@@ -191,15 +191,12 @@ class BitrateControllerPacketHandler
     /**
      * Utility method that looks-up or creates the adaptive source projection of
      * a source.
-     *
-     * @param sourceBitrateAllocation the source bitrate allocation
-     * @return the adaptive source projection for the source bitrate allocation
-     * that is specified as an argument.
      */
-    AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(
-            SingleSourceAllocation sourceBitrateAllocation)
+    AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(AllocationResult allocationResult)
     {
-        MediaSourceDesc source = sourceBitrateAllocation.source;
+        MediaSourceDesc source = allocationResult.getSource();
+        String endpointID = allocationResult.getEndpointId();
+
         if (source == null)
         {
             return null;
@@ -229,12 +226,11 @@ class BitrateControllerPacketHandler
             // but a reference persists in the adaptiveSourceProjectionMap). We're
             // creating local final variables and pass that to the lambda function
             // in order to avoid that.
-            final String endpointID = sourceBitrateAllocation.endpointID;
             final long targetSSRC = source.getPrimarySSRC();
             adaptiveSourceProjection
                     = new AdaptiveSourceProjection(
                     diagnosticContext,
-                    sourceBitrateAllocation.source,
+                    source,
                     () -> eventEmitter.fireEvent(handler -> {
                         handler.keyframeNeeded(endpointID, targetSSRC);
                         return Unit.INSTANCE;
@@ -242,7 +238,7 @@ class BitrateControllerPacketHandler
                     payloadTypes,
                     logger);
 
-            logger.debug(() -> "new source projection for " + sourceBitrateAllocation.source);
+            logger.debug(() -> "new source projection for " + source);
 
             // Route all encodings to the specified bitrate controller.
             for (RtpEncodingDesc rtpEncoding: rtpEncodings)

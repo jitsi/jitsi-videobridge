@@ -294,7 +294,7 @@ public class Endpoint
                 = new BitrateController.EventHandler()
         {
             @Override
-            public void allocationChanged(@NotNull List<? extends SingleSourceAllocation> allocation)
+            public void allocationChanged(@NotNull List<AllocationResult> allocation)
             {
                 // Intentional no-op.
             }

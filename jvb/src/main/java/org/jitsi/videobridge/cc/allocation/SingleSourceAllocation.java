@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.allocation;
 
 import org.jitsi.nlj.MediaSourceDesc;
 import org.jitsi.nlj.RtpLayerDesc;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.TimeSeriesLogger;
 import org.jitsi.videobridge.VideoConstraints;
@@ -32,9 +33,9 @@ import java.util.List;
  */
 public class SingleSourceAllocation {
     /**
-     * An reusable empty array of {@link RateSnapshot} to reduce allocations.
+     * An reusable empty array of {@link LayerSnapshot} to reduce allocations.
      */
-    private static final RateSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new RateSnapshot[0];
+    private static final LayerSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new LayerSnapshot[0];
 
     /**
      * The {@link TimeSeriesLogger} to be used by this instance to print time
@@ -66,7 +67,7 @@ public class SingleSourceAllocation {
      * <p>
      * {@link RtpLayerDesc} of {@link #source}.
      */
-    final RateSnapshot[] ratedIndices;
+    final LayerSnapshot[] ratedIndices;
 
     /**
      * The rated quality that needs to be achieved before allocating
@@ -108,7 +109,8 @@ public class SingleSourceAllocation {
             MediaSourceDesc source,
             VideoConstraints effectiveVideoConstraints,
             Clock clock,
-            DiagnosticContext diagnosticContext) {
+            DiagnosticContext diagnosticContext)
+    {
         this.endpointID = endpointID;
         this.effectiveVideoConstraints = effectiveVideoConstraints;
         this.source = source;
@@ -121,7 +123,7 @@ public class SingleSourceAllocation {
         }
 
         long nowMs = clock.instant().toEpochMilli();
-        List<RateSnapshot> ratesList = new ArrayList<>();
+        List<LayerSnapshot> ratesList = new ArrayList<>();
         // Initialize the list of flows that we will consider for sending
         // for this source. For example, for the on-stage participant we
         // consider 720p@30fps, 360p@30fps, 180p@30fps, 180p@15fps,
@@ -155,11 +157,12 @@ public class SingleSourceAllocation {
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
                     || ratesList.isEmpty()) {
-                long layerBitrateBps = (long) layer.getBitrate(nowMs).getBps();
+                Bandwidth layerBitrate = layer.getBitrate(nowMs);
+                long layerBitrateBps = (long) layerBitrate.getBps();
                 if (layerBitrateBps > 0) {
                     idealBps = layerBitrateBps;
                 }
-                ratesList.add(new RateSnapshot(layerBitrateBps, layer));
+                ratesList.add(new LayerSnapshot(layer, layerBitrate));
             }
 
             if (layer.getHeight() <= effectiveVideoConstraints.getPreferredHeight()) {
@@ -187,16 +190,16 @@ public class SingleSourceAllocation {
             DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
                     = diagnosticContext.makeTimeSeriesPoint("calculated_rates")
                     .addField("remote_endpoint_id", endpointID);
-            for (RateSnapshot rateSnapshot : ratesList) {
+            for (LayerSnapshot layerSnapshot : ratesList) {
                 ratesTimeSeriesPoint.addField(
-                        Integer.toString(rateSnapshot.layer.getIndex()),
-                        rateSnapshot.bps);
+                        Integer.toString(layerSnapshot.getLayer().getIndex()),
+                        layerSnapshot.getBitrate().getBps());
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
         }
 
         this.ratedPreferredIdx = ratedPreferredIdx;
-        ratedIndices = ratesList.toArray(new RateSnapshot[0]);
+        ratedIndices = ratesList.toArray(new LayerSnapshot[0]);
         // TODO Determining the rated ideal index needs some work.
         // The ideal rated quality is constrained by the viewport of the
         // endpoint. For example, on a mobile device we should probably not
@@ -212,7 +215,8 @@ public class SingleSourceAllocation {
      * @param maxBps the maximum bitrate (in bps) that the target subjective
      *               quality can have.
      */
-    void improve(long maxBps) {
+    void improve(long maxBps)
+    {
         if (ratedIndices.length == 0) {
             return;
         }
@@ -220,7 +224,7 @@ public class SingleSourceAllocation {
         if (ratedTargetIdx == -1 && ratedPreferredIdx > -1) {
             // Boost on stage participant to preferred, if there's enough bw.
             for (int i = 0; i < ratedIndices.length; i++) {
-                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bps) {
+                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].getBitrate().getBps()) {
                     break;
                 }
 
@@ -228,7 +232,9 @@ public class SingleSourceAllocation {
             }
         } else {
             // Try the next element in the ratedIndices array.
-            if (ratedTargetIdx + 1 < ratedIndices.length && ratedIndices[ratedTargetIdx + 1].bps < maxBps) {
+            if (ratedTargetIdx + 1 < ratedIndices.length
+                    && ratedIndices[ratedTargetIdx + 1].getBitrate().getBps() < maxBps)
+            {
                 ratedTargetIdx++;
             }
         }
@@ -245,8 +251,11 @@ public class SingleSourceAllocation {
             // measure for the 1080p stream is less than the bitrate that we
             // measure for the 720p stream, then we "jump over" the 720p
             // stream and immediately select the 1080p stream.
-            for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++) {
-                if (ratedIndices[i].bps > 0 && ratedIndices[i].bps <= ratedIndices[ratedTargetIdx].bps) {
+            for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
+            {
+                if (ratedIndices[i].getBitrate().getBps() > 0 && ratedIndices[i].getBitrate().getBps()
+                        <= ratedIndices[ratedTargetIdx].getBitrate().getBps())
+                {
                     ratedTargetIdx = i;
                 }
             }
@@ -258,24 +267,14 @@ public class SingleSourceAllocation {
      *
      * @return the target bitrate (in bps) for this endpoint allocation.
      */
-    long getTargetBitrate() {
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].bps : 0;
+    long getTargetBitrate()
+    {
+        return ratedTargetIdx != -1 ? (long) ratedIndices[ratedTargetIdx].getBitrate().getBps() : 0;
     }
 
-    /**
-     * Expose for testing only.
-     */
-    public RtpLayerDesc getTargetLayer() {
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer : null;
-    }
-
-    /**
-     * @return the bitrate (in bps) of the layer that is the closest to
-     * the ideal and has a bitrate, or 0 if there are no layers with a
-     * bitrate (for example, the endpoint is video muted).
-     */
-    long getIdealBitrate() {
-        return idealBitrate;
+    private LayerSnapshot getTargetLayer()
+    {
+        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx] : null;
     }
 
     /**
@@ -283,32 +282,32 @@ public class SingleSourceAllocation {
      *
      * @return the target quality for this source.
      */
-    int getTargetIndex() {
+    int getTargetIndex()
+    {
         // figures out the quality of the layer of the target rated
         // quality.
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer.getIndex() : -1;
+        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].getLayer().getIndex() : -1;
+    }
+
+    private LayerSnapshot getIdealLayer()
+    {
+        return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1] : null;
     }
 
     /**
-     * Gets the preferred quality for this source.
-     *
-     * @return the preferred quality for this source.
+     * Creates the final immutable result of this allocation. To be called once the allocation algorithm has
+     * completed.
      */
-    int getPreferredIndex() {
-        // figures out the quality of the layer of the target rated
-        // quality.
-        return ratedPreferredIdx != -1 ? ratedIndices[ratedPreferredIdx].layer.getIndex() : -1;
-    }
-
-    /**
-     * Gets the ideal quality for this source.
-     *
-     * @return the ideal quality for this source.
-     */
-    int getIdealIndex() {
-        // figures out the quality of the layer of the ideal rated
-        // quality.
-        return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1].layer.getIndex() : -1;
+    AllocationResult getResult()
+    {
+        return new AllocationResult(
+                endpointID,
+                source,
+                getTargetLayer(),
+                getIdealLayer(),
+                effectiveVideoConstraints,
+                oversending
+        );
     }
 
     @Override
@@ -319,33 +318,5 @@ public class SingleSourceAllocation {
                 + " ratedTargetIdx=" + ratedTargetIdx
                 + " oversending=" + oversending
                 + " idealBitrate=" + idealBitrate;
-    }
-
-    /**
-     * A snapshot of the bitrate for a given {@link RtpLayerDesc}.
-     */
-    static class RateSnapshot
-    {
-        /**
-         * The bitrate (in bps) of the associated {@link #layer}.
-         */
-        final long bps;
-
-        /**
-         * The {@link RtpLayerDesc}.
-         */
-        final RtpLayerDesc layer;
-
-        /**
-         * Ctor.
-         *
-         * @param bps The bitrate (in bps) of the associated {@link #layer}.
-         * @param layer the {@link RtpLayerDesc}.
-         */
-        private RateSnapshot(long bps, RtpLayerDesc layer)
-        {
-            this.bps = bps;
-            this.layer = layer;
-        }
     }
 }
