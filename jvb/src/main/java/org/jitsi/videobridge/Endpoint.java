@@ -37,6 +37,7 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.cc.*;
+import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
@@ -289,8 +290,15 @@ public class Endpoint
                 }
             });
 
-        BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
+        org.jitsi.videobridge.cc.allocation.EventHandler bcEventHandler
+                = new org.jitsi.videobridge.cc.allocation.EventHandler()
         {
+            @Override
+            public void allocationChanged(@NotNull List<? extends SingleSourceAllocation> allocation)
+            {
+                // Intentional no-op.
+            }
+
             @Override
             public void forwardedEndpointsChanged(Collection<String> forwardedEndpoints)
             {
@@ -333,15 +341,17 @@ public class Endpoint
         );
 
         diagnosticContext.put("endpoint_id", id);
-        bandwidthProbing = new BandwidthProbing(Endpoint.this.transceiver::sendProbing);
+        bandwidthProbing
+                = new BandwidthProbing(
+                        Endpoint.this.transceiver::sendProbing,
+                        Endpoint.this.bitrateController::getStatusSnapshot);
         bandwidthProbing.setDiagnosticContext(diagnosticContext);
-        bandwidthProbing.setBitrateController(bitrateController);
         conference.encodingsManager.subscribe(this);
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
 
-        iceTransport = new IceTransport(getID(), iceControlling, logger);
+        iceTransport = new IceTransport(getId(), iceControlling, logger);
         setupIceTransport();
         dtlsTransport = new DtlsTransport(logger);
         setupDtlsTransport();
@@ -660,7 +670,7 @@ public class Endpoint
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
             if (senderEndpoint != null)
             {
-                senderEndpoint.removeReceiver(getID());
+                senderEndpoint.removeReceiver(getId());
             }
         }
 
@@ -671,7 +681,7 @@ public class Endpoint
 
             if (senderEndpoint != null)
             {
-                senderEndpoint.addReceiver(getID(), videoConstraintsEntry.getValue());
+                senderEndpoint.addReceiver(getId(), videoConstraintsEntry.getValue());
             }
         }
     }
@@ -1082,7 +1092,7 @@ public class Endpoint
         {
             String wsUrl = colibriWebSocketService.getColibriWebSocketUrl(
                     getConference().getID(),
-                    getID(),
+                    getId(),
                     iceTransport.getIcePassword()
             );
             if (wsUrl != null)
@@ -1194,7 +1204,7 @@ public class Endpoint
      */
     private void handleIncomingPacket(PacketInfo packetInfo)
     {
-        packetInfo.setEndpointId(getID());
+        packetInfo.setEndpointId(getId());
         getConference().handleIncomingPacket(packetInfo);
     }
 
@@ -1208,7 +1218,7 @@ public class Endpoint
             long secondarySsrc,
             SsrcAssociationType type)
     {
-        if (endpointId.equalsIgnoreCase(getID()))
+        if (endpointId.equalsIgnoreCase(getId()))
         {
             transceiver.addSsrcAssociation(new LocalSsrcAssociation(primarySsrc, secondarySsrc, type));
         }

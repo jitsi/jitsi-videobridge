@@ -68,7 +68,7 @@ class ConferencePeriodicRunnable
             String id = endpoint.getStatsId();
             if (id == null)
             {
-                id = endpoint.getID();
+                id = endpoint.getId();
             }
             EndpointStats endpointStats = new EndpointStats(id);
 

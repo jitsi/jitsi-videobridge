@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.cc
+package org.jitsi.videobridge.cc.allocation
 
 import com.google.common.collect.ImmutableMap
 import io.kotest.core.spec.IsolationMode
@@ -39,7 +39,9 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.VideoConstraints
+import org.jitsi.videobridge.cc.VideoConstraintsCompatibility
 import java.time.Instant
+import java.util.function.Supplier
 
 class BitrateControllerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -57,7 +59,11 @@ class BitrateControllerTest : ShouldSpec() {
                 val lastN = -1
                 val videoConstraints = mapOf("endpoint-1" to VideoConstraints(720))
 
-                BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
+                EndpointMultiRank.makeEndpointMultiRankList(
+                    conferenceEndpoints,
+                    videoConstraints,
+                    lastN
+                ).map {
                     it.endpoint.id to it.effectiveVideoConstraints
                 }.toMap().shouldContainExactly(
                     mapOf(
@@ -74,7 +80,11 @@ class BitrateControllerTest : ShouldSpec() {
                 val lastN = 3
                 val videoConstraints = mapOf<String, VideoConstraints>()
 
-                BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
+                EndpointMultiRank.makeEndpointMultiRankList(
+                    conferenceEndpoints,
+                    videoConstraints,
+                    lastN
+                ).map {
                     it.endpoint.id to it.effectiveVideoConstraints
                 }.toMap().shouldContainExactly(
                     mapOf(
@@ -92,7 +102,11 @@ class BitrateControllerTest : ShouldSpec() {
                 // it explicitly selects only the share, ignoring the last-N list.
                 val lastN = 1
                 val videoConstraints = mapOf("endpoint-2" to VideoConstraints(1080))
-                BitrateController.makeEndpointMultiRankList(conferenceEndpoints, videoConstraints, lastN).map {
+                EndpointMultiRank.makeEndpointMultiRankList(
+                    conferenceEndpoints,
+                    videoConstraints,
+                    lastN
+                ).map {
                     it.endpoint.id to it.effectiveVideoConstraints
                 }.toMap().shouldContainExactly(
                     mapOf(
@@ -662,9 +676,9 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     val forwardedEndpointsHistory: History<Collection<String>> = mutableListOf()
     val allocationHistory: History<List<AllocationInfo>> = mutableListOf()
 
-    val bc = BitrateController<Endpoint>(
+    val bc = BitrateController(
         "destinationEndpoint",
-        object : BitrateController.EventHandler {
+        object : EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Collection<String>) {
                 Event(bwe, forwardedEndpoints, clock.instant()).apply {
                     logger.info("Forwarded endpoints changed: $this")
@@ -684,14 +698,14 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
 
-            override fun allocationChanged(allocation: List<BitrateController.SourceBitrateAllocation>) {
+            override fun allocationChanged(allocation: List<SingleSourceAllocation>) {
                 Event(bwe, allocation.map { it.toEndpointAllocationInfo() }, clock.instant()).apply {
                     logger.info("Allocation changed: $this")
                     allocationHistory.add(this)
                 }
             }
         },
-        { endpoints },
+        Supplier { endpoints },
         DiagnosticContext(),
         logger,
         clock
@@ -748,7 +762,7 @@ data class AllocationInfo(
         "\n\t[id=$id, height=$height, fps=$fps, bitrate=$bitrate, oversending=$oversending]"
 }
 
-fun BitrateController.SourceBitrateAllocation.toEndpointAllocationInfo() =
+fun SingleSourceAllocation.toEndpointAllocationInfo() =
     AllocationInfo(
         endpointID,
         targetLayer?.height ?: 0,
@@ -778,11 +792,10 @@ private fun VideoConstraintsCompatibility.tileView(vararg endpoints: String): Im
 }
 
 class Endpoint(
-    val id: String,
-    private val mediaSource: MediaSourceDesc? = null
-) : BitrateController.MediaSourceContainer {
-    override fun getID() = id
-    override fun getMediaSources() = mediaSource?.let { arrayOf(mediaSource) } ?: emptyArray()
+    override val id: String,
+    mediaSource: MediaSourceDesc? = null
+) : MediaSourceContainer {
+    override val mediaSources = mediaSource?.let { arrayOf(mediaSource) } ?: emptyArray()
 }
 
 fun createEndpoints(vararg ids: String): List<Endpoint> {

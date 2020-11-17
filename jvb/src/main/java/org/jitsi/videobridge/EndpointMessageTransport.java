@@ -481,7 +481,7 @@ class EndpointMessageTransport
     {
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
-        videoConstraintsMap.remove(endpoint.getID());
+        videoConstraintsMap.remove(endpoint.getId());
 
         logger.debug(() -> "New video constraints map: " + videoConstraintsMap);
 
@@ -499,7 +499,7 @@ class EndpointMessageTransport
     {
         int maxFrameHeight = message.getMaxFrameHeight();
         logger.debug(
-                () -> "Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
+                () -> "Received a maxFrameHeight video constraint from " + endpoint.getId() + ": " + maxFrameHeight);
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
         setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
@@ -531,7 +531,7 @@ class EndpointMessageTransport
     public BridgeChannelMessage endpointMessage(EndpointMessage message)
     {
         // First insert/overwrite the "from" to prevent spoofing.
-        String from = endpoint.getID();
+        String from = endpoint.getId();
         message.setFrom(from);
 
         Conference conference = endpoint.getConference();

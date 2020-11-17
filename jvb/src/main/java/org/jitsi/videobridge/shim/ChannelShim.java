@@ -224,12 +224,12 @@ public class ChannelShim
     public void describe(ColibriConferenceIQ.ChannelCommon commonIq)
     {
         commonIq.setID(id);
-        commonIq.setEndpoint(endpoint.getID());
+        commonIq.setEndpoint(endpoint.getId());
         // I don't think we even support not being the initiator at this point,
         // so hard-coding this
         commonIq.setInitiator(true);
         // Elsewhere we enforce that endpoint ID == channel bundle ID
-        commonIq.setChannelBundleId(endpoint.getID());
+        commonIq.setChannelBundleId(endpoint.getId());
         if (commonIq instanceof ColibriConferenceIQ.Channel)
         {
             ColibriConferenceIQ.Channel iq
@@ -299,7 +299,7 @@ public class ChannelShim
                 {
                     endpoint.getConference().encodingsManager
                         .addSsrcAssociation(
-                                endpoint.getID(),
+                                endpoint.getId(),
                                 primarySsrc,
                                 secondarySsrc,
                                 ssrcAssociationType);
@@ -332,7 +332,7 @@ public class ChannelShim
             }
             else
             {
-                logger.debug(() -> "Adding a payload type to endpoint=" + endpoint.getID() + ": " + pt);
+                logger.debug(() -> "Adding a payload type to endpoint=" + endpoint.getId() + ": " + pt);
 
                 // Note that we never clear the endpoint's list of payload
                 // types. They just accumulate (but they can be replaced). This

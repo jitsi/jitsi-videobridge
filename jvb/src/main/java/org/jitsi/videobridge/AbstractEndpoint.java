@@ -23,7 +23,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.cc.*;
+import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.rest.root.debug.*;
 import org.jitsi.videobridge.util.*;
@@ -48,7 +48,7 @@ import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
  * @author Brian Baldino
  */
 public abstract class AbstractEndpoint
-    implements BitrateController.MediaSourceContainer
+    implements MediaSourceContainer
 {
     /**
      * The default video constraints to assume when nothing is signaled.
@@ -170,7 +170,7 @@ public abstract class AbstractEndpoint
      *
      * @return the (unique) identifier/ID of this instance
      */
-    public final String getID()
+    public final String getId()
     {
         return id;
     }
@@ -237,7 +237,7 @@ public abstract class AbstractEndpoint
     @Override
     public String toString()
     {
-        return getClass().getName() + " " + getID();
+        return getClass().getName() + " " + getId();
     }
 
     /**
@@ -402,14 +402,13 @@ public abstract class AbstractEndpoint
      *
      * NOTE that if there are no {@link VideoConstraints} specified for an
      * endpoint, then its {@link VideoConstraints} are assumed to be
-     * {@link org.jitsi.videobridge.cc.BitrateController.defaultVideoConstraints}
+     * the default.
      *
      * @param videoConstraints the map of endpoint id to {@link VideoConstraints}
      * that contains the {@link VideoConstraints} to respect when allocating
      * bandwidth for a specific endpoint.
      */
-    public abstract void setSenderVideoConstraints(
-        ImmutableMap<String, VideoConstraints> videoConstraints);
+    public abstract void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> videoConstraints);
 
     /**
      * Notifies this instance that the max video constraints that the bridge

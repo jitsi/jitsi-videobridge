@@ -275,7 +275,7 @@ public class Conference
             }
             catch (IOException e)
             {
-                logger.error("Failed to send message on data channel to: " + endpoint.getID() + ", msg: " + msg, e);
+                logger.error("Failed to send message on data channel to: " + endpoint.getId() + ", msg: " + msg, e);
             }
         }
 
@@ -399,7 +399,7 @@ public class Conference
     {
         List<String> lastNEndpointIds
                 = speechActivity.getOrderedEndpoints().stream()
-                    .map(AbstractEndpoint::getID)
+                    .map(AbstractEndpoint::getId)
                     .collect(Collectors.toList());
 
         endpointsCache.forEach(e -> e.lastNEndpointsChanged(lastNEndpointIds));
@@ -413,7 +413,7 @@ public class Conference
     private void dominantSpeakerChanged()
     {
         AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
-        String dominantSpeakerId = dominantSpeaker == null ? null : dominantSpeaker.getID();
+        String dominantSpeakerId = dominantSpeaker == null ? null : dominantSpeaker.getId();
 
         if (logger.isInfoEnabled())
         {
@@ -467,7 +467,7 @@ public class Conference
     private double getMaxReceiverRtt(String excludedEndpointId)
     {
         return endpointsCache.stream()
-                .filter(ep -> !ep.getID().equalsIgnoreCase(excludedEndpointId))
+                .filter(ep -> !ep.getId().equalsIgnoreCase(excludedEndpointId))
                 .map(Endpoint::getRtt)
                 .mapToDouble(Double::valueOf)
                 .max()
@@ -810,7 +810,7 @@ public class Conference
     void endpointExpired(AbstractEndpoint endpoint)
     {
         final AbstractEndpoint removedEndpoint;
-        String id = endpoint.getID();
+        String id = endpoint.getId();
         removedEndpoint = endpointsById.remove(id);
         if (removedEndpoint != null)
         {
@@ -826,7 +826,7 @@ public class Conference
 
         if (removedEndpoint != null)
         {
-            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getID());
+            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getId());
             endpointsChanged();
         }
     }
@@ -845,14 +845,14 @@ public class Conference
         }
 
         final AbstractEndpoint replacedEndpoint;
-        replacedEndpoint = endpointsById.put(endpoint.getID(), endpoint);
+        replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
         updateEndpointsCache();
 
         endpointsChanged();
 
         if (replacedEndpoint != null)
         {
-            logger.info("Endpoint with id " + endpoint.getID() + ": " +
+            logger.info("Endpoint with id " + endpoint.getId() + ": " +
                 replacedEndpoint + " has been replaced by new " +
                 "endpoint with same id: " + endpoint);
         }
@@ -868,7 +868,7 @@ public class Conference
     @Override
     public void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
     {
-        epConnectionStatusMonitor.endpointConnected(endpoint.getID());
+        epConnectionStatusMonitor.endpointConnected(endpoint.getId());
 
         if (!isExpired())
         {
@@ -878,12 +878,12 @@ public class Conference
             {
                 try
                 {
-                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeaker.getID()));
+                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeaker.getId()));
                 }
                 catch (IOException e)
                 {
                     logger.error(
-                            "Failed to send dominant speaker update on data channel to " + endpoint.getID(),
+                            "Failed to send dominant speaker update on data channel to " + endpoint.getId(),
                             e);
                 }
             }
@@ -952,7 +952,7 @@ public class Conference
         PotentialPacketHandler prevHandler = null;
         for (Endpoint endpoint : endpointsCache)
         {
-            if (endpoint.getID().equals(sourceEndpointId))
+            if (endpoint.getId().equals(sourceEndpointId))
             {
                 continue;
             }
@@ -1120,9 +1120,9 @@ public class Conference
         debugState.put("endpoints", endpoints);
         for (Endpoint e : endpointsCache)
         {
-            if (endpointId == null || endpointId.equals(e.getID()))
+            if (endpointId == null || endpointId.equals(e.getId()))
             {
-                endpoints.put(e.getID(), full ? e.getDebugState() : e.getStatsId());
+                endpoints.put(e.getId(), full ? e.getDebugState() : e.getStatsId());
             }
         }
         return debugState;
