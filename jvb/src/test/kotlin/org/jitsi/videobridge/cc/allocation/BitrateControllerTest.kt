@@ -33,6 +33,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
+import org.jitsi.nlj.util.mbps
 import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
@@ -189,6 +190,63 @@ class BitrateControllerTest : ShouldSpec() {
 
                     verifyTileViewLastN1()
                 }
+            }
+            context("Selected endpoints should override the dominant speaker") {
+                // A is dominant speaker, A and B are selected. With LastN=2 we should always forward the selected
+                // endpoints regardless of who is speaking.
+                // The exact flow of this scenario was taken from a (non-jitsi-meet) client.
+                bc.setEndpointOrdering("A", "B", "C", "D")
+                bc.setSelectedEndpoints("A", "B", maxFrameHeight = 720)
+                bc.setLastN(2)
+
+                clock.elapse(20.secs)
+                bc.bwe = 10.mbps
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                // B becomes dominant speaker.
+                bc.setEndpointOrdering("B", "A", "C", "D")
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                bc.setMaxFrameHeight(360)
+
+                clock.elapse(2.secs)
+                // This should change nothing, the selection didn't change.
+                bc.setSelectedEndpoints("A", "B")
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                bc.setLastN(-1)
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
+
+                clock.elapse(2.secs)
+                bc.setMaxFrameHeight(360)
+                clock.elapse(2.secs)
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
+
+                bc.setLastN(2)
+                clock.elapse(2.secs)
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                // D is now dominant speaker, but it should not override the selected endpoints.
+                bc.setEndpointOrdering("D", "B", "A", "C")
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                bc.bwe = 10.mbps
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                bc.bwe = 0.mbps
+                clock.elapse(2.secs)
+                bc.bwe = 10.mbps
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                // C is now dominant speaker, but it should not override the selected endpoints.
+                bc.setEndpointOrdering("C", "D", "A", "B")
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
             }
         }
     }
@@ -716,15 +774,24 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         bc.endpointOrderingChanged(mutableListOf(*endpoints))
     }
 
-    fun setStageView(onStageEndpoint: String) {
-        vcc.setMaxFrameHeight(720)
+    fun setStageView(onStageEndpoint: String, maxFrameHeight: Int = 720) {
+        vcc.setMaxFrameHeight(maxFrameHeight)
         vcc.setSelectedEndpoints(setOf(onStageEndpoint))
         setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
     }
 
-    fun setTileView(vararg selectedEndpoints: String) {
-        vcc.setMaxFrameHeight(180)
+    fun setSelectedEndpoints(vararg selectedEndpoints: String, maxFrameHeight: Int? = null) {
+        maxFrameHeight?.let { vcc.setMaxFrameHeight(it) }
         vcc.setSelectedEndpoints(setOf(*selectedEndpoints))
+        setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
+    }
+
+    fun setTileView(vararg selectedEndpoints: String) {
+        setSelectedEndpoints(*selectedEndpoints, maxFrameHeight = 180)
+    }
+
+    fun setMaxFrameHeight(maxFrameHeight: Int) {
+        vcc.setMaxFrameHeight(maxFrameHeight)
         setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
     }
 
