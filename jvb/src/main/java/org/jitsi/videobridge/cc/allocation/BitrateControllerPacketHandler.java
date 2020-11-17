@@ -184,17 +184,23 @@ class BitrateControllerPacketHandler
     AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(
             SingleSourceAllocation sourceBitrateAllocation)
     {
+        MediaSourceDesc source = sourceBitrateAllocation.source;
+        if (source == null)
+        {
+            return null;
+        }
+
         synchronized (adaptiveSourceProjectionMap)
         {
             AdaptiveSourceProjection adaptiveSourceProjection
-                    = adaptiveSourceProjectionMap.get(sourceBitrateAllocation.targetSSRC);
+                    = adaptiveSourceProjectionMap.get(source.getPrimarySSRC());
 
-            if (adaptiveSourceProjection != null || sourceBitrateAllocation.source == null)
+            if (adaptiveSourceProjection != null)
             {
                 return adaptiveSourceProjection;
             }
 
-            RtpEncodingDesc[] rtpEncodings = sourceBitrateAllocation.source.getRtpEncodings();
+            RtpEncodingDesc[] rtpEncodings = source.getRtpEncodings();
 
             if (ArrayUtils.isNullOrEmpty(rtpEncodings))
             {
@@ -209,7 +215,7 @@ class BitrateControllerPacketHandler
             // creating local final variables and pass that to the lambda function
             // in order to avoid that.
             final String endpointID = sourceBitrateAllocation.endpointID;
-            final long targetSSRC = sourceBitrateAllocation.targetSSRC;
+            final long targetSSRC = source.getPrimarySSRC();
             adaptiveSourceProjection
                     = new AdaptiveSourceProjection(
                     diagnosticContext,

@@ -40,11 +40,6 @@ public class SingleSourceAllocation {
     final VideoConstraints effectiveVideoConstraints;
 
     /**
-     * Helper field that keeps the SSRC of the target stream.
-     */
-    final long targetSSRC;
-
-    /**
      * The first {@link MediaSourceDesc} of the {@code Endpoint} that
      * this instance pertains to.
      */
@@ -91,10 +86,7 @@ public class SingleSourceAllocation {
     final long idealBitrate;
 
     /**
-     * Ctor.
-     *
-     * @param source      the {@link MediaSourceDesc} that this bitrate
-     *                    allocation pertains to.
+     * @param source The {@link MediaSourceDesc} that this bitrate allocation pertains to.
      */
     SingleSourceAllocation(
             String endpointID,
@@ -106,13 +98,7 @@ public class SingleSourceAllocation {
         this.effectiveVideoConstraints = effectiveVideoConstraints;
         this.source = source;
 
-        if (source == null) {
-            this.targetSSRC = -1;
-        } else {
-            this.targetSSRC = source.getPrimarySSRC();
-        }
-
-        if (targetSSRC == -1 || effectiveVideoConstraints.getIdealHeight() <= 0) {
+        if (source == null || effectiveVideoConstraints.getIdealHeight() <= 0) {
             ratedPreferredIdx = -1;
             idealBitrate = 0;
             ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
