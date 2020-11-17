@@ -121,20 +121,19 @@ class BitrateControllerTest : ShouldSpec() {
         }
 
         context("Allocation") {
-            val vcc = VideoConstraintsCompatibility()
 
             context("Stage view") {
                 context("When LastN is not set") {
                     context("and the dominant speaker is on stage") {
                         bc.setEndpointOrdering("A", "B", "C", "D")
-                        bc.setVideoConstraints(vcc.stageView("A"))
+                        bc.setStageView("A")
                         runBweLoop()
 
                         verifyStageView()
                     }
                     context("and a non-dominant speaker is on stage") {
                         bc.setEndpointOrdering("B", "A", "C", "D")
-                        bc.setVideoConstraints(vcc.stageView("A"))
+                        bc.setStageView("A")
                         runBweLoop()
 
                         verifyStageView()
@@ -143,7 +142,7 @@ class BitrateControllerTest : ShouldSpec() {
                 context("When LastN=0") {
                     // LastN=0 is used when the client goes in "audio-only" mode.
                     bc.setEndpointOrdering("A", "B", "C", "D")
-                    bc.setVideoConstraints(vcc.stageView("A"))
+                    bc.setStageView("A")
                     bc.setLastN(0)
                     runBweLoop()
 
@@ -153,7 +152,7 @@ class BitrateControllerTest : ShouldSpec() {
                     // LastN=1 is used when the client goes in "audio-only" mode, but someone starts a screenshare.
                     context("and the dominant speaker is on-stage") {
                         bc.setEndpointOrdering("A", "B", "C", "D")
-                        bc.setVideoConstraints(vcc.stageView("A"))
+                        bc.setStageView("A")
                         bc.setLastN(1)
                         runBweLoop()
 
@@ -161,7 +160,7 @@ class BitrateControllerTest : ShouldSpec() {
                     }
                     context("and a non-dominant speaker is on stage") {
                         bc.setEndpointOrdering("B", "A", "C", "D")
-                        bc.setVideoConstraints(vcc.stageView("A"))
+                        bc.setStageView("A")
                         bc.setLastN(1)
                         runBweLoop()
 
@@ -171,7 +170,7 @@ class BitrateControllerTest : ShouldSpec() {
             }
             context("Tile view") {
                 bc.setEndpointOrdering("A", "B", "C", "D")
-                bc.setVideoConstraints(vcc.tileView("A", "B", "C", "D"))
+                bc.setTileView("A", "B", "C", "D")
 
                 context("When LastN is not set") {
                     runBweLoop()
@@ -663,6 +662,7 @@ fun List<Event<List<AllocationInfo>>>.shouldMatchInOrder(vararg events: Event<Li
 private class BitrateControllerWrapper(vararg endpointIds: String, val clock: FakeClock = FakeClock()) {
     val endpoints: List<Endpoint> = createEndpoints(*endpointIds)
     val logger = createLogger()
+    val vcc = VideoConstraintsCompatibility()
 
     var bwe = (-1).bps
         set(value) {
@@ -712,8 +712,20 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     )
 
     fun setEndpointOrdering(vararg endpoints: String) {
-        logger.info("Set endpoints $endpoints")
+        logger.info("Set endpoints ${endpoints.joinToString(",")}")
         bc.endpointOrderingChanged(mutableListOf(*endpoints))
+    }
+
+    fun setStageView(onStageEndpoint: String) {
+        vcc.setMaxFrameHeight(720)
+        vcc.setSelectedEndpoints(setOf(onStageEndpoint))
+        setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
+    }
+
+    fun setTileView(vararg selectedEndpoints: String) {
+        vcc.setMaxFrameHeight(180)
+        vcc.setSelectedEndpoints(setOf(*selectedEndpoints))
+        setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
     }
 
     fun setVideoConstraints(videoConstraints: ImmutableMap<String, VideoConstraints>) {
@@ -777,18 +789,6 @@ fun SingleSourceAllocation.toEndpointAllocationInfo() =
 fun <T> List<Collection<T>>.shouldContainInOrder(vararg ts: Collection<T>) {
     this.size shouldBe ts.size
     ts.forEachIndexed { i, it -> this[i].shouldContainExactly(it) }
-}
-
-private fun VideoConstraintsCompatibility.stageView(endpoint: String): ImmutableMap<String, VideoConstraints> {
-    setMaxFrameHeight(720)
-    setSelectedEndpoints(setOf(endpoint))
-    return ImmutableMap.copyOf(computeVideoConstraints())
-}
-
-private fun VideoConstraintsCompatibility.tileView(vararg endpoints: String): ImmutableMap<String, VideoConstraints> {
-    setMaxFrameHeight(180)
-    setSelectedEndpoints(setOf(*endpoints))
-    return ImmutableMap.copyOf(computeVideoConstraints())
 }
 
 class Endpoint(
