@@ -123,7 +123,7 @@ public class ConferenceSpeechActivity
         {
             AbstractEndpoint endpoint
                     = endpointsBySpeechActivity.stream()
-                        .filter(e -> id.equals(e.getID()))
+                        .filter(e -> id.equals(e.getId()))
                         .findFirst().orElse(null);
             // Move this endpoint to the top of our sorted list
             if (!endpointsBySpeechActivity.remove(endpoint))
@@ -225,7 +225,7 @@ public class ConferenceSpeechActivity
         DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
         if (dsi != null)
         {
-            dominantSpeakerIdentification.levelChanged(endpoint.getID(), (int) level);
+            dominantSpeakerIdentification.levelChanged(endpoint.getId(), (int) level);
         }
     }
 
@@ -297,7 +297,7 @@ public class ConferenceSpeechActivity
         AbstractEndpoint dominantEndpoint = getDominantEndpoint();
         debugState.put(
                 "dominantEndpoint",
-                dominantEndpoint == null ? "null" : dominantEndpoint.getID());
+                dominantEndpoint == null ? "null" : dominantEndpoint.getId());
         DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
         debugState.put(
                 "dominantSpeakerIdentification",

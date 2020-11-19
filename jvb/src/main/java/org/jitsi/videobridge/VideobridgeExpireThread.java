@@ -154,7 +154,7 @@ public class VideobridgeExpireThread
                 {
                     if (endpoint.shouldExpire())
                     {
-                        logger.info("Expiring endpoint " + endpoint.getID());
+                        logger.info("Expiring endpoint " + endpoint.getId());
                         EXPIRE_EXECUTOR.execute(endpoint::expire);
                     }
                 }

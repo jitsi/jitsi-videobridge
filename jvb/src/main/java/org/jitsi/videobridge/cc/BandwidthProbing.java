@@ -15,14 +15,17 @@
  */
 package org.jitsi.videobridge.cc;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.rtp.bandwidthestimation.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.videobridge.cc.config.*;
 import org.json.simple.*;
 
 import java.util.*;
+import java.util.function.*;
 
 /**
   * @author George Politis
@@ -66,9 +69,9 @@ import java.util.*;
 
      private DiagnosticContext diagnosticContext;
 
-     private BitrateController bitrateController;
+     private final @NotNull Supplier<BitrateControllerStatusSnapshot> statusSnapshotSupplier;
 
-     private ProbingDataSender probingDataSender;
+     private final @NotNull ProbingDataSender probingDataSender;
 
      private static final BandwidthProbingConfig config = new BandwidthProbingConfig();
 
@@ -76,10 +79,13 @@ import java.util.*;
       * Ctor.
       *
       */
-     public BandwidthProbing(ProbingDataSender probingDataSender)
+     public BandwidthProbing(
+             @NotNull ProbingDataSender probingDataSender,
+             @NotNull Supplier<BitrateControllerStatusSnapshot> statusSnapshotSupplier)
      {
          super(config.getPaddingPeriodMs());
          this.probingDataSender = probingDataSender;
+         this.statusSnapshotSupplier = statusSnapshotSupplier;
      }
 
      /**
@@ -88,18 +94,6 @@ import java.util.*;
      public void setDiagnosticContext(DiagnosticContext diagnosticContext)
      {
          this.diagnosticContext = diagnosticContext;
-     }
-
-     /**
-      * TODO(brian): there's data we need from bitratecontroller that may be
-      * tough to get another way. for now, i've tried to at least minimize the
-      * dependency by creating the #getStatusSnapshot method inside
-      * bitratecontroller that this can use (so it doesn't have to depend on
-      * accessing the source descriptions)
-      */
-     public void setBitrateController(BitrateController bitrateController)
-     {
-        this.bitrateController = bitrateController;
      }
 
      /**
@@ -118,10 +112,11 @@ import java.util.*;
          // We calculate how much to probe for based on the total target bps
          // (what we're able to reach), the total ideal bps (what we want to
          // be able to reach) and the total current bps (what we currently send).
-         BitrateController.StatusSnapshot bitrateControllerStatus = bitrateController.getStatusSnapshot();
+         BitrateControllerStatusSnapshot bitrateControllerStatus = statusSnapshotSupplier.get();
 
          // How much padding do we need?
-         long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
+         long totalNeededBps =
+                 bitrateControllerStatus.getCurrentIdealBps() - bitrateControllerStatus.getCurrentTargetBps();
          if (totalNeededBps < 1)
          {
              // Don't need to send any probing.
@@ -131,7 +126,7 @@ import java.util.*;
 
          long latestBweCopy = latestBwe;
 
-         if (bitrateControllerStatus.currentIdealBps <= latestBweCopy)
+         if (bitrateControllerStatus.getCurrentIdealBps() <= latestBweCopy)
          {
              // it seems like the ideal bps fits in the bandwidth estimation,
              // let's update the bitrate controller.
@@ -142,7 +137,7 @@ import java.util.*;
          }
 
          // How much padding can we afford?
-         long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
+         long maxPaddingBps = latestBweCopy - bitrateControllerStatus.getCurrentTargetBps();
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
          DiagnosticContext.TimeSeriesPoint timeSeriesPoint = null;
@@ -155,8 +150,8 @@ import java.util.*;
              timeSeriesPoint = diagnosticContext
                      .makeTimeSeriesPoint("sent_padding")
                      .addField("padding_bps", paddingBps)
-                     .addField("total_ideal_bps", bitrateControllerStatus.currentIdealBps)
-                     .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
+                     .addField("total_ideal_bps", bitrateControllerStatus.getCurrentIdealBps())
+                     .addField("total_target_bps", bitrateControllerStatus.getCurrentTargetBps())
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
                      .addField("bwe_bps", latestBweCopy)
@@ -166,7 +161,7 @@ import java.util.*;
 
          if (bytesNeeded >= 1)
          {
-             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, (int)bytesNeeded);
+             int bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.getActiveSsrcs(), (int)bytesNeeded);
 
              bytesLeftOver = Math.max(bytesNeeded - bytesSent, 0);
 

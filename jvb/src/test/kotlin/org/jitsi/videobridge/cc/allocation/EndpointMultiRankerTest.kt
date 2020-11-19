@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.cc
+package org.jitsi.videobridge.cc.allocation
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainInOrder
@@ -27,7 +27,7 @@ class EndpointMultiRankerTest : FunSpec({
             thumbnailVideoConstraints.toRank(1),
             thumbnailVideoConstraints.toRank(2)
         )
-        val sorted = ranks.sortedWith(BitrateController.EndpointMultiRanker())
+        val sorted = ranks.sortedWith(EndpointMultiRank.EndpointMultiRanker())
 
         // NOTE that the active speaker rank is the tie breaker if both the
         // ideal and preferred height is equal and the order in which the
@@ -46,7 +46,7 @@ class EndpointMultiRankerTest : FunSpec({
         val speaker2 = thumbnailVideoConstraints.toRank(1)
         val speaker3 = stageVideoConstraints.toRank(3)
 
-        val sorted = listOf(activeSpeaker, speaker2, speaker3).sortedWith(BitrateController.EndpointMultiRanker())
+        val sorted = listOf(activeSpeaker, speaker2, speaker3).sortedWith(EndpointMultiRank.EndpointMultiRanker())
 
         // NOTE that the active speaker rank is the tie breaker if both the
         // ideal and preferred height is equal and the order in which the
@@ -64,5 +64,5 @@ class EndpointMultiRankerTest : FunSpec({
 private val stageVideoConstraints = VideoConstraints(720)
 private val thumbnailVideoConstraints = VideoConstraints(180)
 
-private fun VideoConstraints.toRank(rank: Int): BitrateController.EndpointMultiRank<Endpoint> =
-    BitrateController.EndpointMultiRank<Endpoint>(rank, this, null)
+private fun VideoConstraints.toRank(rank: Int): EndpointMultiRank<Endpoint> =
+    EndpointMultiRank<Endpoint>(rank, this, null)
