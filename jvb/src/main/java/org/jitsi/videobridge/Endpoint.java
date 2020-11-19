@@ -290,8 +290,8 @@ public class Endpoint
                 }
             });
 
-        org.jitsi.videobridge.cc.allocation.EventHandler bcEventHandler
-                = new org.jitsi.videobridge.cc.allocation.EventHandler()
+        BitrateController.EventHandler bcEventHandler
+                = new BitrateController.EventHandler()
         {
             @Override
             public void allocationChanged(@NotNull List<? extends SingleSourceAllocation> allocation)

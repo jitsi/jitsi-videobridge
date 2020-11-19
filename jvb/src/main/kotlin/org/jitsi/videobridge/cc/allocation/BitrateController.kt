@@ -90,6 +90,19 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         packetHandler.addPayloadType(payloadType)
         bitrateAllocator.addPayloadType(payloadType)
     }
+
+    interface EventHandler {
+        fun forwardedEndpointsChanged(forwardedEndpoints: Collection<String>)
+        fun effectiveVideoConstraintsChanged(
+            oldVideoConstraints: ImmutableMap<String, VideoConstraints>,
+            newVideoConstraints: ImmutableMap<String, VideoConstraints>
+        )
+        fun keyframeNeeded(endpointId: String?, ssrc: Long)
+        /**
+         * This is meant to be internal to BitrateAllocator, but is exposed here temporarily for the purposes of testing.
+         */
+        fun allocationChanged(allocation: List<SingleSourceAllocation>) { }
+    }
 }
 
 /**
@@ -98,19 +111,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 interface MediaSourceContainer {
     val id: String
     val mediaSources: Array<MediaSourceDesc>?
-}
-
-interface EventHandler {
-    fun forwardedEndpointsChanged(forwardedEndpoints: Collection<String>)
-    fun effectiveVideoConstraintsChanged(
-        oldVideoConstraints: ImmutableMap<String, VideoConstraints>,
-        newVideoConstraints: ImmutableMap<String, VideoConstraints>
-    )
-    fun keyframeNeeded(endpointId: String?, ssrc: Long)
-    /**
-     * This is meant to be internal to BitrateAllocator, but is exposed here temporarily for the purposes of testing.
-     */
-    fun allocationChanged(allocation: List<SingleSourceAllocation>) { }
 }
 
 data class BitrateControllerStatusSnapshot(

@@ -736,7 +736,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
     val bc = BitrateController(
         "destinationEndpoint",
-        object : EventHandler {
+        object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Collection<String>) {
                 Event(bwe, forwardedEndpoints, clock.instant()).apply {
                     logger.info("Forwarded endpoints changed: $this")

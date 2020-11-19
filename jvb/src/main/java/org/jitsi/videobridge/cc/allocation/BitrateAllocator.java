@@ -212,7 +212,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
     private final Clock clock;
 
-    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
+    private final EventEmitter<BitrateController.EventHandler> eventEmitter = new EventEmitter<>();
 
     private final Supplier<List<T>> endpointsSupplier;
 
@@ -234,7 +234,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     BitrateAllocator(
             String destinationEndpointId,
-            EventHandler eventHandler,
+            BitrateController.EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
             @NotNull DiagnosticContext diagnosticContext,
             Logger parentLogger,

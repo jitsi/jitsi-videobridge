@@ -45,13 +45,13 @@ class BitrateControllerPacketHandler
     private final Map<Long, AdaptiveSourceProjection> adaptiveSourceProjectionMap = new ConcurrentHashMap<>();
 
     private final DiagnosticContext diagnosticContext;
-    private final EventEmitter<EventHandler> eventEmitter;
+    private final EventEmitter<BitrateController.EventHandler> eventEmitter;
 
     BitrateControllerPacketHandler(
             Clock clock,
             Logger parentLogger,
             DiagnosticContext diagnosticContext,
-            EventEmitter<EventHandler> eventEmitter)
+            EventEmitter<BitrateController.EventHandler> eventEmitter)
     {
         this.clock = clock;
         this.logger = parentLogger.createChildLogger(BitrateControllerPacketHandler.class.getName());
