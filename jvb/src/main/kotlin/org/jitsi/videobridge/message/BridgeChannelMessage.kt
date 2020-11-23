@@ -192,12 +192,16 @@ class ClientHelloMessage : BridgeChannelMessage(TYPE) {
 /**
  * A message sent from a bridge to a client in response to a [ClientHelloMessage] or when a websocket is accepted.
  */
-class ServerHelloMessage : BridgeChannelMessage(TYPE) {
-    override fun toJson() = JSON_STRING
+class ServerHelloMessage @JvmOverloads constructor(
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    val version: String? = null
+) : BridgeChannelMessage(TYPE) {
 
+    override fun toJson(): String =
+        if (version == null) JSON_STRING_NO_VERSION else """{"colibriClass":"$TYPE","version":"$version"}"""
     companion object {
         const val TYPE = "ServerHello"
-        val JSON_STRING: String = ObjectMapper().writeValueAsString(ServerHelloMessage())
+        val JSON_STRING_NO_VERSION: String = ObjectMapper().writeValueAsString(ServerHelloMessage())
     }
 }
 
