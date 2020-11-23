@@ -548,7 +548,7 @@ public class VideobridgeStatistics
             {
                 unlockedSetStat(REGION, region);
             }
-            unlockedSetStat(VERSION, videobridge.getVersionService().getCurrentVersion().toString());
+            unlockedSetStat(VERSION, videobridge.getVersion().toString());
 
             // TODO(brian): expose these stats in a `getStats` call in XmppConnection
             //  rather than calling xmppConnection.getMucClientManager?

@@ -24,13 +24,11 @@ import org.jitsi.shutdown.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.*;
-import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -128,9 +126,7 @@ public class Videobridge
      */
     private final ScheduledFuture<?> loadSamplerTask;
 
-    public final JvbHealthChecker healthChecker;
-
-    private final VersionService versionService;
+    private final Version version;
 
     @NotNull private final ShutdownServiceImpl shutdownService;
 
@@ -155,7 +151,8 @@ public class Videobridge
      */
     public Videobridge(
         @Nullable XmppConnection xmppConnection,
-        @NotNull ShutdownServiceImpl shutdownService)
+        @NotNull ShutdownServiceImpl shutdownService,
+        @NotNull Version version)
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
@@ -185,8 +182,7 @@ public class Videobridge
         {
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
-        healthChecker = new JvbHealthChecker();
-        versionService = new JvbVersionService();
+        this.version = version;
         this.shutdownService = shutdownService;
     }
 
@@ -396,17 +392,6 @@ public class Videobridge
     }
 
     /**
-     * Returns a string representing the health of this {@link Videobridge}.
-     * Note that this method does not perform any tests, but only checks the
-     * cached value provided by the {@link org.jitsi.health.HealthCheckService}.
-     */
-    private String getHealthStatus()
-    {
-        Exception result = healthChecker.getResult();
-        return result == null ? "OK" : result.getMessage();
-    }
-
-    /**
      * Handles a shutdown request.
      */
     public void shutdown(boolean graceful)
@@ -476,7 +461,6 @@ public class Videobridge
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
-        healthChecker.start();
 
         // <conference>
         ProviderManager.addIQProvider(
@@ -524,7 +508,6 @@ public class Videobridge
     public void stop()
     {
         videobridgeExpireThread.stop();
-        healthChecker.stop();
         if (loadSamplerTask != null)
         {
             loadSamplerTask.cancel(true);
@@ -551,7 +534,6 @@ public class Videobridge
         debugState.put("shutdownInProgress", shutdownInProgress);
         debugState.put("time", System.currentTimeMillis());
 
-        debugState.put("health", getHealthStatus());
         debugState.put("load-management", jvbLoadManager.getStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
@@ -620,15 +602,9 @@ public class Videobridge
         return json;
     }
 
-    /**
-     * Gets the version of the jitsi-videobridge application.
-     */
-    // TODO(brian): this should just return a Version, instead of the VersionService,
-    // but Jicoco needs access to the VersionService right now (though it would work
-    // just fine with just having the Version).  So fix this once Jicoco is fixed.
-    public VersionService getVersionService()
+    public Version getVersion()
     {
-        return versionService;
+        return version;
     }
 
     public void addEventHandler(EventHandler eventHandler)
@@ -654,20 +630,10 @@ public class Videobridge
         @Override
         public IQ versionIqReceived(@NotNull org.jivesoftware.smackx.iqversion.packet.Version iq)
         {
-            Version currentVersion = versionService.getCurrentVersion();
-            if (currentVersion == null)
-            {
-                return IQ.createErrorResponse(
-                    iq,
-                    XMPPError.getBuilder(XMPPError.Condition.internal_server_error)
-                );
-            }
-
-            // send packet
             org.jivesoftware.smackx.iqversion.packet.Version versionResult =
                 new org.jivesoftware.smackx.iqversion.packet.Version(
-                    currentVersion.getApplicationName(),
-                    currentVersion.toString(),
+                    version.getApplicationName(),
+                    version.toString(),
                     System.getProperty("os.name")
                 );
 
