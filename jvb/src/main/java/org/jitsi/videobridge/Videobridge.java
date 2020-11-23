@@ -24,13 +24,11 @@ import org.jitsi.shutdown.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.*;
-import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.version.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -128,8 +126,6 @@ public class Videobridge
      */
     private final ScheduledFuture<?> loadSamplerTask;
 
-    public final JvbHealthChecker healthChecker;
-
     private final Version version;
 
     @NotNull private final ShutdownServiceImpl shutdownService;
@@ -186,7 +182,6 @@ public class Videobridge
         {
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
-        healthChecker = new JvbHealthChecker();
         this.version = version;
         this.shutdownService = shutdownService;
     }
@@ -397,17 +392,6 @@ public class Videobridge
     }
 
     /**
-     * Returns a string representing the health of this {@link Videobridge}.
-     * Note that this method does not perform any tests, but only checks the
-     * cached value provided by the {@link org.jitsi.health.HealthCheckService}.
-     */
-    private String getHealthStatus()
-    {
-        Exception result = healthChecker.getResult();
-        return result == null ? "OK" : result.getMessage();
-    }
-
-    /**
      * Handles a shutdown request.
      */
     public void shutdown(boolean graceful)
@@ -477,7 +461,6 @@ public class Videobridge
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
-        healthChecker.start();
 
         // <conference>
         ProviderManager.addIQProvider(
@@ -525,7 +508,6 @@ public class Videobridge
     public void stop()
     {
         videobridgeExpireThread.stop();
-        healthChecker.stop();
         if (loadSamplerTask != null)
         {
             loadSamplerTask.cancel(true);
@@ -552,7 +534,6 @@ public class Videobridge
         debugState.put("shutdownInProgress", shutdownInProgress);
         debugState.put("time", System.currentTimeMillis());
 
-        debugState.put("health", getHealthStatus());
         debugState.put("load-management", jvbLoadManager.getStats());
         debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 

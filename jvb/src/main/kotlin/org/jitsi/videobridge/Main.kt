@@ -30,6 +30,7 @@ import org.jitsi.rest.servletContextHandler
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.health.JvbHealthChecker
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
@@ -79,6 +80,7 @@ fun main(args: Array<String>) {
     val shutdownService = ShutdownServiceImpl()
     val versionService = JvbVersionService()
     val videobridge = Videobridge(xmppConnection, shutdownService, versionService.currentVersion).apply { start() }
+    val healthChecker = JvbHealthChecker().apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val statsCollector = if (StatsCollector.config.enabled) {
         StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
@@ -133,7 +135,7 @@ fun main(args: Array<String>) {
     )
     val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        val restApp = Application(videobridge, xmppConnection, statsCollector, versionService)
+        val restApp = Application(videobridge, xmppConnection, statsCollector, versionService, healthChecker)
         createServer(privateServerConfig).also {
             it.servletContextHandler.addServlet(
                 ServletHolder(ServletContainer(restApp)),
@@ -150,6 +152,7 @@ fun main(args: Array<String>) {
     shutdownService.waitForShutdown()
 
     logger.info("Bridge shutting down")
+    healthChecker.stop()
     octoRelayService?.stop()
     xmppConnection.stop()
     callstats?.let {

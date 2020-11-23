@@ -20,6 +20,7 @@ import org.glassfish.jersey.server.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
@@ -34,7 +35,8 @@ public class Application extends ResourceConfig
             Videobridge videobridge,
             XmppConnection xmppConnection,
             StatsCollector statsCollector,
-            @NotNull VersionService versionService)
+            @NotNull VersionService versionService,
+            @NotNull JvbHealthChecker healthChecker)
 
     {
         register(
@@ -42,7 +44,8 @@ public class Application extends ResourceConfig
                 videobridge,
                 xmppConnection,
                 statsCollector,
-                versionService
+                versionService,
+                healthChecker
             )
         );
         // Filters

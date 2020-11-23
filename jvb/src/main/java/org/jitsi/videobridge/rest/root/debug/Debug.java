@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.rest.root.debug;
 
+import org.jitsi.health.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.debug.*;
 import org.jitsi.nlj.util.*;
@@ -50,14 +51,22 @@ public class Debug
     @SuppressWarnings("unused")
     private Videobridge videobridge;
 
+    @Inject
+    private HealthCheckServiceSupplier healthCheckServiceSupplier;
+
     private Logger logger = new LoggerImpl(Debug.class.getName());
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridge.getDebugState(null, null, full);
-        return confJson.toJSONString();
+        OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
+
+        // Append the health status.
+        Exception result = healthCheckServiceSupplier.get().getResult();
+        debugState.put("health", result == null ? "OK" : result.getMessage());
+
+        return debugState.toJSONString();
     }
 
     @POST

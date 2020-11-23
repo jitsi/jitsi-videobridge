@@ -22,6 +22,7 @@ import org.jitsi.utils.version.VersionService
 import org.jitsi.version.VersionServiceSupplier
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.health.JvbHealthCheckServiceSupplier
+import org.jitsi.videobridge.health.JvbHealthChecker
 import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.version.JvbVersionServiceSupplier
 import org.jitsi.videobridge.xmpp.XmppConnection
@@ -30,7 +31,8 @@ class ServiceBinder(
     private val videobridge: Videobridge,
     private val xmppConnection: XmppConnection,
     private val statsCollector: StatsCollector?,
-    private val versionService: VersionService
+    private val versionService: VersionService,
+    private val healthChecker: JvbHealthChecker
 ) : AbstractBinder() {
     override fun configure() {
         bind(videobridge).to(Videobridge::class.java)
@@ -42,7 +44,7 @@ class ServiceBinder(
         bind(xmppConnection).to(XmppConnection::class.java)
         // These are still suppliers rather than direct instances because that's what
         // Jicoco requires
-        bind(JvbHealthCheckServiceSupplier(videobridge.healthChecker)).to(HealthCheckServiceSupplier::class.java)
+        bind(JvbHealthCheckServiceSupplier(healthChecker)).to(HealthCheckServiceSupplier::class.java)
         bind(JvbVersionServiceSupplier(versionService)).to(VersionServiceSupplier::class.java)
     }
 }
