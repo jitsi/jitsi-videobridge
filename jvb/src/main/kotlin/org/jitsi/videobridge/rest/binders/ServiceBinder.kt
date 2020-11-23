@@ -18,6 +18,7 @@ package org.jitsi.videobridge.rest.binders
 
 import org.glassfish.hk2.utilities.binding.AbstractBinder
 import org.jitsi.health.HealthCheckServiceSupplier
+import org.jitsi.utils.version.VersionService
 import org.jitsi.version.VersionServiceSupplier
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.health.JvbHealthCheckServiceSupplier
@@ -28,7 +29,8 @@ import org.jitsi.videobridge.xmpp.XmppConnection
 class ServiceBinder(
     private val videobridge: Videobridge,
     private val xmppConnection: XmppConnection,
-    private val statsCollector: StatsCollector?
+    private val statsCollector: StatsCollector?,
+    private val versionService: VersionService
 ) : AbstractBinder() {
     override fun configure() {
         bind(videobridge).to(Videobridge::class.java)
@@ -41,6 +43,6 @@ class ServiceBinder(
         // These are still suppliers rather than direct instances because that's what
         // Jicoco requires
         bind(JvbHealthCheckServiceSupplier(videobridge.healthChecker)).to(HealthCheckServiceSupplier::class.java)
-        bind(JvbVersionServiceSupplier(videobridge.versionService)).to(VersionServiceSupplier::class.java)
+        bind(JvbVersionServiceSupplier(versionService)).to(VersionServiceSupplier::class.java)
     }
 }

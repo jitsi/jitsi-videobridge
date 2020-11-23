@@ -130,7 +130,7 @@ public class Videobridge
 
     public final JvbHealthChecker healthChecker;
 
-    private final VersionService versionService;
+    private final Version version;
 
     @NotNull private final ShutdownServiceImpl shutdownService;
 
@@ -155,7 +155,8 @@ public class Videobridge
      */
     public Videobridge(
         @Nullable XmppConnection xmppConnection,
-        @NotNull ShutdownServiceImpl shutdownService)
+        @NotNull ShutdownServiceImpl shutdownService,
+        @NotNull Version version)
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
@@ -186,7 +187,7 @@ public class Videobridge
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
         healthChecker = new JvbHealthChecker();
-        versionService = new JvbVersionService();
+        this.version = version;
         this.shutdownService = shutdownService;
     }
 
@@ -620,15 +621,9 @@ public class Videobridge
         return json;
     }
 
-    /**
-     * Gets the version of the jitsi-videobridge application.
-     */
-    // TODO(brian): this should just return a Version, instead of the VersionService,
-    // but Jicoco needs access to the VersionService right now (though it would work
-    // just fine with just having the Version).  So fix this once Jicoco is fixed.
-    public VersionService getVersionService()
+    public Version getVersion()
     {
-        return versionService;
+        return version;
     }
 
     public void addEventHandler(EventHandler eventHandler)
@@ -654,20 +649,10 @@ public class Videobridge
         @Override
         public IQ versionIqReceived(@NotNull org.jivesoftware.smackx.iqversion.packet.Version iq)
         {
-            Version currentVersion = versionService.getCurrentVersion();
-            if (currentVersion == null)
-            {
-                return IQ.createErrorResponse(
-                    iq,
-                    XMPPError.getBuilder(XMPPError.Condition.internal_server_error)
-                );
-            }
-
-            // send packet
             org.jivesoftware.smackx.iqversion.packet.Version versionResult =
                 new org.jivesoftware.smackx.iqversion.packet.Version(
-                    currentVersion.getApplicationName(),
-                    currentVersion.toString(),
+                    version.getApplicationName(),
+                    version.toString(),
                     System.getProperty("os.name")
                 );
 
