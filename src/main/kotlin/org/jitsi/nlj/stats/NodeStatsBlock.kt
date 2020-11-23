@@ -180,6 +180,8 @@ class NodeStatsBlock(val name: String) {
             json.entries.forEach { (key, value) ->
                 when (value) {
                     is Map<*, *> -> addBlock(fromJson(key.toString(), value))
+                    is Number -> addNumber(key.toString(), value)
+                    is Boolean -> addBoolean(key.toString(), value)
                     else -> addString(key.toString(), value.toString())
                 }
             }
