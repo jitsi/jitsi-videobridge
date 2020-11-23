@@ -17,8 +17,10 @@
 package org.jitsi.videobridge.rest.root.debug;
 
 import org.eclipse.jetty.http.*;
+import org.glassfish.hk2.utilities.binding.*;
 import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.test.*;
+import org.jitsi.health.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
@@ -55,9 +57,19 @@ public class DebugTest extends JerseyTest
         enable(TestProperties.DUMP_ENTITY);
         return new ResourceConfig() {
             {
-                register(new MockBinder<>(videobridge, Videobridge.class));
+                register(new AbstractBinder()
+                {
+                    @Override
+                    protected void configure()
+                    {
+                        bind(mock(HealthCheckServiceSupplier.class)).to(HealthCheckServiceSupplier.class);
+                        bind(videobridge).to(Videobridge.class);
+                    }
+                });
                 register(Debug.class);
             }
+
+
         };
     }
 
