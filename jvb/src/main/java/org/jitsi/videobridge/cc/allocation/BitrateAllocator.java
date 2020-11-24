@@ -424,21 +424,14 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
 
         // Compute the bitrate allocation.
-        List<SingleAllocation> allocations = allocate(bweBps, sortedEndpoints);
-        if (!allocations.isEmpty())
+        Allocation newAllocation = allocate(bweBps, sortedEndpoints);
+        if (newAllocation.getOversending())
         {
-            // If we're oversending, we only do it with a single stream, so check the first
-            // one we're forwarding and see if it required and oversend.  Note: this is not
-            // as flexible as adding up the bitrates and seeing if they exceed the bwe, but
-            // it's more efficient than summing them all up.
-            if (allocations.get(0).getOversending())
-            {
-                oversendingTimeTracker.on();
-            }
-            else
-            {
-                oversendingTimeTracker.off();
-            }
+            oversendingTimeTracker.on();
+        }
+        else
+        {
+            oversendingTimeTracker.off();
         }
 
         // Update the the controllers based on the allocation and send a
@@ -452,9 +445,9 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
         boolean changed = false;
-        if (!allocations.isEmpty())
+        if (!newAllocation.getAllocations().isEmpty())
         {
-            for (SingleAllocation singleAllocation : allocations)
+            for (SingleAllocation singleAllocation : newAllocation.getAllocations())
             {
                 newEffectiveConstraints.put(
                         singleAllocation.getEndpointId(),
@@ -494,7 +487,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         {
             eventEmitter.fireEvent(handler ->
             {
-                handler.allocationChanged(new Allocation(allocations));
+                handler.allocationChanged(newAllocation);
                 return Unit.INSTANCE;
             });
         }
@@ -542,7 +535,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SingleSourceAllocation}.
      */
-    private synchronized @NotNull List<SingleAllocation> allocate(
+    private synchronized @NotNull Allocation allocate(
             long maxBandwidth,
             List<T> conferenceEndpoints)
     {
@@ -550,7 +543,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
         if (sourceBitrateAllocations.isEmpty())
         {
-            return Collections.emptyList();
+            return new Allocation(Collections.emptySet());
         }
 
         long oldMaxBandwidth = -1;
@@ -618,7 +611,8 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
         // at this point, maxBandwidth is what we failed to allocate.
 
-        return sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toList());
+        return new Allocation(
+                sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()));
     }
 
     /**

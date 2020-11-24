@@ -115,7 +115,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         /**
          * This is meant to be internal to BitrateAllocator, but is exposed here temporarily for the purposes of testing.
          */
-        fun allocationChanged(singleAllocation: Allocation) { }
+        fun allocationChanged(allocation: Allocation) { }
     }
 }
 

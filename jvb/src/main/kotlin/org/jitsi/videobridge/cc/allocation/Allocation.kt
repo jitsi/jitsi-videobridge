@@ -25,7 +25,7 @@ import org.jitsi.videobridge.VideoConstraints
  * The result of bitrate allocation.
  */
 class Allocation(
-    val allocations: List<SingleAllocation>
+    val allocations: Set<SingleAllocation>
 ) {
     val oversending: Boolean
         get() = allocations.any { it.oversending }

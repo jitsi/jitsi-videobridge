@@ -465,7 +465,7 @@ class BitrateControllerTest : ShouldSpec() {
         bc.forwardedEndpointsHistory.size shouldBe 0
 
         // TODO: The history contains 3 identical elements, which is probably a bug.
-        bc.allocationHistory.last().event shouldContainExactly listOf(
+        bc.allocationHistory.last().event shouldBe setOf(
             AllocationInfo("A", noVideo),
             AllocationInfo("B", noVideo),
             AllocationInfo("C", noVideo),
@@ -489,7 +489,7 @@ class BitrateControllerTest : ShouldSpec() {
         bc.allocationHistory.shouldMatchInOrder(
             Event(
                 0.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld7_5, oversending = true),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
@@ -498,7 +498,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 100.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld15),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
@@ -507,7 +507,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 150.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld30),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
@@ -516,7 +516,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 500.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", sd30),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
@@ -525,7 +525,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 2010.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", hd30),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
@@ -553,7 +553,7 @@ class BitrateControllerTest : ShouldSpec() {
         bc.allocationHistory.shouldMatchInOrder(
             Event(
                 0.kbps,
-                listOf(
+                setOf(
                     // TODO: do we want to oversend in tile view?
                     AllocationInfo("A", ld7_5, oversending = true),
                     AllocationInfo("B", noVideo),
@@ -563,7 +563,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 100.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld7_5),
                     AllocationInfo("B", ld7_5),
                     AllocationInfo("C", noVideo),
@@ -572,7 +572,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 150.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld7_5),
                     AllocationInfo("B", ld7_5),
                     AllocationInfo("C", ld7_5),
@@ -581,7 +581,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 200.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld7_5),
                     AllocationInfo("B", ld7_5),
                     AllocationInfo("C", ld7_5),
@@ -590,7 +590,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 250.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld15),
                     AllocationInfo("B", ld7_5),
                     AllocationInfo("C", ld7_5),
@@ -599,7 +599,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 300.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld15),
                     AllocationInfo("B", ld15),
                     AllocationInfo("C", ld7_5),
@@ -608,7 +608,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 350.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld15),
                     AllocationInfo("B", ld15),
                     AllocationInfo("C", ld15),
@@ -617,7 +617,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 400.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld15),
                     AllocationInfo("B", ld15),
                     AllocationInfo("C", ld15),
@@ -626,7 +626,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 450.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld30),
                     AllocationInfo("B", ld15),
                     AllocationInfo("C", ld15),
@@ -635,7 +635,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 500.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld30),
                     AllocationInfo("B", ld30),
                     AllocationInfo("C", ld15),
@@ -644,7 +644,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 550.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld30),
                     AllocationInfo("B", ld30),
                     AllocationInfo("C", ld30),
@@ -653,7 +653,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 610.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld30),
                     AllocationInfo("B", ld30),
                     AllocationInfo("C", ld30),
@@ -678,7 +678,7 @@ class BitrateControllerTest : ShouldSpec() {
         bc.allocationHistory.shouldMatchInOrder(
             Event(
                 0.kbps,
-                listOf(
+                setOf(
                     // TODO: do we want to oversend in tile view?
                     AllocationInfo("A", ld7_5, oversending = true),
                     AllocationInfo("B", noVideo),
@@ -688,7 +688,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 100.kbps,
-                listOf(
+                setOf(
                     AllocationInfo("A", ld15),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
@@ -697,7 +697,7 @@ class BitrateControllerTest : ShouldSpec() {
             ),
             Event(
                 160.kbps, // TODO: why 160 instead of 150? weird.
-                listOf(
+                setOf(
                     AllocationInfo("A", ld30),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
@@ -708,11 +708,11 @@ class BitrateControllerTest : ShouldSpec() {
     }
 }
 
-fun List<Event<List<AllocationInfo>>>.shouldMatchInOrder(vararg events: Event<List<AllocationInfo>>) {
+fun List<Event<Collection<AllocationInfo>>>.shouldMatchInOrder(vararg events: Event<Collection<AllocationInfo>>) {
     events.size shouldBe size
     events.forEachIndexed { i, it ->
         this[i].bwe shouldBe it.bwe
-        this[i].event.shouldContainExactly(it.event)
+        this[i].event.toSet() shouldBe it.event.toSet()
         // Ignore this.time
     }
 }
@@ -732,7 +732,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     // Save the output.
     val effectiveConstraintsHistory: History<ImmutableMap<String, VideoConstraints>> = mutableListOf()
     val forwardedEndpointsHistory: History<Collection<String>> = mutableListOf()
-    val allocationHistory: History<List<AllocationInfo>> = mutableListOf()
+    val allocationHistory: History<Collection<AllocationInfo>> = mutableListOf()
 
     val bc = BitrateController(
         "destinationEndpoint",
@@ -754,10 +754,14 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
                 }
             }
 
-            override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
+            override fun keyframeNeeded(endpointId: String?, ssrc: Long) {}
 
             override fun allocationChanged(allocation: Allocation) {
-                Event(bwe, allocation.allocations.map { it.toEndpointAllocationInfo() }, clock.instant()).apply {
+                Event<Collection<AllocationInfo>>(
+                    bwe,
+                    allocation.allocations.map { it.toEndpointAllocationInfo() }.toSet(),
+                    clock.instant()
+                ).apply {
                     logger.info("Allocation changed: $this")
                     allocationHistory.add(this)
                 }
@@ -839,6 +843,13 @@ data class AllocationInfo(
 
     override fun toString(): String =
         "\n\t[id=$id, height=$height, fps=$fps, bitrate=$bitrate, oversending=$oversending]"
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is AllocationInfo) return false
+
+        return id == other.id && height == other.height && fps == other.fps && bitrate == other.bitrate
+            && oversending == other.oversending
+    }
 }
 
 fun SingleAllocation.toEndpointAllocationInfo() =
