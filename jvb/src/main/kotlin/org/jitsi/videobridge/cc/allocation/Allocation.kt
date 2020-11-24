@@ -18,12 +18,30 @@ package org.jitsi.videobridge.cc.allocation
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.bps
 import org.jitsi.videobridge.VideoConstraints
+
+/**
+ * The result of bitrate allocation.
+ */
+class Allocation(
+    val allocations: List<SingleAllocation>
+) {
+    val oversending: Boolean
+        get() = allocations.any { it.oversending }
+    val targetBitrate: Bandwidth
+        get() = allocations.mapNotNull { it.targetLayer?.bitrate?.bps }.sum().bps
+    val idealBitrate: Bandwidth
+        get() = allocations.mapNotNull { it.idealLayer?.bitrate?.bps }.sum().bps
+
+    val forwardedEndpoints: List<String>
+        get() = allocations.filter { it.targetLayer != null }.map { it.endpointId }.toList()
+}
 
 /**
  * The result of bitrate allocation for a specific [MediaSourceDesc].
  */
-data class AllocationResult(
+data class SingleAllocation(
     val endpointId: String,
     val source: MediaSourceDesc?,
     /**

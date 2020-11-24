@@ -756,8 +756,8 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
 
-            override fun allocationChanged(allocation: List<AllocationResult>) {
-                Event(bwe, allocation.map { it.toEndpointAllocationInfo() }, clock.instant()).apply {
+            override fun allocationChanged(allocation: Allocation) {
+                Event(bwe, allocation.allocations.map { it.toEndpointAllocationInfo() }, clock.instant()).apply {
                     logger.info("Allocation changed: $this")
                     allocationHistory.add(this)
                 }
@@ -841,7 +841,7 @@ data class AllocationInfo(
         "\n\t[id=$id, height=$height, fps=$fps, bitrate=$bitrate, oversending=$oversending]"
 }
 
-fun AllocationResult.toEndpointAllocationInfo() =
+fun SingleAllocation.toEndpointAllocationInfo() =
     AllocationInfo(
         endpointId,
         targetLayer?.layer?.height ?: 0,

@@ -192,10 +192,10 @@ class BitrateControllerPacketHandler
      * Utility method that looks-up or creates the adaptive source projection of
      * a source.
      */
-    AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(AllocationResult allocationResult)
+    AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(SingleAllocation singleAllocation)
     {
-        MediaSourceDesc source = allocationResult.getSource();
-        String endpointID = allocationResult.getEndpointId();
+        MediaSourceDesc source = singleAllocation.getSource();
+        String endpointID = singleAllocation.getEndpointId();
 
         if (source == null)
         {

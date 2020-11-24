@@ -298,9 +298,9 @@ public class SingleSourceAllocation {
      * Creates the final immutable result of this allocation. To be called once the allocation algorithm has
      * completed.
      */
-    AllocationResult getResult()
+    SingleAllocation getResult()
     {
-        return new AllocationResult(
+        return new SingleAllocation(
                 endpointID,
                 source,
                 getTargetLayer(),

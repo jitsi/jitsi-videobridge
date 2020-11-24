@@ -454,14 +454,14 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
 
         // Compute the bitrate allocation.
-        List<AllocationResult> sourceBitrateAllocations = allocate(bweBps, sortedEndpoints);
-        if (!sourceBitrateAllocations.isEmpty())
+        List<SingleAllocation> allocations = allocate(bweBps, sortedEndpoints);
+        if (!allocations.isEmpty())
         {
             // If we're oversending, we only do it with a single stream, so check the first
             // one we're forwarding and see if it required and oversend.  Note: this is not
             // as flexible as adding up the bitrates and seeing if they exceed the bwe, but
             // it's more efficient than summing them all up.
-            if (sourceBitrateAllocations.get(0).getOversending())
+            if (allocations.get(0).getOversending())
             {
                 oversendingTimeTracker.on();
             }
@@ -486,22 +486,22 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
         boolean changed = false;
-        if (!sourceBitrateAllocations.isEmpty())
+        if (!allocations.isEmpty())
         {
-            for (AllocationResult sourceBitrateAllocation : sourceBitrateAllocations)
+            for (SingleAllocation singleAllocation : allocations)
             {
                 newEffectiveConstraints.put(
-                        sourceBitrateAllocation.getEndpointId(),
-                        sourceBitrateAllocation.getEffectiveVideoConstraints());
+                        singleAllocation.getEndpointId(),
+                        singleAllocation.getEffectiveVideoConstraints());
 
-                LayerSnapshot targetLayer = sourceBitrateAllocation.getTargetLayer();
+                LayerSnapshot targetLayer = singleAllocation.getTargetLayer();
                 int sourceTargetIdx = targetLayer == null ? -1 : targetLayer.getLayer().getIndex();
-                LayerSnapshot idealLayer = sourceBitrateAllocation.getIdealLayer();
+                LayerSnapshot idealLayer = singleAllocation.getIdealLayer();
                 int sourceIdealIdx = idealLayer == null ? -1 : idealLayer.getLayer().getIndex();
 
                 // Review this.
                 AdaptiveSourceProjection adaptiveSourceProjection
-                        = packetHandler.lookupOrCreateAdaptiveSourceProjection(sourceBitrateAllocation);
+                        = packetHandler.lookupOrCreateAdaptiveSourceProjection(singleAllocation);
 
                 if (adaptiveSourceProjection != null)
                 {
@@ -511,7 +511,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
                 if (sourceTargetIdx > -1)
                 {
-                    newForwardedEndpointIds.add(sourceBitrateAllocation.getEndpointId());
+                    newForwardedEndpointIds.add(singleAllocation.getEndpointId());
                 }
             }
         }
@@ -533,7 +533,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         {
             eventEmitter.fireEvent(handler ->
             {
-                handler.allocationChanged(sourceBitrateAllocations);
+                handler.allocationChanged(new Allocation(allocations));
                 return Unit.INSTANCE;
             });
         }
@@ -592,7 +592,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SingleSourceAllocation}.
      */
-    private synchronized @NotNull List<AllocationResult> allocate(
+    private synchronized @NotNull List<SingleAllocation> allocate(
             long maxBandwidth,
             List<T> conferenceEndpoints)
     {
