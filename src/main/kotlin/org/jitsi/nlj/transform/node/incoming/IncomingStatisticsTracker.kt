@@ -83,7 +83,13 @@ class IncomingStatisticsSnapshot(
      * Per-ssrc stats.
      */
     val ssrcStats: Map<Long, IncomingSsrcStats.Snapshot>
-)
+) {
+    fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
+        ssrcStats.forEach() { (ssrc, snapshot) ->
+            put(ssrc, snapshot.toJson())
+        }
+    }
+}
 
 /**
  * Tracks various statistics for the stream using ssrc [ssrc].  Some statistics are tracked only

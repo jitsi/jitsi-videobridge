@@ -17,6 +17,7 @@ package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.nlj.util.bytes
 import java.util.concurrent.atomic.AtomicLong
 
@@ -78,5 +79,12 @@ class PacketStreamStats {
          * Total number of packets.
          */
         val packets: Long
-    )
+    ) {
+        fun toJson() = OrderedJsonObject().apply {
+            put("bitrate_bps", bitrate.bps)
+            put("packetrate", packetRate)
+            put("total_bytes", bytes)
+            put("total_packets", packets)
+        }
+    }
 }

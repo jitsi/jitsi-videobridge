@@ -20,6 +20,7 @@ import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
+import org.jitsi.nlj.util.OrderedJsonObject
 
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
@@ -29,4 +30,14 @@ data class TransceiverStats(
     val outgoingPacketStreamStats: PacketStreamStats.Snapshot,
     val bandwidthEstimatorStats: BandwidthEstimator.StatisticsSnapshot,
     val tccEngineStats: TransportCcEngine.StatisticsSnapshot
-)
+) {
+    fun toJson() = OrderedJsonObject().apply {
+        put("endpoint_connection_stats", endpointConnectionStats.toJson())
+        put("incoming_stats", incomingStats.toJson())
+        put("incoming_packet_stream_stats", incomingPacketStreamStats.toJson())
+        put("outgoing_stats", outgoingStats.toJson())
+        put("outgoing_packet_stream_stats", outgoingPacketStreamStats.toJson())
+        put("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
+        put("tcc_engine_stats", tccEngineStats.toJson())
+    }
+}
