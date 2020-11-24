@@ -18,8 +18,6 @@ package org.jitsi.videobridge.cc.allocation;
 import org.jitsi.nlj.MediaSourceDesc;
 import org.jitsi.nlj.RtpLayerDesc;
 import org.jitsi.nlj.util.*;
-import org.jitsi.utils.logging.DiagnosticContext;
-import org.jitsi.utils.logging.TimeSeriesLogger;
 import org.jitsi.videobridge.VideoConstraints;
 
 import java.time.Clock;
@@ -36,13 +34,6 @@ public class SingleSourceAllocation {
      * An reusable empty array of {@link LayerSnapshot} to reduce allocations.
      */
     private static final LayerSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new LayerSnapshot[0];
-
-    /**
-     * The {@link TimeSeriesLogger} to be used by this instance to print time
-     * series.
-     */
-    private static final TimeSeriesLogger timeSeriesLogger
-            = TimeSeriesLogger.getTimeSeriesLogger(BitrateAllocator.class);
 
     /**
      * The ID of the {@code Endpoint} that this instance pertains to.
@@ -108,8 +99,7 @@ public class SingleSourceAllocation {
             String endpointID,
             MediaSourceDesc source,
             VideoConstraints effectiveVideoConstraints,
-            Clock clock,
-            DiagnosticContext diagnosticContext)
+            Clock clock)
     {
         this.endpointID = endpointID;
         this.effectiveVideoConstraints = effectiveVideoConstraints;
@@ -184,19 +174,6 @@ public class SingleSourceAllocation {
         }
 
         this.idealBitrate = idealBps;
-
-        if (timeSeriesLogger.isTraceEnabled())
-        {
-            DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
-                    = diagnosticContext.makeTimeSeriesPoint("calculated_rates")
-                    .addField("remote_endpoint_id", endpointID);
-            for (LayerSnapshot layerSnapshot : ratesList) {
-                ratesTimeSeriesPoint.addField(
-                        Integer.toString(layerSnapshot.getLayer().getIndex()),
-                        layerSnapshot.getBitrate().getBps());
-            }
-            timeSeriesLogger.trace(ratesTimeSeriesPoint);
-        }
 
         this.ratedPreferredIdx = ratedPreferredIdx;
         ratedIndices = ratesList.toArray(new LayerSnapshot[0]);

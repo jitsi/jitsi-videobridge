@@ -22,8 +22,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.logging.*;
-import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.cc.AdaptiveSourceProjection;
 import org.jitsi.videobridge.cc.config.*;
@@ -96,13 +95,6 @@ import java.util.stream.*;
 public class BitrateAllocator<T extends MediaSourceContainer>
 {
     /**
-     * The {@link TimeSeriesLogger} to be used by this instance to print time
-     * series.
-     */
-    private static final TimeSeriesLogger timeSeriesLogger
-            = TimeSeriesLogger.getTimeSeriesLogger(BitrateAllocator.class);
-
-    /**
      * Returns a boolean that indicates whether or not the current bandwidth
      * estimation (in bps) has changed above the configured threshold (in
      * percent) {@link #BWE_CHANGE_THRESHOLD_PCT} with respect to the previous
@@ -147,20 +139,12 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private final Logger logger;
 
-
     /**
      * The {@link List} of endpoints that are currently being forwarded,
      * represented by their IDs. Required for backwards compatibility with
      * existing LastN code.
      */
     private Set<String> forwardedEndpointIds = Collections.emptySet();
-
-    /**
-     * A boolean that indicates whether to enable or disable the video quality
-     * tracing.
-     */
-    private final boolean enableVideoQualityTracing;
-
 
     /**
      * The last bandwidth estimation that we got. This is used to limit the
@@ -198,8 +182,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private final String destinationEndpointId;
 
-    private final DiagnosticContext diagnosticContext;
-
     // NOTE(george): this flag acts as an approximation for determining whether
     // or not adaptivity/probing is supported. Eventually we need to scrap this
     // and implement something cleaner, i.e. disable adaptivity if the endpoint
@@ -236,19 +218,16 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             String destinationEndpointId,
             BitrateController.EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
-            @NotNull DiagnosticContext diagnosticContext,
             Logger parentLogger,
             Clock clock,
             BitrateControllerPacketHandler packetHandler
     )
     {
         this.destinationEndpointId = destinationEndpointId;
-        this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(BitrateAllocator.class.getName());
         this.clock = clock;
         this.packetHandler = packetHandler;
 
-        enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
         this.endpointsSupplier = endpointsSupplier;
         eventEmitter.addHandler(eventHandler);
     }
@@ -377,13 +356,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     void bandwidthChanged(long newBandwidthBps)
     {
-        if (timeSeriesLogger.isTraceEnabled())
-        {
-            timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("new_bwe")
-                    .addField("bwe_bps", newBandwidthBps));
-        }
-
         if (!changeIsLargerThanThreshold(lastBwe, newBandwidthBps))
         {
             logger.debug(() -> "New bandwidth (" + newBandwidthBps
@@ -435,8 +407,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     {
         Instant now = clock.instant();
         lastUpdateTime = now;
-        long nowMs = now.toEpochMilli();
-
         long bweBps = getAvailableBandwidth();
 
         if (sortedEndpointIds == null || sortedEndpointIds.isEmpty())
@@ -477,10 +447,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
         Set<String> newForwardedEndpointIds = new HashSet<>();
 
-        // Accumulators used for tracing purposes.
-        long totalIdealBps = 0, totalTargetBps = 0;
-        int totalIdealIdx = 0, totalTargetIdx = 0;
-
         // Now that the bitrate allocation update is complete, we wish to compute the "effective" sender video
         // constraints map which are used in layer suspension.
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
@@ -520,11 +486,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             for (AdaptiveSourceProjection adaptiveSourceProjection
                     : packetHandler.getAdaptiveSourceProjectionMap().values())
             {
-                if (enableVideoQualityTracing)
-                {
-                    totalIdealIdx--;
-                    totalTargetIdx--;
-                }
                 adaptiveSourceProjection.setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
                 adaptiveSourceProjection.setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
             }
@@ -536,17 +497,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                 handler.allocationChanged(new Allocation(allocations));
                 return Unit.INSTANCE;
             });
-        }
-
-        if (enableVideoQualityTracing)
-        {
-            timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("did_update", nowMs)
-                    .addField("total_target_idx", totalTargetIdx)
-                    .addField("total_ideal_idx", totalIdealIdx)
-                    .addField("bwe_bps", bweBps)
-                    .addField("total_target_bps", totalTargetBps)
-                    .addField("total_ideal_bps", totalIdealBps));
         }
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
@@ -731,8 +681,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                                     endpointMultiRank.endpoint.getId(),
                                     source,
                                     endpointMultiRank.effectiveVideoConstraints,
-                                    clock,
-                                    diagnosticContext));
+                                    clock));
                 }
 
 

@@ -56,7 +56,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             destinationEndpointId,
             eventHandler,
             endpointsSupplier,
-            diagnosticContext,
             parentLogger,
             clock,
             packetHandler
