@@ -201,7 +201,7 @@ class ServerHelloMessage @JvmOverloads constructor(
         if (version == null) JSON_STRING_NO_VERSION else """{"colibriClass":"$TYPE","version":"$version"}"""
     companion object {
         const val TYPE = "ServerHello"
-        val JSON_STRING_NO_VERSION: String = ObjectMapper().writeValueAsString(ServerHelloMessage())
+        const val JSON_STRING_NO_VERSION: String = """{"colibriClass":"$TYPE"}"""
     }
 }
 
