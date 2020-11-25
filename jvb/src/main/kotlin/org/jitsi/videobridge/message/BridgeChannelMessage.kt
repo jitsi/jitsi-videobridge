@@ -44,8 +44,6 @@ import java.util.concurrent.atomic.AtomicLong
 @JsonSubTypes(
     JsonSubTypes.Type(value = SelectedEndpointsMessage::class, name = SelectedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = SelectedEndpointMessage::class, name = SelectedEndpointMessage.TYPE),
-    JsonSubTypes.Type(value = PinnedEndpointsMessage::class, name = PinnedEndpointsMessage.TYPE),
-    JsonSubTypes.Type(value = PinnedEndpointMessage::class, name = PinnedEndpointMessage.TYPE),
     JsonSubTypes.Type(value = ClientHelloMessage::class, name = ClientHelloMessage.TYPE),
     JsonSubTypes.Type(value = ServerHelloMessage::class, name = ServerHelloMessage.TYPE),
     JsonSubTypes.Type(value = EndpointMessage::class, name = EndpointMessage.TYPE),
@@ -90,8 +88,6 @@ open class MessageHandler {
         return when (message) {
             is SelectedEndpointsMessage -> selectedEndpoints(message)
             is SelectedEndpointMessage -> selectedEndpoint(message)
-            is PinnedEndpointsMessage -> pinnedEndpoints(message)
-            is PinnedEndpointMessage -> pinnedEndpoint(message)
             is ClientHelloMessage -> clientHello(message)
             is ServerHelloMessage -> serverHello(message)
             is EndpointMessage -> endpointMessage(message)
@@ -114,8 +110,6 @@ open class MessageHandler {
 
     open fun selectedEndpoints(message: SelectedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun selectedEndpoint(message: SelectedEndpointMessage) = unhandledMessageReturnNull(message)
-    open fun pinnedEndpoints(message: PinnedEndpointsMessage) = unhandledMessageReturnNull(message)
-    open fun pinnedEndpoint(message: PinnedEndpointMessage) = unhandledMessageReturnNull(message)
     open fun clientHello(message: ClientHelloMessage) = unhandledMessageReturnNull(message)
     open fun serverHello(message: ServerHelloMessage) = unhandledMessageReturnNull(message)
     open fun endpointMessage(message: EndpointMessage) = unhandledMessageReturnNull(message)
@@ -151,29 +145,6 @@ class SelectedEndpointsMessage(val selectedEndpoints: List<String>) : BridgeChan
 class SelectedEndpointMessage(val selectedEndpoint: String?) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "SelectedEndpointChangedEvent"
-    }
-}
-
-/**
- * A message sent from a client to a bridge, indicating that the list of endpoints pinned by the client has changed.
- */
-class PinnedEndpointsMessage(val pinnedEndpoints: List<String>) : BridgeChannelMessage(TYPE) {
-
-    companion object {
-        const val TYPE = "PinnedEndpointsChangedEvent"
-    }
-}
-
-/**
- * A message sent from a client to a bridge, indicating that the client's pinned endpoint has changed.
- *
- * This format is no longer used in jitsi-meet and is considered deprecated. The semantics are equivalent to
- * [PinnedEndpointsMessage] with a list of one endpoint.
- */
-@Deprecated("Use SelectedEndpointsMessage")
-class PinnedEndpointMessage(val pinnedEndpoint: String?) : BridgeChannelMessage(TYPE) {
-    companion object {
-        const val TYPE = "PinnedEndpointChangedEvent"
     }
 }
 

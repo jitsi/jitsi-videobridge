@@ -73,8 +73,7 @@ class EndpointMessageTransport
     private final AtomicInteger numOutgoingMessagesDropped = new AtomicInteger(0);
 
     /**
-     * The compatibility layer that translates selected, pinned and max
-     * resolution messages into video constraints.
+     * The compatibility layer that translates selected, and max resolution messages into video constraints.
      */
     private final VideoConstraintsCompatibility videoConstraintsCompatibility = new VideoConstraintsCompatibility();
 
@@ -401,45 +400,6 @@ class EndpointMessageTransport
         debugState.put("video_constraints_compatibility", videoConstraintsCompatibility.getDebugState());
 
         return debugState;
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@link PinnedEndpointMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    @Override
-    public BridgeChannelMessage pinnedEndpoint(PinnedEndpointMessage message)
-    {
-        String newPinnedEndpointID = message.getPinnedEndpoint();
-
-        List<String> newPinnedIDs =
-                isBlank(newPinnedEndpointID) ?
-                        Collections.emptyList() :
-                        Collections.singletonList(newPinnedEndpointID);
-
-        pinnedEndpoints(new PinnedEndpointsMessage(newPinnedIDs));
-        return null;
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@code PinnedEndpointsChangedEvent}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    @Override
-    public BridgeChannelMessage pinnedEndpoints(PinnedEndpointsMessage message)
-    {
-        Set<String> newPinnedEndpoints = new HashSet<>(message.getPinnedEndpoints());
-
-        logger.debug(() -> "Pinned " + newPinnedEndpoints);
-
-        videoConstraintsCompatibility.setPinnedEndpoints(newPinnedEndpoints);
-        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
-
-        return null;
     }
 
     /**

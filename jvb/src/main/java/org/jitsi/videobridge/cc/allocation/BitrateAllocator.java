@@ -280,7 +280,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      *
      * @param conferenceEndpoints the endpoints of the conference sorted in
      * dominant speaker order (NOTE this does NOT take into account orderings
-     * specific to this particular endpoint, e.g. selected or pinned, though
+     * specific to this particular endpoint, e.g. selected, though
      * this method SHOULD be invoked when those things change; they will be
      * taken into account in this flow)
      */
@@ -449,8 +449,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
     /**
      * Returns a prioritized {@link SingleSourceAllocation} array where
-     * selected endpoint are at the top of the array, followed by the pinned
-     * endpoints, finally followed by any other remaining endpoints. The
+     * selected endpoint are at the top of the array followed by any other remaining endpoints. The
      * priority respects the order induced by the <tt>conferenceEndpoints</tt>
      * parameter.
      *
@@ -461,8 +460,8 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
      * @return a prioritized {@link SingleSourceAllocation} array where
-     * selected endpoint are at the top of the array, followed by the pinned
-     * endpoints, finally followed by any other remaining endpoints.
+     * selected endpoint are at the top of the array,
+     * followed by any other remaining endpoints.
      */
     private synchronized @NotNull List<SingleSourceAllocation> prioritize(List<T> conferenceEndpoints)
     {

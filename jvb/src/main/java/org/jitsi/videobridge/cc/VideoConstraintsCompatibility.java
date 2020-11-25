@@ -26,17 +26,11 @@ import java.util.*;
 import java.util.stream.*;
 
 /**
- * A class that translates between old-world selected/pinned/maxFrameHeight
+ * A class that translates between old-world selected/maxFrameHeight
  * messages to new-world video constraints.
  */
 public class VideoConstraintsCompatibility
 {
-    /**
-     * The last pinned endpoints set signaled by the receiving endpoint.
-     */
-    @NotNull
-    private Set<String> pinnedEndpoints = Collections.emptySet();
-
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
      */
@@ -53,7 +47,7 @@ public class VideoConstraintsCompatibility
 
     /**
      * Computes the video constraints map (endpoint -> video constraints) that
-     * corresponds to the selected, pinned and max resolution messages (whose
+     * corresponds to the selected and max resolution messages (whose
      * meanings are explained below) that the bridge has received from the
      * receiving endpoint.
      *
@@ -68,20 +62,8 @@ public class VideoConstraintsCompatibility
      * during the bandwidth allocation step and eagerly allocate bandwidth up to
      * the preferred resolution and preferred frame-rate.
      *
-     * Pinned endpoints are those that the receiver "always" wants to have in
-     * its last-n set even if they're not on-stage (again, provided that there's
-     * enough bandwidth, but that's up to the bitrate controller to decide).
-     *
-     * For pinned endpoints we set the "ideal" height to 180, reflecting the
-     * receiver's "desire" always watch them.
-     *
-     * Note that semantically, selected is not equal to pinned. Pinned endpoints
-     * that become selected are treated as selected. Selected endpoints that
-     * become pinned are treated as selected. When a selected & pinned endpoint
-     * goes off-stage, it maintains its status as "pinned".
-     *
      * The max height constrained was added for tile-view back when everything
-     * was expressed as "selected" and "pinned" endpoints, the idea being we
+     * was expressed as "selected" endpoints, the idea being we
      * mark everything as selected (so endpoints aren't limited to 180p) and
      * set the max to 360p (so endpoints are limited to 360p, instead of 720p
      * which is normally used for selected endpoints. This was the quickest, not
@@ -102,21 +84,6 @@ public class VideoConstraintsCompatibility
         Map<String, VideoConstraints> newVideoConstraints = new HashMap<>();
 
         int maxFrameHeightCopy = maxFrameHeight;
-
-        Set<String> pinnedEndpointsCopy = pinnedEndpoints;
-        if (!pinnedEndpointsCopy.isEmpty())
-        {
-            final VideoConstraints pinnedEndpointConstraints
-                = new VideoConstraints(Math.min(
-                BitrateControllerConfig.thumbnailMaxHeightPx(), maxFrameHeightCopy));
-
-            Map<String, VideoConstraints> pinnedVideoConstraintsMap
-                = pinnedEndpointsCopy
-                .stream()
-                .collect(Collectors.toMap(e -> e, e -> pinnedEndpointConstraints));
-
-            newVideoConstraints.putAll(pinnedVideoConstraintsMap);
-        }
 
         Set<String> selectedEndpointsCopy = selectedEndpoints;
         if (!selectedEndpointsCopy.isEmpty())
@@ -165,24 +132,11 @@ public class VideoConstraintsCompatibility
                 .stream()
                 .collect(Collectors.toMap(e -> e, e -> selectedEndpointConstraints));
 
-            // Add video constraints for all the selected endpoints (which will
-            // automatically override the video constraints for pinned endpoints, so
-            // they're bumped to 720p if they're also selected).
+            // Add video constraints for all the selected endpoints.
             newVideoConstraints.putAll(selectedVideoConstraintsMap);
         }
 
         return newVideoConstraints;
-    }
-
-    /**
-     * Sets the pinned endpoints signaled by the receiving endpoint.
-     *
-     * @param newPinnedEndpoints the pinned endpoints signaled by the receiving
-     * endpoint.
-     */
-    public void setPinnedEndpoints(@NotNull Set<String> newPinnedEndpoints)
-    {
-        this.pinnedEndpoints = newPinnedEndpoints;
     }
 
     /**
@@ -211,10 +165,6 @@ public class VideoConstraintsCompatibility
     public OrderedJsonObject getDebugState()
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
-
-        JSONArray pinned = new JSONArray();
-        pinned.addAll(pinnedEndpoints);
-        debugState.put("pinned", pinned);
 
         JSONArray selected = new JSONArray();
         selected.addAll(selectedEndpoints);
