@@ -24,7 +24,6 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.cc.AdaptiveSourceProjection;
 import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -140,13 +139,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private final Logger logger;
 
     /**
-     * The {@link List} of endpoints that are currently being forwarded,
-     * represented by their IDs. Required for backwards compatibility with
-     * existing LastN code.
-     */
-    private Set<String> forwardedEndpointIds = Collections.emptySet();
-
-    /**
      * The last bandwidth estimation that we got. This is used to limit the
      * resolution changes due to bandwidth changes. We react to bandwidth
      * changes greater than BWE_CHANGE_THRESHOLD_PCT/100 of the last bandwidth
@@ -194,7 +186,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
     private final Clock clock;
 
-    private final EventEmitter<BitrateController.EventHandler> eventEmitter = new EventEmitter<>();
+    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
     private final Supplier<List<T>> endpointsSupplier;
 
@@ -210,13 +202,16 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
     private final BitrateControllerPacketHandler packetHandler;
 
+    @NotNull
+    private Allocation allocation = new Allocation(Collections.emptySet());
+
     /**
      * Initializes a new {@link BitrateAllocator} instance which is to
      * belong to a particular {@link Endpoint}.
      */
     BitrateAllocator(
             String destinationEndpointId,
-            BitrateController.EventHandler eventHandler,
+            EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
             Logger parentLogger,
             Clock clock,
@@ -243,7 +238,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
-        debugState.put("forwardedEndpoints", forwardedEndpointIds.toString());
         debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
         debugState.put("lastBwe", lastBwe);
         debugState.put("videoConstraints", videoConstraintsMap);
@@ -255,59 +249,10 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         return debugState;
     }
 
-    /**
-     * Get a snapshot of the following data:
-     * 1) The current target bitrate we're trying to send across our sources
-     * 2) The ideal bitrate we could possibly send, given our sources
-     * 3) The ssrcs we're currently forwarding
-     *
-     * @return the snapshot containing that info
-     */
-    BitrateControllerStatusSnapshot getStatusSnapshot()
+    @NotNull
+    Allocation getAllocation()
     {
-        List<Long> activeSsrcs = new ArrayList<>();
-        long totalTargetBps = 0, totalIdealBps = 0;
-        long nowMs = clock.instant().toEpochMilli();
-        for (MediaSourceDesc incomingSource : endpointsSupplier.get().stream()
-                .filter(e -> !destinationEndpointId.equals(e.getId()))
-                .map(MediaSourceContainer::getMediaSources)
-                .flatMap(Arrays::stream)
-                .filter(MediaSourceDesc::hasRtpLayers)
-                .collect(Collectors.toList()))
-        {
-
-            long primarySsrc = incomingSource.getPrimarySSRC();
-            AdaptiveSourceProjection adaptiveSourceProjection
-                    = packetHandler.getAdaptiveSourceProjectionMap().getOrDefault(primarySsrc, null);
-
-            if (adaptiveSourceProjection == null)
-            {
-                logger.debug(destinationEndpointId + " is missing " +
-                        "an adaptive source projection for endpoint=" +
-                        incomingSource.getOwner() + ", ssrc=" + primarySsrc);
-                continue;
-            }
-
-            long targetBps
-                    = (long) incomingSource.getBitrate(nowMs, adaptiveSourceProjection.getTargetIndex()).getBps();
-            if (targetBps > 0)
-            {
-                long ssrc = adaptiveSourceProjection.getTargetSsrc();
-                if (ssrc > -1)
-                {
-                    activeSsrcs.add(ssrc);
-                }
-            }
-
-            totalTargetBps += targetBps;
-            // the sum of the bitrates (in bps) of the layers that are the
-            // closest to the ideal and has a bitrate. this is similar to how
-            // we compute the ideal bitrate bellow in
-            // {@link SourceBitrateAllocation#idealBitrate} and the logic should
-            // be extracted in a utility method somehow.
-            totalIdealBps += incomingSource.getBitrate(nowMs, adaptiveSourceProjection.getIdealIndex()).getBps();
-        }
-        return new BitrateControllerStatusSnapshot(totalTargetBps, totalIdealBps, activeSsrcs);
+        return allocation;
     }
 
     /**
@@ -405,8 +350,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private synchronized void update()
     {
-        Instant now = clock.instant();
-        lastUpdateTime = now;
+        lastUpdateTime = clock.instant();
         long bweBps = getAvailableBandwidth();
 
         if (sortedEndpointIds == null || sortedEndpointIds.isEmpty())
@@ -434,17 +378,20 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             oversendingTimeTracker.off();
         }
 
-        // Update the the controllers based on the allocation and send a
-        // notification to the client the set of forwarded endpoints has
-        // changed.
-        Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
-        Set<String> newForwardedEndpointIds = new HashSet<>();
+        boolean allocationChanged = !allocation.hasTheSameLayersAs(newAllocation);
+        if (allocationChanged)
+        {
+            eventEmitter.fireEvent(handler -> {
+                handler.allocationChanged(newAllocation);
+                return Unit.INSTANCE;
+            });
+        }
+        allocation = newAllocation;
 
         // Now that the bitrate allocation update is complete, we wish to compute the "effective" sender video
         // constraints map which are used in layer suspension.
         Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
 
-        boolean changed = false;
         if (!newAllocation.getAllocations().isEmpty())
         {
             for (SingleAllocation singleAllocation : newAllocation.getAllocations())
@@ -452,55 +399,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                 newEffectiveConstraints.put(
                         singleAllocation.getEndpointId(),
                         singleAllocation.getEffectiveVideoConstraints());
-
-                LayerSnapshot targetLayer = singleAllocation.getTargetLayer();
-                int sourceTargetIdx = targetLayer == null ? -1 : targetLayer.getLayer().getIndex();
-                LayerSnapshot idealLayer = singleAllocation.getIdealLayer();
-                int sourceIdealIdx = idealLayer == null ? -1 : idealLayer.getLayer().getIndex();
-
-                // Review this.
-                AdaptiveSourceProjection adaptiveSourceProjection
-                        = packetHandler.lookupOrCreateAdaptiveSourceProjection(singleAllocation);
-
-                if (adaptiveSourceProjection != null)
-                {
-                    changed |= adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
-                    changed |= adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
-                }
-
-                if (sourceTargetIdx > -1)
-                {
-                    newForwardedEndpointIds.add(singleAllocation.getEndpointId());
-                }
             }
-        }
-        else
-        {
-            for (AdaptiveSourceProjection adaptiveSourceProjection
-                    : packetHandler.getAdaptiveSourceProjectionMap().values())
-            {
-                adaptiveSourceProjection.setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
-                adaptiveSourceProjection.setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
-            }
-        }
-        if (changed)
-        {
-            eventEmitter.fireEvent(handler ->
-            {
-                handler.allocationChanged(newAllocation);
-                return Unit.INSTANCE;
-            });
-        }
-
-        if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
-        {
-            // TODO(george) bring back sending this message on message transport
-            //  connect
-            eventEmitter.fireEvent(handler ->
-            {
-                handler.forwardedEndpointsChanged(newForwardedEndpointIds);
-                return Unit.INSTANCE;
-            });
         }
 
         if (!newEffectiveConstraints.equals(effectiveConstraintsMap))
@@ -516,8 +415,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                 return Unit.INSTANCE;
             });
         }
-
-        this.forwardedEndpointIds = newForwardedEndpointIds;
     }
 
 
@@ -729,14 +626,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
     }
 
-    /**
-     * Return the number of endpoints whose streams are currently being forwarded.
-     */
-    int numForwardedEndpoints()
-    {
-        return forwardedEndpointIds.size();
-    }
-
     void maybeUpdate()
     {
         if (Duration.between(lastUpdateTime, clock.instant())
@@ -745,5 +634,13 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             logger.debug("Forcing an update");
             TaskPools.CPU_POOL.submit(this::update);
         }
+    }
+
+    public interface EventHandler
+    {
+        default void allocationChanged(@NotNull Allocation allocation) {}
+        default void effectiveVideoConstraintsChanged(
+                @NotNull ImmutableMap<String, VideoConstraints> oldEffectiveVideoConstraints,
+                @NotNull ImmutableMap<String, VideoConstraints> newEffectiveVideoConstraints) {}
     }
 }

@@ -29,13 +29,21 @@ class Allocation(
 ) {
     val oversending: Boolean
         get() = allocations.any { it.oversending }
-    val targetBitrate: Bandwidth
-        get() = allocations.mapNotNull { it.targetLayer?.bitrate?.bps }.sum().bps
-    val idealBitrate: Bandwidth
-        get() = allocations.mapNotNull { it.idealLayer?.bitrate?.bps }.sum().bps
 
-    val forwardedEndpoints: List<String>
-        get() = allocations.filter { it.targetLayer != null }.map { it.endpointId }.toList()
+    val forwardedEndpoints: Set<String>
+        get() = allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
+
+    /**
+     * Whether the two allocations have the same endpoints and same layers.
+     */
+    fun hasTheSameLayersAs(other: Allocation) =
+        allocations.size == other.allocations.size && allocations.all { allocation ->
+        other.allocations.any { otherAllocation ->
+            allocation.endpointId == otherAllocation.endpointId &&
+                allocation.targetLayer?.layer?.index == otherAllocation.targetLayer?.layer?.index &&
+                allocation.idealLayer?.layer?.index == otherAllocation.idealLayer?.layer?.index
+        }
+    }
 }
 
 /**
@@ -57,7 +65,11 @@ data class SingleAllocation(
      * Set to true if the selected/target layer has higher bitrate than the available bandwidth.
      */
     val oversending: Boolean
-)
+) {
+    private val targetIndex: Int
+        get() = targetLayer?.layer?.index ?: -1
+    fun isForwarded(): Boolean = targetIndex > -1
+}
 
 /**
  * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.

@@ -300,7 +300,7 @@ public class Endpoint
             }
 
             @Override
-            public void forwardedEndpointsChanged(Collection<String> forwardedEndpoints)
+            public void forwardedEndpointsChanged(@NotNull Set<String> forwardedEndpoints)
             {
                 sendForwardedEndpointsMessage(forwardedEndpoints);
             }

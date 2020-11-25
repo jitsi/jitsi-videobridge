@@ -192,7 +192,7 @@ class BitrateControllerPacketHandler
      * Utility method that looks-up or creates the adaptive source projection of
      * a source.
      */
-    AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(SingleAllocation singleAllocation)
+    private AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(SingleAllocation singleAllocation)
     {
         MediaSourceDesc source = singleAllocation.getSource();
         String endpointID = singleAllocation.getEndpointId();
@@ -259,7 +259,7 @@ class BitrateControllerPacketHandler
         return clock.instant().toEpochMilli() - firstMediaMs;
     }
 
-    Map<Long, AdaptiveSourceProjection> getAdaptiveSourceProjectionMap()
+    private Map<Long, AdaptiveSourceProjection> getAdaptiveSourceProjectionMap()
     {
         return adaptiveSourceProjectionMap;
     }
@@ -283,5 +283,40 @@ class BitrateControllerPacketHandler
         debugState.put("adaptiveSourceProjectionMap", adaptiveSourceProjectionsJson);
 
         return debugState;
+    }
+
+    /**
+     * Signals to this instance that the bitrate allocation chosen by the {@code BitrateAllocator} has changed.
+     */
+    void allocationChanged(@NotNull Allocation allocation)
+    {
+        if (!allocation.getAllocations().isEmpty())
+        {
+            for (SingleAllocation singleAllocation : allocation.getAllocations())
+            {
+                LayerSnapshot targetLayer = singleAllocation.getTargetLayer();
+                int sourceTargetIdx = targetLayer == null ? -1 : targetLayer.getLayer().getIndex();
+                LayerSnapshot idealLayer = singleAllocation.getIdealLayer();
+                int sourceIdealIdx = idealLayer == null ? -1 : idealLayer.getLayer().getIndex();
+
+                // Review this.
+                AdaptiveSourceProjection adaptiveSourceProjection
+                        = lookupOrCreateAdaptiveSourceProjection(singleAllocation);
+
+                if (adaptiveSourceProjection != null)
+                {
+                    adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
+                    adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
+                }
+            }
+        }
+        else
+        {
+            for (AdaptiveSourceProjection adaptiveSourceProjection : getAdaptiveSourceProjectionMap().values())
+            {
+                adaptiveSourceProjection.setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
+                adaptiveSourceProjection.setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
+            }
+        }
     }
 }

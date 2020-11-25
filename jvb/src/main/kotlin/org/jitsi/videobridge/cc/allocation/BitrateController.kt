@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
@@ -45,16 +46,22 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     endpointsSupplier: Supplier<List<T>>,
     diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
-    clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC()
 ) {
     val eventEmitter = EventEmitter<EventHandler>()
+
+    private val bitrateAllocatorEventHandler = BitrateAllocatorEventHandler()
+    /**
+     * Keep track of the "forwarded" endpoints, i.e. the endpoints for which we are forwarding *some* layer.
+     */
+    private var forwardedEndpoints: Set<String> = emptySet()
 
     private val packetHandler: BitrateControllerPacketHandler =
         BitrateControllerPacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
     private val bitrateAllocator: BitrateAllocator<T> =
         BitrateAllocator(
             destinationEndpointId,
-            eventHandler,
+            bitrateAllocatorEventHandler,
             endpointsSupplier,
             parentLogger,
             clock,
@@ -66,7 +73,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     // Proxy to the allocator
-    fun getStatusSnapshot(): BitrateControllerStatusSnapshot = bitrateAllocator.statusSnapshot
     fun endpointOrderingChanged(conferenceEndpoints: List<String>) =
         bitrateAllocator.endpointOrderingChanged(conferenceEndpoints)
     var lastN: Int
@@ -79,7 +85,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     /**
      * Return the number of endpoints whose streams are currently being forwarded.
      */
-    fun numForwardedEndpoints(): Int = bitrateAllocator.numForwardedEndpoints()
+    fun numForwardedEndpoints(): Int = forwardedEndpoints.size
     fun getTotalOversendingTime(): Duration = bitrateAllocator.oversendingTimeTracker.totalTimeOn()
     fun isOversending() = bitrateAllocator.oversendingTimeTracker.state
     fun bandwidthChanged(newBandwidthBps: Long) = bitrateAllocator.bandwidthChanged(newBandwidthBps)
@@ -98,6 +104,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     val debugState: JSONObject = JSONObject().apply {
         put("bitrate_allocator", bitrateAllocator.debugState)
         put("packet_handler", packetHandler.debugState)
+        put("forwardedEndpoints", forwardedEndpoints.toString())
     }
 
     fun addPayloadType(payloadType: PayloadType) {
@@ -105,8 +112,39 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         bitrateAllocator.addPayloadType(payloadType)
     }
 
+    /**
+     * Get the target and ideal bitrate of the current [Allocation], as well as the list of SSRCs being forwarded.
+     */
+    fun getStatusSnapshot(): BitrateControllerStatusSnapshot {
+        var totalTargetBitrate = 0.bps
+        var totalIdealBitrate = 0.bps
+        val activeSsrcs = mutableSetOf<Long>()
+
+        val nowMs = clock.instant().toEpochMilli()
+        val allocation = bitrateAllocator.allocation
+        allocation.allocations.forEach {
+            // Note that we access `targetLayer.layer` for the *current* bitrate of the layer as opposed to
+            // `targetLayer.bitrate` which is the bitrate at the time of allocation.
+            it.targetLayer?.layer?.getBitrate(nowMs)?.let { targetBitrate ->
+                totalTargetBitrate += targetBitrate
+                it.source?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
+            }
+            it.idealLayer?.layer?.getBitrate(nowMs)?.let { idealBitrate ->
+                totalIdealBitrate += idealBitrate
+            }
+        }
+
+        activeSsrcs.removeIf { it < 0 }
+
+        return BitrateControllerStatusSnapshot(
+            currentTargetBps = totalTargetBitrate.bps.toLong(),
+            currentIdealBps = totalIdealBitrate.bps.toLong(),
+            activeSsrcs = activeSsrcs
+        )
+    }
+
     interface EventHandler {
-        fun forwardedEndpointsChanged(forwardedEndpoints: Collection<String>)
+        fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>)
         fun effectiveVideoConstraintsChanged(
             oldVideoConstraints: ImmutableMap<String, VideoConstraints>,
             newVideoConstraints: ImmutableMap<String, VideoConstraints>
@@ -116,6 +154,34 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
          * This is meant to be internal to BitrateAllocator, but is exposed here temporarily for the purposes of testing.
          */
         fun allocationChanged(allocation: Allocation) { }
+    }
+
+    private inner class BitrateAllocatorEventHandler: BitrateAllocator.EventHandler {
+        override fun allocationChanged(allocation: Allocation) {
+            // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
+            packetHandler.allocationChanged(allocation)
+
+            // TODO(george) bring back sending this message on message transport
+            //  connect
+            val newForwardedEndpoints = allocation.forwardedEndpoints
+            if (forwardedEndpoints != newForwardedEndpoints) {
+                forwardedEndpoints = newForwardedEndpoints
+                eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
+            }
+
+            // TODO: this is for testing only. Shold we change the tests to work with [BitrateAllocator] directly?
+            eventEmitter.fireEvent { allocationChanged(allocation) }
+        }
+
+        override fun effectiveVideoConstraintsChanged(
+            oldEffectiveVideoConstraints: ImmutableMap<String, VideoConstraints>,
+            newEffectiveVideoConstraints: ImmutableMap<String, VideoConstraints>
+        ) {
+            // Forward to the outer EventHandler.
+            eventEmitter.fireEvent {
+                effectiveVideoConstraintsChanged(oldEffectiveVideoConstraints, newEffectiveVideoConstraints)
+            }
+        }
     }
 }
 

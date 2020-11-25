@@ -19,7 +19,7 @@ package org.jitsi.videobridge.cc.allocation
 import com.google.common.collect.ImmutableMap
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
-import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -52,7 +52,6 @@ class BitrateControllerTest : ShouldSpec() {
     private val bc = BitrateControllerWrapper("A", "B", "C", "D", clock = clock)
 
     init {
-
         context("Effective constraints") {
             val conferenceEndpoints = List(5) { i -> Endpoint("endpoint-${i + 1}") }
 
@@ -266,10 +265,10 @@ class BitrateControllerTest : ShouldSpec() {
         // TODO: The results with bwe==-1 are wrong.
         bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
         bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            listOf("A"),
-            listOf("A", "B"),
-            listOf("A", "B", "C"),
-            listOf("A", "B", "C", "D")
+            setOf("A"),
+            setOf("A", "B"),
+            setOf("A", "B", "C"),
+            setOf("A", "B", "C", "D")
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -479,7 +478,7 @@ class BitrateControllerTest : ShouldSpec() {
         bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
 
         bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            listOf("A")
+            setOf("A")
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -540,10 +539,10 @@ class BitrateControllerTest : ShouldSpec() {
         // TODO: The results with bwe==-1 are wrong.
         bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
         bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            listOf("A"),
-            listOf("A", "B"),
-            listOf("A", "B", "C"),
-            listOf("A", "B", "C", "D")
+            setOf("A"),
+            setOf("A", "B"),
+            setOf("A", "B", "C"),
+            setOf("A", "B", "C", "D")
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -668,7 +667,7 @@ class BitrateControllerTest : ShouldSpec() {
         // TODO: The results with bwe==-1 are wrong.
         bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
         bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            listOf("A")
+            setOf("A")
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -731,13 +730,13 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
     // Save the output.
     val effectiveConstraintsHistory: History<ImmutableMap<String, VideoConstraints>> = mutableListOf()
-    val forwardedEndpointsHistory: History<Collection<String>> = mutableListOf()
+    val forwardedEndpointsHistory: History<Set<String>> = mutableListOf()
     val allocationHistory: History<Collection<AllocationInfo>> = mutableListOf()
 
     val bc = BitrateController(
         "destinationEndpoint",
         object : BitrateController.EventHandler {
-            override fun forwardedEndpointsChanged(forwardedEndpoints: Collection<String>) {
+            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) {
                 Event(bwe, forwardedEndpoints, clock.instant()).apply {
                     logger.info("Forwarded endpoints changed: $this")
                     forwardedEndpointsHistory.add(this)
@@ -860,14 +859,6 @@ fun SingleAllocation.toEndpointAllocationInfo() =
         targetLayer?.bitrate ?: 0.bps, // 0 is fine with our Mock RtpLayerDesc
         oversending
     )
-
-/**
- * Like the normal List<T>.shouldContainInOrder, but compare elements' contents.
- */
-fun <T> List<Collection<T>>.shouldContainInOrder(vararg ts: Collection<T>) {
-    this.size shouldBe ts.size
-    ts.forEachIndexed { i, it -> this[i].shouldContainExactly(it) }
-}
 
 class Endpoint(
     override val id: String,
