@@ -24,6 +24,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.VideoConstraints
+import org.jitsi.videobridge.util.BooleanStateTimeTracker
 import org.jitsi.videobridge.util.EventEmitter
 import org.json.simple.JSONObject
 import java.time.Clock
@@ -56,6 +57,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      */
     private var forwardedEndpoints: Set<String> = emptySet()
 
+    /**
+     * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
+     */
+    val oversendingTimeTracker = BooleanStateTimeTracker()
+
     private val packetHandler: BitrateControllerPacketHandler =
         BitrateControllerPacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
     private val bitrateAllocator: BitrateAllocator<T> =
@@ -86,8 +92,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * Return the number of endpoints whose streams are currently being forwarded.
      */
     fun numForwardedEndpoints(): Int = forwardedEndpoints.size
-    fun getTotalOversendingTime(): Duration = bitrateAllocator.oversendingTimeTracker.totalTimeOn()
-    fun isOversending() = bitrateAllocator.oversendingTimeTracker.state
+    fun getTotalOversendingTime(): Duration = oversendingTimeTracker.totalTimeOn()
+    fun isOversending() = oversendingTimeTracker.state
     fun bandwidthChanged(newBandwidthBps: Long) = bitrateAllocator.bandwidthChanged(newBandwidthBps)
 
     // Proxy to the packet handler
@@ -105,6 +111,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         put("bitrate_allocator", bitrateAllocator.debugState)
         put("packet_handler", packetHandler.debugState)
         put("forwardedEndpoints", forwardedEndpoints.toString())
+        put("oversending", oversendingTimeTracker.state)
+        put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
     }
 
     fun addPayloadType(payloadType: PayloadType) {
@@ -166,6 +174,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
                 forwardedEndpoints = newForwardedEndpoints
                 eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
             }
+
+            oversendingTimeTracker.setState(allocation.oversending)
 
             // TODO: this is for testing only. Shold we change the tests to work with [BitrateAllocator] directly?
             eventEmitter.fireEvent { allocationChanged(allocation) }

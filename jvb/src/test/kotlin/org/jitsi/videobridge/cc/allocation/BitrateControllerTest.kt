@@ -286,6 +286,15 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
+                50.kbps,
+                listOf(
+                    AllocationInfo("A", ld7_5, oversending = false),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
                 100.kbps,
                 listOf(
                     AllocationInfo("A", ld15),
@@ -496,6 +505,15 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
+                50.kbps,
+                setOf(
+                    AllocationInfo("A", ld7_5, oversending = false),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
                 100.kbps,
                 setOf(
                     AllocationInfo("A", ld15),
@@ -555,6 +573,15 @@ class BitrateControllerTest : ShouldSpec() {
                 setOf(
                     // TODO: do we want to oversend in tile view?
                     AllocationInfo("A", ld7_5, oversending = true),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
+                50.kbps,
+                setOf(
+                    AllocationInfo("A", ld7_5, oversending = false),
                     AllocationInfo("B", noVideo),
                     AllocationInfo("C", noVideo),
                     AllocationInfo("D", noVideo)
@@ -686,6 +713,15 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
+                50.kbps,
+                setOf(
+                    AllocationInfo("A", ld7_5, oversending = false),
+                    AllocationInfo("B", noVideo),
+                    AllocationInfo("C", noVideo),
+                    AllocationInfo("D", noVideo)
+                )
+            ),
+            Event(
                 100.kbps,
                 setOf(
                     AllocationInfo("A", ld15),
@@ -708,7 +744,7 @@ class BitrateControllerTest : ShouldSpec() {
 }
 
 fun List<Event<Collection<AllocationInfo>>>.shouldMatchInOrder(vararg events: Event<Collection<AllocationInfo>>) {
-    events.size shouldBe size
+    size shouldBe events.size
     events.forEachIndexed { i, it ->
         this[i].bwe shouldBe it.bwe
         this[i].event.toSet() shouldBe it.event.toSet()

@@ -195,11 +195,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private Instant lastUpdateTime = Instant.MIN;
 
-    /**
-     * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
-     */
-    final BooleanStateTimeTracker oversendingTimeTracker = new BooleanStateTimeTracker();
-
     private final BitrateControllerPacketHandler packetHandler;
 
     @NotNull
@@ -244,8 +239,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
         debugState.put("supportsRtx", supportsRtx);
-        debugState.put("oversending", oversendingTimeTracker.getState());
-        debugState.put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().getSeconds());
         return debugState;
     }
 
@@ -369,16 +362,8 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
         // Compute the bitrate allocation.
         Allocation newAllocation = allocate(bweBps, sortedEndpoints);
-        if (newAllocation.getOversending())
-        {
-            oversendingTimeTracker.on();
-        }
-        else
-        {
-            oversendingTimeTracker.off();
-        }
 
-        boolean allocationChanged = !allocation.hasTheSameLayersAs(newAllocation);
+        boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
         if (allocationChanged)
         {
             eventEmitter.fireEvent(handler -> {

@@ -17,7 +17,6 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.videobridge.VideoConstraints
 
 /**
@@ -35,14 +34,16 @@ class Allocation(
     /**
      * Whether the two allocations have the same endpoints and same layers.
      */
-    fun hasTheSameLayersAs(other: Allocation) =
-        allocations.size == other.allocations.size && allocations.all { allocation ->
-        other.allocations.any { otherAllocation ->
-            allocation.endpointId == otherAllocation.endpointId &&
-                allocation.targetLayer?.index == otherAllocation.targetLayer?.index &&
-                allocation.idealLayer?.index == otherAllocation.idealLayer?.index
-        }
-    }
+    fun isTheSameAs(other: Allocation) =
+        allocations.size == other.allocations.size &&
+            oversending == other.oversending &&
+            allocations.all { allocation ->
+                other.allocations.any { otherAllocation ->
+                    allocation.endpointId == otherAllocation.endpointId &&
+                        allocation.targetLayer?.index == otherAllocation.targetLayer?.index &&
+                        allocation.idealLayer?.index == otherAllocation.idealLayer?.index
+                }
+            }
 }
 
 /**
