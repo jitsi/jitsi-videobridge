@@ -154,12 +154,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private Map<String, VideoConstraints2> effectiveConstraintsMap = Collections.emptyMap();
 
-    /**
-     * The last-n value for the endpoint to which this {@link BitrateAllocator}
-     * belongs
-     */
-    private int lastN = -1;
-
     private final Clock clock;
 
     private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
@@ -167,8 +161,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private final Supplier<List<T>> endpointsSupplier;
     private final Supplier<Boolean> trustBwe;
 
-    private AllocationSettings.Snapshot allocationSettings
-            = new AllocationSettings.Snapshot(Collections.emptySet(), Collections.emptyMap());
+    private AllocationSettings.Snapshot allocationSettings = new AllocationSettings.Snapshot();
 
     /**
      * The last time {@link BitrateAllocator#update()} was called
@@ -212,7 +205,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         debugState.put("lastBwe", lastBwe);
         debugState.put("allocationSettings", allocationSettings.toString());
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
-        debugState.put("lastN", lastN);
         return debugState;
     }
 
@@ -470,7 +462,9 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         // Init.
         List<SingleSourceAllocation> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
 
-        int adjustedLastN = JvbLastNKt.calculateLastN(this.lastN, JvbLastNKt.jvbLastNSingleton.getJvbLastN());
+        int adjustedLastN = JvbLastNKt.calculateLastN(
+                allocationSettings.getLastN(),
+                JvbLastNKt.jvbLastNSingleton.getJvbLastN());
         if (adjustedLastN < 0)
         {
             // If lastN is disabled, pretend lastN == szConference.
@@ -480,7 +474,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         {
             // If lastN is enabled, pretend lastN at most as big as the size
             // of the conference.
-            adjustedLastN = Math.min(lastN, conferenceEndpoints.size());
+            adjustedLastN = Math.min(allocationSettings.getLastN(), conferenceEndpoints.size());
         }
         if (logger.isDebugEnabled())
         {
@@ -521,29 +515,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
 
         return sourceBitrateAllocations;
-    }
-
-    /**
-     * Sets the LastN value.
-     */
-    void setLastN(int lastN)
-    {
-        if (this.lastN != lastN)
-        {
-            this.lastN = lastN;
-
-            logger.debug(() -> " lastN has changed, updating");
-
-            update();
-        }
-    }
-
-    /**
-     * Gets the LastN value.
-     */
-    int getLastN()
-    {
-        return lastN;
     }
 
     void maybeUpdate()

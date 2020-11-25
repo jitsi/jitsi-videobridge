@@ -30,6 +30,8 @@ class AllocationSettings {
      */
     private var maxFrameHeight = Int.MAX_VALUE
 
+    private var lastN: Int = -1
+
     private val videoConstraintsCompatibility = VideoConstraintsCompatibility().apply {
         setSelectedEndpoints(selectedEndpoints)
         setMaxFrameHeight(maxFrameHeight)
@@ -59,6 +61,14 @@ class AllocationSettings {
         return false
     }
 
+    fun setLastN(lastN: Int): Boolean {
+        if (this.lastN != lastN) {
+            this.lastN = lastN
+            return true
+        }
+        return false
+    }
+
     private fun setVideoConstraints(videoConstraints: Map<String, VideoConstraints>): Boolean {
         if (this.videoConstraints != videoConstraints) {
             this.videoConstraints = videoConstraints
@@ -67,16 +77,17 @@ class AllocationSettings {
         return false
     }
 
-
-    fun snapshot() = Snapshot(selectedEndpoints, videoConstraints)
+    fun snapshot() = Snapshot(selectedEndpoints, videoConstraints, lastN)
 
     data class Snapshot(
-        val selectedEndpoints: Set<String>,
-        val videoConstraints: Map<String, VideoConstraints>
+        val selectedEndpoints: Set<String> = emptySet(),
+        val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
+        val lastN: Int = -1
     ) {
         override fun toString(): String = OrderedJsonObject().apply {
             put("selected_endpoints", selectedEndpoints)
             put("video_constraints", videoConstraints)
+            put("last_n", lastN)
         }.toJSONString()
     }
 

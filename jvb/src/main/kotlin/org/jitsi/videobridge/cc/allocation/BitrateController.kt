@@ -23,7 +23,6 @@ import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
-import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
 import org.jitsi.videobridge.util.EventEmitter
@@ -101,9 +100,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun endpointOrderingChanged(conferenceEndpoints: List<String>) =
         bitrateAllocator.endpointOrderingChanged(conferenceEndpoints)
     var lastN: Int
-        get() = bitrateAllocator.lastN
+        get() = allocationSettings.snapshot().lastN
         set(value) {
-            bitrateAllocator.lastN = value
+            if (allocationSettings.setLastN(value)) {
+                bitrateAllocator.update(allocationSettings.snapshot())
+            }
         }
 
     fun setMaxFrameHeight(maxFrameHeight: Int) {
