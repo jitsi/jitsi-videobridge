@@ -20,7 +20,6 @@ import edu.umd.cs.findbugs.annotations.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
@@ -169,28 +168,17 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private int lastN = -1;
 
-    // NOTE(george): this flag acts as an approximation for determining whether
-    // or not adaptivity/probing is supported. Eventually we need to scrap this
-    // and implement something cleaner, i.e. disable adaptivity if the endpoint
-    // hasn't signaled `goog-remb` nor `transport-cc`.
-    //
-    // Unfortunately the channel iq from jicofo lists `goog-remb` and
-    // `transport-cc` support, even tho the jingle from firefox doesn't (which
-    // is the main use case for wanting to disable adaptivity).
-    private boolean supportsRtx = false;
-
     private final Clock clock;
 
     private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
     private final Supplier<List<T>> endpointsSupplier;
+    private final Supplier<Boolean> trustBwe;
 
     /**
      * The last time {@link BitrateAllocator#update()} was called
      */
     private Instant lastUpdateTime = Instant.MIN;
-
-    private final BitrateControllerPacketHandler packetHandler;
 
     @NotNull
     private Allocation allocation = new Allocation(Collections.emptySet());
@@ -202,14 +190,13 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     BitrateAllocator(
             EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
+            Supplier<Boolean> trustBwe,
             Logger parentLogger,
-            Clock clock,
-            BitrateControllerPacketHandler packetHandler
-    )
+            Clock clock)
     {
         this.logger = parentLogger.createChildLogger(BitrateAllocator.class.getName());
         this.clock = clock;
-        this.packetHandler = packetHandler;
+        this.trustBwe = trustBwe;
 
         this.endpointsSupplier = endpointsSupplier;
         eventEmitter.addHandler(eventHandler);
@@ -231,7 +218,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         debugState.put("videoConstraints", videoConstraintsMap);
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
-        debugState.put("supportsRtx", supportsRtx);
         return debugState;
     }
 
@@ -255,27 +241,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private long getAvailableBandwidth()
     {
-        boolean trustBwe = BitrateControllerConfig.trustBwe();
-        if (trustBwe)
-        {
-            // Ignore the bandwidth estimations in the first 10 seconds because
-            // the REMBs don't ramp up fast enough. This needs to go but it's
-            // related to our GCC implementation that needs to be brought up to
-            // speed.
-            if (packetHandler.timeSinceFirstMedia() < 10000)
-            {
-                trustBwe = false;
-            }
-        }
-
-        if (!trustBwe || !supportsRtx)
-        {
-            return Long.MAX_VALUE;
-        }
-        else
-        {
-            return lastBwe;
-        }
+        return trustBwe.get() ? lastBwe : Long.MAX_VALUE;
     }
 
     /**
@@ -590,17 +556,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     int getLastN()
     {
         return lastN;
-    }
-
-    /**
-     * Adds a payload type.
-     */
-    void addPayloadType(PayloadType payloadType)
-    {
-        if (payloadType.getEncoding() == PayloadTypeEncoding.RTX)
-        {
-            supportsRtx = true;
-        }
     }
 
     void maybeUpdate()

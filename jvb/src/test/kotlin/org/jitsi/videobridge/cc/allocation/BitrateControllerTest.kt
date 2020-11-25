@@ -770,7 +770,6 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     val allocationHistory: History<Collection<AllocationInfo>> = mutableListOf()
 
     val bc = BitrateController(
-        "destinationEndpoint",
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) {
                 Event(bwe, forwardedEndpoints, clock.instant()).apply {

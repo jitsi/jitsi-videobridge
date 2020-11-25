@@ -19,11 +19,13 @@ import com.google.common.collect.ImmutableMap
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.VideoConstraints
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
 import org.jitsi.videobridge.util.EventEmitter
 import org.json.simple.JSONObject
@@ -61,20 +63,38 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      */
     val oversendingTimeTracker = BooleanStateTimeTracker()
 
+    /**
+     * NOTE(george): this flag acts as an approximation for determining whether or not adaptivity/probing is
+     * supported. Eventually we need to scrap this and implement something cleaner, i.e. disable adaptivity if the
+     * endpoint hasn't signaled `goog-remb` nor `transport-cc`.
+     *
+     * Unfortunately the channel iq from jicofo lists `goog-remb` and `transport-cc` support, even tho the jingle from
+     * firefox doesn't (which is the main use case for wanting to disable adaptivity).
+     */
+    private var supportsRtx = false
+
     private val packetHandler: BitrateControllerPacketHandler =
         BitrateControllerPacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
     private val bitrateAllocator: BitrateAllocator<T> =
         BitrateAllocator(
             bitrateAllocatorEventHandler,
             endpointsSupplier,
+            Supplier { trustBwe },
             parentLogger,
-            clock,
-            packetHandler
+            clock
         )
 
     init {
         eventEmitter.addHandler(eventHandler)
     }
+
+    /**
+     * Ignore the bandwidth estimations in the first 10 seconds because the REMBs don't ramp up fast enough. This needs
+     * to go but it's related to our GCC implementation that needs to be brought up to speed.
+     * TODO: Is this comment still accurate?
+     */
+    private val trustBwe: Boolean
+        get() = BitrateControllerConfig.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10000
 
     // Proxy to the allocator
     fun endpointOrderingChanged(conferenceEndpoints: List<String>) =
@@ -111,11 +131,16 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         put("forwardedEndpoints", forwardedEndpoints.toString())
         put("oversending", oversendingTimeTracker.state)
         put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
+        put("supportsRtx", supportsRtx)
+        put("trust_bwe", trustBwe)
     }
 
     fun addPayloadType(payloadType: PayloadType) {
         packetHandler.addPayloadType(payloadType)
-        bitrateAllocator.addPayloadType(payloadType)
+
+        if (payloadType.encoding == PayloadTypeEncoding.RTX) {
+            supportsRtx = true
+        }
     }
 
     /**
