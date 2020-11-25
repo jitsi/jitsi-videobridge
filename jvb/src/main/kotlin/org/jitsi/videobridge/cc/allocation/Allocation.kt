@@ -18,7 +18,6 @@ package org.jitsi.videobridge.cc.allocation
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.nlj.util.bps
 import org.jitsi.videobridge.VideoConstraints
 
 /**
@@ -40,8 +39,8 @@ class Allocation(
         allocations.size == other.allocations.size && allocations.all { allocation ->
         other.allocations.any { otherAllocation ->
             allocation.endpointId == otherAllocation.endpointId &&
-                allocation.targetLayer?.layer?.index == otherAllocation.targetLayer?.layer?.index &&
-                allocation.idealLayer?.layer?.index == otherAllocation.idealLayer?.layer?.index
+                allocation.targetLayer?.index == otherAllocation.targetLayer?.index &&
+                allocation.idealLayer?.index == otherAllocation.idealLayer?.index
         }
     }
 }
@@ -55,11 +54,11 @@ data class SingleAllocation(
     /**
      * The layer which has been selected to be forwarded.
      */
-    val targetLayer: LayerSnapshot?,
+    val targetLayer: RtpLayerDesc?,
     /**
      * The layer which would have been selected without bandwidth constraints.
      */
-    val idealLayer: LayerSnapshot?,
+    val idealLayer: RtpLayerDesc?,
     val effectiveVideoConstraints: VideoConstraints,
     /**
      * Set to true if the selected/target layer has higher bitrate than the available bandwidth.
@@ -67,14 +66,7 @@ data class SingleAllocation(
     val oversending: Boolean
 ) {
     private val targetIndex: Int
-        get() = targetLayer?.layer?.index ?: -1
+        get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1
 }
 
-/**
- * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
- */
-data class LayerSnapshot(
-    val layer: RtpLayerDesc,
-    val bitrate: Bandwidth
-)

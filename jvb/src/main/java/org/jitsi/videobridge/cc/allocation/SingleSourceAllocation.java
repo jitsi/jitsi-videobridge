@@ -201,7 +201,7 @@ public class SingleSourceAllocation {
         if (ratedTargetIdx == -1 && ratedPreferredIdx > -1) {
             // Boost on stage participant to preferred, if there's enough bw.
             for (int i = 0; i < ratedIndices.length; i++) {
-                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].getBitrate().getBps()) {
+                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bitrate.getBps()) {
                     break;
                 }
 
@@ -210,7 +210,7 @@ public class SingleSourceAllocation {
         } else {
             // Try the next element in the ratedIndices array.
             if (ratedTargetIdx + 1 < ratedIndices.length
-                    && ratedIndices[ratedTargetIdx + 1].getBitrate().getBps() < maxBps)
+                    && ratedIndices[ratedTargetIdx + 1].bitrate.getBps() < maxBps)
             {
                 ratedTargetIdx++;
             }
@@ -230,8 +230,8 @@ public class SingleSourceAllocation {
             // stream and immediately select the 1080p stream.
             for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
             {
-                if (ratedIndices[i].getBitrate().getBps() > 0 && ratedIndices[i].getBitrate().getBps()
-                        <= ratedIndices[ratedTargetIdx].getBitrate().getBps())
+                if (ratedIndices[i].bitrate.getBps() > 0 && ratedIndices[i].bitrate.getBps()
+                        <= ratedIndices[ratedTargetIdx].bitrate.getBps())
                 {
                     ratedTargetIdx = i;
                 }
@@ -246,7 +246,7 @@ public class SingleSourceAllocation {
      */
     long getTargetBitrate()
     {
-        return ratedTargetIdx != -1 ? (long) ratedIndices[ratedTargetIdx].getBitrate().getBps() : 0;
+        return ratedTargetIdx != -1 ? (long) ratedIndices[ratedTargetIdx].bitrate.getBps() : 0;
     }
 
     private LayerSnapshot getTargetLayer()
@@ -263,7 +263,7 @@ public class SingleSourceAllocation {
     {
         // figures out the quality of the layer of the target rated
         // quality.
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].getLayer().getIndex() : -1;
+        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer.getIndex() : -1;
     }
 
     private LayerSnapshot getIdealLayer()
@@ -277,11 +277,13 @@ public class SingleSourceAllocation {
      */
     SingleAllocation getResult()
     {
+        LayerSnapshot targetLayer = getTargetLayer();
+        LayerSnapshot idealLayer = getIdealLayer();
         return new SingleAllocation(
                 endpointID,
                 source,
-                getTargetLayer(),
-                getIdealLayer(),
+                targetLayer == null ? null : targetLayer.layer,
+                idealLayer == null ? null : idealLayer.layer,
                 effectiveVideoConstraints,
                 oversending
         );
@@ -296,4 +298,19 @@ public class SingleSourceAllocation {
                 + " oversending=" + oversending
                 + " idealBitrate=" + idealBitrate;
     }
+
+    /**
+     * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
+     */
+    private static class LayerSnapshot
+    {
+        private final RtpLayerDesc layer;
+        private final Bandwidth bitrate;
+        private LayerSnapshot(RtpLayerDesc layer, Bandwidth bitrate)
+        {
+            this.layer = layer;
+            this.bitrate = bitrate;
+        }
+    }
 }
+

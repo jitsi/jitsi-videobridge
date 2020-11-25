@@ -294,10 +294,10 @@ class BitrateControllerPacketHandler
         {
             for (SingleAllocation singleAllocation : allocation.getAllocations())
             {
-                LayerSnapshot targetLayer = singleAllocation.getTargetLayer();
-                int sourceTargetIdx = targetLayer == null ? -1 : targetLayer.getLayer().getIndex();
-                LayerSnapshot idealLayer = singleAllocation.getIdealLayer();
-                int sourceIdealIdx = idealLayer == null ? -1 : idealLayer.getLayer().getIndex();
+                RtpLayerDesc targetLayer = singleAllocation.getTargetLayer();
+                int sourceTargetIdx = targetLayer == null ? -1 : targetLayer.getIndex();
+                RtpLayerDesc idealLayer = singleAllocation.getIdealLayer();
+                int sourceIdealIdx = idealLayer == null ? -1 : idealLayer.getIndex();
 
                 // Review this.
                 AdaptiveSourceProjection adaptiveSourceProjection

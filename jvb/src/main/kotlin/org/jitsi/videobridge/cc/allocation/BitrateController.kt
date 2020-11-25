@@ -123,13 +123,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         val nowMs = clock.instant().toEpochMilli()
         val allocation = bitrateAllocator.allocation
         allocation.allocations.forEach {
-            // Note that we access `targetLayer.layer` for the *current* bitrate of the layer as opposed to
-            // `targetLayer.bitrate` which is the bitrate at the time of allocation.
-            it.targetLayer?.layer?.getBitrate(nowMs)?.let { targetBitrate ->
+            it.targetLayer?.getBitrate(nowMs)?.let { targetBitrate ->
                 totalTargetBitrate += targetBitrate
                 it.source?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
             }
-            it.idealLayer?.layer?.getBitrate(nowMs)?.let { idealBitrate ->
+            it.idealLayer?.getBitrate(nowMs)?.let { idealBitrate ->
                 totalIdealBitrate += idealBitrate
             }
         }

@@ -854,9 +854,9 @@ data class AllocationInfo(
 fun SingleAllocation.toEndpointAllocationInfo() =
     AllocationInfo(
         endpointId,
-        targetLayer?.layer?.height ?: 0,
-        targetLayer?.layer?.frameRate ?: 0.0,
-        targetLayer?.bitrate ?: 0.bps, // 0 is fine with our Mock RtpLayerDesc
+        targetLayer?.height ?: 0,
+        targetLayer?.frameRate ?: 0.0,
+        targetLayer?.getBitrate(0) ?: 0.bps, // getBitrate(0) is fine with our Mock RtpLayerDesc
         oversending
     )
 
