@@ -112,7 +112,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             bitrateAllocator.update(allocationSettings.snapshot())
         }
     }
-    fun setSelectedEndpoints(selectedEndpoints: Set<String>) {
+    fun setSelectedEndpoints(selectedEndpoints: List<String>) {
         if (allocationSettings.setSelectedEndpoints(selectedEndpoints)) {
             bitrateAllocator.update(allocationSettings.snapshot())
         }

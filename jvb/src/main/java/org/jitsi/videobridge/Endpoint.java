@@ -1433,7 +1433,7 @@ public class Endpoint
         return bitrateController.isOversending();
     }
 
-    void setSelectedEndpoints(Set<String> selectedEndpoints)
+    void setSelectedEndpoints(List<String> selectedEndpoints)
     {
         bitrateController.setSelectedEndpoints(selectedEndpoints);
     }

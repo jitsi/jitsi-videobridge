@@ -422,7 +422,7 @@ class EndpointMessageTransport
     @Override
     public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
     {
-        Set<String> newSelectedEndpoints = new HashSet<>(message.getSelectedEndpoints());
+        List<String> newSelectedEndpoints = new ArrayList<>(message.getSelectedEndpoints());
         // Some jitsi-meet versions incorrectly include their own ID.
         newSelectedEndpoints.remove(endpoint.getId());
 

@@ -811,12 +811,12 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
 
     fun setStageView(onStageEndpoint: String, maxFrameHeight: Int = 720) {
         bc.setMaxFrameHeight(maxFrameHeight)
-        bc.setSelectedEndpoints(setOf(onStageEndpoint))
+        bc.setSelectedEndpoints(listOf(onStageEndpoint))
     }
 
     fun setSelectedEndpoints(vararg selectedEndpoints: String, maxFrameHeight: Int? = null) {
         maxFrameHeight?.let { bc.setMaxFrameHeight(it) }
-        bc.setSelectedEndpoints(setOf(*selectedEndpoints))
+        bc.setSelectedEndpoints(listOf(*selectedEndpoints))
     }
 
     fun setTileView(vararg selectedEndpoints: String) {

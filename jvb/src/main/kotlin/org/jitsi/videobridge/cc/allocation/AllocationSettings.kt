@@ -23,7 +23,7 @@ class AllocationSettings {
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
      */
-    private var selectedEndpoints = emptySet<String>()
+    private var selectedEndpoints = emptyList<String>()
 
     /**
      * The last max resolution signaled by the receiving endpoint.
@@ -49,7 +49,7 @@ class AllocationSettings {
         return false
     }
 
-    fun setSelectedEndpoints(selectedEndpoints: Set<String>): Boolean {
+    fun setSelectedEndpoints(selectedEndpoints: List<String>): Boolean {
         if (this.selectedEndpoints != selectedEndpoints) {
             this.selectedEndpoints = selectedEndpoints
             videoConstraintsCompatibility.setSelectedEndpoints(selectedEndpoints)
@@ -80,7 +80,7 @@ class AllocationSettings {
     fun snapshot() = Snapshot(selectedEndpoints, videoConstraints, lastN)
 
     data class Snapshot(
-        val selectedEndpoints: Set<String> = emptySet(),
+        val selectedEndpoints: List<String> = emptyList(),
         val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
         val lastN: Int = -1
     ) {

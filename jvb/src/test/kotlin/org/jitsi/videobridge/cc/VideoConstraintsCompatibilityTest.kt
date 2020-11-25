@@ -9,7 +9,7 @@ class VideoConstraintsCompatibilityTest : ShouldSpec() {
         val vcc = VideoConstraintsCompatibility()
         context("Stage view behavior") {
             vcc.setMaxFrameHeight(720)
-            vcc.setSelectedEndpoints(setOf("A"))
+            vcc.setSelectedEndpoints(listOf("A"))
             vcc.computeVideoConstraints().shouldContainExactly(
                 mapOf(
                     "A" to VideoConstraints(720, 360, 30.0)
@@ -18,7 +18,7 @@ class VideoConstraintsCompatibilityTest : ShouldSpec() {
         }
         context("Tile view behavior") {
             vcc.setMaxFrameHeight(180)
-            vcc.setSelectedEndpoints(setOf("A", "B", "C", "D"))
+            vcc.setSelectedEndpoints(listOf("A", "B", "C", "D"))
             vcc.computeVideoConstraints().shouldContainExactly(
                 mapOf(
                     "A" to VideoConstraints(180, -1, -1.0),

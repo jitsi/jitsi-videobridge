@@ -35,7 +35,7 @@ public class VideoConstraintsCompatibility
      * The last selected endpoints set signaled by the receiving endpoint.
      */
     @NotNull
-    private Set<String> selectedEndpoints = Collections.emptySet();
+    private List<String> selectedEndpoints = Collections.emptyList();
 
     /**
      * The last max resolution signaled by the receiving endpoint. We set a
@@ -85,7 +85,7 @@ public class VideoConstraintsCompatibility
 
         int maxFrameHeightCopy = maxFrameHeight;
 
-        Set<String> selectedEndpointsCopy = selectedEndpoints;
+        List<String> selectedEndpointsCopy = selectedEndpoints;
         if (!selectedEndpointsCopy.isEmpty())
         {
             final VideoConstraints selectedEndpointConstraints;
@@ -156,7 +156,7 @@ public class VideoConstraintsCompatibility
      * @param newSelectedEndpoints the selected endpoints signaled by the
      * receiving endpoint.
      */
-    public void setSelectedEndpoints(@NotNull Set<String> newSelectedEndpoints)
+    public void setSelectedEndpoints(@NotNull List<String> newSelectedEndpoints)
     {
         this.selectedEndpoints = newSelectedEndpoints;
     }
