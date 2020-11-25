@@ -103,8 +103,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * @return true if the bandwidth has changed above the configured threshold,
      * false otherwise.
      */
-    private static boolean changeIsLargerThanThreshold(
-            long previousBwe, long currentBwe)
+    private static boolean bweChangeIsLargerThanThreshold(long previousBwe, long currentBwe)
     {
         if (previousBwe == -1 || currentBwe == -1)
         {
@@ -253,7 +252,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     void bandwidthChanged(long newBandwidthBps)
     {
-        if (!changeIsLargerThanThreshold(lastBwe, newBandwidthBps))
+        if (!bweChangeIsLargerThanThreshold(lastBwe, newBandwidthBps))
         {
             logger.debug(() -> "New bandwidth (" + newBandwidthBps
                     + ") is not significantly " +
