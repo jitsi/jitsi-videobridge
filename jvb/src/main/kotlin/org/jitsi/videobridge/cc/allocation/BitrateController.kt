@@ -105,9 +105,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         set(value) {
             bitrateAllocator.lastN = value
         }
-    // TODO remove when the tests are updated.
-    fun setVideoConstraints(newVideoConstraintsMap: Map<String, VideoConstraints>) =
-        bitrateAllocator.setVideoConstraints(newVideoConstraintsMap)
 
     fun setMaxFrameHeight(maxFrameHeight: Int) {
         if (allocationSettings.setMaxFrameHeight(maxFrameHeight)) {

@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.cc.allocation
 
-import com.google.common.collect.ImmutableMap
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
@@ -40,7 +39,6 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.VideoConstraints
-import org.jitsi.videobridge.cc.VideoConstraintsCompatibility
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -755,7 +753,6 @@ fun List<Event<Collection<AllocationInfo>>>.shouldMatchInOrder(vararg events: Ev
 private class BitrateControllerWrapper(vararg endpointIds: String, val clock: FakeClock = FakeClock()) {
     val endpoints: List<Endpoint> = createEndpoints(*endpointIds)
     val logger = createLogger()
-    val vcc = VideoConstraintsCompatibility()
 
     var bwe = (-1).bps
         set(value) {
@@ -813,15 +810,13 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     }
 
     fun setStageView(onStageEndpoint: String, maxFrameHeight: Int = 720) {
-        vcc.setMaxFrameHeight(maxFrameHeight)
-        vcc.setSelectedEndpoints(setOf(onStageEndpoint))
-        setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
+        bc.setMaxFrameHeight(maxFrameHeight)
+        bc.setSelectedEndpoints(setOf(onStageEndpoint))
     }
 
     fun setSelectedEndpoints(vararg selectedEndpoints: String, maxFrameHeight: Int? = null) {
-        maxFrameHeight?.let { vcc.setMaxFrameHeight(it) }
-        vcc.setSelectedEndpoints(setOf(*selectedEndpoints))
-        setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
+        maxFrameHeight?.let { bc.setMaxFrameHeight(it) }
+        bc.setSelectedEndpoints(setOf(*selectedEndpoints))
     }
 
     fun setTileView(vararg selectedEndpoints: String) {
@@ -829,13 +824,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
     }
 
     fun setMaxFrameHeight(maxFrameHeight: Int) {
-        vcc.setMaxFrameHeight(maxFrameHeight)
-        setVideoConstraints(ImmutableMap.copyOf(vcc.computeVideoConstraints()))
-    }
-
-    fun setVideoConstraints(videoConstraints: ImmutableMap<String, VideoConstraints>) {
-        logger.info("Set video constraints $videoConstraints")
-        bc.setVideoConstraints(videoConstraints)
+        bc.setMaxFrameHeight(maxFrameHeight)
     }
 
     fun setLastN(n: Int) {

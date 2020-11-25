@@ -523,17 +523,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         return sourceBitrateAllocations;
     }
 
-    // TODO: remove when the tests are ported.
-    void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
-    {
-        if (!this.allocationSettings.getVideoConstraints().equals(newVideoConstraintsMap))
-        {
-            update(new AllocationSettings.Snapshot(
-                    allocationSettings.getSelectedEndpoints(),
-                    newVideoConstraintsMap));
-        }
-    }
-
     /**
      * Sets the LastN value.
      */
