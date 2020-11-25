@@ -169,11 +169,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private int lastN = -1;
 
-    /**
-     * The ID of the endpoint to which this {@link BitrateAllocator} belongs
-     */
-    private final String destinationEndpointId;
-
     // NOTE(george): this flag acts as an approximation for determining whether
     // or not adaptivity/probing is supported. Eventually we need to scrap this
     // and implement something cleaner, i.e. disable adaptivity if the endpoint
@@ -205,7 +200,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * belong to a particular {@link Endpoint}.
      */
     BitrateAllocator(
-            String destinationEndpointId,
             EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
             Logger parentLogger,
@@ -213,7 +207,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             BitrateControllerPacketHandler packetHandler
     )
     {
-        this.destinationEndpointId = destinationEndpointId;
         this.logger = parentLogger.createChildLogger(BitrateAllocator.class.getName());
         this.clock = clock;
         this.packetHandler = packetHandler;
@@ -328,11 +321,10 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     synchronized void endpointOrderingChanged(List<String> conferenceEndpoints)
     {
-        logger.debug(() -> " endpoint ordering has changed, updating");
+        logger.debug(() -> "Endpoint ordering has changed, updating.");
 
-        List<String> newSortedEndpointIds = new ArrayList<>(conferenceEndpoints);
-        newSortedEndpointIds.remove(destinationEndpointId);
-        sortedEndpointIds = newSortedEndpointIds;
+        // TODO: Maybe suppress calling update() unless the order actually changed?
+        sortedEndpointIds = conferenceEndpoints;
         update();
     }
 
@@ -586,7 +578,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         {
             this.lastN = lastN;
 
-            logger.debug(() -> destinationEndpointId + " lastN has changed, updating");
+            logger.debug(() -> " lastN has changed, updating");
 
             update();
         }

@@ -320,7 +320,6 @@ public class Endpoint
             }
         };
         bitrateController = new BitrateController<>(
-                id,
                 bcEventHandler,
                 conference::getEndpoints,
                 diagnosticContext, logger);
@@ -475,7 +474,9 @@ public class Endpoint
      */
     void lastNEndpointsChanged(List<String> orderedEndpointIds)
     {
-        bitrateController.endpointOrderingChanged(orderedEndpointIds);
+        List<String> orderedEndpointsWithoutThis = new ArrayList<>(orderedEndpointIds);
+        orderedEndpointsWithoutThis.remove(getId());
+        bitrateController.endpointOrderingChanged(orderedEndpointsWithoutThis);
     }
 
     /**

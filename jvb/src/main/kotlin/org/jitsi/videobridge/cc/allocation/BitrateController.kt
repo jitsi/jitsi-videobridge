@@ -42,7 +42,6 @@ import java.util.function.Supplier
  *
  */
 class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
-    destinationEndpointId: String,
     eventHandler: EventHandler,
     endpointsSupplier: Supplier<List<T>>,
     diagnosticContext: DiagnosticContext,
@@ -66,7 +65,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         BitrateControllerPacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
     private val bitrateAllocator: BitrateAllocator<T> =
         BitrateAllocator(
-            destinationEndpointId,
             bitrateAllocatorEventHandler,
             endpointsSupplier,
             parentLogger,
