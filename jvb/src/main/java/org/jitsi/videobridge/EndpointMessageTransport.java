@@ -432,6 +432,8 @@ class EndpointMessageTransport
     public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
     {
         Set<String> newSelectedEndpoints = new HashSet<>(message.getSelectedEndpoints());
+        // Some jitsi-meet versions incorrectly include their own ID.
+        newSelectedEndpoints.remove(endpoint.getId());
 
         logger.debug(() -> "Selected " + newSelectedEndpoints);
         videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
@@ -445,12 +447,8 @@ class EndpointMessageTransport
      * @param videoConstraintsMap the sender video constraints of this
      * {@link #endpoint}.
      */
-    public void setSenderVideoConstraints(Map<String, VideoConstraints> videoConstraintsMap)
+    private void setSenderVideoConstraints(Map<String, VideoConstraints> videoConstraintsMap)
     {
-        // Don't "pollute" the video constraints map with constraints for this
-        // endpoint.
-        videoConstraintsMap.remove(endpoint.getId());
-
         logger.debug(() -> "New video constraints map: " + videoConstraintsMap);
 
         endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));

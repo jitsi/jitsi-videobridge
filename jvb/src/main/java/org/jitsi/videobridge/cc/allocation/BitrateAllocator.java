@@ -153,7 +153,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * The map of endpoint id to video constraints that contains the video
      * constraints to respect when allocating bandwidth for a specific endpoint.
      */
-    private ImmutableMap<String, VideoConstraints> videoConstraintsMap = ImmutableMap.of();
+    private Map<String, VideoConstraints> videoConstraintsMap = ImmutableMap.of();
 
     /**
      * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
@@ -517,7 +517,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         return sourceBitrateAllocations;
     }
 
-    void setVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraintsMap)
+    void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
     {
         if (!this.videoConstraintsMap.equals(newVideoConstraintsMap))
         {

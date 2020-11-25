@@ -17,7 +17,6 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import com.google.common.collect.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
@@ -35,8 +34,6 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
-
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
  * a participant in the conference, which connects the participant's audio
@@ -50,11 +47,6 @@ import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
 public abstract class AbstractEndpoint
     implements MediaSourceContainer
 {
-    /**
-     * The default video constraints to assume when nothing is signaled.
-     */
-    private static final VideoConstraints defaultMaxReceiverVideoConstraints = disabledVideoConstraints;
-
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
@@ -413,7 +405,7 @@ public abstract class AbstractEndpoint
      * that contains the {@link VideoConstraints} to respect when allocating
      * bandwidth for a specific endpoint.
      */
-    public abstract void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> videoConstraints);
+    public abstract void setSenderVideoConstraints(Map<String, VideoConstraints> videoConstraints);
 
     /**
      * Notifies this instance that the max video constraints that the bridge

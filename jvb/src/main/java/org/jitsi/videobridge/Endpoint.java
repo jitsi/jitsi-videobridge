@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import com.google.common.collect.*;
 import kotlin.*;
 import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
@@ -652,7 +651,7 @@ public class Endpoint
     }
 
     @Override
-    public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
+    public void setSenderVideoConstraints(Map<String, VideoConstraints> newVideoConstraints)
     {
         bitrateController.setVideoConstraints(newVideoConstraints);
     }

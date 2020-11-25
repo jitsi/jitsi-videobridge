@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
-import com.google.common.collect.ImmutableMap
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
@@ -104,7 +103,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         set(value) {
             bitrateAllocator.lastN = value
         }
-    fun setVideoConstraints(newVideoConstraintsMap: ImmutableMap<String, VideoConstraints>) =
+    fun setVideoConstraints(newVideoConstraintsMap: Map<String, VideoConstraints>) =
         bitrateAllocator.setVideoConstraints(newVideoConstraintsMap)
     /**
      * Return the number of endpoints whose streams are currently being forwarded.
