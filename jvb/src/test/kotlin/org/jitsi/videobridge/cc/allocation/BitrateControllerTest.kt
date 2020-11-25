@@ -125,21 +125,24 @@ class BitrateControllerTest : ShouldSpec() {
                 val ordered = prioritize(
                     listOf("F", "E", "D", "C", "B", "A"),
                     emptyList(),
-                    endpoints)
+                    endpoints
+                )
                 ordered.map { it.id } shouldBe listOf("F", "E", "D", "C", "B", "A")
             }
             context("With one selected") {
                 val ordered = prioritize(
                     listOf("F", "E", "D", "C", "B", "A"),
                     listOf("B"),
-                    endpoints)
+                    endpoints
+                )
                 ordered.map { it.id } shouldBe listOf("B", "F", "E", "D", "C", "A")
             }
             context("With multiple selected") {
                 val ordered = prioritize(
                     listOf("F", "E", "D", "C", "B", "A"),
                     listOf("B", "A", "E"),
-                    endpoints)
+                    endpoints
+                )
                 ordered.map { it.id } shouldBe listOf("B", "A", "E", "F", "D", "C")
             }
         }

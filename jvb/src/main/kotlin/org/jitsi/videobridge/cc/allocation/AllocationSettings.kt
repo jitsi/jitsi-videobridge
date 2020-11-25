@@ -40,8 +40,7 @@ class AllocationSettings {
     private var videoConstraints = videoConstraintsCompatibility.computeVideoConstraints()
 
     fun setMaxFrameHeight(maxFrameHeight: Int): Boolean {
-        if (this.maxFrameHeight != maxFrameHeight)
-        {
+        if (this.maxFrameHeight != maxFrameHeight) {
             this.maxFrameHeight = maxFrameHeight
             videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight)
             return setVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints())
@@ -90,5 +89,4 @@ class AllocationSettings {
             put("last_n", lastN)
         }.toJSONString()
     }
-
 }

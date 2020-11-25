@@ -27,7 +27,6 @@ import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.TransceiverEventHandler
-import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.cc.allocation.VideoConstraints2
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
