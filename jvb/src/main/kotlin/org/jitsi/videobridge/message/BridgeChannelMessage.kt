@@ -51,7 +51,6 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = EndpointMessage::class, name = EndpointMessage.TYPE),
     JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintMessage::class, name = ReceiverVideoConstraintMessage.TYPE),
-    JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
     JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
@@ -98,7 +97,6 @@ open class MessageHandler {
             is EndpointMessage -> endpointMessage(message)
             is LastNMessage -> lastN(message)
             is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
-            is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
             is DominantSpeakerMessage -> dominantSpeaker(message)
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
@@ -123,7 +121,6 @@ open class MessageHandler {
     open fun endpointMessage(message: EndpointMessage) = unhandledMessageReturnNull(message)
     open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage) = unhandledMessageReturnNull(message)
-    open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
@@ -275,39 +272,6 @@ class LastNMessage(val lastN: Int) : BridgeChannelMessage(TYPE) {
 class ReceiverVideoConstraintMessage(val maxFrameHeight: Int) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "ReceiverVideoConstraint"
-    }
-}
-
-/**
- * A message sent from a client to a bridge, indicating constraints on the streams it wishes to receive. The constraints
- * are expressed as a list of [VideoConstraints], each of which specify the remote endpoint for which the constraint
- * applies and the `idealHeight`.
- *
- * NOTE that the intention is for this message to completely replace the following five messages:
- * [ReceiverVideoConstraintMessage], [PinnedEndpointMessage], [PinnedEndpointsMessage], [SelectedEndpointMessage], and
- * [SelectedEndpointsMessage].
- *
- * This isn't the case currently because that would require substantial changes in the client and instead it was
- * decided to provide a server side compatibility layer.
- *
- * Usage of the above old-world data messages should be avoided in future code.
- *
- * Example Json message:
- *
- * {
- *   "colibriClass": "ReceiverVideoConstraintsChangedEvent",
- *   "videoConstraints": [
- *     { "id": "abcdabcd", "idealHeight": 180 },
- *     { "id": "12341234", "idealHeight": 360 }
- *   ]
- * }
- */
-class ReceiverVideoConstraintsMessage(val videoConstraints: List<VideoConstraints>) : BridgeChannelMessage(TYPE) {
-
-    data class VideoConstraints(val id: String, val idealHeight: Int)
-
-    companion object {
-        const val TYPE = "ReceiverVideoConstraintsChangedEvent"
     }
 }
 

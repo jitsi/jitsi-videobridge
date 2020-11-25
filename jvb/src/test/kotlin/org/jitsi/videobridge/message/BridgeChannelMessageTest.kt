@@ -26,7 +26,6 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.videobridge.cc.allocation.VideoConstraints2
-import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
@@ -117,21 +116,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed2.otherFields["other_field1"] shouldBe "other_value1"
                 parsed2.otherFields["other_field2"] shouldBe 97
             }
-        }
-
-        context("serializing and parsing ReceiverVideoConstraintsChangedEvent") {
-            val constraints = listOf(
-                VideoConstraints("abcdabcd", 180),
-                VideoConstraints("12341234", 360)
-            )
-            val message = ReceiverVideoConstraintsMessage(constraints)
-
-            val parsed = parse(message.toJson())
-
-            parsed.shouldBeInstanceOf<ReceiverVideoConstraintsMessage>()
-            parsed as ReceiverVideoConstraintsMessage
-            parsed.videoConstraints.size shouldBe 2
-            parsed.videoConstraints shouldBe constraints
         }
 
         context("serializing and parsing DominantSpeakerMessage") {
