@@ -1401,6 +1401,7 @@ public class Endpoint
         debugState.put("iceTransport", iceTransport.getDebugState());
         debugState.put("dtlsTransport", dtlsTransport.getDebugState());
         debugState.put("transceiver", transceiver.getNodeStats().toJson());
+        debugState.put("transceiver-stats", transceiver.getTransceiverStats().toJson());
         debugState.put("acceptAudio", acceptAudio);
         debugState.put("acceptVideo", acceptVideo);
         debugState.put("messageTransport", messageTransport.getDebugState());
