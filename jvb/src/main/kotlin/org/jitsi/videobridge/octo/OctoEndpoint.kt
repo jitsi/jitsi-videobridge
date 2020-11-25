@@ -83,10 +83,6 @@ class OctoEndpoint(
         // single OctoEndpoints instance.
     }
 
-    override fun setSenderVideoConstraints(newVideoConstraints: Map<String, VideoConstraints>?) {
-        // NO-OP
-    }
-
     override fun requestKeyframe(mediaSsrc: Long) {
         transceiver.requestKeyframe(mediaSsrc)
     }

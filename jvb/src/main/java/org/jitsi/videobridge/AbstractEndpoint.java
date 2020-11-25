@@ -390,24 +390,6 @@ public abstract class AbstractEndpoint
     public abstract void addRtpExtension(RtpExtension rtpExtension);
 
     /**
-     * Sets the video constraints for the streams that this endpoint wishes to
-     * receive expressed as a map of endpoint id to {@link VideoConstraints}.
-     *
-     * NOTE that the map specifies all the constraints that need to be respected
-     * and therefore it resets any previous settings. In other words the map
-     * is not a diff/delta to be applied on top of the existing settings.
-     *
-     * NOTE that if there are no {@link VideoConstraints} specified for an
-     * endpoint, then its {@link VideoConstraints} are assumed to be
-     * the default.
-     *
-     * @param videoConstraints the map of endpoint id to {@link VideoConstraints}
-     * that contains the {@link VideoConstraints} to respect when allocating
-     * bandwidth for a specific endpoint.
-     */
-    public abstract void setSenderVideoConstraints(Map<String, VideoConstraints> videoConstraints);
-
-    /**
      * Notifies this instance that the max video constraints that the bridge
      * needs to receive from this endpoint has changed. Each implementation
      * handles this notification differently.

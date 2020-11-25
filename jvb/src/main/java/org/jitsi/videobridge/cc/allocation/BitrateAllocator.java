@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc.allocation;
 
-import com.google.common.collect.*;
 import edu.umd.cs.findbugs.annotations.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
@@ -150,12 +149,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private List<String> sortedEndpointIds;
 
     /**
-     * The map of endpoint id to video constraints that contains the video
-     * constraints to respect when allocating bandwidth for a specific endpoint.
-     */
-    private Map<String, VideoConstraints> videoConstraintsMap = ImmutableMap.of();
-
-    /**
      * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
      * fall outside of the last-n set + endpoints not announced in the videoConstraintsMap.
      */
@@ -173,6 +166,9 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
     private final Supplier<List<T>> endpointsSupplier;
     private final Supplier<Boolean> trustBwe;
+
+    private AllocationSettings.Snapshot allocationSettings
+            = new AllocationSettings.Snapshot(Collections.emptySet(), Collections.emptyMap());
 
     /**
      * The last time {@link BitrateAllocator#update()} was called
@@ -214,7 +210,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         JSONObject debugState = new JSONObject();
         debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
         debugState.put("lastBwe", lastBwe);
-        debugState.put("videoConstraints", videoConstraintsMap);
+        debugState.put("allocationSettings", allocationSettings.toString());
         debugState.put("effectiveVideoConstraints", effectiveConstraintsMap);
         debugState.put("lastN", lastN);
         return debugState;
@@ -290,6 +286,12 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
         // TODO: Maybe suppress calling update() unless the order actually changed?
         sortedEndpointIds = conferenceEndpoints;
+        update();
+    }
+
+    void update(AllocationSettings.Snapshot allocationSettings)
+    {
+        this.allocationSettings = allocationSettings;
         update();
     }
 
@@ -485,11 +487,15 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                     ", sorted endpoint list: " +
                     conferenceEndpoints.stream().map(MediaSourceContainer::getId).collect(Collectors.joining(", ")) +
-                    ". Endpoints constraints: " + Arrays.toString(videoConstraintsMap.values().toArray()));
+                    ". Endpoints constraints: "
+                    + Arrays.toString(allocationSettings.getVideoConstraints().values().toArray()));
         }
 
         List<EndpointMultiRank<T>> endpointMultiRankList
-                = EndpointMultiRank.makeEndpointMultiRankList(conferenceEndpoints, videoConstraintsMap, adjustedLastN);
+                = EndpointMultiRank.makeEndpointMultiRankList(
+                        conferenceEndpoints,
+                        allocationSettings.getVideoConstraints(),
+                        adjustedLastN);
 
         for (EndpointMultiRank<T> endpointMultiRank : endpointMultiRankList)
         {
@@ -517,12 +523,14 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         return sourceBitrateAllocations;
     }
 
+    // TODO: remove when the tests are ported.
     void setVideoConstraints(Map<String, VideoConstraints> newVideoConstraintsMap)
     {
-        if (!this.videoConstraintsMap.equals(newVideoConstraintsMap))
+        if (!this.allocationSettings.getVideoConstraints().equals(newVideoConstraintsMap))
         {
-            this.videoConstraintsMap = newVideoConstraintsMap;
-            update();
+            update(new AllocationSettings.Snapshot(
+                    allocationSettings.getSelectedEndpoints(),
+                    newVideoConstraintsMap));
         }
     }
 
@@ -555,7 +563,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                 .compareTo(BitrateControllerConfig.maxTimeBetweenCalculations()) > 0)
         {
             logger.debug("Forcing an update");
-            TaskPools.CPU_POOL.submit(this::update);
+            TaskPools.CPU_POOL.submit((Runnable) this::update);
         }
     }
 

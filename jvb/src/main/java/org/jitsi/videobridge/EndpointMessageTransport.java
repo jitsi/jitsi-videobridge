@@ -15,10 +15,8 @@
  */
 package org.jitsi.videobridge;
 
-import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
@@ -71,11 +69,6 @@ class EndpointMessageTransport
     private final EndpointMessageTransportEventHandler eventHandler;
 
     private final AtomicInteger numOutgoingMessagesDropped = new AtomicInteger(0);
-
-    /**
-     * The compatibility layer that translates selected, and max resolution messages into video constraints.
-     */
-    private final VideoConstraintsCompatibility videoConstraintsCompatibility = new VideoConstraintsCompatibility();
 
     /**
      * The number of sent message by type.
@@ -397,8 +390,6 @@ class EndpointMessageTransport
         sentCounts.putAll(sentMessagesCounts);
         debugState.put("sent_counts", sentCounts);
 
-        debugState.put("video_constraints_compatibility", videoConstraintsCompatibility.getDebugState());
-
         return debugState;
     }
 
@@ -436,22 +427,8 @@ class EndpointMessageTransport
         newSelectedEndpoints.remove(endpoint.getId());
 
         logger.debug(() -> "Selected " + newSelectedEndpoints);
-        videoConstraintsCompatibility.setSelectedEndpoints(newSelectedEndpoints);
-        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
+        endpoint.setSelectedEndpoints(newSelectedEndpoints);
         return null;
-    }
-
-    /**
-     * Sets the sender video constraints of this {@link #endpoint}.
-     *
-     * @param videoConstraintsMap the sender video constraints of this
-     * {@link #endpoint}.
-     */
-    private void setSenderVideoConstraints(Map<String, VideoConstraints> videoConstraintsMap)
-    {
-        logger.debug(() -> "New video constraints map: " + videoConstraintsMap);
-
-        endpoint.setSenderVideoConstraints(ImmutableMap.copyOf(videoConstraintsMap));
     }
 
     /**
@@ -467,9 +444,7 @@ class EndpointMessageTransport
         logger.debug(
                 () -> "Received a maxFrameHeight video constraint from " + endpoint.getId() + ": " + maxFrameHeight);
 
-        videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
-        setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
-
+        endpoint.setMaxFrameHeight(maxFrameHeight);
         return null;
     }
 

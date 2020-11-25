@@ -650,12 +650,6 @@ public class Endpoint
         transceiver.addRtpExtension(rtpExtension);
     }
 
-    @Override
-    public void setSenderVideoConstraints(Map<String, VideoConstraints> newVideoConstraints)
-    {
-        bitrateController.setVideoConstraints(newVideoConstraints);
-    }
-
     private void effectiveVideoConstraintsChanged(
         Map<String, VideoConstraints2> oldEffectiveConstraints,
         Map<String, VideoConstraints2> newEffectiveConstraints)
@@ -1437,6 +1431,16 @@ public class Endpoint
     public boolean isOversending()
     {
         return bitrateController.isOversending();
+    }
+
+    void setSelectedEndpoints(Set<String> selectedEndpoints)
+    {
+        bitrateController.setSelectedEndpoints(selectedEndpoints);
+    }
+
+    void setMaxFrameHeight(int maxFrameHeight)
+    {
+        bitrateController.setMaxFrameHeight(maxFrameHeight);
     }
 
     private class TransceiverEventHandlerImpl implements TransceiverEventHandler

@@ -83,6 +83,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             clock
         )
 
+    private val allocationSettings = AllocationSettings()
+
     init {
         eventEmitter.addHandler(eventHandler)
     }
@@ -103,8 +105,21 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         set(value) {
             bitrateAllocator.lastN = value
         }
+    // TODO remove when the tests are updated.
     fun setVideoConstraints(newVideoConstraintsMap: Map<String, VideoConstraints>) =
         bitrateAllocator.setVideoConstraints(newVideoConstraintsMap)
+
+    fun setMaxFrameHeight(maxFrameHeight: Int) {
+        if (allocationSettings.setMaxFrameHeight(maxFrameHeight)) {
+            bitrateAllocator.update(allocationSettings.snapshot())
+        }
+    }
+    fun setSelectedEndpoints(selectedEndpoints: Set<String>) {
+        if (allocationSettings.setSelectedEndpoints(selectedEndpoints)) {
+            bitrateAllocator.update(allocationSettings.snapshot())
+        }
+    }
+
     /**
      * Return the number of endpoints whose streams are currently being forwarded.
      */
