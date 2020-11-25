@@ -33,6 +33,8 @@ import java.util.*;
 import java.util.function.*;
 import java.util.stream.*;
 
+import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
+
 /**
  * The {@link BitrateAllocator} is attached to a destination {@code
  * Endpoint} and its purpose is 1st to selectively drop incoming packets
@@ -144,7 +146,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private long lastBwe = -1;
 
     /**
-     * The list of endpoints ids ordered by activity (minus the id of the {@link #destinationEndpoint}).
+     * The list of endpoints ids ordered by speech activity.
      */
     private List<String> sortedEndpointIds;
 
@@ -295,24 +297,18 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private synchronized void update()
     {
         lastUpdateTime = clock.instant();
-        long bweBps = getAvailableBandwidth();
 
         if (sortedEndpointIds == null || sortedEndpointIds.isEmpty())
         {
             return;
         }
 
-        List<T> sortedEndpoints = new ArrayList<>(sortedEndpointIds.size());
-        List<T> conferenceEndpoints = endpointsSupplier.get();
-        for (String endpointId : sortedEndpointIds)
-        {
-            conferenceEndpoints.stream()
-                    .filter(e -> e.getId().equals(endpointId))
-                    .findFirst().ifPresent(sortedEndpoints::add);
-        }
+        // Order the endpoints by selection, followed by speech activity.
+        List<T> sortedEndpoints
+                = prioritize(sortedEndpointIds, allocationSettings.getSelectedEndpoints(), endpointsSupplier.get());
 
         // Compute the bitrate allocation.
-        Allocation newAllocation = allocate(bweBps, sortedEndpoints);
+        Allocation newAllocation = allocate(getAvailableBandwidth(), sortedEndpoints);
 
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
         if (allocationChanged)
@@ -346,7 +342,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
     }
 
-
     /**
      * Computes the ideal and the target bitrate, limiting the target to be
      * less than bandwidth estimation specified as an argument.
@@ -365,7 +360,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             long maxBandwidth,
             List<T> conferenceEndpoints)
     {
-        List<SingleSourceAllocation> sourceBitrateAllocations = prioritize(conferenceEndpoints);
+        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceEndpoints);
 
         if (sourceBitrateAllocations.isEmpty())
         {
@@ -441,6 +436,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                 sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()));
     }
 
+
     /**
      * Returns a prioritized {@link SingleSourceAllocation} array where
      * selected endpoint are at the top of the array followed by any other remaining endpoints. The
@@ -457,7 +453,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * selected endpoint are at the top of the array,
      * followed by any other remaining endpoints.
      */
-    private synchronized @NotNull List<SingleSourceAllocation> prioritize(List<T> conferenceEndpoints)
+    private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
     {
         // Init.
         List<SingleSourceAllocation> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
@@ -485,17 +481,17 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                     + Arrays.toString(allocationSettings.getVideoConstraints().values().toArray()));
         }
 
-        List<EndpointMultiRank<T>> endpointMultiRankList
-                = EndpointMultiRank.makeEndpointMultiRankList(
-                        conferenceEndpoints,
-                        allocationSettings.getVideoConstraints(),
-                        adjustedLastN);
-
-        for (EndpointMultiRank<T> endpointMultiRank : endpointMultiRankList)
+        Map<String, VideoConstraints> videoConstraintsMap = allocationSettings.getVideoConstraints();
+        for (int i = 0; i < conferenceEndpoints.size(); i++)
         {
-            MediaSourceContainer sourceEndpoint = endpointMultiRank.endpoint;
-
-            MediaSourceDesc[] sources = sourceEndpoint.getMediaSources();
+            MediaSourceContainer endpoint = conferenceEndpoints.get(i);
+            MediaSourceDesc[] sources = endpoint.getMediaSources();
+            VideoConstraints effectiveVideoConstraints
+                = videoConstraintsMap.getOrDefault(endpoint.getId(), VideoConstraints.thumbnailVideoConstraints);
+            if (adjustedLastN > -1 && i >= adjustedLastN)
+            {
+                effectiveVideoConstraints = VideoConstraints.disabledVideoConstraints;
+            }
 
             if (!ArrayUtils.isNullOrEmpty(sources))
             {
@@ -503,14 +499,11 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                 {
                     sourceBitrateAllocations.add(
                             new SingleSourceAllocation(
-                                    endpointMultiRank.endpoint.getId(),
+                                    endpoint.getId(),
                                     source,
-                                    endpointMultiRank.effectiveVideoConstraints,
+                                    effectiveVideoConstraints,
                                     clock));
                 }
-
-
-                logger.trace(() -> "Adding endpoint " + sourceEndpoint.getId() + " to allocations");
             }
         }
 
