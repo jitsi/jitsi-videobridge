@@ -25,6 +25,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jitsi.videobridge.cc.allocation.VideoConstraints2
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
@@ -58,7 +59,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.selectedEndpoints shouldBe listOf("abcdabcd", "12341234")
             }
 
-            should("serialize and de-seriealize correctly") {
+            should("serialize and de-serialize correctly") {
                 val selectedEndpoints = listOf("abcdabcd", "12341234")
                 val serialized = SelectedEndpointsMessage(selectedEndpoints).toJson()
                 val parsed2 = parse(serialized)
@@ -198,33 +199,31 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsedForwardedEndpoints.toList() shouldContainExactly forwardedEndpoints
         }
 
-        context("serializing and parsing VideoConstraints and SenderVideoConstraintsMessage") {
-            val videoConstraints: org.jitsi.videobridge.VideoConstraints =
-                jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
-            videoConstraints.idealHeight shouldBe 1080
-            videoConstraints.preferredHeight shouldBe 360
-            videoConstraints.preferredFps shouldBe 30.0
+        context("serializing and parsing VideoConstraints2") {
+            val videoConstraints: VideoConstraints2 = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
+            videoConstraints.maxHeight shouldBe 1080
+            videoConstraints.maxFrameRate shouldBe 15.0
+        }
 
-            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(videoConstraints)
+        context("and SenderVideoConstraintsMessage") {
+            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(1080)
             val parsed = parse(senderVideoConstraintsMessage.toJson())
 
             parsed.shouldBeInstanceOf<SenderVideoConstraintsMessage>()
             parsed as SenderVideoConstraintsMessage
 
             parsed.videoConstraints.idealHeight shouldBe 1080
-            parsed.videoConstraints.preferredHeight shouldBe 360
-            parsed.videoConstraints.preferredFps shouldBe 30.0
         }
 
         context("serializing and parsing AddReceiver") {
-            val message = AddReceiverMessage("bridge1", "abcdabcd", org.jitsi.videobridge.VideoConstraints(360))
+            val message = AddReceiverMessage("bridge1", "abcdabcd", VideoConstraints2(360))
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<AddReceiverMessage>()
             parsed as AddReceiverMessage
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
-            parsed.videoConstraints shouldBe org.jitsi.videobridge.VideoConstraints(360)
+            parsed.videoConstraints shouldBe VideoConstraints2(360)
         }
 
         context("serializing and parsing RemoveReceiver") {
@@ -296,9 +295,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
         const val VIDEO_CONSTRAINTS = """
             {
-                "idealHeight": 1080,
-                "preferredHeight": 360,
-                "preferredFps": 30.0
+                "maxHeight": 1080,
+                "maxFrameRate": 15.0
             }
         """
     }

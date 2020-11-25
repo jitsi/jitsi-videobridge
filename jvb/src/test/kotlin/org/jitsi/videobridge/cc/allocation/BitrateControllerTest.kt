@@ -765,7 +765,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         }
 
     // Save the output.
-    val effectiveConstraintsHistory: History<ImmutableMap<String, VideoConstraints>> = mutableListOf()
+    val effectiveConstraintsHistory: History<Map<String, VideoConstraints2>> = mutableListOf()
     val forwardedEndpointsHistory: History<Set<String>> = mutableListOf()
     val allocationHistory: History<Collection<AllocationInfo>> = mutableListOf()
 
@@ -779,10 +779,10 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
             }
 
             override fun effectiveVideoConstraintsChanged(
-                oldVideoConstraints: ImmutableMap<String, VideoConstraints>,
-                newVideoConstraints: ImmutableMap<String, VideoConstraints>
+                oldEffectiveConstraints: Map<String, VideoConstraints2>,
+                newEffectiveConstraints: Map<String, VideoConstraints2>
             ) {
-                Event(bwe, newVideoConstraints, clock.instant()).apply {
+                Event(bwe, newEffectiveConstraints, clock.instant()).apply {
                     logger.info("Effective constraints changed: $this")
                     effectiveConstraintsHistory.add(this)
                 }

@@ -290,8 +290,7 @@ public class Endpoint
                 }
             });
 
-        BitrateController.EventHandler bcEventHandler
-                = new BitrateController.EventHandler()
+        BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
         {
             @Override
             public void allocationChanged(@NotNull Allocation allocation)
@@ -307,10 +306,10 @@ public class Endpoint
 
             @Override
             public void effectiveVideoConstraintsChanged(
-                    ImmutableMap<String, VideoConstraints> oldVideoConstraints,
-                    ImmutableMap<String, VideoConstraints> newVideoConstraints)
+                    @NotNull Map<String, VideoConstraints2> oldEffectiveConstraints,
+                    @NotNull Map<String, VideoConstraints2> newEffectiveConstraints)
             {
-                Endpoint.this.effectiveVideoConstraintsChanged(oldVideoConstraints, newVideoConstraints);
+                Endpoint.this.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints);
             }
 
             @Override
@@ -659,11 +658,11 @@ public class Endpoint
     }
 
     private void effectiveVideoConstraintsChanged(
-        ImmutableMap<String, VideoConstraints> oldVideoConstraints,
-        ImmutableMap<String, VideoConstraints> newVideoConstraints)
+        Map<String, VideoConstraints2> oldEffectiveConstraints,
+        Map<String, VideoConstraints2> newEffectiveConstraints)
     {
-        Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
-        removedEndpoints.removeAll(newVideoConstraints.keySet());
+        Set<String> removedEndpoints = new HashSet<>(oldEffectiveConstraints.keySet());
+        removedEndpoints.removeAll(newEffectiveConstraints.keySet());
 
         // Sources that "this" endpoint no longer receives.
         for (String id : removedEndpoints)
@@ -676,23 +675,22 @@ public class Endpoint
         }
 
         // Added or updated.
-        for (Map.Entry<String, VideoConstraints> videoConstraintsEntry : newVideoConstraints.entrySet())
-        {
-            AbstractEndpoint senderEndpoint = getConference().getEndpoint(videoConstraintsEntry.getKey());
-
+        newEffectiveConstraints.forEach((endpointId, effectiveConstraints) -> {
+            AbstractEndpoint senderEndpoint = getConference().getEndpoint(endpointId);
             if (senderEndpoint != null)
             {
-                senderEndpoint.addReceiver(getId(), videoConstraintsEntry.getValue());
+                senderEndpoint.addReceiver(getId(), effectiveConstraints);
             }
-        }
+        });
+
     }
 
     @Override
-    protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints)
+    protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints2 maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
         SenderVideoConstraintsMessage senderVideoConstraintsMessage
-                = new SenderVideoConstraintsMessage(maxVideoConstraints);
+                = new SenderVideoConstraintsMessage(maxVideoConstraints.getMaxHeight());
 
         logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
 

@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
-import org.jitsi.videobridge.VideoConstraints
+import org.jitsi.videobridge.cc.allocation.VideoConstraints2
 import org.json.simple.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -380,11 +380,18 @@ class ForwardedEndpointsMessage(
  * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
  */
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
+    constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
+
     /**
      * Serialize manually because it's faster than either Jackson or json-simple.
-     * Note that we depend on `VideoConstraints.toString` producing JSON.
+     *
+     * We use the "idealHeight" format that the jitsi-meet client expects.
      */
-    override fun toJson(): String = """{"colibriClass":"$TYPE", "videoConstraints":$videoConstraints}"""
+    override fun toJson(): String =
+        """{"colibriClass":"$TYPE", "videoConstraints":{"idealHeight":${videoConstraints.idealHeight}}}"""
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class VideoConstraints(val idealHeight: Int)
 
     companion object {
         const val TYPE = "SenderVideoConstraints"
@@ -398,7 +405,7 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
 class AddReceiverMessage(
     val bridgeId: String,
     val endpointId: String,
-    val videoConstraints: VideoConstraints
+    val videoConstraints: VideoConstraints2
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Serialize manually because it's faster than either Jackson or json-simple.

@@ -17,7 +17,6 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.videobridge.VideoConstraints
 
 /**
  * The result of bitrate allocation.
@@ -60,7 +59,7 @@ data class SingleAllocation(
      * The layer which would have been selected without bandwidth constraints.
      */
     val idealLayer: RtpLayerDesc?,
-    val effectiveVideoConstraints: VideoConstraints,
+    val effectiveVideoConstraints: VideoConstraints2,
     /**
      * Set to true if the selected/target layer has higher bitrate than the available bandwidth.
      */

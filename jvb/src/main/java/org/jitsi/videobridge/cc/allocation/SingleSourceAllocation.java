@@ -284,7 +284,9 @@ public class SingleSourceAllocation {
                 source,
                 targetLayer == null ? null : targetLayer.layer,
                 idealLayer == null ? null : idealLayer.layer,
-                effectiveVideoConstraints,
+                new VideoConstraints2(
+                        effectiveVideoConstraints.getIdealHeight(),
+                        effectiveVideoConstraints.getPreferredFps()),
                 oversending
         );
     }

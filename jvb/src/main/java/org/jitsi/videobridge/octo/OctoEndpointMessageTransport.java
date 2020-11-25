@@ -63,7 +63,7 @@ class OctoEndpointMessageTransport
 
     /**
      * This message indicates that a remote bridge wishes to receive video
-     * with certain constraints for a specific endpoin.
+     * with certain constraints for a specific endpoint.
      * @param message
      * @return
      */

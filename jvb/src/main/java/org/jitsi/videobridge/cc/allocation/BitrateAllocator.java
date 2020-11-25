@@ -159,7 +159,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
      * fall outside of the last-n set + endpoints not announced in the videoConstraintsMap.
      */
-    private Map<String, VideoConstraints> effectiveConstraintsMap = Collections.emptyMap();
+    private Map<String, VideoConstraints2> effectiveConstraintsMap = Collections.emptyMap();
 
     /**
      * The last-n value for the endpoint to which this {@link BitrateAllocator}
@@ -332,28 +332,21 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
         // Now that the bitrate allocation update is complete, we wish to compute the "effective" sender video
         // constraints map which are used in layer suspension.
-        Map<String, VideoConstraints> newEffectiveConstraints = new HashMap<>();
-
-        if (!newAllocation.getAllocations().isEmpty())
+        Map<String, VideoConstraints2> newEffectiveConstraints = new HashMap<>();
+        for (SingleAllocation singleAllocation : newAllocation.getAllocations())
         {
-            for (SingleAllocation singleAllocation : newAllocation.getAllocations())
-            {
-                newEffectiveConstraints.put(
-                        singleAllocation.getEndpointId(),
-                        singleAllocation.getEffectiveVideoConstraints());
-            }
+            newEffectiveConstraints.put(
+                    singleAllocation.getEndpointId(),
+                    singleAllocation.getEffectiveVideoConstraints());
         }
 
         if (!newEffectiveConstraints.equals(effectiveConstraintsMap))
         {
-            ImmutableMap<String, VideoConstraints>
-                    oldEffectiveConstraints = ImmutableMap.copyOf(effectiveConstraintsMap);
-            // TODO make the call outside the synchronized block.
+            Map<String, VideoConstraints2> oldEffectiveConstraints = effectiveConstraintsMap;
             effectiveConstraintsMap = newEffectiveConstraints;
             eventEmitter.fireEvent(handler ->
             {
-                handler.effectiveVideoConstraintsChanged(
-                        oldEffectiveConstraints, ImmutableMap.copyOf(newEffectiveConstraints));
+                handler.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints);
                 return Unit.INSTANCE;
             });
         }
@@ -571,7 +564,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     {
         default void allocationChanged(@NotNull Allocation allocation) {}
         default void effectiveVideoConstraintsChanged(
-                @NotNull ImmutableMap<String, VideoConstraints> oldEffectiveVideoConstraints,
-                @NotNull ImmutableMap<String, VideoConstraints> newEffectiveVideoConstraints) {}
+                @NotNull Map<String, VideoConstraints2> oldEffectiveConstraints,
+                @NotNull Map<String, VideoConstraints2> newEffectiveConstraints) {}
     }
 }
