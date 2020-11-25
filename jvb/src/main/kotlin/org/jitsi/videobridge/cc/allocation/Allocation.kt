@@ -69,4 +69,3 @@ data class SingleAllocation(
         get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1
 }
-

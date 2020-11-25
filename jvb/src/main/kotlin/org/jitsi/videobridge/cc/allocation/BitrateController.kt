@@ -184,7 +184,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         fun allocationChanged(allocation: Allocation) { }
     }
 
-    private inner class BitrateAllocatorEventHandler: BitrateAllocator.EventHandler {
+    private inner class BitrateAllocatorEventHandler : BitrateAllocator.EventHandler {
         override fun allocationChanged(allocation: Allocation) {
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)

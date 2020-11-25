@@ -881,8 +881,8 @@ data class AllocationInfo(
     override fun equals(other: Any?): Boolean {
         if (other !is AllocationInfo) return false
 
-        return id == other.id && height == other.height && fps == other.fps && bitrate == other.bitrate
-            && oversending == other.oversending
+        return id == other.id && height == other.height && fps == other.fps && bitrate == other.bitrate &&
+            oversending == other.oversending
     }
 }
 
