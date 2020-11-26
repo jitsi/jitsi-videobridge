@@ -25,9 +25,12 @@ import org.jitsi.nlj.util.DataSize
  * Keeps track of its subjective quality index,
  * its last stable bitrate and other useful things for adaptivity/routing.
  *
+ * Note: this class and [getBitrate] are only open to allow to be overridden for testing. We found that mocking has
+ * severe overhead and is not suitable for performance tests.
+ *
  * @author George Politis
  */
-class RtpLayerDesc
+open class RtpLayerDesc
 constructor(
     /**
      * The index of this instance's encoding in the source encoding array.
@@ -122,7 +125,7 @@ constructor(
      * @return the cumulative bitrate (in bps) of this [RtpLayerDesc]
      * and its dependencies.
      */
-    fun getBitrate(nowMs: Long): Bandwidth {
+    open fun getBitrate(nowMs: Long): Bandwidth {
         var bitrate = bitrateTracker.getRate(nowMs)
 
         /* TODO: does the wrong thing if we have multiple dependencies */
