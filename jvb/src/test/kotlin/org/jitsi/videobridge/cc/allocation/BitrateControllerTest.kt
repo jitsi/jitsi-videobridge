@@ -20,8 +20,6 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.mockk
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingDesc
@@ -981,17 +979,8 @@ fun createLayer(
 ): RtpLayerDesc {
     val sid = -1
 
-    val rtpLayerDesc = mockk<RtpLayerDesc>()
-    every { rtpLayerDesc.eid } returns eid
-    every { rtpLayerDesc.tid } returns tid
-    every { rtpLayerDesc.sid } returns sid
-    every { rtpLayerDesc.height } returns height
-    every { rtpLayerDesc.frameRate } returns frameRate
-    every { rtpLayerDesc.getBitrate(any()) } returns bitrate
-
-    // This is copied from the real implementation.
-    every { rtpLayerDesc.layerId } returns RtpLayerDesc.getIndex(0, sid, tid)
-    every { rtpLayerDesc.index } returns RtpLayerDesc.getIndex(eid, sid, tid)
-
-    return rtpLayerDesc
+    // Use a real RtpLayerDesc, because mocking absolutely kills the performance.
+    return object : RtpLayerDesc(eid, tid, sid, height, frameRate, dependencyLayers = null) {
+        override fun getBitrate(nowMs: Long): Bandwidth = bitrate
+    }
 }
