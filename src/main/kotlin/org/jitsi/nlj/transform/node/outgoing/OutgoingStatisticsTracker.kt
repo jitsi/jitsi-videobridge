@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.outgoing
 
 import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.rtp.rtp.RtpPacket
@@ -34,6 +35,15 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
             OutgoingSsrcStats(rtpPacket.ssrc)
         }
         stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return super.getNodeStats().apply {
+            val stats = getSnapshot()
+            stats.ssrcStats.forEach { (ssrc, streamStats) ->
+                addJson(ssrc.toString(), streamStats.toJson())
+            }
+        }
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
