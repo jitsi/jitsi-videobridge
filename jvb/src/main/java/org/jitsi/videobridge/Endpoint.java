@@ -690,12 +690,19 @@ public class Endpoint
     protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
-        SenderVideoConstraintsMessage senderVideoConstraintsMessage
-                = new SenderVideoConstraintsMessage(maxVideoConstraints);
+        if (ArrayUtils.isNullOrEmpty(getMediaSources()))
+        {
+            logger.debug("Suppressing sending a SenderVideoConstraints message, endpoint has no streams.");
+        }
+        else
+        {
+            SenderVideoConstraintsMessage senderVideoConstraintsMessage
+                    = new SenderVideoConstraintsMessage(maxVideoConstraints);
 
-        logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
+            logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
 
-        sendMessage(senderVideoConstraintsMessage);
+            sendMessage(senderVideoConstraintsMessage);
+        }
     }
 
     /**
