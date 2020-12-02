@@ -5,10 +5,10 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.VideoConstraints
-import org.jitsi.videobridge.util.EventEmitter
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
