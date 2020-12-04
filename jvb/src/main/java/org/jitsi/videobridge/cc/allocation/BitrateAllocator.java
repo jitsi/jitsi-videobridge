@@ -379,7 +379,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             {
                 SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
 
-                if (sourceBitrateAllocation.effectiveVideoConstraints.getIdealHeight() <= 0)
+                if (sourceBitrateAllocation.constraints.getIdealHeight() <= 0)
                 {
                     continue;
                 }

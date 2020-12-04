@@ -40,11 +40,7 @@ public class SingleSourceAllocation {
      */
     public final String endpointID;
 
-    /**
-     * Indicates whether this {@code Endpoint} is on-stage/selected or not
-     * at the {@code Endpoint} that owns this {@link BitrateAllocator}.
-     */
-    final VideoConstraints effectiveVideoConstraints;
+    final VideoConstraints constraints;
 
     /**
      * The first {@link MediaSourceDesc} of the {@code Endpoint} that
@@ -98,14 +94,14 @@ public class SingleSourceAllocation {
     SingleSourceAllocation(
             String endpointID,
             MediaSourceDesc source,
-            VideoConstraints effectiveVideoConstraints,
+            VideoConstraints constraints,
             Clock clock)
     {
         this.endpointID = endpointID;
-        this.effectiveVideoConstraints = effectiveVideoConstraints;
+        this.constraints = constraints;
         this.source = source;
 
-        if (source == null || effectiveVideoConstraints.getIdealHeight() <= 0) {
+        if (source == null || constraints.getIdealHeight() <= 0) {
             ratedPreferredIdx = -1;
             idealBitrate = 0;
             ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
@@ -123,7 +119,7 @@ public class SingleSourceAllocation {
         long idealBps = 0;
         for (RtpLayerDesc layer : source.getRtpLayers()) {
 
-            int idealHeight = effectiveVideoConstraints.getIdealHeight();
+            int idealHeight = constraints.getIdealHeight();
             // We don't want to exceed the ideal resolution but we also
             // want to make sure we have at least 1 rated encoding.
             if (idealHeight >= 0 && layer.getHeight() > idealHeight && !ratesList.isEmpty()) {
@@ -138,11 +134,11 @@ public class SingleSourceAllocation {
             // 180p30fps, 360p30fps and 720p30fps.
 
             boolean lessThanPreferredResolution
-                    = layer.getHeight() < effectiveVideoConstraints.getPreferredHeight();
+                    = layer.getHeight() < constraints.getPreferredHeight();
             boolean lessThanOrEqualIdealResolution
-                    = layer.getHeight() <= effectiveVideoConstraints.getIdealHeight();
+                    = layer.getHeight() <= constraints.getIdealHeight();
             boolean atLeastPreferredFps
-                    = layer.getFrameRate() >= effectiveVideoConstraints.getPreferredFps();
+                    = layer.getFrameRate() >= constraints.getPreferredFps();
 
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
@@ -155,7 +151,7 @@ public class SingleSourceAllocation {
                 ratesList.add(new LayerSnapshot(layer, layerBitrate));
             }
 
-            if (layer.getHeight() <= effectiveVideoConstraints.getPreferredHeight()) {
+            if (layer.getHeight() <= constraints.getPreferredHeight()) {
                 // The improve step below will "eagerly" try to allocate
                 // up-to the ratedPreferredIdx before moving on to the next
                 // track. Eagerly means we consume all available bandwidth
@@ -285,8 +281,8 @@ public class SingleSourceAllocation {
                 targetLayer == null ? null : targetLayer.layer,
                 idealLayer == null ? null : idealLayer.layer,
                 new VideoConstraints2(
-                        effectiveVideoConstraints.getIdealHeight(),
-                        effectiveVideoConstraints.getPreferredFps()),
+                        constraints.getIdealHeight(),
+                        constraints.getPreferredFps()),
                 oversending
         );
     }
@@ -294,7 +290,7 @@ public class SingleSourceAllocation {
     @Override
     public String toString() {
         return "[id=" + endpointID
-                + " effectiveVideoConstraints=" + effectiveVideoConstraints
+                + " effectiveVideoConstraints=" + constraints
                 + " ratedPreferredIdx=" + ratedPreferredIdx
                 + " ratedTargetIdx=" + ratedTargetIdx
                 + " oversending=" + oversending
