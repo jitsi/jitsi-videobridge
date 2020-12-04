@@ -152,6 +152,11 @@ class BitrateControllerTest : ShouldSpec() {
                     context("and the dominant speaker is on stage") {
                         bc.setEndpointOrdering("A", "B", "C", "D")
                         bc.setStageView("A")
+
+                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                        bc.bc.allocationSettings.lastN shouldBe -1
+                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+
                         runBweLoop()
 
                         verifyStageView()
@@ -159,6 +164,10 @@ class BitrateControllerTest : ShouldSpec() {
                     context("and a non-dominant speaker is on stage") {
                         bc.setEndpointOrdering("B", "A", "C", "D")
                         bc.setStageView("A")
+
+                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                        bc.bc.allocationSettings.lastN shouldBe -1
+                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
                         runBweLoop()
 
                         verifyStageView()
@@ -169,6 +178,11 @@ class BitrateControllerTest : ShouldSpec() {
                     bc.setEndpointOrdering("A", "B", "C", "D")
                     bc.setStageView("A")
                     bc.setLastN(0)
+
+                    bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                    bc.bc.allocationSettings.lastN shouldBe 0
+                    bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+
                     runBweLoop()
 
                     verifyLastN0()
@@ -179,6 +193,11 @@ class BitrateControllerTest : ShouldSpec() {
                         bc.setEndpointOrdering("A", "B", "C", "D")
                         bc.setStageView("A")
                         bc.setLastN(1)
+
+                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                        bc.bc.allocationSettings.lastN shouldBe 1
+                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+
                         runBweLoop()
 
                         verifyStageViewLastN1()
@@ -187,6 +206,11 @@ class BitrateControllerTest : ShouldSpec() {
                         bc.setEndpointOrdering("B", "A", "C", "D")
                         bc.setStageView("A")
                         bc.setLastN(1)
+
+                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                        bc.bc.allocationSettings.lastN shouldBe 1
+                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+
                         runBweLoop()
 
                         verifyStageViewLastN1()
@@ -196,6 +220,10 @@ class BitrateControllerTest : ShouldSpec() {
             context("Tile view") {
                 bc.setEndpointOrdering("A", "B", "C", "D")
                 bc.setTileView("A", "B", "C", "D")
+
+                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
+                bc.bc.allocationSettings.lastN shouldBe -1
+                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B", "C", "D")
 
                 context("When LastN is not set") {
                     runBweLoop()
@@ -222,6 +250,11 @@ class BitrateControllerTest : ShouldSpec() {
                 bc.setEndpointOrdering("A", "B", "C", "D")
                 bc.setSelectedEndpoints("A", "B", maxFrameHeight = 720)
                 bc.setLastN(2)
+
+                // TODO: This should probably not use TileView
+                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
+                bc.bc.allocationSettings.lastN shouldBe 2
+                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B")
 
                 clock.elapse(20.secs)
                 bc.bwe = 10.mbps

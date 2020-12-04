@@ -82,7 +82,9 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             clock
         )
 
-    private val allocationSettings = AllocationSettingsWrapper()
+    private val allocationSettingsWrapper = AllocationSettingsWrapper()
+    val allocationSettings
+        get() = allocationSettingsWrapper.get()
 
     init {
         eventEmitter.addHandler(eventHandler)
@@ -100,21 +102,21 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun endpointOrderingChanged(conferenceEndpoints: List<String>) =
         bitrateAllocator.endpointOrderingChanged(conferenceEndpoints)
     var lastN: Int
-        get() = allocationSettings.lastN
+        get() = allocationSettingsWrapper.lastN
         set(value) {
-            if (allocationSettings.setLastN(value)) {
-                bitrateAllocator.update(allocationSettings.get())
+            if (allocationSettingsWrapper.setLastN(value)) {
+                bitrateAllocator.update(allocationSettingsWrapper.get())
             }
         }
 
     fun setMaxFrameHeight(maxFrameHeight: Int) {
-        if (allocationSettings.setMaxFrameHeight(maxFrameHeight)) {
-            bitrateAllocator.update(allocationSettings.get())
+        if (allocationSettingsWrapper.setMaxFrameHeight(maxFrameHeight)) {
+            bitrateAllocator.update(allocationSettingsWrapper.get())
         }
     }
     fun setSelectedEndpoints(selectedEndpoints: List<String>) {
-        if (allocationSettings.setSelectedEndpoints(selectedEndpoints)) {
-            bitrateAllocator.update(allocationSettings.get())
+        if (allocationSettingsWrapper.setSelectedEndpoints(selectedEndpoints)) {
+            bitrateAllocator.update(allocationSettingsWrapper.get())
         }
     }
 
