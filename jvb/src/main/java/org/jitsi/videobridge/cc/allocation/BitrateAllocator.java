@@ -34,6 +34,7 @@ import java.util.function.*;
 import java.util.stream.*;
 
 import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
+import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.toVideoConstraints2;
 
 /**
  * The {@link BitrateAllocator} is attached to a destination {@code
@@ -154,7 +155,9 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
      * fall outside of the last-n set + endpoints not announced in the videoConstraintsMap.
      */
-    private Map<String, VideoConstraints2> effectiveConstraintsMap = Collections.emptyMap();
+    // Temporary until we remove the extra fields from VideoConstraint
+    private Map<String, VideoConstraints2> effectiveConstraintsMap2 = Collections.emptyMap();
+    private Map<String, VideoConstraints> effectiveConstraintsMap = Collections.emptyMap();
 
     private final Clock clock;
 
@@ -307,6 +310,10 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         List<T> sortedEndpoints
                 = prioritize(sortedEndpointIds, allocationSettings.getSelectedEndpoints(), endpointsSupplier.get());
 
+        effectiveConstraintsMap = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
+        Map<String, VideoConstraints2> oldEffectiveConstraints2 = effectiveConstraintsMap2;
+        effectiveConstraintsMap2 = toVideoConstraints2(effectiveConstraintsMap);
+
         // Compute the bitrate allocation.
         Allocation newAllocation = allocate(getAvailableBandwidth(), sortedEndpoints);
 
@@ -320,23 +327,11 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
         allocation = newAllocation;
 
-        // Now that the bitrate allocation update is complete, we wish to compute the "effective" sender video
-        // constraints map which are used in layer suspension.
-        Map<String, VideoConstraints2> newEffectiveConstraints = new HashMap<>();
-        for (SingleAllocation singleAllocation : newAllocation.getAllocations())
+        if (!effectiveConstraintsMap2.equals(oldEffectiveConstraints2))
         {
-            newEffectiveConstraints.put(
-                    singleAllocation.getEndpointId(),
-                    singleAllocation.getEffectiveVideoConstraints());
-        }
-
-        if (!newEffectiveConstraints.equals(effectiveConstraintsMap))
-        {
-            Map<String, VideoConstraints2> oldEffectiveConstraints = effectiveConstraintsMap;
-            effectiveConstraintsMap = newEffectiveConstraints;
             eventEmitter.fireEvent(handler ->
             {
-                handler.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints);
+                handler.effectiveVideoConstraintsChanged(oldEffectiveConstraints2, effectiveConstraintsMap2);
                 return Unit.INSTANCE;
             });
         }
@@ -458,37 +453,9 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         // Init.
         List<SingleSourceAllocation> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
 
-        int adjustedLastN = JvbLastNKt.calculateLastN(
-                allocationSettings.getLastN(),
-                JvbLastNKt.jvbLastNSingleton.getJvbLastN());
-        if (adjustedLastN < 0)
+        for (MediaSourceContainer endpoint : conferenceEndpoints)
         {
-            // If lastN is disabled, pretend lastN == szConference.
-            adjustedLastN = conferenceEndpoints.size();
-        }
-        else
-        {
-            // If lastN is enabled, pretend lastN at most as big as the size
-            // of the conference.
-            adjustedLastN = Math.min(allocationSettings.getLastN(), conferenceEndpoints.size());
-        }
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
-                    ", sorted endpoint list: " +
-                    conferenceEndpoints.stream().map(MediaSourceContainer::getId).collect(Collectors.joining(", ")) +
-                    ". Allocation settings: " + allocationSettings);
-        }
-
-        for (int i = 0; i < conferenceEndpoints.size(); i++)
-        {
-            MediaSourceContainer endpoint = conferenceEndpoints.get(i);
             MediaSourceDesc[] sources = endpoint.getMediaSources();
-            VideoConstraints effectiveVideoConstraints = allocationSettings.getConstraints(endpoint.getId());
-            if (adjustedLastN > -1 && i >= adjustedLastN)
-            {
-                effectiveVideoConstraints = VideoConstraints.disabledVideoConstraints;
-            }
 
             if (!ArrayUtils.isNullOrEmpty(sources))
             {
@@ -498,7 +465,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                             new SingleSourceAllocation(
                                     endpoint.getId(),
                                     source,
-                                    effectiveVideoConstraints,
+                                    effectiveConstraintsMap.get(endpoint.getId()),
                                     clock));
                 }
             }
