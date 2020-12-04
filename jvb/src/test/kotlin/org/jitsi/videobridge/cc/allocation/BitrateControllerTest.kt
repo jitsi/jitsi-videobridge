@@ -39,84 +39,13 @@ import java.time.Instant
 import java.util.function.Supplier
 
 class BitrateControllerTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    override fun isolationMode() = IsolationMode.InstancePerLeaf
 
     private val logger = createLogger()
     private val clock = FakeClock()
     private val bc = BitrateControllerWrapper("A", "B", "C", "D", clock = clock)
 
     init {
-        context("Effective constraints") {
-            /*
-            TODO: bring back effective constraints tests.
-            val conferenceEndpoints = List(5) { i -> Endpoint("endpoint-${i + 1}") }
-
-            context("When nothing is specified (expect 180p)") {
-                val lastN = -1
-                val videoConstraints = mapOf("endpoint-1" to VideoConstraints(720))
-
-                EndpointMultiRank.makeEndpointMultiRankList(
-                    conferenceEndpoints,
-                    videoConstraints,
-                    lastN
-                ).map {
-                    it.endpoint.id to it.effectiveVideoConstraints
-                }.toMap().shouldContainExactly(
-                    mapOf(
-                        "endpoint-1" to VideoConstraints(720),
-                        "endpoint-2" to VideoConstraints.thumbnailVideoConstraints,
-                        "endpoint-3" to VideoConstraints.thumbnailVideoConstraints,
-                        "endpoint-4" to VideoConstraints.thumbnailVideoConstraints,
-                        "endpoint-5" to VideoConstraints.thumbnailVideoConstraints
-                    )
-                )
-            }
-
-            context("With LastN") {
-                val lastN = 3
-                val videoConstraints = mapOf<String, VideoConstraints>()
-
-                EndpointMultiRank.makeEndpointMultiRankList(
-                    conferenceEndpoints,
-                    videoConstraints,
-                    lastN
-                ).map {
-                    it.endpoint.id to it.effectiveVideoConstraints
-                }.toMap().shouldContainExactly(
-                    mapOf(
-                        "endpoint-1" to VideoConstraints.thumbnailVideoConstraints,
-                        "endpoint-2" to VideoConstraints.thumbnailVideoConstraints,
-                        "endpoint-3" to VideoConstraints.thumbnailVideoConstraints,
-                        "endpoint-4" to VideoConstraints.disabledVideoConstraints,
-                        "endpoint-5" to VideoConstraints.disabledVideoConstraints
-                    )
-                )
-            }
-
-            context("With explicitly selected ep outside LastN") {
-                // This replicates what the client's low-bandwidth mode does when there is a screenshare -
-                // it explicitly selects only the share, ignoring the last-N list.
-                val lastN = 1
-                val videoConstraints = mapOf("endpoint-2" to VideoConstraints(1080))
-                EndpointMultiRank.makeEndpointMultiRankList(
-                    conferenceEndpoints,
-                    videoConstraints,
-                    lastN
-                ).map {
-                    it.endpoint.id to it.effectiveVideoConstraints
-                }.toMap().shouldContainExactly(
-                    mapOf(
-                        "endpoint-1" to VideoConstraints.disabledVideoConstraints,
-                        "endpoint-2" to VideoConstraints(1080),
-                        "endpoint-3" to VideoConstraints.disabledVideoConstraints,
-                        "endpoint-4" to VideoConstraints.disabledVideoConstraints,
-                        "endpoint-5" to VideoConstraints.disabledVideoConstraints
-                    )
-                )
-            }
-             */
-        }
-
         context("Prioritization") {
             val endpoints = createEndpoints("A", "B", "C", "D", "E", "F")
             context("Without selection") {
@@ -249,7 +178,21 @@ class BitrateControllerTest : ShouldSpec() {
                 // The exact flow of this scenario was taken from a (non-jitsi-meet) client.
                 bc.setEndpointOrdering("A", "B", "C", "D")
                 bc.setSelectedEndpoints("A", "B", maxFrameHeight = 720)
+
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints2(720, -1.0),
+                    "B" to VideoConstraints2(720, -1.0),
+                    "C" to VideoConstraints2(180, -1.0),
+                    "D" to VideoConstraints2(180, -1.0)
+                )
+
                 bc.setLastN(2)
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints2(720, -1.0),
+                    "B" to VideoConstraints2(720, -1.0),
+                    "C" to VideoConstraints2(0, -1.0),
+                    "D" to VideoConstraints2(0, -1.0)
+                )
 
                 // TODO: This should probably not use TileView
                 bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
@@ -267,6 +210,12 @@ class BitrateControllerTest : ShouldSpec() {
 
                 clock.elapse(2.secs)
                 bc.setMaxFrameHeight(360)
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints2(360, -1.0),
+                    "B" to VideoConstraints2(360, -1.0),
+                    "C" to VideoConstraints2(0, -1.0),
+                    "D" to VideoConstraints2(0, -1.0)
+                )
 
                 clock.elapse(2.secs)
                 // This should change nothing, the selection didn't change.
@@ -275,6 +224,12 @@ class BitrateControllerTest : ShouldSpec() {
 
                 clock.elapse(2.secs)
                 bc.setLastN(-1)
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints2(360, -1.0),
+                    "B" to VideoConstraints2(360, -1.0),
+                    "C" to VideoConstraints2(180, -1.0),
+                    "D" to VideoConstraints2(180, -1.0)
+                )
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
 
                 clock.elapse(2.secs)
@@ -283,6 +238,12 @@ class BitrateControllerTest : ShouldSpec() {
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
 
                 bc.setLastN(2)
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints2(360, -1.0),
+                    "B" to VideoConstraints2(360, -1.0),
+                    "C" to VideoConstraints2(0, -1.0),
+                    "D" to VideoConstraints2(0, -1.0)
+                )
                 clock.elapse(2.secs)
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
 
@@ -327,6 +288,13 @@ class BitrateControllerTest : ShouldSpec() {
             setOf("A", "B"),
             setOf("A", "B", "C"),
             setOf("A", "B", "C", "D")
+        )
+
+        bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+            "A" to VideoConstraints2(720, 30.0),
+            "B" to VideoConstraints2(180, -1.0),
+            "C" to VideoConstraints2(180, -1.0),
+            "D" to VideoConstraints2(180, -1.0)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -530,6 +498,13 @@ class BitrateControllerTest : ShouldSpec() {
         // No video forwarded even with high BWE.
         bc.forwardedEndpointsHistory.size shouldBe 0
 
+        bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+            "A" to VideoConstraints2(0, -1.0),
+            "B" to VideoConstraints2(0, -1.0),
+            "C" to VideoConstraints2(0, -1.0),
+            "D" to VideoConstraints2(0, -1.0)
+        )
+
         // TODO: The history contains 3 identical elements, which is probably a bug.
         bc.allocationHistory.last().event shouldBe setOf(
             AllocationInfo("A", noVideo),
@@ -546,6 +521,13 @@ class BitrateControllerTest : ShouldSpec() {
 
         bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
             setOf("A")
+        )
+
+        bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+            "A" to VideoConstraints2(720, 30.0),
+            "B" to VideoConstraints2(0, -1.0),
+            "C" to VideoConstraints2(0, -1.0),
+            "D" to VideoConstraints2(0, -1.0)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -755,6 +737,13 @@ class BitrateControllerTest : ShouldSpec() {
             setOf("A")
         )
 
+        bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+            "A" to VideoConstraints2(180, -1.0),
+            "B" to VideoConstraints2(0, -1.0),
+            "C" to VideoConstraints2(0, -1.0),
+            "D" to VideoConstraints2(0, -1.0)
+        )
+
         // At this stage the purpose of this is just to document current behavior.
         // TODO: the allocations for bwe=-1 are wrong.
         bc.allocationHistory.removeIf { it.bwe < 0.bps }
@@ -909,6 +898,11 @@ data class Event<T>(
     val time: Instant = Instant.MIN
 ) {
     override fun toString(): String = "\n[time=${time.toEpochMilli()} bwe=$bwe] $event"
+    override fun equals(other: Any?): Boolean {
+        if (other !is Event<*>) return false
+        // Ignore this.time
+        return bwe == other.bwe && event == other.event
+    }
 }
 
 /**
