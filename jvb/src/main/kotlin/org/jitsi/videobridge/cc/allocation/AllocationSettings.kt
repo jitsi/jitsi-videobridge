@@ -113,8 +113,7 @@ internal class AllocationSettingsWrapper {
      */
     private fun setVideoConstraints(strategyAndConstraints: StrategyAndConstraints): Boolean {
         val (strategy, constraints) = strategyAndConstraints
-        if (this.videoConstraints != constraints ||
-            this.strategy != strategy) {
+        if (this.videoConstraints != constraints || this.strategy != strategy) {
             this.videoConstraints = constraints
             this.strategy = strategy
             return true

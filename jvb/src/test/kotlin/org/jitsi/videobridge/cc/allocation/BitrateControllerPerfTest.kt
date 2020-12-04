@@ -84,15 +84,14 @@ class BitrateControllerPerfTest : StringSpec() {
         addPayloadType(RtxPayloadType(123, mapOf("apt" to "124")))
     }
 
-
     init {
-       "Tile view".config(enabled = false) {
-           repeat(5) {
-               run("Warmup", listOf("A", "B", "C", "D", "E"), 180)
-           }
-           repeat(10) {
-               run("Tile view", listOf("A", "B", "C", "D", "E"), 180)
-           }
+        "Tile view".config(enabled = false) {
+            repeat(5) {
+                run("Warmup", listOf("A", "B", "C", "D", "E"), 180)
+            }
+            repeat(10) {
+                run("Tile view", listOf("A", "B", "C", "D", "E"), 180)
+            }
         }
         "Stage view".config(enabled = false) {
             repeat(5) {
