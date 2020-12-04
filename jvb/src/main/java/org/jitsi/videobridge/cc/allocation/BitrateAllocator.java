@@ -477,17 +477,14 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             logger.debug("Prioritizing endpoints, adjusted last-n: " + adjustedLastN +
                     ", sorted endpoint list: " +
                     conferenceEndpoints.stream().map(MediaSourceContainer::getId).collect(Collectors.joining(", ")) +
-                    ". Endpoints constraints: "
-                    + Arrays.toString(allocationSettings.getVideoConstraints().values().toArray()));
+                    ". Allocation settings: " + allocationSettings);
         }
 
-        Map<String, VideoConstraints> videoConstraintsMap = allocationSettings.getVideoConstraints();
         for (int i = 0; i < conferenceEndpoints.size(); i++)
         {
             MediaSourceContainer endpoint = conferenceEndpoints.get(i);
             MediaSourceDesc[] sources = endpoint.getMediaSources();
-            VideoConstraints effectiveVideoConstraints
-                = videoConstraintsMap.getOrDefault(endpoint.getId(), VideoConstraints.thumbnailVideoConstraints);
+            VideoConstraints effectiveVideoConstraints = allocationSettings.getConstraints(endpoint.getId());
             if (adjustedLastN > -1 && i >= adjustedLastN)
             {
                 effectiveVideoConstraints = VideoConstraints.disabledVideoConstraints;

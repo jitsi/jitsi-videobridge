@@ -27,7 +27,7 @@ import kotlin.math.min
 data class AllocationSettings(
     val strategy: AllocationStrategy = AllocationStrategy.StageView,
     val selectedEndpoints: List<String> = emptyList(),
-    val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
+    private val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1
 ) {
     override fun toString(): String = OrderedJsonObject().apply {
@@ -36,6 +36,9 @@ data class AllocationSettings(
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
     }.toJSONString()
+
+    fun getConstraints(endpointId: String) =
+        videoConstraints.getOrDefault(endpointId, VideoConstraints.thumbnailVideoConstraints)
 }
 
 /**
