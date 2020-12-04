@@ -57,8 +57,10 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                     loadReducer.reduceLoad()
                     lastReducerTime = now
                 } else {
-                    logger.info("Load reducer ran at $lastReducerTime, which is within " +
-                        "${loadReducer.impactTime()} of now, not running reduce")
+                    logger.info(
+                        "Load reducer ran at $lastReducerTime, which is within " +
+                            "${loadReducer.impactTime()} of now, not running reduce"
+                    )
                 }
             }
         } else {
@@ -67,8 +69,10 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                 if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
                     if (canRunReducer(now)) {
                         if (loadReducer.recover()) {
-                            logger.info("Recovery ran after a load measurement of $loadMeasurement (which was " +
-                                "below threshold of $jvbRecoveryThreshold) was received")
+                            logger.info(
+                                "Recovery ran after a load measurement of $loadMeasurement (which was " +
+                                    "below threshold of $jvbRecoveryThreshold) was received"
+                            )
                             lastReducerTime = now
                         } else {
                             logger.cdebug { "Recovery had no work to do" }

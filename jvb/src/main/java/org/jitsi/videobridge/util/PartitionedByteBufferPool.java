@@ -223,12 +223,12 @@ class PartitionedByteBufferPool
         /**
          * Request rate in requests per second over the last 10 seconds.
          */
-        private final RateTracker requestRate = new RateTracker(Duration.ofSeconds(10));
+        private final RateTracker requestRate = new RateTracker(Duration.ofSeconds(10), Duration.ofMillis(100));
 
         /**
          * Return rate in requests per second over the last 10 seconds.
          */
-        private final RateTracker returnRate = new RateTracker(Duration.ofSeconds(10));
+        private final RateTracker returnRate = new RateTracker(Duration.ofSeconds(10), Duration.ofMillis(100));
 
         /**
          * Initializes a new partition.

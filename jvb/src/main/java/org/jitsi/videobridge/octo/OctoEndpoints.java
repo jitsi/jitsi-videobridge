@@ -118,7 +118,7 @@ import java.util.stream.*;
       */
      void endpointExpired(@NotNull OctoEndpoint endpoint)
      {
-        octoEndpointIds.remove(endpoint.getID());
+        octoEndpointIds.remove(endpoint.getId());
      }
 
      void addPayloadType(PayloadType payloadType)

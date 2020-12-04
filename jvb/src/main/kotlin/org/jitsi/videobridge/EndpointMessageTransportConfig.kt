@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2020 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.util
+package org.jitsi.videobridge
 
-fun getJavaVersion(): Int {
-    val javaVersionString = System.getProperty("java.version")
-    return if (javaVersionString.startsWith("1.")) {
-        javaVersionString.substring(2, 3).toInt()
-    } else {
-        val dotIndex = javaVersionString.indexOf(".")
-        if (dotIndex != -1) {
-            javaVersionString.substring(0, dotIndex).toInt()
-        } else {
-            javaVersionString.toInt()
-        }
+import org.jitsi.config.JitsiConfig.Companion.newConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
+
+class EndpointMessageTransportConfig {
+    val announceVersion: Boolean by config("videobridge.version.announce".from(newConfig))
+    fun announceVersion() = announceVersion
+
+    companion object {
+        @JvmField
+        val config = EndpointMessageTransportConfig()
     }
 }

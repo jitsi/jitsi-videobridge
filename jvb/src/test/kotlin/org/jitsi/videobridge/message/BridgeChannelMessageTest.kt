@@ -37,7 +37,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
         context("serializing") {
             should("encode the type as colibriClass") {
                 // Any message will do, this one is just simple
-                val message = ServerHelloMessage()
+                val message = ClientHelloMessage()
 
                 val parsed = JSONParser().parse(message.toJson())
                 parsed.shouldBeInstanceOf<JSONObject>()
@@ -120,8 +120,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
         context("serializing and parsing ReceiverVideoConstraintsChangedEvent") {
             val constraints = listOf(
-                    VideoConstraints("abcdabcd", 180),
-                    VideoConstraints("12341234", 360))
+                VideoConstraints("abcdabcd", 180),
+                VideoConstraints("12341234", 360)
+            )
             val message = ReceiverVideoConstraintsMessage(constraints)
 
             val parsed = parse(message.toJson())
@@ -144,9 +145,20 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing ServerHello") {
+            context("without a version") {
+                val parsed = parse(ServerHelloMessage().toJson())
+                parsed.shouldBeInstanceOf<ServerHelloMessage>()
+                parsed as ServerHelloMessage
+                parsed.version shouldBe null
+            }
+            context("with a version") {
+                val message = ServerHelloMessage("v")
 
-            val parsed = parse(ServerHelloMessage().toJson())
-            parsed.shouldBeInstanceOf<ServerHelloMessage>()
+                val parsed = parse(message.toJson())
+                parsed.shouldBeInstanceOf<ServerHelloMessage>()
+                parsed as ServerHelloMessage
+                parsed.version shouldBe "v"
+            }
         }
 
         context("serializing and parsing ClientHello") {

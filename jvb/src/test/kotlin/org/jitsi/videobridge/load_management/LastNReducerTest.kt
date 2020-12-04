@@ -49,10 +49,12 @@ class LastNReducerTest : ShouldSpec() {
             val conf1 = createMockConference(4, 8, 12)
             val conf2 = createMockConference(2, 4, 10)
 
-            val reducer = withLastNConfig("""
+            val reducer = withLastNConfig(
+                """
                 reduction-scale = .5
                 recover-scale = 2
-            """) {
+                """
+            ) {
                 LastNReducer(Supplier { listOf(conf1, conf2) }, jvbLastN)
             }
             context("running the reducer") {

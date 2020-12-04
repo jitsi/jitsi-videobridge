@@ -17,7 +17,10 @@
 package org.jitsi.videobridge.rest.root;
 
 import org.glassfish.jersey.server.*;
+import org.jetbrains.annotations.*;
+import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
@@ -31,14 +34,18 @@ public class Application extends ResourceConfig
     public Application(
             Videobridge videobridge,
             XmppConnection xmppConnection,
-            StatsCollector statsManager)
+            StatsCollector statsCollector,
+            @NotNull VersionService versionService,
+            @NotNull JvbHealthChecker healthChecker)
 
     {
         register(
             new ServiceBinder(
                 videobridge,
                 xmppConnection,
-                statsManager
+                statsCollector,
+                versionService,
+                healthChecker
             )
         );
         // Filters

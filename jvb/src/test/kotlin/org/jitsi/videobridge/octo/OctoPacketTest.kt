@@ -60,6 +60,7 @@ class OctoPacketTest : ShouldSpec() {
             // Endpoint ID = "abcdabcd"
             0xab, 0xcd, 0xab, 0xcd,
             // MediaType = Video (1)
-            0x40, 0x00, 0x00, 0x00)
+            0x40, 0x00, 0x00, 0x00
+        )
     }
 }

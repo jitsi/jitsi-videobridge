@@ -57,8 +57,11 @@ class OctoRelayService {
         } catch (t: Throwable) {
             when (t) {
                 is UnknownHostException, is SocketException -> {
-                    logger.error("Failed to initialize Octo UDP transport with " +
-                            "address " + address + ":" + port + ".", t)
+                    logger.error(
+                        "Failed to initialize Octo UDP transport with " +
+                            "address " + address + ":" + port + ".",
+                        t
+                    )
                 }
                 else -> {
                     logger.error("Error creating OctoRelayService UdpTransport", t)

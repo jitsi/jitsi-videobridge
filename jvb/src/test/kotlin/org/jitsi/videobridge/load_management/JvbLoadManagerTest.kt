@@ -37,7 +37,8 @@ class JvbLoadManagerTest : ShouldSpec({
     }
     val clock = FakeClock()
 
-    val loadManager = createWithConfig("""
+    val loadManager = createWithConfig(
+        """
         videobridge.load-management.reducer-enabled=true
         """.trimIndent()
     ) {

@@ -32,9 +32,11 @@ class OctoConfig {
     // based on the presence of these properties) and as potential values
     // in each of the individual bindAddress and bindPort properties.
     private val legacyBindAddress: String? by optionalconfig(
-        "org.jitsi.videobridge.octo.BIND_ADDRESS".from(JitsiConfig.legacyConfig))
+        "org.jitsi.videobridge.octo.BIND_ADDRESS".from(JitsiConfig.legacyConfig)
+    )
     private val legacyBindPort: Int? by optionalconfig(
-        "org.jitsi.videobridge.octo.BIND_PORT".from(JitsiConfig.legacyConfig))
+        "org.jitsi.videobridge.octo.BIND_PORT".from(JitsiConfig.legacyConfig)
+    )
 
     val enabled: Boolean by config {
         // The legacy config file doesn't have an 'enabled' property,

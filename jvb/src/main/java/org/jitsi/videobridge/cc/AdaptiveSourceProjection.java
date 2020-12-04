@@ -114,7 +114,7 @@ public class AdaptiveSourceProjection
      * @param payloadTypes a reference to a map of payload types.  This map
      *                     should be updated as the payload types change.
      */
-    AdaptiveSourceProjection(
+    public AdaptiveSourceProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaSourceDesc source,
         Runnable keyframeRequester,
@@ -135,7 +135,7 @@ public class AdaptiveSourceProjection
     /**
      * @return the ideal quality for this source projection.
      */
-    int getIdealIndex()
+    public int getIdealIndex()
     {
         return idealIndex;
     }
@@ -144,10 +144,14 @@ public class AdaptiveSourceProjection
      * Update the ideal quality for this source projection.
      *
      * @param value the ideal quality for this source projection.
+     * @return {@code true} if the value was changed as a result of this call.
      */
-    void setIdealIndex(int value)
+    public boolean setIdealIndex(int value)
     {
+        boolean changed = idealIndex != value;
         idealIndex = value;
+
+        return changed;
     }
 
     /**
@@ -155,7 +159,7 @@ public class AdaptiveSourceProjection
      *
      * @return the target index value for this source projection.
      */
-    int getTargetIndex()
+    public int getTargetIndex()
     {
         return targetIndex;
     }
@@ -164,10 +168,14 @@ public class AdaptiveSourceProjection
      * Sets the target index value for this source projection.
      *
      * @param value the new target index value for this source projection.
+     * @return {@code true} if the value was changed as a result of this call.
      */
-    void setTargetIndex(int value)
+    public boolean setTargetIndex(int value)
     {
+        boolean changed = targetIndex != value;
         targetIndex = value;
+
+        return changed;
     }
 
     /**
@@ -371,7 +379,7 @@ public class AdaptiveSourceProjection
      *
      * @param packetInfo the RTP packet to rewrite.
      */
-   void rewriteRtp(@NotNull PacketInfo packetInfo)
+   public void rewriteRtp(@NotNull PacketInfo packetInfo)
         throws RewriteException
     {
         AdaptiveSourceProjectionContext contextCopy = context;
@@ -387,7 +395,7 @@ public class AdaptiveSourceProjection
      * @param rtcpSrPacket the RTCP SR packet to rewrite.
      * @return true to let the RTCP packet through, false to drop.
      */
-    boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
+    public boolean rewriteRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
         AdaptiveSourceProjectionContext contextCopy = context;
         if (contextCopy == null)
@@ -401,7 +409,7 @@ public class AdaptiveSourceProjection
     /**
      * @return the SSRC of the source projection.
      */
-    long getTargetSsrc()
+    public long getTargetSsrc()
     {
         return targetSsrc;
     }

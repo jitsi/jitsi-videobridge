@@ -109,8 +109,10 @@ class BridgeOctoTransport(
                 logger.info("Removing handler for conference $conferenceId")
                 incomingPacketHandlers.remove(conferenceId)
             } else {
-                logger.info("Tried to remove handler for conference $conferenceId but it wasn't the currently " +
-                    "active one")
+                logger.info(
+                    "Tried to remove handler for conference $conferenceId but it wasn't the currently " +
+                        "active one"
+                )
             }
         }
     }

@@ -37,6 +37,7 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.cc.*;
+import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
@@ -289,8 +290,15 @@ public class Endpoint
                 }
             });
 
-        BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
+        BitrateController.EventHandler bcEventHandler
+                = new BitrateController.EventHandler()
         {
+            @Override
+            public void allocationChanged(@NotNull List<? extends SingleSourceAllocation> allocation)
+            {
+                // Intentional no-op.
+            }
+
             @Override
             public void forwardedEndpointsChanged(Collection<String> forwardedEndpoints)
             {
@@ -333,15 +341,17 @@ public class Endpoint
         );
 
         diagnosticContext.put("endpoint_id", id);
-        bandwidthProbing = new BandwidthProbing(Endpoint.this.transceiver::sendProbing);
+        bandwidthProbing
+                = new BandwidthProbing(
+                        Endpoint.this.transceiver::sendProbing,
+                        Endpoint.this.bitrateController::getStatusSnapshot);
         bandwidthProbing.setDiagnosticContext(diagnosticContext);
-        bandwidthProbing.setBitrateController(bitrateController);
         conference.encodingsManager.subscribe(this);
 
         bandwidthProbing.enabled = true;
         recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
 
-        iceTransport = new IceTransport(getID(), iceControlling, logger);
+        iceTransport = new IceTransport(getId(), iceControlling, logger);
         setupIceTransport();
         dtlsTransport = new DtlsTransport(logger);
         setupDtlsTransport();
@@ -660,7 +670,7 @@ public class Endpoint
             AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
             if (senderEndpoint != null)
             {
-                senderEndpoint.removeReceiver(getID());
+                senderEndpoint.removeReceiver(getId());
             }
         }
 
@@ -671,7 +681,7 @@ public class Endpoint
 
             if (senderEndpoint != null)
             {
-                senderEndpoint.addReceiver(getID(), videoConstraintsEntry.getValue());
+                senderEndpoint.addReceiver(getId(), videoConstraintsEntry.getValue());
             }
         }
     }
@@ -680,12 +690,19 @@ public class Endpoint
     protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
-        SenderVideoConstraintsMessage senderVideoConstraintsMessage
-                = new SenderVideoConstraintsMessage(maxVideoConstraints);
+        if (ArrayUtils.isNullOrEmpty(getMediaSources()))
+        {
+            logger.debug("Suppressing sending a SenderVideoConstraints message, endpoint has no streams.");
+        }
+        else
+        {
+            SenderVideoConstraintsMessage senderVideoConstraintsMessage
+                    = new SenderVideoConstraintsMessage(maxVideoConstraints);
 
-        logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
+            logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
 
-        sendMessage(senderVideoConstraintsMessage);
+            sendMessage(senderVideoConstraintsMessage);
+        }
     }
 
     /**
@@ -780,9 +797,11 @@ public class Endpoint
                 logger.debug(dtlsTransport.getDebugState().toJSONString());
             }
 
+            logger.info("Spent " + bitrateController.getTotalOversendingTime().getSeconds() + " seconds oversending");
+
             transceiver.teardown();
 
-            AbstractEndpointMessageTransport messageTransport = getMessageTransport();
+            EndpointMessageTransport messageTransport = getMessageTransport();
             if (messageTransport != null)
             {
                 messageTransport.close();
@@ -967,7 +986,7 @@ public class Endpoint
     {
         TaskPools.SCHEDULED_POOL.schedule(() -> {
             if (!isExpired()) {
-                AbstractEndpointMessageTransport t = getMessageTransport();
+                EndpointMessageTransport t = getMessageTransport();
                 if (t != null)
                 {
                     if (!t.isConnected())
@@ -1080,7 +1099,7 @@ public class Endpoint
         {
             String wsUrl = colibriWebSocketService.getColibriWebSocketUrl(
                     getConference().getID(),
-                    getID(),
+                    getId(),
                     iceTransport.getIcePassword()
             );
             if (wsUrl != null)
@@ -1192,7 +1211,7 @@ public class Endpoint
      */
     private void handleIncomingPacket(PacketInfo packetInfo)
     {
-        packetInfo.setEndpointId(getID());
+        packetInfo.setEndpointId(getId());
         getConference().handleIncomingPacket(packetInfo);
     }
 
@@ -1206,7 +1225,7 @@ public class Endpoint
             long secondarySsrc,
             SsrcAssociationType type)
     {
-        if (endpointId.equalsIgnoreCase(getID()))
+        if (endpointId.equalsIgnoreCase(getId()))
         {
             transceiver.addSsrcAssociation(new LocalSsrcAssociation(primarySsrc, secondarySsrc, type));
         }
@@ -1422,6 +1441,11 @@ public class Endpoint
     {
         // The endpoint is sending video if we (the transceiver) are receiving video.
         return transceiver.isReceivingVideo();
+    }
+
+    public boolean isOversending()
+    {
+        return bitrateController.isOversending();
     }
 
     private class TransceiverEventHandlerImpl implements TransceiverEventHandler

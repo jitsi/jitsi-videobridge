@@ -32,7 +32,7 @@ class VideobridgeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val shutdownService: ShutdownServiceImpl = mockk(relaxed = true)
-    private val videobridge = Videobridge(null, shutdownService)
+    private val videobridge = Videobridge(null, shutdownService, mockk())
     init {
         context("Debug state should be JSON") {
             videobridge.getDebugState(null, null, true).shouldBeValidJson()

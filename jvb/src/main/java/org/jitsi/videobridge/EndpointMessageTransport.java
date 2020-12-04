@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import com.google.common.collect.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.*;
 import java.util.function.*;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.jitsi.videobridge.EndpointMessageTransportConfig.config;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -125,7 +127,7 @@ class EndpointMessageTransport
         // remote endpoint and the Videobridge is operational.
         // We take care to send the reply using the same transport channel on
         // which we received the request..
-        return new ServerHelloMessage();
+        return createServerHello();
     }
 
     @Override
@@ -141,6 +143,8 @@ class EndpointMessageTransport
      */
     protected void sendMessage(Object dst, BridgeChannelMessage message)
     {
+        super.sendMessage(dst, message); // Log message
+
         if (dst instanceof ColibriWebSocket)
         {
             sendMessage((ColibriWebSocket) dst, message);
@@ -283,10 +287,22 @@ class EndpointMessageTransport
 
             webSocket = ws;
             webSocketLastActive = true;
-            sendMessage(ws, new ServerHelloMessage());
+            sendMessage(ws, createServerHello());
         }
 
         notifyTransportChannelConnected();
+    }
+
+    private ServerHelloMessage createServerHello()
+    {
+        if (config.announceVersion())
+        {
+            return new ServerHelloMessage(endpoint.getConference().getVideobridge().getVersion().toString());
+        }
+        else
+        {
+            return new ServerHelloMessage();
+        }
     }
 
     /**
@@ -478,7 +494,7 @@ class EndpointMessageTransport
     {
         // Don't "pollute" the video constraints map with constraints for this
         // endpoint.
-        videoConstraintsMap.remove(endpoint.getID());
+        videoConstraintsMap.remove(endpoint.getId());
 
         logger.debug(() -> "New video constraints map: " + videoConstraintsMap);
 
@@ -496,7 +512,7 @@ class EndpointMessageTransport
     {
         int maxFrameHeight = message.getMaxFrameHeight();
         logger.debug(
-                () -> "Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
+                () -> "Received a maxFrameHeight video constraint from " + endpoint.getId() + ": " + maxFrameHeight);
 
         videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight);
         setSenderVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints());
@@ -513,11 +529,7 @@ class EndpointMessageTransport
     @Override
     public BridgeChannelMessage lastN(LastNMessage message)
     {
-        int lastN = message.getLastN();
-        if (endpoint != null)
-        {
-            endpoint.setLastN(lastN);
-        }
+        endpoint.setLastN(message.getLastN());
 
         return null;
     }
@@ -532,7 +544,7 @@ class EndpointMessageTransport
     public BridgeChannelMessage endpointMessage(EndpointMessage message)
     {
         // First insert/overwrite the "from" to prevent spoofing.
-        String from = endpoint.getID();
+        String from = endpoint.getId();
         message.setFrom(from);
 
         Conference conference = endpoint.getConference();

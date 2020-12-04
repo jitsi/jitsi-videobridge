@@ -51,10 +51,13 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
     soSndBuf: Int? = null,
     private val clock: Clock = Clock.systemUTC()
 ) {
-    private val logger = createChildLogger(parentLogger, mapOf(
-        "address" to bindAddress,
-        "port" to bindPort.toString()
-    ))
+    private val logger = createChildLogger(
+        parentLogger,
+        mapOf(
+            "address" to bindAddress,
+            "port" to bindPort.toString()
+        )
+    )
 
     private val running = AtomicBoolean(true)
 
@@ -64,9 +67,11 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         soRcvBuf?.let { receiveBufferSize = it }
         soSndBuf?.let { sendBufferSize = it }
     }.also { socket ->
-        logger.info("Initialized with bind address $bindAddress and bind port $bindPort. " +
+        logger.info(
+            "Initialized with bind address $bindAddress and bind port $bindPort. " +
                 "Receive buffer size ${socket.receiveBufferSize}${soRcvBuf?.let { " (asked for $it)"} ?: ""}. " +
-                "Send buffer size ${socket.sendBufferSize}${soSndBuf?.let { " (asked for $it)"} ?: ""}.")
+                "Send buffer size ${socket.sendBufferSize}${soSndBuf?.let { " (asked for $it)"} ?: ""}."
+        )
     }
 
     private val stats = Stats()
@@ -141,10 +146,10 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         private val packetsSent = LongAdder()
         private val bytesSent = LongAdder()
         private val outgoingPacketsDropped = LongAdder()
-        private val receivePacketRate: RateTracker = RateTracker(RATE_INTERVAL)
-        private val receiveBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL)
-        private val sendPacketRate: RateTracker = RateTracker(RATE_INTERVAL)
-        private val sendBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL)
+        private val receivePacketRate: RateTracker = RateTracker(RATE_INTERVAL, RATE_BUCKET_SIZE)
+        private val receiveBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL, RATE_BUCKET_SIZE)
+        private val sendPacketRate: RateTracker = RateTracker(RATE_INTERVAL, RATE_BUCKET_SIZE)
+        private val sendBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL, RATE_BUCKET_SIZE)
 
         fun packetReceived(numBytes: Int, time: Instant) {
             packetsReceived.increment()
@@ -198,6 +203,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
 
         companion object {
             val RATE_INTERVAL = 60.secs
+            val RATE_BUCKET_SIZE = 1.secs
         }
     }
 
