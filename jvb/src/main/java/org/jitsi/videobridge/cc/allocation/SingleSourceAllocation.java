@@ -19,6 +19,7 @@ import org.jitsi.nlj.MediaSourceDesc;
 import org.jitsi.nlj.RtpLayerDesc;
 import org.jitsi.nlj.util.*;
 import org.jitsi.videobridge.VideoConstraints;
+import org.jitsi.videobridge.cc.config.*;
 
 import java.time.Clock;
 import java.util.ArrayList;
@@ -95,6 +96,7 @@ public class SingleSourceAllocation {
             String endpointID,
             MediaSourceDesc source,
             VideoConstraints constraints,
+            AllocationStrategy strategy,
             Clock clock)
     {
         this.endpointID = endpointID;
@@ -133,12 +135,18 @@ public class SingleSourceAllocation {
             // practice today this translates to 180p7.5fps, 180p15fps,
             // 180p30fps, 360p30fps and 720p30fps.
 
-            boolean lessThanPreferredResolution
-                    = layer.getHeight() < constraints.getPreferredHeight();
-            boolean lessThanOrEqualIdealResolution
-                    = layer.getHeight() <= constraints.getIdealHeight();
-            boolean atLeastPreferredFps
-                    = layer.getFrameRate() >= constraints.getPreferredFps();
+            // preferredHeight and preferredFps are ONLY ever used for "on stage" participants.
+            int preferredHeight = -1;
+            double preferredFps = -1.0;
+            if (strategy == AllocationStrategy.StageView && constraints.getIdealHeight() > 180)
+            {
+                preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
+                preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
+            }
+
+            boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
+            boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getIdealHeight();
+            boolean atLeastPreferredFps = layer.getFrameRate() >= preferredFps;
 
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
@@ -151,7 +159,7 @@ public class SingleSourceAllocation {
                 ratesList.add(new LayerSnapshot(layer, layerBitrate));
             }
 
-            if (layer.getHeight() <= constraints.getPreferredHeight()) {
+            if (layer.getHeight() <= preferredHeight) {
                 // The improve step below will "eagerly" try to allocate
                 // up-to the ratedPreferredIdx before moving on to the next
                 // track. Eagerly means we consume all available bandwidth

@@ -466,6 +466,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                                     endpoint.getId(),
                                     source,
                                     effectiveConstraintsMap.get(endpoint.getId()),
+                                    allocationSettings.getStrategy(),
                                     clock));
                 }
             }
