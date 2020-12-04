@@ -38,19 +38,18 @@ import kotlin.random.Random
  * Tested three versions of the code:
  * 1. Pre-refactoring: on top of 3bf235fb9a2c9ce8caa52de9544f0adcd3933752
  * 2. After refactoring stage1 (already merged in master): on top of b89765161321be272323dd6abc14efd19cb7f759
- * 3. After refactoring stage2: on top of e96bfd538f54095310acb2a56251a6cf5bbdde2e ("feat: Prioritize endpoints based
- * on selection direrctly, instead of using EndpointMultiRank which inferred selection from the "preferredHeight"
- * values.") in PR #1530.
+ * 3. After refactoring stage2: on top of fcfcb36d3f2d234ef90affed96392f78e2b08ee7 ("ref: Rename VideoConstraints2 to
+ * VideoConstraints.") in PR #1530.
  *
  * Tile View:
  * pre-ref: 4.16
  * stage1: 4.40
- * stage3: 5.59
+ * stage3: 5.63
  *
  * Stage View:
  * pre-ref: 4.15
  * stage1: 4.04
- * stage3: 5.83
+ * stage3: 6.00
  *
  *
  */
