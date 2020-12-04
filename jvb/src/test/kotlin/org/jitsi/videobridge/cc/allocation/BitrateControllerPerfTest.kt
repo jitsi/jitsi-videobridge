@@ -65,8 +65,8 @@ class BitrateControllerPerfTest : StringSpec() {
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
             override fun effectiveVideoConstraintsChanged(
-                oldEffectiveConstraints: Map<String, VideoConstraints2>,
-                newEffectiveConstraints: Map<String, VideoConstraints2>
+                oldEffectiveConstraints: Map<String, VideoConstraints>,
+                newEffectiveConstraints: Map<String, VideoConstraints>
             ) { }
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
             override fun allocationChanged(allocation: Allocation) { }

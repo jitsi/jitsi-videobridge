@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
-import org.jitsi.videobridge.cc.allocation.VideoConstraints2
+import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.json.simple.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -340,7 +340,7 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
 class AddReceiverMessage(
     val bridgeId: String,
     val endpointId: String,
-    val videoConstraints: VideoConstraints2
+    val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Serialize manually because it's faster than either Jackson or json-simple.

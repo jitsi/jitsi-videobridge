@@ -189,8 +189,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     interface EventHandler {
         fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>)
         fun effectiveVideoConstraintsChanged(
-            oldEffectiveConstraints: Map<String, VideoConstraints2>,
-            newEffectiveConstraints: Map<String, VideoConstraints2>
+            oldEffectiveConstraints: Map<String, VideoConstraints>,
+            newEffectiveConstraints: Map<String, VideoConstraints>
         )
         fun keyframeNeeded(endpointId: String?, ssrc: Long)
         /**
@@ -219,8 +219,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         }
 
         override fun effectiveVideoConstraintsChanged(
-            oldEffectiveConstraints: Map<String, VideoConstraints2>,
-            newEffectiveConstraints: Map<String, VideoConstraints2>
+            oldEffectiveConstraints: Map<String, VideoConstraints>,
+            newEffectiveConstraints: Map<String, VideoConstraints>
         ) {
             // Forward to the outer EventHandler.
             eventEmitter.fireEvent {

@@ -305,8 +305,8 @@ public class Endpoint
 
             @Override
             public void effectiveVideoConstraintsChanged(
-                    @NotNull Map<String, VideoConstraints2> oldEffectiveConstraints,
-                    @NotNull Map<String, VideoConstraints2> newEffectiveConstraints)
+                    @NotNull Map<String, VideoConstraints> oldEffectiveConstraints,
+                    @NotNull Map<String, VideoConstraints> newEffectiveConstraints)
             {
                 Endpoint.this.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints);
             }
@@ -651,8 +651,8 @@ public class Endpoint
     }
 
     private void effectiveVideoConstraintsChanged(
-        Map<String, VideoConstraints2> oldEffectiveConstraints,
-        Map<String, VideoConstraints2> newEffectiveConstraints)
+        Map<String, VideoConstraints> oldEffectiveConstraints,
+        Map<String, VideoConstraints> newEffectiveConstraints)
     {
         Set<String> removedEndpoints = new HashSet<>(oldEffectiveConstraints.keySet());
         removedEndpoints.removeAll(newEffectiveConstraints.keySet());
@@ -679,7 +679,7 @@ public class Endpoint
     }
 
     @Override
-    protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints2 maxVideoConstraints)
+    protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
         SenderVideoConstraintsMessage senderVideoConstraintsMessage

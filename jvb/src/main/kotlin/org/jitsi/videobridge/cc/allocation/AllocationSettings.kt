@@ -26,7 +26,7 @@ import kotlin.math.min
 data class AllocationSettings(
     val strategy: AllocationStrategy = AllocationStrategy.StageView,
     val selectedEndpoints: List<String> = emptyList(),
-    private val videoConstraints: Map<String, VideoConstraints2> = emptyMap(),
+    private val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1
 ) {
     override fun toString(): String = OrderedJsonObject().apply {
@@ -37,7 +37,7 @@ data class AllocationSettings(
     }.toJSONString()
 
     fun getConstraints(endpointId: String) =
-        videoConstraints.getOrDefault(endpointId, VideoConstraints2(config.thumbnailMaxHeightPx()))
+        videoConstraints.getOrDefault(endpointId, VideoConstraints(config.thumbnailMaxHeightPx()))
 }
 
 /**
@@ -170,7 +170,7 @@ internal fun computeVideoConstraints(
 
     if (selectedEndpoints.isEmpty()) return StrategyAndConstraints(allocationStrategy, mapOf())
 
-    val selectedEndpointConstraints = VideoConstraints2(min(config.onstageIdealHeightPx(), maxFrameHeight))
+    val selectedEndpointConstraints = VideoConstraints(min(config.onstageIdealHeightPx(), maxFrameHeight))
 
     return StrategyAndConstraints(
         allocationStrategy,
@@ -181,5 +181,5 @@ internal fun computeVideoConstraints(
 
 internal data class StrategyAndConstraints(
     val allocationStrategy: AllocationStrategy,
-    val constraints: Map<String, VideoConstraints2>
+    val constraints: Map<String, VideoConstraints>
 )

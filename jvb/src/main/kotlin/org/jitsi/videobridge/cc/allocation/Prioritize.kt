@@ -61,12 +61,12 @@ fun <T : MediaSourceContainer?> prioritize(
  * Return the "effective" constraints for the given endpoints, i.e. the constraints adjusted for LastN.
  */
 fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, allocationSettings: AllocationSettings):
-    Map<String, VideoConstraints2> {
+    Map<String, VideoConstraints> {
 
         val effectiveLastN = effectiveLastN(allocationSettings.lastN)
         return endpoints.mapIndexed { i, endpoint ->
             endpoint.id to if (i >= effectiveLastN) {
-                VideoConstraints2(0)
+                VideoConstraints(0)
             } else {
                 allocationSettings.getConstraints(endpoint.id)
             }

@@ -28,7 +28,7 @@ class AllocationSettingsTest : ShouldSpec() {
                 strategy shouldBe AllocationStrategy.StageView
                 constraints.shouldContainExactly(
                     mapOf(
-                        "A" to VideoConstraints2(720)
+                        "A" to VideoConstraints(720)
                     )
                 )
             }
@@ -38,10 +38,10 @@ class AllocationSettingsTest : ShouldSpec() {
                 strategy shouldBe AllocationStrategy.TileView
                 constraints.shouldContainExactly(
                     mapOf(
-                        "A" to VideoConstraints2(180),
-                        "B" to VideoConstraints2(180),
-                        "C" to VideoConstraints2(180),
-                        "D" to VideoConstraints2(180)
+                        "A" to VideoConstraints(180),
+                        "B" to VideoConstraints(180),
+                        "C" to VideoConstraints(180),
+                        "D" to VideoConstraints(180)
                     )
                 )
             }

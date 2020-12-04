@@ -180,18 +180,18 @@ class BitrateControllerTest : ShouldSpec() {
                 bc.setSelectedEndpoints("A", "B", maxFrameHeight = 720)
 
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints2(720),
-                    "B" to VideoConstraints2(720),
-                    "C" to VideoConstraints2(180),
-                    "D" to VideoConstraints2(180)
+                    "A" to VideoConstraints(720),
+                    "B" to VideoConstraints(720),
+                    "C" to VideoConstraints(180),
+                    "D" to VideoConstraints(180)
                 )
 
                 bc.setLastN(2)
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints2(720),
-                    "B" to VideoConstraints2(720),
-                    "C" to VideoConstraints2(0),
-                    "D" to VideoConstraints2(0)
+                    "A" to VideoConstraints(720),
+                    "B" to VideoConstraints(720),
+                    "C" to VideoConstraints(0),
+                    "D" to VideoConstraints(0)
                 )
 
                 // TODO: This should probably not use TileView
@@ -211,10 +211,10 @@ class BitrateControllerTest : ShouldSpec() {
                 clock.elapse(2.secs)
                 bc.setMaxFrameHeight(360)
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints2(360),
-                    "B" to VideoConstraints2(360),
-                    "C" to VideoConstraints2(0),
-                    "D" to VideoConstraints2(0)
+                    "A" to VideoConstraints(360),
+                    "B" to VideoConstraints(360),
+                    "C" to VideoConstraints(0),
+                    "D" to VideoConstraints(0)
                 )
 
                 clock.elapse(2.secs)
@@ -225,10 +225,10 @@ class BitrateControllerTest : ShouldSpec() {
                 clock.elapse(2.secs)
                 bc.setLastN(-1)
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints2(360),
-                    "B" to VideoConstraints2(360),
-                    "C" to VideoConstraints2(180),
-                    "D" to VideoConstraints2(180)
+                    "A" to VideoConstraints(360),
+                    "B" to VideoConstraints(360),
+                    "C" to VideoConstraints(180),
+                    "D" to VideoConstraints(180)
                 )
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
 
@@ -239,10 +239,10 @@ class BitrateControllerTest : ShouldSpec() {
 
                 bc.setLastN(2)
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints2(360),
-                    "B" to VideoConstraints2(360),
-                    "C" to VideoConstraints2(0),
-                    "D" to VideoConstraints2(0)
+                    "A" to VideoConstraints(360),
+                    "B" to VideoConstraints(360),
+                    "C" to VideoConstraints(0),
+                    "D" to VideoConstraints(0)
                 )
                 clock.elapse(2.secs)
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
@@ -291,10 +291,10 @@ class BitrateControllerTest : ShouldSpec() {
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints2(720),
-            "B" to VideoConstraints2(180),
-            "C" to VideoConstraints2(180),
-            "D" to VideoConstraints2(180)
+            "A" to VideoConstraints(720),
+            "B" to VideoConstraints(180),
+            "C" to VideoConstraints(180),
+            "D" to VideoConstraints(180)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -499,10 +499,10 @@ class BitrateControllerTest : ShouldSpec() {
         bc.forwardedEndpointsHistory.size shouldBe 0
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints2(0),
-            "B" to VideoConstraints2(0),
-            "C" to VideoConstraints2(0),
-            "D" to VideoConstraints2(0)
+            "A" to VideoConstraints(0),
+            "B" to VideoConstraints(0),
+            "C" to VideoConstraints(0),
+            "D" to VideoConstraints(0)
         )
 
         // TODO: The history contains 3 identical elements, which is probably a bug.
@@ -524,10 +524,10 @@ class BitrateControllerTest : ShouldSpec() {
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints2(720),
-            "B" to VideoConstraints2(0),
-            "C" to VideoConstraints2(0),
-            "D" to VideoConstraints2(0)
+            "A" to VideoConstraints(720),
+            "B" to VideoConstraints(0),
+            "C" to VideoConstraints(0),
+            "D" to VideoConstraints(0)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -738,10 +738,10 @@ class BitrateControllerTest : ShouldSpec() {
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints2(180),
-            "B" to VideoConstraints2(0),
-            "C" to VideoConstraints2(0),
-            "D" to VideoConstraints2(0)
+            "A" to VideoConstraints(180),
+            "B" to VideoConstraints(0),
+            "C" to VideoConstraints(0),
+            "D" to VideoConstraints(0)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -811,7 +811,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         }
 
     // Save the output.
-    val effectiveConstraintsHistory: History<Map<String, VideoConstraints2>> = mutableListOf()
+    val effectiveConstraintsHistory: History<Map<String, VideoConstraints>> = mutableListOf()
     val forwardedEndpointsHistory: History<Set<String>> = mutableListOf()
     val allocationHistory: History<Collection<AllocationInfo>> = mutableListOf()
 
@@ -825,8 +825,8 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
             }
 
             override fun effectiveVideoConstraintsChanged(
-                oldEffectiveConstraints: Map<String, VideoConstraints2>,
-                newEffectiveConstraints: Map<String, VideoConstraints2>
+                oldEffectiveConstraints: Map<String, VideoConstraints>,
+                newEffectiveConstraints: Map<String, VideoConstraints>
             ) {
                 Event(bwe, newEffectiveConstraints, clock.instant()).apply {
                     logger.info("Effective constraints changed: $this")

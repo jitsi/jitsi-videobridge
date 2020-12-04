@@ -40,7 +40,7 @@ public class SingleSourceAllocation {
      */
     public final String endpointID;
 
-    final VideoConstraints2 constraints;
+    final VideoConstraints constraints;
 
     /**
      * The first {@link MediaSourceDesc} of the {@code Endpoint} that
@@ -94,7 +94,7 @@ public class SingleSourceAllocation {
     SingleSourceAllocation(
             String endpointID,
             MediaSourceDesc source,
-            VideoConstraints2 constraints,
+            VideoConstraints constraints,
             AllocationStrategy strategy,
             Clock clock)
     {

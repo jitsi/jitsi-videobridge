@@ -154,7 +154,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
      * fall outside of the last-n set + endpoints not announced in the videoConstraintsMap.
      */
-    private Map<String, VideoConstraints2> effectiveConstraints = Collections.emptyMap();
+    private Map<String, VideoConstraints> effectiveConstraints = Collections.emptyMap();
 
     private final Clock clock;
 
@@ -307,7 +307,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         List<T> sortedEndpoints
                 = prioritize(sortedEndpointIds, allocationSettings.getSelectedEndpoints(), endpointsSupplier.get());
 
-        Map<String, VideoConstraints2> oldEffectiveConstraints = effectiveConstraints;
+        Map<String, VideoConstraints> oldEffectiveConstraints = effectiveConstraints;
         effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
 
         // Compute the bitrate allocation.
@@ -485,7 +485,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     {
         default void allocationChanged(@NotNull Allocation allocation) {}
         default void effectiveVideoConstraintsChanged(
-                @NotNull Map<String, VideoConstraints2> oldEffectiveConstraints,
-                @NotNull Map<String, VideoConstraints2> newEffectiveConstraints) {}
+                @NotNull Map<String, VideoConstraints> oldEffectiveConstraints,
+                @NotNull Map<String, VideoConstraints> newEffectiveConstraints) {}
     }
 }

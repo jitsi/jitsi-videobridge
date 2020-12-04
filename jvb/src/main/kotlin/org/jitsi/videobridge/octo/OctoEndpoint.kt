@@ -27,7 +27,7 @@ import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.TransceiverEventHandler
-import org.jitsi.videobridge.cc.allocation.VideoConstraints2
+import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.RemoveReceiverMessage
@@ -102,7 +102,7 @@ class OctoEndpoint(
      * This [OctoEndpoint] aggregates the constraints from the local endpoints on this bridge, and propagates the max
      * constraints to the bridge that is local for the sending endpoint via an [AddReceiverMessage].
      */
-    override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints2) {
+    override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints) {
         conference.tentacle.sendMessage(
             AddReceiverMessage(
                 conference.tentacle.bridgeId,

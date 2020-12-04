@@ -67,7 +67,7 @@ public abstract class AbstractEndpoint
     /**
      * The map of receiver endpoint id -> video constraints.
      */
-    private final Map<String, VideoConstraints2> receiverVideoConstraintsMap = new ConcurrentHashMap<>();
+    private final Map<String, VideoConstraints> receiverVideoConstraintsMap = new ConcurrentHashMap<>();
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -90,7 +90,7 @@ public abstract class AbstractEndpoint
      * in the conference. The client needs to send _at least_ this to satisfy
      * all receivers.
      */
-    private VideoConstraints2 maxReceiverVideoConstraints = new VideoConstraints2(0, 0.0);
+    private VideoConstraints maxReceiverVideoConstraints = new VideoConstraints(0, 0.0);
 
     protected final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
@@ -340,19 +340,19 @@ public abstract class AbstractEndpoint
      * sender).
      */
     private void receiverVideoConstraintsChanged(
-        Collection<VideoConstraints2> newVideoConstraints)
+        Collection<VideoConstraints> newVideoConstraints)
     {
-        VideoConstraints2 oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraints;
+        VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraints;
 
         int maxHeight = newVideoConstraints
             .stream()
-            .mapToInt(VideoConstraints2::getMaxHeight)
+            .mapToInt(VideoConstraints::getMaxHeight)
             .max()
             .orElse(0);
 
         // Currently we only support constraining the height, and not frame rate.
 
-        VideoConstraints2 newReceiverMaxVideoConstraints = new VideoConstraints2(maxHeight, -1.0);
+        VideoConstraints newReceiverMaxVideoConstraints = new VideoConstraints(maxHeight, -1.0);
 
         if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
         {
@@ -398,7 +398,7 @@ public abstract class AbstractEndpoint
      * needs to receive from this endpoint
      */
     protected abstract void
-    maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints2 maxVideoConstraints);
+    maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints);
 
     /**
      * Notifies this instance that a specified received wants to receive
@@ -411,9 +411,9 @@ public abstract class AbstractEndpoint
      * @param newVideoConstraints the video constraints that the receiver
      * wishes to receive.
      */
-    public void addReceiver(String receiverId, VideoConstraints2 newVideoConstraints)
+    public void addReceiver(String receiverId, VideoConstraints newVideoConstraints)
     {
-        VideoConstraints2 oldVideoConstraints = receiverVideoConstraintsMap.put(receiverId, newVideoConstraints);
+        VideoConstraints oldVideoConstraints = receiverVideoConstraintsMap.put(receiverId, newVideoConstraints);
         if (oldVideoConstraints == null || !oldVideoConstraints.equals(newVideoConstraints))
         {
             logger.debug(

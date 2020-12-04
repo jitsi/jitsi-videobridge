@@ -25,7 +25,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.jitsi.videobridge.cc.allocation.VideoConstraints2
+import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
@@ -184,7 +184,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing VideoConstraints2") {
-            val videoConstraints: VideoConstraints2 = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
+            val videoConstraints: VideoConstraints = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
             videoConstraints.maxHeight shouldBe 1080
             videoConstraints.maxFrameRate shouldBe 15.0
         }
@@ -200,14 +200,14 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing AddReceiver") {
-            val message = AddReceiverMessage("bridge1", "abcdabcd", VideoConstraints2(360))
+            val message = AddReceiverMessage("bridge1", "abcdabcd", VideoConstraints(360))
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<AddReceiverMessage>()
             parsed as AddReceiverMessage
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
-            parsed.videoConstraints shouldBe VideoConstraints2(360)
+            parsed.videoConstraints shouldBe VideoConstraints(360)
         }
 
         context("serializing and parsing RemoveReceiver") {
