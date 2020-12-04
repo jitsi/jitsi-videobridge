@@ -19,7 +19,26 @@ import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.cc.VideoConstraintsCompatibility
 
-class AllocationSettings {
+/**
+ * This class encapsulates all of the client-controller settings for bitrate allocation.
+ */
+data class AllocationSettings(
+    val selectedEndpoints: List<String> = emptyList(),
+    val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
+    val lastN: Int = -1
+) {
+    override fun toString(): String = OrderedJsonObject().apply {
+        put("selected_endpoints", selectedEndpoints)
+        put("video_constraints", videoConstraints)
+        put("last_n", lastN)
+    }.toJSONString()
+}
+
+/**
+ * Maintains an [AllocationSettings] instance and allows fields to be set individually, with an indication of whether
+ * the overall state changed.
+ */
+internal class AllocationSettingsWrapper {
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
      */
@@ -30,7 +49,7 @@ class AllocationSettings {
      */
     private var maxFrameHeight = Int.MAX_VALUE
 
-    private var lastN: Int = -1
+    internal var lastN: Int = -1
 
     private val videoConstraintsCompatibility = VideoConstraintsCompatibility().apply {
         setSelectedEndpoints(selectedEndpoints)
@@ -39,15 +58,27 @@ class AllocationSettings {
 
     private var videoConstraints = videoConstraintsCompatibility.computeVideoConstraints()
 
+    private var allocationSettings = create()
+
+    /**
+     * Return `true` iff the [AllocationSettings] state changed.
+     */
     fun setMaxFrameHeight(maxFrameHeight: Int): Boolean {
         if (this.maxFrameHeight != maxFrameHeight) {
             this.maxFrameHeight = maxFrameHeight
             videoConstraintsCompatibility.setMaxFrameHeight(maxFrameHeight)
-            return setVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints())
+            return setVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints()).also {
+                if (it) {
+                    allocationSettings = create()
+                }
+            }
         }
         return false
     }
 
+    /**
+     * Return `true` iff the [AllocationSettings] state changed.
+     */
     fun setSelectedEndpoints(selectedEndpoints: List<String>): Boolean {
         if (this.selectedEndpoints != selectedEndpoints) {
             this.selectedEndpoints = selectedEndpoints
@@ -55,19 +86,27 @@ class AllocationSettings {
             setVideoConstraints(videoConstraintsCompatibility.computeVideoConstraints())
             // selectedEndpoints is part of the snapshot, so it has changed no matter whether the constraints also
             // changed.
+            allocationSettings = create()
             return true
         }
         return false
     }
 
+    /**
+     * Return `true` iff the [AllocationSettings] state changed.
+     */
     fun setLastN(lastN: Int): Boolean {
         if (this.lastN != lastN) {
             this.lastN = lastN
+            allocationSettings = create()
             return true
         }
         return false
     }
 
+    /**
+     * Return `true` iff the [AllocationSettings] state changed.
+     */
     private fun setVideoConstraints(videoConstraints: Map<String, VideoConstraints>): Boolean {
         if (this.videoConstraints != videoConstraints) {
             this.videoConstraints = videoConstraints
@@ -76,17 +115,7 @@ class AllocationSettings {
         return false
     }
 
-    fun snapshot() = Snapshot(selectedEndpoints, videoConstraints, lastN)
+    private fun create() = AllocationSettings(selectedEndpoints, videoConstraints, lastN)
 
-    data class Snapshot(
-        val selectedEndpoints: List<String> = emptyList(),
-        val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
-        val lastN: Int = -1
-    ) {
-        override fun toString(): String = OrderedJsonObject().apply {
-            put("selected_endpoints", selectedEndpoints)
-            put("video_constraints", videoConstraints)
-            put("last_n", lastN)
-        }.toJSONString()
-    }
+    fun get() = allocationSettings
 }

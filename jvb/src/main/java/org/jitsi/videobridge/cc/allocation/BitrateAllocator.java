@@ -163,7 +163,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private final Supplier<List<T>> endpointsSupplier;
     private final Supplier<Boolean> trustBwe;
 
-    private AllocationSettings.Snapshot allocationSettings = new AllocationSettings.Snapshot();
+    private AllocationSettings allocationSettings = new AllocationSettings();
 
     /**
      * The last time {@link BitrateAllocator#update()} was called
@@ -283,7 +283,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         update();
     }
 
-    void update(AllocationSettings.Snapshot allocationSettings)
+    void update(AllocationSettings allocationSettings)
     {
         this.allocationSettings = allocationSettings;
         update();
