@@ -18,7 +18,6 @@ package org.jitsi.videobridge.cc.allocation
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import org.jitsi.videobridge.VideoConstraints
 
 class AllocationSettingsTest : ShouldSpec() {
     init {
@@ -29,7 +28,7 @@ class AllocationSettingsTest : ShouldSpec() {
                 strategy shouldBe AllocationStrategy.StageView
                 constraints.shouldContainExactly(
                     mapOf(
-                        "A" to VideoConstraints(720, 360, 30.0)
+                        "A" to VideoConstraints2(720)
                     )
                 )
             }
@@ -39,10 +38,10 @@ class AllocationSettingsTest : ShouldSpec() {
                 strategy shouldBe AllocationStrategy.TileView
                 constraints.shouldContainExactly(
                     mapOf(
-                        "A" to VideoConstraints(180, -1, -1.0),
-                        "B" to VideoConstraints(180, -1, -1.0),
-                        "C" to VideoConstraints(180, -1, -1.0),
-                        "D" to VideoConstraints(180, -1, -1.0)
+                        "A" to VideoConstraints2(180),
+                        "B" to VideoConstraints2(180),
+                        "C" to VideoConstraints2(180),
+                        "D" to VideoConstraints2(180)
                     )
                 )
             }
