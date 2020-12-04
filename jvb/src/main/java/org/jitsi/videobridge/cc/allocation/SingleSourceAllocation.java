@@ -18,7 +18,6 @@ package org.jitsi.videobridge.cc.allocation;
 import org.jitsi.nlj.MediaSourceDesc;
 import org.jitsi.nlj.RtpLayerDesc;
 import org.jitsi.nlj.util.*;
-import org.jitsi.videobridge.VideoConstraints;
 import org.jitsi.videobridge.cc.config.*;
 
 import java.time.Clock;
@@ -41,7 +40,7 @@ public class SingleSourceAllocation {
      */
     public final String endpointID;
 
-    final VideoConstraints constraints;
+    final VideoConstraints2 constraints;
 
     /**
      * The first {@link MediaSourceDesc} of the {@code Endpoint} that
@@ -95,7 +94,7 @@ public class SingleSourceAllocation {
     SingleSourceAllocation(
             String endpointID,
             MediaSourceDesc source,
-            VideoConstraints constraints,
+            VideoConstraints2 constraints,
             AllocationStrategy strategy,
             Clock clock)
     {
@@ -103,7 +102,7 @@ public class SingleSourceAllocation {
         this.constraints = constraints;
         this.source = source;
 
-        if (source == null || constraints.getIdealHeight() <= 0) {
+        if (source == null || constraints.getMaxHeight() <= 0) {
             ratedPreferredIdx = -1;
             idealBitrate = 0;
             ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
@@ -121,7 +120,7 @@ public class SingleSourceAllocation {
         long idealBps = 0;
         for (RtpLayerDesc layer : source.getRtpLayers()) {
 
-            int idealHeight = constraints.getIdealHeight();
+            int idealHeight = constraints.getMaxHeight();
             // We don't want to exceed the ideal resolution but we also
             // want to make sure we have at least 1 rated encoding.
             if (idealHeight >= 0 && layer.getHeight() > idealHeight && !ratesList.isEmpty()) {
@@ -138,14 +137,14 @@ public class SingleSourceAllocation {
             // preferredHeight and preferredFps are ONLY ever used for "on stage" participants.
             int preferredHeight = -1;
             double preferredFps = -1.0;
-            if (strategy == AllocationStrategy.StageView && constraints.getIdealHeight() > 180)
+            if (strategy == AllocationStrategy.StageView && constraints.getMaxHeight() > 180)
             {
                 preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
                 preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
             }
 
             boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
-            boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getIdealHeight();
+            boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getMaxHeight();
             boolean atLeastPreferredFps = layer.getFrameRate() >= preferredFps;
 
             if ((lessThanPreferredResolution
@@ -295,7 +294,7 @@ public class SingleSourceAllocation {
     @Override
     public String toString() {
         return "[id=" + endpointID
-                + " effectiveVideoConstraints=" + constraints
+                + " constraints=" + constraints
                 + " ratedPreferredIdx=" + ratedPreferredIdx
                 + " ratedTargetIdx=" + ratedTargetIdx
                 + " oversending=" + oversending

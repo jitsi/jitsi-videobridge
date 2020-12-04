@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
-import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.calculateLastN
 import org.jitsi.videobridge.jvbLastNSingleton
 import java.util.ArrayList
@@ -62,12 +61,12 @@ fun <T : MediaSourceContainer?> prioritize(
  * Return the "effective" constraints for the given endpoints, i.e. the constraints adjusted for LastN.
  */
 fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, allocationSettings: AllocationSettings):
-    Map<String, VideoConstraints> {
+    Map<String, VideoConstraints2> {
 
     val effectiveLastN = effectiveLastN(allocationSettings.lastN)
     return endpoints.mapIndexed { i, endpoint ->
         endpoint.id to if (i >= effectiveLastN) {
-            VideoConstraints.disabledVideoConstraints
+            VideoConstraints2(0)
         } else {
             allocationSettings.getConstraints(endpoint.id)
         }
@@ -80,9 +79,4 @@ fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, alloc
 private fun effectiveLastN(lastN: Int): Int {
     val adjustedLastN = calculateLastN(lastN, jvbLastNSingleton.jvbLastN)
     return if (adjustedLastN < 0) Int.MAX_VALUE else adjustedLastN
-}
-
-// Temporary
-fun toVideoConstraints2(constraints: Map<String, VideoConstraints>): Map<String, VideoConstraints2> {
-    return constraints.map { it.key to VideoConstraints2(it.value.idealHeight, -1.0) }.toMap()
 }
