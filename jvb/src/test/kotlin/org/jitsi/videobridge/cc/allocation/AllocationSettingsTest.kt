@@ -17,20 +17,27 @@ package org.jitsi.videobridge.cc.allocation
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.maps.shouldContainExactly
+import io.kotest.matchers.shouldBe
 import org.jitsi.videobridge.VideoConstraints
 
 class AllocationSettingsTest : ShouldSpec() {
     init {
         context("computeVideoConstraints") {
             context("Stage view behavior") {
-                computeVideoConstraints(720, listOf("A")).shouldContainExactly(
+                val (strategy, constraints) = computeVideoConstraints(720, listOf("A"))
+
+                strategy shouldBe AllocationStrategy.StageView
+                constraints.shouldContainExactly(
                     mapOf(
                         "A" to VideoConstraints(720, 360, 30.0)
                     )
                 )
             }
             context("Tile view behavior") {
-                computeVideoConstraints(180, listOf("A", "B", "C", "D")).shouldContainExactly(
+                val (strategy, constraints) = computeVideoConstraints(180, listOf("A", "B", "C", "D"))
+
+                strategy shouldBe AllocationStrategy.TileView
+                constraints.shouldContainExactly(
                     mapOf(
                         "A" to VideoConstraints(180, -1, -1.0),
                         "B" to VideoConstraints(180, -1, -1.0),

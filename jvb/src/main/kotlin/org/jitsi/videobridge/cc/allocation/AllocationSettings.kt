@@ -25,11 +25,13 @@ import kotlin.math.min
  * This class encapsulates all of the client-controller settings for bitrate allocation.
  */
 data class AllocationSettings(
+    val strategy: AllocationStrategy = AllocationStrategy.StageView,
     val selectedEndpoints: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1
 ) {
     override fun toString(): String = OrderedJsonObject().apply {
+        put("strategy", strategy)
         put("selected_endpoints", selectedEndpoints)
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
@@ -53,11 +55,12 @@ internal class AllocationSettingsWrapper {
 
     internal var lastN: Int = -1
 
-    private var videoConstraints = computeVideoConstraints(maxFrameHeight, selectedEndpoints)
+    private var videoConstraints = computeVideoConstraints(maxFrameHeight, selectedEndpoints).constraints
+    internal var strategy = computeVideoConstraints(maxFrameHeight, selectedEndpoints).allocationStrategy
 
     private var allocationSettings = create()
 
-    private fun create() = AllocationSettings(selectedEndpoints, videoConstraints, lastN)
+    private fun create() = AllocationSettings(strategy, selectedEndpoints, videoConstraints, lastN)
     fun get() = allocationSettings
 
     private fun computeVideoConstraints() = computeVideoConstraints(maxFrameHeight, selectedEndpoints)
@@ -106,9 +109,12 @@ internal class AllocationSettingsWrapper {
     /**
      * Return `true` iff the [AllocationSettings] state changed.
      */
-    private fun setVideoConstraints(videoConstraints: Map<String, VideoConstraints>): Boolean {
-        if (this.videoConstraints != videoConstraints) {
-            this.videoConstraints = videoConstraints
+    private fun setVideoConstraints(strategyAndConstraints: StrategyAndConstraints): Boolean {
+        val (strategy, constraints) = strategyAndConstraints
+        if (this.videoConstraints != constraints ||
+            this.strategy != strategy) {
+            this.videoConstraints = constraints
+            this.strategy = strategy
             return true
         }
         return false
@@ -139,43 +145,47 @@ internal class AllocationSettingsWrapper {
 internal fun computeVideoConstraints(
     maxFrameHeight: Int,
     selectedEndpoints: List<String>
-): Map<String, VideoConstraints> {
-    val newVideoConstraints: MutableMap<String, VideoConstraints> = HashMap()
-    if (selectedEndpoints.isNotEmpty()) {
-        val selectedEndpointConstraints = if (selectedEndpoints.size > 1) {
-            // This implements special handling for tile-view.
-            // (selectedEndpoints.size() > 1) is equivalent to tile-view, so we use it as a clue to detect tile-view.
-            //
-            // (selectedEndpoints.size() > 1) implies tile-view because multiple "selected" endpoints has only ever
-            // been used for tile-view.
-            //
-            // tile-view implies (selectedEndpoints.size() > 1) because,
-            // (selectedEndpoints.size() <= 1) implies non tile-view because
-            // soon as we click on a participant we exit tile-view, see:
-            //
-            // https://github.com/jitsi/jitsi-meet/commit/ebcde745ef34bd3d45a2d884825fdc48cfa16839
-            // https://github.com/jitsi/jitsi-meet/commit/4cea7018f536891b028784e7495f71fc99fc18a0
-            // https://github.com/jitsi/jitsi-meet/commit/29bc18df01c82cefbbc7b78f5aef7b97c2dee0e4
-            // https://github.com/jitsi/jitsi-meet/commit/e63cd8c81bceb9763e4d57be5f2262c6347afc23
-            //
-            // In tile view we set the ideal height but not the preferred height nor the preferred frame-rate, because
-            // we want even even distribution of bandwidth among all the tiles to avoid ninjas.
-            VideoConstraints(min(config.onstageIdealHeightPx(), maxFrameHeight))
-        } else {
-            // Stage view
-            VideoConstraints(
-                min(config.onstageIdealHeightPx(), maxFrameHeight),
-                config.onstagePreferredHeightPx(),
-                config.onstagePreferredFramerate()
-            )
-        }
+): StrategyAndConstraints {
 
-        val selectedVideoConstraintsMap: Map<String, VideoConstraints> = selectedEndpoints
-            .stream()
-            .collect(Collectors.toMap({ e: String -> e }) { selectedEndpointConstraints })
+    // This implements special handling for tile-view.
+    // (selectedEndpoints.size() > 1) is equivalent to tile-view, so we use it as a clue to detect tile-view.
+    //
+    // (selectedEndpoints.size() > 1) implies tile-view because multiple "selected" endpoints has only ever
+    // been used for tile-view.
+    //
+    // tile-view implies (selectedEndpoints.size() > 1) because,
+    // (selectedEndpoints.size() <= 1) implies non tile-view because
+    // soon as we click on a participant we exit tile-view, see:
+    //
+    // https://github.com/jitsi/jitsi-meet/commit/ebcde745ef34bd3d45a2d884825fdc48cfa16839
+    // https://github.com/jitsi/jitsi-meet/commit/4cea7018f536891b028784e7495f71fc99fc18a0
+    // https://github.com/jitsi/jitsi-meet/commit/29bc18df01c82cefbbc7b78f5aef7b97c2dee0e4
+    // https://github.com/jitsi/jitsi-meet/commit/e63cd8c81bceb9763e4d57be5f2262c6347afc23
+    //
+    // In tile view we set the ideal height but not the preferred height nor the preferred frame-rate, because
+    // we want even even distribution of bandwidth among all the tiles to avoid ninjas.
+    val allocationStrategy =
+        if (selectedEndpoints.size > 1) AllocationStrategy.TileView else AllocationStrategy.StageView
 
-        // Add video constraints for all the selected endpoints.
-        newVideoConstraints.putAll(selectedVideoConstraintsMap)
+    if (selectedEndpoints.isEmpty()) return StrategyAndConstraints(allocationStrategy, mapOf())
+
+    val selectedEndpointConstraints = when (allocationStrategy) {
+        AllocationStrategy.TileView -> VideoConstraints(min(config.onstageIdealHeightPx(), maxFrameHeight))
+        AllocationStrategy.StageView -> VideoConstraints(
+            min(config.onstageIdealHeightPx(), maxFrameHeight),
+            config.onstagePreferredHeightPx(),
+            config.onstagePreferredFramerate()
+        )
     }
-    return newVideoConstraints
+
+    return StrategyAndConstraints(
+        allocationStrategy,
+        selectedEndpoints.stream()
+            .collect(Collectors.toMap({ e: String -> e }) { selectedEndpointConstraints })
+    )
 }
+
+internal data class StrategyAndConstraints(
+    val allocationStrategy: AllocationStrategy,
+    val constraints: Map<String, VideoConstraints>
+)
