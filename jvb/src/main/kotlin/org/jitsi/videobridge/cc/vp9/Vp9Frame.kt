@@ -293,65 +293,76 @@ class Vp9Frame internal constructor(
         ) /* TODO: also check start, end, seq nums? */ {
             return
         }
-        throw RuntimeException(buildString {
-            with(pkt) {
-                append("Packet ssrc $ssrc, seq $sequenceNumber, picture id $pictureId, timestamp $timestamp ")
-            }
-            append("is not consistent with frame $ssrc, seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
-            append("picture id $pictureId, timestamp $timestamp: ")
+        throw RuntimeException(
+            buildString {
+                with(pkt) {
+                    append("Packet ssrc $ssrc, seq $sequenceNumber, picture id $pictureId, timestamp $timestamp ")
+                }
+                append("is not consistent with frame $ssrc, ")
+                append("seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
+                append("picture id $pictureId, timestamp $timestamp: ")
 
-            var complained = false
-            if (temporalLayer != pkt.temporalLayerIndex) {
-                append("packet temporal layer ${pkt.temporalLayerIndex} != frame temporal layer $temporalLayer")
-                complained = true
-            }
-            if (tl0PICIDX != pkt.TL0PICIDX) {
-                if (complained) {
-                    append("; ")
+                var complained = false
+                if (temporalLayer != pkt.temporalLayerIndex) {
+                    append("packet temporal layer ${pkt.temporalLayerIndex} != frame temporal layer $temporalLayer")
+                    complained = true
                 }
-                append("packet TL0PICIDX ${pkt.TL0PICIDX} != frame TL0PICIDX $tl0PICIDX")
-                complained = true
-            }
-            if (pictureId != pkt.pictureId) {
-                if (complained) {
-                    append("; ")
+                if (tl0PICIDX != pkt.TL0PICIDX) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append("packet TL0PICIDX ${pkt.TL0PICIDX} != frame TL0PICIDX $tl0PICIDX")
+                    complained = true
                 }
-                append("packet PictureID ${pkt.pictureId} != frame PictureID $pictureId")
-                complained = true
-            }
-            if (isSwitchingUpPoint != pkt.isSwitchingUpPoint) {
-                if (complained) {
-                    append("; ")
+                if (pictureId != pkt.pictureId) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append("packet PictureID ${pkt.pictureId} != frame PictureID $pictureId")
+                    complained = true
                 }
-                append("packet switchingUpPoint ${pkt.isSwitchingUpPoint} != " +
-                    "frame switchingUpPoint $isSwitchingUpPoint")
-                complained = true
-            }
-            if (isUpperLevelReference != pkt.isUpperLevelReference) {
-                if (complained) {
-                    append("; ")
+                if (isSwitchingUpPoint != pkt.isSwitchingUpPoint) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append(
+                        "packet switchingUpPoint ${pkt.isSwitchingUpPoint} != " +
+                            "frame switchingUpPoint $isSwitchingUpPoint"
+                    )
+                    complained = true
                 }
-                append("packet upperLevelReference ${pkt.isUpperLevelReference} != " +
-                    "frame upperLevelReference $isUpperLevelReference")
-                complained = true
-            }
-            if (usesInterLayerDependency != pkt.usesInterLayerDependency) {
-                if (complained) {
-                    append("; ")
+                if (isUpperLevelReference != pkt.isUpperLevelReference) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append(
+                        "packet upperLevelReference ${pkt.isUpperLevelReference} != " +
+                            "frame upperLevelReference $isUpperLevelReference"
+                    )
+                    complained = true
                 }
-                append("packet usesInterLayerDepencency ${pkt.usesInterLayerDependency} != " +
-                    "frame usesInterLayerDepencency $usesInterLayerDependency")
-                complained = true
-            }
-            if (isInterPicturePredicted != pkt.isInterPicturePredicted) {
-                if (complained) {
-                    append("; ")
+                if (usesInterLayerDependency != pkt.usesInterLayerDependency) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append(
+                        "packet usesInterLayerDepencency ${pkt.usesInterLayerDependency} != " +
+                            "frame usesInterLayerDepencency $usesInterLayerDependency"
+                    )
+                    complained = true
                 }
-                append("packet isInterPicturePredicted ${pkt.isInterPicturePredicted} != " +
-                    "frame isInterPicturePredicted $isInterPicturePredicted")
-                complained = true
+                if (isInterPicturePredicted != pkt.isInterPicturePredicted) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append(
+                        "packet isInterPicturePredicted ${pkt.isInterPicturePredicted} != " +
+                            "frame isInterPicturePredicted $isInterPicturePredicted"
+                    )
+                    complained = true
+                }
             }
-        })
+        )
     }
 
     /**

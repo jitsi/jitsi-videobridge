@@ -93,18 +93,20 @@ class Vp9PictureMap(
             if (!picture.matchesPicture(packet)) {
                 check(picture.pictureId == pictureId) {
                     "Picture map returned picture with picture ID ${picture.pictureId} "
-                        "when asked for picture with picture ID $pictureId"
+                    "when asked for picture with picture ID $pictureId"
                 }
-                logger.warn("Cannot insert packet in picture map: " +
-                    with(picture) {
-                        "picture with ssrc $ssrc, timestamp $timestamp, " +
-                            "and sequence number range $earliestKnownSequenceNumber-$latestKnownSequenceNumber, "
-                    } +
-                    with(packet) {
-                        "and packet $sequenceNumber with ssrc $ssrc, timestamp $timestamp, " +
-                            "and sequence number $sequenceNumber"
-                    } +
-                    " both have picture ID $pictureId")
+                logger.warn(
+                    "Cannot insert packet in picture map: " +
+                        with(picture) {
+                            "picture with ssrc $ssrc, timestamp $timestamp, " +
+                                "and sequence number range $earliestKnownSequenceNumber-$latestKnownSequenceNumber, "
+                        } +
+                        with(packet) {
+                            "and packet $sequenceNumber with ssrc $ssrc, timestamp $timestamp, " +
+                                "and sequence number $sequenceNumber"
+                        } +
+                        " both have picture ID $pictureId"
+                )
                 return null
             }
             try {

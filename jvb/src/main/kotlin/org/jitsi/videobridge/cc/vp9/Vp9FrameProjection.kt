@@ -104,7 +104,8 @@ internal constructor(
         ssrc: Long,
         sequenceNumberDelta: Int,
         timestamp: Long
-    ) : this(diagnosticContext = diagnosticContext,
+    ) : this(
+        diagnosticContext = diagnosticContext,
         vp9Frame = null,
         ssrc = ssrc,
         timestamp = timestamp,
@@ -112,7 +113,8 @@ internal constructor(
         pictureId = 0,
         tl0PICIDX = 0,
         mark = false,
-        createdMs = 0)
+        createdMs = 0
+    )
 
     fun rewriteSeqNo(seq: Int): Int {
         return applySequenceNumberDelta(seq, sequenceNumberDelta)
@@ -126,19 +128,20 @@ internal constructor(
     fun rewriteRtp(pkt: Vp9Packet) {
         val sequenceNumber = rewriteSeqNo(pkt.sequenceNumber)
         if (timeSeriesLogger.isTraceEnabled) {
-            timeSeriesLogger.trace(diagnosticContext
-                .makeTimeSeriesPoint("rtp_vp9_rewrite")
-                .addField("orig.rtp.ssrc", pkt.ssrc)
-                .addField("orig.rtp.timestamp", pkt.timestamp)
-                .addField("orig.rtp.seq", pkt.sequenceNumber)
-                .addField("orig.vp9.pictureid", pkt.pictureId)
-                .addField("orig.vp9.tl0picidx", pkt.TL0PICIDX)
-                .addField("proj.rtp.ssrc", ssrc)
-                .addField("proj.rtp.timestamp", timestamp)
-                .addField("proj.rtp.seq", sequenceNumber)
-                .addField("proj.vp9.pictureid", pictureId)
-                .addField("proj.vp9.tl0picidx", tl0PICIDX)
-                .addField("proj.rtp.mark", mark)
+            timeSeriesLogger.trace(
+                diagnosticContext
+                    .makeTimeSeriesPoint("rtp_vp9_rewrite")
+                    .addField("orig.rtp.ssrc", pkt.ssrc)
+                    .addField("orig.rtp.timestamp", pkt.timestamp)
+                    .addField("orig.rtp.seq", pkt.sequenceNumber)
+                    .addField("orig.vp9.pictureid", pkt.pictureId)
+                    .addField("orig.vp9.tl0picidx", pkt.TL0PICIDX)
+                    .addField("proj.rtp.ssrc", ssrc)
+                    .addField("proj.rtp.timestamp", timestamp)
+                    .addField("proj.rtp.seq", sequenceNumber)
+                    .addField("proj.vp9.pictureid", pictureId)
+                    .addField("proj.vp9.tl0picidx", tl0PICIDX)
+                    .addField("proj.rtp.mark", mark)
             )
         }
 

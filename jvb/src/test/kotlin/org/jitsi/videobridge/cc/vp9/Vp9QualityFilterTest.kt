@@ -238,8 +238,10 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 val targetIndex = RtpLayerDesc.getIndex(0, 2, 0)
 
                 testGenerator(generator, filter, targetIndex) { f, result ->
-                    result.accept shouldBe (f.temporalLayer == 0 &&
-                        (f.spatialLayer == 2 || !f.isInterPicturePredicted))
+                    result.accept shouldBe (
+                        f.temporalLayer == 0 &&
+                            (f.spatialLayer == 2 || !f.isInterPicturePredicted)
+                        )
                     if (result.accept) {
                         result.mark shouldBe (f.spatialLayer == 2)
                         filter.needsKeyframe shouldBe false
@@ -415,7 +417,8 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 frame = f,
                 externalTargetIndex = targetIndex,
                 incomingIndex = packetIndex,
-                receivedMs = ms)
+                receivedMs = ms
+            )
             evaluator(f, result)
             frames++
         }

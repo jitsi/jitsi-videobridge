@@ -158,32 +158,35 @@ class Vp9Picture(packet: Vp9Packet) {
             /* TODO: also check start, end, seq nums? */
             return
         }
-        throw RuntimeException(buildString {
-            with(pkt) {
-                append("Packet ssrc $ssrc, seq $sequenceNumber, picture id $pictureId, timestamp $timestamp ")
-            }
-            append("is not consistent with picture $ssrc, seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
-            append("picture id $pictureId, timestamp $timestamp: ")
+        throw RuntimeException(
+            buildString {
+                with(pkt) {
+                    append("Packet ssrc $ssrc, seq $sequenceNumber, picture id $pictureId, timestamp $timestamp ")
+                }
+                append("is not consistent with picture $ssrc, ")
+                append("seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
+                append("picture id $pictureId, timestamp $timestamp: ")
 
-            var complained = false
-            if (temporalLayer != pkt.temporalLayerIndex) {
-                append("packet temporal layer ${pkt.temporalLayerIndex} != frame temporal layer $temporalLayer")
-                complained = true
-            }
-            if (tl0PICIDX != pkt.TL0PICIDX) {
-                if (complained) {
-                    append("; ")
+                var complained = false
+                if (temporalLayer != pkt.temporalLayerIndex) {
+                    append("packet temporal layer ${pkt.temporalLayerIndex} != frame temporal layer $temporalLayer")
+                    complained = true
                 }
-                append("packet TL0PICIDX ${pkt.TL0PICIDX} != frame TL0PICIDX $tl0PICIDX")
-                complained = true
-            }
-            if (pictureId != pkt.pictureId) {
-                if (complained) {
-                    append("; ")
+                if (tl0PICIDX != pkt.TL0PICIDX) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append("packet TL0PICIDX ${pkt.TL0PICIDX} != frame TL0PICIDX $tl0PICIDX")
+                    complained = true
                 }
-                append("packet PictureID ${pkt.pictureId} != frame PictureID $pictureId")
+                if (pictureId != pkt.pictureId) {
+                    if (complained) {
+                        append("; ")
+                    }
+                    append("packet PictureID ${pkt.pictureId} != frame PictureID $pictureId")
+                }
             }
-        })
+        )
     }
 
     /**
