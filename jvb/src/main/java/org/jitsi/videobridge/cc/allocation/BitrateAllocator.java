@@ -87,7 +87,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * The list of endpoints ids ordered by speech activity.
      */
     @NotNull
-    private List<String> sortedEndpointIds;
+    private List<String> sortedEndpointIds = Collections.emptyList();
 
     /**
      * Provide the current list of endpoints (in no particular order).
@@ -246,7 +246,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
 
         // Compute the bitrate allocation.
-        Allocation newAllocation = allocate(getAvailableBandwidth(), sortedEndpoints);
+        Allocation newAllocation = allocate(sortedEndpoints);
 
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
         if (allocationChanged)
@@ -282,9 +282,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link SingleSourceAllocation}.
      */
-    private synchronized @NotNull Allocation allocate(
-            long maxBandwidth,
-            List<T> conferenceEndpoints)
+    private synchronized @NotNull Allocation allocate(List<T> conferenceEndpoints)
     {
         List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceEndpoints);
 
@@ -293,6 +291,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             return new Allocation(Collections.emptySet());
         }
 
+        long maxBandwidth = getAvailableBandwidth();
         long oldMaxBandwidth = -1;
 
         int oldStateLen = 0;
