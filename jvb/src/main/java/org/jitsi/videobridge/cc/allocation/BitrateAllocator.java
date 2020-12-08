@@ -73,7 +73,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         // allocation. This is an ugly hack to prevent too many resolution/UI changes in case the bridge produces too
         // low bandwidth estimate, at the risk of clogging the receiver's pipe.
         // TODO: do we still need this? Do we ever ever see BWE drop by <%15?
-        return deltaBwe > 0 || deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
+        return deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
     }
 
     private final Logger logger;
@@ -86,6 +86,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     /**
      * The list of endpoints ids ordered by speech activity.
      */
+    @NotNull
     private List<String> sortedEndpointIds;
 
     /**
@@ -215,13 +216,13 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         logger.debug(() -> "Endpoint ordering has changed, updating.");
 
         // TODO: Maybe suppress calling update() unless the order actually changed?
-        sortedEndpointIds = conferenceEndpoints;
+        sortedEndpointIds = conferenceEndpoints != null ? conferenceEndpoints : Collections.emptyList();
         update();
     }
 
     /**
      * Updates the allocation settings and calculates a new bitrate {@link Allocation}.
-     * @param allocationSettings
+     * @param allocationSettings the new allocation settings.
      */
     void update(AllocationSettings allocationSettings)
     {
@@ -235,11 +236,6 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private synchronized void update()
     {
         lastUpdateTime = clock.instant();
-
-        if (sortedEndpointIds == null || sortedEndpointIds.isEmpty())
-        {
-            return;
-        }
 
         // Order the endpoints by selection, followed by speech activity.
         List<T> sortedEndpoints
