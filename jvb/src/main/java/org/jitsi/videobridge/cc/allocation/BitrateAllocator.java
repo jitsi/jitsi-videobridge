@@ -89,8 +89,19 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private List<String> sortedEndpointIds;
 
     /**
-     * A modified copy of the original video constraints map, augmented with video constraints for the endpoints that
-     * fall outside of the last-n set + endpoints not announced in the videoConstraintsMap.
+     * Provide the current list of endpoints (in no particular order).
+     * TODO: Simplify to avoid the weird (and slow) flow involving `endpointsSupplier` and `sortedEndpointIds`.
+     */
+    private final Supplier<List<T>> endpointsSupplier;
+
+    /**
+     * The "effective" constraints for an endpoint indicate the maximum resolution/fps that this
+     * {@link BitrateAllocator} would allocate for this endpoint given enough bandwidth.
+     *
+     * They are the constraints signaled by the receiver, further reduced to 0 when the endpoint is "outside lastN".
+     *
+     * Effective constraints are used to signal to video senders to reduce their resolution to the minimum that
+     * satisfies all receivers.
      */
     private Map<String, VideoConstraints> effectiveConstraints = Collections.emptyMap();
 
@@ -98,23 +109,28 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
     private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
-    private final Supplier<List<T>> endpointsSupplier;
+    /**
+     * Whether bitrate allocation should be constrained to the available bandwidth (when {@code true}), or assume
+     * infinite bandwidth (when {@code false}.
+     */
     private final Supplier<Boolean> trustBwe;
 
+    /**
+     * The allocations settings signalled by the receiver.
+     */
     private AllocationSettings allocationSettings = new AllocationSettings();
 
     /**
-     * The last time {@link BitrateAllocator#update()} was called
+     * The last time {@link BitrateAllocator#update()} was called.
      */
     private Instant lastUpdateTime = Instant.MIN;
 
+    /**
+     * The result of the bitrate control algorithm, the last time it ran.
+     */
     @NotNull
     private Allocation allocation = new Allocation(Collections.emptySet());
 
-    /**
-     * Initializes a new {@link BitrateAllocator} instance which is to
-     * belong to a particular {@link Endpoint}.
-     */
     BitrateAllocator(
             EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
@@ -131,8 +147,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Gets a JSON representation of the parts of this object's state that
-     * are deemed useful for debugging.
+     * Gets a JSON representation of the parts of this object's state that are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
     @SuppressFBWarnings(
@@ -155,16 +170,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * We can't just use {@link #bweBps} to get the most recent bandwidth
-     * estimate as we must take into account the initial join period where
-     * we don't 'trust' the bwe anyway, as well as whether or not we'll
-     * trust it at all (we ignore it always if the endpoint doesn't support
-     * RTX, which is our way of filtering out endpoints that don't do
-     * probing)
-     *
-     * @return the estimated bandwidth, in bps, based on the last update
-     * we received and taking into account whether or not we 'trust' the
-     * bandwidth estimate.
+     * Get the available bandwidth, taking into account the `trustBwe` option.
      */
     private long getAvailableBandwidth()
     {
@@ -199,15 +205,10 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Called when the ordering of endpoints has changed in some way. This could
-     * be due to an endpoint joining or leaving, a new dominant speaker, or a
-     * change in which endpoints are selected.
+     * Notify this {@link BitrateAllocator} that the order of the endpoints (including the addition/removal of an
+     * endpoint) has changed.
      *
-     * @param conferenceEndpoints the endpoints of the conference sorted in
-     * dominant speaker order (NOTE this does NOT take into account orderings
-     * specific to this particular endpoint, e.g. selected, though
-     * this method SHOULD be invoked when those things change; they will be
-     * taken into account in this flow)
+     * @param conferenceEndpoints the IDs of the conference endpoints ordered by speech activity.
      */
     synchronized void endpointOrderingChanged(List<String> conferenceEndpoints)
     {
@@ -218,6 +219,10 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         update();
     }
 
+    /**
+     * Updates the allocation settings and calculates a new bitrate {@link Allocation}.
+     * @param allocationSettings
+     */
     void update(AllocationSettings allocationSettings)
     {
         this.allocationSettings = allocationSettings;
@@ -225,9 +230,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Computes a new bitrate allocation for every endpoint in the conference,
-     * and updates the state of this instance so that bitrate allocation is
-     * eventually met.
+     * Runs the bitrate allocation algorithm, and fires events if the result is different from the previous result.
      */
     private synchronized void update()
     {
