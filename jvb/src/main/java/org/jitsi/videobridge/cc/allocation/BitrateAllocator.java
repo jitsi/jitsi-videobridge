@@ -36,57 +36,6 @@ import java.util.stream.*;
 import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
 
 /**
- * The {@link BitrateAllocator} is attached to a destination {@code
- * Endpoint} and its purpose is 1st to selectively drop incoming packets
- * based on their source {@link Endpoint} and 2nd to rewrite the accepted
- * packets so that they form a correct RTP stream without gaps in their
- * sequence numbers nor in their timestamps.
- * <p>
- * In the Selective Forwarding Middlebox (SFM) topology [RFC7667], senders are
- * sending multiple bitstreams of (they multistream) the same video source
- * (using either with simulcast or scalable video coding) and the SFM decides
- * which bitstream to send to which receiver.
- * <p>
- * For example, suppose we're in a 3-way simulcast-enabled video call (so 3
- * source {@link Endpoint}s) where the endpoints are sending two
- * non-scalable RTP streams of the same video source. The bitrate controller,
- * will chose to forward only one RTP stream at a time to a specific destination
- * endpoint.
- * <p>
- * With scalable video coding (SVC) a bitstream can be broken down into multiple
- * sub-bitstreams of lower frame rate (that we call temporal layers or TL)
- * and/or lower resolution (that we call spatial layers or SL). The exact
- * dependencies between the different layers of an SVC bitstream are codec
- * specific but, as a general rule of thumb higher temporal/spatial layers
- * depend on lower temporal/spatial layers creating a dependency graph.
- * <p>
- * For example, a 720p@30fps VP8 scalable bitstream can be broken down into 3
- * sub-bitstreams: one 720p@30fps layer (the highest temporal layer), that
- * depends on a 720p@15fps layer that depends on a 720p7.5fps layer (the lowest
- * temporal layer). In order for the decoder to be able decode the highest
- * temporal layer, it needs to get all the packets of its direct and transitive
- * dependencies, so of both the other two layers. In this simple case we have a
- * linked list of dependencies with the the lowest temporal layer as root and
- * the highest temporal layer as a leaf.
- * <p>
- * In order for the SFM to be able to filter the incoming packets we need to be
- * able to assign incoming packets to "flows" with properties that allow us to
- * define filtering rules. In this implementation a flow is represented by an
- * {@link RtpLayerDesc} and its properties are bitrate and subjective quality
- * index. Specifically, the incoming packets belong to some {@link FrameDesc},
- * which belongs to some {@link RtpLayerDesc}, which belongs to some {@link
- * MediaSourceDesc}, which belongs to the source {@link Endpoint}.
- * This hierarchy allows for fine-grained filtering up to the {@link FrameDesc}
- * level.
- * <p>
- * The decision of whether to project or drop a specific RTP packet of a
- * specific {@link FrameDesc} of a specific {@link MediaSourceDesc}
- * depends on the bitrate allocation of the specific {@link
- * MediaSourceDesc} and on the state of the bitstream that is produced by
- * this filter. For example, if we have a {@link MediaSourceDesc} with 2
- * {@link RtpLayerDesc} in a simulcast configuration, then we can switch
- * between the two {@link RtpLayerDesc}s if it is mandated by the bitrate
- * allocation and only if we see a refresh point.
  *
  * @author George Politis
  */
@@ -94,15 +43,12 @@ import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
 public class BitrateAllocator<T extends MediaSourceContainer>
 {
     /**
-     * Returns a boolean that indicates whether or not the current bandwidth
-     * estimation (in bps) has changed above the configured threshold (in
-     * percent) {@link #BWE_CHANGE_THRESHOLD_PCT} with respect to the previous
-     * bandwidth estimation.
+     * Returns a boolean that indicates whether or not the current bandwidth estimation (in bps) has changed above the
+     * configured threshold with respect to the previous bandwidth estimation.
      *
      * @param previousBwe the previous bandwidth estimation (in bps).
      * @param currentBwe the current bandwidth estimation (in bps).
-     * @return true if the bandwidth has changed above the configured threshold,
-     * false otherwise.
+     * @return true if the bandwidth has changed above the configured threshold, * false otherwise.
      */
     private static boolean bweChangeIsLargerThanThreshold(long previousBwe, long currentBwe)
     {
@@ -113,37 +59,29 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
         long deltaBwe = currentBwe - previousBwe;
 
-        // if the bwe has increased, we should act upon it, otherwise
-        // we may end up in this broken situation: Suppose that the target
-        // bitrate is 2.5Mbps, and that the last bitrate allocation was
-        // performed with a 2.4Mbps bandwidth estimate.  The bridge keeps
-        // probing and, suppose that, eventually the bandwidth estimate reaches
-        // 2.6Mbps, which is plenty to accommodate the target bitrate; but the
-        // minimum bandwidth estimate that would trigger a new bitrate
-        // allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
-        //
-        // if, on the other hand, the bwe has decreased, we require a 15%
-        // (configurable) drop at last in order to update the bitrate
-        // allocation. This is an ugly hack to prevent too many resolution/UI
-        // changes in case the bridge produces too low bandwidth estimate, at
-        // the risk of clogging the receiver's pipe.
+        // If the bwe has increased, we should act upon it, otherwise we may end up in this broken situation: Suppose
+        // that the target bitrate is 2.5Mbps, and that the last bitrate allocation was performed with a 2.4Mbps
+        // bandwidth estimate.  The bridge keeps probing and, suppose that, eventually the bandwidth estimate reaches
+        // 2.6Mbps, which is plenty to accommodate the target bitrate; but the minimum bandwidth estimate that would
+        // trigger a new bitrate allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
+        if (deltaBwe > 0)
+        {
+            return true;
+        }
 
+        // If, on the other hand, the bwe has decreased, we require at least a 15% drop in order to update the bitrate
+        // allocation. This is an ugly hack to prevent too many resolution/UI changes in case the bridge produces too
+        // low bandwidth estimate, at the risk of clogging the receiver's pipe.
+        // TODO: do we still need this? Do we ever ever see BWE drop by <%15?
         return deltaBwe > 0 || deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
     }
 
-    /**
-     * The {@link Logger} to be used by this instance to print debug
-     * information.
-     */
     private final Logger logger;
 
     /**
-     * The last bandwidth estimation that we got. This is used to limit the
-     * resolution changes due to bandwidth changes. We react to bandwidth
-     * changes greater than BWE_CHANGE_THRESHOLD_PCT/100 of the last bandwidth
-     * estimation.
+     * The estimated available bandwidth in bits per second.
      */
-    private long lastBwe = -1;
+    private long bweBps = -1;
 
     /**
      * The list of endpoints ids ordered by speech activity.
@@ -204,7 +142,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     {
         JSONObject debugState = new JSONObject();
         debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
-        debugState.put("lastBwe", lastBwe);
+        debugState.put("bweBps", bweBps);
         debugState.put("allocationSettings", allocationSettings.toString());
         debugState.put("effectiveConstraints", effectiveConstraints);
         return debugState;
@@ -217,7 +155,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * We can't just use {@link #lastBwe} to get the most recent bandwidth
+     * We can't just use {@link #bweBps} to get the most recent bandwidth
      * estimate as we must take into account the initial join period where
      * we don't 'trust' the bwe anyway, as well as whether or not we'll
      * trust it at all (we ignore it always if the endpoint doesn't support
@@ -230,23 +168,20 @@ public class BitrateAllocator<T extends MediaSourceContainer>
      */
     private long getAvailableBandwidth()
     {
-        return trustBwe.get() ? lastBwe : Long.MAX_VALUE;
+        return trustBwe.get() ? bweBps : Long.MAX_VALUE;
     }
 
     /**
-     * Called when the estimated bandwidth for the endpoint to which this
-     * BitrateController belongs has changed (which may therefore result in a
-     * different set of streams being forwarded)
-     *
+     * Notify the {@link BitrateAllocator} that the estimated available bandwidth has changed.
      * @param newBandwidthBps the newly estimated bandwidth in bps
      */
     void bandwidthChanged(long newBandwidthBps)
     {
-        if (!bweChangeIsLargerThanThreshold(lastBwe, newBandwidthBps))
+        if (!bweChangeIsLargerThanThreshold(bweBps, newBandwidthBps))
         {
             logger.debug(() -> "New bandwidth (" + newBandwidthBps
                     + ") is not significantly " +
-                    "changed from previous estimate (" + lastBwe + "), ignoring");
+                    "changed from previous estimate (" + bweBps + "), ignoring");
             // If this is a "negligible" change in the bandwidth estimation
             // wrt the last bandwidth estimation that we reacted to, then
             // do not update the bitrate allocation. The goal is to limit
@@ -258,7 +193,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         {
             logger.debug(() -> "new bandwidth is " + newBandwidthBps + ", updating");
 
-            lastBwe = newBandwidthBps;
+            bweBps = newBandwidthBps;
             update();
         }
     }
