@@ -200,9 +200,8 @@ class SingleSourceAllocation {
             // than the bitrate that we measure for the 720p stream, then we "jump over" the 720p stream and immediately
             // select the 1080p stream.
             //
-            // TODO: We should skip over to the *highest* layer with a lower bitrate.
             // TODO further: Should we just prune the list of layers we consider to not include such layers?
-            for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
+            for (int i = ratedIndices.length -1; i >= ratedTargetIdx + 1; i--)
             {
                 if (ratedIndices[i].bitrate.getBps() <= ratedIndices[ratedTargetIdx].bitrate.getBps())
                 {
