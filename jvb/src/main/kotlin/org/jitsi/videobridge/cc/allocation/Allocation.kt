@@ -21,12 +21,10 @@ import org.jitsi.nlj.RtpLayerDesc
 /**
  * The result of bitrate allocation.
  */
-class Allocation(
-    val allocations: Set<SingleAllocation>
+class Allocation @JvmOverloads constructor(
+    val allocations: Set<SingleAllocation>,
+    val oversending: Boolean = false
 ) {
-    val oversending: Boolean
-        get() = allocations.any { it.oversending }
-
     val forwardedEndpoints: Set<String>
         get() = allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
@@ -57,11 +55,7 @@ data class SingleAllocation(
     /**
      * The layer which would have been selected without bandwidth constraints.
      */
-    val idealLayer: RtpLayerDesc?,
-    /**
-     * Set to true if the selected/target layer has higher bitrate than the available bandwidth.
-     */
-    val oversending: Boolean
+    val idealLayer: RtpLayerDesc?
 ) {
     private val targetIndex: Int
         get() = targetLayer?.index ?: -1

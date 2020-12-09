@@ -38,7 +38,6 @@ import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
  *
  * @author George Politis
  */
-@SuppressWarnings("JavadocReference")
 public class BitrateAllocator<T extends MediaSourceContainer>
 {
     /**
@@ -292,6 +291,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         // The number of allocations with a selected layer.
         int numAllocationsWithVideo = 0;
 
+        boolean oversending = false;
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
@@ -309,15 +309,12 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
                 maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 sourceBitrateAllocation.improve(maxBandwidth);
-                // We will "force" forward the lowest layer of the highest priority (first in line)
-                // participant if we weren't able to allocate any bandwidth for it and
-                // enableOnstageVideoSuspend is false.
                 if (i == 0 &&
                         sourceBitrateAllocation.targetIdx < 0 &&
                         !BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
                     sourceBitrateAllocation.targetIdx = 0;
-                    sourceBitrateAllocation.oversending = true;
+                    oversending = true;
                 }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
 
@@ -350,7 +347,8 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
 
         return new Allocation(
-                sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()));
+                sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()),
+                oversending);
     }
 
 

@@ -67,11 +67,6 @@ class SingleSourceAllocation {
      */
     int targetIdx = -1;
 
-    /**
-     * Whether the chosen index leads to sending more than the available bandwidth.
-     */
-    boolean oversending = false;
-
     SingleSourceAllocation(
             String endpointId,
             MediaSourceDesc source,
@@ -242,8 +237,7 @@ class SingleSourceAllocation {
                 endpointId,
                 source,
                 targetLayer == null ? null : targetLayer.layer,
-                idealLayer == null ? null : idealLayer.layer,
-                oversending
+                idealLayer == null ? null : idealLayer.layer
         );
     }
 
@@ -252,8 +246,7 @@ class SingleSourceAllocation {
         return "[id=" + endpointId
                 + " constraints=" + constraints
                 + " ratedPreferredIdx=" + preferredIdx
-                + " ratedTargetIdx=" + targetIdx
-                + " oversending=" + oversending;
+                + " ratedTargetIdx=" + targetIdx;
     }
 
     /**
