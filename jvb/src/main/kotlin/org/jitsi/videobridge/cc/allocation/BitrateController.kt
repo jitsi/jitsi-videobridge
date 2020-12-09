@@ -36,7 +36,7 @@ import java.util.function.Supplier
  * 1. Decide how to allocate the available bandwidth between the available streams.
  * 2. Implement the allocation via a packet handling interface.
  *
- * Historically both were implemented in a single class, but they are now split between [BitrateAllocator] (for
+ * Historically both were implemented in a single class, but they are now split between [BandwidthAllocator] (for
  * the allocation) and [BitrateControllerPacketHandler] (for packet handling). This class was introduced as a
  * lightweight shim in order to preserve the previous API.
  *
@@ -73,8 +73,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
     private val packetHandler: BitrateControllerPacketHandler =
         BitrateControllerPacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
-    private val bitrateAllocator: BitrateAllocator<T> =
-        BitrateAllocator(
+    private val bandwidthAllocator: BandwidthAllocator<T> =
+        BandwidthAllocator(
             bitrateAllocatorEventHandler,
             endpointsSupplier,
             Supplier { trustBwe },
@@ -100,23 +100,23 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
     // Proxy to the allocator
     fun endpointOrderingChanged(conferenceEndpoints: List<String>) =
-        bitrateAllocator.endpointOrderingChanged(conferenceEndpoints)
+        bandwidthAllocator.endpointOrderingChanged(conferenceEndpoints)
     var lastN: Int
         get() = allocationSettingsWrapper.lastN
         set(value) {
             if (allocationSettingsWrapper.setLastN(value)) {
-                bitrateAllocator.update(allocationSettingsWrapper.get())
+                bandwidthAllocator.update(allocationSettingsWrapper.get())
             }
         }
 
     fun setMaxFrameHeight(maxFrameHeight: Int) {
         if (allocationSettingsWrapper.setMaxFrameHeight(maxFrameHeight)) {
-            bitrateAllocator.update(allocationSettingsWrapper.get())
+            bandwidthAllocator.update(allocationSettingsWrapper.get())
         }
     }
     fun setSelectedEndpoints(selectedEndpoints: List<String>) {
         if (allocationSettingsWrapper.setSelectedEndpoints(selectedEndpoints)) {
-            bitrateAllocator.update(allocationSettingsWrapper.get())
+            bandwidthAllocator.update(allocationSettingsWrapper.get())
         }
     }
 
@@ -126,13 +126,13 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun numForwardedEndpoints(): Int = forwardedEndpoints.size
     fun getTotalOversendingTime(): Duration = oversendingTimeTracker.totalTimeOn()
     fun isOversending() = oversendingTimeTracker.state
-    fun bandwidthChanged(newBandwidthBps: Long) = bitrateAllocator.bandwidthChanged(newBandwidthBps)
+    fun bandwidthChanged(newBandwidthBps: Long) = bandwidthAllocator.bandwidthChanged(newBandwidthBps)
 
     // Proxy to the packet handler
     fun accept(packetInfo: PacketInfo): Boolean = packetHandler.accept(packetInfo)
     fun accept(rtcpSrPacket: RtcpSrPacket?): Boolean {
         // TODO: It is not clear why this is here, and why it isn't in the other accept() method.
-        bitrateAllocator.maybeUpdate()
+        bandwidthAllocator.maybeUpdate()
 
         return packetHandler.accept(rtcpSrPacket)
     }
@@ -140,7 +140,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
 
     val debugState: JSONObject = JSONObject().apply {
-        put("bitrate_allocator", bitrateAllocator.debugState)
+        put("bitrate_allocator", bandwidthAllocator.debugState)
         put("packet_handler", packetHandler.debugState)
         put("forwardedEndpoints", forwardedEndpoints.toString())
         put("oversending", oversendingTimeTracker.state)
@@ -166,7 +166,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         val activeSsrcs = mutableSetOf<Long>()
 
         val nowMs = clock.instant().toEpochMilli()
-        val allocation = bitrateAllocator.allocation
+        val allocation = bandwidthAllocator.allocation
         allocation.allocations.forEach {
             it.targetLayer?.getBitrate(nowMs)?.let { targetBitrate ->
                 totalTargetBitrate += targetBitrate
@@ -201,7 +201,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         fun allocationChanged(allocation: Allocation) { }
     }
 
-    private inner class BitrateAllocatorEventHandler : BitrateAllocator.EventHandler {
+    private inner class BitrateAllocatorEventHandler : BandwidthAllocator.EventHandler {
         override fun allocationChanged(allocation: Allocation) {
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)
@@ -232,7 +232,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 }
 
 /**
- * Abstracts a source endpoint for the purposes of [BitrateAllocator].
+ * Abstracts a source endpoint for the purposes of [BandwidthAllocator].
  */
 interface MediaSourceContainer {
     val id: String

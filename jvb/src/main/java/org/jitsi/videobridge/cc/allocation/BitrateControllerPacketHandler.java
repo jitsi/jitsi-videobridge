@@ -123,11 +123,11 @@ class BitrateControllerPacketHandler
 
     /**
      * Defines a packet filter that controls which RTP packets to be written
-     * into the {@code Endpoint} that owns this {@link BitrateAllocator}.
+     * into the {@code Endpoint} that owns this {@link BandwidthAllocator}.
      *
      * @param packetInfo that packet for which to decide whether to accept
      * @return <tt>true</tt> to allow the specified packet to be
-     * written into the {@code Endpoint} that owns this {@link BitrateAllocator}
+     * written into the {@code Endpoint} that owns this {@link BandwidthAllocator}
      * ; otherwise, <tt>false</tt>
      */
     boolean accept(@NotNull PacketInfo packetInfo)
@@ -150,15 +150,15 @@ class BitrateControllerPacketHandler
     /**
      * Defines a packet filter that controls which RTCP Sender Report
      * packets to be written into the {@code Endpoint} that owns this
-     * {@link BitrateAllocator}.
+     * {@link BandwidthAllocator}.
      * </p>
      * Filters out packets that match one of the streams that this
      * {@code BitrateController} manages, but don't match the target SSRC.
-     * Allows packets for streams not managed by this {@link BitrateAllocator}.
+     * Allows packets for streams not managed by this {@link BandwidthAllocator}.
      *
      * @param rtcpSrPacket that packet for which to decide whether to accept
      * @return <tt>true</tt> to allow the specified packet to be
-     * written into the {@code Endpoint} that owns this {@link BitrateAllocator}
+     * written into the {@code Endpoint} that owns this {@link BandwidthAllocator}
      * ; otherwise, <tt>false</tt>
      */
     boolean accept(RtcpSrPacket rtcpSrPacket)

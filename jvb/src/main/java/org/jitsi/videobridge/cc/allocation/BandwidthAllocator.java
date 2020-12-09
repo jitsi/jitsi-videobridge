@@ -38,7 +38,7 @@ import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
  *
  * @author George Politis
  */
-public class BitrateAllocator<T extends MediaSourceContainer>
+public class BandwidthAllocator<T extends MediaSourceContainer>
 {
     /**
      * Returns a boolean that indicates whether or not the current bandwidth estimation (in bps) has changed above the
@@ -95,7 +95,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
     /**
      * The "effective" constraints for an endpoint indicate the maximum resolution/fps that this
-     * {@link BitrateAllocator} would allocate for this endpoint given enough bandwidth.
+     * {@link BandwidthAllocator} would allocate for this endpoint given enough bandwidth.
      *
      * They are the constraints signaled by the receiver, further reduced to 0 when the endpoint is "outside lastN".
      *
@@ -120,7 +120,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     private AllocationSettings allocationSettings = new AllocationSettings();
 
     /**
-     * The last time {@link BitrateAllocator#update()} was called.
+     * The last time {@link BandwidthAllocator#update()} was called.
      */
     private Instant lastUpdateTime = Instant.MIN;
 
@@ -130,14 +130,14 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     @NotNull
     private Allocation allocation = new Allocation(Collections.emptySet());
 
-    BitrateAllocator(
+    BandwidthAllocator(
             EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
             Supplier<Boolean> trustBwe,
             Logger parentLogger,
             Clock clock)
     {
-        this.logger = parentLogger.createChildLogger(BitrateAllocator.class.getName());
+        this.logger = parentLogger.createChildLogger(BandwidthAllocator.class.getName());
         this.clock = clock;
         this.trustBwe = trustBwe;
 
@@ -177,7 +177,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Notify the {@link BitrateAllocator} that the estimated available bandwidth has changed.
+     * Notify the {@link BandwidthAllocator} that the estimated available bandwidth has changed.
      * @param newBandwidthBps the newly estimated bandwidth in bps
      */
     void bandwidthChanged(long newBandwidthBps)
@@ -204,7 +204,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Notify this {@link BitrateAllocator} that the order of the endpoints (including the addition/removal of an
+     * Notify this {@link BandwidthAllocator} that the order of the endpoints (including the addition/removal of an
      * endpoint) has changed.
      *
      * @param conferenceEndpoints the IDs of the conference endpoints ordered by speech activity.
