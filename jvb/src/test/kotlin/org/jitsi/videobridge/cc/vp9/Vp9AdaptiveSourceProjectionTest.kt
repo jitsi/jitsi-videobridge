@@ -49,7 +49,7 @@ class Vp9AdaptiveSourceProjectionTest {
             diagnosticContext, payloadType,
             initialState, logger
         )
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         val packetInfo = generator.nextPacket()
         val packet = packetInfo.packetAs<Vp9Packet>()
         val targetIndex = getIndex(0, 0, 0)
@@ -176,11 +176,10 @@ class Vp9AdaptiveSourceProjectionTest {
                 /* Note we don't want assertFalse(accepted) here because slightly-too-old packets
                  * that are part of an existing accepted frame will be accepted.
                  */
-            } else if (packet.temporalLayerIndex <= targetTid &&
-                (
-                    packet.spatialLayerIndex == targetSid ||
-                        (packet.isUpperLevelReference && packet.spatialLayerIndex < targetSid)
-                    )
+            } else if (packet.temporalLayerIndex <= targetTid && (
+                packet.spatialLayerIndex == targetSid ||
+                    (packet.isUpperLevelReference && packet.spatialLayerIndex < targetSid)
+                )
             ) {
                 Assert.assertTrue(accepted)
 
@@ -258,206 +257,212 @@ class Vp9AdaptiveSourceProjectionTest {
     }
 
     @Test
+    fun simpleNonScalableTest() {
+        val generator = NonScalableVp9PacketGenerator()
+        runInOrderTest(generator, getIndex(0, 0, 0))
+    }
+
+    @Test
     fun simpleProjectionTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         runInOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun filteredProjectionTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         runInOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun largerFrameProjectionTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         runInOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun largerFrameFilteredTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         runInOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun hugeFrameTest() {
-        val generator = Vp9PacketGenerator(200)
+        val generator = ScalableVp9PacketGenerator(200)
         runInOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun simpleKsvcTest() {
-        val generator = Vp9PacketGenerator(1, 3)
+        val generator = ScalableVp9PacketGenerator(1, 3)
         runInOrderTest(generator, getIndex(0, 2, 2))
     }
 
     @Test
     fun filteredKsvcTest() {
-        val generator = Vp9PacketGenerator(1, 3)
+        val generator = ScalableVp9PacketGenerator(1, 3)
         runInOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun temporalFilteredKsvcTest() {
-        val generator = Vp9PacketGenerator(1, 3)
+        val generator = ScalableVp9PacketGenerator(1, 3)
         runInOrderTest(generator, getIndex(0, 2, 0))
     }
 
     @Test
     fun spatialAndTemporalFilteredKsvcTest() {
-        val generator = Vp9PacketGenerator(1, 3)
+        val generator = ScalableVp9PacketGenerator(1, 3)
         runInOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun largerKsvcTest() {
-        val generator = Vp9PacketGenerator(3, 3)
+        val generator = ScalableVp9PacketGenerator(3, 3)
         runInOrderTest(generator, getIndex(0, 2, 2))
     }
 
     @Test
     fun largerFilteredKsvcTest() {
-        val generator = Vp9PacketGenerator(3, 3)
+        val generator = ScalableVp9PacketGenerator(3, 3)
         runInOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun largerTemporalFilteredKsvcTest() {
-        val generator = Vp9PacketGenerator(3, 3)
+        val generator = ScalableVp9PacketGenerator(3, 3)
         runInOrderTest(generator, getIndex(0, 2, 0))
     }
 
     @Test
     fun largerSpatialAndTemporalFilteredKsvcTest() {
-        val generator = Vp9PacketGenerator(3, 3)
+        val generator = ScalableVp9PacketGenerator(3, 3)
         runInOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun simpleSvcTest() {
-        val generator = Vp9PacketGenerator(1, 3, false)
+        val generator = ScalableVp9PacketGenerator(1, 3, false)
         runInOrderTest(generator, getIndex(0, 2, 2))
     }
 
     @Test
     fun filteredSvcTest() {
-        val generator = Vp9PacketGenerator(1, 3, false)
+        val generator = ScalableVp9PacketGenerator(1, 3, false)
         runInOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun temporalFilteredSvcTest() {
-        val generator = Vp9PacketGenerator(1, 3, false)
+        val generator = ScalableVp9PacketGenerator(1, 3, false)
         runInOrderTest(generator, getIndex(0, 2, 0))
     }
 
     @Test
     fun spatialAndTemporalFilteredSvcTest() {
-        val generator = Vp9PacketGenerator(1, 3, false)
+        val generator = ScalableVp9PacketGenerator(1, 3, false)
         runInOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun largerSvcTest() {
-        val generator = Vp9PacketGenerator(3, 3, false)
+        val generator = ScalableVp9PacketGenerator(3, 3, false)
         runInOrderTest(generator, getIndex(0, 2, 2))
     }
 
     @Test
     fun largerFilteredSvcTest() {
-        val generator = Vp9PacketGenerator(3, 3, false)
+        val generator = ScalableVp9PacketGenerator(3, 3, false)
         runInOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun largerTemporalFilteredSvcTest() {
-        val generator = Vp9PacketGenerator(3, 3, false)
+        val generator = ScalableVp9PacketGenerator(3, 3, false)
         runInOrderTest(generator, getIndex(0, 2, 0))
     }
 
     @Test
     fun largerSpatialAndTemporalFilteredSvcTest() {
-        val generator = Vp9PacketGenerator(3, 3, false)
+        val generator = ScalableVp9PacketGenerator(3, 3, false)
         runInOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun simpleOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         runOutOfOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun largerOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         runOutOfOrderTest(generator, getIndex(0, 0, 2))
     }
 
     @Test
     fun filteredOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         runOutOfOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun largerFilteredOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         runOutOfOrderTest(generator, getIndex(0, 0, 0))
     }
 
     @Test
     fun simpleKsvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(1, 3)
+        val generator = ScalableVp9PacketGenerator(1, 3)
         runOutOfOrderTest(generator, getIndex(0, 2, 2), 3)
     }
 
     @Test
     fun largerKsvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(3, 3)
+        val generator = ScalableVp9PacketGenerator(3, 3)
         runOutOfOrderTest(generator, getIndex(0, 2, 2), 7)
     }
 
     @Test
     fun filteredKsvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(1, 3)
+        val generator = ScalableVp9PacketGenerator(1, 3)
         runOutOfOrderTest(generator, getIndex(0, 0, 2), 3)
     }
 
     @Test
     fun largerFilteredKsvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(3, 3)
+        val generator = ScalableVp9PacketGenerator(3, 3)
         runOutOfOrderTest(generator, getIndex(0, 0, 2), 7)
     }
 
     @Test
     fun simpleSvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(1, 3, false)
+        val generator = ScalableVp9PacketGenerator(1, 3, false)
         runOutOfOrderTest(generator, getIndex(0, 2, 2), 3)
     }
 
     @Test
     fun largerSvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(3, 3, false)
+        val generator = ScalableVp9PacketGenerator(3, 3, false)
         runOutOfOrderTest(generator, getIndex(0, 2, 2), 7)
     }
 
     @Test
     fun filteredSvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(1, 3, false)
+        val generator = ScalableVp9PacketGenerator(1, 3, false)
         runOutOfOrderTest(generator, getIndex(0, 0, 2), 3)
     }
 
     @Test
     fun largerFilteredSvcOutOfOrderTest() {
-        val generator = Vp9PacketGenerator(3, 3, false)
+        val generator = ScalableVp9PacketGenerator(3, 3, false)
         runOutOfOrderTest(generator, getIndex(0, 0, 2), 7)
     }
 
     @Test
     fun slightlyDelayedKeyframeTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = "slightlyDelayedKeyframeTest"
         val initialState = RtpState(1, 10000, 1000000)
@@ -500,7 +505,7 @@ class Vp9AdaptiveSourceProjectionTest {
 
     @Test
     fun veryDelayedKeyframeTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = "veryDelayedKeyframeTest"
         val initialState = RtpState(1, 10000, 1000000)
@@ -553,7 +558,7 @@ class Vp9AdaptiveSourceProjectionTest {
 
     @Test
     fun delayedPartialKeyframeTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = "delayedPartialKeyframeTest"
         val initialState = RtpState(1, 10000, 1000000)
@@ -604,9 +609,9 @@ class Vp9AdaptiveSourceProjectionTest {
 
     @Test
     fun twoStreamsNoSwitchingTest() {
-        val generator1 = Vp9PacketGenerator(3)
-        val generator2 = Vp9PacketGenerator(3)
-        generator2.setSsrc(0xdeadbeefL)
+        val generator1 = ScalableVp9PacketGenerator(3)
+        val generator2 = ScalableVp9PacketGenerator(3)
+        generator2.ssrc = 0xdeadbeefL
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = "twoStreamsNoSwitchingTest"
         val initialState = RtpState(1, 10000, 1000000)
@@ -646,9 +651,9 @@ class Vp9AdaptiveSourceProjectionTest {
 
     @Test
     fun twoStreamsSwitchingTest() {
-        val generator1 = Vp9PacketGenerator(3)
-        val generator2 = Vp9PacketGenerator(3)
-        generator2.setSsrc(0xdeadbeefL)
+        val generator1 = ScalableVp9PacketGenerator(3)
+        val generator2 = ScalableVp9PacketGenerator(3)
+        generator2.ssrc = 0xdeadbeefL
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = "twoStreamsSwitchingTest"
         val initialState = RtpState(1, 10000, 1000000)
@@ -813,7 +818,7 @@ class Vp9AdaptiveSourceProjectionTest {
 
     @Test
     fun temporalLayerSwitchingTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = "temporalLayerSwitchingTest"
         val initialState = RtpState(1, 10000, 1000000)
@@ -978,32 +983,152 @@ class Vp9AdaptiveSourceProjectionTest {
 
     @Test
     fun largeDropoutTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         runLargeDropoutTest(generator, 2)
     }
 
     @Test
     fun filteredLargeDropoutTest() {
-        val generator = Vp9PacketGenerator(1)
+        val generator = ScalableVp9PacketGenerator(1)
         runLargeDropoutTest(generator, 0)
     }
 
     @Test
     fun largeFrameDropoutTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         runLargeDropoutTest(generator, 2)
     }
 
     @Test
     fun filteredLargeFrameDropoutTest() {
-        val generator = Vp9PacketGenerator(3)
+        val generator = ScalableVp9PacketGenerator(3)
         runLargeDropoutTest(generator, 0)
     }
 
-    // TODO: spatial layers
-    private class Vp9PacketGenerator(val packetsPerFrame: Int, val numLayers: Int = 1, val isKsvc: Boolean = true) {
+    private abstract class Vp9PacketGenerator {
+        open val packetsPerFrame: Int = 1
+        abstract val ts: Long
+        var ssrc: Long = 0xcafebabeL
+
+        abstract fun reset()
+        abstract fun nextPacket(): PacketInfo
+
+        init {
+            reset()
+        }
+
+        companion object {
+            const val baseReceivedTime = 1577836800000L /* 2020-01-01 00:00:00 UTC */
+        }
+    }
+
+    private class NonScalableVp9PacketGenerator() : Vp9PacketGenerator() {
         private var seq = 0
-        var ts: Long = 0
+        override var ts: Long = 0
+            private set
+        private var picId = 0
+        private var packetOfFrame = 0
+        private var keyframePicture = false
+        private var keyframeRequested = false
+        private var frameCount = 0
+        private var receivedTime: Long = 0
+
+        override fun reset() {
+            val useRandom = true // switch off to ease debugging
+            val seed = System.currentTimeMillis()
+            val random = Random(seed)
+            seq = if (useRandom) random.nextInt() % 0x10000 else 0
+            ts = if (useRandom) random.nextLong() % 0x100000000L else 0
+            picId = 0
+            packetOfFrame = 0
+            keyframePicture = true
+            keyframeRequested = false
+            ssrc = 0xcafebabeL
+            frameCount = 0
+            receivedTime = baseReceivedTime
+        }
+
+        override fun nextPacket(): PacketInfo {
+            val startOfFrame = packetOfFrame == 0
+            val endOfFrame = packetOfFrame == packetsPerFrame - 1
+            val buffer = vp9PacketTemplate.clone()
+            val rtpPacket = RtpPacket(buffer, 0, buffer.size)
+            rtpPacket.ssrc = ssrc
+            rtpPacket.sequenceNumber = seq
+            rtpPacket.timestamp = ts
+
+            /* Do VP9 manipulations on buffer before constructing Vp9Packet, because
+               Vp9Packet computes values at construct-time. */
+            DePacketizer.VP9PayloadDescriptor.setStartOfFrame(
+                rtpPacket.buffer,
+                rtpPacket.payloadOffset, rtpPacket.payloadLength, startOfFrame
+            )
+            DePacketizer.VP9PayloadDescriptor.setEndOfFrame(
+                rtpPacket.buffer,
+                rtpPacket.payloadOffset, rtpPacket.payloadLength, endOfFrame
+            )
+            DePacketizer.VP9PayloadDescriptor.setInterPicturePredicted(
+                rtpPacket.buffer,
+                rtpPacket.payloadOffset, rtpPacket.payloadLength, !keyframePicture
+            )
+
+            rtpPacket.isMarked = endOfFrame
+            val vp9Packet = rtpPacket.toOtherType(::Vp9Packet)
+
+            /* Make sure our manipulations of the raw buffer were correct. */
+            Assert.assertEquals(startOfFrame, vp9Packet.isStartOfFrame)
+            Assert.assertEquals(endOfFrame, vp9Packet.isEndOfFrame)
+            Assert.assertEquals(!keyframePicture, vp9Packet.isInterPicturePredicted)
+            Assert.assertEquals(false, vp9Packet.hasLayerIndices)
+            Assert.assertEquals(false, vp9Packet.isSwitchingUpPoint)
+            Assert.assertEquals(false, vp9Packet.usesInterLayerDependency)
+            Assert.assertEquals(keyframePicture, vp9Packet.isKeyframe)
+
+            vp9Packet.pictureId = picId
+            val info = PacketInfo(vp9Packet)
+            info.receivedTime = receivedTime
+            seq = RtpUtils.applySequenceNumberDelta(seq, 1)
+            if (endOfFrame) {
+                packetOfFrame = 0
+                ts = RtpUtils.applyTimestampDelta(ts, 3000)
+                picId = applyExtendedPictureIdDelta(picId, 1)
+                keyframePicture = keyframeRequested
+                keyframeRequested = false
+                frameCount++
+                receivedTime = baseReceivedTime + frameCount * 100 / 3
+            } else {
+                packetOfFrame++
+            }
+            return info
+        }
+        companion object {
+            private val vp9PacketTemplate = DatatypeConverter.parseHexBinary( /* RTP Header */
+                "80" + /* V, P, X, CC */
+                    "60" + /* M, PT */
+                    "0000" + /* Seq */
+                    "00000000" + /* TS */
+                    "cafebabe" + /* SSRC */
+                    /* VP9 Payload descriptor */
+                    // I=1,P=0,L=0,F=0,B=1,E=0,V=0,Z=0
+                    "88" +
+                    // M=1,PID=0x653e=25918
+                    "e53e" +
+                    /* TODO: Add SS if necessary.  Not currently parsed by the source projection context. */
+                    // Dummy payload data
+                    "000000"
+            )
+        }
+    }
+
+    private class ScalableVp9PacketGenerator(
+        override val packetsPerFrame: Int,
+        val numLayers: Int = 1,
+        val isKsvc: Boolean = true
+    ) :
+        Vp9PacketGenerator() {
+        private var seq = 0
+        override var ts: Long = 0
+            private set
         private var picId = 0
         private var tl0picidx = 0
         private var packetOfFrame = 0
@@ -1011,12 +1136,11 @@ class Vp9AdaptiveSourceProjectionTest {
         private var keyframeRequested = false
         private var sid = 0
         private var tidCycle = 0
-        private var ssrc: Long = 0
         private var packetCount = 0
         private var octetCount = 0
         private var frameCount = 0
         private var receivedTime: Long = 0
-        fun reset() {
+        override fun reset() {
             val useRandom = true // switch off to ease debugging
             val seed = System.currentTimeMillis()
             val random = Random(seed)
@@ -1036,13 +1160,8 @@ class Vp9AdaptiveSourceProjectionTest {
             receivedTime = baseReceivedTime
         }
 
-        fun setSsrc(ssrc: Long) {
-            this.ssrc = ssrc
-        }
-
-        fun nextPacket(): PacketInfo {
-            val tid: Int
-            tid = when (tidCycle % 4) {
+        override fun nextPacket(): PacketInfo {
+            val tid = when (tidCycle % 4) {
                 0 -> 0
                 2 -> 1
                 1, 3 -> 2
@@ -1058,7 +1177,7 @@ class Vp9AdaptiveSourceProjectionTest {
             if (startOfPicture && tid == 0) {
                 tl0picidx = applyTl0PicIdxDelta(tl0picidx, 1)
             }
-            val buffer = vp9PacketTemplate.clone()
+            val buffer = vp9SvcPacketTemplate.clone()
             val rtpPacket = RtpPacket(buffer, 0, buffer.size)
             rtpPacket.ssrc = ssrc
             rtpPacket.sequenceNumber = seq
@@ -1161,7 +1280,7 @@ class Vp9AdaptiveSourceProjectionTest {
             }
 
         companion object {
-            private val vp9PacketTemplate = DatatypeConverter.parseHexBinary( /* RTP Header */
+            private val vp9SvcPacketTemplate = DatatypeConverter.parseHexBinary( /* RTP Header */
                 "80" + /* V, P, X, CC */
                     "60" + /* M, PT */
                     "0000" + /* Seq */
@@ -1180,8 +1299,6 @@ class Vp9AdaptiveSourceProjectionTest {
                     // Dummy payload data
                     "000000"
             )
-            private const val baseReceivedTime = 1577836800000L /* 2020-01-01 00:00:00 UTC */
-
             /* TODO: move this to jitsi-rtp */
             fun setSIBuilderNtp(siBuilder: SenderInfoBuilder, wallTime: Long) {
                 val JAVA_TO_NTP_EPOCH_OFFSET_SECS = 2208988800L
@@ -1190,10 +1307,6 @@ class Vp9AdaptiveSourceProjectionTest {
                 siBuilder.ntpTimestampMsw = wallSecs + JAVA_TO_NTP_EPOCH_OFFSET_SECS
                 siBuilder.ntpTimestampLsw = wallMs * (1L shl 32) / 1000
             }
-        }
-
-        init {
-            reset()
         }
     }
 }
