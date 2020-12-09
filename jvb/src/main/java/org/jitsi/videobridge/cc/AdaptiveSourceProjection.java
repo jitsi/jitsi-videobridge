@@ -132,49 +132,19 @@ public class AdaptiveSourceProjection
     }
 
     /**
-     * @return the ideal quality for this source projection.
-     */
-    public int getIdealIndex()
-    {
-        return idealIndex;
-    }
-
-    /**
      * Update the ideal quality for this source projection.
-     *
-     * @param value the ideal quality for this source projection.
-     * @return {@code true} if the value was changed as a result of this call.
      */
-    public boolean setIdealIndex(int value)
+    public void setIdealIndex(int value)
     {
-        boolean changed = idealIndex != value;
         idealIndex = value;
-
-        return changed;
-    }
-
-    /**
-     * Gets the target index value for this source projection.
-     *
-     * @return the target index value for this source projection.
-     */
-    public int getTargetIndex()
-    {
-        return targetIndex;
     }
 
     /**
      * Sets the target index value for this source projection.
-     *
-     * @param value the new target index value for this source projection.
-     * @return {@code true} if the value was changed as a result of this call.
      */
-    public boolean setTargetIndex(int value)
+    public void setTargetIndex(int value)
     {
-        boolean changed = targetIndex != value;
         targetIndex = value;
-
-        return changed;
     }
 
     /**
