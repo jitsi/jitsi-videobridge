@@ -93,11 +93,6 @@ public class AdaptiveSourceProjection
     private int contextPayloadType = -1;
 
     /**
-     * The ideal quality index for this source projection.
-     */
-    private int idealIndex = RtpLayerDesc.SUSPENDED_INDEX;
-
-    /**
      * The target quality index for this source projection.
      */
     private int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
@@ -129,14 +124,6 @@ public class AdaptiveSourceProjection
             JMap.of("targetSsrc", Long.toString(targetSsrc),
                 "srcEpId", Objects.toString(source.getOwner(), "")));
         this.keyframeRequester = keyframeRequester;
-    }
-
-    /**
-     * Update the ideal quality for this source projection.
-     */
-    public void setIdealIndex(int value)
-    {
-        idealIndex = value;
     }
 
     /**
@@ -389,7 +376,6 @@ public class AdaptiveSourceProjection
                 "context",
                 contextCopy == null ? null : contextCopy.getDebugState());
         debugState.put("contextPayloadType", contextPayloadType);
-        debugState.put("idealIndex", idealIndex);
         debugState.put("targetIndex", targetIndex);
 
         return debugState;

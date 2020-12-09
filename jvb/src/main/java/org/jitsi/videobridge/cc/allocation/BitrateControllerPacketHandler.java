@@ -296,8 +296,6 @@ class BitrateControllerPacketHandler
             {
                 RtpLayerDesc targetLayer = singleAllocation.getTargetLayer();
                 int sourceTargetIdx = targetLayer == null ? -1 : targetLayer.getIndex();
-                RtpLayerDesc idealLayer = singleAllocation.getIdealLayer();
-                int sourceIdealIdx = idealLayer == null ? -1 : idealLayer.getIndex();
 
                 // Review this.
                 AdaptiveSourceProjection adaptiveSourceProjection
@@ -306,7 +304,6 @@ class BitrateControllerPacketHandler
                 if (adaptiveSourceProjection != null)
                 {
                     adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
-                    adaptiveSourceProjection.setIdealIndex(sourceIdealIdx);
                 }
             }
         }
@@ -315,7 +312,6 @@ class BitrateControllerPacketHandler
             for (AdaptiveSourceProjection adaptiveSourceProjection : getAdaptiveSourceProjectionMap().values())
             {
                 adaptiveSourceProjection.setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
-                adaptiveSourceProjection.setIdealIndex(RtpLayerDesc.SUSPENDED_INDEX);
             }
         }
     }
