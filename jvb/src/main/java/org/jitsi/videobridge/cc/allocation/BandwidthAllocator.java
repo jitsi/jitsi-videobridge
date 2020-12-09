@@ -58,10 +58,10 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         long deltaBwe = currentBwe - previousBwe;
 
         // If the bwe has increased, we should act upon it, otherwise we may end up in this broken situation: Suppose
-        // that the target bitrate is 2.5Mbps, and that the last bitrate allocation was performed with a 2.4Mbps
+        // that the target bitrate is 2.5Mbps, and that the last bandwidth allocation was performed with a 2.4Mbps
         // bandwidth estimate.  The bridge keeps probing and, suppose that, eventually the bandwidth estimate reaches
         // 2.6Mbps, which is plenty to accommodate the target bitrate; but the minimum bandwidth estimate that would
-        // trigger a new bitrate allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
+        // trigger a new bandwidth allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
         if (deltaBwe > 0)
         {
             return true;
@@ -109,7 +109,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
     /**
-     * Whether bitrate allocation should be constrained to the available bandwidth (when {@code true}), or assume
+     * Whether bandwidth allocation should be constrained to the available bandwidth (when {@code true}), or assume
      * infinite bandwidth (when {@code false}.
      */
     private final Supplier<Boolean> trustBwe;
@@ -189,7 +189,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                     "changed from previous estimate (" + bweBps + "), ignoring");
             // If this is a "negligible" change in the bandwidth estimation
             // wrt the last bandwidth estimation that we reacted to, then
-            // do not update the bitrate allocation. The goal is to limit
+            // do not update the bandwidth allocation. The goal is to limit
             // the resolution changes due to bandwidth estimation changes,
             // as often resolution changes can negatively impact user
             // experience, at the risk of clogging the receiver pipe.
@@ -229,7 +229,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Runs the bitrate allocation algorithm, and fires events if the result is different from the previous result.
+     * Runs the bandwidth allocation algorithm, and fires events if the result is different from the previous result.
      */
     private synchronized void update()
     {
@@ -243,7 +243,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         Map<String, VideoConstraints> oldEffectiveConstraints = effectiveConstraints;
         effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
 
-        // Compute the bitrate allocation.
+        // Compute the bandwidth allocation.
         Allocation newAllocation = allocate(sortedEndpoints);
 
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
@@ -267,7 +267,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Implements the bitrate allocation algorithm for the given ordered list of endpoints.
+     * Implements the bandwidth allocation algorithm for the given ordered list of endpoints.
      *
      * @param conferenceEndpoints the list of endpoints in order of priority to allocate for.
      * @return the new {@link Allocation}.

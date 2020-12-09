@@ -29,7 +29,7 @@ import java.util.function.Supplier
 import kotlin.random.Random
 
 /**
- * Keep track of the performance of the bitrate allocation code.
+ * Keep track of the performance of the bandwidth allocation code.
  *
  * The following results were obtained on an AWS t3.large instance. The tests for stage and tile view were run
  * separately (only one was enabled when the command was run). Shown is the "microseconds per speaker switch", averaged

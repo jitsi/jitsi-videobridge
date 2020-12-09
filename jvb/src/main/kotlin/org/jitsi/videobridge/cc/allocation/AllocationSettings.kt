@@ -21,7 +21,7 @@ import java.util.stream.Collectors
 import kotlin.math.min
 
 /**
- * This class encapsulates all of the client-controller settings for bitrate allocation.
+ * This class encapsulates all of the client-controlled settings for bandwidth allocation.
  */
 data class AllocationSettings(
     val strategy: AllocationStrategy = AllocationStrategy.StageView,
@@ -128,7 +128,7 @@ internal class AllocationSettingsWrapper {
  *
  * For selected endpoints we set the "ideal" height to 720 reflecting the the receiver's "desire" to watch the track
  * in high resolution. We also set the "preferred" resolution and the "preferred" frame rate. Under the hood this
- * instructs the bitrate allocator to and eagerly allocate bandwidth up to the preferred resolution and
+ * instructs the bandwidth allocator to and eagerly allocate bandwidth up to the preferred resolution and
  * preferred frame-rate.
  *
  * The max height constraint was added for tile-view back when everything was expressed as "selected" endpoints, the
@@ -141,7 +141,7 @@ internal class AllocationSettingsWrapper {
  * do for selected endpoints doesn't work well in tile-view because we end-up with a lot of ninjas.
  *
  * By simply setting an ideal height X as a global constraint, without setting a preferred resolution/frame-rate, we
- * signal to the bitrate allocator that it needs to (evenly) distribute bandwidth across all participants, up to X.
+ * signal to the bandwidth allocator that it needs to (evenly) distribute bandwidth across all participants, up to X.
  */
 internal fun computeVideoConstraints(
     maxFrameHeight: Int,

@@ -19,7 +19,7 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
 
 /**
- * The result of bitrate allocation.
+ * The result of bandwidth allocation.
  */
 class Allocation @JvmOverloads constructor(
     val allocations: Set<SingleAllocation>,
@@ -43,7 +43,7 @@ class Allocation @JvmOverloads constructor(
 }
 
 /**
- * The result of bitrate allocation for a specific [MediaSourceDesc].
+ * The result of bandwidth allocation for a specific endpoint and a [MediaSourceDesc].
  */
 data class SingleAllocation(
     val endpointId: String,
