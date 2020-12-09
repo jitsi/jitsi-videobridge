@@ -22,11 +22,11 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.utils.*;
+import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.AdaptiveSourceProjection;
 import org.jitsi.videobridge.cc.RewriteException;
-import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
 import java.time.*;

@@ -21,11 +21,11 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
-import org.jitsi.videobridge.util.EventEmitter
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
