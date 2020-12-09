@@ -39,7 +39,7 @@ class SingleSourceAllocation {
     /**
      * The ID of the {@code Endpoint} that this instance pertains to.
      */
-    public final String endpointID;
+    private final String endpointID;
 
     /**
      * The constraints to use while allocating bandwidth to this endpoint.
@@ -49,12 +49,12 @@ class SingleSourceAllocation {
     /**
      * The {@link MediaSourceDesc} that this instance pertains to.
      */
-    final MediaSourceDesc source;
+    private final MediaSourceDesc source;
 
     /**
-     * An array that holds the stable bitrate snapshots of the {@link RtpLayerDesc}s that this {@link #source} offers.
+     * An array that holds the layers to be considered when allocating bandwidth.
      */
-    final LayerSnapshot[] ratedIndices;
+    private final LayerSnapshot[] ratedIndices;
 
     /**
      * The rated quality that needs to be achieved before allocating bandwidth for any of the subsequent sources.
@@ -70,7 +70,7 @@ class SingleSourceAllocation {
     /**
      * Whether the chosen index leads to sending more than the available bandwidth.
      */
-    public boolean oversending = false;
+    boolean oversending = false;
 
     SingleSourceAllocation(
             String endpointID,
