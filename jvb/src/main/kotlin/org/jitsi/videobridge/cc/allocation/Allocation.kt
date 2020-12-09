@@ -47,15 +47,15 @@ class Allocation @JvmOverloads constructor(
  */
 data class SingleAllocation(
     val endpointId: String,
-    val source: MediaSourceDesc?,
+    val source: MediaSourceDesc? = null,
     /**
      * The layer which has been selected to be forwarded.
      */
-    val targetLayer: RtpLayerDesc?,
+    val targetLayer: RtpLayerDesc? = null,
     /**
      * The layer which would have been selected without bandwidth constraints.
      */
-    val idealLayer: RtpLayerDesc?
+    val idealLayer: RtpLayerDesc? = null
 ) {
     private val targetIndex: Int
         get() = targetLayer?.index ?: -1

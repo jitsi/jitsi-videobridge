@@ -22,8 +22,7 @@ import org.jitsi.metaconfig.from
 import java.util.function.Supplier
 
 /**
- * A JVB-wide last-n value which will be observed by all endpoints
- * on this bridge.
+ * A JVB-wide last-n value which will be observed by all endpoints on this bridge.
  *
  * A value of -1 means no limit is enforced.
  */
