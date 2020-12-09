@@ -72,15 +72,6 @@ class SingleSourceAllocation {
      */
     public boolean oversending = false;
 
-    /**
-     * The bitrate (in bps) of the highest active layer (with bitrate > 0) that will be considered for selection (i.e.
-     * the layer that will be chosen given infinite bandwidth).
-     * Note that not all layers satisfying the constraints are considered for selection. With the default config, the
-     * {@link AllocationStrategy#StageView} strategy prefers 360p/30fps over 720p at 7.5 or 15 fps, so the latter
-     * two will not be considered. So when the 720p/30fps layer is not active, the "ideal" will be 360p/30fps.
-     */
-    final long idealBitrate;
-
     SingleSourceAllocation(
             String endpointID,
             MediaSourceDesc source,
@@ -95,7 +86,6 @@ class SingleSourceAllocation {
         if (source == null || constraints.getMaxHeight() <= 0)
         {
             ratedPreferredIdx = -1;
-            idealBitrate = 0;
             ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
             return;
         }
@@ -105,7 +95,6 @@ class SingleSourceAllocation {
         // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
         // a couple of exceptions (see comments below).
         int ratedPreferredIdx = 0;
-        long idealBps = 0;
         for (RtpLayerDesc layer : source.getRtpLayers())
         {
 
@@ -147,11 +136,6 @@ class SingleSourceAllocation {
                     || ratesList.isEmpty())
             {
                 Bandwidth layerBitrate = layer.getBitrate(nowMs);
-                long layerBitrateBps = (long) layerBitrate.getBps();
-                if (layerBitrateBps > 0)
-                {
-                    idealBps = layerBitrateBps;
-                }
                 // TODO: Do we want to consider layers with bitrate=0?
                 ratesList.add(new LayerSnapshot(layer, layerBitrate));
             }
@@ -165,8 +149,6 @@ class SingleSourceAllocation {
                 ratedPreferredIdx = ratesList.size() - 1;
             }
         }
-
-        this.idealBitrate = idealBps;
 
         this.ratedPreferredIdx = ratedPreferredIdx;
         ratedIndices = ratesList.toArray(new LayerSnapshot[0]);
@@ -281,8 +263,7 @@ class SingleSourceAllocation {
                 + " constraints=" + constraints
                 + " ratedPreferredIdx=" + ratedPreferredIdx
                 + " ratedTargetIdx=" + ratedTargetIdx
-                + " oversending=" + oversending
-                + " idealBitrate=" + idealBitrate;
+                + " oversending=" + oversending;
     }
 
     /**
