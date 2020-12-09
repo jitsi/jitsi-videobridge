@@ -33,12 +33,14 @@ class Vp9Picture(packet: Vp9Packet) {
     val frames = ArrayList<Vp9Frame?>()
 
     init {
-        val sid = if (packet.hasLayerIndices) packet.spatialLayerIndex else 0
+        val sid = packet.effectiveSpatialLayerIndex
 
         setFrameAtSid(Vp9Frame(packet), sid)
     }
 
     fun frame(sid: Int) = frames.getOrNull(sid)
+
+    fun frame(packet: Vp9Packet) = frame(packet.effectiveSpatialLayerIndex)
 
     private fun setFrameAtSid(frame: Vp9Frame, sid: Int) =
         frames.setAndExtend(sid, frame, null)
@@ -94,9 +96,9 @@ class Vp9Picture(packet: Vp9Packet) {
     fun addPacket(packet: Vp9Packet): PacketInsertionResult {
         require(matchesPicture(packet)) { "Non-matching packet added to picture" }
 
-        val sid = if (packet.hasLayerIndices) packet.spatialLayerIndex else 0
+        val sid = packet.effectiveSpatialLayerIndex
 
-        val f = frame(sid)
+        val f = frame(packet)
 
         if (f != null) {
             f.addPacket(packet)
@@ -148,7 +150,8 @@ class Vp9Picture(packet: Vp9Packet) {
      * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
     fun validateConsistency(pkt: Vp9Packet) {
-        val f = frame(pkt.spatialLayerIndex)
+
+        val f = frame(pkt)
         if (f != null) {
             f.validateConsistency(pkt)
             return

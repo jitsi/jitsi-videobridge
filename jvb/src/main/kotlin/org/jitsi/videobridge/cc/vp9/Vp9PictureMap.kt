@@ -85,7 +85,7 @@ class Vp9PictureMap(
             return if (!pictureHistory.insert(pictureId, picture)) {
                 null
             } else {
-                PacketInsertionResult(picture.frame(packet.spatialLayerIndex)!!, picture, true, isReset = true)
+                PacketInsertionResult(picture.frame(packet)!!, picture, true, isReset = true)
             }
         }
         val picture = pictureHistory[pictureId]
@@ -121,7 +121,9 @@ class Vp9PictureMap(
         val newPicture = Vp9Picture(packet)
         return if (!pictureHistory.insert(pictureId, newPicture)) {
             null
-        } else PacketInsertionResult(newPicture.frame(packet.spatialLayerIndex)!!, newPicture, true)
+        } else {
+            PacketInsertionResult(newPicture.frame(packet)!!, newPicture, true)
+        }
     }
 
     @Synchronized
@@ -228,7 +230,7 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
             pred = pred,
             startIndex = searchStartIndex,
             endIndex = searchEndIndex,
-            startLayer = frame.spatialLayer - 1,
+            startLayer = frame.effectiveSpatialLayer - 1,
             increment = -1
         )
     }
@@ -247,7 +249,7 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
             pred = pred,
             startIndex = searchStartIndex,
             endIndex = lastIndex + 1,
-            startLayer = frame.spatialLayer + 1,
+            startLayer = frame.effectiveSpatialLayer + 1,
             increment = 1
         )
     }

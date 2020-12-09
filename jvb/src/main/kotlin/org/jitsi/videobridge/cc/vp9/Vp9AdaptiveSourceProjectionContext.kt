@@ -146,7 +146,7 @@ class Vp9AdaptiveSourceProjectionContext(
 
     /** Look up a Vp9Frame for a packet. */
     private fun lookupVp9Frame(vp9Packet: Vp9Packet): Vp9Frame? =
-        vp9PictureMaps[vp9Packet.ssrc]?.findPicture(vp9Packet)?.frame(vp9Packet.spatialLayerIndex)
+        vp9PictureMaps[vp9Packet.ssrc]?.findPicture(vp9Packet)?.frame(vp9Packet)
 
     /**
      * Insert a packet in the appropriate Vp9FrameMap.

@@ -88,7 +88,9 @@ class Vp9AdaptiveSourceProjectionTest {
                 packetInfo,
                 getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
             )
-            if (packet.isStartOfFrame && packet.spatialLayerIndex == 0 && packet.temporalLayerIndex == 0) {
+            if (!packet.hasLayerIndices) {
+                expectedTl0PicIdx = -1
+            } else if (packet.isStartOfFrame && packet.spatialLayerIndex == 0 && packet.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
             }
             val endOfPicture = packet.isEndOfPicture // Save this before rewriteRtp
@@ -104,7 +106,10 @@ class Vp9AdaptiveSourceProjectionTest {
                 Assert.assertEquals(expectedTs, packet.timestamp)
                 Assert.assertEquals(expectedPicId, packet.pictureId)
                 Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
-                Assert.assertEquals(packet.isEndOfFrame && packet.spatialLayerIndex == targetSid, packet.isMarked)
+                Assert.assertEquals(
+                    packet.isEndOfFrame && packet.effectiveSpatialLayerIndex == targetSid,
+                    packet.isMarked
+                )
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
             } else {
                 Assert.assertFalse(accepted)

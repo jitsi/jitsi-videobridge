@@ -173,6 +173,12 @@ class Vp9Frame internal constructor(
      */
     var isAccepted = false
 
+    /**
+     * The "effective" spatial layer of the frame, i.e. the spatial layer, or 0 if the frame does not have layer information.
+     */
+    val effectiveSpatialLayer: Int
+        get() = if (spatialLayer >= 0) spatialLayer else 0
+
     constructor(packet: Vp9Packet) : this(
         ssrc = packet.ssrc,
         timestamp = packet.timestamp,
