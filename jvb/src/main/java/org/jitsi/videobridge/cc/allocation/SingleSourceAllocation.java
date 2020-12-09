@@ -39,7 +39,7 @@ class SingleSourceAllocation {
     /**
      * The ID of the {@code Endpoint} that this instance pertains to.
      */
-    private final String endpointID;
+    private final String endpointId;
 
     /**
      * The constraints to use while allocating bandwidth to this endpoint.
@@ -54,18 +54,18 @@ class SingleSourceAllocation {
     /**
      * An array that holds the layers to be considered when allocating bandwidth.
      */
-    private final LayerSnapshot[] ratedIndices;
+    private final LayerSnapshot[] layers;
 
     /**
-     * The rated quality that needs to be achieved before allocating bandwidth for any of the subsequent sources.
+     * The index (into {@link #layers}) of the "preferred" layer, i.e. the layer up to which we allocate eagerly.
      */
-    final int ratedPreferredIdx;
+    final int preferredIdx;
 
     /**
-     * The current rated quality target for this source. It can be improved in the {@code improve()} step, if there is
-     * enough bandwidth.
+     * The index of the current target layer. It can be improved in the {@code improve()} step, if there is enough
+     * bandwidth.
      */
-    int ratedTargetIdx = -1;
+    int targetIdx = -1;
 
     /**
      * Whether the chosen index leads to sending more than the available bandwidth.
@@ -73,20 +73,20 @@ class SingleSourceAllocation {
     boolean oversending = false;
 
     SingleSourceAllocation(
-            String endpointID,
+            String endpointId,
             MediaSourceDesc source,
             VideoConstraints constraints,
             AllocationStrategy strategy,
             Clock clock)
     {
-        this.endpointID = endpointID;
+        this.endpointId = endpointId;
         this.constraints = constraints;
         this.source = source;
 
         if (source == null || constraints.getMaxHeight() <= 0)
         {
-            ratedPreferredIdx = -1;
-            ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
+            preferredIdx = -1;
+            layers = EMPTY_RATE_SNAPSHOT_ARRAY;
             return;
         }
 
@@ -151,12 +151,12 @@ class SingleSourceAllocation {
             }
         }
 
-        this.ratedPreferredIdx = ratedPreferredIdx;
-        ratedIndices = ratesList.toArray(new LayerSnapshot[0]);
+        this.preferredIdx = ratedPreferredIdx;
+        layers = ratesList.toArray(new LayerSnapshot[0]);
     }
 
     /**
-     * Implements an "improve" step, incrementing {@link #ratedTargetIdx} to the next layer if there is sufficient
+     * Implements an "improve" step, incrementing {@link #targetIdx} to the next layer if there is sufficient
      * bandwidth. Note that this works eagerly up until the "preferred" layer (if any), and as a single step from
      * then on.
      *
@@ -164,34 +164,34 @@ class SingleSourceAllocation {
      */
     void improve(long maxBps)
     {
-        if (ratedIndices.length == 0)
+        if (layers.length == 0)
         {
             return;
         }
 
-        if (ratedTargetIdx == -1 && ratedPreferredIdx > -1)
+        if (targetIdx == -1 && preferredIdx > -1)
         {
             // Boost on stage participant to preferred, if there's enough bw.
-            for (int i = 0; i < ratedIndices.length; i++)
+            for (int i = 0; i < layers.length; i++)
             {
-                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bitrate.getBps())
+                if (i > preferredIdx || maxBps < layers[i].bitrate.getBps())
                 {
                     break;
                 }
 
-                ratedTargetIdx = i;
+                targetIdx = i;
             }
         }
         else
         {
             // Try the next element in the ratedIndices array.
-            if (ratedTargetIdx + 1 < ratedIndices.length && ratedIndices[ratedTargetIdx + 1].bitrate.getBps() < maxBps)
+            if (targetIdx + 1 < layers.length && layers[targetIdx + 1].bitrate.getBps() < maxBps)
             {
-                ratedTargetIdx++;
+                targetIdx++;
             }
         }
 
-        if (ratedTargetIdx > -1)
+        if (targetIdx > -1)
         {
             // If there's a higher layer available with a lower bitrate, skip to it.
             //
@@ -201,11 +201,11 @@ class SingleSourceAllocation {
             // select the 1080p stream.
             //
             // TODO further: Should we just prune the list of layers we consider to not include such layers?
-            for (int i = ratedIndices.length -1; i >= ratedTargetIdx + 1; i--)
+            for (int i = layers.length -1; i >= targetIdx + 1; i--)
             {
-                if (ratedIndices[i].bitrate.getBps() <= ratedIndices[ratedTargetIdx].bitrate.getBps())
+                if (layers[i].bitrate.getBps() <= layers[targetIdx].bitrate.getBps())
                 {
-                    ratedTargetIdx = i;
+                    targetIdx = i;
                 }
             }
         }
@@ -216,27 +216,18 @@ class SingleSourceAllocation {
      */
     long getTargetBitrate()
     {
-        return ratedTargetIdx != -1 ? (long) ratedIndices[ratedTargetIdx].bitrate.getBps() : 0;
+        LayerSnapshot targetLayer = getTargetLayer();
+        return targetLayer != null ? (long) targetLayer.bitrate.getBps() : 0;
     }
 
     private LayerSnapshot getTargetLayer()
     {
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx] : null;
-    }
-
-    /**
-     * Gets the index of the target layer, i.e. the index of the currently chosen layer.
-     */
-    int getTargetIndex()
-    {
-        // figures out the quality of the layer of the target rated
-        // quality.
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer.getIndex() : -1;
+        return targetIdx != -1 ? layers[targetIdx] : null;
     }
 
     private LayerSnapshot getIdealLayer()
     {
-        return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1] : null;
+        return layers.length != 0 ? layers[layers.length - 1] : null;
     }
 
     /**
@@ -248,7 +239,7 @@ class SingleSourceAllocation {
         LayerSnapshot targetLayer = getTargetLayer();
         LayerSnapshot idealLayer = getIdealLayer();
         return new SingleAllocation(
-                endpointID,
+                endpointId,
                 source,
                 targetLayer == null ? null : targetLayer.layer,
                 idealLayer == null ? null : idealLayer.layer,
@@ -258,10 +249,10 @@ class SingleSourceAllocation {
 
     @Override
     public String toString() {
-        return "[id=" + endpointID
+        return "[id=" + endpointId
                 + " constraints=" + constraints
-                + " ratedPreferredIdx=" + ratedPreferredIdx
-                + " ratedTargetIdx=" + ratedTargetIdx
+                + " ratedPreferredIdx=" + preferredIdx
+                + " ratedTargetIdx=" + targetIdx
                 + " oversending=" + oversending;
     }
 

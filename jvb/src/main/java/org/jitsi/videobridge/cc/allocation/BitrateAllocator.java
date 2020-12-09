@@ -21,7 +21,6 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -286,17 +285,19 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         long maxBandwidth = getAvailableBandwidth();
         long oldMaxBandwidth = -1;
 
-        int oldStateLen = 0;
-        int[] oldRatedTargetIndices = new int[sourceBitrateAllocations.size()];
-        int[] newRatedTargetIndices = new int[sourceBitrateAllocations.size()];
-        Arrays.fill(newRatedTargetIndices, -1);
+        int[] oldTargetIndices = new int[sourceBitrateAllocations.size()];
+        int[] newTargetIndices = new int[sourceBitrateAllocations.size()];
+        Arrays.fill(newTargetIndices, -1);
+
+        // The number of allocations with a selected layer.
+        int numAllocationsWithVideo = 0;
 
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
-            System.arraycopy(newRatedTargetIndices, 0, oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
+            System.arraycopy(newTargetIndices, 0, oldTargetIndices, 0, oldTargetIndices.length);
 
-            int newStateLen = 0;
+            int newNumAllocationsWithVideo = 0;
             for (int i = 0; i < sourceBitrateAllocations.size(); i++)
             {
                 SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
@@ -312,38 +313,40 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                 // participant if we weren't able to allocate any bandwidth for it and
                 // enableOnstageVideoSuspend is false.
                 if (i == 0 &&
-                        sourceBitrateAllocation.ratedTargetIdx < 0 &&
+                        sourceBitrateAllocation.targetIdx < 0 &&
                         !BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
-                    sourceBitrateAllocation.ratedTargetIdx = 0;
+                    sourceBitrateAllocation.targetIdx = 0;
                     sourceBitrateAllocation.oversending = true;
                 }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
 
-                newRatedTargetIndices[i] = sourceBitrateAllocation.ratedTargetIdx;
-                if (sourceBitrateAllocation.getTargetIndex() > -1)
+                newTargetIndices[i] = sourceBitrateAllocation.targetIdx;
+                if (sourceBitrateAllocation.targetIdx != -1)
                 {
-                    newStateLen++;
+                    newNumAllocationsWithVideo++;
                 }
 
-                if (sourceBitrateAllocation.ratedTargetIdx < sourceBitrateAllocation.ratedPreferredIdx)
+                // FIXME: Why do we not attempt to allocate the remainder of the bandwidth to the rest of the endpoints
+                //  in this case? Is this just a performance optimization?
+                if (sourceBitrateAllocation.targetIdx < sourceBitrateAllocation.preferredIdx)
                 {
                     break;
                 }
             }
 
-            if (oldStateLen > newStateLen)
+            if (numAllocationsWithVideo > newNumAllocationsWithVideo)
             {
                 // rollback state to prevent jumps in the number of forwarded participants.
                 for (int i = 0; i < sourceBitrateAllocations.size(); i++)
                 {
-                    sourceBitrateAllocations.get(i).ratedTargetIdx = oldRatedTargetIndices[i];
+                    sourceBitrateAllocations.get(i).targetIdx = oldTargetIndices[i];
                 }
 
                 break;
             }
 
-            oldStateLen = newStateLen;
+            numAllocationsWithVideo = newNumAllocationsWithVideo;
         }
 
         return new Allocation(
