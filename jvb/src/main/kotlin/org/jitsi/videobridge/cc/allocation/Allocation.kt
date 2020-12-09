@@ -39,8 +39,7 @@ class Allocation(
             allocations.all { allocation ->
                 other.allocations.any { otherAllocation ->
                     allocation.endpointId == otherAllocation.endpointId &&
-                        allocation.targetLayer?.index == otherAllocation.targetLayer?.index &&
-                        allocation.idealLayer?.index == otherAllocation.idealLayer?.index
+                        allocation.targetLayer?.index == otherAllocation.targetLayer?.index
                 }
             }
 }
