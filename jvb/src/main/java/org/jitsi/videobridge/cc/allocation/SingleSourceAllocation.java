@@ -25,11 +25,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A bitrate allocation that pertains to a specific source.
+ * A bitrate allocation that pertains to a specific source. This is the internal representation used in the allocation
+ * algorithm, as opposed to {@link SingleAllocation} which is the end result.
  *
  * @author George Politis
  */
-public class SingleSourceAllocation {
+class SingleSourceAllocation {
     /**
      * An reusable empty array of {@link LayerSnapshot} to reduce allocations.
      */
@@ -40,57 +41,46 @@ public class SingleSourceAllocation {
      */
     public final String endpointID;
 
+    /**
+     * The constraints to use while allocating bandwidth to this endpoint.
+     */
     final VideoConstraints constraints;
 
     /**
-     * The first {@link MediaSourceDesc} of the {@code Endpoint} that
-     * this instance pertains to.
+     * The {@link MediaSourceDesc} that this instance pertains to.
      */
     final MediaSourceDesc source;
 
     /**
-     * An array that holds the stable bitrate snapshots of the
-     * {@link RtpLayerDesc}s that this {@link #source} offers.
-     * <p>
-     * {@link RtpLayerDesc} of {@link #source}.
+     * An array that holds the stable bitrate snapshots of the {@link RtpLayerDesc}s that this {@link #source} offers.
      */
     final LayerSnapshot[] ratedIndices;
 
     /**
-     * The rated quality that needs to be achieved before allocating
-     * bandwidth for any of the other subsequent sources in this allocation
-     * decision. The rated quality is not necessarily equal to the encoding
-     * quality. For example, for the on-stage participant we consider 5
-     * rated qualities:
-     * <p>
-     * 0 -> 180p7.5, 1 -> 180p15, 2 -> 180p30, 3 -> 360p30, 4 -> 720p30.
-     * <p>
-     * The encoding quality of the 4th rated quality is 8.
+     * The rated quality that needs to be achieved before allocating bandwidth for any of the subsequent sources.
      */
     final int ratedPreferredIdx;
 
     /**
-     * The current rated quality target for this source. It can potentially
-     * be improved in the improve step, provided there is enough bandwidth.
+     * The current rated quality target for this source. It can be improved in the {@code improve()} step, if there is
+     * enough bandwidth.
      */
     int ratedTargetIdx = -1;
 
     /**
-     * A boolean that indicates whether or not we're force pushing through
-     * the bottleneck this source.
+     * Whether the chosen index leads to sending more than the available bandwidth.
      */
     public boolean oversending = false;
 
     /**
-     * the bitrate (in bps) of the layer that is the closest to the ideal
-     * and has a bitrate, or 0 if there are no layers with a bitrate (for
-     * example, the endpoint is video muted).
+     * The bitrate (in bps) of the highest active layer (with bitrate > 0) that will be considered for selection (i.e.
+     * the layer that will be chosen given infinite bandwidth).
+     * Note that not all layers satisfying the constraints are considered for selection. With the default config, the
+     * {@link AllocationStrategy#StageView} strategy prefers 360p/30fps over 720p at 7.5 or 15 fps, so the latter
+     * two will not be considered. So when the 720p/30fps layer is not active, the "ideal" will be 360p/30fps.
      */
     final long idealBitrate;
 
-    /**
-     * @param source The {@link MediaSourceDesc} that this bitrate allocation pertains to.
-     */
     SingleSourceAllocation(
             String endpointID,
             MediaSourceDesc source,
@@ -102,7 +92,8 @@ public class SingleSourceAllocation {
         this.constraints = constraints;
         this.source = source;
 
-        if (source == null || constraints.getMaxHeight() <= 0) {
+        if (source == null || constraints.getMaxHeight() <= 0)
+        {
             ratedPreferredIdx = -1;
             idealBitrate = 0;
             ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
@@ -111,34 +102,38 @@ public class SingleSourceAllocation {
 
         long nowMs = clock.instant().toEpochMilli();
         List<LayerSnapshot> ratesList = new ArrayList<>();
-        // Initialize the list of flows that we will consider for sending
-        // for this source. For example, for the on-stage participant we
-        // consider 720p@30fps, 360p@30fps, 180p@30fps, 180p@15fps,
-        // 180p@7.5fps while for the thumbnails we consider 180p@30fps,
-        // 180p@15fps and 180p@7.5fps
+        // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
+        // a couple of exceptions (see comments below).
         int ratedPreferredIdx = 0;
         long idealBps = 0;
-        for (RtpLayerDesc layer : source.getRtpLayers()) {
+        for (RtpLayerDesc layer : source.getRtpLayers())
+        {
 
             int idealHeight = constraints.getMaxHeight();
-            // We don't want to exceed the ideal resolution but we also
-            // want to make sure we have at least 1 rated encoding.
-            if (idealHeight >= 0 && layer.getHeight() > idealHeight && !ratesList.isEmpty()) {
-                continue;
+            // Skip layers that do not satisfy the constraints. If no layers satisfy the constraints, add the lowest
+            // layer anyway (the constraints are "soft", and given enough bandwidth we prefer to exceed them rather than
+            // sending no video at all).
+            if (!ratesList.isEmpty())
+            {
+                if (idealHeight >= 0 && layer.getHeight() > idealHeight)
+                {
+                    continue;
+                }
+                if (constraints.getMaxFrameRate() > 0 && layer.getFrameRate() > constraints.getMaxFrameRate())
+                {
+                    continue;
+                }
             }
 
-            // For the "selected" participant we favor frame rate over
-            // resolution. We include all temporal layers up to the
-            // preferred resolution, but only consider the preferred
-            // frame-rate with higher-than-preferred resolutions. In
-            // practice today this translates to 180p7.5fps, 180p15fps,
-            // 180p30fps, 360p30fps and 720p30fps.
-
-            // preferredHeight and preferredFps are ONLY ever used for "on stage" participants.
             int preferredHeight = -1;
             double preferredFps = -1.0;
             if (strategy == AllocationStrategy.StageView && constraints.getMaxHeight() > 180)
             {
+                // For the "on-stage" participant we favor frame rate over resolution. We consider all temporal layers
+                // for resolutions lower than the preferred, but for resolutions >= preferred, we only consider
+                // frame rates at least as high as the preferred. In practice this means we consider 180p/7.5fps,
+                // 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
+                // TODO: do we want to consider 360p/15 and/or 360o/7.5 too?
                 preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
                 preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
             }
@@ -149,29 +144,24 @@ public class SingleSourceAllocation {
 
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
-                    || ratesList.isEmpty()) {
+                    || ratesList.isEmpty())
+            {
                 Bandwidth layerBitrate = layer.getBitrate(nowMs);
                 long layerBitrateBps = (long) layerBitrate.getBps();
-                if (layerBitrateBps > 0) {
+                if (layerBitrateBps > 0)
+                {
                     idealBps = layerBitrateBps;
                 }
+                // TODO: Do we want to consider layers with bitrate=0?
                 ratesList.add(new LayerSnapshot(layer, layerBitrate));
             }
 
-            if (layer.getHeight() <= preferredHeight) {
-                // The improve step below will "eagerly" try to allocate
-                // up-to the ratedPreferredIdx before moving on to the next
-                // track. Eagerly means we consume all available bandwidth
-                // up to the preferred resolution, leaving higher-frame
-                // rates as an option for subsequent improvement steps.
-                //
-                // NOTE that the above comment suggests that the prefix
-                // "preferred" in the preferredFps and preferredHeight
-                // params has different semantics: In the preferredHeight
-                // param it means "eagerly allocate up to the preferred
-                // resolution" whereas in the preferredFps param it means
-                // "only consider encodings with at least preferredFps" once
-                // we've reached the preferredHeight.
+            if (layer.getHeight() <= preferredHeight)
+            {
+                // Set the layer up to which allocation will be "eager", meaning it will continue to allocate to this
+                // endpoint before moving on to the next. This is only set for the "on-stage" endpoint, to the
+                // "preferred" resolution with the highest bitrate.
+                // TODO: Is there a bug with this being set outside the above "if"?
                 ratedPreferredIdx = ratesList.size() - 1;
             }
         }
@@ -180,57 +170,55 @@ public class SingleSourceAllocation {
 
         this.ratedPreferredIdx = ratedPreferredIdx;
         ratedIndices = ratesList.toArray(new LayerSnapshot[0]);
-        // TODO Determining the rated ideal index needs some work.
-        // The ideal rated quality is constrained by the viewport of the
-        // endpoint. For example, on a mobile device we should probably not
-        // send anything above 360p (not even the on-stage participant). On
-        // a laptop computer 720p seems reasonable and on a big screen 1080p
-        // or above.
     }
 
     /**
-     * Computes the ideal and the target bitrate, limiting the target to
-     * be less than bandwidth estimation specified as an argument.
+     * Implements an "improve" step, incrementing {@link #ratedTargetIdx} to the next layer if there is sufficient
+     * bandwidth. Note that this works eagerly up until the "preferred" layer (if any), and as a single step from
+     * then on.
      *
-     * @param maxBps the maximum bitrate (in bps) that the target subjective
-     *               quality can have.
+     * @param maxBps the bandwidth available.
      */
     void improve(long maxBps)
     {
-        if (ratedIndices.length == 0) {
+        if (ratedIndices.length == 0)
+        {
             return;
         }
 
-        if (ratedTargetIdx == -1 && ratedPreferredIdx > -1) {
+        if (ratedTargetIdx == -1 && ratedPreferredIdx > -1)
+        {
             // Boost on stage participant to preferred, if there's enough bw.
-            for (int i = 0; i < ratedIndices.length; i++) {
-                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bitrate.getBps()) {
+            for (int i = 0; i < ratedIndices.length; i++)
+            {
+                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bitrate.getBps())
+                {
                     break;
                 }
 
                 ratedTargetIdx = i;
             }
-        } else {
+        }
+        else
+        {
             // Try the next element in the ratedIndices array.
-            if (ratedTargetIdx + 1 < ratedIndices.length
-                    && ratedIndices[ratedTargetIdx + 1].bitrate.getBps() < maxBps)
+            if (ratedTargetIdx + 1 < ratedIndices.length && ratedIndices[ratedTargetIdx + 1].bitrate.getBps() < maxBps)
             {
                 ratedTargetIdx++;
             }
         }
 
-        if (ratedTargetIdx > -1) {
-            // if there's a better subjective quality with the same or less
-            // bitrate than the current target quality, make it the target.
-            // i.e. set the target to the next best available quality with
-            // the least possible bitrate.
+        if (ratedTargetIdx > -1)
+        {
+            // If there's a higher layer available with a lower bitrate, skip to it.
             //
-            // For example, if 1080p@15fps is configured as a better
-            // subjective quality than 720p@30fps (i.e. it sits on a higher
-            // index in the ratedIndices array) and the bitrate that we
-            // measure for the 1080p stream is less than the bitrate that we
-            // measure for the 720p stream, then we "jump over" the 720p
-            // stream and immediately select the 1080p stream.
+            // For example, if 1080p@15fps is configured as a better subjective quality than 720p@30fps (i.e. it sits
+            // on a higher index in the ratedIndices array) and the bitrate that we measure for the 1080p stream is less
+            // than the bitrate that we measure for the 720p stream, then we "jump over" the 720p stream and immediately
+            // select the 1080p stream.
+            //
+            // TODO: We should skip over to the *highest* layer with a lower bitrate.
+            // TODO further: Should we just prune the list of layers we consider to not include such layers?
             for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
             {
                 if (ratedIndices[i].bitrate.getBps() > 0 && ratedIndices[i].bitrate.getBps()
@@ -243,9 +231,7 @@ public class SingleSourceAllocation {
     }
 
     /**
-     * Gets the target bitrate (in bps) for this endpoint allocation.
-     *
-     * @return the target bitrate (in bps) for this endpoint allocation.
+     * Gets the target bitrate (in bps) for this endpoint allocation, i.e. the bitrate of the currently chosen layer.
      */
     long getTargetBitrate()
     {
@@ -258,9 +244,7 @@ public class SingleSourceAllocation {
     }
 
     /**
-     * Gets the target quality for this source.
-     *
-     * @return the target quality for this source.
+     * Gets the index of the target layer, i.e. the index of the currently chosen layer.
      */
     int getTargetIndex()
     {
@@ -275,7 +259,7 @@ public class SingleSourceAllocation {
     }
 
     /**
-     * Creates the final immutable result of this allocation. To be called once the allocation algorithm has
+     * Creates the final immutable result of this allocation. Should be called once the allocation algorithm has
      * completed.
      */
     SingleAllocation getResult()

@@ -269,18 +269,10 @@ public class BitrateAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Computes the ideal and the target bitrate, limiting the target to be
-     * less than bandwidth estimation specified as an argument.
+     * Implements the bitrate allocation algorithm for the given ordered list of endpoints.
      *
-     * @param maxBandwidth the max bandwidth estimation that the target bitrate
-     * must not exceed.
-     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
-     * participating in the multipoint conference with the dominant (speaker)
-     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performance;
-     * if it's omitted it will be fetched from the
-     * {@link ConferenceSpeechActivity}.
-     * @return an array of {@link SingleSourceAllocation}.
+     * @param conferenceEndpoints the list of endpoints in order of priority to allocate for.
+     * @return the new {@link Allocation}.
      */
     private synchronized @NotNull Allocation allocate(List<T> conferenceEndpoints)
     {
@@ -342,8 +334,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
 
             if (oldStateLen > newStateLen)
             {
-                // rollback state to prevent jumps in the number of forwarded
-                // participants.
+                // rollback state to prevent jumps in the number of forwarded participants.
                 for (int i = 0; i < sourceBitrateAllocations.size(); i++)
                 {
                     sourceBitrateAllocations.get(i).ratedTargetIdx = oldRatedTargetIndices[i];
@@ -355,29 +346,11 @@ public class BitrateAllocator<T extends MediaSourceContainer>
             oldStateLen = newStateLen;
         }
 
-        // at this point, maxBandwidth is what we failed to allocate.
-
         return new Allocation(
                 sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()));
     }
 
 
-    /**
-     * Returns a prioritized {@link SingleSourceAllocation} array where
-     * selected endpoint are at the top of the array followed by any other remaining endpoints. The
-     * priority respects the order induced by the <tt>conferenceEndpoints</tt>
-     * parameter.
-     *
-     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
-     * participating in the multipoint conference with the dominant (speaker)
-     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performance;
-     * if it's omitted it will be fetched from the
-     * {@link ConferenceSpeechActivity}.
-     * @return a prioritized {@link SingleSourceAllocation} array where
-     * selected endpoint are at the top of the array,
-     * followed by any other remaining endpoints.
-     */
     private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
     {
         // Init.
@@ -412,6 +385,9 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         return sourceBitrateAllocations;
     }
 
+    /**
+     * Submits a call to `update` in a CPU thread if bandwidth allocation has not been performed recently.
+     */
     void maybeUpdate()
     {
         if (Duration.between(lastUpdateTime, clock.instant())
