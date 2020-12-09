@@ -136,17 +136,18 @@ class SingleSourceAllocation {
                     || ratesList.isEmpty())
             {
                 Bandwidth layerBitrate = layer.getBitrate(nowMs);
-                // TODO: Do we want to consider layers with bitrate=0?
-                ratesList.add(new LayerSnapshot(layer, layerBitrate));
-            }
+                if (layerBitrate.getBps() > 0)
+                {
+                    ratesList.add(new LayerSnapshot(layer, layerBitrate));
 
-            if (layer.getHeight() <= preferredHeight)
-            {
-                // Set the layer up to which allocation will be "eager", meaning it will continue to allocate to this
-                // endpoint before moving on to the next. This is only set for the "on-stage" endpoint, to the
-                // "preferred" resolution with the highest bitrate.
-                // TODO: Is there a bug with this being set outside the above "if"?
-                ratedPreferredIdx = ratesList.size() - 1;
+                    if (layer.getHeight() <= preferredHeight)
+                    {
+                        // Set the layer up to which allocation will be "eager", meaning it will continue to allocate
+                        // to this endpoint before moving on to the next. This is only set for the "on-stage" endpoint,
+                        // to the "preferred" resolution with the highest bitrate.
+                        ratedPreferredIdx = ratesList.size() - 1;
+                    }
+                }
             }
         }
 
@@ -203,8 +204,7 @@ class SingleSourceAllocation {
             // TODO further: Should we just prune the list of layers we consider to not include such layers?
             for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
             {
-                if (ratedIndices[i].bitrate.getBps() > 0 && ratedIndices[i].bitrate.getBps()
-                        <= ratedIndices[ratedTargetIdx].bitrate.getBps())
+                if (ratedIndices[i].bitrate.getBps() <= ratedIndices[ratedTargetIdx].bitrate.getBps())
                 {
                     ratedTargetIdx = i;
                 }

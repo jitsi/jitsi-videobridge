@@ -172,6 +172,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
                 totalTargetBitrate += targetBitrate
                 it.source?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
             }
+            // Note: The "ideal" layer is calculated at allocation time, and does not consider inactive layers. If a
+            // higher layer becomes active, it will only become "ideal" the next time allocation is performed.
             it.idealLayer?.getBitrate(nowMs)?.let { idealBitrate ->
                 totalIdealBitrate += idealBitrate
             }
@@ -204,8 +206,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)
 
-            // TODO(george) bring back sending this message on message transport
-            //  connect
+            // TODO(george) bring back sending this message on message transport  connect
             val newForwardedEndpoints = allocation.forwardedEndpoints
             if (forwardedEndpoints != newForwardedEndpoints) {
                 forwardedEndpoints = newForwardedEndpoints
@@ -214,7 +215,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
             oversendingTimeTracker.setState(allocation.oversending)
 
-            // TODO: this is for testing only. Shold we change the tests to work with [BitrateAllocator] directly?
+            // TODO: this is for testing only. Should we change the tests to work with [BitrateAllocator] directly?
             eventEmitter.fireEvent { allocationChanged(allocation) }
         }
 
