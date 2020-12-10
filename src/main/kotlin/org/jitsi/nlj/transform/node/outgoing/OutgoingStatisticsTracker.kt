@@ -37,14 +37,17 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
         stats.packetSent(rtpPacket.length, rtpPacket.timestamp)
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            val stats = getSnapshot()
-            stats.ssrcStats.forEach { (ssrc, streamStats) ->
-                addJson(ssrc.toString(), streamStats.toJson())
-            }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        val stats = getSnapshot()
+        stats.ssrcStats.forEach { (ssrc, streamStats) ->
+            addJson(ssrc.toString(), streamStats.toJson())
         }
     }
+
+    /**
+     * Don't aggregate the per-SSRC stats.
+     */
+    override fun getNodeStatsToAggregate(): NodeStatsBlock = super.getNodeStats()
 
     override fun trace(f: () -> Unit) = f.invoke()
 
