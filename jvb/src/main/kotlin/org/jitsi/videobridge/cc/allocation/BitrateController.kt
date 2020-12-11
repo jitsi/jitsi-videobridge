@@ -158,7 +158,13 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     /**
-     * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being forwarded.
+     * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being
+     * forwarded, for use in probing.
+     *
+     * Note that the ideal layers are calculated with the allocation, and inactive layers are not considered. So when a
+     * higher layer becomes active, it will not be accounted for until until the allocation updates. Conversely, if the
+     * ideal layer becomes inactive, it will contribute 0 bps to the total ideal bitrate until the allocation updates
+     * and a lower layer is selected as idea.
      */
     fun getStatusSnapshot(): BitrateControllerStatusSnapshot {
         var totalTargetBitrate = 0.bps
@@ -172,8 +178,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
                 totalTargetBitrate += targetBitrate
                 it.source?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
             }
-            // Note: The "ideal" layer is calculated at allocation time, and does not consider inactive layers. If a
-            // higher layer becomes active, it will only become "ideal" the next time allocation is performed.
             it.idealLayer?.getBitrate(nowMs)?.let { idealBitrate ->
                 totalIdealBitrate += idealBitrate
             }
