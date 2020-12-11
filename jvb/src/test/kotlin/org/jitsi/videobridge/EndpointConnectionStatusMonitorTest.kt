@@ -45,10 +45,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val localEp2: Endpoint = mockk {
         every { id } returns "2"
     }
-    val remoteEp1: OctoEndpoint = mockk {
-        every { id } returns "3"
-    }
-    val eps = listOf(localEp1, localEp2, remoteEp1)
+    val eps = listOf(localEp1, localEp2)
 
     val broadcastMessage = slot<EndpointConnectionStatusMessage>()
     val broadcastSendToOcto = slot<Boolean>()
@@ -60,7 +57,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val sendMessageCalls = mutableListOf<Triple<EndpointConnectionStatusMessage, List<AbstractEndpoint>, Boolean>>()
 
     val conference: Conference = mockk {
-        every { endpoints } returns eps
+        every { localEndpoints } returns eps
         every { broadcastMessage(capture(broadcastMessage), capture(broadcastSendToOcto)) } answers {
             broadcastCalls += Pair(broadcastMessage.captured, broadcastSendToOcto.captured)
         }
@@ -88,7 +85,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 every { it.lastIncomingActivity } returns NEVER
             }
             context("but haven't been around longer than first transfer timeout") {
-                eps.filterIsInstance<Endpoint>().forEach {
+                eps.forEach {
                     every { it.mostRecentChannelCreatedTime } returns clock.instant()
                 }
                 executor.runOne()
@@ -98,7 +95,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 }
             }
             context("and have been around longer than first transfer timeout") {
-                eps.filterIsInstance<Endpoint>().forEach {
+                eps.forEach {
                     every { it.mostRecentChannelCreatedTime } returns clock.instant()
                 }
                 clock.elapse(1.mins)
@@ -117,9 +114,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
         }
         context("when the endpoints have had activity") {
             eps.forEach {
-                if (it is Endpoint) {
-                    every { it.mostRecentChannelCreatedTime } returns clock.instant()
-                }
+                every { it.mostRecentChannelCreatedTime } returns clock.instant()
                 every { it.lastIncomingActivity } returns clock.instant()
             }
             context("that is within maxInactivityLimit") {

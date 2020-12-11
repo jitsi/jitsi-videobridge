@@ -60,8 +60,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
     }
 
     private fun run() {
-        val localEps = conference.endpoints.filterIsInstance<Endpoint>()
-        localEps.forEach(::monitorEndpointActivity)
+        conference.localEndpoints.forEach(::monitorEndpointActivity)
     }
 
     private fun monitorEndpointActivity(endpoint: Endpoint) {
@@ -91,11 +90,12 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
         val active = noActivityTime <= config.maxInactivityLimit
         var changed = false
         synchronized(inactiveEndpointIds) {
-            if (!active && !inactiveEndpointIds.contains(endpoint.id)) {
+            val wasActive = !inactiveEndpointIds.contains(endpoint.id)
+            if (wasActive && !active) {
                 logger.cdebug { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
                 inactiveEndpointIds += endpoint.id
                 changed = true
-            } else if (active && inactiveEndpointIds.contains(endpoint.id)) {
+            } else if (!wasActive && active) {
                 logger.cdebug { "${endpoint.id} has reconnected" }
                 inactiveEndpointIds -= endpoint.id
                 changed = true
