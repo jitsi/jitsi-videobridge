@@ -172,26 +172,6 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                         }
                     }
                 }
-                context("and then an ep expires") {
-                    monitor.endpointExpired("1")
-                    context("and then a new ep joins") {
-                        every { conference.getEndpoint("4") } returns mockk() { every { id } returns "4" }
-                        monitor.endpointConnected("4")
-                        // We shouldn't get a notification for the expired endpoint
-                        should("update the new endpoint of the other endpoints' statuses") {
-                            sendMessageCalls shouldHaveSize 1
-                            sendMessageCalls.forAll { (_, destEps, sendToOcto) ->
-                                destEps shouldHaveSize 1
-                                destEps.first().id shouldBe "4"
-                                sendToOcto shouldBe false
-                            }
-                            sendMessageCalls.forAny { (msg, _, _) ->
-                                msg.endpoint shouldBe "2"
-                                msg.active shouldBe "false"
-                            }
-                        }
-                    }
-                }
             }
         }
     }

@@ -826,7 +826,6 @@ public class Conference
 
         if (removedEndpoint != null)
         {
-            epConnectionStatusMonitor.endpointExpired(removedEndpoint.getId());
             endpointsChanged();
         }
     }
