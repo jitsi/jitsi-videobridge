@@ -31,7 +31,7 @@ LastN is the maximum number of video streams that the receiver wants to receive.
 #### Selected endpoints
 This is a list of endpoints to be prioritized first, overriding the natural speech activity order of the endpoints.
 
-For example, if the receiver wants to always receive an endpoint that is screenshaing, regardless of who is speaking
+For example, if the receiver wants to always receive an endpoint that is screensharing, regardless of who is speaking
 in the conference, it can "select" this endpoint. 
 
 #### Allocation Strategy
@@ -74,8 +74,9 @@ TODO: Update the algorithm, to only move selected endpoint when they are sending
 
 ### 2. Apply LastN
 This phase disables video for endpoints in the list that are not among the first `LastN`. Note that the effective 
-`LastN` value comes from the number signaled by the client, potentially also limited by [configuration](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/kotlin/org/jitsi/videobridge/JvbLastN.kt).
-This is implemented by setting the `maxHeight` constraint to 0.
+`LastN` value comes from the number signaled by the client, potentially also limited by [static](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/kotlin/org/jitsi/videobridge/JvbLastN.kt)
+and [dynamic](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/kotlin/org/jitsi/videobridge/load_management/LastNReducer.kt)
+configuration of the bridge. This is implemented by setting the `maxHeight` constraint to 0.
 
 The resulting constraints are the "effective" constraints used by the rest of the algorithm. Once calculated, they are
 announced via an event, so that the sender-side constraints can be applied. Doing this step here, early in the process,
@@ -86,7 +87,7 @@ The final phase is the actual allocation.
 
 #### 3.1 Initialize potential layers
 The first step is to initialize a list of layers to consider for each endpoint. It starts with the list of all layers
-for the endpoint, and prunes which should not be considered:
+for the endpoint, and prunes ones which should not be considered:
 
 A) The ones with resolution and frame rate higher than the constraints
 

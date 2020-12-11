@@ -183,7 +183,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsedForwardedEndpoints.toList() shouldContainExactly forwardedEndpoints
         }
 
-        context("serializing and parsing VideoConstraints2") {
+        context("serializing and parsing VideoConstraints") {
             val videoConstraints: VideoConstraints = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
             videoConstraints.maxHeight shouldBe 1080
             videoConstraints.maxFrameRate shouldBe 15.0

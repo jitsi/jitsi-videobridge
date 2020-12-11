@@ -117,7 +117,6 @@ class SingleSourceAllocation {
                 // for resolutions lower than the preferred, but for resolutions >= preferred, we only consider
                 // frame rates at least as high as the preferred. In practice this means we consider 180p/7.5fps,
                 // 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
-                // TODO: do we want to consider 360p/15 and/or 360o/7.5 too?
                 preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
                 preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
             }
