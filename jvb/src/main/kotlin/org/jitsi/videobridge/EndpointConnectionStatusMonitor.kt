@@ -38,6 +38,13 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
 
     private val config = EndpointConnectionStatusConfig()
 
+    /**
+     * Note that we intentionally do not prune this set when an endpoint expires, because if an endpoint expires and
+     * is recreated, we need to send an "active" message (the other endpoints in the conference are not aware that the
+     * object on the bridge was expired and recreated).
+     * Also note that when an endpoint is moved to another bridge, it will be expired and an OctoEndpoint with the same
+     * ID will be created.
+     */
     private val inactiveEndpointIds = mutableSetOf<String>()
 
     private val taskHandle = AtomicReference<ScheduledFuture<*>>(null)
@@ -60,8 +67,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
     }
 
     private fun run() {
-        val localEps = conference.endpoints.filterIsInstance<Endpoint>()
-        localEps.forEach(::monitorEndpointActivity)
+        conference.localEndpoints.forEach(::monitorEndpointActivity)
     }
 
     private fun monitorEndpointActivity(endpoint: Endpoint) {
@@ -91,11 +97,12 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
         val active = noActivityTime <= config.maxInactivityLimit
         var changed = false
         synchronized(inactiveEndpointIds) {
-            if (!active && !inactiveEndpointIds.contains(endpoint.id)) {
+            val wasActive = !inactiveEndpointIds.contains(endpoint.id)
+            if (wasActive && !active) {
                 logger.cdebug { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
                 inactiveEndpointIds += endpoint.id
                 changed = true
-            } else if (active && inactiveEndpointIds.contains(endpoint.id)) {
+            } else if (!wasActive && active) {
                 logger.cdebug { "${endpoint.id} has reconnected" }
                 inactiveEndpointIds -= endpoint.id
                 changed = true
@@ -122,22 +129,16 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
 
     /**
      * Notify this [EndpointConnectionStatusMonitor] that an endpoint in the conference has
-     * expired
-     */
-    fun endpointExpired(endpointId: String) {
-        synchronized(inactiveEndpointIds) {
-            inactiveEndpointIds -= endpointId
-        }
-    }
-
-    /**
-     * Notify this [EndpointConnectionStatusMonitor] that an endpoint in the conference has
      * connected
      */
     fun endpointConnected(endpointId: String) {
         synchronized(inactiveEndpointIds) {
+            val localEndpointIds = conference.localEndpoints.map { it.id }
             inactiveEndpointIds.forEach { inactiveEpId ->
-                notifyStatusChange(inactiveEpId, isConnected = false, receiverEpId = endpointId)
+                // inactiveEndpointIds may contain endpoints that have already expired and/or moved to another bridge.
+                if (localEndpointIds.contains(inactiveEpId)) {
+                    notifyStatusChange(inactiveEpId, isConnected = false, receiverEpId = endpointId)
+                }
             }
         }
     }
