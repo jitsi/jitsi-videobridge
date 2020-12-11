@@ -33,7 +33,6 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.mins
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
-import org.jitsi.videobridge.octo.OctoEndpoint
 
 class EndpointConnectionStatusMonitorTest : ShouldSpec({
     isolationMode = IsolationMode.InstancePerLeaf
