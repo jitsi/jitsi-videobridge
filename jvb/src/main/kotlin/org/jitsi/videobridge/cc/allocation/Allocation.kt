@@ -40,6 +40,8 @@ class Allocation @JvmOverloads constructor(
                         allocation.targetLayer?.index == otherAllocation.targetLayer?.index
                 }
             }
+
+    override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
 }
 
 /**
@@ -60,4 +62,10 @@ data class SingleAllocation(
     private val targetIndex: Int
         get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1
+
+    /**
+     * Exclude [source]
+     */
+    override fun toString(): String = "[id=$endpointId target=${targetLayer?.height}/${targetLayer?.frameRate} " +
+        "ideal=${idealLayer?.height}/${idealLayer?.frameRate}"
 }

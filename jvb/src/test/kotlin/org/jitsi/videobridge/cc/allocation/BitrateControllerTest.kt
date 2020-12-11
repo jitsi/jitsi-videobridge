@@ -16,9 +16,11 @@
 
 package org.jitsi.videobridge.cc.allocation
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -170,6 +172,32 @@ class BitrateControllerTest : ShouldSpec() {
                     runBweLoop()
 
                     verifyTileViewLastN1()
+                }
+            }
+            context("Tile view 360p") {
+                bc.setEndpointOrdering("A", "B", "C", "D")
+                bc.setTileView("A", "B", "C", "D", maxFrameHeight = 360)
+
+                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
+                bc.bc.allocationSettings.lastN shouldBe -1
+                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B", "C", "D")
+
+                context("When LastN is not set") {
+                    runBweLoop()
+
+                    verifyTileView360p()
+                }
+                context("When LastN=0") {
+                    bc.setLastN(0)
+                    runBweLoop()
+
+                    verifyLastN0()
+                }
+                context("When LastN=1") {
+                    bc.setLastN(1)
+                    runBweLoop()
+
+                    verifyTileViewLastN1(360)
                 }
             }
             context("Selected endpoints should override the dominant speaker") {
@@ -819,7 +847,370 @@ class BitrateControllerTest : ShouldSpec() {
         )
     }
 
-    private fun verifyTileViewLastN1() {
+    private fun verifyTileView360p() {
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: The results with bwe==-1 are wrong.
+        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
+            setOf("A"),
+            setOf("A", "B"),
+            setOf("A", "B", "C"),
+            setOf("A", "B", "C", "D")
+        )
+
+        // At this stage the purpose of this is just to document current behavior.
+        // TODO: the allocations for bwe=-1 are wrong.
+        bc.allocationHistory.removeIf { it.bwe < 0.bps }
+
+        bc.allocationHistory.shouldMatchInOrder(
+            Event(
+                0.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("B", targetLayer = noVideo),
+                        SingleAllocation("C", targetLayer = noVideo),
+                        SingleAllocation("D", targetLayer = noVideo)
+                    ),
+                    // TODO: do we want to oversend in tile view?
+                    oversending = true
+                )
+            ),
+            Event(
+                50.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("B", targetLayer = noVideo),
+                        SingleAllocation("C", targetLayer = noVideo),
+                        SingleAllocation("D", targetLayer = noVideo)
+                    ),
+                    oversending = false
+                )
+            ),
+            Event(
+                100.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("B", targetLayer = ld7_5),
+                        SingleAllocation("C", targetLayer = noVideo),
+                        SingleAllocation("D", targetLayer = noVideo)
+                    )
+                )
+            ),
+            Event(
+                150.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("B", targetLayer = ld7_5),
+                        SingleAllocation("C", targetLayer = ld7_5),
+                        SingleAllocation("D", targetLayer = noVideo)
+                    )
+                )
+            ),
+            Event(
+                200.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("B", targetLayer = ld7_5),
+                        SingleAllocation("C", targetLayer = ld7_5),
+                        SingleAllocation("D", targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                250.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld15),
+                        SingleAllocation("B", targetLayer = ld7_5),
+                        SingleAllocation("C", targetLayer = ld7_5),
+                        SingleAllocation("D", targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                300.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld15),
+                        SingleAllocation("B", targetLayer = ld15),
+                        SingleAllocation("C", targetLayer = ld7_5),
+                        SingleAllocation("D", targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                350.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld15),
+                        SingleAllocation("B", targetLayer = ld15),
+                        SingleAllocation("C", targetLayer = ld15),
+                        SingleAllocation("D", targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                400.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld15),
+                        SingleAllocation("B", targetLayer = ld15),
+                        SingleAllocation("C", targetLayer = ld15),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                450.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld30),
+                        SingleAllocation("B", targetLayer = ld15),
+                        SingleAllocation("C", targetLayer = ld15),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                470.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = ld15),
+                        SingleAllocation("C", targetLayer = ld15),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                500.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld30),
+                        SingleAllocation("B", targetLayer = ld30),
+                        SingleAllocation("C", targetLayer = ld15),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                520.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = ld30),
+                        SingleAllocation("C", targetLayer = ld15),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                530.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("C", targetLayer = ld15),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                550.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld30),
+                        SingleAllocation("B", targetLayer = ld30),
+                        SingleAllocation("C", targetLayer = ld30),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                570.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = ld30),
+                        SingleAllocation("C", targetLayer = ld30),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                580.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("C", targetLayer = ld30),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                600.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("C", targetLayer = sd7_5),
+                        SingleAllocation("D", targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                610.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = ld30),
+                        SingleAllocation("B", targetLayer = ld30),
+                        SingleAllocation("C", targetLayer = ld30),
+                        SingleAllocation("D", targetLayer = ld30)
+                    )
+                )
+            ),
+            Event(
+                620.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = ld30),
+                        SingleAllocation("C", targetLayer = ld30),
+                        SingleAllocation("D", targetLayer = ld30)
+                    )
+                )
+            ),
+            Event(
+                640.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("C", targetLayer = ld30),
+                        SingleAllocation("D", targetLayer = ld30)
+                    )
+                )
+            ),
+            Event(
+                650.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("C", targetLayer = sd7_5),
+                        SingleAllocation("D", targetLayer = ld30)
+                    )
+                )
+            ),
+            Event(
+                670.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("C", targetLayer = sd7_5),
+                        SingleAllocation("D", targetLayer = sd7_5)
+                    )
+                )
+            ),
+            Event(
+                830.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd15),
+                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("C", targetLayer = sd7_5),
+                        SingleAllocation("D", targetLayer = sd7_5)
+                    )
+                )
+            ),
+            Event(
+                1000.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd15),
+                        SingleAllocation("B", targetLayer = sd15),
+                        SingleAllocation("C", targetLayer = sd7_5),
+                        SingleAllocation("D", targetLayer = sd7_5)
+                    )
+                )
+            ),
+            Event(
+                1160.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd15),
+                        SingleAllocation("B", targetLayer = sd15),
+                        SingleAllocation("C", targetLayer = sd15),
+                        SingleAllocation("D", targetLayer = sd7_5)
+                    )
+                )
+            ),
+            Event(
+                1330.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd15),
+                        SingleAllocation("B", targetLayer = sd15),
+                        SingleAllocation("C", targetLayer = sd15),
+                        SingleAllocation("D", targetLayer = sd15)
+                    )
+                )
+            ),
+            Event(
+                1500.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd30),
+                        SingleAllocation("B", targetLayer = sd15),
+                        SingleAllocation("C", targetLayer = sd15),
+                        SingleAllocation("D", targetLayer = sd15)
+                    )
+                )
+            ),
+            Event(
+                1670.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd30),
+                        SingleAllocation("B", targetLayer = sd30),
+                        SingleAllocation("C", targetLayer = sd15),
+                        SingleAllocation("D", targetLayer = sd15)
+                    )
+                )
+            ),
+            Event(
+                1840.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd30),
+                        SingleAllocation("B", targetLayer = sd30),
+                        SingleAllocation("C", targetLayer = sd30),
+                        SingleAllocation("D", targetLayer = sd15)
+                    )
+                )
+            ),
+            Event(
+                2010.kbps,
+                Allocation(
+                    setOf(
+                        SingleAllocation("A", targetLayer = sd30),
+                        SingleAllocation("B", targetLayer = sd30),
+                        SingleAllocation("C", targetLayer = sd30),
+                        SingleAllocation("D", targetLayer = sd30)
+                    )
+                )
+            )
+        )
+    }
+
+    private fun verifyTileViewLastN1(maxFrameHeight: Int = 180) {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
         bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
@@ -828,7 +1219,7 @@ class BitrateControllerTest : ShouldSpec() {
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints(180),
+            "A" to VideoConstraints(maxFrameHeight),
             "B" to VideoConstraints(0),
             "C" to VideoConstraints(0),
             "D" to VideoConstraints(0)
@@ -838,7 +1229,7 @@ class BitrateControllerTest : ShouldSpec() {
         // TODO: the allocations for bwe=-1 are wrong.
         bc.allocationHistory.removeIf { it.bwe < 0.bps }
 
-        bc.allocationHistory.shouldMatchInOrder(
+        val expectedAllocationHistory = mutableListOf(
             // TODO: do we want to oversend in tile view?
             Event(
                 0.kbps,
@@ -886,6 +1277,46 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             )
         )
+        if (maxFrameHeight > 180) {
+            expectedAllocationHistory.addAll(
+                listOf(
+                    Event(
+                        170.kbps,
+                        Allocation(
+                            setOf(
+                                SingleAllocation("A", targetLayer = sd7_5),
+                                SingleAllocation("B", targetLayer = noVideo),
+                                SingleAllocation("C", targetLayer = noVideo),
+                                SingleAllocation("D", targetLayer = noVideo)
+                            )
+                        )
+                    ),
+                    Event(
+                        340.kbps,
+                        Allocation(
+                            setOf(
+                                SingleAllocation("A", targetLayer = sd15),
+                                SingleAllocation("B", targetLayer = noVideo),
+                                SingleAllocation("C", targetLayer = noVideo),
+                                SingleAllocation("D", targetLayer = noVideo)
+                            )
+                        )
+                    ),
+                    Event(
+                        510.kbps,
+                        Allocation(
+                            setOf(
+                                SingleAllocation("A", targetLayer = sd30),
+                                SingleAllocation("B", targetLayer = noVideo),
+                                SingleAllocation("C", targetLayer = noVideo),
+                                SingleAllocation("D", targetLayer = noVideo)
+                            )
+                        )
+                    )
+                )
+            )
+        }
+        bc.allocationHistory.shouldMatchInOrder(*expectedAllocationHistory.toTypedArray())
     }
 }
 
@@ -893,7 +1324,9 @@ fun List<Event<Allocation>>.shouldMatchInOrder(vararg events: Event<Allocation>)
     size shouldBe events.size
     events.forEachIndexed { i, it ->
         this[i].bwe shouldBe it.bwe
-        this[i].event.shouldMatch(it.event)
+        withClue("bwe=${it.bwe}") {
+            this[i].event.shouldMatch(it.event)
+        }
         // Ignore this.time
     }
 }
@@ -901,12 +1334,12 @@ fun List<Event<Allocation>>.shouldMatchInOrder(vararg events: Event<Allocation>)
 fun Allocation.shouldMatch(other: Allocation) {
     allocations.size shouldBe other.allocations.size
     allocations.forEach { thisSingleAllocation ->
-        val match = other.allocations.any {
-            it.endpointId == thisSingleAllocation.endpointId &&
-                it.targetLayer?.index == thisSingleAllocation.targetLayer?.index
+        withClue("Allocation for ${thisSingleAllocation.endpointId}") {
+            val otherSingleAllocation = other.allocations.find { it.endpointId == thisSingleAllocation.endpointId }
+            otherSingleAllocation.shouldNotBeNull()
+            thisSingleAllocation.targetLayer?.height shouldBe otherSingleAllocation.targetLayer?.height
+            thisSingleAllocation.targetLayer?.frameRate shouldBe otherSingleAllocation.targetLayer?.frameRate
         }
-
-        match shouldBe true
     }
 }
 
@@ -979,8 +1412,8 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         bc.setSelectedEndpoints(listOf(*selectedEndpoints))
     }
 
-    fun setTileView(vararg selectedEndpoints: String) {
-        setSelectedEndpoints(*selectedEndpoints, maxFrameHeight = 180)
+    fun setTileView(vararg selectedEndpoints: String, maxFrameHeight: Int = 180) {
+        setSelectedEndpoints(*selectedEndpoints, maxFrameHeight = maxFrameHeight)
     }
 
     fun setMaxFrameHeight(maxFrameHeight: Int) {
