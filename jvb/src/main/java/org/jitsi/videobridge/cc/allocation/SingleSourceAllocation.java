@@ -195,7 +195,7 @@ class SingleSourceAllocation {
             // select the 1080p stream.
             //
             // TODO further: Should we just prune the list of layers we consider to not include such layers?
-            for (int i = layers.length -1; i >= targetIdx + 1; i--)
+            for (int i = layers.length - 1; i >= targetIdx + 1; i--)
             {
                 if (layers[i].bitrate.getBps() <= layers[targetIdx].bitrate.getBps())
                 {
@@ -222,6 +222,20 @@ class SingleSourceAllocation {
     private LayerSnapshot getIdealLayer()
     {
         return layers.length != 0 ? layers[layers.length - 1] : null;
+    }
+
+    /**
+     * If there is no target layer, switch to the lowest layer (if any are available).
+     * @return true if the target layer was changed.
+     */
+    boolean tryLowestLayer()
+    {
+        if (targetIdx < 0 && layers.length > 0)
+        {
+            targetIdx = 0;
+            return true;
+        }
+        return false;
     }
 
     /**

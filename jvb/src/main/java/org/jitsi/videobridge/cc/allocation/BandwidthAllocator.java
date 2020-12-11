@@ -310,12 +310,9 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
                 maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 sourceBitrateAllocation.improve(maxBandwidth);
-                if (i == 0 &&
-                        sourceBitrateAllocation.targetIdx < 0 &&
-                        !BitrateControllerConfig.enableOnstageVideoSuspend())
+                if (i == 0 && !BitrateControllerConfig.enableOnstageVideoSuspend())
                 {
-                    sourceBitrateAllocation.targetIdx = 0;
-                    oversending = true;
+                    oversending = sourceBitrateAllocation.tryLowestLayer();
                 }
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
 
