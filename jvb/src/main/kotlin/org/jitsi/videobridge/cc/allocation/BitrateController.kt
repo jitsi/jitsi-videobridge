@@ -158,7 +158,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     /**
-     * Get the target and ideal bitrate of the current [Allocation], as well as the list of SSRCs being forwarded.
+     * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being forwarded.
      */
     fun getStatusSnapshot(): BitrateControllerStatusSnapshot {
         var totalTargetBitrate = 0.bps
@@ -198,11 +198,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         /**
          * This is meant to be internal to BitrateAllocator, but is exposed here temporarily for the purposes of testing.
          */
-        fun allocationChanged(allocation: Allocation) { }
+        fun allocationChanged(allocation: BandwidthAllocation) { }
     }
 
     private inner class BitrateAllocatorEventHandler : BandwidthAllocator.EventHandler {
-        override fun allocationChanged(allocation: Allocation) {
+        override fun allocationChanged(allocation: BandwidthAllocation) {
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)
 

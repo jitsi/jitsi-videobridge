@@ -67,7 +67,7 @@ class BitrateControllerPerfTest : StringSpec() {
                 newEffectiveConstraints: Map<String, VideoConstraints>
             ) { }
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
-            override fun allocationChanged(allocation: Allocation) { }
+            override fun allocationChanged(allocation: BandwidthAllocation) { }
         },
         Supplier { endpoints },
         DiagnosticContext(),

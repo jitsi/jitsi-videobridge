@@ -21,7 +21,7 @@ import org.jitsi.nlj.RtpLayerDesc
 /**
  * The result of bandwidth allocation.
  */
-class Allocation @JvmOverloads constructor(
+class BandwidthAllocation @JvmOverloads constructor(
     val allocations: Set<SingleAllocation>,
     val oversending: Boolean = false
 ) {
@@ -31,7 +31,7 @@ class Allocation @JvmOverloads constructor(
     /**
      * Whether the two allocations have the same endpoints and same layers.
      */
-    fun isTheSameAs(other: Allocation) =
+    fun isTheSameAs(other: BandwidthAllocation) =
         allocations.size == other.allocations.size &&
             oversending == other.oversending &&
             allocations.all { allocation ->

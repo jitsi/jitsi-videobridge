@@ -292,7 +292,7 @@ public class Endpoint
         BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
         {
             @Override
-            public void allocationChanged(@NotNull Allocation allocation)
+            public void allocationChanged(@NotNull BandwidthAllocation allocation)
             {
                 // Intentional no-op.
             }

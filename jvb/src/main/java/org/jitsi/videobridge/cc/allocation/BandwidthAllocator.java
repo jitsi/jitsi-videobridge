@@ -129,7 +129,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      * The result of the bitrate control algorithm, the last time it ran.
      */
     @NotNull
-    private Allocation allocation = new Allocation(Collections.emptySet());
+    private BandwidthAllocation allocation = new BandwidthAllocation(Collections.emptySet());
 
     BandwidthAllocator(
             EventHandler eventHandler,
@@ -164,7 +164,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     @NotNull
-    Allocation getAllocation()
+    BandwidthAllocation getAllocation()
     {
         return allocation;
     }
@@ -220,7 +220,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Updates the allocation settings and calculates a new bitrate {@link Allocation}.
+     * Updates the allocation settings and calculates a new bitrate {@link BandwidthAllocation}.
      * @param allocationSettings the new allocation settings.
      */
     void update(AllocationSettings allocationSettings)
@@ -245,7 +245,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
 
         // Compute the bandwidth allocation.
-        Allocation newAllocation = allocate(sortedEndpoints);
+        BandwidthAllocation newAllocation = allocate(sortedEndpoints);
 
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
         if (allocationChanged)
@@ -271,15 +271,15 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      * Implements the bandwidth allocation algorithm for the given ordered list of endpoints.
      *
      * @param conferenceEndpoints the list of endpoints in order of priority to allocate for.
-     * @return the new {@link Allocation}.
+     * @return the new {@link BandwidthAllocation}.
      */
-    private synchronized @NotNull Allocation allocate(List<T> conferenceEndpoints)
+    private synchronized @NotNull BandwidthAllocation allocate(List<T> conferenceEndpoints)
     {
         List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceEndpoints);
 
         if (sourceBitrateAllocations.isEmpty())
         {
-            return new Allocation(Collections.emptySet());
+            return new BandwidthAllocation(Collections.emptySet());
         }
 
         long maxBandwidth = getAvailableBandwidth();
@@ -347,7 +347,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             numAllocationsWithVideo = newNumAllocationsWithVideo;
         }
 
-        return new Allocation(
+        return new BandwidthAllocation(
                 sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()),
                 oversending);
     }
@@ -402,7 +402,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
     public interface EventHandler
     {
-        default void allocationChanged(@NotNull Allocation allocation) {}
+        default void allocationChanged(@NotNull BandwidthAllocation allocation) {}
         default void effectiveVideoConstraintsChanged(
                 @NotNull Map<String, VideoConstraints> oldEffectiveConstraints,
                 @NotNull Map<String, VideoConstraints> newEffectiveConstraints) {}

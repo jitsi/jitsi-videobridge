@@ -270,7 +270,7 @@ class BitrateControllerPacketHandler
     /**
      * Signals to this instance that the allocation chosen by the {@code BitrateAllocator} has changed.
      */
-    void allocationChanged(@NotNull Allocation allocation)
+    void allocationChanged(@NotNull BandwidthAllocation allocation)
     {
         if (allocation.getAllocations().isEmpty())
         {
