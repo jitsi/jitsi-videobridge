@@ -19,10 +19,12 @@ You can download binary packages for Debian/Ubuntu:
 Maven assembly binaries:
 * [assemblies](https://download.jitsi.org/jitsi-videobridge/)
 
-Or you can clone the Git repo and run the JVB from source using maven.
+Or you can clone the Git repo and run the JVB from source using maven. After you've cloned the repo:
 
 ```sh
-JVB_HOME="The path to your JVB clone."
+export JAVA_HOME=$(readlink -f $(which javac) | sed 's:/bin/javac$::') # Set JAVA_HOME if needed
+cd jitsi-videobridge/jvb
+JVB_HOME=$(pwd)
 
-mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.MainKt -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=.jitsi-videobridge "
+mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.MainKt -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=.jitsi-videobridge -apis=rest,xmpp"
 ```
