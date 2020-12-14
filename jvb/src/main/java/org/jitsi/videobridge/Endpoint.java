@@ -319,7 +319,7 @@ public class Endpoint
         };
         bitrateController = new BitrateController<>(
                 bcEventHandler,
-                conference::getEndpoints,
+                this::getOrderedEndpoints,
                 diagnosticContext, logger);
 
         outgoingSrtpPacketQueue = new PacketInfoQueue(
@@ -363,6 +363,16 @@ public class Endpoint
         boolean iceControlling)
     {
         this(id, conference, parentLogger, iceControlling, Clock.systemUTC());
+    }
+
+    /**
+     * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
+     */
+    private List<AbstractEndpoint> getOrderedEndpoints()
+    {
+        List<AbstractEndpoint> allOrderedEndpoints = new LinkedList<>(getConference().getOrderedEndpoints());
+        allOrderedEndpoints.remove(this);
+        return allOrderedEndpoints;
     }
 
     /**
@@ -470,11 +480,9 @@ public class Endpoint
     /**
      * Notifies this {@code Endpoint} that the ordered list of {@code Endpoint}s changed.
      */
-    void lastNEndpointsChanged(List<String> orderedEndpointIds)
+    void lastNEndpointsChanged()
     {
-        List<String> orderedEndpointsWithoutThis = new ArrayList<>(orderedEndpointIds);
-        orderedEndpointsWithoutThis.remove(getId());
-        bitrateController.endpointOrderingChanged(orderedEndpointsWithoutThis);
+        bitrateController.endpointOrderingChanged();
     }
 
     /**

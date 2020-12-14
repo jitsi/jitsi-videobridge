@@ -58,7 +58,7 @@ class BitrateControllerPerfTest : StringSpec() {
     private val random = Random(93232)
 
     private val endpointIds = mutableListOf("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
-    private val endpoints: List<Endpoint> = createEndpoints(*endpointIds.toTypedArray())
+    private val endpoints: MutableList<Endpoint> = createEndpoints(*endpointIds.toTypedArray())
     private val bc = BitrateController(
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
@@ -69,7 +69,7 @@ class BitrateControllerPerfTest : StringSpec() {
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
             override fun allocationChanged(allocation: BandwidthAllocation) { }
         },
-        Supplier { endpoints },
+        Supplier { endpoints.toList() },
         DiagnosticContext(),
         createLogger(),
         clock
@@ -114,12 +114,12 @@ class BitrateControllerPerfTest : StringSpec() {
 
         bc.setSelectedEndpoints(selectedEndpoints)
         bc.setMaxFrameHeight(maxFrameHeight)
-        bc.endpointOrderingChanged(endpointIds)
+        bc.endpointOrderingChanged()
 
         // Change the dominant speaker just a couple of times.
         repeat(NUM_SPEAKER_CHANGES) {
-            endpointIds.selectNewDominantSpeaker()
-            bc.endpointOrderingChanged(endpointIds)
+            endpoints.selectNewDominantSpeaker()
+            bc.endpointOrderingChanged()
             clock.elapse(2.secs)
         }
 
@@ -129,7 +129,7 @@ class BitrateControllerPerfTest : StringSpec() {
         logger.info("$testName took a total of $totalDuration, $microsPerSpeakerChange µs per speaker change.")
     }
 
-    private fun MutableList<String>.selectNewDominantSpeaker() {
+    private fun <T : Any> MutableList<T>.selectNewDominantSpeaker() {
         val newDominantSpeakerIdx = 1 + random.nextInt(size - 1)
         val newDominantSpeaker = this.removeAt(newDominantSpeakerIdx)
         this.add(0, newDominantSpeaker)
