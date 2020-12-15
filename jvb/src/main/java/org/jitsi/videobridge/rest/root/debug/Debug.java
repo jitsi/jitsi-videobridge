@@ -56,16 +56,61 @@ public class Debug
 
     private final Logger logger = new LoggerImpl(Debug.class.getName());
 
+    /**
+     * Find out whether the given JVB feature is currently enabled or disabled
+     * @param feature the feature to check
+     * @return true if the feature is enabled, false otherwise
+     */
     @GET
-    @Path("/feature/{feature}")
-    public Boolean getFeatureState(@PathParam("feature") DebugFeatures feature)
+    @Path("/features/jvb/{feature}")
+    public Boolean getJvbFeatureState(@PathParam("feature") DebugFeatures feature)
     {
-        switch (feature) {
-
+        switch (feature)
+        {
+            case PAYLOAD_VERIFICATION: {
+                return Node.Companion.isPayloadVerificationEnabled();
+            }
+            case NODE_STATS: {
+                return StatsKeepingNode.Companion.getEnableStatistics();
+            }
+            case POOL_STATS: {
+                return ByteBufferPool.statisticsEnabled();
+            }
+            case QUEUE_STATS: {
+                return PacketQueue.getEnableStatisticsDefault();
+            }
+            case NODE_TRACING: {
+                return Node.Companion.isNodeTracingEnabled();
+            }
+            case TRANSIT_STATS: {
+                // Always enabled (worth modeling as a 'feature' then?)
+                return true;
+            }
+            case TASK_POOL_STATS: {
+                // Always enabled (worth modeling as a 'feature' then?)
+                return true;
+            }
             default: {
                 throw new NotFoundException();
             }
         }
+    }
+
+    /**
+     * Set the state of a given JVB feature
+     * @param feature the feature to enable or disable
+     * @param enabled whether the feature should be enabled
+     * @return HTTP response
+     */
+    @PUT
+    @Path("/features/jvb/{feature}/{enabled}")
+    public Response getJvbFeatureState(
+        @PathParam("feature") DebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
+    {
+        logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
+        setFeature(feature, enabled);
+        return Response.ok().build();
     }
 
     @POST
