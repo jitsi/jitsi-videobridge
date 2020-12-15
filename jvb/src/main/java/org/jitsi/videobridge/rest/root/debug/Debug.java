@@ -54,19 +54,18 @@ public class Debug
     @Inject
     private HealthCheckServiceSupplier healthCheckServiceSupplier;
 
-    private Logger logger = new LoggerImpl(Debug.class.getName());
+    private final Logger logger = new LoggerImpl(Debug.class.getName());
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
-    public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
+    @Path("/feature/{feature}")
+    public Boolean getFeatureState(@PathParam("feature") DebugFeatures feature)
     {
-        OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
+        switch (feature) {
 
-        // Append the health status.
-        Exception result = healthCheckServiceSupplier.get().getResult();
-        debugState.put("health", result == null ? "OK" : result.getMessage());
-
-        return debugState.toJSONString();
+            default: {
+                throw new NotFoundException();
+            }
+        }
     }
 
     @POST
@@ -171,6 +170,19 @@ public class Debug
                 throw new NotFoundException();
             }
         }
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
+    {
+        OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
+
+        // Append the health status.
+        Exception result = healthCheckServiceSupplier.get().getResult();
+        debugState.put("health", result == null ? "OK" : result.getMessage());
+
+        return debugState.toJSONString();
     }
 
     @GET
