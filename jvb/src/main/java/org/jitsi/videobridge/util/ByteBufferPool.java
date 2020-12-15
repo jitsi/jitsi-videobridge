@@ -277,4 +277,10 @@ public class ByteBufferPool
         pool2.enableStatistics(enable);
         pool3.enableStatistics(enable);
     }
+
+    public static boolean statisticsEnabled()
+    {
+        return enableStatistics;
+    }
+
 }
