@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
+import org.jitsi.videobridge.cc.allocation.AllocationStrategy
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.json.simple.JSONObject
 import java.util.concurrent.ConcurrentHashMap
@@ -54,7 +55,8 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
-    JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE)
+    JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
+    JsonSubTypes.Type(value = BandwidthAllocationSettingsMessage::class, name = BandwidthAllocationSettingsMessage.TYPE)
 )
 // The type is included as colibriClass (as we want) by the annotation above.
 @JsonIgnoreProperties("type")
@@ -99,6 +101,7 @@ open class MessageHandler {
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
+            is BandwidthAllocationSettingsMessage -> bandwidthAllocationSettings(message)
         }
     }
 
@@ -121,6 +124,8 @@ open class MessageHandler {
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
+    open fun bandwidthAllocationSettings(message: BandwidthAllocationSettingsMessage) =
+        unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
 }
@@ -370,5 +375,17 @@ class RemoveReceiverMessage(
 
     companion object {
         const val TYPE = "RemoveReceiver"
+    }
+}
+
+class BandwidthAllocationSettingsMessage(
+    val lastN: Int? = null,
+    val selectedEndpoints: List<String>? = null,
+    val strategy: AllocationStrategy? = null,
+    val defaultConstraints: VideoConstraints? = null,
+    val constraints: Map<String, VideoConstraints>? = null
+) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "BandwidthAllocationSettings"
     }
 }

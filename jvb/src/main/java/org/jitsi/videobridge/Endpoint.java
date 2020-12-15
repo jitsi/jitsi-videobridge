@@ -1450,6 +1450,11 @@ public class Endpoint
         bitrateController.setMaxFrameHeight(maxFrameHeight);
     }
 
+    void setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage message)
+    {
+        bitrateController.setBandwidthAllocationSettings(message);
+    }
+
     private class TransceiverEventHandlerImpl implements TransceiverEventHandler
     {
         /**

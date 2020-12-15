@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.videobridge.message.BandwidthAllocationSettingsMessage
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig as config
 import java.util.stream.Collectors
 import kotlin.math.min
@@ -27,7 +28,8 @@ data class AllocationSettings(
     val strategy: AllocationStrategy = AllocationStrategy.StageView,
     val selectedEndpoints: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
-    val lastN: Int = -1
+    val lastN: Int = -1,
+    val defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 ) {
     override fun toString(): String = OrderedJsonObject().apply {
         put("strategy", strategy)
@@ -36,8 +38,7 @@ data class AllocationSettings(
         put("last_n", lastN)
     }.toJSONString()
 
-    fun getConstraints(endpointId: String) =
-        videoConstraints.getOrDefault(endpointId, VideoConstraints(config.thumbnailMaxHeightPx()))
+    fun getConstraints(endpointId: String) = videoConstraints.getOrDefault(endpointId, defaultConstraints)
 }
 
 /**
@@ -58,6 +59,9 @@ internal class AllocationSettingsWrapper {
     internal var lastN: Int = -1
 
     private var videoConstraints: Map<String, VideoConstraints> = emptyMap()
+
+    private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
+
     internal var strategy = AllocationStrategy.StageView
 
     private var allocationSettings = create()
@@ -80,8 +84,50 @@ internal class AllocationSettingsWrapper {
         return false
     }
 
+    fun setBandwidthAllocationSettings(message: BandwidthAllocationSettingsMessage): Boolean {
+        var changed = false
+
+        message.lastN?.let {
+            if (lastN != it) {
+                lastN = it
+                changed = true
+            }
+        }
+        message.selectedEndpoints?.let {
+            if (selectedEndpoints != it) {
+                selectedEndpoints = it
+                changed = true
+            }
+        }
+        message.strategy?.let {
+            if (strategy != it) {
+                strategy = it
+                changed = true
+            }
+        }
+        message.defaultConstraints?.let {
+            if (defaultConstraints != it) {
+                defaultConstraints = it
+                changed = true
+            }
+        }
+        message.constraints?.let {
+            if (this.videoConstraints != it) {
+                this.videoConstraints = it
+                changed = true
+            }
+        }
+
+        if (changed) {
+            allocationSettings = create()
+        }
+        return changed
+    }
+
     /**
      * Return `true` iff the [AllocationSettings] state changed.
+     * Note: This is the legacy API, which updates the constraints and strategy based on the selected endpoints and
+     * [maxFrameHeight]. To update just the selected endpoints, use [setBandwidthAllocationSettings].
      */
     fun setSelectedEndpoints(selectedEndpoints: List<String>): Boolean {
         if (this.selectedEndpoints != selectedEndpoints) {

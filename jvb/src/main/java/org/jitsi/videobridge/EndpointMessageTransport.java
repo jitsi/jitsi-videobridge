@@ -436,6 +436,14 @@ class EndpointMessageTransport
         return null;
     }
 
+    @Nullable
+    @Override
+    public BridgeChannelMessage bandwidthAllocationSettings(@NotNull BandwidthAllocationSettingsMessage message)
+    {
+        endpoint.setBandwidthAllocationSettings(message);
+        return null;
+    }
+
     /**
      * Notifies this {@code Endpoint} that a
      * {@link ReceiverVideoConstraintMessage} has been received

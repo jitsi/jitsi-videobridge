@@ -23,8 +23,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jitsi.videobridge.cc.allocation.AllocationStrategy
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
@@ -219,6 +221,36 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
         }
+
+        context("Parsing BandwidthAllocationSettingsMessage") {
+            context("With all fields present") {
+                val parsed = parse(BANDWIDTH_ALLOCATION_SETTINGS)
+
+                parsed.shouldBeInstanceOf<BandwidthAllocationSettingsMessage>()
+                parsed as BandwidthAllocationSettingsMessage
+                parsed.lastN shouldBe 3
+                parsed.strategy shouldBe AllocationStrategy.TileView
+                parsed.selectedEndpoints shouldBe listOf("selected1", "selected2")
+                parsed.defaultConstraints shouldBe VideoConstraints(0)
+                val constraints = parsed.constraints
+                constraints.shouldNotBeNull()
+                constraints.size shouldBe 3
+                constraints["epOnStage"] shouldBe VideoConstraints(720)
+                constraints["epThumbnail1"] shouldBe VideoConstraints(180)
+                constraints["epThumbnail2"] shouldBe VideoConstraints(180, 30.0)
+            }
+
+            context("With fields missing") {
+                val parsed = parse(BANDWIDTH_ALLOCATION_SETTINGS_EMPTY)
+                parsed.shouldBeInstanceOf<BandwidthAllocationSettingsMessage>()
+                parsed as BandwidthAllocationSettingsMessage
+                parsed.lastN shouldBe null
+                parsed.strategy shouldBe null
+                parsed.selectedEndpoints shouldBe null
+                parsed.defaultConstraints shouldBe null
+                parsed.constraints shouldBe null
+            }
+        }
     }
 
     private fun testSerializePerformance() {
@@ -281,6 +313,26 @@ class BridgeChannelMessageTest : ShouldSpec() {
             {
                 "maxHeight": 1080,
                 "maxFrameRate": 15.0
+            }
+        """
+
+        const val BANDWIDTH_ALLOCATION_SETTINGS_EMPTY = """
+            {
+              "colibriClass": "BandwidthAllocationSettings"
+            }
+        """
+        const val BANDWIDTH_ALLOCATION_SETTINGS = """
+            {
+              "colibriClass": "BandwidthAllocationSettings",
+              "lastN": 3,
+              "selectedEndpoints": [ "selected1", "selected2" ],
+              "strategy": "TileView",
+              "defaultConstraints": { "maxHeight": 0 },
+              "constraints": {
+                "epOnStage": { "maxHeight": 720 },
+                "epThumbnail1": { "maxHeight": 180 },
+                "epThumbnail2": { "maxHeight": 180, "maxFrameRate": 30 }
+              }
             }
         """
     }

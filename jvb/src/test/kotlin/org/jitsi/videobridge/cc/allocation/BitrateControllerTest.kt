@@ -36,6 +36,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.videobridge.message.BandwidthAllocationSettingsMessage
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -76,131 +77,157 @@ class BitrateControllerTest : ShouldSpec() {
         }
 
         context("Allocation") {
-
             context("Stage view") {
                 context("When LastN is not set") {
                     context("and the dominant speaker is on stage") {
-                        bc.setEndpointOrdering("A", "B", "C", "D")
-                        bc.setStageView("A")
+                        listOf(true, false).forEach { legacy ->
+                            context("With ${if(legacy) "legacy" else "new"} signaling") {
+                                bc.setEndpointOrdering("A", "B", "C", "D")
+                                bc.setStageView("A", legacy = legacy)
 
-                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
-                        bc.bc.allocationSettings.lastN shouldBe -1
-                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                                bc.bc.allocationSettings.lastN shouldBe -1
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
 
-                        runBweLoop()
+                                runBweLoop()
 
-                        verifyStageView()
+                                verifyStageView()
+                            }
+                        }
                     }
                     context("and a non-dominant speaker is on stage") {
-                        bc.setEndpointOrdering("B", "A", "C", "D")
-                        bc.setStageView("A")
+                        listOf(true, false).forEach { legacy ->
+                            context("With ${if (legacy) "legacy" else "new"} signaling") {
+                                bc.setEndpointOrdering("B", "A", "C", "D")
+                                bc.setStageView("A", legacy = legacy)
 
-                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
-                        bc.bc.allocationSettings.lastN shouldBe -1
-                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
-                        runBweLoop()
+                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                                bc.bc.allocationSettings.lastN shouldBe -1
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                runBweLoop()
 
-                        verifyStageView()
+                                verifyStageView()
+                            }
+                        }
                     }
                 }
                 context("When LastN=0") {
-                    // LastN=0 is used when the client goes in "audio-only" mode.
-                    bc.setEndpointOrdering("A", "B", "C", "D")
-                    bc.setStageView("A")
-                    bc.setLastN(0)
+                    listOf(true, false).forEach { legacy ->
+                        context("With ${if (legacy) "legacy" else "new"} signaling") {
+                            // LastN=0 is used when the client goes in "audio-only" mode.
+                            bc.setEndpointOrdering("A", "B", "C", "D")
+                            bc.setStageView("A", lastN = 0, legacy = legacy)
 
-                    bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
-                    bc.bc.allocationSettings.lastN shouldBe 0
-                    bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                            bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                            bc.bc.allocationSettings.lastN shouldBe 0
+                            bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
 
-                    runBweLoop()
+                            runBweLoop()
 
-                    verifyLastN0()
+                            verifyLastN0()
+                        }
+                    }
                 }
                 context("When LastN=1") {
-                    // LastN=1 is used when the client goes in "audio-only" mode, but someone starts a screenshare.
-                    context("and the dominant speaker is on-stage") {
-                        bc.setEndpointOrdering("A", "B", "C", "D")
-                        bc.setStageView("A")
-                        bc.setLastN(1)
+                    listOf(true, false).forEach { legacy ->
+                        context("With ${if (legacy) "legacy" else "new"} signaling") {
+                            // LastN=1 is used when the client goes in "audio-only" mode, but someone starts a screenshare.
+                            context("and the dominant speaker is on-stage") {
+                                bc.setEndpointOrdering("A", "B", "C", "D")
+                                bc.setStageView("A", lastN = 1, legacy = legacy)
 
-                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
-                        bc.bc.allocationSettings.lastN shouldBe 1
-                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                                bc.bc.allocationSettings.lastN shouldBe 1
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
 
-                        runBweLoop()
+                                runBweLoop()
 
-                        verifyStageViewLastN1()
+                                verifyStageViewLastN1()
+                            }
+                        }
                     }
                     context("and a non-dominant speaker is on stage") {
-                        bc.setEndpointOrdering("B", "A", "C", "D")
-                        bc.setStageView("A")
-                        bc.setLastN(1)
+                        listOf(true, false).forEach { legacy ->
+                            context("With ${if (legacy) "legacy" else "new"} signaling") {
+                                bc.setEndpointOrdering("B", "A", "C", "D")
+                                bc.setStageView("A", lastN = 1, legacy = legacy)
 
-                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
-                        bc.bc.allocationSettings.lastN shouldBe 1
-                        bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
+                                bc.bc.allocationSettings.lastN shouldBe 1
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
 
-                        runBweLoop()
+                                runBweLoop()
 
-                        verifyStageViewLastN1()
+                                verifyStageViewLastN1()
+                            }
+                        }
                     }
                 }
             }
             context("Tile view") {
-                bc.setEndpointOrdering("A", "B", "C", "D")
-                bc.setTileView("A", "B", "C", "D")
+                listOf(true, false).forEach { legacy ->
+                    context("With ${if (legacy) "legacy" else "new"} signaling") {
+                        bc.setEndpointOrdering("A", "B", "C", "D")
+                        bc.setTileView("A", "B", "C", "D", legacy = legacy)
 
-                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
-                bc.bc.allocationSettings.lastN shouldBe -1
-                // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView, and in
-                // tile view we do not use selected endpoints.
-                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
+                        bc.bc.allocationSettings.lastN shouldBe -1
+                        // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView,
+                        // and in tile view we do not use selected endpoints.
+                        bc.bc.allocationSettings.selectedEndpoints shouldBe
+                            if (legacy) emptyList() else listOf("A", "B", "C", "D")
 
-                context("When LastN is not set") {
-                    runBweLoop()
+                        context("When LastN is not set") {
+                            runBweLoop()
 
-                    verifyTileView()
-                }
-                context("When LastN=0") {
-                    bc.setLastN(0)
-                    runBweLoop()
+                            verifyTileView()
+                        }
+                        context("When LastN=0") {
+                            bc.setTileView("A", "B", "C", "D", lastN = 0, legacy = legacy)
+                            runBweLoop()
 
-                    verifyLastN0()
-                }
-                context("When LastN=1") {
-                    bc.setLastN(1)
-                    runBweLoop()
+                            verifyLastN0()
+                        }
+                        context("When LastN=1") {
+                            bc.setTileView("A", "B", "C", "D", lastN = 1, legacy = legacy)
+                            runBweLoop()
 
-                    verifyTileViewLastN1()
+                            verifyTileViewLastN1()
+                        }
+                    }
                 }
             }
             context("Tile view 360p") {
-                bc.setEndpointOrdering("A", "B", "C", "D")
-                bc.setTileView("A", "B", "C", "D", maxFrameHeight = 360)
+                listOf(true, false).forEach { legacy ->
+                    context("With ${if (legacy) "legacy" else "new"} signaling") {
+                        bc.setEndpointOrdering("A", "B", "C", "D")
+                        bc.setTileView("A", "B", "C", "D", maxFrameHeight = 360, legacy = legacy)
 
-                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
-                bc.bc.allocationSettings.lastN shouldBe -1
-                // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView, and in
-                // tile view we do not use selected endpoints.
-                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
+                        bc.bc.allocationSettings.lastN shouldBe -1
+                        // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView,
+                        // and in tile view we do not use selected endpoints.
+                        bc.bc.allocationSettings.selectedEndpoints shouldBe
+                            if (legacy) emptyList() else listOf("A", "B", "C", "D")
 
-                context("When LastN is not set") {
-                    runBweLoop()
+                        context("When LastN is not set") {
+                            runBweLoop()
 
-                    verifyTileView360p()
-                }
-                context("When LastN=0") {
-                    bc.setLastN(0)
-                    runBweLoop()
+                            verifyTileView360p()
+                        }
+                        context("When LastN=0") {
+                            bc.setTileView("A", "B", "C", "D", lastN = 0, maxFrameHeight = 360, legacy = legacy)
+                            runBweLoop()
 
-                    verifyLastN0()
-                }
-                context("When LastN=1") {
-                    bc.setLastN(1)
-                    runBweLoop()
+                            verifyLastN0()
+                        }
+                        context("When LastN=1") {
+                            bc.setTileView("A", "B", "C", "D", lastN = 1, maxFrameHeight = 360, legacy = legacy)
+                            runBweLoop()
 
-                    verifyTileViewLastN1(360)
+                            verifyTileViewLastN1(360)
+                        }
+                    }
                 }
             }
             context("Selected endpoints should override the dominant speaker") {
@@ -1407,9 +1434,20 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         bc.endpointOrderingChanged(mutableListOf(*endpoints))
     }
 
-    fun setStageView(onStageEndpoint: String, maxFrameHeight: Int = 720) {
-        bc.setMaxFrameHeight(maxFrameHeight)
-        bc.setSelectedEndpoints(listOf(onStageEndpoint))
+    fun setStageView(onStageEndpoint: String, maxFrameHeight: Int = 720, legacy: Boolean = true, lastN: Int? = null) {
+        if (legacy) {
+            lastN?.let { bc.lastN = lastN }
+            bc.setMaxFrameHeight(maxFrameHeight)
+            bc.setSelectedEndpoints(listOf(onStageEndpoint))
+        } else {
+            bc.setBandwidthAllocationSettings(
+                BandwidthAllocationSettingsMessage(
+                    lastN = lastN,
+                    selectedEndpoints = listOf(onStageEndpoint),
+                    constraints = mapOf(onStageEndpoint to VideoConstraints(720))
+                )
+            )
+        }
     }
 
     fun setSelectedEndpoints(vararg selectedEndpoints: String, maxFrameHeight: Int? = null) {
@@ -1417,12 +1455,25 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         bc.setSelectedEndpoints(listOf(*selectedEndpoints))
     }
 
-    fun setTileView(vararg selectedEndpoints: String, maxFrameHeight: Int = 180) {
-        setSelectedEndpoints(*selectedEndpoints, maxFrameHeight = maxFrameHeight)
-    }
+    fun setTileView(
+        vararg selectedEndpoints: String,
+        maxFrameHeight: Int = 180,
+        legacy: Boolean = true,
+        lastN: Int? = null) {
+        if (legacy) {
+            lastN?.let { bc.lastN = lastN }
+            setSelectedEndpoints(*selectedEndpoints, maxFrameHeight = maxFrameHeight)
+        } else {
+            bc.setBandwidthAllocationSettings(
+                BandwidthAllocationSettingsMessage(
+                    lastN = lastN,
+                    strategy = AllocationStrategy.TileView,
+                    selectedEndpoints = listOf(*selectedEndpoints),
+                    constraints = selectedEndpoints.map { it to VideoConstraints(maxFrameHeight) }.toMap()
+                )
+            )
 
-    fun setMaxFrameHeight(maxFrameHeight: Int) {
-        bc.setMaxFrameHeight(maxFrameHeight)
+        }
     }
 
     fun setLastN(n: Int) {
