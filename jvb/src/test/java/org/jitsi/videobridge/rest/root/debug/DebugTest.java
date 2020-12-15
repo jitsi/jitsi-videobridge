@@ -68,8 +68,6 @@ public class DebugTest extends JerseyTest
                 });
                 register(Debug.class);
             }
-
-
         };
     }
 

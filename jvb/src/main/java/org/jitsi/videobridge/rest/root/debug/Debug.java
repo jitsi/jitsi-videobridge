@@ -116,24 +116,13 @@ public class Debug
         return Response.ok().build();
     }
 
-    /**
-     *
-     * @param confId the conference id
-     * @param epId the endpoint id
-     * @param feature the Feature to enable or disable
-     * @param state the feature state in String form. Note that we don't rely on Jersey's automatic parsing here because
-     *              we want /debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
-     *              inside the method it returns 404.
-     * @return the Response
-     * @throws IllegalArgumentException when parsing the state fails.
-     */
     @POST
-    @Path("/{confId}/{epId}/{state}/{feature}")
-    public Response toggleEndpointFeature(
-            @PathParam("confId") String confId,
-            @PathParam("epId") String epId,
-            @PathParam("feature") EndpointDebugFeatures feature,
-            @PathParam("state") String state)
+    @Path("/features/endpoint/{confId}/{epId}/{feature}/{enabled}")
+    public Response setEndpointFeatureState(
+        @PathParam("confId") String confId,
+        @PathParam("epId") String epId,
+        @PathParam("feature") EndpointDebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
     {
         Conference conference = videobridge.getConference(confId);
         if (conference == null)
@@ -147,14 +136,10 @@ public class Debug
             throw new NotFoundException("No endpoint was found with the specified id.");
         }
 
-        // the only exception possible here is the IllegalArgumentException which comes with
-        // a handy error message and gets translated to a HTTP 500 error.
-        FeatureState featureState = FeatureState.fromString(state);
-
-        logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + featureState.getValue());
+        logger.info("Setting feature state: feature=" + feature.getValue() + ", enabled? " + enabled);
         try
         {
-            endpoint.setFeature(feature, featureState.getValue());
+            endpoint.setFeature(feature, enabled);
         }
         catch (IllegalStateException e)
         {
@@ -163,6 +148,7 @@ public class Debug
 
         return Response.ok().build();
     }
+
 
     private void setFeature(DebugFeatures feature, boolean enabled)
     {
@@ -277,7 +263,7 @@ public class Debug
     // Old deprecated paths
 
     /**
-     * Legacy method of retrieving jvb feature stats.  Use {@link Debug#getJvbFeatureStats(DebugFeatures)}
+     * Depreacted, use {@link Debug#getJvbFeatureStats(DebugFeatures)}
      * @param featureName the feature name
      * @param uriInfo the URI info of the request
      * @return HTTP response
@@ -294,7 +280,7 @@ public class Debug
     }
 
     /**
-     * Use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
+     * Deprecated, use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
      * @param featureName feature name
      * @param uriInfo UriInfo of the request
      * @return HTTP response
@@ -309,7 +295,7 @@ public class Debug
     }
 
     /**
-     * Use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
+     * Depreacted, use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
      * @param featureName feature name
      * @param uriInfo UriInfo of the request
      * @return HTTP response
@@ -320,6 +306,32 @@ public class Debug
     public Response disableFeature(@PathParam("feature_name") String featureName, @Context UriInfo uriInfo)
     {
         String newTarget = uriInfo.getBaseUri() + "/features/jvb/" + featureName + "/false";
+        return Response.status(301).location(URI.create(newTarget)).build();
+    }
+
+    /**
+     * Deprecated, use {@link Debug#setEndpointFeatureState(String, String, EndpointDebugFeatures, Boolean)}
+     * @param confId the conference id
+     * @param epId the endpoint id
+     * @param featureName the Feature to enable or disable
+     * @param state the feature state in String form. Note that we don't rely on Jersey's automatic parsing here because
+     *              we want /debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
+     *              inside the method it returns 404.
+     * @return the Response
+     * @throws IllegalArgumentException when parsing the state fails.
+     */
+    @Deprecated
+    @POST
+    @Path("/{confId}/{epId}/{state}/{feature}")
+    public Response toggleEndpointFeature(
+        @PathParam("confId") String confId,
+        @PathParam("epId") String epId,
+        @PathParam("feature") String featureName,
+        @PathParam("state") String state,
+        @Context UriInfo uriInfo)
+    {
+        final boolean enabled = FeatureState.fromString(state) == FeatureState.ENABLE;
+        String newTarget = uriInfo.getBaseUri() + "features/endpoint/" + confId + "/" + epId + "/" + featureName + "/" + enabled;
         return Response.status(301).location(URI.create(newTarget)).build();
     }
 }
