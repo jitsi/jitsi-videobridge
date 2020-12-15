@@ -33,6 +33,7 @@ import org.jitsi.videobridge.xmpp.*;
 import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
+import java.net.*;
 
 /**
  * A REST interface for retrieving debug information about the bridge.
@@ -55,6 +56,8 @@ public class Debug
     private HealthCheckServiceSupplier healthCheckServiceSupplier;
 
     private final Logger logger = new LoggerImpl(Debug.class.getName());
+
+    // Functions to enable or disable features
 
     /**
      * Find out whether the given JVB feature is currently enabled or disabled
@@ -102,23 +105,14 @@ public class Debug
      * @param enabled whether the feature should be enabled
      * @return HTTP response
      */
-    @PUT
+    @POST
     @Path("/features/jvb/{feature}/{enabled}")
-    public Response getJvbFeatureState(
+    public Response setJvbFeatureState(
         @PathParam("feature") DebugFeatures feature,
         @PathParam("enabled") Boolean enabled)
     {
         logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
         setFeature(feature, enabled);
-        return Response.ok().build();
-    }
-
-    @POST
-    @Path("/enable/{feature}")
-    public Response enableFeature(@PathParam("feature") DebugFeatures feature)
-    {
-        logger.info("Enabling " + feature.getValue());
-        setFeature(feature, true);
         return Response.ok().build();
     }
 
@@ -170,15 +164,6 @@ public class Debug
         return Response.ok().build();
     }
 
-    @POST
-    @Path("/disable/{feature}")
-    public Response disableFeature(@PathParam("feature") DebugFeatures feature)
-    {
-        logger.info("Disabling " + feature.getValue());
-        setFeature(feature, false);
-        return Response.ok().build();
-    }
-
     private void setFeature(DebugFeatures feature, boolean enabled)
     {
         switch (feature)
@@ -217,6 +202,8 @@ public class Debug
         }
     }
 
+    // Functions to actually get statistics
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
@@ -254,9 +241,9 @@ public class Debug
     }
 
     @GET
-    @Path("/stats/{feature}")
+    @Path("/stats/jvb/{feature}")
     @Produces(MediaType.APPLICATION_JSON)
-    public String getStats(@PathParam("feature") DebugFeatures feature)
+    public String getJvbFeatureStats(@PathParam("feature") DebugFeatures feature)
     {
         switch (feature)
         {
@@ -285,5 +272,54 @@ public class Debug
                 throw new NotFoundException();
             }
         }
+    }
+
+    // Old deprecated paths
+
+    /**
+     * Legacy method of retrieving jvb feature stats.  Use {@link Debug#getJvbFeatureStats(DebugFeatures)}
+     * @param featureName the feature name
+     * @param uriInfo the URI info of the request
+     * @return HTTP response
+     */
+    @Deprecated
+    @GET
+    @Path("/stats/{feature_name:.+}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getStats(@PathParam("feature_name") String featureName, @Context UriInfo uriInfo)
+    {
+        // Redirect to the new location
+        String newTarget = uriInfo.getBaseUri() + "debug/stats/jvb/" + featureName;
+        return Response.status(301).location(URI.create(newTarget)).build();
+    }
+
+    /**
+     * Use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
+     * @param featureName feature name
+     * @param uriInfo UriInfo of the request
+     * @return HTTP response
+     */
+    @Deprecated
+    @POST
+    @Path("/enable/{feature_name:.+}")
+    public Response enableFeature(@PathParam("feature_name") String featureName, @Context UriInfo uriInfo)
+    {
+        String newTarget = uriInfo.getBaseUri() + "/features/jvb/" + featureName + "/true";
+        return Response.status(301).location(URI.create(newTarget)).build();
+    }
+
+    /**
+     * Use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
+     * @param featureName feature name
+     * @param uriInfo UriInfo of the request
+     * @return HTTP response
+     */
+    @Deprecated
+    @POST
+    @Path("/disable/{feature_name:.+}")
+    public Response disableFeature(@PathParam("feature_name") String featureName, @Context UriInfo uriInfo)
+    {
+        String newTarget = uriInfo.getBaseUri() + "/features/jvb/" + featureName + "/false";
+        return Response.status(301).location(URI.create(newTarget)).build();
     }
 }

@@ -97,7 +97,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testEnableDebugFeature()
     {
-        Response resp = target(BASE_URL + "/enable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target(BASE_URL + "/features/jvb/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue() + "/true")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -115,7 +115,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testEnableNonexistentDebugFeature()
     {
-        Response resp = target(BASE_URL + "/enable/blah")
+        Response resp = target(BASE_URL + "/features/jvb/blah/true")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
@@ -124,7 +124,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testDisableDebugFeature()
     {
-        Response resp = target(BASE_URL + "/disable/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue())
+        Response resp = target(BASE_URL + "/features/jvb/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue() + "/false")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
@@ -160,7 +160,7 @@ public class DebugTest extends JerseyTest
     @Test
     public void testDisableNonexistentDebugFeature()
     {
-        Response resp = target(BASE_URL + "/disable/blah")
+        Response resp = target(BASE_URL + "/features/jvb/blah/false")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
