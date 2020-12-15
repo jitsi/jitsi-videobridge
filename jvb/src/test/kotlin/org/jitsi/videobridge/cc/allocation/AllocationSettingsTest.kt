@@ -23,20 +23,25 @@ class AllocationSettingsTest : ShouldSpec() {
     init {
         context("computeVideoConstraints") {
             context("Stage view behavior") {
-                val (strategy, constraints) = computeVideoConstraints(720, listOf("A"))
+                val allocationSettings = AllocationSettingsWrapper()
+                allocationSettings.setMaxFrameHeight(720)
+                allocationSettings.setSelectedEndpoints(listOf("A"))
 
-                strategy shouldBe AllocationStrategy.StageView
-                constraints.shouldContainExactly(
+                allocationSettings.get().strategy shouldBe AllocationStrategy.StageView
+                allocationSettings.get().videoConstraints.shouldContainExactly(
                     mapOf(
                         "A" to VideoConstraints(720)
                     )
                 )
+                allocationSettings.get().selectedEndpoints shouldBe listOf("A")
             }
             context("Tile view behavior") {
-                val (strategy, constraints) = computeVideoConstraints(180, listOf("A", "B", "C", "D"))
+                val allocationSettings = AllocationSettingsWrapper()
+                allocationSettings.setMaxFrameHeight(180)
+                allocationSettings.setSelectedEndpoints(listOf("A", "B", "C", "D"))
 
-                strategy shouldBe AllocationStrategy.TileView
-                constraints.shouldContainExactly(
+                allocationSettings.get().strategy shouldBe AllocationStrategy.TileView
+                allocationSettings.get().videoConstraints.shouldContainExactly(
                     mapOf(
                         "A" to VideoConstraints(180),
                         "B" to VideoConstraints(180),
@@ -44,6 +49,9 @@ class AllocationSettingsTest : ShouldSpec() {
                         "D" to VideoConstraints(180)
                     )
                 )
+                // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView, and the
+                // desired behavior in TileView is to not have selected endpoints.
+                allocationSettings.get().selectedEndpoints shouldBe emptyList()
             }
         }
     }
