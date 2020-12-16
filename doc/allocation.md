@@ -106,8 +106,167 @@ The normal `improve()` step selects the next higher layer if there is sufficient
 The preferred resolution [can be configured](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L40).
 
 # Signaling
-TODO
-## Old message format
-TODO
+This section describes the signaling between the client and the bridge that affects bandwidth allocation.
+
+## Legacy message format
+This is the signaling currently used in jitsi-meet, but the intention is to replace it with the new format and
+eventually deprecate this format.
+
+This format is not expressive enough to enable all features supported by the bridge, so some assumptions have to be
+made. Notably:
+1. The selection strategy is inferred from the number of selected endpoints (`TileView` if more than one endpoints
+is selected, and `StageView` otherwise).
+2. Multiple selected endpoints are not supported with the usual semantics. When multiple endpoints are selected, this
+signals the use of `TileView`, but does NOT override the speaker order.
+3. Constraints are constructed solely based on `maxFrameHeight` and the selected endpoints.
+### LastN
+LastN is set with a `LastNChangedEvent` message:
+```json
+{
+  "colibriClass": "LastNChangedEvent",
+  "lastN": 3
+}
+```
+
+### MaxFrameHeight
+A global maximum resolution is set with a `ReceiverVideoConstraint` message:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraint",
+  "maxFrameHeight": 360
+}
+```
+
+### Selected endpoints
+Selected endpoints are set with a `SelectedEndpointsChangedEvent` message:
+```json
+{
+  "colibriClass": "SelectedEndpointsChangedEvent",
+  "selectedEndpoints": ["A", "B"]
+}
+```
+
 ## New message format
-TODO
+The new format uses a single message with a set fields:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "lastN": 2,
+  "selectedEndpoints": ["A", "B"],
+  "strategy": "StageView",
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A": { "maxHeight": 720 },
+    "B": { "maxHeight": 360 }
+  }
+}
+```
+
+All fields are optional. The ones which are included will be updated, and the ones which are not included are not
+changed.
+
+The `defaultConstraints` are used for endpoints not explicitly included in `constraints` (including new endpoints).
+
+The initial values are `lastN: -1` (unlimited), `strategy: StaveView`, `defaultConstraints: {maxHeight: 180}`
+([configurable](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L38)),
+and the rest empty.
+
+### Examples
+
+#### Stage view (1)
+Stage view with endpoint `A` in high definition and all other endpoints in 180p:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "selectedEndpoints": ["A"],
+  "strategy": "StageView",
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A": { "maxHeight": 720 }
+  }
+}
+```
+
+#### Stage view (2)
+Stage view with endpoint `A` in high definition, `B`, `C`, `D` in 180p and all others disabled:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "selectedEndpoints": ["A"],
+  "strategy": "StageView",
+  "defaultConstraints": { "maxHeight":  0 },
+  "constraints": {
+    "A": { "maxHeight": 720 },
+    "B": { "maxHeight": 180 },
+    "C": { "maxHeight": 180 },
+    "D": { "maxHeight": 180 }
+  }
+}
+```
+
+#### Stage view (3)
+Stage view with endpoint `A` in high definition, `B`, `C`, `D` disabled and all others in 180p:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "selectedEndpoints": ["A"],
+  "strategy": "StageView",
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A": { "maxHeight": 720 },
+    "B": { "maxHeight": 0 },
+    "C": { "maxHeight": 0 },
+    "D": { "maxHeight": 0 }
+  }
+}
+```
+
+#### Tile view (1)
+Tile view with all endpoints in 180p/15fps:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "strategy": "TileView",
+  "defaultConstraints": { "maxHeight":  180, "maxFrameRate": 15 }
+}
+```
+
+#### Tile view (2)
+Tile view with all endpoints in 360p:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "strategy": "TileView",
+  "defaultConstraints": { "maxHeight":  360 }
+}
+```
+
+#### Tile view (3)
+Tile view with 180p, endpoints `A` and `B` prioritized, and endpoints `C` and `D` disabled:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "selectedEndpoints": ["A", "B"],
+  "strategy": "TileView",
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "C": { "maxHeight":  0 },
+    "D": { "maxHeight":  0 }
+  }
+}
+```
+
+#### Tile view (4)
+Tile view with all endpoints disabled except `A`, `B`, `C`:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "strategy": "TileView",
+  "defaultConstraints": { "maxHeight":  0 },
+  "constraints": {
+    "A": { "maxHeight":  180 },
+    "B": { "maxHeight":  180 },
+    "C": { "maxHeight":  180 }
+  }
+}
+```
