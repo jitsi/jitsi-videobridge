@@ -66,7 +66,12 @@ internal class AllocationSettingsWrapper {
 
     private var allocationSettings = create()
 
-    private fun create() = AllocationSettings(strategy, selectedEndpoints, videoConstraints, lastN)
+    private fun create() = AllocationSettings(
+        strategy = strategy,
+        selectedEndpoints = selectedEndpoints,
+        videoConstraints = videoConstraints,
+        defaultConstraints = defaultConstraints,
+        lastN = lastN)
     fun get() = allocationSettings
 
     /**
