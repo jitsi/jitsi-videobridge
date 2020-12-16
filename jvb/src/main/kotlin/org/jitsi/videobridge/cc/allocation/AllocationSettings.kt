@@ -71,7 +71,8 @@ internal class AllocationSettingsWrapper {
         selectedEndpoints = selectedEndpoints,
         videoConstraints = videoConstraints,
         defaultConstraints = defaultConstraints,
-        lastN = lastN)
+        lastN = lastN
+    )
     fun get() = allocationSettings
 
     /**
