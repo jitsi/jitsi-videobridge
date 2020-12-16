@@ -31,6 +31,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
+import org.jitsi.nlj.util.mbps
 import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
@@ -230,12 +231,17 @@ class BitrateControllerTest : ShouldSpec() {
                     }
                 }
             }
-            context("Selected endpoints should override the dominant speaker") {
+            context("Selected endpoints should override the dominant speaker (with new signaling)") {
                 // A is dominant speaker, A and B are selected. With LastN=2 we should always forward the selected
                 // endpoints regardless of who is speaking.
                 // The exact flow of this scenario was taken from a (non-jitsi-meet) client.
                 bc.setEndpointOrdering("A", "B", "C", "D")
-                bc.setSelectedEndpoints("A", "B", maxFrameHeight = 720)
+                bc.bc.setBandwidthAllocationSettings(
+                    BandwidthAllocationSettingsMessage(
+                        selectedEndpoints = listOf("A", "B"),
+                        constraints = mapOf("A" to VideoConstraints(720), "B" to VideoConstraints(720))
+                    )
+                )
 
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
                     "A" to VideoConstraints(720),
@@ -244,7 +250,7 @@ class BitrateControllerTest : ShouldSpec() {
                     "D" to VideoConstraints(180)
                 )
 
-                bc.setLastN(2)
+                bc.bc.setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage(lastN = 2))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
                     "A" to VideoConstraints(720),
                     "B" to VideoConstraints(720),
@@ -252,79 +258,77 @@ class BitrateControllerTest : ShouldSpec() {
                     "D" to VideoConstraints(0)
                 )
 
-                // TODO: This should probably not use TileView
-                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
+                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
                 bc.bc.allocationSettings.lastN shouldBe 2
-                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B")
 
-                // These are disabled until the new API is in, because the legacy API does not support multiple selected
-                // endpoints.
-                // clock.elapse(20.secs)
-                // bc.bwe = 10.mbps
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
-                //
-                // clock.elapse(2.secs)
-                // // B becomes dominant speaker.
-                // bc.setEndpointOrdering("B", "A", "C", "D")
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
-                //
-                // clock.elapse(2.secs)
-                // bc.setMaxFrameHeight(360)
-                // bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                //     "A" to VideoConstraints(360),
-                //     "B" to VideoConstraints(360),
-                //     "C" to VideoConstraints(0),
-                //     "D" to VideoConstraints(0)
-                // )
-                //
-                // clock.elapse(2.secs)
-                // // This should change nothing, the selection didn't change.
-                // bc.setSelectedEndpoints("A", "B")
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
-                //
-                // clock.elapse(2.secs)
-                // bc.setLastN(-1)
-                // bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                //     "A" to VideoConstraints(360),
-                //     "B" to VideoConstraints(360),
-                //     "C" to VideoConstraints(180),
-                //     "D" to VideoConstraints(180)
-                // )
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
-                //
-                // clock.elapse(2.secs)
-                // bc.setMaxFrameHeight(360)
-                // clock.elapse(2.secs)
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
-                //
-                // bc.setLastN(2)
-                // bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                //     "A" to VideoConstraints(360),
-                //     "B" to VideoConstraints(360),
-                //     "C" to VideoConstraints(0),
-                //     "D" to VideoConstraints(0)
-                // )
-                // clock.elapse(2.secs)
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
-                //
-                // clock.elapse(2.secs)
-                // // D is now dominant speaker, but it should not override the selected endpoints.
-                // bc.setEndpointOrdering("D", "B", "A", "C")
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
-                //
-                // bc.bwe = 10.mbps
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
-                //
-                // clock.elapse(2.secs)
-                // bc.bwe = 0.mbps
-                // clock.elapse(2.secs)
-                // bc.bwe = 10.mbps
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
-                //
-                // clock.elapse(2.secs)
-                // // C is now dominant speaker, but it should not override the selected endpoints.
-                // bc.setEndpointOrdering("C", "D", "A", "B")
-                // bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                clock.elapse(20.secs)
+                bc.bwe = 10.mbps
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                // B becomes dominant speaker.
+                bc.setEndpointOrdering("B", "A", "C", "D")
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                bc.bc.setBandwidthAllocationSettings(
+                    BandwidthAllocationSettingsMessage(
+                        constraints = mapOf("A" to VideoConstraints(360), "B" to VideoConstraints(360))
+                    )
+                )
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints(360),
+                    "B" to VideoConstraints(360),
+                    "C" to VideoConstraints(0),
+                    "D" to VideoConstraints(0)
+                )
+
+                clock.elapse(2.secs)
+                // This should change nothing, the selection didn't change.
+                bc.bc.setBandwidthAllocationSettings(
+                    BandwidthAllocationSettingsMessage(selectedEndpoints = listOf("A", "B"))
+                )
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                bc.bc.setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage(lastN = -1))
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints(360),
+                    "B" to VideoConstraints(360),
+                    "C" to VideoConstraints(180),
+                    "D" to VideoConstraints(180)
+                )
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
+
+                bc.bc.setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage(lastN = 2))
+                bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
+                    "A" to VideoConstraints(360),
+                    "B" to VideoConstraints(360),
+                    "C" to VideoConstraints(0),
+                    "D" to VideoConstraints(0)
+                )
+                clock.elapse(2.secs)
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                // D is now dominant speaker, but it should not override the selected endpoints.
+                bc.setEndpointOrdering("D", "B", "A", "C")
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                bc.bwe = 10.mbps
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                bc.bwe = 0.mbps
+                clock.elapse(2.secs)
+                bc.bwe = 10.mbps
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+
+                clock.elapse(2.secs)
+                // C is now dominant speaker, but it should not override the selected endpoints.
+                bc.setEndpointOrdering("C", "D", "A", "B")
+                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
             }
         }
     }
