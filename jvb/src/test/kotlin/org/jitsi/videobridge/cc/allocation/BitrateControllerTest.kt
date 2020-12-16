@@ -82,7 +82,7 @@ class BitrateControllerTest : ShouldSpec() {
                 context("When LastN is not set") {
                     context("and the dominant speaker is on stage") {
                         listOf(true, false).forEach { legacy ->
-                            context("With ${if(legacy) "legacy" else "new"} signaling") {
+                            context("With ${if (legacy) "legacy" else "new"} signaling") {
                                 bc.setEndpointOrdering("A", "B", "C", "D")
                                 bc.setStageView("A", legacy = legacy)
 
@@ -1463,7 +1463,8 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         vararg selectedEndpoints: String,
         maxFrameHeight: Int = 180,
         legacy: Boolean = true,
-        lastN: Int? = null) {
+        lastN: Int? = null
+    ) {
         if (legacy) {
             lastN?.let { bc.lastN = lastN }
             setSelectedEndpoints(*selectedEndpoints, maxFrameHeight = maxFrameHeight)
@@ -1476,7 +1477,6 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
                     constraints = selectedEndpoints.map { it to VideoConstraints(maxFrameHeight) }.toMap()
                 )
             )
-
         }
     }
 
