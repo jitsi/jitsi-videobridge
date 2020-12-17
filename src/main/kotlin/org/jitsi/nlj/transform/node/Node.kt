@@ -147,9 +147,13 @@ sealed class Node(
             }
         }
 
+        fun isPayloadVerificationEnabled(): Boolean = PacketInfo.ENABLE_PAYLOAD_VERIFICATION
+
         fun enableNodeTracing(enable: Boolean) {
             TRACE_ENABLED = enable
         }
+
+        fun isNodeTracingEnabled(): Boolean = TRACE_ENABLED
     }
 }
 
