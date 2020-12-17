@@ -239,10 +239,9 @@ public class ByteBufferPool
     /**
      * Gets a JSON representation of the statistics about the pool.
      */
-    @SuppressWarnings("unchecked")
-    public static JSONObject getStatsJson()
+    public static OrderedJsonObject getStatsJson()
     {
-        JSONObject stats = new JSONObject();
+        OrderedJsonObject stats = new OrderedJsonObject();
         long numRequestsSum = numRequests.sum();
         long numLargeRequestsSum = numLargeRequests.sum();
         stats.put("outstanding_buffers", bookkeeping.size());
