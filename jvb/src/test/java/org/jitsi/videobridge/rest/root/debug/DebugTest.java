@@ -18,6 +18,8 @@ package org.jitsi.videobridge.rest.root.debug;
 
 import org.eclipse.jetty.http.*;
 import org.glassfish.hk2.utilities.binding.*;
+import org.glassfish.jersey.client.*;
+import org.glassfish.jersey.logging.*;
 import org.glassfish.jersey.server.*;
 import org.glassfish.jersey.test.*;
 import org.jitsi.health.*;
@@ -33,6 +35,8 @@ import javax.ws.rs.*;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.*;
+
+import java.util.logging.*;
 
 import static junit.framework.TestCase.*;
 import static org.junit.Assert.assertTrue;
@@ -71,6 +75,12 @@ public class DebugTest extends JerseyTest
         };
     }
 
+    @Override
+    protected void configureClient(ClientConfig config)
+    {
+        config.register(new LoggingFeature(Logger.getAnonymousLogger(), Level.ALL, LoggingFeature.Verbosity.HEADERS_ONLY, 1500));
+    }
+
     @Test
     public void testAllResourcesAreBehindConfig()
     {
@@ -93,7 +103,7 @@ public class DebugTest extends JerseyTest
     }
 
     @Test
-    public void testEnableDebugFeature()
+    public void testEnableJvbFeature()
     {
         Response resp = target(BASE_URL + "/features/jvb/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue() + "/true")
                 .request()
@@ -102,65 +112,58 @@ public class DebugTest extends JerseyTest
     }
 
     @Test
-    public void testEnableEndpointDebugFeature()
-    {
-        Response resp = target(BASE_URL + "/foo/bar/enable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
-                .request()
-                .post(Entity.json(null));
-        assertEquals(HttpStatus.OK_200, resp.getStatus());
-    }
-
-    @Test
-    public void testEnableNonexistentDebugFeature()
-    {
-        Response resp = target(BASE_URL + "/features/jvb/blah/true")
-                .request()
-                .post(Entity.json(null));
-        assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
-    }
-
-    @Test
-    public void testDisableDebugFeature()
+    public void testDisableJvbFeature()
     {
         Response resp = target(BASE_URL + "/features/jvb/" + DebugFeatures.PAYLOAD_VERIFICATION.getValue() + "/false")
-                .request()
-                .post(Entity.json(null));
+            .request()
+            .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
     }
 
-    @Test
-    public void testDisableEndpointDebugFeature()
-    {
-        Response resp = target(BASE_URL + "/foo/bar/disable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
-                .request()
-                .post(Entity.json(null));
-        assertEquals(HttpStatus.OK_200, resp.getStatus());
-    }
 
     @Test
-    public void testInvalidEndpointDebugFeature()
+    public void testEnableNonexistentJvbFeature()
     {
-        Response resp = target(BASE_URL + "/foo/broken/disable/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
-                .request()
-                .post(Entity.json(null));
+        Response resp = target(BASE_URL + "/features/jvb/blah/true")
+            .request()
+            .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
     }
 
     @Test
-    public void testInvalidEndpointDebugFeatureState()
-    {
-        Response resp = target(BASE_URL + "/foo/bar/broken/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
-                .request()
-                .post(Entity.json(null));
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR_500, resp.getStatus());
-    }
-
-    @Test
-    public void testDisableNonexistentDebugFeature()
+    public void testDisableNonexistentJvbFeature()
     {
         Response resp = target(BASE_URL + "/features/jvb/blah/false")
+            .request()
+            .post(Entity.json(null));
+        assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
+    }
+
+    @Test
+    public void testEnableEndpointFeature()
+    {
+        Response resp = target(BASE_URL + "/features/endpoint/foo/bar/" + EndpointDebugFeatures.PCAP_DUMP.getValue() + "/true")
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testDisableEndpointFeature()
+    {
+        Response resp = target(BASE_URL + "/features/endpoint/foo/bar/" + EndpointDebugFeatures.PCAP_DUMP.getValue() + "/false")
+                .request()
+                .post(Entity.json(null));
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testDisableInvalidEndpointFeature()
+    {
+        Response resp = target(BASE_URL + "/features/endpoint/foo/bar/nonexistent/false")
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
     }
+
 }

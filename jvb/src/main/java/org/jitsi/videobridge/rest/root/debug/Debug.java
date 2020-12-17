@@ -60,6 +60,35 @@ public class Debug
     // Functions to enable or disable features
 
     /**
+     * Set the state of a given JVB feature
+     * @param feature the feature to enable or disable
+     * @param enabled whether the feature should be enabled
+     * @return HTTP response
+     */
+    @POST
+    @Path("/features/jvb/{feature}/{enabled}")
+    public Response setJvbFeatureState(
+        @PathParam("feature") DebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
+    {
+        logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
+        setFeature(feature, enabled);
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/features/jvb/{feature}/{enabled}")
+    public Response setJvbFeatureState2(
+        @PathParam("feature") DebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
+    {
+        System.out.println("Here with get instead of post!");
+        logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
+        setFeature(feature, enabled);
+        return Response.ok().build();
+    }
+
+    /**
      * Find out whether the given JVB feature is currently enabled or disabled
      * @param feature the feature to check
      * @return true if the feature is enabled, false otherwise
@@ -97,23 +126,6 @@ public class Debug
                 throw new NotFoundException();
             }
         }
-    }
-
-    /**
-     * Set the state of a given JVB feature
-     * @param feature the feature to enable or disable
-     * @param enabled whether the feature should be enabled
-     * @return HTTP response
-     */
-    @POST
-    @Path("/features/jvb/{feature}/{enabled}")
-    public Response setJvbFeatureState(
-        @PathParam("feature") DebugFeatures feature,
-        @PathParam("enabled") Boolean enabled)
-    {
-        logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
-        setFeature(feature, enabled);
-        return Response.ok().build();
     }
 
     @POST
@@ -276,62 +288,6 @@ public class Debug
     {
         // Redirect to the new location
         String newTarget = uriInfo.getBaseUri() + "debug/stats/jvb/" + featureName;
-        return Response.status(301).location(URI.create(newTarget)).build();
-    }
-
-    /**
-     * Deprecated, use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
-     * @param featureName feature name
-     * @param uriInfo UriInfo of the request
-     * @return HTTP response
-     */
-    @Deprecated
-    @POST
-    @Path("/enable/{feature_name:.+}")
-    public Response enableFeature(@PathParam("feature_name") String featureName, @Context UriInfo uriInfo)
-    {
-        String newTarget = uriInfo.getBaseUri() + "/features/jvb/" + featureName + "/true";
-        return Response.status(301).location(URI.create(newTarget)).build();
-    }
-
-    /**
-     * Depreacted, use {@link Debug#setJvbFeatureState(DebugFeatures, Boolean)}
-     * @param featureName feature name
-     * @param uriInfo UriInfo of the request
-     * @return HTTP response
-     */
-    @Deprecated
-    @POST
-    @Path("/disable/{feature_name:.+}")
-    public Response disableFeature(@PathParam("feature_name") String featureName, @Context UriInfo uriInfo)
-    {
-        String newTarget = uriInfo.getBaseUri() + "/features/jvb/" + featureName + "/false";
-        return Response.status(301).location(URI.create(newTarget)).build();
-    }
-
-    /**
-     * Deprecated, use {@link Debug#setEndpointFeatureState(String, String, EndpointDebugFeatures, Boolean)}
-     * @param confId the conference id
-     * @param epId the endpoint id
-     * @param featureName the Feature to enable or disable
-     * @param state the feature state in String form. Note that we don't rely on Jersey's automatic parsing here because
-     *              we want /debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
-     *              inside the method it returns 404.
-     * @return the Response
-     * @throws IllegalArgumentException when parsing the state fails.
-     */
-    @Deprecated
-    @POST
-    @Path("/{confId}/{epId}/{state}/{feature}")
-    public Response toggleEndpointFeature(
-        @PathParam("confId") String confId,
-        @PathParam("epId") String epId,
-        @PathParam("feature") String featureName,
-        @PathParam("state") String state,
-        @Context UriInfo uriInfo)
-    {
-        final boolean enabled = FeatureState.fromString(state) == FeatureState.ENABLE;
-        String newTarget = uriInfo.getBaseUri() + "features/endpoint/" + confId + "/" + epId + "/" + featureName + "/" + enabled;
-        return Response.status(301).location(URI.create(newTarget)).build();
+        return Response.status(302).location(URI.create(newTarget)).build();
     }
 }
