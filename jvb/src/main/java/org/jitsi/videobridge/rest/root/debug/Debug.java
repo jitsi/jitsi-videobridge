@@ -33,6 +33,7 @@ import org.jitsi.videobridge.xmpp.*;
 import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
+import java.net.*;
 
 /**
  * A REST interface for retrieving debug information about the bridge.
@@ -54,48 +55,86 @@ public class Debug
     @Inject
     private HealthCheckServiceSupplier healthCheckServiceSupplier;
 
-    private Logger logger = new LoggerImpl(Debug.class.getName());
+    private final Logger logger = new LoggerImpl(Debug.class.getName());
 
-    @GET
-    @Produces(MediaType.APPLICATION_JSON)
-    public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
+    // Functions to enable or disable features
+
+    /**
+     * Set the state of a given JVB feature
+     * @param feature the feature to enable or disable
+     * @param enabled whether the feature should be enabled
+     * @return HTTP response
+     */
+    @POST
+    @Path("/features/jvb/{feature}/{enabled}")
+    public Response setJvbFeatureState(
+        @PathParam("feature") DebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
     {
-        OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
-
-        // Append the health status.
-        Exception result = healthCheckServiceSupplier.get().getResult();
-        debugState.put("health", result == null ? "OK" : result.getMessage());
-
-        return debugState.toJSONString();
+        logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
+        setFeature(feature, enabled);
+        return Response.ok().build();
     }
 
-    @POST
-    @Path("/enable/{feature}")
-    public Response enableFeature(@PathParam("feature") DebugFeatures feature)
+    @GET
+    @Path("/features/jvb/{feature}/{enabled}")
+    public Response setJvbFeatureState2(
+        @PathParam("feature") DebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
     {
-        logger.info("Enabling " + feature.getValue());
-        setFeature(feature, true);
+        System.out.println("Here with get instead of post!");
+        logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
+        setFeature(feature, enabled);
         return Response.ok().build();
     }
 
     /**
-     *
-     * @param confId the conference id
-     * @param epId the endpoint id
-     * @param feature the Feature to enable or disable
-     * @param state the feature state in String form. Note that we don't rely on Jersey's automatic parsing here because
-     *              we want /debug/foo/bar/broken/ to return and HTTP 500 error and without the special handling
-     *              inside the method it returns 404.
-     * @return the Response
-     * @throws IllegalArgumentException when parsing the state fails.
+     * Find out whether the given JVB feature is currently enabled or disabled
+     * @param feature the feature to check
+     * @return true if the feature is enabled, false otherwise
      */
+    @GET
+    @Path("/features/jvb/{feature}")
+    public Boolean getJvbFeatureState(@PathParam("feature") DebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case PAYLOAD_VERIFICATION: {
+                return Node.Companion.isPayloadVerificationEnabled();
+            }
+            case NODE_STATS: {
+                return StatsKeepingNode.Companion.getEnableStatistics();
+            }
+            case POOL_STATS: {
+                return ByteBufferPool.statisticsEnabled();
+            }
+            case QUEUE_STATS: {
+                return PacketQueue.getEnableStatisticsDefault();
+            }
+            case NODE_TRACING: {
+                return Node.Companion.isNodeTracingEnabled();
+            }
+            case TRANSIT_STATS: {
+                // Always enabled (worth modeling as a 'feature' then?)
+                return true;
+            }
+            case TASK_POOL_STATS: {
+                // Always enabled (worth modeling as a 'feature' then?)
+                return true;
+            }
+            default: {
+                throw new NotFoundException();
+            }
+        }
+    }
+
     @POST
-    @Path("/{confId}/{epId}/{state}/{feature}")
-    public Response toggleEndpointFeature(
-            @PathParam("confId") String confId,
-            @PathParam("epId") String epId,
-            @PathParam("feature") EndpointDebugFeatures feature,
-            @PathParam("state") String state)
+    @Path("/features/endpoint/{confId}/{epId}/{feature}/{enabled}")
+    public Response setEndpointFeatureState(
+        @PathParam("confId") String confId,
+        @PathParam("epId") String epId,
+        @PathParam("feature") EndpointDebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
     {
         Conference conference = videobridge.getConference(confId);
         if (conference == null)
@@ -109,14 +148,10 @@ public class Debug
             throw new NotFoundException("No endpoint was found with the specified id.");
         }
 
-        // the only exception possible here is the IllegalArgumentException which comes with
-        // a handy error message and gets translated to a HTTP 500 error.
-        FeatureState featureState = FeatureState.fromString(state);
-
-        logger.info("Setting feature state: feature=" + feature.getValue() + ", state=" + featureState.getValue());
+        logger.info("Setting feature state: feature=" + feature.getValue() + ", enabled? " + enabled);
         try
         {
-            endpoint.setFeature(feature, featureState.getValue());
+            endpoint.setFeature(feature, enabled);
         }
         catch (IllegalStateException e)
         {
@@ -126,14 +161,6 @@ public class Debug
         return Response.ok().build();
     }
 
-    @POST
-    @Path("/disable/{feature}")
-    public Response disableFeature(@PathParam("feature") DebugFeatures feature)
-    {
-        logger.info("Disabling " + feature.getValue());
-        setFeature(feature, false);
-        return Response.ok().build();
-    }
 
     private void setFeature(DebugFeatures feature, boolean enabled)
     {
@@ -173,6 +200,21 @@ public class Debug
         }
     }
 
+    // Functions to actually get statistics
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
+    {
+        OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
+
+        // Append the health status.
+        Exception result = healthCheckServiceSupplier.get().getResult();
+        debugState.put("health", result == null ? "OK" : result.getMessage());
+
+        return debugState.toJSONString();
+    }
+
     @GET
     @Path("/{confId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -197,9 +239,9 @@ public class Debug
     }
 
     @GET
-    @Path("/stats/{feature}")
+    @Path("/stats/jvb/{feature}")
     @Produces(MediaType.APPLICATION_JSON)
-    public String getStats(@PathParam("feature") DebugFeatures feature)
+    public String getJvbFeatureStats(@PathParam("feature") DebugFeatures feature)
     {
         switch (feature)
         {
@@ -228,5 +270,24 @@ public class Debug
                 throw new NotFoundException();
             }
         }
+    }
+
+    // Old deprecated paths
+
+    /**
+     * Depreacted, use {@link Debug#getJvbFeatureStats(DebugFeatures)}
+     * @param featureName the feature name
+     * @param uriInfo the URI info of the request
+     * @return HTTP response
+     */
+    @Deprecated
+    @GET
+    @Path("/stats/{feature_name:.+}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getStats(@PathParam("feature_name") String featureName, @Context UriInfo uriInfo)
+    {
+        // Redirect to the new location
+        String newTarget = uriInfo.getBaseUri() + "debug/stats/jvb/" + featureName;
+        return Response.status(302).location(URI.create(newTarget)).build();
     }
 }
