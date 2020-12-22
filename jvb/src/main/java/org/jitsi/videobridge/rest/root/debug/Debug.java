@@ -161,6 +161,35 @@ public class Debug
         return Response.ok().build();
     }
 
+    @GET
+    @Path("/features/endpoint/{confId}/{epId}/{feature}/")
+    public Boolean getEndpointFeatureState(
+        @PathParam("confId") String confId,
+        @PathParam("epId") String epId,
+        @PathParam("feature") EndpointDebugFeatures feature)
+    {
+        Conference conference = videobridge.getConference(confId);
+        if (conference == null)
+        {
+            throw new NotFoundException("No conference was found with the specified id.");
+        }
+
+        AbstractEndpoint endpoint = conference.getEndpoint(epId);
+        if (endpoint == null)
+        {
+            throw new NotFoundException("No endpoint was found with the specified id.");
+        }
+
+        try
+        {
+            return endpoint.isFeatureEnabled(feature);
+        }
+        catch (Exception e)
+        {
+            throw new ServerErrorException(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     private void setFeature(DebugFeatures feature, boolean enabled)
     {
