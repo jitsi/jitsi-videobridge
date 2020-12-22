@@ -1430,6 +1430,18 @@ public class Endpoint
     }
 
     @Override
+    public boolean isFeatureEnabled(EndpointDebugFeatures feature)
+    {
+        switch (feature)
+        {
+            case PCAP_DUMP:
+                return transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP);
+        }
+
+        throw new RuntimeException("Unsupported feature");
+    }
+
+    @Override
     public boolean isSendingAudio()
     {
         // The endpoint is sending audio if we (the transceiver) are receiving audio.

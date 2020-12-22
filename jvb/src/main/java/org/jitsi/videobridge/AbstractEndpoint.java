@@ -372,6 +372,9 @@ public abstract class AbstractEndpoint
      */
     public abstract void setFeature(EndpointDebugFeatures feature, boolean enabled);
 
+    public abstract boolean isFeatureEnabled(EndpointDebugFeatures feature);
+
+
     /**
      * Whether the remote endpoint is currently sending (non-silence) audio.
      */
