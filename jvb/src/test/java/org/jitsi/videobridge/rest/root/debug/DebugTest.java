@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge.rest.root.debug;
 
-import junit.framework.*;
 import org.eclipse.jetty.http.*;
 import org.glassfish.hk2.utilities.binding.*;
 import org.glassfish.jersey.client.*;
@@ -28,20 +27,17 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.junit.*;
-import org.junit.Assert;
-import org.junit.Test;
 import org.reflections.*;
 import org.reflections.scanners.*;
 import org.reflections.util.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.client.*;
-import javax.ws.rs.core.Application;
 import javax.ws.rs.core.*;
-
 import java.util.logging.*;
 
-import static junit.framework.TestCase.*;
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -61,6 +57,7 @@ public class DebugTest extends JerseyTest
 
         when(videobridge.getConference("foo")).thenReturn(conference);
         when(conference.getEndpoint("bar")).thenReturn(endpoint);
+        when(conference.getLocalEndpoint("bar")).thenReturn(endpoint);
 
         enable(TestProperties.LOG_TRAFFIC);
         enable(TestProperties.DUMP_ENTITY);

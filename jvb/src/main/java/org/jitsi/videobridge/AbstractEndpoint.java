@@ -365,17 +365,6 @@ public abstract class AbstractEndpoint
     }
 
     /**
-     * Enables/disables the given feature, if the endpoint implementation supports it.
-     *
-     * @param feature the feature to enable or disable.
-     * @param enabled the state of the feature.
-     */
-    public abstract void setFeature(EndpointDebugFeatures feature, boolean enabled);
-
-    public abstract boolean isFeatureEnabled(EndpointDebugFeatures feature);
-
-
-    /**
      * Whether the remote endpoint is currently sending (non-silence) audio.
      */
     public abstract boolean isSendingAudio();

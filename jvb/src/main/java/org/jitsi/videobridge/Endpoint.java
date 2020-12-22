@@ -1416,9 +1416,11 @@ public class Endpoint
     }
 
     /**
-     * {@inheritDoc}
+     * Enables/disables the given feature, if the endpoint implementation supports it.
+     *
+     * @param feature the feature to enable or disable.
+     * @param enabled the state of the feature.
      */
-    @Override
     public void setFeature(EndpointDebugFeatures feature, boolean enabled) {
 
         switch (feature)
@@ -1429,7 +1431,6 @@ public class Endpoint
         }
     }
 
-    @Override
     public boolean isFeatureEnabled(EndpointDebugFeatures feature)
     {
         switch (feature)

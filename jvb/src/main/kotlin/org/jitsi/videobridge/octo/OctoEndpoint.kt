@@ -31,7 +31,6 @@ import org.jitsi.videobridge.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.RemoveReceiverMessage
-import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 
 /**
  * Represents an endpoint in a conference, which is connected to another
@@ -93,14 +92,6 @@ class OctoEndpoint(
 
     override fun requestKeyframe() {
         transceiver.requestKeyframe()
-    }
-
-    override fun setFeature(feature: EndpointDebugFeatures?, enabled: Boolean) {
-        // NO-OP
-    }
-
-    override fun isFeatureEnabled(feature: EndpointDebugFeatures?): Boolean {
-        throw RuntimeException("Not supported")
     }
 
     override fun shouldExpire(): Boolean = !transceiver.hasReceiveSsrcs()
