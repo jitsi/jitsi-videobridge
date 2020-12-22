@@ -71,7 +71,7 @@ class SingleSourceAllocation {
             String endpointId,
             MediaSourceDesc source,
             VideoConstraints constraints,
-            AllocationStrategy strategy,
+            boolean onStage,
             Clock clock)
     {
         this.endpointId = endpointId;
@@ -111,7 +111,7 @@ class SingleSourceAllocation {
 
             int preferredHeight = -1;
             double preferredFps = -1.0;
-            if (strategy == AllocationStrategy.StageView && constraints.getMaxHeight() > 180)
+            if (onStage && constraints.getMaxHeight() > 180)
             {
                 // For the "on-stage" participant we favor frame rate over resolution. We consider all temporal layers
                 // for resolutions lower than the preferred, but for resolutions >= preferred, we only consider

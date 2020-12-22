@@ -27,20 +27,21 @@ class AllocationSettingsTest : ShouldSpec() {
                 allocationSettings.setMaxFrameHeight(720)
                 allocationSettings.setSelectedEndpoints(listOf("A"))
 
-                allocationSettings.get().strategy shouldBe AllocationStrategy.StageView
+                // This tests the legacy API, which intentionally translates "selected" to "on-stage".
+                allocationSettings.get().selectedEndpoints shouldBe emptyList()
+                allocationSettings.get().onStageEndpoints shouldBe listOf("A")
                 allocationSettings.get().videoConstraints.shouldContainExactly(
                     mapOf(
                         "A" to VideoConstraints(720)
                     )
                 )
-                allocationSettings.get().selectedEndpoints shouldBe listOf("A")
             }
             context("Tile view behavior") {
                 val allocationSettings = AllocationSettingsWrapper()
                 allocationSettings.setMaxFrameHeight(180)
                 allocationSettings.setSelectedEndpoints(listOf("A", "B", "C", "D"))
 
-                allocationSettings.get().strategy shouldBe AllocationStrategy.TileView
+                allocationSettings.get().onStageEndpoints shouldBe emptyList()
                 allocationSettings.get().videoConstraints.shouldContainExactly(
                     mapOf(
                         "A" to VideoConstraints(180),
@@ -52,6 +53,7 @@ class AllocationSettingsTest : ShouldSpec() {
                 // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView, and the
                 // desired behavior in TileView is to not have selected endpoints.
                 allocationSettings.get().selectedEndpoints shouldBe emptyList()
+                allocationSettings.get().onStageEndpoints shouldBe emptyList()
             }
         }
     }

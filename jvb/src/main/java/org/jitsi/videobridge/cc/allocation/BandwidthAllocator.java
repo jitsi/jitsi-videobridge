@@ -237,8 +237,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         lastUpdateTime = clock.instant();
 
         // Order the endpoints by selection, followed by speech activity.
-        List<T> sortedEndpoints
-                = prioritize(sortedEndpointIds, allocationSettings.getSelectedEndpoints(), endpointsSupplier.get());
+        List<T> sortedEndpoints = prioritize(sortedEndpointIds, getSelectedEndpoints(), endpointsSupplier.get());
 
         // Extract and update the effective constraints.
         Map<String, VideoConstraints> oldEffectiveConstraints = effectiveConstraints;
@@ -265,6 +264,20 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 return Unit.INSTANCE;
             });
         }
+    }
+
+    private List<String> getSelectedEndpoints()
+    {
+        // On-stage participants are considered selected (with higher prio).
+        List<String> selectedEndpoints = new ArrayList<>(allocationSettings.getOnStageEndpoints());
+        allocationSettings.getSelectedEndpoints().forEach(selectedEndpoint ->
+        {
+            if (!selectedEndpoints.contains(selectedEndpoint))
+            {
+                selectedEndpoints.add(selectedEndpoint);
+            }
+        });
+        return selectedEndpoints;
     }
 
     /**
@@ -375,7 +388,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                                     // I think this is not desired behavior. However, it is required for the "effective
                                     // constraints" to work as designed.
                                     effectiveConstraints.get(endpoint.getId()),
-                                    allocationSettings.getStrategy(),
+                                    allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
                                     clock));
                 }
             }

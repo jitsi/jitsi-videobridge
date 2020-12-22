@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
-import org.jitsi.videobridge.cc.allocation.AllocationStrategy
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.json.simple.JSONObject
 import java.util.concurrent.ConcurrentHashMap
@@ -381,7 +380,7 @@ class RemoveReceiverMessage(
 class BandwidthAllocationSettingsMessage(
     val lastN: Int? = null,
     val selectedEndpoints: List<String>? = null,
-    val strategy: AllocationStrategy? = null,
+    val onStageEndpoints: List<String>? = null,
     val defaultConstraints: VideoConstraints? = null,
     val constraints: Map<String, VideoConstraints>? = null
 ) : BridgeChannelMessage(TYPE) {

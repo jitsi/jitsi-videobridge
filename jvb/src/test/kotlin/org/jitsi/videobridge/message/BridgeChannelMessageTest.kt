@@ -26,7 +26,6 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.jitsi.videobridge.cc.allocation.AllocationStrategy
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.json.simple.JSONArray
@@ -229,7 +228,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.shouldBeInstanceOf<BandwidthAllocationSettingsMessage>()
                 parsed as BandwidthAllocationSettingsMessage
                 parsed.lastN shouldBe 3
-                parsed.strategy shouldBe AllocationStrategy.TileView
+                parsed.onStageEndpoints shouldBe listOf("onstage1", "onstage2")
                 parsed.selectedEndpoints shouldBe listOf("selected1", "selected2")
                 parsed.defaultConstraints shouldBe VideoConstraints(0)
                 val constraints = parsed.constraints
@@ -245,7 +244,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.shouldBeInstanceOf<BandwidthAllocationSettingsMessage>()
                 parsed as BandwidthAllocationSettingsMessage
                 parsed.lastN shouldBe null
-                parsed.strategy shouldBe null
+                parsed.onStageEndpoints shouldBe null
                 parsed.selectedEndpoints shouldBe null
                 parsed.defaultConstraints shouldBe null
                 parsed.constraints shouldBe null
@@ -326,7 +325,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
               "colibriClass": "BandwidthAllocationSettings",
               "lastN": 3,
               "selectedEndpoints": [ "selected1", "selected2" ],
-              "strategy": "TileView",
+              "onStageEndpoints": [ "onstage1", "onstage2" ],
               "defaultConstraints": { "maxHeight": 0 },
               "constraints": {
                 "epOnStage": { "maxHeight": 720 },

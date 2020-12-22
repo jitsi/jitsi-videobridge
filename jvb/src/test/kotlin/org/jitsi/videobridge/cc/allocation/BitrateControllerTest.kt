@@ -86,9 +86,9 @@ class BitrateControllerTest : ShouldSpec() {
                                 bc.setEndpointOrdering("A", "B", "C", "D")
                                 bc.setStageView("A", legacy = legacy)
 
-                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
                                 bc.bc.allocationSettings.lastN shouldBe -1
-                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                                bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
 
                                 runBweLoop()
 
@@ -102,9 +102,9 @@ class BitrateControllerTest : ShouldSpec() {
                                 bc.setEndpointOrdering("B", "A", "C", "D")
                                 bc.setStageView("A", legacy = legacy)
 
-                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
                                 bc.bc.allocationSettings.lastN shouldBe -1
-                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                                bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
                                 runBweLoop()
 
                                 verifyStageView()
@@ -119,9 +119,9 @@ class BitrateControllerTest : ShouldSpec() {
                             bc.setEndpointOrdering("A", "B", "C", "D")
                             bc.setStageView("A", lastN = 0, legacy = legacy)
 
-                            bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
                             bc.bc.allocationSettings.lastN shouldBe 0
-                            bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                            bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                            bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
 
                             runBweLoop()
 
@@ -137,9 +137,9 @@ class BitrateControllerTest : ShouldSpec() {
                                 bc.setEndpointOrdering("A", "B", "C", "D")
                                 bc.setStageView("A", lastN = 1, legacy = legacy)
 
-                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
                                 bc.bc.allocationSettings.lastN shouldBe 1
-                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                                bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
 
                                 runBweLoop()
 
@@ -153,9 +153,9 @@ class BitrateControllerTest : ShouldSpec() {
                                 bc.setEndpointOrdering("B", "A", "C", "D")
                                 bc.setStageView("A", lastN = 1, legacy = legacy)
 
-                                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
                                 bc.bc.allocationSettings.lastN shouldBe 1
-                                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                                bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
 
                                 runBweLoop()
 
@@ -171,7 +171,6 @@ class BitrateControllerTest : ShouldSpec() {
                         bc.setEndpointOrdering("A", "B", "C", "D")
                         bc.setTileView("A", "B", "C", "D", legacy = legacy)
 
-                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
                         bc.bc.allocationSettings.lastN shouldBe -1
                         // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView,
                         // and in tile view we do not use selected endpoints.
@@ -204,7 +203,6 @@ class BitrateControllerTest : ShouldSpec() {
                         bc.setEndpointOrdering("A", "B", "C", "D")
                         bc.setTileView("A", "B", "C", "D", maxFrameHeight = 360, legacy = legacy)
 
-                        bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.TileView
                         bc.bc.allocationSettings.lastN shouldBe -1
                         // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView,
                         // and in tile view we do not use selected endpoints.
@@ -258,7 +256,6 @@ class BitrateControllerTest : ShouldSpec() {
                     "D" to VideoConstraints(0)
                 )
 
-                bc.bc.allocationSettings.strategy shouldBe AllocationStrategy.StageView
                 bc.bc.allocationSettings.lastN shouldBe 2
                 bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B")
 
@@ -1447,7 +1444,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
             bc.setBandwidthAllocationSettings(
                 BandwidthAllocationSettingsMessage(
                     lastN = lastN,
-                    selectedEndpoints = listOf(onStageEndpoint),
+                    onStageEndpoints = listOf(onStageEndpoint),
                     constraints = mapOf(onStageEndpoint to VideoConstraints(720))
                 )
             )
@@ -1472,7 +1469,6 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
             bc.setBandwidthAllocationSettings(
                 BandwidthAllocationSettingsMessage(
                     lastN = lastN,
-                    strategy = AllocationStrategy.TileView,
                     selectedEndpoints = listOf(*selectedEndpoints),
                     constraints = selectedEndpoints.map { it to VideoConstraints(maxFrameHeight) }.toMap()
                 )

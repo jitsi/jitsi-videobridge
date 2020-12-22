@@ -34,17 +34,14 @@ This is a list of endpoints to be prioritized first, overriding the natural spee
 For example, if the receiver wants to always receive an endpoint that is screensharing, regardless of who is speaking
 in the conference, it can "select" this endpoint. 
 
-#### Allocation Strategy
-The allocation strategy tweaks the order in which bandwidth is allocated. Note that this does NOT affect the order of 
-the endpoints themselves. Currently, there are two supported strategies: StageView and TileView.
- 
-In broad words, StageView is optimized for the case where the receiver renders one endpoint in a large viewport 
-("on stage"), and the rest in small viewports ("thumbnails"). It offers bandwidth to the "on stage" endpoint first,
-before moving on to the other endpoints. See [Implementation](#Implementation) for details.
-
-TileView is optimized for the case where the receiver renders all endpoints in similarly sized viewports. It allocates
-a low resolution layer for every endpoint, before trying to allocate higher resolutions. See
-[Implementation](#Implementation) for details.
+#### On-stage endpoints
+This is a list of endpoints for which allocation should be prioritized up to a higher resolution (since they are
+displayed "on stage"). On-stage endpoints are prioritized higher than selected endpoints, and in addition:
+1. Allocation for them is greedy up to the preferred resolution
+([360p by default](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L40))
+2. Above the preferred resolution, only frame rates of
+[at least 30 fps](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L41)
+are considered.
 
 #### Video Constraints
 Video constraints are resolution (`maxHeight`) and frame rate (`maxFrameRate`) constraints for each endpoint. These are
@@ -101,8 +98,8 @@ It starts with no layers selected for any endpoint, and remaining bandwidth equa
 Until there is remaining bandwidth, it loops over the endpoints in the order obtained in [phase 1](#1.-Prioritize),
 and tries to `improve()` the layer of each.
 
-The normal `improve()` step selects the next higher layer if there is sufficient bandwidth. For the case of the 
-`StageView` strategy and the on-stage endpoint, the `improve()` step works eagerly up to the "preferred" resolution.
+The normal `improve()` step selects the next higher layer if there is sufficient bandwidth. For on-stage endpoints
+the `improve()` step works eagerly up to the "preferred" resolution.
 The preferred resolution [can be configured](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L40).
 
 # Signaling
@@ -112,13 +109,13 @@ This section describes the signaling between the client and the bridge that affe
 This is the signaling currently used in jitsi-meet, but the intention is to replace it with the new format and
 eventually deprecate this format.
 
-This format is not expressive enough to enable all features supported by the bridge, so some assumptions have to be
-made. Notably:
-1. The selection strategy is inferred from the number of selected endpoints (`TileView` if more than one endpoints
-is selected, and `StageView` otherwise).
-2. Multiple selected endpoints are not supported with the usual semantics. When multiple endpoints are selected, this
-signals the use of `TileView`, but does NOT override the speaker order.
-3. Constraints are constructed solely based on `maxFrameHeight` and the selected endpoints.
+This format is not expressive enough to enable all features supported by the bridge, so the following assumption is
+made: The client is in TileView if it has selected more than one endpoint, otherwise it is in StageView.
+
+In StageView, we set the single endpoint as "on-stage". In TileView, the signaled selected endpoints are ignored (for
+backward compatibility with jitsi-meet).
+
+Constraints are constructed solely based on `maxFrameHeight` and the signaled selected endpoints.
 ### LastN
 LastN is set with a `LastNChangedEvent` message:
 ```json
@@ -153,7 +150,7 @@ The new format uses a single message with a set fields:
   "colibriClass": "BandwidthAllocationSettings",
   "lastN": 2,
   "selectedEndpoints": ["A", "B"],
-  "strategy": "StageView",
+  "onStageEndpoints": ["C", "D"],
   "defaultConstraints": { "maxHeight":  180 },
   "constraints": {
     "A": { "maxHeight": 720 },
@@ -178,8 +175,7 @@ Stage view with endpoint `A` in high definition and all other endpoints in 180p:
 ```json
 {
   "colibriClass": "BandwidthAllocationSettings",
-  "selectedEndpoints": ["A"],
-  "strategy": "StageView",
+  "onStageEndpoints": ["A"],
   "defaultConstraints": { "maxHeight":  180 },
   "constraints": {
     "A": { "maxHeight": 720 }
@@ -192,8 +188,7 @@ Stage view with endpoint `A` in high definition, `B`, `C`, `D` in 180p and all o
 ```json
 {
   "colibriClass": "BandwidthAllocationSettings",
-  "selectedEndpoints": ["A"],
-  "strategy": "StageView",
+  "onStageEndpoints": ["A"],
   "defaultConstraints": { "maxHeight":  0 },
   "constraints": {
     "A": { "maxHeight": 720 },
@@ -209,8 +204,7 @@ Stage view with endpoint `A` in high definition, `B`, `C`, `D` disabled and all 
 ```json
 {
   "colibriClass": "BandwidthAllocationSettings",
-  "selectedEndpoints": ["A"],
-  "strategy": "StageView",
+  "onStageEndpoints": ["A"],
   "defaultConstraints": { "maxHeight":  180 },
   "constraints": {
     "A": { "maxHeight": 720 },
@@ -221,12 +215,26 @@ Stage view with endpoint `A` in high definition, `B`, `C`, `D` disabled and all 
 }
 ```
 
+#### Stage view (4)
+Stage view with endpoint `A` in high definition and all other endpoints in 180p, with "D" prioritized higher than 
+the dominant speaker:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "onStageEndpoints": ["A"],
+  "selectedEndpoints": ["D"],
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A": { "maxHeight": 720 }
+  }
+}
+```
+
 #### Tile view (1)
 Tile view with all endpoints in 180p/15fps:
 ```json
 {
   "colibriClass": "BandwidthAllocationSettings",
-  "strategy": "TileView",
   "defaultConstraints": { "maxHeight":  180, "maxFrameRate": 15 }
 }
 ```
@@ -236,7 +244,6 @@ Tile view with all endpoints in 360p:
 ```json
 {
   "colibriClass": "BandwidthAllocationSettings",
-  "strategy": "TileView",
   "defaultConstraints": { "maxHeight":  360 }
 }
 ```
@@ -247,7 +254,6 @@ Tile view with 180p, endpoints `A` and `B` prioritized, and endpoints `C` and `D
 {
   "colibriClass": "BandwidthAllocationSettings",
   "selectedEndpoints": ["A", "B"],
-  "strategy": "TileView",
   "defaultConstraints": { "maxHeight":  180 },
   "constraints": {
     "C": { "maxHeight":  0 },
@@ -261,12 +267,25 @@ Tile view with all endpoints disabled except `A`, `B`, `C`:
 ```json
 {
   "colibriClass": "BandwidthAllocationSettings",
-  "strategy": "TileView",
   "defaultConstraints": { "maxHeight":  0 },
   "constraints": {
     "A": { "maxHeight":  180 },
     "B": { "maxHeight":  180 },
     "C": { "maxHeight":  180 }
+  }
+}
+```
+#### Multi-stage view (1)
+With two on-stage endpoints, and up-to 4 other endpoints at 180p:
+```json
+{
+  "colibriClass": "BandwidthAllocationSettings",
+  "onStageEndpoints": ["A", "B"],
+  "lastN": 6,
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A": { "maxHeight":  720 },
+    "B": { "maxHeight":  720 }
   }
 }
 ```

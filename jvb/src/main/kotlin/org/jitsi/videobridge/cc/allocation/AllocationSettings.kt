@@ -25,14 +25,14 @@ import kotlin.math.min
  * This class encapsulates all of the client-controlled settings for bandwidth allocation.
  */
 data class AllocationSettings(
-    val strategy: AllocationStrategy = AllocationStrategy.StageView,
+    val onStageEndpoints: List<String> = emptyList(),
     val selectedEndpoints: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1,
     val defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 ) {
     override fun toString(): String = OrderedJsonObject().apply {
-        put("strategy", strategy)
+        put("on_stage_endpoints", onStageEndpoints)
         put("selected_endpoints", selectedEndpoints)
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
@@ -62,12 +62,11 @@ internal class AllocationSettingsWrapper {
 
     private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 
-    internal var strategy = AllocationStrategy.StageView
-
+    private var onStageEndpoints: List<String> = emptyList()
     private var allocationSettings = create()
 
     private fun create() = AllocationSettings(
-        strategy = strategy,
+        onStageEndpoints = onStageEndpoints,
         selectedEndpoints = selectedEndpoints,
         videoConstraints = videoConstraints,
         defaultConstraints = defaultConstraints,
@@ -105,9 +104,9 @@ internal class AllocationSettingsWrapper {
                 changed = true
             }
         }
-        message.strategy?.let {
-            if (strategy != it) {
-                strategy = it
+        message.onStageEndpoints?.let {
+            if (onStageEndpoints != it) {
+                onStageEndpoints = it
                 changed = true
             }
         }
@@ -202,36 +201,30 @@ internal class AllocationSettingsWrapper {
         //
         // In tile view we set the ideal height but not the preferred height nor the preferred frame-rate, because
         // we want even even distribution of bandwidth among all the tiles to avoid ninjas.
-        val newStrategy =
-            if (selectedEndpoints.size > 1) AllocationStrategy.TileView else AllocationStrategy.StageView
+        val tileView = selectedEndpoints.size > 1
 
-        val selectedEndpointConstraints = VideoConstraints(min(config.onstageIdealHeightPx(), maxFrameHeight))
+        val onStageConstraints = VideoConstraints(min(config.onstageIdealHeightPx(), maxFrameHeight))
         val newConstraints = selectedEndpoints.stream()
-            .collect(Collectors.toMap({ e: String -> e }) { selectedEndpointConstraints })
+            .collect(Collectors.toMap({ e: String -> e }) { onStageConstraints })
 
-        // With the legacy signaling the client selects all endpoints in TileView, but does not want to override the
-        // speaker order.
-        val newSelectedEndpoints = if (newStrategy == AllocationStrategy.TileView) emptyList() else selectedEndpoints
+        val newOnStageEndpoints = if (tileView) emptyList() else selectedEndpoints
 
         var changed = false
-        if (strategy != newStrategy) {
-            strategy = newStrategy
+        if (newOnStageEndpoints != onStageEndpoints) {
+            onStageEndpoints = newOnStageEndpoints
             changed = true
         }
         if (videoConstraints != newConstraints) {
             videoConstraints = newConstraints
             changed = true
         }
-        if (this.selectedEndpoints != newSelectedEndpoints) {
-            this.selectedEndpoints = newSelectedEndpoints
+        // With the legacy signaling the client selects all endpoints in TileView, but does not want to override the
+        // speaker order. In stage view, we use onStageEndpoints instead.
+        if (this.selectedEndpoints.isNotEmpty()) {
+            this.selectedEndpoints = emptyList()
             changed = true
         }
 
         return changed
     }
 }
-
-internal data class StrategyAndConstraints(
-    val allocationStrategy: AllocationStrategy,
-    val constraints: Map<String, VideoConstraints>
-)
