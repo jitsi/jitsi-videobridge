@@ -319,9 +319,16 @@ class Transceiver(
     }
 
     fun setFeature(feature: Features, enabled: Boolean) {
-        val featureToggleEvent = FeatureToggleEvent(feature, enabled)
-        rtpReceiver.handleEvent(featureToggleEvent)
-        rtpSender.handleEvent(featureToggleEvent)
+        rtpReceiver.setFeature(feature, enabled)
+        rtpSender.setFeature(feature, enabled)
+    }
+
+    fun isFeatureEnabled(feature: Features): Boolean {
+        // As of now, the only feature we have (pcap) is always enabled on both
+        // the RTP sender and RTP receiver at the same time, so returning
+        // the state of one of them is sufficient.  If that were to change
+        // in the future we'd have to rethink this API
+        return rtpReceiver.isFeatureEnabled(feature)
     }
 
     companion object {

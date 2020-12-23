@@ -229,6 +229,24 @@ class RtpSenderImpl(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
+    override fun setFeature(feature: Features, enabled: Boolean) {
+        when (feature) {
+            Features.TRANSCEIVER_PCAP_DUMP -> {
+                if (enabled) {
+                    toggleablePcapWriter.enable()
+                } else {
+                    toggleablePcapWriter.disable()
+                }
+            }
+        }
+    }
+
+    override fun isFeatureEnabled(feature: Features): Boolean {
+        return when (feature) {
+            Features.TRANSCEIVER_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
+        }
+    }
+
     /**
      * Handles packets that have gone through the incoming queue and sends them
      * through the sender pipeline

@@ -53,6 +53,9 @@ abstract class RtpReceiver :
     abstract fun isReceivingAudio(): Boolean
     abstract fun isReceivingVideo(): Boolean
 
+    abstract fun setFeature(feature: Features, enabled: Boolean)
+    abstract fun isFeatureEnabled(feature: Features): Boolean
+
     /**
      * Forcibly mute or unmute the incoming audio stream
      */
