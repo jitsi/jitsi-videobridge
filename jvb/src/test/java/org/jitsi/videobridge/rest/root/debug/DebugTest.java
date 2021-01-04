@@ -33,12 +33,11 @@ import org.reflections.util.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.client.*;
-import javax.ws.rs.core.Application;
 import javax.ws.rs.core.*;
-
 import java.util.logging.*;
 
-import static junit.framework.TestCase.*;
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -46,16 +45,19 @@ public class DebugTest extends JerseyTest
 {
     protected Videobridge videobridge;
     protected static final String BASE_URL = "/debug";
+    Endpoint endpoint;
+    Conference conference;
 
     @Override
     protected Application configure()
     {
         videobridge = mock(Videobridge.class);
+        endpoint = mock(Endpoint.class);
+        conference = mock(Conference.class);
 
-        Endpoint endpoint = mock(Endpoint.class);
-        Conference conference = mock(Conference.class);
         when(videobridge.getConference("foo")).thenReturn(conference);
         when(conference.getEndpoint("bar")).thenReturn(endpoint);
+        when(conference.getLocalEndpoint("bar")).thenReturn(endpoint);
 
         enable(TestProperties.LOG_TRAFFIC);
         enable(TestProperties.DUMP_ENTITY);
@@ -146,6 +148,33 @@ public class DebugTest extends JerseyTest
                 .request()
                 .post(Entity.json(null));
         assertEquals(HttpStatus.OK_200, resp.getStatus());
+    }
+
+    @Test
+    public void testGetEndpointFeatureState()
+    {
+        when(endpoint.isFeatureEnabled(EndpointDebugFeatures.PCAP_DUMP)).thenReturn(true);
+        Response resp = target(BASE_URL + "/features/endpoint/foo/bar/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
+            .request()
+            .get();
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+        assertTrue(Boolean.parseBoolean(resp.readEntity(String.class)));
+
+        when(endpoint.isFeatureEnabled(EndpointDebugFeatures.PCAP_DUMP)).thenReturn(false);
+        resp = target(BASE_URL + "/features/endpoint/foo/bar/" + EndpointDebugFeatures.PCAP_DUMP.getValue())
+            .request()
+            .get();
+        assertEquals(HttpStatus.OK_200, resp.getStatus());
+        assertFalse(Boolean.parseBoolean(resp.readEntity(String.class)));
+    }
+
+    @Test
+    public void testGetNonexistentEndpointFeatureState()
+    {
+        Response resp = target(BASE_URL + "/features/endpoint/foo/bar/nonexistent")
+            .request()
+            .get();
+        assertEquals(HttpStatus.NOT_FOUND_404, resp.getStatus());
     }
 
     @Test
