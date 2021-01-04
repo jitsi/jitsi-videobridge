@@ -144,7 +144,7 @@ Selected endpoints are set with a `SelectedEndpointsChangedEvent` message:
 ```
 
 ## New message format
-The new format uses a single message with a set fields:
+The new format uses a single message with a set of fields:
 ```json
 {
   "colibriClass": "BandwidthAllocationSettings",
