@@ -33,7 +33,6 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.mins
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
-import org.jitsi.videobridge.octo.OctoEndpoint
 
 class EndpointConnectionStatusMonitorTest : ShouldSpec({
     isolationMode = IsolationMode.InstancePerLeaf
@@ -45,10 +44,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val localEp2: Endpoint = mockk {
         every { id } returns "2"
     }
-    val remoteEp1: OctoEndpoint = mockk {
-        every { id } returns "3"
-    }
-    val eps = listOf(localEp1, localEp2, remoteEp1)
+    val eps = listOf(localEp1, localEp2)
 
     val broadcastMessage = slot<EndpointConnectionStatusMessage>()
     val broadcastSendToOcto = slot<Boolean>()
@@ -60,7 +56,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val sendMessageCalls = mutableListOf<Triple<EndpointConnectionStatusMessage, List<AbstractEndpoint>, Boolean>>()
 
     val conference: Conference = mockk {
-        every { endpoints } returns eps
+        every { localEndpoints } returns eps
         every { broadcastMessage(capture(broadcastMessage), capture(broadcastSendToOcto)) } answers {
             broadcastCalls += Pair(broadcastMessage.captured, broadcastSendToOcto.captured)
         }
@@ -88,7 +84,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 every { it.lastIncomingActivity } returns NEVER
             }
             context("but haven't been around longer than first transfer timeout") {
-                eps.filterIsInstance<Endpoint>().forEach {
+                eps.forEach {
                     every { it.mostRecentChannelCreatedTime } returns clock.instant()
                 }
                 executor.runOne()
@@ -98,7 +94,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 }
             }
             context("and have been around longer than first transfer timeout") {
-                eps.filterIsInstance<Endpoint>().forEach {
+                eps.forEach {
                     every { it.mostRecentChannelCreatedTime } returns clock.instant()
                 }
                 clock.elapse(1.mins)
@@ -117,9 +113,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
         }
         context("when the endpoints have had activity") {
             eps.forEach {
-                if (it is Endpoint) {
-                    every { it.mostRecentChannelCreatedTime } returns clock.instant()
-                }
+                every { it.mostRecentChannelCreatedTime } returns clock.instant()
                 every { it.lastIncomingActivity } returns clock.instant()
             }
             context("that is within maxInactivityLimit") {
@@ -174,26 +168,6 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                         sendMessageCalls.forAny { (msg, _, _) ->
                             msg.endpoint shouldBe "2"
                             msg.active shouldBe "false"
-                        }
-                    }
-                }
-                context("and then an ep expires") {
-                    monitor.endpointExpired("1")
-                    context("and then a new ep joins") {
-                        every { conference.getEndpoint("4") } returns mockk() { every { id } returns "4" }
-                        monitor.endpointConnected("4")
-                        // We shouldn't get a notification for the expired endpoint
-                        should("update the new endpoint of the other endpoints' statuses") {
-                            sendMessageCalls shouldHaveSize 1
-                            sendMessageCalls.forAll { (_, destEps, sendToOcto) ->
-                                destEps shouldHaveSize 1
-                                destEps.first().id shouldBe "4"
-                                sendToOcto shouldBe false
-                            }
-                            sendMessageCalls.forAny { (msg, _, _) ->
-                                msg.endpoint shouldBe "2"
-                                msg.active shouldBe "false"
-                            }
                         }
                     }
                 }

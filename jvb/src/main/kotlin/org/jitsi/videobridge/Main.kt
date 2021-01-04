@@ -25,6 +25,7 @@ import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.rest.JettyBundleActivatorConfig
 import org.jitsi.rest.createServer
+import org.jitsi.rest.enableCors
 import org.jitsi.rest.isEnabled
 import org.jitsi.rest.servletContextHandler
 import org.jitsi.shutdown.ShutdownServiceImpl
@@ -40,11 +41,10 @@ import org.jitsi.videobridge.stats.callstats.CallstatsService
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
-import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 import org.jitsi.videobridge.xmpp.XmppConnection
-import java.lang.IllegalStateException
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
+import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
@@ -141,6 +141,7 @@ fun main(args: Array<String>) {
                 ServletHolder(ServletContainer(restApp)),
                 "/*"
             )
+            it.servletContextHandler.enableCors()
             it.start()
         }
     } else {

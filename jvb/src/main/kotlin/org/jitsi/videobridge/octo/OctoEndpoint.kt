@@ -16,17 +16,16 @@
 
 package org.jitsi.videobridge.octo
 
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
-import org.jitsi.nlj.MediaSourceDesc
-import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
@@ -88,10 +87,6 @@ class OctoEndpoint(
 
     override fun requestKeyframe() {
         transceiver.requestKeyframe()
-    }
-
-    override fun setFeature(feature: EndpointDebugFeatures?, enabled: Boolean) {
-        // NO-OP
     }
 
     override fun shouldExpire(): Boolean = !transceiver.hasReceiveSsrcs()
