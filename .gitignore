@@ -13,3 +13,4 @@ target/
 *.iml
 .mvn/
 .kotlintest
+**/.DS_Store

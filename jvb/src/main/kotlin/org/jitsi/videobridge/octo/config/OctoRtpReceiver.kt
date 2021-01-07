@@ -18,6 +18,7 @@ package org.jitsi.videobridge.octo.config
 
 import org.jitsi.nlj.AudioLevelListener
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpReceiver
@@ -179,6 +180,14 @@ class OctoRtpReceiver(
     }
 
     override fun onRttUpdate(newRttMs: Double) {
+        TODO("Not yet implemented")
+    }
+
+    override fun setFeature(feature: Features, enabled: Boolean) {
+        TODO("Not yet implemented")
+    }
+
+    override fun isFeatureEnabled(feature: Features): Boolean {
         TODO("Not yet implemented")
     }
 
