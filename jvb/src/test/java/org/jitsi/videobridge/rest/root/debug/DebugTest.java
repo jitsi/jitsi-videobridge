@@ -68,7 +68,7 @@ public class DebugTest extends JerseyTest
                     @Override
                     protected void configure()
                     {
-                        bind(mock(HealthCheckServiceSupplier.class)).to(HealthCheckServiceSupplier.class);
+                        bind(mock(HealthCheckService.class)).to(HealthCheckService.class);
                         bind(videobridge).to(Videobridge.class);
                     }
                 });
