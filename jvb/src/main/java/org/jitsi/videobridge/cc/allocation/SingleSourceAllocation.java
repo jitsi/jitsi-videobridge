@@ -86,6 +86,7 @@ class SingleSourceAllocation {
         }
 
         long nowMs = clock.instant().toEpochMilli();
+        boolean noActiveLayers = source.getRtpLayers().stream().noneMatch(l -> l.getBitrate(nowMs).getBps() > 0);
         List<LayerSnapshot> ratesList = new ArrayList<>();
         // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
         // a couple of exceptions (see comments below).
@@ -130,7 +131,9 @@ class SingleSourceAllocation {
                     || ratesList.isEmpty())
             {
                 Bandwidth layerBitrate = layer.getBitrate(nowMs);
-                if (layerBitrate.getBps() > 0)
+                // No active layers usually happens when the source has just been signaled and we haven't received
+                // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
+                if (noActiveLayers || layerBitrate.getBps() > 0)
                 {
                     ratesList.add(new LayerSnapshot(layer, layerBitrate));
 
