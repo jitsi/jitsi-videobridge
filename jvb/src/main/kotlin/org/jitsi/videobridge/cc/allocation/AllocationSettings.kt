@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.util.OrderedJsonObject
-import org.jitsi.videobridge.message.BandwidthAllocationSettingsMessage
+import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig as config
 import java.util.stream.Collectors
 import kotlin.math.min
@@ -89,7 +89,7 @@ internal class AllocationSettingsWrapper {
         return false
     }
 
-    fun setBandwidthAllocationSettings(message: BandwidthAllocationSettingsMessage): Boolean {
+    fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage): Boolean {
         var changed = false
 
         message.lastN?.let {

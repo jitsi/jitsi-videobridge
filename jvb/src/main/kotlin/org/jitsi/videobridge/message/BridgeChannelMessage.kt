@@ -55,7 +55,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
-    JsonSubTypes.Type(value = BandwidthAllocationSettingsMessage::class, name = BandwidthAllocationSettingsMessage.TYPE)
+    JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE)
 )
 // The type is included as colibriClass (as we want) by the annotation above.
 @JsonIgnoreProperties("type")
@@ -100,7 +100,7 @@ open class MessageHandler {
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
-            is BandwidthAllocationSettingsMessage -> bandwidthAllocationSettings(message)
+            is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
         }
     }
 
@@ -123,8 +123,7 @@ open class MessageHandler {
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
-    open fun bandwidthAllocationSettings(message: BandwidthAllocationSettingsMessage) =
-        unhandledMessageReturnNull(message)
+    open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
 }
@@ -377,7 +376,7 @@ class RemoveReceiverMessage(
     }
 }
 
-class BandwidthAllocationSettingsMessage(
+class ReceiverVideoConstraintsMessage(
     val lastN: Int? = null,
     val selectedEndpoints: List<String>? = null,
     val onStageEndpoints: List<String>? = null,
@@ -385,6 +384,6 @@ class BandwidthAllocationSettingsMessage(
     val constraints: Map<String, VideoConstraints>? = null
 ) : BridgeChannelMessage(TYPE) {
     companion object {
-        const val TYPE = "BandwidthAllocationSettings"
+        const val TYPE = "ReceiverVideoConstraints"
     }
 }

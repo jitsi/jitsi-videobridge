@@ -25,7 +25,7 @@ import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
-import org.jitsi.videobridge.message.BandwidthAllocationSettingsMessage
+import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
 import org.json.simple.JSONObject
 import java.time.Clock
@@ -158,7 +158,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         }
     }
 
-    fun setBandwidthAllocationSettings(message: BandwidthAllocationSettingsMessage) {
+    fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
         if (allocationSettingsWrapper.setBandwidthAllocationSettings(message)) {
             bandwidthAllocator.update(allocationSettingsWrapper.get())
         }

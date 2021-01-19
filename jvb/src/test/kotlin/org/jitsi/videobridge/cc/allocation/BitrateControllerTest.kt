@@ -37,7 +37,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
-import org.jitsi.videobridge.message.BandwidthAllocationSettingsMessage
+import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -235,7 +235,7 @@ class BitrateControllerTest : ShouldSpec() {
                 // The exact flow of this scenario was taken from a (non-jitsi-meet) client.
                 bc.setEndpointOrdering("A", "B", "C", "D")
                 bc.bc.setBandwidthAllocationSettings(
-                    BandwidthAllocationSettingsMessage(
+                    ReceiverVideoConstraintsMessage(
                         selectedEndpoints = listOf("A", "B"),
                         constraints = mapOf("A" to VideoConstraints(720), "B" to VideoConstraints(720))
                     )
@@ -248,7 +248,7 @@ class BitrateControllerTest : ShouldSpec() {
                     "D" to VideoConstraints(180)
                 )
 
-                bc.bc.setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage(lastN = 2))
+                bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = 2))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
                     "A" to VideoConstraints(720),
                     "B" to VideoConstraints(720),
@@ -270,7 +270,7 @@ class BitrateControllerTest : ShouldSpec() {
 
                 clock.elapse(2.secs)
                 bc.bc.setBandwidthAllocationSettings(
-                    BandwidthAllocationSettingsMessage(
+                    ReceiverVideoConstraintsMessage(
                         constraints = mapOf("A" to VideoConstraints(360), "B" to VideoConstraints(360))
                     )
                 )
@@ -284,12 +284,12 @@ class BitrateControllerTest : ShouldSpec() {
                 clock.elapse(2.secs)
                 // This should change nothing, the selection didn't change.
                 bc.bc.setBandwidthAllocationSettings(
-                    BandwidthAllocationSettingsMessage(selectedEndpoints = listOf("A", "B"))
+                    ReceiverVideoConstraintsMessage(selectedEndpoints = listOf("A", "B"))
                 )
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
 
                 clock.elapse(2.secs)
-                bc.bc.setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage(lastN = -1))
+                bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = -1))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
                     "A" to VideoConstraints(360),
                     "B" to VideoConstraints(360),
@@ -298,7 +298,7 @@ class BitrateControllerTest : ShouldSpec() {
                 )
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
 
-                bc.bc.setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage(lastN = 2))
+                bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = 2))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
                     "A" to VideoConstraints(360),
                     "B" to VideoConstraints(360),
@@ -1442,7 +1442,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
             bc.setSelectedEndpoints(listOf(onStageEndpoint))
         } else {
             bc.setBandwidthAllocationSettings(
-                BandwidthAllocationSettingsMessage(
+                ReceiverVideoConstraintsMessage(
                     lastN = lastN,
                     onStageEndpoints = listOf(onStageEndpoint),
                     constraints = mapOf(onStageEndpoint to VideoConstraints(720))
@@ -1467,7 +1467,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
             setSelectedEndpoints(*selectedEndpoints, maxFrameHeight = maxFrameHeight)
         } else {
             bc.setBandwidthAllocationSettings(
-                BandwidthAllocationSettingsMessage(
+                ReceiverVideoConstraintsMessage(
                     lastN = lastN,
                     selectedEndpoints = listOf(*selectedEndpoints),
                     constraints = selectedEndpoints.map { it to VideoConstraints(maxFrameHeight) }.toMap()

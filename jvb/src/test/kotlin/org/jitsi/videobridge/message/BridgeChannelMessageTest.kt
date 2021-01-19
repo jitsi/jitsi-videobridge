@@ -221,12 +221,12 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.endpointId shouldBe "abcdabcd"
         }
 
-        context("Parsing BandwidthAllocationSettingsMessage") {
+        context("Parsing ReceiverVideoConstraints") {
             context("With all fields present") {
-                val parsed = parse(BANDWIDTH_ALLOCATION_SETTINGS)
+                val parsed = parse(RECEIVER_VIDEO_CONSTRAINTS)
 
-                parsed.shouldBeInstanceOf<BandwidthAllocationSettingsMessage>()
-                parsed as BandwidthAllocationSettingsMessage
+                parsed.shouldBeInstanceOf<ReceiverVideoConstraintsMessage>()
+                parsed as ReceiverVideoConstraintsMessage
                 parsed.lastN shouldBe 3
                 parsed.onStageEndpoints shouldBe listOf("onstage1", "onstage2")
                 parsed.selectedEndpoints shouldBe listOf("selected1", "selected2")
@@ -240,9 +240,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
             }
 
             context("With fields missing") {
-                val parsed = parse(BANDWIDTH_ALLOCATION_SETTINGS_EMPTY)
-                parsed.shouldBeInstanceOf<BandwidthAllocationSettingsMessage>()
-                parsed as BandwidthAllocationSettingsMessage
+                val parsed = parse(RECEIVER_VIDEO_CONSTRAINTS_EMPTY)
+                parsed.shouldBeInstanceOf<ReceiverVideoConstraintsMessage>()
+                parsed as ReceiverVideoConstraintsMessage
                 parsed.lastN shouldBe null
                 parsed.onStageEndpoints shouldBe null
                 parsed.selectedEndpoints shouldBe null
@@ -315,14 +315,14 @@ class BridgeChannelMessageTest : ShouldSpec() {
             }
         """
 
-        const val BANDWIDTH_ALLOCATION_SETTINGS_EMPTY = """
+        const val RECEIVER_VIDEO_CONSTRAINTS_EMPTY = """
             {
-              "colibriClass": "BandwidthAllocationSettings"
+              "colibriClass": "ReceiverVideoConstraints"
             }
         """
-        const val BANDWIDTH_ALLOCATION_SETTINGS = """
+        const val RECEIVER_VIDEO_CONSTRAINTS = """
             {
-              "colibriClass": "BandwidthAllocationSettings",
+              "colibriClass": "ReceiverVideoConstraints",
               "lastN": 3,
               "selectedEndpoints": [ "selected1", "selected2" ],
               "onStageEndpoints": [ "onstage1", "onstage2" ],

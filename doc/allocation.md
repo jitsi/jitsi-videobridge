@@ -147,7 +147,7 @@ Selected endpoints are set with a `SelectedEndpointsChangedEvent` message:
 The new format uses a single message with a set of fields:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "lastN": 2,
   "selectedEndpoints": ["A", "B"],
   "onStageEndpoints": ["C", "D"],
@@ -174,7 +174,7 @@ and the rest empty.
 Stage view with endpoint `A` in high definition and all other endpoints in 180p:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "onStageEndpoints": ["A"],
   "defaultConstraints": { "maxHeight":  180 },
   "constraints": {
@@ -187,7 +187,7 @@ Stage view with endpoint `A` in high definition and all other endpoints in 180p:
 Stage view with endpoint `A` in high definition, `B`, `C`, `D` in 180p and all others disabled:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "onStageEndpoints": ["A"],
   "defaultConstraints": { "maxHeight":  0 },
   "constraints": {
@@ -203,7 +203,7 @@ Stage view with endpoint `A` in high definition, `B`, `C`, `D` in 180p and all o
 Stage view with endpoint `A` in high definition, `B`, `C`, `D` disabled and all others in 180p:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "onStageEndpoints": ["A"],
   "defaultConstraints": { "maxHeight":  180 },
   "constraints": {
@@ -220,7 +220,7 @@ Stage view with endpoint `A` in high definition and all other endpoints in 180p,
 the dominant speaker:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "onStageEndpoints": ["A"],
   "selectedEndpoints": ["D"],
   "defaultConstraints": { "maxHeight":  180 },
@@ -234,7 +234,7 @@ the dominant speaker:
 Tile view with all endpoints in 180p/15fps:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "defaultConstraints": { "maxHeight":  180, "maxFrameRate": 15 }
 }
 ```
@@ -243,7 +243,7 @@ Tile view with all endpoints in 180p/15fps:
 Tile view with all endpoints in 360p:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "defaultConstraints": { "maxHeight":  360 }
 }
 ```
@@ -252,7 +252,7 @@ Tile view with all endpoints in 360p:
 Tile view with 180p, endpoints `A` and `B` prioritized, and endpoints `C` and `D` disabled:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "selectedEndpoints": ["A", "B"],
   "defaultConstraints": { "maxHeight":  180 },
   "constraints": {
@@ -266,7 +266,7 @@ Tile view with 180p, endpoints `A` and `B` prioritized, and endpoints `C` and `D
 Tile view with all endpoints disabled except `A`, `B`, `C`:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "defaultConstraints": { "maxHeight":  0 },
   "constraints": {
     "A": { "maxHeight":  180 },
@@ -279,7 +279,7 @@ Tile view with all endpoints disabled except `A`, `B`, `C`:
 With two on-stage endpoints, and up-to 4 other endpoints at 180p:
 ```json
 {
-  "colibriClass": "BandwidthAllocationSettings",
+  "colibriClass": "ReceiverVideoConstraints",
   "onStageEndpoints": ["A", "B"],
   "lastN": 6,
   "defaultConstraints": { "maxHeight":  180 },

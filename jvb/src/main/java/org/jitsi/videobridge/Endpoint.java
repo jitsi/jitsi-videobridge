@@ -1463,7 +1463,7 @@ public class Endpoint
         bitrateController.setMaxFrameHeight(maxFrameHeight);
     }
 
-    void setBandwidthAllocationSettings(BandwidthAllocationSettingsMessage message)
+    void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message)
     {
         bitrateController.setBandwidthAllocationSettings(message);
     }

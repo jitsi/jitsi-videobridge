@@ -438,7 +438,7 @@ class EndpointMessageTransport
 
     @Nullable
     @Override
-    public BridgeChannelMessage bandwidthAllocationSettings(@NotNull BandwidthAllocationSettingsMessage message)
+    public BridgeChannelMessage receiverVideoConstraints(@NotNull ReceiverVideoConstraintsMessage message)
     {
         endpoint.setBandwidthAllocationSettings(message);
         return null;
