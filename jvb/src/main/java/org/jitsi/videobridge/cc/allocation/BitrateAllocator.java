@@ -557,7 +557,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         }
         if (changed)
         {
-            eventEmitter.fireEvent(handler ->
+            eventEmitter.fireEventSync(handler ->
             {
                 handler.allocationChanged(sourceBitrateAllocations);
                 return Unit.INSTANCE;
@@ -579,7 +579,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
         {
             // TODO(george) bring back sending this message on message transport
             //  connect
-            eventEmitter.fireEvent(handler ->
+            eventEmitter.fireEventSync(handler ->
             {
                 handler.forwardedEndpointsChanged(newForwardedEndpointIds);
                 return Unit.INSTANCE;
@@ -592,7 +592,7 @@ public class BitrateAllocator<T extends MediaSourceContainer>
                     oldEffectiveConstraints = ImmutableMap.copyOf(effectiveConstraintsMap);
             // TODO make the call outside the synchronized block.
             effectiveConstraintsMap = newEffectiveConstraints;
-            eventEmitter.fireEvent(handler ->
+            eventEmitter.fireEventSync(handler ->
             {
                 handler.effectiveVideoConstraintsChanged(
                         oldEffectiveConstraints, ImmutableMap.copyOf(newEffectiveConstraints));

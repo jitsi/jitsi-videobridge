@@ -247,7 +247,7 @@ public class Videobridge
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
 
-        eventEmitter.fireEvent(handler ->
+        eventEmitter.fireEventSync(handler ->
         {
             handler.conferenceCreated(conference);
             return Unit.INSTANCE;
@@ -289,7 +289,7 @@ public class Videobridge
             {
                 conferencesById.remove(id);
                 conference.expire();
-                eventEmitter.fireEvent(handler ->
+                eventEmitter.fireEventSync(handler ->
                 {
                     handler.conferenceExpired(conference);
                     return Unit.INSTANCE;
