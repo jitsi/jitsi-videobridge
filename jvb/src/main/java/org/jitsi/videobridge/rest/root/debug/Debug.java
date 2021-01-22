@@ -53,7 +53,7 @@ public class Debug
     private Videobridge videobridge;
 
     @Inject
-    private HealthCheckServiceSupplier healthCheckServiceSupplier;
+    private HealthCheckService healthCheckService;
 
     private final Logger logger = new LoggerImpl(Debug.class.getName());
 
@@ -238,7 +238,7 @@ public class Debug
         OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
 
         // Append the health status.
-        Exception result = healthCheckServiceSupplier.get().getResult();
+        Exception result = healthCheckService.getResult();
         debugState.put("health", result == null ? "OK" : result.getMessage());
 
         return debugState.toJSONString();

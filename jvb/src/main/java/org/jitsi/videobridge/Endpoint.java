@@ -406,7 +406,7 @@ public class Endpoint
             @Override
             public void connected() {
                 logger.info("ICE connected");
-                eventEmitter.fireEvent(handler -> {
+                eventEmitter.fireEventSync(handler -> {
                     handler.iceSucceeded();
                     return Unit.INSTANCE;
                 });
@@ -417,7 +417,7 @@ public class Endpoint
 
             @Override
             public void failed() {
-                eventEmitter.fireEvent(handler -> {
+                eventEmitter.fireEventSync(handler -> {
                     handler.iceFailed();
                     return Unit.INSTANCE;
                 });
@@ -1125,7 +1125,7 @@ public class Endpoint
     {
         if (transceiver.setMediaSources(mediaSources))
         {
-            eventEmitter.fireEvent(handler -> {
+            eventEmitter.fireEventSync(handler -> {
                 handler.sourcesChanged();
                 return Unit.INSTANCE;
             });

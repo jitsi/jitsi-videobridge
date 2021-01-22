@@ -35,7 +35,7 @@ public class Application extends ResourceConfig
             Videobridge videobridge,
             XmppConnection xmppConnection,
             StatsCollector statsCollector,
-            @NotNull VersionService versionService,
+            @NotNull Version version,
             @NotNull JvbHealthChecker healthChecker)
 
     {
@@ -44,7 +44,6 @@ public class Application extends ResourceConfig
                 videobridge,
                 xmppConnection,
                 statsCollector,
-                versionService,
                 healthChecker
             )
         );
@@ -55,11 +54,11 @@ public class Application extends ResourceConfig
 
         if (config.isEnabled(RestApis.HEALTH))
         {
-            register(new org.jitsi.rest.Health());
+            register(new org.jitsi.rest.Health(healthChecker));
         }
         if (config.isEnabled(RestApis.VERSION))
         {
-            register(new org.jitsi.rest.Version());
+            register(new org.jitsi.rest.Version(version));
         }
     }
 }

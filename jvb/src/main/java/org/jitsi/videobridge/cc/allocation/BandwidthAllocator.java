@@ -255,7 +255,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
         if (allocationChanged)
         {
-            eventEmitter.fireEvent(handler -> {
+            eventEmitter.fireEventSync(handler -> {
                 handler.allocationChanged(newAllocation);
                 return Unit.INSTANCE;
             });
@@ -264,7 +264,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         if (!effectiveConstraints.equals(oldEffectiveConstraints))
         {
-            eventEmitter.fireEvent(handler ->
+            eventEmitter.fireEventSync(handler ->
             {
                 handler.effectiveVideoConstraintsChanged(oldEffectiveConstraints, effectiveConstraints);
                 return Unit.INSTANCE;

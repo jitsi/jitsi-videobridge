@@ -135,7 +135,13 @@ fun main(args: Array<String>) {
     )
     val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        val restApp = Application(videobridge, xmppConnection, statsCollector, versionService, healthChecker)
+        val restApp = Application(
+            videobridge,
+            xmppConnection,
+            statsCollector,
+            versionService.currentVersion,
+            healthChecker
+        )
         createServer(privateServerConfig).also {
             it.servletContextHandler.addServlet(
                 ServletHolder(ServletContainer(restApp)),
