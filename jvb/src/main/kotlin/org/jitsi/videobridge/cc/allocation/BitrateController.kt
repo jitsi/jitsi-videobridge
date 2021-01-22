@@ -263,13 +263,13 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             val newForwardedEndpoints = allocation.forwardedEndpoints
             if (forwardedEndpoints != newForwardedEndpoints) {
                 forwardedEndpoints = newForwardedEndpoints
-                eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
+                eventEmitter.fireEventSync { forwardedEndpointsChanged(newForwardedEndpoints) }
             }
 
             oversendingTimeTracker.setState(allocation.oversending)
 
             // TODO: this is for testing only. Should we change the tests to work with [BitrateAllocator] directly?
-            eventEmitter.fireEvent { allocationChanged(allocation) }
+            eventEmitter.fireEventSync { allocationChanged(allocation) }
         }
 
         override fun effectiveVideoConstraintsChanged(
@@ -277,7 +277,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             newEffectiveConstraints: Map<String, VideoConstraints>
         ) {
             // Forward to the outer EventHandler.
-            eventEmitter.fireEvent {
+            eventEmitter.fireEventSync {
                 effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
             }
         }
