@@ -23,6 +23,7 @@ import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
@@ -45,7 +46,7 @@ import java.util.function.Supplier
 class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     eventHandler: EventHandler,
     endpointsSupplier: Supplier<List<T>>,
-    diagnosticContext: DiagnosticContext,
+    private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
@@ -61,6 +62,10 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
      */
     val oversendingTimeTracker = BooleanStateTimeTracker()
+
+    val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(BitrateController::class.java).let {
+        if (it.isTraceEnabled) it else null
+    }
 
     /**
      * NOTE(george): this flag acts as an approximation for determining whether or not adaptivity/probing is
@@ -127,7 +132,10 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun numForwardedEndpoints(): Int = forwardedEndpoints.size
     fun getTotalOversendingTime(): Duration = oversendingTimeTracker.totalTimeOn()
     fun isOversending() = oversendingTimeTracker.state
-    fun bandwidthChanged(newBandwidthBps: Long) = bandwidthAllocator.bandwidthChanged(newBandwidthBps)
+    fun bandwidthChanged(newBandwidthBps: Long) {
+        timeSeriesLogger?.logBweChange(newBandwidthBps)
+        bandwidthAllocator.bandwidthChanged(newBandwidthBps)
+    }
 
     // Proxy to the packet handler
     fun accept(packetInfo: PacketInfo): Boolean = packetHandler.accept(packetInfo)
@@ -199,6 +207,38 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         )
     }
 
+    private fun TimeSeriesLogger.logBweChange(newBweBps: Long) {
+        trace(diagnosticContext.makeTimeSeriesPoint("new_bwe").addField("bwe_bps", newBweBps)))
+    }
+
+    private fun TimeSeriesLogger.logAllocationChange(allocation: BandwidthAllocation) {
+        val nowMs = clock.millis()
+
+        var totalTargetBps = 0.0
+        var totalIdealBps = 0.0
+
+        allocation.allocations.forEach {
+            it.targetLayer?.getBitrate(nowMs)?.let { bitrate -> totalTargetBps += bitrate.bps }
+            it.idealLayer?.getBitrate(nowMs)?.let { bitrate -> totalIdealBps += bitrate.bps }
+            trace(
+                diagnosticContext
+                    .makeTimeSeriesPoint("allocation_for_source", nowMs)
+                    .addField("endpoint_id", it.endpointId)
+                    .addField("target_idx", it.targetLayer?.index ?: -1)
+                    .addField("ideal_idx", it.idealLayer?.index ?: -1)
+                    .addField("target_bps", it.targetLayer?.getBitrate(nowMs)?.bps ?: -1)
+                    .addField("ideal_bps", it.idealLayer?.getBitrate(nowMs)?.bps ?: -1)
+            )
+        }
+
+        trace(
+            diagnosticContext
+                .makeTimeSeriesPoint("allocation", nowMs)
+                .addField("total_target_bps", totalTargetBps)
+                .addField("total_ideal_bps", totalIdealBps)
+        )
+    }
+
     interface EventHandler {
         fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>)
         fun effectiveVideoConstraintsChanged(
@@ -214,6 +254,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
     private inner class BitrateAllocatorEventHandler : BandwidthAllocator.EventHandler {
         override fun allocationChanged(allocation: BandwidthAllocation) {
+            timeSeriesLogger?.logAllocationChange(allocation)
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)
 
