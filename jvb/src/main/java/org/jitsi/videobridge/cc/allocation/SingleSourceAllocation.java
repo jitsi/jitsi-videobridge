@@ -18,6 +18,7 @@ package org.jitsi.videobridge.cc.allocation;
 import org.jitsi.nlj.MediaSourceDesc;
 import org.jitsi.nlj.RtpLayerDesc;
 import org.jitsi.nlj.util.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.config.*;
 
 import java.time.Clock;
@@ -31,6 +32,9 @@ import java.util.List;
  * @author George Politis
  */
 class SingleSourceAllocation {
+    private static final TimeSeriesLogger timeSeriesLogger
+            = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator.class);
+
     /**
      * An reusable empty array of {@link LayerSnapshot} to reduce allocations.
      */
@@ -72,6 +76,7 @@ class SingleSourceAllocation {
             MediaSourceDesc source,
             VideoConstraints constraints,
             boolean onStage,
+            DiagnosticContext diagnosticContext,
             Clock clock)
     {
         this.endpointId = endpointId;
@@ -146,6 +151,21 @@ class SingleSourceAllocation {
                     }
                 }
             }
+
+        }
+
+        if (timeSeriesLogger.isTraceEnabled())
+        {
+            DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
+                    = diagnosticContext.makeTimeSeriesPoint("layers_considered")
+                        .addField("remote_endpoint_id", endpointId);
+            for (LayerSnapshot layerSnapshot : ratesList)
+            {
+                ratesTimeSeriesPoint.addField(
+                        layerSnapshot.layer.getHeight() + "p_" + layerSnapshot.layer.getFrameRate() + "fps_bps",
+                        layerSnapshot.bitrate.getBps());
+            }
+            timeSeriesLogger.trace(ratesTimeSeriesPoint);
         }
 
         this.preferredIdx = ratedPreferredIdx;

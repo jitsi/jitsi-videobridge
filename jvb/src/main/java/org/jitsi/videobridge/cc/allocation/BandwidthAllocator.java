@@ -21,7 +21,9 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
+import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
@@ -131,16 +133,20 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     @NotNull
     private BandwidthAllocation allocation = new BandwidthAllocation(Collections.emptySet());
 
+    private final DiagnosticContext diagnosticContext;
+
     BandwidthAllocator(
             EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
             Supplier<Boolean> trustBwe,
             Logger parentLogger,
+            DiagnosticContext diagnosticContext,
             Clock clock)
     {
         this.logger = parentLogger.createChildLogger(BandwidthAllocator.class.getName());
         this.clock = clock;
         this.trustBwe = trustBwe;
+        this.diagnosticContext = diagnosticContext;
 
         this.endpointsSupplier = endpointsSupplier;
         eventEmitter.addHandler(eventHandler);
@@ -389,6 +395,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                                     // constraints" to work as designed.
                                     effectiveConstraints.get(endpoint.getId()),
                                     allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
+                                    diagnosticContext,
                                     clock));
                 }
             }

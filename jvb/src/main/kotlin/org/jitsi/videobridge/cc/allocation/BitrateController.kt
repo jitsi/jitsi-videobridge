@@ -85,6 +85,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             endpointsSupplier,
             Supplier { trustBwe },
             parentLogger,
+            diagnosticContext,
             clock
         )
 
@@ -208,7 +209,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     private fun TimeSeriesLogger.logBweChange(newBweBps: Long) {
-        trace(diagnosticContext.makeTimeSeriesPoint("new_bwe").addField("bwe_bps", newBweBps)))
+        trace(diagnosticContext.makeTimeSeriesPoint("new_bwe").addField("bwe_bps", newBweBps))
     }
 
     private fun TimeSeriesLogger.logAllocationChange(allocation: BandwidthAllocation) {
@@ -223,7 +224,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             trace(
                 diagnosticContext
                     .makeTimeSeriesPoint("allocation_for_source", nowMs)
-                    .addField("endpoint_id", it.endpointId)
+                    .addField("remote_endpoint_id", it.endpointId)
                     .addField("target_idx", it.targetLayer?.index ?: -1)
                     .addField("ideal_idx", it.idealLayer?.index ?: -1)
                     .addField("target_bps", it.targetLayer?.getBitrate(nowMs)?.bps ?: -1)
