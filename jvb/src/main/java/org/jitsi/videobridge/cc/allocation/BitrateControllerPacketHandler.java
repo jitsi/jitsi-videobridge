@@ -214,7 +214,7 @@ class BitrateControllerPacketHandler
                     = new AdaptiveSourceProjection(
                     diagnosticContext,
                     sourceBitrateAllocation.source,
-                    () -> eventEmitter.fireEvent(handler -> {
+                    () -> eventEmitter.fireEventSync(handler -> {
                         handler.keyframeNeeded(endpointID, targetSSRC);
                         return Unit.INSTANCE;
                     }),
