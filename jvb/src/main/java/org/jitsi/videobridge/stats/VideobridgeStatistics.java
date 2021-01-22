@@ -238,6 +238,8 @@ public class VideobridgeStatistics
         // The number of endpoints to which we're "oversending" (which can occur when
         // enableOnstageVideoSuspend is false)
         int numOversending = 0;
+        int endpointsWithHighOutgoingLoss = 0;
+        int numLocalActiveEndpoints = 0;
 
         for (Conference conference : videobridge.getConferences())
         {
@@ -255,6 +257,11 @@ public class VideobridgeStatistics
                 inactiveConferences++;
                 inactiveEndpoints += conference.getEndpointCount();
             }
+            else
+            {
+                numLocalActiveEndpoints += conference.getLocalEndpointCount();
+            }
+
             if (conference.isOctoEnabled())
             {
                 octoConferences++;
@@ -332,8 +339,22 @@ public class VideobridgeStatistics
 
                 incomingPacketsReceived += endpointConnectionStats.getIncomingLossStats().getPacketsReceived();
                 incomingPacketsLost += endpointConnectionStats.getIncomingLossStats().getPacketsLost();
-                outgoingPacketsReceived += endpointConnectionStats.getOutgoingLossStats().getPacketsReceived();
-                outgoingPacketsLost += endpointConnectionStats.getOutgoingLossStats().getPacketsLost();
+
+                long endpointOutgoingPacketsReceived
+                        = endpointConnectionStats.getOutgoingLossStats().getPacketsReceived();
+                long endpointOutgoingPacketsLost = endpointConnectionStats.getOutgoingLossStats().getPacketsLost();
+                outgoingPacketsReceived += endpointOutgoingPacketsReceived;
+                outgoingPacketsLost += endpointOutgoingPacketsLost;
+
+                if (!inactive && endpointOutgoingPacketsLost + endpointOutgoingPacketsReceived > 0)
+                {
+                    double endpointOutgoingFractionLost = ((double) endpointOutgoingPacketsLost)
+                            / (endpointOutgoingPacketsLost + endpointOutgoingPacketsReceived);
+                    if (endpointOutgoingFractionLost > 0.1)
+                    {
+                        endpointsWithHighOutgoingLoss++;
+                    }
+                }
             }
 
             updateBuckets(audioSendersBuckets, conferenceAudioSenders);
@@ -402,7 +423,13 @@ public class VideobridgeStatistics
         {
             unlockedSetStat(INCOMING_LOSS, incomingLoss);
             unlockedSetStat(OUTGOING_LOSS, outgoingLoss);
+
             unlockedSetStat(OVERALL_LOSS, overallLoss);
+            // The number of active endpoints that have more than 10% loss in the bridge->endpoint direction.
+            unlockedSetStat("endpoints_with_high_outgoing_loss", endpointsWithHighOutgoingLoss);
+            // The number of local (non-octo) active (in a conference where at least one endpoint sends audio or video)
+            // endpoints.
+            unlockedSetStat("local_active_endpoints", numLocalActiveEndpoints);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
                     (bitrateDownloadBps + 500) / 1000 /* kbps */);
