@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import com.google.common.collect.*;
 import kotlin.*;
 import kotlin.jvm.functions.*;
 import org.jetbrains.annotations.*;
@@ -290,27 +289,26 @@ public class Endpoint
                 }
             });
 
-        BitrateController.EventHandler bcEventHandler
-                = new BitrateController.EventHandler()
+        BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
         {
             @Override
-            public void allocationChanged(@NotNull List<? extends SingleSourceAllocation> allocation)
+            public void allocationChanged(@NotNull BandwidthAllocation allocation)
             {
                 // Intentional no-op.
             }
 
             @Override
-            public void forwardedEndpointsChanged(Collection<String> forwardedEndpoints)
+            public void forwardedEndpointsChanged(@NotNull Set<String> forwardedEndpoints)
             {
                 sendForwardedEndpointsMessage(forwardedEndpoints);
             }
 
             @Override
             public void effectiveVideoConstraintsChanged(
-                    ImmutableMap<String, VideoConstraints> oldVideoConstraints,
-                    ImmutableMap<String, VideoConstraints> newVideoConstraints)
+                    @NotNull Map<String, VideoConstraints> oldEffectiveConstraints,
+                    @NotNull Map<String, VideoConstraints> newEffectiveConstraints)
             {
-                Endpoint.this.effectiveVideoConstraintsChanged(oldVideoConstraints, newVideoConstraints);
+                Endpoint.this.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints);
             }
 
             @Override
@@ -320,7 +318,6 @@ public class Endpoint
             }
         };
         bitrateController = new BitrateController<>(
-                id,
                 bcEventHandler,
                 conference::getEndpoints,
                 diagnosticContext, logger);
@@ -475,7 +472,9 @@ public class Endpoint
      */
     void lastNEndpointsChanged(List<String> orderedEndpointIds)
     {
-        bitrateController.endpointOrderingChanged(orderedEndpointIds);
+        List<String> orderedEndpointsWithoutThis = new ArrayList<>(orderedEndpointIds);
+        orderedEndpointsWithoutThis.remove(getId());
+        bitrateController.endpointOrderingChanged(orderedEndpointsWithoutThis);
     }
 
     /**
@@ -651,18 +650,12 @@ public class Endpoint
         transceiver.addRtpExtension(rtpExtension);
     }
 
-    @Override
-    public void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> newVideoConstraints)
-    {
-        bitrateController.setVideoConstraints(newVideoConstraints);
-    }
-
     private void effectiveVideoConstraintsChanged(
-        ImmutableMap<String, VideoConstraints> oldVideoConstraints,
-        ImmutableMap<String, VideoConstraints> newVideoConstraints)
+        Map<String, VideoConstraints> oldEffectiveConstraints,
+        Map<String, VideoConstraints> newEffectiveConstraints)
     {
-        Set<String> removedEndpoints = new HashSet<>(oldVideoConstraints.keySet());
-        removedEndpoints.removeAll(newVideoConstraints.keySet());
+        Set<String> removedEndpoints = new HashSet<>(oldEffectiveConstraints.keySet());
+        removedEndpoints.removeAll(newEffectiveConstraints.keySet());
 
         // Sources that "this" endpoint no longer receives.
         for (String id : removedEndpoints)
@@ -675,15 +668,14 @@ public class Endpoint
         }
 
         // Added or updated.
-        for (Map.Entry<String, VideoConstraints> videoConstraintsEntry : newVideoConstraints.entrySet())
-        {
-            AbstractEndpoint senderEndpoint = getConference().getEndpoint(videoConstraintsEntry.getKey());
-
+        newEffectiveConstraints.forEach((endpointId, effectiveConstraints) -> {
+            AbstractEndpoint senderEndpoint = getConference().getEndpoint(endpointId);
             if (senderEndpoint != null)
             {
-                senderEndpoint.addReceiver(getId(), videoConstraintsEntry.getValue());
+                senderEndpoint.addReceiver(getId(), effectiveConstraints);
             }
-        }
+        });
+
     }
 
     @Override
@@ -697,7 +689,7 @@ public class Endpoint
         else
         {
             SenderVideoConstraintsMessage senderVideoConstraintsMessage
-                    = new SenderVideoConstraintsMessage(maxVideoConstraints);
+                    = new SenderVideoConstraintsMessage(maxVideoConstraints.getMaxHeight());
 
             logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
 
@@ -1459,6 +1451,21 @@ public class Endpoint
     public boolean isOversending()
     {
         return bitrateController.isOversending();
+    }
+
+    void setSelectedEndpoints(List<String> selectedEndpoints)
+    {
+        bitrateController.setSelectedEndpoints(selectedEndpoints);
+    }
+
+    void setMaxFrameHeight(int maxFrameHeight)
+    {
+        bitrateController.setMaxFrameHeight(maxFrameHeight);
+    }
+
+    void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message)
+    {
+        bitrateController.setBandwidthAllocationSettings(message);
     }
 
     private class TransceiverEventHandlerImpl implements TransceiverEventHandler

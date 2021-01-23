@@ -76,7 +76,7 @@ public abstract class AbstractEndpointMessageTransport<T extends AbstractEndpoin
         }
         catch (IOException ioe)
         {
-            logger.warn("Invalid message received: " + msg, ioe);
+            logger.warn("Invalid message received (" + ioe.getMessage() + "): " + msg);
             return;
         }
 

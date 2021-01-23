@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
-import org.jitsi.videobridge.VideoConstraints
+import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.json.simple.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -44,20 +44,18 @@ import java.util.concurrent.atomic.AtomicLong
 @JsonSubTypes(
     JsonSubTypes.Type(value = SelectedEndpointsMessage::class, name = SelectedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = SelectedEndpointMessage::class, name = SelectedEndpointMessage.TYPE),
-    JsonSubTypes.Type(value = PinnedEndpointsMessage::class, name = PinnedEndpointsMessage.TYPE),
-    JsonSubTypes.Type(value = PinnedEndpointMessage::class, name = PinnedEndpointMessage.TYPE),
     JsonSubTypes.Type(value = ClientHelloMessage::class, name = ClientHelloMessage.TYPE),
     JsonSubTypes.Type(value = ServerHelloMessage::class, name = ServerHelloMessage.TYPE),
     JsonSubTypes.Type(value = EndpointMessage::class, name = EndpointMessage.TYPE),
     JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintMessage::class, name = ReceiverVideoConstraintMessage.TYPE),
-    JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
     JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
-    JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE)
+    JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
+    JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE)
 )
 // The type is included as colibriClass (as we want) by the annotation above.
 @JsonIgnoreProperties("type")
@@ -91,20 +89,18 @@ open class MessageHandler {
         return when (message) {
             is SelectedEndpointsMessage -> selectedEndpoints(message)
             is SelectedEndpointMessage -> selectedEndpoint(message)
-            is PinnedEndpointsMessage -> pinnedEndpoints(message)
-            is PinnedEndpointMessage -> pinnedEndpoint(message)
             is ClientHelloMessage -> clientHello(message)
             is ServerHelloMessage -> serverHello(message)
             is EndpointMessage -> endpointMessage(message)
             is LastNMessage -> lastN(message)
             is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
-            is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
             is DominantSpeakerMessage -> dominantSpeaker(message)
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
+            is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
         }
     }
 
@@ -116,20 +112,18 @@ open class MessageHandler {
 
     open fun selectedEndpoints(message: SelectedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun selectedEndpoint(message: SelectedEndpointMessage) = unhandledMessageReturnNull(message)
-    open fun pinnedEndpoints(message: PinnedEndpointsMessage) = unhandledMessageReturnNull(message)
-    open fun pinnedEndpoint(message: PinnedEndpointMessage) = unhandledMessageReturnNull(message)
     open fun clientHello(message: ClientHelloMessage) = unhandledMessageReturnNull(message)
     open fun serverHello(message: ServerHelloMessage) = unhandledMessageReturnNull(message)
     open fun endpointMessage(message: EndpointMessage) = unhandledMessageReturnNull(message)
     open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage) = unhandledMessageReturnNull(message)
-    open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
+    open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
 }
@@ -154,29 +148,6 @@ class SelectedEndpointsMessage(val selectedEndpoints: List<String>) : BridgeChan
 class SelectedEndpointMessage(val selectedEndpoint: String?) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "SelectedEndpointChangedEvent"
-    }
-}
-
-/**
- * A message sent from a client to a bridge, indicating that the list of endpoints pinned by the client has changed.
- */
-class PinnedEndpointsMessage(val pinnedEndpoints: List<String>) : BridgeChannelMessage(TYPE) {
-
-    companion object {
-        const val TYPE = "PinnedEndpointsChangedEvent"
-    }
-}
-
-/**
- * A message sent from a client to a bridge, indicating that the client's pinned endpoint has changed.
- *
- * This format is no longer used in jitsi-meet and is considered deprecated. The semantics are equivalent to
- * [PinnedEndpointsMessage] with a list of one endpoint.
- */
-@Deprecated("Use SelectedEndpointsMessage")
-class PinnedEndpointMessage(val pinnedEndpoint: String?) : BridgeChannelMessage(TYPE) {
-    companion object {
-        const val TYPE = "PinnedEndpointChangedEvent"
     }
 }
 
@@ -279,39 +250,6 @@ class ReceiverVideoConstraintMessage(val maxFrameHeight: Int) : BridgeChannelMes
 }
 
 /**
- * A message sent from a client to a bridge, indicating constraints on the streams it wishes to receive. The constraints
- * are expressed as a list of [VideoConstraints], each of which specify the remote endpoint for which the constraint
- * applies and the `idealHeight`.
- *
- * NOTE that the intention is for this message to completely replace the following five messages:
- * [ReceiverVideoConstraintMessage], [PinnedEndpointMessage], [PinnedEndpointsMessage], [SelectedEndpointMessage], and
- * [SelectedEndpointsMessage].
- *
- * This isn't the case currently because that would require substantial changes in the client and instead it was
- * decided to provide a server side compatibility layer.
- *
- * Usage of the above old-world data messages should be avoided in future code.
- *
- * Example Json message:
- *
- * {
- *   "colibriClass": "ReceiverVideoConstraintsChangedEvent",
- *   "videoConstraints": [
- *     { "id": "abcdabcd", "idealHeight": 180 },
- *     { "id": "12341234", "idealHeight": 360 }
- *   ]
- * }
- */
-class ReceiverVideoConstraintsMessage(val videoConstraints: List<VideoConstraints>) : BridgeChannelMessage(TYPE) {
-
-    data class VideoConstraints(val id: String, val idealHeight: Int)
-
-    companion object {
-        const val TYPE = "ReceiverVideoConstraintsChangedEvent"
-    }
-}
-
-/**
  * A message sent from the bridge to a client, indicating that the dominant speaker in the conference changed.
  */
 class DominantSpeakerMessage(var dominantSpeakerEndpoint: String) : BridgeChannelMessage(TYPE) {
@@ -380,11 +318,18 @@ class ForwardedEndpointsMessage(
  * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
  */
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
+    constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
+
     /**
      * Serialize manually because it's faster than either Jackson or json-simple.
-     * Note that we depend on `VideoConstraints.toString` producing JSON.
+     *
+     * We use the "idealHeight" format that the jitsi-meet client expects.
      */
-    override fun toJson(): String = """{"colibriClass":"$TYPE", "videoConstraints":$videoConstraints}"""
+    override fun toJson(): String =
+        """{"colibriClass":"$TYPE", "videoConstraints":{"idealHeight":${videoConstraints.idealHeight}}}"""
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class VideoConstraints(val idealHeight: Int)
 
     companion object {
         const val TYPE = "SenderVideoConstraints"
@@ -428,5 +373,17 @@ class RemoveReceiverMessage(
 
     companion object {
         const val TYPE = "RemoveReceiver"
+    }
+}
+
+class ReceiverVideoConstraintsMessage(
+    val lastN: Int? = null,
+    val selectedEndpoints: List<String>? = null,
+    val onStageEndpoints: List<String>? = null,
+    val defaultConstraints: VideoConstraints? = null,
+    val constraints: Map<String, VideoConstraints>? = null
+) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "ReceiverVideoConstraints"
     }
 }

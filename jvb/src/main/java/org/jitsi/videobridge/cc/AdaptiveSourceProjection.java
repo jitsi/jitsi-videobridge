@@ -93,11 +93,6 @@ public class AdaptiveSourceProjection
     private int contextPayloadType = -1;
 
     /**
-     * The ideal quality index for this source projection.
-     */
-    private int idealIndex = RtpLayerDesc.SUSPENDED_INDEX;
-
-    /**
      * The target quality index for this source projection.
      */
     private int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
@@ -132,49 +127,11 @@ public class AdaptiveSourceProjection
     }
 
     /**
-     * @return the ideal quality for this source projection.
-     */
-    public int getIdealIndex()
-    {
-        return idealIndex;
-    }
-
-    /**
-     * Update the ideal quality for this source projection.
-     *
-     * @param value the ideal quality for this source projection.
-     * @return {@code true} if the value was changed as a result of this call.
-     */
-    public boolean setIdealIndex(int value)
-    {
-        boolean changed = idealIndex != value;
-        idealIndex = value;
-
-        return changed;
-    }
-
-    /**
-     * Gets the target index value for this source projection.
-     *
-     * @return the target index value for this source projection.
-     */
-    public int getTargetIndex()
-    {
-        return targetIndex;
-    }
-
-    /**
      * Sets the target index value for this source projection.
-     *
-     * @param value the new target index value for this source projection.
-     * @return {@code true} if the value was changed as a result of this call.
      */
-    public boolean setTargetIndex(int value)
+    public void setTargetIndex(int value)
     {
-        boolean changed = targetIndex != value;
         targetIndex = value;
-
-        return changed;
     }
 
     /**
@@ -419,7 +376,6 @@ public class AdaptiveSourceProjection
                 "context",
                 contextCopy == null ? null : contextCopy.getDebugState());
         debugState.put("contextPayloadType", contextPayloadType);
-        debugState.put("idealIndex", idealIndex);
         debugState.put("targetIndex", targetIndex);
 
         return debugState;

@@ -17,7 +17,6 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import com.google.common.collect.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
@@ -35,8 +34,6 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
-
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
  * a participant in the conference, which connects the participant's audio
@@ -50,11 +47,6 @@ import static org.jitsi.videobridge.VideoConstraints.disabledVideoConstraints;
 public abstract class AbstractEndpoint
     implements MediaSourceContainer
 {
-    /**
-     * The default video constraints to assume when nothing is signaled.
-     */
-    private static final VideoConstraints defaultMaxReceiverVideoConstraints = disabledVideoConstraints;
-
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
@@ -98,7 +90,7 @@ public abstract class AbstractEndpoint
      * in the conference. The client needs to send _at least_ this to satisfy
      * all receivers.
      */
-    private VideoConstraints maxReceiverVideoConstraints = defaultMaxReceiverVideoConstraints;
+    private VideoConstraints maxReceiverVideoConstraints = new VideoConstraints(0, 0.0);
 
     protected final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
@@ -352,10 +344,15 @@ public abstract class AbstractEndpoint
     {
         VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraints;
 
-        VideoConstraints newReceiverMaxVideoConstraints = newVideoConstraints
+        int maxHeight = newVideoConstraints
             .stream()
-            .max(Comparator.comparingInt(VideoConstraints::getIdealHeight))
-            .orElse(defaultMaxReceiverVideoConstraints);
+            .mapToInt(VideoConstraints::getMaxHeight)
+            .max()
+            .orElse(0);
+
+        // Currently we only support constraining the height, and not frame rate.
+
+        VideoConstraints newReceiverMaxVideoConstraints = new VideoConstraints(maxHeight, -1.0);
 
         if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
         {
@@ -385,24 +382,6 @@ public abstract class AbstractEndpoint
     public abstract void addRtpExtension(RtpExtension rtpExtension);
 
     /**
-     * Sets the video constraints for the streams that this endpoint wishes to
-     * receive expressed as a map of endpoint id to {@link VideoConstraints}.
-     *
-     * NOTE that the map specifies all the constraints that need to be respected
-     * and therefore it resets any previous settings. In other words the map
-     * is not a diff/delta to be applied on top of the existing settings.
-     *
-     * NOTE that if there are no {@link VideoConstraints} specified for an
-     * endpoint, then its {@link VideoConstraints} are assumed to be
-     * the default.
-     *
-     * @param videoConstraints the map of endpoint id to {@link VideoConstraints}
-     * that contains the {@link VideoConstraints} to respect when allocating
-     * bandwidth for a specific endpoint.
-     */
-    public abstract void setSenderVideoConstraints(ImmutableMap<String, VideoConstraints> videoConstraints);
-
-    /**
      * Notifies this instance that the max video constraints that the bridge
      * needs to receive from this endpoint has changed. Each implementation
      * handles this notification differently.
@@ -430,7 +409,7 @@ public abstract class AbstractEndpoint
         if (oldVideoConstraints == null || !oldVideoConstraints.equals(newVideoConstraints))
         {
             logger.debug(
-                () -> "Changed receiver constraints: " + receiverId + ": " + newVideoConstraints.getIdealHeight());
+                () -> "Changed receiver constraints: " + receiverId + ": " + newVideoConstraints.getMaxHeight());
             receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
         }
     }

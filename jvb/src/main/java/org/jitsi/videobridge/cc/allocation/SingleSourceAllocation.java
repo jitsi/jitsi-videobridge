@@ -1,350 +1,301 @@
+/*
+ * Copyright @ 2020 - present 8x8, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.jitsi.videobridge.cc.allocation;
 
 import org.jitsi.nlj.MediaSourceDesc;
 import org.jitsi.nlj.RtpLayerDesc;
-import org.jitsi.utils.logging.DiagnosticContext;
-import org.jitsi.utils.logging.TimeSeriesLogger;
-import org.jitsi.videobridge.VideoConstraints;
+import org.jitsi.nlj.util.*;
+import org.jitsi.utils.logging.*;
+import org.jitsi.videobridge.cc.config.*;
 
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A bitrate allocation that pertains to a specific source.
+ * A bitrate allocation that pertains to a specific source. This is the internal representation used in the allocation
+ * algorithm, as opposed to {@link SingleAllocation} which is the end result.
  *
  * @author George Politis
  */
-public class SingleSourceAllocation {
-    /**
-     * An reusable empty array of {@link RateSnapshot} to reduce allocations.
-     */
-    private static final RateSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new RateSnapshot[0];
+class SingleSourceAllocation {
+    private static final TimeSeriesLogger timeSeriesLogger
+            = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator.class);
 
     /**
-     * The {@link TimeSeriesLogger} to be used by this instance to print time
-     * series.
+     * An reusable empty array of {@link LayerSnapshot} to reduce allocations.
      */
-    private static final TimeSeriesLogger timeSeriesLogger
-            = TimeSeriesLogger.getTimeSeriesLogger(BitrateAllocator.class);
+    private static final LayerSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new LayerSnapshot[0];
 
     /**
      * The ID of the {@code Endpoint} that this instance pertains to.
      */
-    public final String endpointID;
+    private final String endpointId;
 
     /**
-     * Indicates whether this {@code Endpoint} is on-stage/selected or not
-     * at the {@code Endpoint} that owns this {@link BitrateAllocator}.
+     * The constraints to use while allocating bandwidth to this endpoint.
      */
-    final VideoConstraints effectiveVideoConstraints;
+    final VideoConstraints constraints;
 
     /**
-     * Helper field that keeps the SSRC of the target stream.
+     * The {@link MediaSourceDesc} that this instance pertains to.
      */
-    final long targetSSRC;
+    private final MediaSourceDesc source;
 
     /**
-     * The first {@link MediaSourceDesc} of the {@code Endpoint} that
-     * this instance pertains to.
+     * An array that holds the layers to be considered when allocating bandwidth.
      */
-    final MediaSourceDesc source;
+    private final LayerSnapshot[] layers;
 
     /**
-     * An array that holds the stable bitrate snapshots of the
-     * {@link RtpLayerDesc}s that this {@link #source} offers.
-     * <p>
-     * {@link RtpLayerDesc} of {@link #source}.
+     * The index (into {@link #layers}) of the "preferred" layer, i.e. the layer up to which we allocate eagerly.
      */
-    final RateSnapshot[] ratedIndices;
+    final int preferredIdx;
 
     /**
-     * The rated quality that needs to be achieved before allocating
-     * bandwidth for any of the other subsequent sources in this allocation
-     * decision. The rated quality is not necessarily equal to the encoding
-     * quality. For example, for the on-stage participant we consider 5
-     * rated qualities:
-     * <p>
-     * 0 -> 180p7.5, 1 -> 180p15, 2 -> 180p30, 3 -> 360p30, 4 -> 720p30.
-     * <p>
-     * The encoding quality of the 4th rated quality is 8.
+     * The index of the current target layer. It can be improved in the {@code improve()} step, if there is enough
+     * bandwidth.
      */
-    final int ratedPreferredIdx;
+    int targetIdx = -1;
 
-    /**
-     * The current rated quality target for this source. It can potentially
-     * be improved in the improve step, provided there is enough bandwidth.
-     */
-    int ratedTargetIdx = -1;
-
-    /**
-     * A boolean that indicates whether or not we're force pushing through
-     * the bottleneck this source.
-     */
-    public boolean oversending = false;
-
-    /**
-     * the bitrate (in bps) of the layer that is the closest to the ideal
-     * and has a bitrate, or 0 if there are no layers with a bitrate (for
-     * example, the endpoint is video muted).
-     */
-    final long idealBitrate;
-
-    /**
-     * Ctor.
-     *
-     * @param source      the {@link MediaSourceDesc} that this bitrate
-     *                    allocation pertains to.
-     */
     SingleSourceAllocation(
-            String endpointID,
+            String endpointId,
             MediaSourceDesc source,
-            VideoConstraints effectiveVideoConstraints,
-            Clock clock,
-            DiagnosticContext diagnosticContext) {
-        this.endpointID = endpointID;
-        this.effectiveVideoConstraints = effectiveVideoConstraints;
+            VideoConstraints constraints,
+            boolean onStage,
+            DiagnosticContext diagnosticContext,
+            Clock clock)
+    {
+        this.endpointId = endpointId;
+        this.constraints = constraints;
         this.source = source;
 
-        if (source == null) {
-            this.targetSSRC = -1;
-        } else {
-            this.targetSSRC = source.getPrimarySSRC();
-        }
-
-        if (targetSSRC == -1 || effectiveVideoConstraints.getIdealHeight() <= 0) {
-            ratedPreferredIdx = -1;
-            idealBitrate = 0;
-            ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
+        if (source == null || constraints.getMaxHeight() <= 0)
+        {
+            preferredIdx = -1;
+            layers = EMPTY_RATE_SNAPSHOT_ARRAY;
             return;
         }
 
         long nowMs = clock.instant().toEpochMilli();
-        List<RateSnapshot> ratesList = new ArrayList<>();
-        // Initialize the list of flows that we will consider for sending
-        // for this source. For example, for the on-stage participant we
-        // consider 720p@30fps, 360p@30fps, 180p@30fps, 180p@15fps,
-        // 180p@7.5fps while for the thumbnails we consider 180p@30fps,
-        // 180p@15fps and 180p@7.5fps
+        boolean noActiveLayers = source.getRtpLayers().stream().noneMatch(l -> l.getBitrate(nowMs).getBps() > 0);
+        List<LayerSnapshot> ratesList = new ArrayList<>();
+        // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
+        // a couple of exceptions (see comments below).
         int ratedPreferredIdx = 0;
-        long idealBps = 0;
-        for (RtpLayerDesc layer : source.getRtpLayers()) {
+        for (RtpLayerDesc layer : source.getRtpLayers())
+        {
 
-            int idealHeight = effectiveVideoConstraints.getIdealHeight();
-            // We don't want to exceed the ideal resolution but we also
-            // want to make sure we have at least 1 rated encoding.
-            if (idealHeight >= 0 && layer.getHeight() > idealHeight && !ratesList.isEmpty()) {
-                continue;
+            int idealHeight = constraints.getMaxHeight();
+            // Skip layers that do not satisfy the constraints. If no layers satisfy the constraints, add the lowest
+            // layer anyway (the constraints are "soft", and given enough bandwidth we prefer to exceed them rather than
+            // sending no video at all).
+            if (!ratesList.isEmpty())
+            {
+                if (idealHeight >= 0 && layer.getHeight() > idealHeight)
+                {
+                    continue;
+                }
+                if (constraints.getMaxFrameRate() > 0 && layer.getFrameRate() > constraints.getMaxFrameRate())
+                {
+                    continue;
+                }
             }
 
-            // For the "selected" participant we favor frame rate over
-            // resolution. We include all temporal layers up to the
-            // preferred resolution, but only consider the preferred
-            // frame-rate with higher-than-preferred resolutions. In
-            // practice today this translates to 180p7.5fps, 180p15fps,
-            // 180p30fps, 360p30fps and 720p30fps.
+            int preferredHeight = -1;
+            double preferredFps = -1.0;
+            if (onStage && constraints.getMaxHeight() > 180)
+            {
+                // For the "on-stage" participant we favor frame rate over resolution. We consider all temporal layers
+                // for resolutions lower than the preferred, but for resolutions >= preferred, we only consider
+                // frame rates at least as high as the preferred. In practice this means we consider 180p/7.5fps,
+                // 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
+                preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
+                preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
+            }
 
-            boolean lessThanPreferredResolution
-                    = layer.getHeight() < effectiveVideoConstraints.getPreferredHeight();
-            boolean lessThanOrEqualIdealResolution
-                    = layer.getHeight() <= effectiveVideoConstraints.getIdealHeight();
-            boolean atLeastPreferredFps
-                    = layer.getFrameRate() >= effectiveVideoConstraints.getPreferredFps();
+            boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
+            boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getMaxHeight();
+            boolean atLeastPreferredFps = layer.getFrameRate() >= preferredFps;
 
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
-                    || ratesList.isEmpty()) {
-                long layerBitrateBps = (long) layer.getBitrate(nowMs).getBps();
-                if (layerBitrateBps > 0) {
-                    idealBps = layerBitrateBps;
+                    || ratesList.isEmpty())
+            {
+                Bandwidth layerBitrate = layer.getBitrate(nowMs);
+                // No active layers usually happens when the source has just been signaled and we haven't received
+                // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
+                if (noActiveLayers || layerBitrate.getBps() > 0)
+                {
+                    ratesList.add(new LayerSnapshot(layer, layerBitrate));
+
+                    if (layer.getHeight() <= preferredHeight)
+                    {
+                        // Set the layer up to which allocation will be "eager", meaning it will continue to allocate
+                        // to this endpoint before moving on to the next. This is only set for the "on-stage" endpoint,
+                        // to the "preferred" resolution with the highest bitrate.
+                        ratedPreferredIdx = ratesList.size() - 1;
+                    }
                 }
-                ratesList.add(new RateSnapshot(layerBitrateBps, layer));
             }
 
-            if (layer.getHeight() <= effectiveVideoConstraints.getPreferredHeight()) {
-                // The improve step below will "eagerly" try to allocate
-                // up-to the ratedPreferredIdx before moving on to the next
-                // track. Eagerly means we consume all available bandwidth
-                // up to the preferred resolution, leaving higher-frame
-                // rates as an option for subsequent improvement steps.
-                //
-                // NOTE that the above comment suggests that the prefix
-                // "preferred" in the preferredFps and preferredHeight
-                // params has different semantics: In the preferredHeight
-                // param it means "eagerly allocate up to the preferred
-                // resolution" whereas in the preferredFps param it means
-                // "only consider encodings with at least preferredFps" once
-                // we've reached the preferredHeight.
-                ratedPreferredIdx = ratesList.size() - 1;
-            }
         }
-
-        this.idealBitrate = idealBps;
 
         if (timeSeriesLogger.isTraceEnabled())
         {
             DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
-                    = diagnosticContext.makeTimeSeriesPoint("calculated_rates")
-                    .addField("remote_endpoint_id", endpointID);
-            for (RateSnapshot rateSnapshot : ratesList) {
+                    = diagnosticContext.makeTimeSeriesPoint("layers_considered")
+                        .addField("remote_endpoint_id", endpointId);
+            for (LayerSnapshot layerSnapshot : ratesList)
+            {
                 ratesTimeSeriesPoint.addField(
-                        Integer.toString(rateSnapshot.layer.getIndex()),
-                        rateSnapshot.bps);
+                        layerSnapshot.layer.getHeight() + "p_" + layerSnapshot.layer.getFrameRate() + "fps_bps",
+                        layerSnapshot.bitrate.getBps());
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
         }
 
-        this.ratedPreferredIdx = ratedPreferredIdx;
-        ratedIndices = ratesList.toArray(new RateSnapshot[0]);
-        // TODO Determining the rated ideal index needs some work.
-        // The ideal rated quality is constrained by the viewport of the
-        // endpoint. For example, on a mobile device we should probably not
-        // send anything above 360p (not even the on-stage participant). On
-        // a laptop computer 720p seems reasonable and on a big screen 1080p
-        // or above.
+        this.preferredIdx = ratedPreferredIdx;
+        layers = ratesList.toArray(new LayerSnapshot[0]);
     }
 
     /**
-     * Computes the ideal and the target bitrate, limiting the target to
-     * be less than bandwidth estimation specified as an argument.
+     * Implements an "improve" step, incrementing {@link #targetIdx} to the next layer if there is sufficient
+     * bandwidth. Note that this works eagerly up until the "preferred" layer (if any), and as a single step from
+     * then on.
      *
-     * @param maxBps the maximum bitrate (in bps) that the target subjective
-     *               quality can have.
+     * @param maxBps the bandwidth available.
      */
-    void improve(long maxBps) {
-        if (ratedIndices.length == 0) {
+    void improve(long maxBps)
+    {
+        if (layers.length == 0)
+        {
             return;
         }
 
-        if (ratedTargetIdx == -1 && ratedPreferredIdx > -1) {
+        if (targetIdx == -1 && preferredIdx > -1)
+        {
             // Boost on stage participant to preferred, if there's enough bw.
-            for (int i = 0; i < ratedIndices.length; i++) {
-                if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bps) {
+            for (int i = 0; i < layers.length; i++)
+            {
+                if (i > preferredIdx || maxBps < layers[i].bitrate.getBps())
+                {
                     break;
                 }
 
-                ratedTargetIdx = i;
+                targetIdx = i;
             }
-        } else {
+        }
+        else
+        {
             // Try the next element in the ratedIndices array.
-            if (ratedTargetIdx + 1 < ratedIndices.length && ratedIndices[ratedTargetIdx + 1].bps < maxBps) {
-                ratedTargetIdx++;
+            if (targetIdx + 1 < layers.length && layers[targetIdx + 1].bitrate.getBps() < maxBps)
+            {
+                targetIdx++;
             }
         }
 
-        if (ratedTargetIdx > -1) {
-            // if there's a better subjective quality with the same or less
-            // bitrate than the current target quality, make it the target.
-            // i.e. set the target to the next best available quality with
-            // the least possible bitrate.
+        if (targetIdx > -1)
+        {
+            // If there's a higher layer available with a lower bitrate, skip to it.
             //
-            // For example, if 1080p@15fps is configured as a better
-            // subjective quality than 720p@30fps (i.e. it sits on a higher
-            // index in the ratedIndices array) and the bitrate that we
-            // measure for the 1080p stream is less than the bitrate that we
-            // measure for the 720p stream, then we "jump over" the 720p
-            // stream and immediately select the 1080p stream.
-            for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++) {
-                if (ratedIndices[i].bps > 0 && ratedIndices[i].bps <= ratedIndices[ratedTargetIdx].bps) {
-                    ratedTargetIdx = i;
+            // For example, if 1080p@15fps is configured as a better subjective quality than 720p@30fps (i.e. it sits
+            // on a higher index in the ratedIndices array) and the bitrate that we measure for the 1080p stream is less
+            // than the bitrate that we measure for the 720p stream, then we "jump over" the 720p stream and immediately
+            // select the 1080p stream.
+            //
+            // TODO further: Should we just prune the list of layers we consider to not include such layers?
+            for (int i = layers.length - 1; i >= targetIdx + 1; i--)
+            {
+                if (layers[i].bitrate.getBps() <= layers[targetIdx].bitrate.getBps())
+                {
+                    targetIdx = i;
                 }
             }
         }
     }
 
     /**
-     * Gets the target bitrate (in bps) for this endpoint allocation.
-     *
-     * @return the target bitrate (in bps) for this endpoint allocation.
+     * Gets the target bitrate (in bps) for this endpoint allocation, i.e. the bitrate of the currently chosen layer.
      */
-    long getTargetBitrate() {
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].bps : 0;
+    long getTargetBitrate()
+    {
+        LayerSnapshot targetLayer = getTargetLayer();
+        return targetLayer != null ? (long) targetLayer.bitrate.getBps() : 0;
+    }
+
+    private LayerSnapshot getTargetLayer()
+    {
+        return targetIdx != -1 ? layers[targetIdx] : null;
+    }
+
+    private LayerSnapshot getIdealLayer()
+    {
+        return layers.length != 0 ? layers[layers.length - 1] : null;
     }
 
     /**
-     * Expose for testing only.
+     * If there is no target layer, switch to the lowest layer (if any are available).
+     * @return true if the target layer was changed.
      */
-    public RtpLayerDesc getTargetLayer() {
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer : null;
+    boolean tryLowestLayer()
+    {
+        if (targetIdx < 0 && layers.length > 0)
+        {
+            targetIdx = 0;
+            return true;
+        }
+        return false;
     }
 
     /**
-     * @return the bitrate (in bps) of the layer that is the closest to
-     * the ideal and has a bitrate, or 0 if there are no layers with a
-     * bitrate (for example, the endpoint is video muted).
+     * Creates the final immutable result of this allocation. Should be called once the allocation algorithm has
+     * completed.
      */
-    long getIdealBitrate() {
-        return idealBitrate;
-    }
-
-    /**
-     * Gets the target quality for this source.
-     *
-     * @return the target quality for this source.
-     */
-    int getTargetIndex() {
-        // figures out the quality of the layer of the target rated
-        // quality.
-        return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].layer.getIndex() : -1;
-    }
-
-    /**
-     * Gets the preferred quality for this source.
-     *
-     * @return the preferred quality for this source.
-     */
-    int getPreferredIndex() {
-        // figures out the quality of the layer of the target rated
-        // quality.
-        return ratedPreferredIdx != -1 ? ratedIndices[ratedPreferredIdx].layer.getIndex() : -1;
-    }
-
-    /**
-     * Gets the ideal quality for this source.
-     *
-     * @return the ideal quality for this source.
-     */
-    int getIdealIndex() {
-        // figures out the quality of the layer of the ideal rated
-        // quality.
-        return ratedIndices.length != 0 ? ratedIndices[ratedIndices.length - 1].layer.getIndex() : -1;
+    SingleAllocation getResult()
+    {
+        LayerSnapshot targetLayer = getTargetLayer();
+        LayerSnapshot idealLayer = getIdealLayer();
+        return new SingleAllocation(
+                endpointId,
+                source,
+                targetLayer == null ? null : targetLayer.layer,
+                idealLayer == null ? null : idealLayer.layer
+        );
     }
 
     @Override
     public String toString() {
-        return "[id=" + endpointID
-                + " effectiveVideoConstraints=" + effectiveVideoConstraints
-                + " ratedPreferredIdx=" + ratedPreferredIdx
-                + " ratedTargetIdx=" + ratedTargetIdx
-                + " oversending=" + oversending
-                + " idealBitrate=" + idealBitrate;
+        return "[id=" + endpointId
+                + " constraints=" + constraints
+                + " ratedPreferredIdx=" + preferredIdx
+                + " ratedTargetIdx=" + targetIdx;
     }
 
     /**
-     * A snapshot of the bitrate for a given {@link RtpLayerDesc}.
+     * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
      */
-    static class RateSnapshot
+    private static class LayerSnapshot
     {
-        /**
-         * The bitrate (in bps) of the associated {@link #layer}.
-         */
-        final long bps;
-
-        /**
-         * The {@link RtpLayerDesc}.
-         */
-        final RtpLayerDesc layer;
-
-        /**
-         * Ctor.
-         *
-         * @param bps The bitrate (in bps) of the associated {@link #layer}.
-         * @param layer the {@link RtpLayerDesc}.
-         */
-        private RateSnapshot(long bps, RtpLayerDesc layer)
+        private final RtpLayerDesc layer;
+        private final Bandwidth bitrate;
+        private LayerSnapshot(RtpLayerDesc layer, Bandwidth bitrate)
         {
-            this.bps = bps;
             this.layer = layer;
+            this.bitrate = bitrate;
         }
     }
 }
