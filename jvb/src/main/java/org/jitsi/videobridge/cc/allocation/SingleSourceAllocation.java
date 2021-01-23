@@ -60,6 +60,8 @@ class SingleSourceAllocation {
      */
     private final LayerSnapshot[] layers;
 
+    private final boolean onStage;
+
     /**
      * The index (into {@link #layers}) of the "preferred" layer, i.e. the layer up to which we allocate eagerly.
      */
@@ -82,6 +84,7 @@ class SingleSourceAllocation {
         this.endpointId = endpointId;
         this.constraints = constraints;
         this.source = source;
+        this.onStage = onStage;
 
         if (source == null || constraints.getMaxHeight() <= 0)
         {
@@ -117,12 +120,12 @@ class SingleSourceAllocation {
 
             int preferredHeight = -1;
             double preferredFps = -1.0;
-            if (onStage && constraints.getMaxHeight() > 180)
+            if (constraints.getMaxHeight() > 180)
             {
-                // For the "on-stage" participant we favor frame rate over resolution. We consider all temporal layers
-                // for resolutions lower than the preferred, but for resolutions >= preferred, we only consider
-                // frame rates at least as high as the preferred. In practice this means we consider 180p/7.5fps,
-                // 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
+                // For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
+                // temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
+                // consider frame rates at least as high as the preferred. In practice this means we consider
+                // 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
                 preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
                 preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
             }
@@ -186,7 +189,7 @@ class SingleSourceAllocation {
             return;
         }
 
-        if (targetIdx == -1 && preferredIdx > -1)
+        if (targetIdx == -1 && preferredIdx > -1 && onStage)
         {
             // Boost on stage participant to preferred, if there's enough bw.
             for (int i = 0; i < layers.length; i++)
@@ -283,6 +286,11 @@ class SingleSourceAllocation {
                 + " constraints=" + constraints
                 + " ratedPreferredIdx=" + preferredIdx
                 + " ratedTargetIdx=" + targetIdx;
+    }
+
+    public boolean isOnStage()
+    {
+        return onStage;
     }
 
     /**
