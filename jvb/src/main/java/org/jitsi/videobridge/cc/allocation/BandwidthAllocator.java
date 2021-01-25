@@ -328,8 +328,9 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 }
 
                 maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
+                // In stage view improve greedily until preferred, in tile view go step-by-step.
                 sourceBitrateAllocation.improve(maxBandwidth);
-                if (i == 0 && !BitrateControllerConfig.enableOnstageVideoSuspend())
+                if (i == 0 && sourceBitrateAllocation.isOnStage() && BitrateControllerConfig.allowOversendOnStage())
                 {
                     oversending |= sourceBitrateAllocation.tryLowestLayer();
                 }
@@ -341,9 +342,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                     newNumAllocationsWithVideo++;
                 }
 
-                // FIXME: Why do we not attempt to allocate the remainder of the bandwidth to the rest of the endpoints
-                //  in this case? Is this just a performance optimization?
-                if (sourceBitrateAllocation.targetIdx < sourceBitrateAllocation.preferredIdx)
+                // In stage view, do not allocate bandwidth for thumbnails until the on-stage reaches "preferred".
+                // This prevents enabling thumbnail only to disable them when bwe slightly increases allowing on-stage
+                // to take more.
+                if (sourceBitrateAllocation.isOnStage() &&
+                        sourceBitrateAllocation.targetIdx < sourceBitrateAllocation.preferredIdx)
                 {
                     break;
                 }

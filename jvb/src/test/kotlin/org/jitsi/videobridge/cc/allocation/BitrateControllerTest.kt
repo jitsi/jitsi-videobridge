@@ -726,22 +726,16 @@ class BitrateControllerTest : ShouldSpec() {
             setOf("A", "B", "C", "D")
         )
 
-        // At this stage the purpose of this is just to document current behavior.
-        // TODO: the allocations for bwe=-1 are wrong.
-        bc.allocationHistory.removeIf { it.bwe < 0.bps }
-
         bc.allocationHistory.shouldMatchInOrder(
             Event(
-                0.kbps,
+                (-1).bps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("A", targetLayer = noVideo),
                         SingleAllocation("B", targetLayer = noVideo),
                         SingleAllocation("C", targetLayer = noVideo),
                         SingleAllocation("D", targetLayer = noVideo)
-                    ),
-                    // TODO: do we want to oversend in tile view?
-                    oversending = true
+                    )
                 )
             ),
             Event(
@@ -752,8 +746,7 @@ class BitrateControllerTest : ShouldSpec() {
                         SingleAllocation("B", targetLayer = noVideo),
                         SingleAllocation("C", targetLayer = noVideo),
                         SingleAllocation("D", targetLayer = noVideo)
-                    ),
-                    oversending = false
+                    )
                 )
             ),
             Event(
@@ -891,22 +884,16 @@ class BitrateControllerTest : ShouldSpec() {
             setOf("A", "B", "C", "D")
         )
 
-        // At this stage the purpose of this is just to document current behavior.
-        // TODO: the allocations for bwe=-1 are wrong.
-        bc.allocationHistory.removeIf { it.bwe < 0.bps }
-
         bc.allocationHistory.shouldMatchInOrder(
             Event(
-                0.kbps,
+                (-1).bps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("A", targetLayer = noVideo),
                         SingleAllocation("B", targetLayer = noVideo),
                         SingleAllocation("C", targetLayer = noVideo),
                         SingleAllocation("D", targetLayer = noVideo)
-                    ),
-                    // TODO: do we want to oversend in tile view?
-                    oversending = true
+                    )
                 )
             ),
             Event(
@@ -1010,44 +997,11 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                470.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = ld15),
-                        SingleAllocation("C", targetLayer = ld15),
-                        SingleAllocation("D", targetLayer = ld15)
-                    )
-                )
-            ),
-            Event(
                 500.kbps,
                 BandwidthAllocation(
                     setOf(
                         SingleAllocation("A", targetLayer = ld30),
                         SingleAllocation("B", targetLayer = ld30),
-                        SingleAllocation("C", targetLayer = ld15),
-                        SingleAllocation("D", targetLayer = ld15)
-                    )
-                )
-            ),
-            Event(
-                520.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = ld30),
-                        SingleAllocation("C", targetLayer = ld15),
-                        SingleAllocation("D", targetLayer = ld15)
-                    )
-                )
-            ),
-            Event(
-                530.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = sd7_5),
                         SingleAllocation("C", targetLayer = ld15),
                         SingleAllocation("D", targetLayer = ld15)
                     )
@@ -1065,39 +1019,6 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                570.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = ld30),
-                        SingleAllocation("C", targetLayer = ld30),
-                        SingleAllocation("D", targetLayer = ld15)
-                    )
-                )
-            ),
-            Event(
-                580.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = sd7_5),
-                        SingleAllocation("C", targetLayer = ld30),
-                        SingleAllocation("D", targetLayer = ld15)
-                    )
-                )
-            ),
-            Event(
-                600.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = sd7_5),
-                        SingleAllocation("C", targetLayer = sd7_5),
-                        SingleAllocation("D", targetLayer = ld15)
-                    )
-                )
-            ),
-            Event(
                 610.kbps,
                 BandwidthAllocation(
                     setOf(
@@ -1109,10 +1030,10 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                620.kbps,
+                960.kbps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
+                        SingleAllocation("A", targetLayer = sd30),
                         SingleAllocation("B", targetLayer = ld30),
                         SingleAllocation("C", targetLayer = ld30),
                         SingleAllocation("D", targetLayer = ld30)
@@ -1120,112 +1041,24 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                640.kbps,
+                1310.kbps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = sd7_5),
+                        SingleAllocation("A", targetLayer = sd30),
+                        SingleAllocation("B", targetLayer = sd30),
                         SingleAllocation("C", targetLayer = ld30),
                         SingleAllocation("D", targetLayer = ld30)
                     )
                 )
             ),
             Event(
-                650.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = sd7_5),
-                        SingleAllocation("C", targetLayer = sd7_5),
-                        SingleAllocation("D", targetLayer = ld30)
-                    )
-                )
-            ),
-            Event(
-                670.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd7_5),
-                        SingleAllocation("B", targetLayer = sd7_5),
-                        SingleAllocation("C", targetLayer = sd7_5),
-                        SingleAllocation("D", targetLayer = sd7_5)
-                    )
-                )
-            ),
-            Event(
-                830.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd15),
-                        SingleAllocation("B", targetLayer = sd7_5),
-                        SingleAllocation("C", targetLayer = sd7_5),
-                        SingleAllocation("D", targetLayer = sd7_5)
-                    )
-                )
-            ),
-            Event(
-                1000.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd15),
-                        SingleAllocation("B", targetLayer = sd15),
-                        SingleAllocation("C", targetLayer = sd7_5),
-                        SingleAllocation("D", targetLayer = sd7_5)
-                    )
-                )
-            ),
-            Event(
-                1160.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd15),
-                        SingleAllocation("B", targetLayer = sd15),
-                        SingleAllocation("C", targetLayer = sd15),
-                        SingleAllocation("D", targetLayer = sd7_5)
-                    )
-                )
-            ),
-            Event(
-                1330.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd15),
-                        SingleAllocation("B", targetLayer = sd15),
-                        SingleAllocation("C", targetLayer = sd15),
-                        SingleAllocation("D", targetLayer = sd15)
-                    )
-                )
-            ),
-            Event(
-                1500.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd30),
-                        SingleAllocation("B", targetLayer = sd15),
-                        SingleAllocation("C", targetLayer = sd15),
-                        SingleAllocation("D", targetLayer = sd15)
-                    )
-                )
-            ),
-            Event(
-                1670.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation("A", targetLayer = sd30),
-                        SingleAllocation("B", targetLayer = sd30),
-                        SingleAllocation("C", targetLayer = sd15),
-                        SingleAllocation("D", targetLayer = sd15)
-                    )
-                )
-            ),
-            Event(
-                1840.kbps,
+                1660.kbps,
                 BandwidthAllocation(
                     setOf(
                         SingleAllocation("A", targetLayer = sd30),
                         SingleAllocation("B", targetLayer = sd30),
                         SingleAllocation("C", targetLayer = sd30),
-                        SingleAllocation("D", targetLayer = sd15)
+                        SingleAllocation("D", targetLayer = ld30)
                     )
                 )
             ),
@@ -1258,17 +1091,13 @@ class BitrateControllerTest : ShouldSpec() {
             "D" to VideoConstraints(0)
         )
 
-        // At this stage the purpose of this is just to document current behavior.
-        // TODO: the allocations for bwe=-1 are wrong.
-        bc.allocationHistory.removeIf { it.bwe < 0.bps }
-
         val expectedAllocationHistory = mutableListOf(
             // TODO: do we want to oversend in tile view?
             Event(
-                0.kbps,
+                (-1).bps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation("A", targetLayer = ld7_5),
+                        SingleAllocation("A", targetLayer = noVideo),
                         SingleAllocation("B", targetLayer = noVideo),
                         SingleAllocation("C", targetLayer = noVideo),
                         SingleAllocation("D", targetLayer = noVideo)
@@ -1313,28 +1142,6 @@ class BitrateControllerTest : ShouldSpec() {
         if (maxFrameHeight > 180) {
             expectedAllocationHistory.addAll(
                 listOf(
-                    Event(
-                        170.kbps,
-                        BandwidthAllocation(
-                            setOf(
-                                SingleAllocation("A", targetLayer = sd7_5),
-                                SingleAllocation("B", targetLayer = noVideo),
-                                SingleAllocation("C", targetLayer = noVideo),
-                                SingleAllocation("D", targetLayer = noVideo)
-                            )
-                        )
-                    ),
-                    Event(
-                        340.kbps,
-                        BandwidthAllocation(
-                            setOf(
-                                SingleAllocation("A", targetLayer = sd15),
-                                SingleAllocation("B", targetLayer = noVideo),
-                                SingleAllocation("C", targetLayer = noVideo),
-                                SingleAllocation("D", targetLayer = noVideo)
-                            )
-                        )
-                    ),
                     Event(
                         510.kbps,
                         BandwidthAllocation(

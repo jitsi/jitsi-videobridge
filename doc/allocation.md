@@ -90,8 +90,10 @@ A) The ones with resolution and frame rate higher than the constraints
 
 B) The ones which are inactive (the sending endpoint is currently not transmitting them)
 
-C) In the case of `StageView`, layers with high resolution but insufficient frame rate. The minimum frame rate [can
-be configured](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L41).
+C) Layers with high resolution but insufficient frame rate, that is at least the [preferred resolution](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L40),
+and frame rate less than the [preferred frame rate](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L41).
+For example, with the defaults of preferred resolution 360p and preferred frame rate 30 fps, the following layers will
+not be considered: 360p/7.5fps, 360p/15fps, 720p/7.5fps, 720p/15fps.
 
 #### 3.2 Allocation loop
 It starts with no layers selected for any endpoint, and remaining bandwidth equal to the total available bandwidth.
