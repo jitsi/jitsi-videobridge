@@ -23,7 +23,7 @@ class ConferenceSizeLastNLimitsTest : ConfigTest() {
         context("With limits set") {
             withNewConfig(
                 """
-            videobridge.load-management.last-n-limits {
+            videobridge.load-management.conference-last-n-limits {
                 // Intentionally out of order
                 40 = 10,
                 20 = 20,
@@ -51,7 +51,7 @@ class ConferenceSizeLastNLimitsTest : ConfigTest() {
         context("With no limits set") {
             withNewConfig(
                 """
-            videobridge.load-management.last-n-limits { }
+            videobridge.load-management.conference-last-n-limits { }
         """.trimIndent()
             ) {
                 ConferenceSizeLastNLimits().apply {

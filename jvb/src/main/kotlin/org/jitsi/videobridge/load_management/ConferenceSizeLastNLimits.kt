@@ -22,7 +22,7 @@ import java.util.TreeMap
 
 class ConferenceSizeLastNLimits {
     private val lastNLimits: TreeMap<Int, Int> by config {
-        "videobridge.load-management.last-n-limits".from(JitsiConfig.newConfig)
+        "videobridge.load-management.conference-last-n-limits".from(JitsiConfig.newConfig)
             .convertFrom<ConfigObject> { cfg ->
                 TreeMap(cfg.entries.map { it.key.toInt() to it.value.unwrapped() as Int }.toMap())
             }
