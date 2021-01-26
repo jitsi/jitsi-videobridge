@@ -30,7 +30,7 @@ class ConferenceSizeLastNLimitsTest : ConfigTest() {
                 30 = 15,
                 50 = 5
             }
-        """.trimIndent()
+                """.trimIndent()
             ) {
                 ConferenceSizeLastNLimits().apply {
                     getLastNLimit(19) shouldBe -1
@@ -52,7 +52,7 @@ class ConferenceSizeLastNLimitsTest : ConfigTest() {
             withNewConfig(
                 """
             videobridge.load-management.conference-last-n-limits { }
-        """.trimIndent()
+                """.trimIndent()
             ) {
                 ConferenceSizeLastNLimits().apply {
                     getLastNLimit(111) shouldBe -1

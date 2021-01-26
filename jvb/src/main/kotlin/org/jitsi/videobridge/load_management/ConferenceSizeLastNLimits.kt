@@ -28,11 +28,9 @@ class ConferenceSizeLastNLimits {
             }
     }
 
-    override fun toString() : String = lastNLimits.toString()
     fun getLastNLimit(conferenceSize: Int): Int = lastNLimits.floorEntry(conferenceSize)?.value ?: -1
 
     companion object {
         val singleton = ConferenceSizeLastNLimits()
     }
 }
-
