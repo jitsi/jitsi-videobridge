@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.videobridge.calculateLastN
 import org.jitsi.videobridge.jvbLastNSingleton
+import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion.singleton as conferenceSizeLimits
 import java.util.ArrayList
 
 /**
@@ -63,7 +64,8 @@ fun <T : MediaSourceContainer?> prioritize(
 fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, allocationSettings: AllocationSettings):
     Map<String, VideoConstraints> {
 
-        val effectiveLastN = effectiveLastN(allocationSettings.lastN)
+        // Add 1 for the receiver endpoint, which is not in the list.
+        val effectiveLastN = effectiveLastN(allocationSettings.lastN, endpoints.size + 1)
         return endpoints.mapIndexed { i, endpoint ->
             endpoint.id to if (i >= effectiveLastN) {
                 VideoConstraints(0)
@@ -76,7 +78,8 @@ fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, alloc
 /**
  * The LastN value adjusted according to the limits configured on the bridge, or [Int.MAX_VALUE] if LastN is disabled.
  */
-private fun effectiveLastN(lastN: Int): Int {
-    val adjustedLastN = calculateLastN(lastN, jvbLastNSingleton.jvbLastN)
+private fun effectiveLastN(lastN: Int, conferenceSize: Int): Int {
+    val adjustedLastN =
+        calculateLastN(lastN, jvbLastNSingleton.jvbLastN, conferenceSizeLimits.getLastNLimit(conferenceSize))
     return if (adjustedLastN < 0) Int.MAX_VALUE else adjustedLastN
 }
