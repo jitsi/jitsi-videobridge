@@ -38,7 +38,7 @@ import kotlin.random.Random
  * Tested three versions of the code:
  * 1. Pre-refactoring: on top of 3bf235fb9a2c9ce8caa52de9544f0adcd3933752
  * 2. After refactoring (PR #1530): 98af5107c99e057f51fdf0f60acc2d8aa9b364bb
- * 3. After refactoring and optimization (PR #15XX): ef237f692677d3e5c81b7050b17103a001d3edec
+ * 3. After refactoring and optimization (PR #1557): ef237f692677d3e5c81b7050b17103a001d3edec
  *
  * Tile View:
  * pre-ref: 4.16
