@@ -88,16 +88,6 @@ ports `9090` and `9091` without TLS, and are configured with
 This configuration allows two jitsi-videobridge instances to run on the same
 machine, which is useful while testing Octo.
 
-# Client configuration
-With the above configuration the bridge will advertise a Colibri WebSocket URL,
-and will be ready to accept connections on it, but whether this is used instead of
-WebRTC DataChannels depends on the client.
-
-To enable Colibri WebSocket in the jitsi-meet client, set the following in `config.js`:
-```
-openBridgeChannel: 'websocket'
-```
-
 # Troubleshooting
 To verify that WebSockets are configured and used, first check that the Colibri
 WebSocket URL is advertised to the clients. Open a conference and look for
@@ -111,5 +101,5 @@ like this (you can verify this on meet.jit.si):
 
 Make sure that the URL is correct, and that your infrastructure routes it to
 the correct jitsi-videobridge instance. Finally, check the `Network` tab in the
-Chrome dev console and look for requests to this URL. You should see some requests
-every few seconds, and they should be successful.
+Chrome dev console and look for requests to this URL. You should see a websocket
+opened to this URL, and messages exchanged every few seconds.
