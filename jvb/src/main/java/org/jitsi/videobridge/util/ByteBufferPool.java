@@ -93,7 +93,7 @@ public class ByteBufferPool
     /**
      * Whether to enable or disable book keeping.
      */
-    public static Boolean enableBookkeeping = false;
+    private static Boolean bookkeepingEnabled = false;
 
     /**
      * Total number of buffers requested.
@@ -163,7 +163,7 @@ public class ByteBufferPool
             numLargeRequests.increment();
         }
 
-        if (enableBookkeeping)
+        if (bookkeepingEnabled)
         {
             int arrayId = System.identityHashCode(buf);
 
@@ -188,7 +188,7 @@ public class ByteBufferPool
 
         int len = buf.length;
 
-        if (enableBookkeeping)
+        if (bookkeepingEnabled)
         {
             int arrayId = System.identityHashCode(buf);
             logger.info("Thread " + threadId() + " returned " + len + "-byte buffer "
@@ -279,6 +279,16 @@ public class ByteBufferPool
     public static boolean statisticsEnabled()
     {
         return enableStatistics;
+    }
+
+    public static void enableBookkeeping(boolean enable)
+    {
+        bookkeepingEnabled = enable;
+    }
+
+    public static boolean bookkeepingEnabled()
+    {
+        return bookkeepingEnabled;
     }
 
 }
