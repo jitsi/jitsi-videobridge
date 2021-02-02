@@ -19,7 +19,6 @@ package org.jitsi.videobridge.util;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
-import org.json.simple.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -94,7 +93,7 @@ public class ByteBufferPool
     /**
      * Whether to enable or disable book keeping.
      */
-    public static final Boolean ENABLE_BOOKKEEPING = false;
+    public static Boolean enableBookkeeping = false;
 
     /**
      * Total number of buffers requested.
@@ -164,7 +163,7 @@ public class ByteBufferPool
             numLargeRequests.increment();
         }
 
-        if (ENABLE_BOOKKEEPING)
+        if (enableBookkeeping)
         {
             int arrayId = System.identityHashCode(buf);
 
@@ -189,7 +188,7 @@ public class ByteBufferPool
 
         int len = buf.length;
 
-        if (ENABLE_BOOKKEEPING)
+        if (enableBookkeeping)
         {
             int arrayId = System.identityHashCode(buf);
             logger.info("Thread " + threadId() + " returned " + len + "-byte buffer "
