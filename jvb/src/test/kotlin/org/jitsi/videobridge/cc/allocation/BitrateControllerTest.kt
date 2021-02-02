@@ -77,6 +77,16 @@ class BitrateControllerTest : ShouldSpec() {
             }
         }
 
+        context("Signaling with the legacy API") {
+            bc.bc.setSelectedEndpoints(listOf("A", "B", "C", "D"))
+            // Multiple selected endpoints signals tile-view, and in tile-view we actually run with no selected
+            // endpoints.
+            bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+            bc.bc.allocationSettings.videoConstraints["A"] shouldBe VideoConstraints(1080)
+            bc.bc.setMaxFrameHeight(180)
+            bc.bc.allocationSettings.videoConstraints["A"] shouldBe VideoConstraints(180)
+        }
+
         context("Allocation") {
             context("Stage view") {
                 context("When LastN is not set") {
