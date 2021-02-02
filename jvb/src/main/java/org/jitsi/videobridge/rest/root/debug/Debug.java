@@ -108,6 +108,9 @@ public class Debug
             case POOL_STATS: {
                 return ByteBufferPool.statisticsEnabled();
             }
+            case POOL_BOOKKEEPING: {
+                return ByteBufferPool.bookkeepingEnabled();
+            }
             case QUEUE_STATS: {
                 return PacketQueue.getEnableStatisticsDefault();
             }
@@ -205,6 +208,10 @@ public class Debug
             }
             case POOL_STATS: {
                 ByteBufferPool.enableStatistics(enabled);
+                break;
+            }
+            case POOL_BOOKKEEPING: {
+                ByteBufferPool.enableBookkeeping(enabled);
                 break;
             }
             case QUEUE_STATS: {
