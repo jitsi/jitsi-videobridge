@@ -284,6 +284,11 @@ public class ByteBufferPool
     public static void enableBookkeeping(boolean enable)
     {
         bookkeepingEnabled = enable;
+        if (!enable)
+        {
+            bookkeeping.clear();
+            returnedBookkeeping.clear();
+        }
     }
 
     public static boolean bookkeepingEnabled()
