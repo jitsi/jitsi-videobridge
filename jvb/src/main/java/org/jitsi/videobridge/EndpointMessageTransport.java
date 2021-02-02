@@ -428,8 +428,6 @@ class EndpointMessageTransport
     public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
     {
         List<String> newSelectedEndpoints = new ArrayList<>(message.getSelectedEndpoints());
-        // Some jitsi-meet versions incorrectly include their own ID.
-        newSelectedEndpoints.remove(endpoint.getId());
 
         logger.debug(() -> "Selected " + newSelectedEndpoints);
         endpoint.setSelectedEndpoints(newSelectedEndpoints);

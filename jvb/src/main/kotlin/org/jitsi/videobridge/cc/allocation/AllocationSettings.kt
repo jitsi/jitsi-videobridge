@@ -65,6 +65,12 @@ internal class AllocationSettingsWrapper {
     private var onStageEndpoints: List<String> = emptyList()
     private var allocationSettings = create()
 
+    /**
+     * The set of selected endpoints last signaled via the legacy API ([setSelectedEndpoints]). We save them separately,
+     * because they need to be considered when handling `maxFrameHeight`.
+     */
+    private var signaledSelectedEndpoints = listOf<String>()
+
     private fun create() = AllocationSettings(
         onStageEndpoints = onStageEndpoints,
         selectedEndpoints = selectedEndpoints,
@@ -80,7 +86,7 @@ internal class AllocationSettingsWrapper {
     fun setMaxFrameHeight(maxFrameHeight: Int): Boolean {
         if (this.maxFrameHeight != maxFrameHeight) {
             this.maxFrameHeight = maxFrameHeight
-            return updateVideoConstraints(maxFrameHeight, selectedEndpoints).also {
+            return updateVideoConstraints(maxFrameHeight, signaledSelectedEndpoints).also {
                 if (it) {
                     allocationSettings = create()
                 }
@@ -135,6 +141,7 @@ internal class AllocationSettingsWrapper {
      * [maxFrameHeight]. To update just the selected endpoints, use [setBandwidthAllocationSettings].
      */
     fun setSelectedEndpoints(selectedEndpoints: List<String>): Boolean {
+        signaledSelectedEndpoints = selectedEndpoints
         if (this.selectedEndpoints != selectedEndpoints) {
             this.selectedEndpoints = selectedEndpoints
             updateVideoConstraints(maxFrameHeight, selectedEndpoints)
