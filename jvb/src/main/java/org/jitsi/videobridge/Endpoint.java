@@ -1128,7 +1128,7 @@ public class Endpoint
      */
     private void setMediaSources(MediaSourceDesc[] mediaSources)
     {
-        boolean wasEmpty = transceiver.getMediaSources().length == 0;
+        boolean wasEmpty = ArrayUtils.isNullOrEmpty(transceiver.getMediaSources());
         if (transceiver.setMediaSources(mediaSources))
         {
             eventEmitter.fireEventSync(handler -> {
