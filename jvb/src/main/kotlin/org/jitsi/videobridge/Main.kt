@@ -23,6 +23,7 @@ import org.jitsi.cmd.CmdLine
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
+import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rest.JettyBundleActivatorConfig
 import org.jitsi.rest.createServer
 import org.jitsi.rest.enableCors
@@ -49,6 +50,11 @@ import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
     val logger = LoggerImpl("org.jitsi.videobridge.Main")
+
+    logger.info("Enabling Node tracing")
+    Node.enableNodeTracing(true)
+    logger.info("Enabling payload verification")
+    Node.enablePayloadVerification(true)
 
     setupMetaconfigLogger()
 

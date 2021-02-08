@@ -93,7 +93,7 @@ public class ByteBufferPool
     /**
      * Whether to enable or disable book keeping.
      */
-    private static Boolean bookkeepingEnabled = false;
+    private static Boolean bookkeepingEnabled = true;
 
     /**
      * Total number of buffers requested.
@@ -201,7 +201,7 @@ public class ByteBufferPool
             }
             else if ((b = returnedBookkeeping.get(arrayId)) != null)
             {
-                logger.info("Thread " + threadId()
+                logger.error("Thread " + threadId()
                     + " returned a previously-returned " + len + "-byte buffer at\n"
                     + UtilKt.getStackTrace() +
                     "previously returned at\n" +
@@ -209,7 +209,7 @@ public class ByteBufferPool
             }
             else
             {
-                logger.info("Thread " + threadId()
+                logger.error("Thread " + threadId()
                     + " returned a " + len + "-byte buffer we didn't give out from\n"
                     + UtilKt.getStackTrace());
             }
