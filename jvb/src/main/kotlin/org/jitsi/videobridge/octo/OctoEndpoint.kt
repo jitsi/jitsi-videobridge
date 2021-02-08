@@ -98,7 +98,7 @@ class OctoEndpoint(
      * This [OctoEndpoint] aggregates the constraints from the local endpoints on this bridge, and propagates the max
      * constraints to the bridge that is local for the sending endpoint via an [AddReceiverMessage].
      */
-    override fun maxReceiverVideoConstraintsChanged(maxVideoConstraints: VideoConstraints) {
+    override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         conference.tentacle.sendMessage(
             AddReceiverMessage(
                 conference.tentacle.bridgeId,

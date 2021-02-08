@@ -25,7 +25,6 @@ import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.videobridge.message.*;
-import org.jitsi.videobridge.rest.root.debug.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
@@ -90,7 +89,7 @@ public abstract class AbstractEndpoint
      * in the conference. The client needs to send _at least_ this to satisfy
      * all receivers.
      */
-    private VideoConstraints maxReceiverVideoConstraints = new VideoConstraints(0, 0.0);
+    protected VideoConstraints maxReceiverVideoConstraints = new VideoConstraints(0, 0.0);
 
     protected final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
@@ -357,7 +356,7 @@ public abstract class AbstractEndpoint
         if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
         {
             maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
-            maxReceiverVideoConstraintsChanged(newReceiverMaxVideoConstraints);
+            sendVideoConstraints(newReceiverMaxVideoConstraints);
         }
     }
 
@@ -390,7 +389,7 @@ public abstract class AbstractEndpoint
      * needs to receive from this endpoint
      */
     protected abstract void
-    maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints);
+    sendVideoConstraints(@NotNull VideoConstraints maxVideoConstraints);
 
     /**
      * Notifies this instance that a specified received wants to receive
