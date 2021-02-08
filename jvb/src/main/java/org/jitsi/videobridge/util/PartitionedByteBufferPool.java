@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.stats.*;
 import org.json.simple.*;
@@ -127,15 +128,32 @@ class PartitionedByteBufferPool
      * Adds statistics for this pool to the given JSON object.
      */
     @SuppressWarnings("unchecked")
-    JSONObject getStats()
+    OrderedJsonObject getStats()
     {
-        JSONObject stats = new JSONObject();
+        OrderedJsonObject stats = new OrderedJsonObject();
+
         stats.put("default_size", defaultBufferSize);
+
+        long requests = 0;
+        long returns = 0;
+        long allocations = 0;
         JSONArray partitionStats = new JSONArray();
+
         for (Partition p : partitions)
         {
+            requests += p.numRequests.sum();
+            returns += p.numReturns.sum();
+            allocations += p.numAllocations.sum();
+
             partitionStats.add(p.getStatsJson());
         }
+        stats.put("num_requests", requests);
+        stats.put("num_returns", returns);
+        stats.put("num_allocations", allocations);
+        stats.put(
+            "allocation_percent",
+            100D * allocations / Math.max(1, requests));
+
         stats.put("partitions", partitionStats);
         return stats;
     }
@@ -365,10 +383,10 @@ class PartitionedByteBufferPool
          * Gets a snapshot of the statistics of this partition in JSON format.
          */
         @SuppressWarnings("unchecked")
-        private JSONObject getStatsJson()
+        private OrderedJsonObject getStatsJson()
         {
             long now = System.currentTimeMillis();
-            JSONObject stats = new JSONObject();
+            OrderedJsonObject stats = new OrderedJsonObject();
             stats.put("id", id);
 
             long numRequestsSum = numRequests.sum();
