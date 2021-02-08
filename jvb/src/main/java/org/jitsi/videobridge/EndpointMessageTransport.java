@@ -104,6 +104,7 @@ class EndpointMessageTransport
     @Override
     protected void notifyTransportChannelConnected()
     {
+        endpoint.endpointMessageTransportConnected();
         eventHandler.endpointMessageTransportConnected(endpoint);
     }
 

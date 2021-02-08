@@ -650,6 +650,11 @@ public class Endpoint
         transceiver.addRtpExtension(rtpExtension);
     }
 
+    public void endpointMessageTransportConnected()
+    {
+        sendVideoConstraints(this.maxReceiverVideoConstraints);
+    }
+
     private void effectiveVideoConstraintsChanged(
         Map<String, VideoConstraints> oldEffectiveConstraints,
         Map<String, VideoConstraints> newEffectiveConstraints)
@@ -679,7 +684,7 @@ public class Endpoint
     }
 
     @Override
-    protected void maxReceiverVideoConstraintsChanged(@NotNull VideoConstraints maxVideoConstraints)
+    protected void sendVideoConstraints(@NotNull VideoConstraints maxVideoConstraints)
     {
         // Note that it's up to the client to respect these constraints.
         if (ArrayUtils.isNullOrEmpty(getMediaSources()))
@@ -1123,12 +1128,17 @@ public class Endpoint
      */
     private void setMediaSources(MediaSourceDesc[] mediaSources)
     {
+        boolean wasEmpty = ArrayUtils.isNullOrEmpty(transceiver.getMediaSources());
         if (transceiver.setMediaSources(mediaSources))
         {
             eventEmitter.fireEventSync(handler -> {
                 handler.sourcesChanged();
                 return Unit.INSTANCE;
             });
+        }
+        if (wasEmpty)
+        {
+            sendVideoConstraints(this.maxReceiverVideoConstraints);
         }
     }
 
