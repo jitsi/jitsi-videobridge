@@ -248,19 +248,20 @@ public class ByteBufferPool
         stats.put("num_requests", numRequestsSum);
         stats.put("num_large_requests", numLargeRequestsSum);
         stats.put("num_returns", numReturns.sum());
+
         if (enableStatistics)
         {
+            long allAllocations = numLargeRequestsSum + pool1.getNumAllocations()
+                + pool2.getNumAllocations() + pool3.getNumAllocations();
+            stats.put("num_allocations", allAllocations);
+            stats.put(
+                "allocation_percent",
+                (100.0 * allAllocations) / numRequestsSum);
+
             stats.put("pool1", pool1.getStats());
             stats.put("pool2", pool2.getStats());
             stats.put("pool3", pool3.getStats());
         }
-
-        long allAllocations = numLargeRequestsSum + pool1.getNumAllocations()
-                + pool2.getNumAllocations() + pool3.getNumAllocations();
-
-        stats.put(
-                "allocation_percent",
-                (100.0 * allAllocations) / numRequestsSum);
 
         return stats;
     }
