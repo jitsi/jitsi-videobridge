@@ -71,6 +71,8 @@ public class ByteBufferPool
     private static final Map<Integer, String> bookkeeping
             = new ConcurrentHashMap<>();
 
+    private static final Map<Integer, String> mostRecentAllocLocations = new ConcurrentHashMap<>();
+
     private static class ReturnedBufferBookkeepingInfo
     {
         final String allocTrace;
@@ -167,8 +169,10 @@ public class ByteBufferPool
         {
             int arrayId = System.identityHashCode(buf);
 
-            bookkeeping.put(arrayId, UtilKt.getStackTrace());
+            String stackTrace = UtilKt.getStackTrace();
+            bookkeeping.put(arrayId, stackTrace);
             returnedBookkeeping.remove(arrayId);
+            mostRecentAllocLocations.put(arrayId, stackTrace);
             logger.info("Thread " + threadId() + " got " + buf.length + "-byte buffer "
                     + arrayId);
         }
@@ -205,7 +209,8 @@ public class ByteBufferPool
                     + " returned a previously-returned " + len + "-byte buffer at\n"
                     + UtilKt.getStackTrace() +
                     "previously returned at\n" +
-                    b.deallocTrace);
+                    b.deallocTrace + "\n" +
+                    "it was most recently allocated from " + mostRecentAllocLocations.get(arrayId));
             }
             else
             {
