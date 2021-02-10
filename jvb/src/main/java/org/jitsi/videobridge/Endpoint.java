@@ -1360,6 +1360,8 @@ public class Endpoint
     public void updateForceMute()
     {
         boolean audioForcedMuted = false;
+        boolean videoForceMuted  = false;
+
         for (ChannelShim channelShim : channelShims)
         {
             if (!channelShim.allowIncomingMedia())
@@ -1370,13 +1372,14 @@ public class Endpoint
                         audioForcedMuted = true;
                         break;
                     case VIDEO:
-                        logger.warn(() -> "Tried to mute the incoming video stream, but that is not currently " +
-                            "supported");
+                        videoForceMuted  = true;
                         break;
                 }
             }
         }
+
         transceiver.forceMuteAudio(audioForcedMuted);
+        transceiver.forceMuteVideo(videoForceMuted);
     }
 
     /**
