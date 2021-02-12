@@ -85,6 +85,9 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
                     "${endpoint.id} is having trouble establishing the connection " +
                         "and will be marked as inactive"
                 }
+                synchronized(inactiveEndpointIds) {
+                    inactiveEndpointIds += endpoint.id
+                }
                 notifyStatusChange(endpoint.id, false, null)
                 return
             } else {
