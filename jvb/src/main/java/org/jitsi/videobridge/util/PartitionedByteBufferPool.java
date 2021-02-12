@@ -69,7 +69,7 @@ class PartitionedByteBufferPool
 
     /**
      * Whether to keep track of request/return rates and other basic statistics.
-     * As opposed to {@link ByteBufferPool#ENABLE_BOOKKEEPING} this has a
+     * As opposed to {@link ByteBufferPool#bookkeepingEnabled()} this has a
      * relatively low overhead and can be kept on in production if necessary.
      */
     private boolean enableStatistics = false;
@@ -270,7 +270,7 @@ class PartitionedByteBufferPool
          */
         private byte[] getBuffer(int requiredSize)
         {
-            if (ByteBufferPool.ENABLE_BOOKKEEPING)
+            if (ByteBufferPool.bookkeepingEnabled())
             {
                 logger.info("partition " + id + " request number "
                         + (numRequests.sum() + 1) + ", pool has size "
@@ -299,7 +299,7 @@ class PartitionedByteBufferPool
             }
             else if (buf.length < requiredSize)
             {
-                if (ByteBufferPool.ENABLE_BOOKKEEPING)
+                if (ByteBufferPool.bookkeepingEnabled())
                 {
                     logger.info("Needed buffer of size " + requiredSize
                             + ", got size " + buf.length + " retrying");
@@ -333,7 +333,7 @@ class PartitionedByteBufferPool
                 numNoAllocationNeeded.increment();
             }
 
-            if (ByteBufferPool.ENABLE_BOOKKEEPING)
+            if (ByteBufferPool.bookkeepingEnabled())
             {
                 logger.info("got buffer " + System.identityHashCode(buf)
                         + " from thread " + Thread.currentThread().getId()
@@ -348,7 +348,7 @@ class PartitionedByteBufferPool
          */
         private void returnBuffer(@NotNull byte[] buf)
         {
-            if (ByteBufferPool.ENABLE_BOOKKEEPING)
+            if (ByteBufferPool.bookkeepingEnabled())
             {
                 logger.info("returned buffer " + System.identityHashCode(buf) +
                         " from thread " + Thread.currentThread().getId() + ", partition " + id +

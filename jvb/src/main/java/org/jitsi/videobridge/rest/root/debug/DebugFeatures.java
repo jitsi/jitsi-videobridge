@@ -25,6 +25,7 @@ public enum DebugFeatures
     PAYLOAD_VERIFICATION("payload-verification"),
     NODE_STATS("node-stats"),
     POOL_STATS("pool-stats"),
+    POOL_BOOKKEEPING("pool-bookkeeping"),
     QUEUE_STATS("queue-stats"),
     TRANSIT_STATS("transit-stats"),
     TASK_POOL_STATS("task-pool-stats"),
