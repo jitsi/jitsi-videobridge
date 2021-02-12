@@ -104,9 +104,14 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     broadcastCalls shouldHaveSize 2
                     broadcastCalls.forAny { (msg, sendToOcto) ->
                         sendToOcto && msg.endpoint == "1" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "1"
+                        msg.active shouldBe "false"
                     }
                     broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto && msg.endpoint == "2" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "2"
+                        msg.active shouldBe "false"
                     }
                 }
                 context("and then become active") {
@@ -153,10 +158,14 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     sendMessageCalls.shouldBeEmpty()
                     broadcastCalls shouldHaveSize 2
                     broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto && msg.endpoint == "1" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "1"
+                        msg.active shouldBe "false"
                     }
                     broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto && msg.endpoint == "2" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "2"
+                        msg.active shouldBe "false"
                     }
                 }
                 context("but then one becomes active") {
