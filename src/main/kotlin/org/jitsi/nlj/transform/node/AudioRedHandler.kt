@@ -93,8 +93,9 @@ class AudioRedHandler(
         /**
          * Saves audio (non-RED) packets that we've sent. Packets are cloned on insert and the inserted copies are owned
          * by the cache, meaning that the cache is responsible for returning their buffers to the pool.
+         * It needs to be synchronized because [stop] and [transformAudio] may run in different threads.
          */
-        val sentAudioCache = RtpPacketCache(20, synchronize = false)
+        val sentAudioCache = RtpPacketCache(20, synchronize = true)
 
         /**
          * Process an incoming audio packet. It is either forwarded as it is, or encapsulated in RED with previous
