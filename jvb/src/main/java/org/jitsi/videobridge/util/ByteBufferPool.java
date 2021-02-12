@@ -69,10 +69,10 @@ public class ByteBufferPool
      * A debug data structure which tracks outstanding buffers and tracks from where (via
      * a stack trace) they were requested and returned.
      */
-    private static final Set<byte[]> bookkeeping =
+    private static final Set<byte[]> outstandingBuffers =
         Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
 
-    private static final Set<byte[]> returnedBookkeeping =
+    private static final Set<byte[]> returnedBuffers =
         Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
 
     private static final Map<byte[], Queue<BufferEvent>> bufferEvents =
@@ -159,8 +159,8 @@ public class ByteBufferPool
         if (bookkeepingEnabled)
         {
             Exception stackTrace = new Exception();
-            bookkeeping.add(buf);
-            returnedBookkeeping.remove(buf);
+            outstandingBuffers.add(buf);
+            returnedBuffers.remove(buf);
             bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>())
                 .add(new BufferEvent(BufferEvent.ALLOCATION, System.currentTimeMillis(), stackTrace));
         }
@@ -187,11 +187,11 @@ public class ByteBufferPool
             Exception stackTrace = new Exception();
             bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>())
                 .add(new BufferEvent(BufferEvent.RETURN, System.currentTimeMillis(), stackTrace));
-            if (bookkeeping.remove(buf))
+            if (outstandingBuffers.remove(buf))
             {
-                returnedBookkeeping.add(buf);
+                returnedBuffers.add(buf);
             }
-            else if (returnedBookkeeping.contains(buf))
+            else if (returnedBuffers.contains(buf))
             {
                 String bufferTimeline = bufferEvents.get(buf).stream()
                     .map(BufferEvent::toString)
@@ -236,7 +236,7 @@ public class ByteBufferPool
         OrderedJsonObject stats = new OrderedJsonObject();
         long numRequestsSum = numRequests.sum();
         long numLargeRequestsSum = numLargeRequests.sum();
-        stats.put("outstanding_buffers", bookkeeping.size());
+        stats.put("outstanding_buffers", outstandingBuffers.size());
         stats.put("num_requests", numRequestsSum);
         stats.put("num_large_requests", numLargeRequestsSum);
         stats.put("num_returns", numReturns.sum());
@@ -280,8 +280,8 @@ public class ByteBufferPool
         bookkeepingEnabled = enable;
         if (!enable)
         {
-            bookkeeping.clear();
-            returnedBookkeeping.clear();
+            outstandingBuffers.clear();
+            returnedBuffers.clear();
         }
     }
 
