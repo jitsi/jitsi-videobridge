@@ -72,7 +72,8 @@ public class ByteBufferPool
     private static final Map<byte[], Exception> bookkeeping
             = Collections.synchronizedMap(new IdentityHashMap<>());
 
-    private static final Map<byte[], Queue<BufferEvent>> bufferEvents = Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Map<byte[], Queue<BufferEvent>> bufferEvents =
+        Collections.synchronizedMap(new IdentityHashMap<>());
 
     private static class ReturnedBufferBookkeepingInfo
     {
@@ -195,7 +196,8 @@ public class ByteBufferPool
             int arrayId = System.identityHashCode(buf);
             Exception s;
             Exception stackTrace = new Exception();
-            bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>()).add(new BufferEvent(BufferEvent.RETURN, System.currentTimeMillis(), stackTrace));
+            bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>())
+                .add(new BufferEvent(BufferEvent.RETURN, System.currentTimeMillis(), stackTrace));
             if ((s = bookkeeping.remove(buf)) != null)
             {
                 returnedBookkeeping.put(buf, new ReturnedBufferBookkeepingInfo(s, stackTrace));
