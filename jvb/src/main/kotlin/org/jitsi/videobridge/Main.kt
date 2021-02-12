@@ -23,8 +23,6 @@ import org.jitsi.cmd.CmdLine
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
-import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.debug.BufferTracePlugin
 import org.jitsi.rest.JettyBundleActivatorConfig
 import org.jitsi.rest.createServer
 import org.jitsi.rest.enableCors
@@ -40,7 +38,6 @@ import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.jitsi.videobridge.stats.callstats.CallstatsService
-import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
@@ -52,15 +49,6 @@ import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 fun main(args: Array<String>) {
     val cmdLine = CmdLine().apply { parse(args) }
     val logger = LoggerImpl("org.jitsi.videobridge.Main")
-
-    logger.info("Enabling Node tracing")
-    Node.enableNodeTracing(true)
-    logger.info("Enabling payload verification")
-    Node.enablePayloadVerification(true)
-//    logger.info("Adding buffer trace plugin")
-//    Node.plugins.add(BufferTracePlugin)
-    logger.info("Enabling pool stats")
-    ByteBufferPool.enableStatistics(true)
 
     setupMetaconfigLogger()
 
