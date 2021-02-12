@@ -69,25 +69,14 @@ public class ByteBufferPool
      * A debug data structure which tracks outstanding buffers and tracks from where (via
      * a stack trace) they were requested and returned.
      */
-    private static final Map<byte[], Exception> bookkeeping
-            = Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Set<byte[]> bookkeeping =
+        Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
+
+    private static final Set<byte[]> returnedBookkeeping =
+        Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
 
     private static final Map<byte[], Queue<BufferEvent>> bufferEvents =
         Collections.synchronizedMap(new IdentityHashMap<>());
-
-    private static class ReturnedBufferBookkeepingInfo
-    {
-        final Exception allocTrace;
-        final Exception deallocTrace;
-        ReturnedBufferBookkeepingInfo(Exception a, Exception d)
-        {
-            allocTrace = a;
-            deallocTrace = d;
-        }
-    }
-
-    private static final Map<byte[], ReturnedBufferBookkeepingInfo> returnedBookkeeping
-        = Collections.synchronizedMap(new IdentityHashMap<>());
 
     /**
      * Whether to enable keeping track of statistics.
@@ -170,7 +159,7 @@ public class ByteBufferPool
         if (bookkeepingEnabled)
         {
             Exception stackTrace = new Exception();
-            bookkeeping.put(buf, stackTrace);
+            bookkeeping.add(buf);
             returnedBookkeeping.remove(buf);
             bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>())
                 .add(new BufferEvent(BufferEvent.ALLOCATION, System.currentTimeMillis(), stackTrace));
@@ -198,11 +187,11 @@ public class ByteBufferPool
             Exception stackTrace = new Exception();
             bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>())
                 .add(new BufferEvent(BufferEvent.RETURN, System.currentTimeMillis(), stackTrace));
-            if ((s = bookkeeping.remove(buf)) != null)
+            if (bookkeeping.remove(buf))
             {
-                returnedBookkeeping.put(buf, new ReturnedBufferBookkeepingInfo(s, stackTrace));
+                returnedBookkeeping.add(buf);
             }
-            else if (returnedBookkeeping.get(buf) != null)
+            else if (returnedBookkeeping.contains(buf))
             {
                 String bufferTimeline = bufferEvents.get(buf).stream()
                     .map(BufferEvent::toString)
