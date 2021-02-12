@@ -102,66 +102,62 @@ class AudioRedHandler(
          */
         fun transformAudio(packetInfo: PacketInfo): PacketInfo {
             // Whether we need to add RED encapsulation
+            val encapsulate = when (config.policy) {
+                RedPolicy.NOOP, RedPolicy.STRIP -> false
+                RedPolicy.PROTECT_ALL -> true
+                // RedPolicy.PROTECT_DOMINANT -> =isDominant
+            }
+
             val redPayloadType = redPayloadType
-            val encapsulate = when (redPayloadType) {
-                null -> false
-                else -> when (config.policy) {
-                    RedPolicy.NOOP, RedPolicy.STRIP -> false
-                    RedPolicy.PROTECT_ALL -> true
-                    // RedPolicy.PROTECT_DOMINANT -> =isDominant
-                }
+            if (redPayloadType == null || !encapsulate) {
+                stats.audioPacketForwarded()
+                return packetInfo
             }
 
             val audioRtpPacket = packetInfo.packetAs<AudioRtpPacket>()
+            sentAudioCache.insert(audioRtpPacket)
 
-            sentAudioCache.insert(packetInfo.packetAs())
+            val redundancy = mutableListOf<RtpPacket>()
+            val seq = audioRtpPacket.sequenceNumber
 
-            // This is equivalent to just `encapsulate`, but the compiler does not recognize it.
-            if (encapsulate && redPayloadType != null) {
-                val redundancy = mutableListOf<RtpPacket>()
-                val seq = audioRtpPacket.sequenceNumber
-
-                when (config.distance) {
-                    RedDistance.ONE -> {
-                        getPacketToProtect(applySequenceNumberDelta(seq, -1), config.vadOnly)?.also { secondary ->
+            when (config.distance) {
+                RedDistance.ONE -> {
+                    getPacketToProtect(applySequenceNumberDelta(seq, -1), config.vadOnly)?.also { secondary ->
+                        redundancy.add(secondary)
+                        stats.redundancyPacketAdded()
+                    }
+                }
+                RedDistance.TWO -> {
+                    getPacketToProtect(applySequenceNumberDelta(seq, -1), false)?.also { secondary ->
+                        // With distance 2 we only add the tertiary packet when there is a secondary available
+                        // (regardless of secondary's VAD). This guarantees that the sequence numbers of the
+                        // redundancy packets always directly proceed the primary packet, i.e. that we don't encode
+                        // a packet with primary seq=N and a single redundancy with seq=N-2. This is be important
+                        // when the receiver of the RED stream is another jitsi-videobridge instance (via Octo),
+                        // which makes that assumption about the stream it receives.
+                        val tertiary = getPacketToProtect(applySequenceNumberDelta(seq, -2), config.vadOnly)
+                        if (tertiary != null) {
+                            redundancy.add(tertiary)
+                            stats.redundancyPacketAdded()
+                            redundancy.add(secondary)
+                            stats.redundancyPacketAdded()
+                        } else if (!config.vadOnly || secondary.hasVad()) {
+                            // If there's no tertiary encode the secondary alone, but this time check its VAD.
                             redundancy.add(secondary)
                             stats.redundancyPacketAdded()
                         }
                     }
-                    RedDistance.TWO -> {
-                        getPacketToProtect(applySequenceNumberDelta(seq, -1), false)?.also { secondary ->
-                            // With distance 2 we only add the tertiary packet when there is a secondary available
-                            // (regardless of secondary's VAD). This guarantees that the sequence numbers of the
-                            // redundancy packets always directly proceed the primary packet, i.e. that we don't encode
-                            // a packet with primary seq=N and a single redundancy with seq=N-2. This is be important
-                            // when the receiver of the RED stream is another jitsi-videobridge instance (via Octo),
-                            // which makes that assumption about the stream it receives.
-                            val tertiary = getPacketToProtect(applySequenceNumberDelta(seq, -2), config.vadOnly)
-                            if (tertiary != null) {
-                                redundancy.add(tertiary)
-                                stats.redundancyPacketAdded()
-                                redundancy.add(secondary)
-                                stats.redundancyPacketAdded()
-                            } else if (!config.vadOnly || secondary.hasVad()) {
-                                // If there's no tertiary encode the secondary alone, but this time check its VAD.
-                                redundancy.add(secondary)
-                                stats.redundancyPacketAdded()
-                            }
-                        }
-                    }
                 }
-
-                val redPacket = RedAudioRtpPacket.builder.build(redPayloadType, audioRtpPacket, redundancy)
-                packetInfo.packet = redPacket
-
-                // We replaced packetInfo.packet with our newly allocated packet, so the original can now be returned.
-                // We do not return the redundancy packets, because we only peek()ed at them from the cache.
-                BufferPool.returnBuffer(audioRtpPacket.buffer)
-
-                stats.audioPacketEncapsulated()
-            } else {
-                stats.audioPacketForwarded()
             }
+
+            val redPacket = RedAudioRtpPacket.builder.build(redPayloadType, audioRtpPacket, redundancy)
+            packetInfo.packet = redPacket
+
+            // We replaced packetInfo.packet with our newly allocated packet, so the original can now be returned.
+            // We do not return the redundancy packets, because we only peek()ed at them from the cache.
+            BufferPool.returnBuffer(audioRtpPacket.buffer)
+
+            stats.audioPacketEncapsulated()
             return packetInfo
         }
 
