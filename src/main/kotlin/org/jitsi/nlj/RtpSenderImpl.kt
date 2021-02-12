@@ -185,9 +185,12 @@ class RtpSenderImpl(
         }
 
         probingDataSender = ProbingDataSender(
-            outgoingPacketCache.getPacketCache(), outgoingRtxRoot, absSendTime, diagnosticContext,
-            streamInformationStore,
-            logger
+            packetCache = outgoingPacketCache.getPacketCache(),
+            rtxDataSender = outgoingRtxRoot,
+            garbageDataSender = absSendTime,
+            diagnosticContext = diagnosticContext,
+            streamInformationStore = streamInformationStore,
+            parentLogger = logger
         )
     }
 
