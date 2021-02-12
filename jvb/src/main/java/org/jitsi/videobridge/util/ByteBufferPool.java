@@ -282,6 +282,7 @@ public class ByteBufferPool
         {
             outstandingBuffers.clear();
             returnedBuffers.clear();
+            bufferEvents.clear();
         }
     }
 
