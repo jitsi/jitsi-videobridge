@@ -270,13 +270,6 @@ class PartitionedByteBufferPool
          */
         private byte[] getBuffer(int requiredSize)
         {
-            if (ByteBufferPool.bookkeepingEnabled())
-            {
-                logger.info("partition " + id + " request number "
-                        + (numRequests.sum() + 1) + ", pool has size "
-                        + pool.size());
-            }
-
             if (enableStatistics)
             {
                 numRequests.increment();
@@ -333,12 +326,6 @@ class PartitionedByteBufferPool
                 numNoAllocationNeeded.increment();
             }
 
-            if (ByteBufferPool.bookkeepingEnabled())
-            {
-                logger.info("got buffer " + System.identityHashCode(buf)
-                        + " from thread " + Thread.currentThread().getId()
-                        + ", partition " + id + " now has size " + pool.size());
-            }
             return buf;
         }
 
@@ -348,14 +335,6 @@ class PartitionedByteBufferPool
          */
         private void returnBuffer(@NotNull byte[] buf)
         {
-            if (ByteBufferPool.bookkeepingEnabled())
-            {
-                logger.info("returned buffer " + System.identityHashCode(buf) +
-                        " from thread " + Thread.currentThread().getId() + ", partition " + id +
-                        " now has size " + pool.size());
-
-            }
-
             if (enableStatistics)
             {
                 numReturns.increment();
