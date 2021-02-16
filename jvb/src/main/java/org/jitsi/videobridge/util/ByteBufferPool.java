@@ -65,16 +65,16 @@ public class ByteBufferPool
      */
     private static final Logger logger = new LoggerImpl(ByteBufferPool.class.getName());
 
-    /**
-     * A debug data structure which tracks outstanding buffers and tracks from where (via
-     * a stack trace) they were requested and returned.
-     */
     private static final Set<byte[]> outstandingBuffers =
         Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
 
     private static final Set<byte[]> returnedBuffers =
         Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
 
+    /**
+     * A debug data structure which tracks all events (requests and returns) for a given
+     * buffer
+     */
     private static final Map<byte[], Queue<BufferEvent>> bufferEvents =
         Collections.synchronizedMap(new IdentityHashMap<>());
 
