@@ -234,17 +234,17 @@ public class ByteBufferPool
     public static OrderedJsonObject getStatsJson()
     {
         OrderedJsonObject stats = new OrderedJsonObject();
-        long numRequestsSum = numRequests.sum();
         long numLargeRequestsSum = numLargeRequests.sum();
-        stats.put("outstanding_buffers", outstandingBuffers.size());
-        stats.put("num_requests", numRequestsSum);
+
         stats.put("num_large_requests", numLargeRequestsSum);
-        stats.put("num_returns", numReturns.sum());
 
         if (enableStatistics)
         {
+            long numRequestsSum = numRequests.sum();
             long allAllocations = numLargeRequestsSum + pool1.getNumAllocations()
                 + pool2.getNumAllocations() + pool3.getNumAllocations();
+            stats.put("num_requests", numRequestsSum);
+            stats.put("num_returns", numReturns.sum());
             stats.put("num_allocations", allAllocations);
             stats.put(
                 "allocation_percent",
@@ -253,6 +253,11 @@ public class ByteBufferPool
             stats.put("pool1", pool1.getStats());
             stats.put("pool2", pool2.getStats());
             stats.put("pool3", pool3.getStats());
+        }
+
+        if (bookkeepingEnabled)
+        {
+            stats.put("outstanding_buffers", outstandingBuffers.size());
         }
 
         return stats;
