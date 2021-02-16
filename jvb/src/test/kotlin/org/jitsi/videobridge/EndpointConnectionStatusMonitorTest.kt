@@ -104,9 +104,36 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     broadcastCalls shouldHaveSize 2
                     broadcastCalls.forAny { (msg, sendToOcto) ->
                         sendToOcto && msg.endpoint == "1" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "1"
+                        msg.active shouldBe "false"
                     }
                     broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto && msg.endpoint == "2" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "2"
+                        msg.active shouldBe "false"
+                    }
+                }
+                context("and then become active") {
+                    clock.elapse(30.secs)
+                    eps.forEach {
+                        every { it.lastIncomingActivity } returns clock.instant()
+                    }
+                    executor.runOne()
+                    should("fire broadcast active events for the local endpoints") {
+                        sendMessageCalls.shouldBeEmpty()
+                        // 2 from the messages when it went inactive, and 2 more now for going active
+                        broadcastCalls shouldHaveSize 4
+                        broadcastCalls.forAny { (msg, sendToOcto) ->
+                            sendToOcto shouldBe true
+                            msg.endpoint shouldBe "1"
+                            msg.active shouldBe "true"
+                        }
+                        broadcastCalls.forAny { (msg, sendToOcto) ->
+                            sendToOcto shouldBe true
+                            msg.endpoint shouldBe "2"
+                            msg.active shouldBe "true"
+                        }
                     }
                 }
             }
@@ -131,10 +158,14 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     sendMessageCalls.shouldBeEmpty()
                     broadcastCalls shouldHaveSize 2
                     broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto && msg.endpoint == "1" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "1"
+                        msg.active shouldBe "false"
                     }
                     broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto && msg.endpoint == "2" && msg.active == "false"
+                        sendToOcto shouldBe true
+                        msg.endpoint shouldBe "2"
+                        msg.active shouldBe "false"
                     }
                 }
                 context("but then one becomes active") {
