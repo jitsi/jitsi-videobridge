@@ -36,6 +36,7 @@ import java.util.function.*;
 import java.util.stream.*;
 
 import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
+import static org.jitsi.videobridge.cc.allocation.VideoConstraintsKt.prettyPrint;
 
 /**
  *
@@ -248,6 +249,10 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         // Extract and update the effective constraints.
         Map<String, VideoConstraints> oldEffectiveConstraints = effectiveConstraints;
         effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
+        logger.debug(() ->
+                "Allocating: sortedEndpoints="
+                        + sortedEndpoints.stream().map(T::getId).collect(Collectors.joining(","))
+                        + " effectiveConstraints=" + prettyPrint(effectiveConstraints));
 
         // Compute the bandwidth allocation.
         BandwidthAllocation newAllocation = allocate(sortedEndpoints);
@@ -262,7 +267,10 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         }
         allocation = newAllocation;
 
-        if (!effectiveConstraints.equals(oldEffectiveConstraints))
+        boolean effectiveConstraintsChanged = !effectiveConstraints.equals(oldEffectiveConstraints);
+        logger.debug(() -> "Finished allocation: allocationChanged=" + allocationChanged
+                + " effectiveConstraintsChanged=" + effectiveConstraintsChanged);
+        if (effectiveConstraintsChanged)
         {
             eventEmitter.fireEventSync(handler ->
             {
