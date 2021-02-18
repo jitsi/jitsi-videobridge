@@ -20,6 +20,7 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.shim.*;
@@ -486,6 +487,10 @@ public class VideobridgeStatistics
             unlockedSetStat(
                 "stress_level",
                 jvbStats.stressLevel
+            );
+            unlockedSetStat(
+                "average_participant_stress",
+                JvbLoadManager.Companion.getAverageParticipantStress()
             );
             unlockedSetStat("num_eps_oversending", numOversending);
             unlockedSetStat(CONFERENCES, conferences);
