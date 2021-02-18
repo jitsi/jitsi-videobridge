@@ -249,7 +249,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         // Extract and update the effective constraints.
         Map<String, VideoConstraints> oldEffectiveConstraints = effectiveConstraints;
         effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
-        logger.debug(() ->
+        logger.trace(() ->
                 "Allocating: sortedEndpoints="
                         + sortedEndpoints.stream().map(T::getId).collect(Collectors.joining(","))
                         + " effectiveConstraints=" + prettyPrint(effectiveConstraints));
@@ -268,7 +268,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         allocation = newAllocation;
 
         boolean effectiveConstraintsChanged = !effectiveConstraints.equals(oldEffectiveConstraints);
-        logger.debug(() -> "Finished allocation: allocationChanged=" + allocationChanged
+        logger.trace(() -> "Finished allocation: allocationChanged=" + allocationChanged
                 + " effectiveConstraintsChanged=" + effectiveConstraintsChanged);
         if (effectiveConstraintsChanged)
         {
