@@ -166,6 +166,7 @@ import java.util.stream.*;
          Set<AbstractEndpoint> octoEndpoints = new HashSet<>();
          endpointIds.forEach(endpointId ->
          {
+             logger.info("Creating Octo endpoint " + endpointId);
              OctoEndpoint octoEndpoint = new OctoEndpoint(conference, endpointId, this, logger);
              octoEndpoints.add(octoEndpoint);
              payloadTypes.forEach(octoEndpoint::addPayloadType);
