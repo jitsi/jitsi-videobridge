@@ -443,6 +443,7 @@
           <jvmTarget>1.8</jvmTarget>
           <args>
             <arg>-Xallow-result-return-type</arg>
+            <arg>-Xopt-in=kotlin.ExperimentalStdlibApi</arg>
           </args>
         </configuration>
       </plugin>
