@@ -842,7 +842,6 @@ public class Conference
                         "conference = " + endpoint.getConference());
             }
             AbstractEndpoint replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
-            endpointsById.put(endpoint.getId(), endpoint);
             if (replacedEndpoint != null)
             {
                 logger.info("Endpoint with id " + endpoint.getId() + ": " +
