@@ -28,3 +28,6 @@ data class VideoConstraints(
         this["maxFrameRate"] = maxFrameRate
     }.toJSONString()
 }
+
+fun Map<String, VideoConstraints>.prettyPrint(): String =
+    entries.joinToString { "${it.key}->${it.value.maxHeight}" }
