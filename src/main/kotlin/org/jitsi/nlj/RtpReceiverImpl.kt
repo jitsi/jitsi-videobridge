@@ -55,6 +55,7 @@ import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.Vp8Parser
+import org.jitsi.nlj.transform.node.incoming.VideoMuteNode
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
@@ -118,6 +119,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
             }
         }
     }
+
+    private val videoMuteNode = VideoMuteNode()
+
     private val silenceDiscarder = DiscardableDiscarder("Silence discarder", false)
     private val paddingOnlyDiscarder = DiscardableDiscarder("Padding-only discarder", true)
     private val statsTracker = IncomingStatisticsTracker(streamInformationStore)
@@ -210,6 +214,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         // audioLevelReader back to where it was (in the audio path) and add a new node here which would
                         // check for different discard conditions (i.e. checking the audio level for silence)
                         node(audioLevelReader)
+                        node(videoMuteNode)
                         node(srtpDecryptWrapper)
                         node(toggleablePcapWriter.newObserverNode())
                         node(statsTracker)
@@ -300,6 +305,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun forceMuteAudio(shouldMute: Boolean) {
         audioLevelReader.forceMute = shouldMute
+    }
+
+    override fun forceMuteVideo(shouldMute: Boolean) {
+        videoMuteNode.forceMute = shouldMute
     }
 
     override fun setFeature(feature: Features, enabled: Boolean) {

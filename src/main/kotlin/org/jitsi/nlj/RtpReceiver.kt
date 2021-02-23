@@ -60,6 +60,8 @@ abstract class RtpReceiver :
      * Forcibly mute or unmute the incoming audio stream
      */
     abstract fun forceMuteAudio(shouldMute: Boolean)
+
+    abstract fun forceMuteVideo(shouldMute: Boolean)
 }
 
 interface RtpReceiverEventHandler {
