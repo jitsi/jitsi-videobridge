@@ -171,6 +171,10 @@ class OctoRtpReceiver(
         // No op(?)
     }
 
+    override fun forceMuteVideo(shouldMute: Boolean) {
+        // noop
+    }
+
     override fun getPacketStreamStats(): PacketStreamStats.Snapshot {
         TODO("Not yet implemented")
     }
