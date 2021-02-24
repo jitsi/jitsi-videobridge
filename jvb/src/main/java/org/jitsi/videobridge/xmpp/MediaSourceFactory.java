@@ -21,6 +21,8 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
+import org.jxmpp.jid.parts.*;
+import org.jxmpp.util.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -470,11 +472,31 @@ public class MediaSourceFactory
             = source == null
                 ? null : source.getFirstChildOfType(
                     SSRCInfoPacketExtension.class);
+
         if (ssrcInfoPacketExtension != null)
         {
-            return
-                ssrcInfoPacketExtension.getOwner()
-                    .getResourceOrEmpty().toString();
+            /*
+             * N.B.: this is semantically the same as
+             *    return
+             *       ssrcInfoPacketExtension.getOwner()
+             *          .getResourceOrEmpty().toString();
+             *
+             * but avoids expensive construction a lot of JID parts we just throw away.
+             *
+             * This function is called quadratically often in {@link ConfOctoTransport#setSources}
+             * so needs to be fast.
+             */
+            String ownerAttr = ssrcInfoPacketExtension.getAttributeAsString(SSRCInfoPacketExtension.OWNER_ATTR_NAME);
+            if (ownerAttr == null)
+            {
+                return null;
+            }
+            String unpreppedResource = XmppStringUtils.parseResource(ownerAttr);
+            if (unpreppedResource.isEmpty())
+            {
+                return Resourcepart.EMPTY.toString();
+            }
+            return Resourcepart.fromOrThrowUnchecked(unpreppedResource).toString();
         }
         return null;
     }
