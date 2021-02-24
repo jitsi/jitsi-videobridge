@@ -621,7 +621,7 @@ public class Conference
 
         subscribeToEndpointEvents(endpoint);
 
-        addEndpoint(endpoint);
+        addEndpoints(Collections.singleton(endpoint));
 
         return endpoint;
     }
@@ -831,30 +831,28 @@ public class Conference
     }
 
     /**
-     * Adds a specific {@link AbstractEndpoint} instance to the list of
-     * endpoints in this conference.
-     * @param endpoint the endpoint to add.
+     * Adds a set of {@link AbstractEndpoint} instances to the list of endpoints in this conference.
      */
-    public void addEndpoint(AbstractEndpoint endpoint)
+    public void addEndpoints(Set<AbstractEndpoint> endpoints)
     {
-        if (endpoint.getConference() != this)
-        {
-            throw new IllegalArgumentException("Endpoint belong to other " +
-                "conference = " + endpoint.getConference());
-        }
+        endpoints.forEach(endpoint -> {
+            if (endpoint.getConference() != this)
+            {
+                throw new IllegalArgumentException("Endpoint belong to other " +
+                        "conference = " + endpoint.getConference());
+            }
+            AbstractEndpoint replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
+            if (replacedEndpoint != null)
+            {
+                logger.info("Endpoint with id " + endpoint.getId() + ": " +
+                        replacedEndpoint + " has been replaced by new " +
+                        "endpoint with same id: " + endpoint);
+            }
+        });
 
-        final AbstractEndpoint replacedEndpoint;
-        replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
         updateEndpointsCache();
 
         endpointsChanged();
-
-        if (replacedEndpoint != null)
-        {
-            logger.info("Endpoint with id " + endpoint.getId() + ": " +
-                replacedEndpoint + " has been replaced by new " +
-                "endpoint with same id: " + endpoint);
-        }
     }
 
     /**
