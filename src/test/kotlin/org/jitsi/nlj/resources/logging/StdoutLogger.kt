@@ -20,6 +20,7 @@ import java.util.function.Supplier
 import java.util.logging.Level
 import org.jitsi.utils.logging2.LogContext
 import org.jitsi.utils.logging2.Logger
+import java.util.logging.Handler
 
 /**
  * Logger which logs all messages to stdout (but obeys a set log level).  By default
@@ -130,4 +131,8 @@ class StdoutLogger(
     override fun setLevel(level: Level) {
         _level = level
     }
+    /* These can be stubs */
+    override fun setUseParentHandlers(useParentHandlers: Boolean) = Unit
+    override fun addHandler(handler: Handler?) = Unit
+    override fun removeHandler(handler: Handler?) = Unit
 }

@@ -29,23 +29,8 @@ class PacketInfoQueue(
     executor: ExecutorService,
     handler: (PacketInfo) -> Boolean,
     capacity: Int = 1024
-) : PacketQueue<PacketInfo>(capacity, false, null, id, handler, executor) {
+) : PacketQueue<PacketInfo>(capacity, null, id, handler, executor) {
     override fun releasePacket(pkt: PacketInfo) {
         BufferPool.returnBuffer(pkt.packet.buffer)
     }
-
-    override fun getBuffer(packetInfo: PacketInfo): ByteArray =
-        throw NotImplementedError("copy=true is not supported")
-
-    override fun createPacket(p0: ByteArray?, p1: Int, p2: Int, p3: Any?): PacketInfo =
-        throw NotImplementedError("copy=true is not supported")
-
-    override fun getContext(p0: PacketInfo?): Any? =
-        throw NotImplementedError("copy=true is not supported")
-
-    override fun getLength(p0: PacketInfo): Int =
-        throw NotImplementedError("copy=true is not supported")
-
-    override fun getOffset(p0: PacketInfo?): Int =
-        throw NotImplementedError("copy=true is not supported")
 }
