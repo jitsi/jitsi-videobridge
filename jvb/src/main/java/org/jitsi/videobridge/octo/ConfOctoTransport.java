@@ -342,69 +342,6 @@ public class ConfOctoTransport
      * @param videoSourceGroups the list of source groups for video.
      */
     public void setSources(
-            List<SourcePacketExtension> audioSources,
-            List<SourcePacketExtension> videoSources,
-            List<SourceGroupPacketExtension> videoSourceGroups)
-    {
-        if (!running.get())
-        {
-            return;
-        }
-        List<SourcePacketExtension> allSources = new LinkedList<>(audioSources);
-        allSources.addAll(videoSources);
-
-        // Jicofo sends an empty "source" when it wants to clear the sources.
-        // This manifests as a failure to find an 'owner', hence we clear the
-        // nulls here.
-        Set<String> endpointIds
-                = allSources.stream()
-                    .map(MediaSourceFactory::getOwner)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-        octoEndpoints.setEndpoints(endpointIds);
-
-        // Create the sources after creating the endpoints
-        MediaSourceDesc[] sources =
-            MediaSourceFactory.createMediaSources(
-                videoSources, videoSourceGroups);
-        octoEndpoints.setMediaSources(sources);
-
-        // We only need to call this if the sources of any endpoint actually
-        // changed, but that's not easy to detect. It's safe to call it more
-        // often.
-        conference.endpointSourcesChanged(null);
-
-        endpointIds.forEach(endpointId ->
-        {
-            Map<MediaType, Set<Long>> endpointSsrcsByMediaType = new HashMap<>();
-            Set<Long> epAudioSsrcs = audioSources.stream()
-                    .filter(source -> endpointId.equals(MediaSourceFactory.getOwner(source)))
-                    .filter(Objects::nonNull)
-                    .map(SourcePacketExtension::getSSRC)
-                    .collect(Collectors.toSet());
-            endpointSsrcsByMediaType.put(MediaType.AUDIO, epAudioSsrcs);
-
-            Set<Long> epVideoSsrcs = videoSources.stream()
-                    .filter(source -> endpointId.equals(MediaSourceFactory.getOwner(source)))
-                    .filter(Objects::nonNull)
-                    .map(SourcePacketExtension::getSSRC)
-                    .collect(Collectors.toSet());
-            endpointSsrcsByMediaType.put(MediaType.VIDEO, epVideoSsrcs);
-
-            AbstractEndpoint endpoint = conference.getEndpoint(endpointId);
-            if (endpoint instanceof OctoEndpoint)
-            {
-                ((OctoEndpoint) endpoint).setReceiveSsrcs(endpointSsrcsByMediaType);
-            }
-            else
-            {
-                logger.warn("No OctoEndpoint for SSRCs");
-            }
-        });
-    }
-
-    public void setSources2(
         List<SourcePacketExtension> audioSources,
         List<SourcePacketExtension> videoSources,
         List<SourceGroupPacketExtension> videoSourceGroups)
@@ -413,75 +350,9 @@ public class ConfOctoTransport
         {
             return;
         }
-        Map<String, Set<Long>> audioSsrcsByEpId = new HashMap<>();
-        audioSources.forEach(audioSource -> {
-            String owner;
-            if ((owner = MediaSourceFactory.getOwner(audioSource)) != null)
-            {
-                audioSsrcsByEpId.computeIfAbsent(owner, key -> new HashSet<>()).add(audioSource.getSSRC());
-            }
-        });
-        Map<String, Set<Long>> videoSsrcsByEpId = new HashMap<>();
-        videoSources.forEach(videoSource -> {
-            String owner;
-            if ((owner = MediaSourceFactory.getOwner(videoSource)) != null)
-            {
-                videoSsrcsByEpId.computeIfAbsent(owner, key -> new HashSet<>()).add(videoSource.getSSRC());
-            }
-        });
-
-        Set<String> endpointIds = Stream.concat(audioSsrcsByEpId.keySet().stream(), videoSsrcsByEpId.keySet().stream()).collect(Collectors.toSet());
-
         // Jicofo sends an empty "source" when it wants to clear the sources.
-        // This manifests as a failure to find an 'owner', hence we clear the
-        // nulls here.
-
-        octoEndpoints.setEndpoints(endpointIds);
-
-        // Create the sources after creating the endpoints
-        MediaSourceDesc[] sources =
-            MediaSourceFactory.createMediaSources(
-                videoSources, videoSourceGroups);
-        octoEndpoints.setMediaSources(sources);
-
-        // We only need to call this if the sources of any endpoint actually
-        // changed, but that's not easy to detect. It's safe to call it more
-        // often.
-        conference.endpointSourcesChanged(null);
-
-        endpointIds.forEach(endpointId ->
-        {
-            Map<MediaType, Set<Long>> endpointSsrcsByMediaType = new HashMap<>();
-            Set<Long> audioSsrcs;
-            if ((audioSsrcs = audioSsrcsByEpId.get(endpointId)) != null) {
-                endpointSsrcsByMediaType.put(MediaType.AUDIO, audioSsrcs);
-            }
-            Set<Long> videoSsrcs;
-            if ((videoSsrcs = videoSsrcsByEpId.get(endpointId)) != null) {
-                endpointSsrcsByMediaType.put(MediaType.VIDEO, videoSsrcs);
-            }
-
-            AbstractEndpoint endpoint = conference.getEndpoint(endpointId);
-            if (endpoint instanceof OctoEndpoint)
-            {
-                ((OctoEndpoint) endpoint).setReceiveSsrcs(endpointSsrcsByMediaType);
-            }
-            else
-            {
-                logger.warn("No OctoEndpoint for SSRCs");
-            }
-        });
-    }
-
-    public void setSources3(
-        List<SourcePacketExtension> audioSources,
-        List<SourcePacketExtension> videoSources,
-        List<SourceGroupPacketExtension> videoSourceGroups)
-    {
-        if (!running.get())
-        {
-            return;
-        }
+        // This manifests as a failure to find an 'owner', so we ignore any sources
+        // for which that is the case here
         Map<String, Map<MediaType, Set<Long>>> ssrcsByMediaTypeByEpId = new HashMap<>();
         audioSources.forEach(audioSource -> {
             String owner;
@@ -500,10 +371,6 @@ public class ConfOctoTransport
             }
         });
         Set<String> endpointIds = ssrcsByMediaTypeByEpId.keySet();
-
-        // Jicofo sends an empty "source" when it wants to clear the sources.
-        // This manifests as a failure to find an 'owner', hence we clear the
-        // nulls here.
 
         octoEndpoints.setEndpoints(endpointIds);
 
