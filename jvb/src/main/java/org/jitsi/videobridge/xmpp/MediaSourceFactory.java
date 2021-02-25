@@ -487,18 +487,28 @@ public class MediaSourceFactory
              * so needs to be fast.
              */
             String ownerAttr = ssrcInfoPacketExtension.getAttributeAsString(SSRCInfoPacketExtension.OWNER_ATTR_NAME);
-            if (ownerAttr == null)
+            if (ownerAttr != null)
             {
-                return null;
+                return getResourceFromJid(ownerAttr);
             }
-            String unpreppedResource = XmppStringUtils.parseResource(ownerAttr);
-            if (unpreppedResource.isEmpty())
-            {
-                return Resourcepart.EMPTY.toString();
-            }
-            return Resourcepart.fromOrThrowUnchecked(unpreppedResource).toString();
         }
         return null;
+    }
+
+    /**
+     * Given a string containing a JID, return its StringPrep'd Resource part,
+     * or {@link Resourcepart#EMPTY}, as a string.
+     *
+     * Helper for {@link #getOwner}
+     */
+    private static String getResourceFromJid(String jid)
+    {
+        String unpreppedResource = XmppStringUtils.parseResource(jid);
+        if (unpreppedResource.isEmpty())
+        {
+            return Resourcepart.EMPTY.toString();
+        }
+        return Resourcepart.fromOrThrowUnchecked(unpreppedResource).toString();
     }
 
     /**
