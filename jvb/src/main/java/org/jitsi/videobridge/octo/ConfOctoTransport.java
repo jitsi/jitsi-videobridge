@@ -342,25 +342,37 @@ public class ConfOctoTransport
      * @param videoSourceGroups the list of source groups for video.
      */
     public void setSources(
-            List<SourcePacketExtension> audioSources,
-            List<SourcePacketExtension> videoSources,
-            List<SourceGroupPacketExtension> videoSourceGroups)
+        List<SourcePacketExtension> audioSources,
+        List<SourcePacketExtension> videoSources,
+        List<SourceGroupPacketExtension> videoSourceGroups)
     {
         if (!running.get())
         {
             return;
         }
-        List<SourcePacketExtension> allSources = new LinkedList<>(audioSources);
-        allSources.addAll(videoSources);
-
         // Jicofo sends an empty "source" when it wants to clear the sources.
-        // This manifests as a failure to find an 'owner', hence we clear the
-        // nulls here.
-        Set<String> endpointIds
-                = allSources.stream()
-                    .map(MediaSourceFactory::getOwner)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
+        // This manifests as a failure to find an 'owner', so we ignore any sources
+        // for which that is the case here
+        Map<String, Map<MediaType, Set<Long>>> ssrcsByMediaTypeByEpId = new HashMap<>();
+        audioSources.forEach(audioSource -> {
+            String owner;
+            if ((owner = MediaSourceFactory.getOwner(audioSource)) != null)
+            {
+                Map<MediaType, Set<Long>> epSsrcs =
+                    ssrcsByMediaTypeByEpId.computeIfAbsent(owner, key -> new HashMap<>());
+                epSsrcs.computeIfAbsent(MediaType.AUDIO, key -> new HashSet<>()).add(audioSource.getSSRC());
+            }
+        });
+        videoSources.forEach(videoSource -> {
+            String owner;
+            if ((owner = MediaSourceFactory.getOwner(videoSource)) != null)
+            {
+                Map<MediaType, Set<Long>> epSsrcs =
+                    ssrcsByMediaTypeByEpId.computeIfAbsent(owner, key -> new HashMap<>());
+                epSsrcs.computeIfAbsent(MediaType.VIDEO, key -> new HashSet<>()).add(videoSource.getSSRC());
+            }
+        });
+        Set<String> endpointIds = ssrcsByMediaTypeByEpId.keySet();
 
         octoEndpoints.setEndpoints(endpointIds);
 
@@ -377,21 +389,7 @@ public class ConfOctoTransport
 
         endpointIds.forEach(endpointId ->
         {
-            Map<MediaType, Set<Long>> endpointSsrcsByMediaType = new HashMap<>();
-            Set<Long> epAudioSsrcs = audioSources.stream()
-                    .filter(source -> endpointId.equals(MediaSourceFactory.getOwner(source)))
-                    .filter(Objects::nonNull)
-                    .map(SourcePacketExtension::getSSRC)
-                    .collect(Collectors.toSet());
-            endpointSsrcsByMediaType.put(MediaType.AUDIO, epAudioSsrcs);
-
-            Set<Long> epVideoSsrcs = videoSources.stream()
-                    .filter(source -> endpointId.equals(MediaSourceFactory.getOwner(source)))
-                    .filter(Objects::nonNull)
-                    .map(SourcePacketExtension::getSSRC)
-                    .collect(Collectors.toSet());
-            endpointSsrcsByMediaType.put(MediaType.VIDEO, epVideoSsrcs);
-
+            Map<MediaType, Set<Long>> endpointSsrcsByMediaType = ssrcsByMediaTypeByEpId.get(endpointId);
             AbstractEndpoint endpoint = conference.getEndpoint(endpointId);
             if (endpoint instanceof OctoEndpoint)
             {
