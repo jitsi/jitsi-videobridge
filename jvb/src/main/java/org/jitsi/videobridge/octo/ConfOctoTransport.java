@@ -358,7 +358,8 @@ public class ConfOctoTransport
             String owner;
             if ((owner = MediaSourceFactory.getOwner(audioSource)) != null)
             {
-                Map<MediaType, Set<Long>> epSsrcs = ssrcsByMediaTypeByEpId.computeIfAbsent(owner, key -> new HashMap<>());
+                Map<MediaType, Set<Long>> epSsrcs =
+                    ssrcsByMediaTypeByEpId.computeIfAbsent(owner, key -> new HashMap<>());
                 epSsrcs.computeIfAbsent(MediaType.AUDIO, key -> new HashSet<>()).add(audioSource.getSSRC());
             }
         });
@@ -366,7 +367,8 @@ public class ConfOctoTransport
             String owner;
             if ((owner = MediaSourceFactory.getOwner(videoSource)) != null)
             {
-                Map<MediaType, Set<Long>> epSsrcs = ssrcsByMediaTypeByEpId.computeIfAbsent(owner, key -> new HashMap<>());
+                Map<MediaType, Set<Long>> epSsrcs =
+                    ssrcsByMediaTypeByEpId.computeIfAbsent(owner, key -> new HashMap<>());
                 epSsrcs.computeIfAbsent(MediaType.VIDEO, key -> new HashSet<>()).add(videoSource.getSSRC());
             }
         });
