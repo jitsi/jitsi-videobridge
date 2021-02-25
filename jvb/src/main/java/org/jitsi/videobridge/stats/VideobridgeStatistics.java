@@ -433,10 +433,10 @@ public class VideobridgeStatistics
             unlockedSetStat("local_active_endpoints", numLocalActiveEndpoints);
             unlockedSetStat(
                     BITRATE_DOWNLOAD,
-                    (bitrateDownloadBps + 500) / 1000 /* kbps */);
+                    bitrateDownloadBps / 1000 /* kbps */);
             unlockedSetStat(
                     BITRATE_UPLOAD,
-                    (bitrateUploadBps + 500) / 1000 /* kbps */);
+                    bitrateUploadBps / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
             // TODO seems broken (I see values of > 11 seconds)
