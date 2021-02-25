@@ -69,10 +69,11 @@ sealed class BridgeChannelMessage(
     open fun toJson(): String = ObjectMapper().writeValueAsString(this)
 
     companion object {
+        private val mapper = jacksonObjectMapper()
         @JvmStatic
         @Throws(JsonProcessingException::class, JsonMappingException::class)
         fun parse(string: String): BridgeChannelMessage {
-            return jacksonObjectMapper().readValue(string)
+            return mapper.readValue(string)
         }
     }
 }
