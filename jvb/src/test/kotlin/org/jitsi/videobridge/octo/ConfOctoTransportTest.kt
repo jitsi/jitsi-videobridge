@@ -41,10 +41,7 @@ class ConfOctoTransportTest : ShouldSpec() {
     init {
         mockkStatic("org.jitsi.videobridge.octo.OctoRelayServiceProviderKt")
         every { singleton() } returns mockk {
-            every { get() } answers {
-                println("returning mock relay service!")
-                octoRelayService
-            }
+            every { get() } returns octoRelayService
         }
     }
 
@@ -60,7 +57,7 @@ class ConfOctoTransportTest : ShouldSpec() {
         context("setSources") {
             val audioSources = mutableListOf<SourcePacketExtension>()
             val videoSources = mutableListOf<SourcePacketExtension>()
-            repeat(100) {
+            repeat(500) {
                 val epId = generateEpId()
                 audioSources += generateSourcePacketExtension(epId)
                 videoSources += generateSourcePacketExtension(epId)
@@ -97,5 +94,46 @@ private fun generateSourcePacketExtension(epId: String, numSources: Int = 1): So
                 }
             )
         }
+    }
+}
+
+fun main() {
+    repeat(10) {
+        val bridgeOctoTransportMock: BridgeOctoTransport = mockk {
+            every { relayId } returns "relayId"
+        }
+        val octoRelayService: OctoRelayService = mockk {
+            every { bridgeOctoTransport } returns bridgeOctoTransportMock
+        }
+
+        mockkStatic("org.jitsi.videobridge.octo.OctoRelayServiceProviderKt")
+        every { singleton() } returns mockk {
+            every { get() } returns octoRelayService
+        }
+
+        val conference: Conference = mockk(relaxed = true) {
+            every { gid } returns 123L
+            every { logger } returns LoggerImpl("test")
+            every { tentacle } returns mockk(relaxed = true)
+            every { getEndpoint(any()) } returns mockk<OctoEndpoint>(relaxed = true)
+        }
+        val confOctoTransport = ConfOctoTransport(conference)
+
+        val audioSources = mutableListOf<SourcePacketExtension>()
+        val videoSources = mutableListOf<SourcePacketExtension>()
+        repeat(500) {
+            val epId = generateEpId()
+            audioSources += generateSourcePacketExtension(epId)
+            videoSources += generateSourcePacketExtension(epId)
+        }
+
+        val time = measureTimeMillis {
+            confOctoTransport.setSources(
+                audioSources,
+                videoSources,
+                emptyList()
+            )
+        }
+        println("Took $time ms")
     }
 }
