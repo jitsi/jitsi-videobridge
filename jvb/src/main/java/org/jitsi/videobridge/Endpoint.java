@@ -721,53 +721,6 @@ public abstract class Endpoint
     }
 
     /**
-     * Previously, an endpoint expired when all of its channels did.  Channels
-     * now only exist in their 'shim' form for backwards compatibility, so to
-     * find out whether or not the endpoint expired, we'll check the activity
-     * timestamps from the transceiver and use the largest of the expire times
-     * set in the channel shims.
-     */
-    @Override
-    public boolean shouldExpire()
-    {
-        boolean iceFailed = iceTransport.hasFailed();
-        if (iceFailed)
-        {
-            logger.warn("Allowing to expire because ICE failed.");
-            return true;
-        }
-
-        Duration maxExpireTimeFromChannelShims = channelShims.stream()
-                .map(ChannelShim::getExpire)
-                .map(Duration::ofSeconds)
-                .max(Comparator.comparing(Function.identity()))
-                .orElse(Duration.ofSeconds(0));
-
-        Instant lastActivity = getLastIncomingActivity();
-        Instant now = clock.instant();
-        if (lastActivity == ClockUtils.NEVER)
-        {
-            Duration timeSinceCreation = Duration.between(creationTime, now);
-            if (timeSinceCreation.compareTo(EP_TIMEOUT) > 0)
-            {
-                logger.info("Endpoint's ICE connection has neither failed nor connected " +
-                    "after " + timeSinceCreation + ", expiring");
-                return true;
-            }
-            // We haven't seen any activity yet. If this continues ICE will
-            // eventually fail (which is handled above).
-            return false;
-        }
-
-        if (Duration.between(lastActivity, now).compareTo(maxExpireTimeFromChannelShims) > 0)
-        {
-            logger.info("Allowing to expire because of no activity in over " + maxExpireTimeFromChannelShims);
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
