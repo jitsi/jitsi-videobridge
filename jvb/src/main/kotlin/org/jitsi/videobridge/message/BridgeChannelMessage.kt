@@ -24,12 +24,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonMappingException
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
-import org.json.simple.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -66,7 +64,7 @@ sealed class BridgeChannelMessage(
      * Serialize this [BridgeChannelMessage] to a string in JSON format. Note that this default implementation is very
      * slow, which is why some of the messages that we serialize often override it with a custom optimized version.
      */
-    open fun toJson(): String = ObjectMapper().writeValueAsString(this)
+    open fun toJson(): String = mapper.writeValueAsString(this)
 
     companion object {
         private val mapper = jacksonObjectMapper()
@@ -204,16 +202,6 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
         otherFields[key] = value
     }
 
-    /**
-     * Serialize using json-simple because it's faster.
-     */
-    override fun toJson(): String = JSONObject().apply {
-        this["colibriClass"] = TYPE
-        from?.let { this["from"] = it }
-        this["to"] = to
-        putAll(otherFields)
-    }.toJSONString()
-
     companion object {
         const val TYPE = "EndpointMessage"
     }
@@ -298,16 +286,6 @@ class ForwardedEndpointsMessage(
      */
     val forwardedEndpoints: Collection<String>
 ) : BridgeChannelMessage(TYPE) {
-    /**
-     * Serialize using json-simple because it's faster.
-     */
-    override fun toJson(): String = JSONObject().apply {
-        this["colibriClass"] = TYPE
-        // json-simple does not property serialize collections properly (it handles [List]s correctly, but not [Set]s)
-        // As a short-term solution force the use of a list.
-        this["lastNEndpoints"] = ArrayList(forwardedEndpoints)
-    }.toJSONString()
-
     companion object {
         const val TYPE = "LastNEndpointsChangeEvent"
     }

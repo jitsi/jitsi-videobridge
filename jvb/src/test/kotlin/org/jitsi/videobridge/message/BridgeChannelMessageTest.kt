@@ -250,45 +250,49 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.constraints shouldBe null
             }
         }
-    }
 
-    private fun testSerializePerformance() {
-        val m = DominantSpeakerMessage("x")
-        val times = 1_000_000
+        xcontext("Serializing performance") {
+            val m = DominantSpeakerMessage("x")
+            val times = 1_000_000
 
-        fun toJsonJackson(m: DominantSpeakerMessage): String = ObjectMapper().writeValueAsString(m)
-        fun toJsonJsonSimple(m: DominantSpeakerMessage) = JSONObject().apply {
-            this["dominantSpeakerEndpoint"] = m.dominantSpeakerEndpoint
-        }.toJSONString()
-        fun toJsonStringConcat(m: DominantSpeakerMessage) =
-            "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\",\"dominantSpeakerEndpoint\":\"" +
-                m.dominantSpeakerEndpoint + "\"}"
-        fun toJsonStringTemplate(m: DominantSpeakerMessage) =
-            "{\"colibriClass\":\"${DominantSpeakerMessage.TYPE}\"," +
-                "\"dominantSpeakerEndpoint\":\"${m.dominantSpeakerEndpoint}\"}"
-        fun toJsonRawStringTemplate(m: DominantSpeakerMessage) = """
+            val objectMapper = ObjectMapper()
+            fun toJsonJackson(m: DominantSpeakerMessage): String = objectMapper.writeValueAsString(m)
+            fun toJsonJsonSimple(m: DominantSpeakerMessage) = JSONObject().apply {
+                this["dominantSpeakerEndpoint"] = m.dominantSpeakerEndpoint
+            }.toJSONString()
+
+            fun toJsonStringConcat(m: DominantSpeakerMessage) =
+                "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\",\"dominantSpeakerEndpoint\":\"" +
+                    m.dominantSpeakerEndpoint + "\"}"
+
+            fun toJsonStringTemplate(m: DominantSpeakerMessage) =
+                "{\"colibriClass\":\"${DominantSpeakerMessage.TYPE}\"," +
+                    "\"dominantSpeakerEndpoint\":\"${m.dominantSpeakerEndpoint}\"}"
+
+            fun toJsonRawStringTemplate(m: DominantSpeakerMessage) = """
             {"colibriClass":"${DominantSpeakerMessage.TYPE}",
              "dominantSpeakerEndpoint":"${m.dominantSpeakerEndpoint}"}
          """
 
-        fun runTest(f: (DominantSpeakerMessage) -> String): Long {
-            val start = System.currentTimeMillis()
-            for (i in 0..times) {
-                m.dominantSpeakerEndpoint = i.toString()
-                f(m)
+            fun runTest(f: (DominantSpeakerMessage) -> String): Long {
+                val start = System.currentTimeMillis()
+                for (i in 0..times) {
+                    m.dominantSpeakerEndpoint = i.toString()
+                    f(m)
+                }
+                val end = System.currentTimeMillis()
+
+                return end - start
             }
-            val end = System.currentTimeMillis()
 
-            return end - start
+            System.err.println("Times=$times")
+            System.err.println("Jackson: ${runTest { toJsonJackson(it) }}")
+            System.err.println("Json-simple: ${runTest { toJsonJsonSimple(it) }}")
+            System.err.println("String concat: ${runTest { toJsonStringConcat(it) }}")
+            System.err.println("String template: ${runTest { toJsonStringTemplate(it) }}")
+            System.err.println("Raw string template: ${runTest { toJsonRawStringTemplate(it) }}")
+            System.err.println("Raw string template (trim): ${runTest { toJsonRawStringTemplate(it).trimMargin() }}")
         }
-
-        System.err.println("Times=$times")
-        System.err.println("Jackson: ${runTest { toJsonJackson(it) } }")
-        System.err.println("Json-simple: ${runTest { toJsonJsonSimple(it) } }")
-        System.err.println("String concat: ${runTest { toJsonStringConcat(it) } }")
-        System.err.println("String template: ${runTest { toJsonStringTemplate(it) } }")
-        System.err.println("Raw string template: ${runTest { toJsonRawStringTemplate(it) } }")
-        System.err.println("Raw string template (trim): ${runTest { toJsonRawStringTemplate(it).trimMargin() } }")
     }
 
     companion object {
