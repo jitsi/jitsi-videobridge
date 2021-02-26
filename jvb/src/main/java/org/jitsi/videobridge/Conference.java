@@ -397,17 +397,11 @@ public class Conference
      */
     private void lastNEndpointsChanged()
     {
-        List<String> lastNEndpointIds
-                = speechActivity.getOrderedEndpoints().stream()
-                    .map(AbstractEndpoint::getId)
-                    .collect(Collectors.toList());
-
-        endpointsCache.forEach(e -> e.lastNEndpointsChanged(lastNEndpointIds));
+        endpointsCache.forEach(Endpoint::lastNEndpointsChanged);
     }
 
     /**
-     * Notifies this instance that {@link #speechActivity} has identified a
-     * speaker switch event in this multipoint conference and there is now a new
+     * Notifies this instance that {@link #speechActivity} has identified a speaker switch event and there is now a new
      * dominant speaker.
      */
     private void dominantSpeakerChanged()
@@ -723,6 +717,11 @@ public class Conference
     public List<AbstractEndpoint> getEndpoints()
     {
         return new ArrayList<>(this.endpointsById.values());
+    }
+
+    List<AbstractEndpoint> getOrderedEndpoints()
+    {
+        return speechActivity.getOrderedEndpoints();
     }
 
     /**

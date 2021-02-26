@@ -37,18 +37,18 @@ import kotlin.random.Random
  *
  * Tested three versions of the code:
  * 1. Pre-refactoring: on top of 3bf235fb9a2c9ce8caa52de9544f0adcd3933752
- * 2. After refactoring stage1 (already merged in master): on top of b89765161321be272323dd6abc14efd19cb7f759
- * 3. After refactoring stage2: on top of 8e194f2f21a4c8c3731812760148dc48ad94b2dc
+ * 2. After refactoring (PR #1530): 98af5107c99e057f51fdf0f60acc2d8aa9b364bb
+ * 3. After refactoring and optimization (PR #1557): ef237f692677d3e5c81b7050b17103a001d3edec
  *
  * Tile View:
  * pre-ref: 4.16
- * stage1: 4.40
- * stage3: 5.50
+ * after refactoring: 5.84
+ * after optimization: 4.44
  *
  * Stage View:
  * pre-ref: 4.15
- * stage1: 4.04
- * stage3: 5.64
+ * after refactoring: 6.56
+ * after optimization: 4.48
  *
  *
  */
@@ -58,7 +58,7 @@ class BitrateControllerPerfTest : StringSpec() {
     private val random = Random(93232)
 
     private val endpointIds = mutableListOf("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
-    private val endpoints: List<Endpoint> = createEndpoints(*endpointIds.toTypedArray())
+    private val endpoints: MutableList<Endpoint> = createEndpoints(*endpointIds.toTypedArray())
     private val bc = BitrateController(
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
@@ -69,7 +69,7 @@ class BitrateControllerPerfTest : StringSpec() {
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
             override fun allocationChanged(allocation: BandwidthAllocation) { }
         },
-        Supplier { endpoints },
+        Supplier { endpoints.toList() },
         DiagnosticContext(),
         createLogger(),
         clock
@@ -114,12 +114,12 @@ class BitrateControllerPerfTest : StringSpec() {
 
         bc.setSelectedEndpoints(selectedEndpoints)
         bc.setMaxFrameHeight(maxFrameHeight)
-        bc.endpointOrderingChanged(endpointIds)
+        bc.endpointOrderingChanged()
 
         // Change the dominant speaker just a couple of times.
         repeat(NUM_SPEAKER_CHANGES) {
-            endpointIds.selectNewDominantSpeaker()
-            bc.endpointOrderingChanged(endpointIds)
+            endpoints.selectNewDominantSpeaker()
+            bc.endpointOrderingChanged()
             clock.elapse(2.secs)
         }
 
@@ -129,7 +129,7 @@ class BitrateControllerPerfTest : StringSpec() {
         logger.info("$testName took a total of $totalDuration, $microsPerSpeakerChange µs per speaker change.")
     }
 
-    private fun MutableList<String>.selectNewDominantSpeaker() {
+    private fun <T : Any> MutableList<T>.selectNewDominantSpeaker() {
         val newDominantSpeakerIdx = 1 + random.nextInt(size - 1)
         val newDominantSpeaker = this.removeAt(newDominantSpeakerIdx)
         this.add(0, newDominantSpeaker)

@@ -106,8 +106,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         get() = BitrateControllerConfig.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10000
 
     // Proxy to the allocator
-    fun endpointOrderingChanged(conferenceEndpoints: List<String>) =
-        bandwidthAllocator.endpointOrderingChanged(conferenceEndpoints)
+    fun endpointOrderingChanged() = bandwidthAllocator.update()
     var lastN: Int
         get() = allocationSettingsWrapper.lastN
         set(value) {

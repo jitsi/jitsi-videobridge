@@ -47,32 +47,26 @@ class BitrateControllerTest : ShouldSpec() {
     private val logger = createLogger()
     private val clock = FakeClock()
     private val bc = BitrateControllerWrapper("A", "B", "C", "D", clock = clock)
+    private val A: Endpoint = bc.endpoints.find { it.id == "A" }!!
+    private val B: Endpoint = bc.endpoints.find { it.id == "B" }!!
+    private val C: Endpoint = bc.endpoints.find { it.id == "C" }!!
+    private val D: Endpoint = bc.endpoints.find { it.id == "D" }!!
 
     init {
         context("Prioritization") {
-            val endpoints = createEndpoints("A", "B", "C", "D", "E", "F")
             context("Without selection") {
-                val ordered = prioritize(
-                    listOf("F", "E", "D", "C", "B", "A"),
-                    emptyList(),
-                    endpoints
-                )
+                val endpoints = createEndpoints("F", "E", "D", "C", "B", "A")
+                val ordered = prioritize(endpoints)
                 ordered.map { it.id } shouldBe listOf("F", "E", "D", "C", "B", "A")
             }
             context("With one selected") {
-                val ordered = prioritize(
-                    listOf("F", "E", "D", "C", "B", "A"),
-                    listOf("B"),
-                    endpoints
-                )
+                val endpoints = createEndpoints("F", "E", "D", "C", "B", "A")
+                val ordered = prioritize(endpoints, listOf("B"))
                 ordered.map { it.id } shouldBe listOf("B", "F", "E", "D", "C", "A")
             }
             context("With multiple selected") {
-                val ordered = prioritize(
-                    listOf("F", "E", "D", "C", "B", "A"),
-                    listOf("B", "A", "E"),
-                    endpoints
-                )
+                val endpoints = createEndpoints("F", "E", "D", "C", "B", "A")
+                val ordered = prioritize(endpoints, listOf("B", "A", "E"))
                 ordered.map { it.id } shouldBe listOf("B", "A", "E", "F", "D", "C")
             }
         }
@@ -93,7 +87,7 @@ class BitrateControllerTest : ShouldSpec() {
                     context("and the dominant speaker is on stage") {
                         listOf(true, false).forEach { legacy ->
                             context("With ${if (legacy) "legacy" else "new"} signaling") {
-                                bc.setEndpointOrdering("A", "B", "C", "D")
+                                bc.setEndpointOrdering(A, B, C, D)
                                 bc.setStageView("A", legacy = legacy)
 
                                 bc.bc.allocationSettings.lastN shouldBe -1
@@ -109,7 +103,7 @@ class BitrateControllerTest : ShouldSpec() {
                     context("and a non-dominant speaker is on stage") {
                         listOf(true, false).forEach { legacy ->
                             context("With ${if (legacy) "legacy" else "new"} signaling") {
-                                bc.setEndpointOrdering("B", "A", "C", "D")
+                                bc.setEndpointOrdering(B, A, C, D)
                                 bc.setStageView("A", legacy = legacy)
 
                                 bc.bc.allocationSettings.lastN shouldBe -1
@@ -126,7 +120,7 @@ class BitrateControllerTest : ShouldSpec() {
                     listOf(true, false).forEach { legacy ->
                         context("With ${if (legacy) "legacy" else "new"} signaling") {
                             // LastN=0 is used when the client goes in "audio-only" mode.
-                            bc.setEndpointOrdering("A", "B", "C", "D")
+                            bc.setEndpointOrdering(A, B, C, D)
                             bc.setStageView("A", lastN = 0, legacy = legacy)
 
                             bc.bc.allocationSettings.lastN shouldBe 0
@@ -144,7 +138,7 @@ class BitrateControllerTest : ShouldSpec() {
                         context("With ${if (legacy) "legacy" else "new"} signaling") {
                             // LastN=1 is used when the client goes in "audio-only" mode, but someone starts a screenshare.
                             context("and the dominant speaker is on-stage") {
-                                bc.setEndpointOrdering("A", "B", "C", "D")
+                                bc.setEndpointOrdering(A, B, C, D)
                                 bc.setStageView("A", lastN = 1, legacy = legacy)
 
                                 bc.bc.allocationSettings.lastN shouldBe 1
@@ -160,7 +154,7 @@ class BitrateControllerTest : ShouldSpec() {
                     context("and a non-dominant speaker is on stage") {
                         listOf(true, false).forEach { legacy ->
                             context("With ${if (legacy) "legacy" else "new"} signaling") {
-                                bc.setEndpointOrdering("B", "A", "C", "D")
+                                bc.setEndpointOrdering(B, A, C, D)
                                 bc.setStageView("A", lastN = 1, legacy = legacy)
 
                                 bc.bc.allocationSettings.lastN shouldBe 1
@@ -178,7 +172,7 @@ class BitrateControllerTest : ShouldSpec() {
             context("Tile view") {
                 listOf(true, false).forEach { legacy ->
                     context("With ${if (legacy) "legacy" else "new"} signaling") {
-                        bc.setEndpointOrdering("A", "B", "C", "D")
+                        bc.setEndpointOrdering(A, B, C, D)
                         bc.setTileView("A", "B", "C", "D", legacy = legacy)
 
                         bc.bc.allocationSettings.lastN shouldBe -1
@@ -210,7 +204,7 @@ class BitrateControllerTest : ShouldSpec() {
             context("Tile view 360p") {
                 listOf(true, false).forEach { legacy ->
                     context("With ${if (legacy) "legacy" else "new"} signaling") {
-                        bc.setEndpointOrdering("A", "B", "C", "D")
+                        bc.setEndpointOrdering(A, B, C, D)
                         bc.setTileView("A", "B", "C", "D", maxFrameHeight = 360, legacy = legacy)
 
                         bc.bc.allocationSettings.lastN shouldBe -1
@@ -243,7 +237,7 @@ class BitrateControllerTest : ShouldSpec() {
                 // A is dominant speaker, A and B are selected. With LastN=2 we should always forward the selected
                 // endpoints regardless of who is speaking.
                 // The exact flow of this scenario was taken from a (non-jitsi-meet) client.
-                bc.setEndpointOrdering("A", "B", "C", "D")
+                bc.setEndpointOrdering(A, B, C, D)
                 bc.bc.setBandwidthAllocationSettings(
                     ReceiverVideoConstraintsMessage(
                         selectedEndpoints = listOf("A", "B"),
@@ -275,7 +269,7 @@ class BitrateControllerTest : ShouldSpec() {
 
                 clock.elapse(2.secs)
                 // B becomes dominant speaker.
-                bc.setEndpointOrdering("B", "A", "C", "D")
+                bc.setEndpointOrdering(B, A, C, D)
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
 
                 clock.elapse(2.secs)
@@ -320,7 +314,7 @@ class BitrateControllerTest : ShouldSpec() {
 
                 clock.elapse(2.secs)
                 // D is now dominant speaker, but it should not override the selected endpoints.
-                bc.setEndpointOrdering("D", "B", "A", "C")
+                bc.setEndpointOrdering(D, B, A, C)
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
 
                 bc.bwe = 10.mbps
@@ -334,7 +328,7 @@ class BitrateControllerTest : ShouldSpec() {
 
                 clock.elapse(2.secs)
                 // C is now dominant speaker, but it should not override the selected endpoints.
-                bc.setEndpointOrdering("C", "D", "A", "B")
+                bc.setEndpointOrdering(C, D, A, B)
                 bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
             }
         }
@@ -1194,7 +1188,7 @@ fun BandwidthAllocation.shouldMatch(other: BandwidthAllocation) {
 }
 
 private class BitrateControllerWrapper(vararg endpointIds: String, val clock: FakeClock = FakeClock()) {
-    val endpoints: List<Endpoint> = createEndpoints(*endpointIds)
+    var endpoints: List<Endpoint> = createEndpoints(*endpointIds)
     val logger = createLogger()
 
     var bwe = (-1).bps
@@ -1247,9 +1241,10 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         clock
     )
 
-    fun setEndpointOrdering(vararg endpoints: String) {
-        logger.info("Set endpoints ${endpoints.joinToString(",")}")
-        bc.endpointOrderingChanged(mutableListOf(*endpoints))
+    fun setEndpointOrdering(vararg endpoints: Endpoint) {
+        logger.info("Set endpoints ${endpoints.map{ it.id }.joinToString(",")}")
+        this.endpoints = endpoints.toList()
+        bc.endpointOrderingChanged()
     }
 
     fun setStageView(onStageEndpoint: String, maxFrameHeight: Int = 720, legacy: Boolean = true, lastN: Int? = null) {
@@ -1293,11 +1288,6 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         }
     }
 
-    fun setLastN(n: Int) {
-        logger.info("Set LastN $n")
-        bc.lastN = n
-    }
-
     init {
         // The BC only starts working 10 seconds after it first received media, so fake that.
         bc.transformRtp(PacketInfo(VideoRtpPacket(ByteArray(100), 0, 100)))
@@ -1329,8 +1319,8 @@ class Endpoint(
     override val mediaSources = mediaSource?.let { arrayOf(mediaSource) } ?: emptyArray()
 }
 
-fun createEndpoints(vararg ids: String): List<Endpoint> {
-    return List(ids.size) { i ->
+fun createEndpoints(vararg ids: String): MutableList<Endpoint> {
+    return MutableList(ids.size) { i ->
         Endpoint(
             ids[i],
             createSource(

@@ -50,8 +50,8 @@ public class ConferenceSpeechActivity
         = ConferenceSpeechActivity.this::activeSpeakerChanged;
 
     /**
-     * The <tt>DominantSpeakerIdentification</tt> instance which
-     * detects/identifies the active/dominant speaker in {@link #conference}.
+     * The <tt>DominantSpeakerIdentification</tt> instance which detects/identifies the active/dominant speaker in a
+     * conference.
      */
     private DominantSpeakerIdentification<String> dominantSpeakerIdentification
             = new DominantSpeakerIdentification<>();
@@ -87,8 +87,7 @@ public class ConferenceSpeechActivity
     /**
      * Initializes a new <tt>ConferenceSpeechActivity</tt> instance.
      *
-     * @param listener the listener to be notified when the dominant speaker or enpoint order change.
-     * represented by the new instance
+     * @param listener the listener to be notified when the dominant speaker or endpoint order change.
      */
     public ConferenceSpeechActivity(@NotNull Listener listener, Logger parentLogger)
     {
@@ -236,8 +235,7 @@ public class ConferenceSpeechActivity
     {
         boolean endpointsListChanged = false;
         boolean dominantSpeakerChanged = false;
-        // The list of endpoints may have changed, sync our list to make
-        // sure it matches.
+        // The list of endpoints may have changed, sync our list to make sure it matches.
         synchronized (syncRoot)
         {
             // Remove any endpoints we have that are no longer in the conference

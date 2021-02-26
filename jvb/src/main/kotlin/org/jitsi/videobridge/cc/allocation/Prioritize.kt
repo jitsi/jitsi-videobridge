@@ -18,44 +18,25 @@ package org.jitsi.videobridge.cc.allocation
 import org.jitsi.videobridge.calculateLastN
 import org.jitsi.videobridge.jvbLastNSingleton
 import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion.singleton as conferenceSizeLimits
-import java.util.ArrayList
 
 /**
- * TODO: take into account whether selected endpoints are sending video. Currently, a selected endpoint without
- * video will count towards lastN, which is not desired.
- *
- * TODO: This is *horrible* and should be cleaned up (the input to BitrateAllocator should change), but it allows
- * us to simplify the rest of the allocation process.
- *
- * @param endpointIdsBySpeechActivity the endpoints IDs in the original order (by speech activity).
  * @param selectedEndpointIds the IDs of the selected endpoints, in order of selection.
  * @param conferenceEndpoints the conference endpoints in no particular order.
  *
  * @return the endpoints from `conferenceEndpoints` ordered by selection first, and then speech activity.
  */
-fun <T : MediaSourceContainer?> prioritize(
-    endpointIdsBySpeechActivity: List<String>,
-    selectedEndpointIds: List<String>,
-    conferenceEndpoints: List<T>
+fun <T : MediaSourceContainer> prioritize(
+    conferenceEndpoints: MutableList<T>,
+    selectedEndpointIds: List<String> = emptyList()
 ): List<T> {
-    val orderedEndpoints = ArrayList<T>(conferenceEndpoints.size)
-
-    selectedEndpointIds.forEach {
-        conferenceEndpoints
-            .stream()
-            .filter { e: T -> e!!.id == it }
-            .findFirst().ifPresent { e: T -> orderedEndpoints.add(e) }
+    // Bump selected endpoints to the top of the list.
+    selectedEndpointIds.asReversed().forEach { selectedEndpointId ->
+        conferenceEndpoints.find { it.id == selectedEndpointId }?.let { selectedEndpoint ->
+            conferenceEndpoints.remove(selectedEndpoint)
+            conferenceEndpoints.add(0, selectedEndpoint)
+        }
     }
-
-    val remainingEndpointIds: MutableList<String> = ArrayList(endpointIdsBySpeechActivity)
-    remainingEndpointIds.removeAll(selectedEndpointIds)
-    remainingEndpointIds.forEach {
-        conferenceEndpoints
-            .stream()
-            .filter { e: T -> e!!.id == it }
-            .findFirst().ifPresent { e: T -> orderedEndpoints.add(e) }
-    }
-    return orderedEndpoints
+    return conferenceEndpoints
 }
 
 /**

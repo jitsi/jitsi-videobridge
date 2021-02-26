@@ -22,7 +22,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.config.*;
 import org.jitsi.videobridge.util.*;
@@ -84,12 +83,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      * The estimated available bandwidth in bits per second.
      */
     private long bweBps = -1;
-
-    /**
-     * The list of endpoints ids ordered by speech activity.
-     */
-    @NotNull
-    private List<String> sortedEndpointIds = Collections.emptyList();
 
     /**
      * Provide the current list of endpoints (in no particular order).
@@ -212,21 +205,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Notify this {@link BandwidthAllocator} that the order of the endpoints (including the addition/removal of an
-     * endpoint) has changed.
-     *
-     * @param conferenceEndpoints the IDs of the conference endpoints ordered by speech activity.
-     */
-    synchronized void endpointOrderingChanged(List<String> conferenceEndpoints)
-    {
-        logger.debug(() -> "Endpoint ordering has changed, updating.");
-
-        // TODO: Maybe suppress calling update() unless the order actually changed?
-        sortedEndpointIds = conferenceEndpoints != null ? conferenceEndpoints : Collections.emptyList();
-        update();
-    }
-
-    /**
      * Updates the allocation settings and calculates a new bitrate {@link BandwidthAllocation}.
      * @param allocationSettings the new allocation settings.
      */
@@ -239,12 +217,12 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     /**
      * Runs the bandwidth allocation algorithm, and fires events if the result is different from the previous result.
      */
-    private synchronized void update()
+    synchronized void update()
     {
         lastUpdateTime = clock.instant();
 
         // Order the endpoints by selection, followed by speech activity.
-        List<T> sortedEndpoints = prioritize(sortedEndpointIds, getSelectedEndpoints(), endpointsSupplier.get());
+        List<T> sortedEndpoints = prioritize(endpointsSupplier.get(), getSelectedEndpoints());
 
         // Extract and update the effective constraints.
         Map<String, VideoConstraints> oldEffectiveConstraints = effectiveConstraints;
