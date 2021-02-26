@@ -524,10 +524,7 @@ public abstract class Endpoint
      */
     public abstract void setLocalSsrc(MediaType mediaType, long ssrc);
 
-    public double getRtt()
-    {
-        return getTransceiver().getTransceiverStats().getEndpointConnectionStats().getRtt();
-    }
+    public abstract double getRtt();
 
     /**
      * TODO Brian

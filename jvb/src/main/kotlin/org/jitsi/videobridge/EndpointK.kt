@@ -87,6 +87,8 @@ class EndpointK @JvmOverloads constructor(
      */
     private fun isTransportConnected(): Boolean = iceTransport.isConnected() && dtlsTransport.isConnected
 
+    override fun getRtt(): Double = transceiver.getTransceiverStats().endpointConnectionStats.rtt
+
     override fun wants(packetInfo: PacketInfo): Boolean {
         if (!isTransportConnected()) {
             return false
