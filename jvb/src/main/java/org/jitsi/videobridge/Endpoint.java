@@ -524,69 +524,9 @@ public abstract class Endpoint
      */
     public abstract void setLocalSsrc(MediaType mediaType, long ssrc);
 
-    /**
-     * Checks if this endpoint's DTLS transport is connected.
-     * @return
-     */
-    protected boolean isTransportConnected()
-    {
-        return iceTransport.isConnected() && dtlsTransport.isConnected();
-    }
-
     public double getRtt()
     {
         return getTransceiver().getTransceiverStats().getEndpointConnectionStats().getRtt();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean wants(PacketInfo packetInfo)
-    {
-        if (!isTransportConnected())
-        {
-            return false;
-        }
-
-        Packet packet = Objects.requireNonNull(packetInfo.getPacket(), "packet");
-
-        if (packet instanceof RtpPacket)
-        {
-            if (packet instanceof VideoRtpPacket)
-            {
-                return acceptVideo && bitrateController.accept(packetInfo);
-            }
-            if (packet instanceof AudioRtpPacket)
-            {
-                return acceptAudio;
-            }
-        }
-        else if (packet instanceof RtcpPacket)
-        {
-            if (packet instanceof RtcpSrPacket)
-            {
-                // TODO: For SRs we're only interested in the ntp/rtp timestamp
-                //  association, so we could only accept srs from the main ssrc
-                return bitrateController.accept((RtcpSrPacket) packet);
-            }
-            else if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
-            {
-                // We assume that we are only given PLIs/FIRs destined for this
-                // endpoint. This is because Conference has to find the target
-                // endpoint (this endpoint) anyway, and we would essentially be
-                // performing the same check twice.
-                return true;
-            }
-            else
-            {
-                logger.warn("Ignoring an rtcp packet of type" + packet.getClass().getSimpleName());
-                return false;
-            }
-        }
-
-        logger.warn("Ignoring an unknown packet type:" + packet.getClass().getSimpleName());
-        return false;
     }
 
     /**
