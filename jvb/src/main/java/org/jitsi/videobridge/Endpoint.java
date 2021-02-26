@@ -71,7 +71,7 @@ import java.util.stream.*;
  * @author Pawel Domas
  * @author George Politis
  */
-public class Endpoint
+public abstract class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
         EncodingsManager.EncodingsUpdateListener
 {
@@ -250,7 +250,7 @@ public class Endpoint
      * transport will be initialized to serve as a controlling ICE agent;
      * otherwise - {@code false}
      */
-    public Endpoint(
+    protected Endpoint(
         String id,
         Conference conference,
         Logger parentLogger,
@@ -356,7 +356,7 @@ public class Endpoint
         conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }
 
-    public Endpoint(
+    protected Endpoint(
         String id,
         Conference conference,
         Logger parentLogger,
