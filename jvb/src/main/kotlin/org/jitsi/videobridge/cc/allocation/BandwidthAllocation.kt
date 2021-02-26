@@ -37,6 +37,7 @@ class BandwidthAllocation @JvmOverloads constructor(
             allocations.all { allocation ->
                 other.allocations.any { otherAllocation ->
                     allocation.endpointId == otherAllocation.endpointId &&
+                        allocation.source?.primarySSRC == otherAllocation.source?.primarySSRC &&
                         allocation.targetLayer?.index == otherAllocation.targetLayer?.index
                 }
             }
