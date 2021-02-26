@@ -183,9 +183,9 @@ import java.util.function.*;
      }
 
      @Override
-     public void bandwidthEstimationChanged(Bandwidth newBw)
+     public void bandwidthEstimationChanged(double newBw)
      {
-         this.latestBwe = (long)newBw.getBps();
+         this.latestBwe = (long)newBw;
      }
 
      /**

@@ -1507,10 +1507,10 @@ public class Endpoint
          * Forward bwe events from the Transceiver.
          */
         @Override
-        public void bandwidthEstimationChanged(@NotNull Bandwidth newValue)
+        public void bandwidthEstimationChanged(double newValue)
         {
             logger.debug(() -> "Estimated bandwidth is now " + newValue);
-            bitrateController.bandwidthChanged((long)newValue.getBps());
+            bitrateController.bandwidthChanged((long)newValue);
             bandwidthProbing.bandwidthEstimationChanged(newValue);
         }
     }
