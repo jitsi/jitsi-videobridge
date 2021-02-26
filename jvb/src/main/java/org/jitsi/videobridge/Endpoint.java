@@ -81,8 +81,8 @@ public abstract class Endpoint
      * chain, we track this stats here.  Since they're static, these members will track the delay
      * for packets going out to all endpoints.
      */
-    private static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
-    private static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
+    protected static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
+    protected static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
 
     /**
      * An average of all of the individual bridge jitter values calculated by the
@@ -111,75 +111,75 @@ public abstract class Endpoint
      * individual {@link Endpoint} and their jitter values are averaged together
      * in this static member.
      */
-    private final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
+    protected final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
 
     /**
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
      */
-    private SctpManager sctpManager;
+    protected SctpManager sctpManager;
 
     /**
      * The time at which this endpoint was created (in millis since epoch)
      */
-    private final Instant creationTime;
+    protected final Instant creationTime;
 
     /**
      * How long we'll give an endpoint to either successfully establish
      * an ICE connection or fail before we expire it.
      */
     //TODO: make this configurable
-    private static final Duration EP_TIMEOUT = Duration.ofMinutes(2);
+    protected static final Duration EP_TIMEOUT = Duration.ofMinutes(2);
 
     /**
      * TODO Brian
      */
-    private final SctpHandler sctpHandler = new SctpHandler();
+    protected final SctpHandler sctpHandler = new SctpHandler();
 
     /**
      * TODO Brian
      */
-    private DataChannelStack dataChannelStack;
+    protected DataChannelStack dataChannelStack;
 
     /**
      * TODO Brian
      */
-    private final DataChannelHandler dataChannelHandler = new DataChannelHandler();
+    protected final DataChannelHandler dataChannelHandler = new DataChannelHandler();
 
     /**
      * The instance which manages the Colibri messaging (over a data channel
      * or web sockets).
      */
     @NotNull
-    private final EndpointMessageTransport messageTransport;
+    protected final EndpointMessageTransport messageTransport;
 
     /**
      * The diagnostic context of this instance.
      */
-    private final DiagnosticContext diagnosticContext;
+    protected final DiagnosticContext diagnosticContext;
 
     /**
      * The bitrate controller.
      */
-    private final BitrateController<AbstractEndpoint> bitrateController;
+    protected final BitrateController<AbstractEndpoint> bitrateController;
 
     /**
      * TODO Brian
      */
-    private final BandwidthProbing bandwidthProbing;
+    protected final BandwidthProbing bandwidthProbing;
 
     @NotNull
-    private final IceTransport iceTransport;
+    protected final IceTransport iceTransport;
 
     /**
      * This {@link Endpoint}'s DTLS transport.
      */
     @NotNull
-    private final DtlsTransport dtlsTransport;
+    protected final DtlsTransport dtlsTransport;
 
     /**
      * The {@link Transceiver} which handles receiving and sending of (S)RTP.
      */
-    private final Transceiver transceiver;
+    protected final Transceiver transceiver;
 
     /**
      * The set of {@link ChannelShim}s associated with this endpoint. This
@@ -187,32 +187,32 @@ public abstract class Endpoint
      * removed. The set of channels shims allows to determine if endpoint
      * can accept audio or video.
      */
-    private final Set<ChannelShim> channelShims = ConcurrentHashMap.newKeySet();
+    protected final Set<ChannelShim> channelShims = ConcurrentHashMap.newKeySet();
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
      * to whether the endpoint has an audio Colibri channel whose direction
      * allows sending.
      */
-    private volatile boolean acceptAudio = false;
+    protected volatile boolean acceptAudio = false;
 
     /**
      * Whether this endpoint should accept video packets. We set this according
      * to whether the endpoint has a video Colibri channel whose direction
      * allows sending.
      */
-    private volatile boolean acceptVideo = false;
+    protected volatile boolean acceptVideo = false;
 
     /**
      * The clock used by this endpoint
      */
-    private final Clock clock;
+    protected final Clock clock;
 
     /**
      * Whether or not the bridge should be the peer which opens the data channel
      * (as opposed to letting the far peer/client open it).
      */
-    private static final boolean OPEN_DATA_LOCALLY = false;
+    protected static final boolean OPEN_DATA_LOCALLY = false;
 
     /**
      * The executor which runs bandwidth probing.
@@ -220,24 +220,24 @@ public abstract class Endpoint
      * TODO (brian): align the recurringRunnable stuff with whatever we end up
      * doing with all the other executors.
      */
-    private static final RecurringRunnableExecutor recurringRunnableExecutor
+    protected static final RecurringRunnableExecutor recurringRunnableExecutor
             = new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
      * out via the {@link IceTransport} on an IO thread.
      */
-    private final PacketInfoQueue outgoingSrtpPacketQueue;
+    protected final PacketInfoQueue outgoingSrtpPacketQueue;
 
     /**
      * The {@link SctpSocket} for this endpoint, if an SCTP connection was
      * negotiated.
      */
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private Optional<SctpServerSocket> sctpSocket = Optional.empty();
+    protected Optional<SctpServerSocket> sctpSocket = Optional.empty();
 
     @NotNull
-    private final TransceiverEventHandler transceiverEventHandler = new TransceiverEventHandlerImpl();
+    protected final TransceiverEventHandler transceiverEventHandler = new TransceiverEventHandlerImpl();
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -368,7 +368,7 @@ public abstract class Endpoint
     /**
      * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
      */
-    private List<AbstractEndpoint> getOrderedEndpoints()
+    protected List<AbstractEndpoint> getOrderedEndpoints()
     {
         List<AbstractEndpoint> allOrderedEndpoints = new LinkedList<>(getConference().getOrderedEndpoints());
         allOrderedEndpoints.remove(this);
@@ -384,7 +384,7 @@ public abstract class Endpoint
         return messageTransport;
     }
 
-    private void setupIceTransport()
+    protected void setupIceTransport()
     {
         iceTransport.incomingDataHandler = new IceTransport.IncomingDataHandler() {
             @Override
@@ -440,7 +440,7 @@ public abstract class Endpoint
         };
     }
 
-    private void setupDtlsTransport()
+    protected void setupDtlsTransport()
     {
         dtlsTransport.incomingDataHandler = this::dtlsAppPacketReceived;
         dtlsTransport.outgoingDataHandler = iceTransport::send;
@@ -456,7 +456,7 @@ public abstract class Endpoint
         };
     }
 
-    private boolean doSendSrtp(PacketInfo packetInfo)
+    protected boolean doSendSrtp(PacketInfo packetInfo)
     {
         if (PacketExtensionsKt.looksLikeRtp(packetInfo.getPacket()))
         {
@@ -531,7 +531,7 @@ public abstract class Endpoint
      * Checks if this endpoint's DTLS transport is connected.
      * @return
      */
-    private boolean isTransportConnected()
+    protected boolean isTransportConnected()
     {
         return iceTransport.isConnected() && dtlsTransport.isConnected();
     }
@@ -636,7 +636,7 @@ public abstract class Endpoint
      * Handle a DTLS app packet (that is, a packet of some other protocol sent
      * over DTLS) which has just been received.
      */
-    private void dtlsAppPacketReceived(byte[] data, int off, int len)
+    protected void dtlsAppPacketReceived(byte[] data, int off, int len)
     {
         //TODO(brian): change sctp handler to take buf, off, len
         sctpHandler.processPacket(new PacketInfo(new UnparsedPacket(data, off, len)));
@@ -663,7 +663,7 @@ public abstract class Endpoint
         sendVideoConstraints(this.maxReceiverVideoConstraints);
     }
 
-    private void effectiveVideoConstraintsChanged(
+    protected void effectiveVideoConstraintsChanged(
         Map<String, VideoConstraints> oldEffectiveConstraints,
         Map<String, VideoConstraints> newEffectiveConstraints)
     {
@@ -839,7 +839,7 @@ public abstract class Endpoint
      * the values are cumulative this should execute only once when the endpoint
      * expires.
      */
-    private void updateStatsOnExpire()
+    protected void updateStatsOnExpire()
     {
         Conference.Statistics conferenceStats = getConference().getStatistics();
         TransceiverStats transceiverStats = transceiver.getTransceiverStats();
@@ -947,7 +947,7 @@ public abstract class Endpoint
         sctpSocket = Optional.of(socket);
     }
 
-    private void acceptSctpConnection(SctpServerSocket sctpServerSocket)
+    protected void acceptSctpConnection(SctpServerSocket sctpServerSocket)
     {
         TaskPools.IO_POOL.submit(() -> {
             // We don't want to block the thread calling
@@ -987,7 +987,7 @@ public abstract class Endpoint
      * Schedule a timeout to fire log a message and track a stat if we don't
      * have an endpoint message transport connected within the timeout.
      */
-    private void scheduleEndpointMessageTransportTimeout()
+    protected void scheduleEndpointMessageTransportTimeout()
     {
         TaskPools.SCHEDULED_POOL.schedule(() -> {
             if (!isExpired()) {
@@ -1030,7 +1030,7 @@ public abstract class Endpoint
      * @return the password of the ICE Agent associated with this
      * {@link Endpoint}.
      */
-    private String getIcePassword()
+    protected String getIcePassword()
     {
         return iceTransport.getIcePassword();
     }
@@ -1041,7 +1041,7 @@ public abstract class Endpoint
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
      */
-    private void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints)
+    protected void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints)
     {
         ForwardedEndpointsMessage msg = new ForwardedEndpointsMessage(forwardedEndpoints);
 
@@ -1134,7 +1134,7 @@ public abstract class Endpoint
      * Sets the media sources.
      * @param mediaSources
      */
-    private void setMediaSources(MediaSourceDesc[] mediaSources)
+    protected void setMediaSources(MediaSourceDesc[] mediaSources)
     {
         boolean wasEmpty = ArrayUtils.isNullOrEmpty(transceiver.getMediaSources());
         if (transceiver.setMediaSources(mediaSources))
@@ -1219,7 +1219,7 @@ public abstract class Endpoint
      * transceiver's incoming pipeline.
      * @param packetInfo the packet.
      */
-    private void handleIncomingPacket(PacketInfo packetInfo)
+    protected void handleIncomingPacket(PacketInfo packetInfo)
     {
         packetInfo.setEndpointId(getId());
         getConference().handleIncomingPacket(packetInfo);
@@ -1489,7 +1489,7 @@ public abstract class Endpoint
         bitrateController.setBandwidthAllocationSettings(message);
     }
 
-    private class TransceiverEventHandlerImpl implements TransceiverEventHandler
+    protected class TransceiverEventHandlerImpl implements TransceiverEventHandler
     {
         /**
          * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
@@ -1519,9 +1519,9 @@ public abstract class Endpoint
      * A node which can be placed in the pipeline to cache Data channel packets
      * until the DataChannelStack is ready to handle them.
      */
-    private static class DataChannelHandler extends ConsumerNode
+    protected static class DataChannelHandler extends ConsumerNode
     {
-        private final Object dataChannelStackLock = new Object();
+        protected final Object dataChannelStackLock = new Object();
         public DataChannelStack dataChannelStack = null;
         public BlockingQueue<PacketInfo> cachedDataChannelPackets = new LinkedBlockingQueue<>();
 
@@ -1596,12 +1596,12 @@ public abstract class Endpoint
      * A node which can be placed in the pipeline to cache SCTP packets until
      * the SCTPManager is ready to handle them.
      */
-    private static class SctpHandler extends ConsumerNode
+    protected static class SctpHandler extends ConsumerNode
     {
-        private final Object sctpManagerLock = new Object();
+        protected final Object sctpManagerLock = new Object();
         public SctpManager sctpManager = null;
         public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>(100);
-        private AtomicLong numCachedSctpPackets = new AtomicLong();
+        protected AtomicLong numCachedSctpPackets = new AtomicLong();
 
         /**
          * Initializes a new {@link SctpHandler} instance.
