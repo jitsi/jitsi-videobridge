@@ -522,10 +522,7 @@ public abstract class Endpoint
      * @param mediaType
      * @param ssrc
      */
-    public void setLocalSsrc(MediaType mediaType, long ssrc)
-    {
-        transceiver.setLocalSsrc(mediaType, ssrc);
-    }
+    public abstract void setLocalSsrc(MediaType mediaType, long ssrc);
 
     /**
      * Checks if this endpoint's DTLS transport is connected.

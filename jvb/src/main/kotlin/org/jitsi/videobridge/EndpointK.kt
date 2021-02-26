@@ -17,6 +17,7 @@
 package org.jitsi.videobridge
 
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.shim.ChannelShim
 import java.time.Clock
@@ -69,4 +70,9 @@ class EndpointK @JvmOverloads constructor(
         }
         return false
     }
+
+    /**
+     * Set the local SSRC for [mediaType] to [ssrc] for this endpoint.
+     */
+    override fun setLocalSsrc(mediaType: MediaType, ssrc: Long) = transceiver.setLocalSsrc(mediaType, ssrc)
 }
