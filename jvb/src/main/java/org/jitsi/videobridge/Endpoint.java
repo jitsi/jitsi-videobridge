@@ -504,18 +504,12 @@ public abstract class Endpoint
     /**
      * {@inheritDoc}
      */
-    public void setLastN(Integer lastN)
-    {
-        bitrateController.setLastN(lastN);
-    }
+    public abstract void setLastN(Integer lastN);
 
     /**
      * Gets the LastN value for this endpoint.
      */
-    public int getLastN()
-    {
-        return bitrateController.getLastN();
-    }
+    public abstract int getLastN();
 
     /**
      * Sets the local SSRC for this endpoint.

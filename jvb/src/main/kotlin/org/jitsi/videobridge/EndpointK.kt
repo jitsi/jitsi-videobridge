@@ -77,6 +77,12 @@ class EndpointK @JvmOverloads constructor(
         return false
     }
 
+    override fun setLastN(lastN: Int) {
+        bitrateController.lastN = lastN
+    }
+
+    override fun getLastN(): Int = bitrateController.lastN
+
     /**
      * Set the local SSRC for [mediaType] to [ssrc] for this endpoint.
      */
