@@ -57,8 +57,20 @@ class EndpointK @JvmOverloads constructor(
     clock: Clock = Clock.systemUTC()
 ) : Endpoint(id, conference, parentLogger, iceControlling, clock) {
 
+    // TODO: Some weirdness here with with a property for reading mediaSources but a function for setting them because
+    //  only the getter is defined in AbstractEndpoint.  Will take another look at it.
     override val mediaSources: Array<out MediaSourceDesc>
         get() = transceiver.getMediaSources()
+
+    override fun setMediaSources(mediaSources: Array<MediaSourceDesc>) {
+        val wasEmpty = transceiver.getMediaSources().isEmpty()
+        if (transceiver.setMediaSources(mediaSources)) {
+            eventEmitter.fireEventSync { sourcesChanged() }
+        }
+        if (wasEmpty) {
+            sendVideoConstraints(maxReceiverVideoConstraints)
+        }
+    }
 
     override fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {

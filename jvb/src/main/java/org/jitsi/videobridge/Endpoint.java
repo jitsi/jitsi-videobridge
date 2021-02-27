@@ -828,21 +828,7 @@ public abstract class Endpoint
      * Sets the media sources.
      * @param mediaSources
      */
-    protected void setMediaSources(MediaSourceDesc[] mediaSources)
-    {
-        boolean wasEmpty = ArrayUtils.isNullOrEmpty(transceiver.getMediaSources());
-        if (transceiver.setMediaSources(mediaSources))
-        {
-            eventEmitter.fireEventSync(handler -> {
-                handler.sourcesChanged();
-                return Unit.INSTANCE;
-            });
-        }
-        if (wasEmpty)
-        {
-            sendVideoConstraints(this.maxReceiverVideoConstraints);
-        }
-    }
+    protected abstract void setMediaSources(MediaSourceDesc[] mediaSources);
 
     /**
      * Re-creates this endpoint's media sources based on the sources
