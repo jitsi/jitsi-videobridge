@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge
 
+import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
@@ -37,6 +38,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -160,6 +162,18 @@ class EndpointK @JvmOverloads constructor(
             transceiver.addSsrcAssociation(LocalSsrcAssociation(primarySsrc, secondarySsrc, type))
         } else {
             transceiver.addSsrcAssociation(RemoteSsrcAssociation(primarySsrc, secondarySsrc, type))
+        }
+    }
+
+    override fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
+        when (feature) {
+            EndpointDebugFeatures.PCAP_DUMP -> transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
+        }
+    }
+
+    override fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
+        return when (feature) {
+            EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
         }
     }
 

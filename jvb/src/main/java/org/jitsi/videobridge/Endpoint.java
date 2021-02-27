@@ -1117,26 +1117,9 @@ public abstract class Endpoint
      * @param feature the feature to enable or disable.
      * @param enabled the state of the feature.
      */
-    public void setFeature(EndpointDebugFeatures feature, boolean enabled) {
-
-        switch (feature)
-        {
-            case PCAP_DUMP:
-                transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled);
-                break;
-        }
-    }
-
-    public boolean isFeatureEnabled(EndpointDebugFeatures feature)
-    {
-        switch (feature)
-        {
-            case PCAP_DUMP:
-                return transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP);
-        }
-
-        throw new RuntimeException("Unsupported feature");
-    }
+    public abstract void setFeature(EndpointDebugFeatures feature, boolean enabled);
+    
+    public abstract boolean isFeatureEnabled(EndpointDebugFeatures feature);
 
     @Override
     public boolean isSendingAudio()
