@@ -384,61 +384,7 @@ public abstract class Endpoint
         return messageTransport;
     }
 
-    protected void setupIceTransport()
-    {
-        iceTransport.incomingDataHandler = new IceTransport.IncomingDataHandler() {
-            @Override
-            public void dataReceived(@NotNull byte[] data, int offset, int length, @NotNull Instant receivedTime) {
-                // DTLS data will be handled by the DtlsTransport, but SRTP data can go
-                // straight to the transceiver
-                if (PacketUtils.looksLikeDtls(data, offset, length))
-                {
-                    // DTLS transport is responsible for making its own copy, because it will manage its own
-                    // buffers
-                    dtlsTransport.dtlsDataReceived(data, offset, length);
-                }
-                else
-                {
-                    byte[] copy = ByteBufferPool.getBuffer(
-                        length +
-                            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
-                            RtpPacket.BYTES_TO_LEAVE_AT_END_OF_PACKET
-                    );
-                    System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length);
-                    Packet pkt = new UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length);
-                    PacketInfo pktInfo = new PacketInfo(pkt);
-                    pktInfo.setReceivedTime(receivedTime.toEpochMilli());
-                    transceiver.handleIncomingPacket(pktInfo);
-                }
-            }
-        };
-        iceTransport.eventHandler = new IceTransport.EventHandler() {
-            @Override
-            public void connected() {
-                logger.info("ICE connected");
-                eventEmitter.fireEventSync(handler -> {
-                    handler.iceSucceeded();
-                    return Unit.INSTANCE;
-                });
-                transceiver.setOutgoingPacketHandler(outgoingSrtpPacketQueue::add);
-                TaskPools.IO_POOL.submit(iceTransport::startReadingData);
-                TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake);
-            }
-
-            @Override
-            public void failed() {
-                eventEmitter.fireEventSync(handler -> {
-                    handler.iceFailed();
-                    return Unit.INSTANCE;
-                });
-            }
-
-            @Override
-            public void consentUpdated(@NotNull Instant time) {
-                getTransceiver().getPacketIOActivity().setLastIceActivityInstant(time);
-            }
-        };
-    }
+    protected abstract void setupIceTransport();
 
     protected void setupDtlsTransport()
     {

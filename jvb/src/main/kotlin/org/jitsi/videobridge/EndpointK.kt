@@ -16,18 +16,27 @@
 
 package org.jitsi.videobridge
 
+import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.shim.ChannelShim
+import org.jitsi.videobridge.transport.ice.IceTransport
+import org.jitsi.videobridge.util.ByteBufferPool
+import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.util.looksLikeDtls
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 
 class EndpointK @JvmOverloads constructor(
     id: String,
@@ -36,6 +45,56 @@ class EndpointK @JvmOverloads constructor(
     iceControlling: Boolean,
     clock: Clock = Clock.systemUTC()
 ) : Endpoint(id, conference, parentLogger, iceControlling, clock) {
+
+    override fun setupIceTransport() {
+        iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
+            override fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant) {
+                // DTLS data will be handled by the DtlsTransport, but SRTP data can go
+                // straight to the transceiver
+                if (looksLikeDtls(data, offset, length)) {
+                    // DTLS transport is responsible for making its own copy, because it will manage its own
+                    // buffers
+
+                    // DTLS transport is responsible for making its own copy, because it will manage its own
+                    // buffers
+                    dtlsTransport.dtlsDataReceived(data, offset, length)
+                } else {
+                    val copy = ByteBufferPool.getBuffer(
+                        length +
+                            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                            Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
+                    )
+                    System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
+                    val pktInfo =
+                        PacketInfo(UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)).apply {
+                            this.receivedTime = receivedTime.toEpochMilli()
+                        }
+                    transceiver.handleIncomingPacket(pktInfo)
+                }
+            }
+        }
+        iceTransport.eventHandler = object : IceTransport.EventHandler {
+            override fun connected() {
+                logger.info("ICE connected")
+                eventEmitter.fireEventSync { iceSucceeded() }
+                transceiver.setOutgoingPacketHandler(object : PacketHandler {
+                    override fun processPacket(packetInfo: PacketInfo) {
+                        outgoingSrtpPacketQueue.add(packetInfo)
+                    }
+                })
+                TaskPools.IO_POOL.submit(iceTransport::startReadingData)
+                TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake)
+            }
+
+            override fun failed() {
+                eventEmitter.fireEventSync { iceFailed() }
+            }
+
+            override fun consentUpdated(time: Instant) {
+                transceiver.packetIOActivity.lastIceActivityInstant = time
+            }
+        }
+    }
 
     /**
      * Previously, an endpoint expired when all of its channels did.  Channels
