@@ -946,28 +946,6 @@ public abstract class Endpoint
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public JSONObject getDebugState()
-    {
-        JSONObject debugState = super.getDebugState();
-
-        //debugState.put("sctpManager", sctpManager.getDebugState());
-        debugState.put("bitrateController", bitrateController.getDebugState());
-        debugState.put("bandwidthProbing", bandwidthProbing.getDebugState());
-        debugState.put("iceTransport", iceTransport.getDebugState());
-        debugState.put("dtlsTransport", dtlsTransport.getDebugState());
-        debugState.put("transceiver", transceiver.getNodeStats().toJson());
-        debugState.put("acceptAudio", acceptAudio);
-        debugState.put("acceptVideo", acceptVideo);
-        debugState.put("messageTransport", messageTransport.getDebugState());
-
-        return debugState;
-    }
-
-    /**
      * Enables/disables the given feature, if the endpoint implementation supports it.
      *
      * @param feature the feature to enable or disable.

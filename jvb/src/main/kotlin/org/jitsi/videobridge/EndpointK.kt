@@ -45,6 +45,7 @@ import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
+import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -359,6 +360,20 @@ class EndpointK @JvmOverloads constructor(
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring an endpoint with ICE connected, but not DTLS.")
             conferenceStats.dtlsFailedEndpoints.incrementAndGet()
+        }
+    }
+
+    override fun getDebugState(): JSONObject {
+        return super.getDebugState().apply {
+            // debugState.put("sctpManager", sctpManager.getDebugState());
+            put("bitrateController", bitrateController.debugState)
+            put("bandwidthProbing", bandwidthProbing.debugState)
+            put("iceTransport", iceTransport.getDebugState())
+            put("dtlsTransport", dtlsTransport.getDebugState())
+            put("transceiver", transceiver.getNodeStats().toJson())
+            put("acceptAudio", acceptAudio)
+            put("acceptVideo", acceptVideo)
+            put("messageTransport", messageTransport.debugState)
         }
     }
 
