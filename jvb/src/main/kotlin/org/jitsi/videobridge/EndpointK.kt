@@ -20,6 +20,7 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
@@ -30,6 +31,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.shim.ChannelShim
+import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
@@ -92,6 +94,34 @@ class EndpointK @JvmOverloads constructor(
 
             override fun consentUpdated(time: Instant) {
                 transceiver.packetIOActivity.lastIceActivityInstant = time
+            }
+        }
+    }
+
+    override fun setupDtlsTransport() {
+        dtlsTransport.incomingDataHandler = object : DtlsTransport.IncomingDataHandler {
+            override fun dtlsAppDataReceived(buf: ByteArray, off: Int, len: Int) {
+                this@EndpointK.dtlsAppPacketReceived(buf, off, len)
+            }
+        }
+        dtlsTransport.outgoingDataHandler = object : DtlsTransport.OutgoingDataHandler {
+            override fun sendData(buf: ByteArray, off: Int, len: Int) {
+                iceTransport.send(buf, off, len)
+            }
+        }
+        dtlsTransport.eventHandler = object : DtlsTransport.EventHandler {
+            override fun handshakeComplete(
+                chosenSrtpProtectionProfile: Int,
+                tlsRole: TlsRole,
+                keyingMaterial: ByteArray
+            ) {
+                logger.info("DTLS handshake complete")
+                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
+                // TODO(brian): the old code would work even if the sctp connection was created after
+                //  the handshake had completed, but this won't (since this is a one-time event).  do
+                //  we need to worry about that case?
+                sctpSocket.ifPresent(::acceptSctpConnection)
+                scheduleEndpointMessageTransportTimeout()
             }
         }
     }

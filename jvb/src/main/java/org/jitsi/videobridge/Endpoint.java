@@ -28,8 +28,6 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.extensions.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
-import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging.*;
@@ -386,21 +384,7 @@ public abstract class Endpoint
 
     protected abstract void setupIceTransport();
 
-    protected void setupDtlsTransport()
-    {
-        dtlsTransport.incomingDataHandler = this::dtlsAppPacketReceived;
-        dtlsTransport.outgoingDataHandler = iceTransport::send;
-        dtlsTransport.eventHandler = (chosenSrtpProtectionProfile, tlsRole, keyingMaterial) ->
-        {
-            logger.info("DTLS handshake complete");
-            transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial);
-            //TODO(brian): the old code would work even if the sctp connection was created after
-            // the handshake had completed, but this won't (since this is a one-time event).  do
-            // we need to worry about that case?
-            sctpSocket.ifPresent(socket -> acceptSctpConnection(socket));
-            scheduleEndpointMessageTransportTimeout();
-        };
-    }
+    protected abstract void setupDtlsTransport();
 
     protected boolean doSendSrtp(PacketInfo packetInfo)
     {
