@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge
 
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
@@ -32,6 +33,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -49,6 +51,9 @@ class EndpointK @JvmOverloads constructor(
     iceControlling: Boolean,
     clock: Clock = Clock.systemUTC()
 ) : Endpoint(id, conference, parentLogger, iceControlling, clock) {
+
+    override val mediaSources: Array<out MediaSourceDesc>
+        get() = transceiver.getMediaSources()
 
     override fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -136,6 +141,13 @@ class EndpointK @JvmOverloads constructor(
     override fun addRtpExtension(rtpExtension: RtpExtension) {
         transceiver.addRtpExtension(rtpExtension)
     }
+
+    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
+        logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
+        transceiver.addReceiveSsrc(ssrc, mediaType)
+    }
+
+    override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
     override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
 

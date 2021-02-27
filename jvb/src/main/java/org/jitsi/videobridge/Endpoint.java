@@ -883,16 +883,6 @@ public abstract class Endpoint
     }
 
     /**
-     * Gets the media sources for this endpoint.
-     * @return
-     */
-    @Override
-    public MediaSourceDesc[] getMediaSources()
-    {
-        return transceiver.getMediaSources();
-    }
-
-    /**
      * Re-creates this endpoint's media sources based on the sources
      * and source groups that have been signaled.
      */
@@ -926,26 +916,7 @@ public abstract class Endpoint
             setMediaSources(mediaSources);
         }
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean receivesSsrc(long ssrc)
-    {
-        return transceiver.receivesSsrc(ssrc);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addReceiveSsrc(long ssrc, MediaType mediaType)
-    {
-        logger.debug(() -> "Adding receive ssrc " + ssrc + " of type " + mediaType);
-        transceiver.addReceiveSsrc(ssrc, mediaType);
-    }
-
+    
     /**
      * Handle incoming RTP packets which have been fully processed by the
      * transceiver's incoming pipeline.
