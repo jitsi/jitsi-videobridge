@@ -460,22 +460,6 @@ public abstract class Endpoint
         sctpHandler.processPacket(new PacketInfo(new UnparsedPacket(data, off, len)));
     }
 
-    /**
-     * Adds a payload type to this endpoint.
-     */
-    @Override
-    public void addPayloadType(PayloadType payloadType)
-    {
-        transceiver.addPayloadType(payloadType);
-        bitrateController.addPayloadType(payloadType);
-    }
-
-    @Override
-    public void addRtpExtension(RtpExtension rtpExtension)
-    {
-        transceiver.addRtpExtension(rtpExtension);
-    }
-
     public void endpointMessageTransportConnected()
     {
         sendVideoConstraints(this.maxReceiverVideoConstraints);

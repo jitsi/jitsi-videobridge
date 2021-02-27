@@ -18,7 +18,9 @@ package org.jitsi.videobridge
 
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.NEVER
@@ -124,6 +126,15 @@ class EndpointK @JvmOverloads constructor(
                 scheduleEndpointMessageTransportTimeout()
             }
         }
+    }
+
+    override fun addPayloadType(payloadType: PayloadType) {
+        transceiver.addPayloadType(payloadType)
+        bitrateController.addPayloadType(payloadType)
+    }
+
+    override fun addRtpExtension(rtpExtension: RtpExtension) {
+        transceiver.addRtpExtension(rtpExtension)
     }
 
     override fun send(packetInfo: PacketInfo) {
