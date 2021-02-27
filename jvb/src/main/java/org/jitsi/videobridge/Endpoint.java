@@ -451,46 +451,6 @@ public abstract class Endpoint
     public abstract double getRtt();
 
     /**
-     * TODO Brian
-     */
-    @Override
-    public void send(PacketInfo packetInfo)
-    {
-        Packet packet = packetInfo.getPacket();
-        if (packet instanceof VideoRtpPacket)
-        {
-            boolean accepted = bitrateController.transformRtp(packetInfo);
-            if (!accepted)
-            {
-                logger.warn( "Dropping a packet which was supposed to be accepted:" + packet);
-                return;
-            }
-
-            // The original packet was transformed in place.
-            transceiver.sendPacket(packetInfo);
-
-            return;
-        }
-        else if (packet instanceof RtcpSrPacket)
-        {
-            // Allow the BC to update the timestamp (in place).
-            RtcpSrPacket rtcpSrPacket = (RtcpSrPacket) packet;
-            bitrateController.transformRtcp(rtcpSrPacket);
-
-            if (logger.isTraceEnabled())
-            {
-                logger.trace(
-                    "relaying an sr from ssrc="
-                        + rtcpSrPacket.getSenderSsrc()
-                        + ", timestamp="
-                        + rtcpSrPacket.getSenderInfo().getRtpTimestamp());
-            }
-        }
-
-        transceiver.sendPacket(packetInfo);
-    }
-
-    /**
      * Handle a DTLS app packet (that is, a packet of some other protocol sent
      * over DTLS) which has just been received.
      */

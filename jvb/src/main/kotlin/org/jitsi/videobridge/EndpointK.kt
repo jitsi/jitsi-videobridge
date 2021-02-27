@@ -126,6 +126,28 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
+    override fun send(packetInfo: PacketInfo) {
+        when (val packet = packetInfo.packet) {
+            is VideoRtpPacket -> {
+                if (bitrateController.transformRtp(packetInfo)) {
+                    // The original packet was transformed in place.
+                    transceiver.sendPacket(packetInfo)
+                } else {
+                    logger.warn("Dropping a packet which was supposed to be accepted:$packet")
+                    return
+                }
+            }
+            is RtcpSrPacket -> {
+                // Allow the BC to update the timestamp (in place).
+                bitrateController.transformRtcp(packet)
+                logger.trace {
+                    "relaying an sr from ssrc=${packet.senderSsrc}, timestamp=${packet.senderInfo.rtpTimestamp}"
+                }
+            }
+        }
+        transceiver.sendPacket(packetInfo)
+    }
+
     /**
      * Previously, an endpoint expired when all of its channels did.  Channels
      * now only exist in their 'shim' form for backwards compatibility, so to
