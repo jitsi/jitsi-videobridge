@@ -329,7 +329,7 @@ class EndpointK @JvmOverloads constructor(
      * the values are cumulative this should execute only once when the endpoint
      * expires.
      */
-    override fun updateStatsOnExpire() {
+    private fun updateStatsOnExpire() {
         val conferenceStats = conference.statistics
         val transceiverStats = transceiver.getTransceiverStats()
 
@@ -360,5 +360,47 @@ class EndpointK @JvmOverloads constructor(
             logger.info("Expiring an endpoint with ICE connected, but not DTLS.")
             conferenceStats.dtlsFailedEndpoints.incrementAndGet()
         }
+    }
+
+    override fun expire() {
+        if (super.isExpired()) {
+            return
+        }
+        super.expire()
+
+        try {
+            val channelShimsCopy = channelShims.toSet()
+            channelShims.clear()
+            channelShimsCopy.forEach { channelShim ->
+                if (!channelShim.isExpired) {
+                    channelShim.expire = 0
+                }
+            }
+            updateStatsOnExpire()
+            transceiver.stop()
+            logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
+            logger.cdebug { bitrateController.debugState.toJSONString() }
+            logger.cdebug { iceTransport.getDebugState().toJSONString() }
+            logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
+
+            logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
+
+            transceiver.teardown()
+            getMessageTransport()?.close()
+            sctpHandler.stop()
+            sctpManager?.closeConnection()
+        } catch (t: Throwable) {
+            logger.error("Exception while expiring: ", t)
+        }
+
+        bandwidthProbing.enabled = false
+        recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing)
+        conference.encodingsManager.unsubscribe(this)
+
+        dtlsTransport.stop()
+        iceTransport.stop()
+        outgoingSrtpPacketQueue.close()
+
+        logger.info("Expired.")
     }
 }
