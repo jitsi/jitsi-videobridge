@@ -177,6 +177,9 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
+    override fun isSendingAudio(): Boolean = transceiver.isReceivingAudio()
+    override fun isSendingVideo(): Boolean = transceiver.isReceivingAudio()
+
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
     override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
