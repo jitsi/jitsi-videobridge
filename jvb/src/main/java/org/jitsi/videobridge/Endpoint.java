@@ -916,7 +916,7 @@ public abstract class Endpoint
             setMediaSources(mediaSources);
         }
     }
-    
+
     /**
      * Handle incoming RTP packets which have been fully processed by the
      * transceiver's incoming pipeline.
@@ -926,26 +926,6 @@ public abstract class Endpoint
     {
         packetInfo.setEndpointId(getId());
         getConference().handleIncomingPacket(packetInfo);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onNewSsrcAssociation(
-            String endpointId,
-            long primarySsrc,
-            long secondarySsrc,
-            SsrcAssociationType type)
-    {
-        if (endpointId.equalsIgnoreCase(getId()))
-        {
-            transceiver.addSsrcAssociation(new LocalSsrcAssociation(primarySsrc, secondarySsrc, type));
-        }
-        else
-        {
-            transceiver.addSsrcAssociation(new RemoteSsrcAssociation(primarySsrc, secondarySsrc, type));
-        }
     }
 
     /**
