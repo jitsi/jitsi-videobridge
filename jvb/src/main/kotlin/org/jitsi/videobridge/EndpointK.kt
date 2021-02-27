@@ -137,6 +137,12 @@ class EndpointK @JvmOverloads constructor(
         transceiver.addRtpExtension(rtpExtension)
     }
 
+    override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
+
+    override fun requestKeyframe() = transceiver.requestKeyFrame()
+
+    override fun requestKeyframe(mediaSsrc: Long) = transceiver.requestKeyFrame(mediaSsrc)
+
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> {

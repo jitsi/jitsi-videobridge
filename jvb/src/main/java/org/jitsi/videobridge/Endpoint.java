@@ -516,16 +516,6 @@ public abstract class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public Instant getLastIncomingActivity()
-    {
-        PacketIOActivity packetIOActivity = this.transceiver.getPacketIOActivity();
-        return packetIOActivity.getLastIncomingActivityInstant();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void expire()
     {
         if (super.isExpired())
@@ -870,19 +860,6 @@ public abstract class Endpoint
         }
         logger.debug(() -> "Transport description:\n " + iceUdpTransportPacketExtension.toXML());
         channelBundle.setTransport(iceUdpTransportPacketExtension);
-    }
-
-
-    @Override
-    public void requestKeyframe(long mediaSsrc)
-    {
-        transceiver.requestKeyFrame(mediaSsrc);
-    }
-
-    @Override
-    public void requestKeyframe()
-    {
-        transceiver.requestKeyFrame();
     }
 
     /**
