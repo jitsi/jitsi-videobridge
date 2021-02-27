@@ -579,45 +579,7 @@ public abstract class Endpoint
         logger.info("Expired.");
     }
 
-    /**
-     * Updates the conference statistics with value from this endpoint. Since
-     * the values are cumulative this should execute only once when the endpoint
-     * expires.
-     */
-    protected void updateStatsOnExpire()
-    {
-        Conference.Statistics conferenceStats = getConference().getStatistics();
-        TransceiverStats transceiverStats = transceiver.getTransceiverStats();
-        PacketStreamStats.Snapshot incomingStats = transceiverStats.getIncomingPacketStreamStats();
-        PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
-        BandwidthEstimator.StatisticsSnapshot bweStats = transceiverStats.getBandwidthEstimatorStats();
-
-        conferenceStats.totalBytesReceived.addAndGet(incomingStats.getBytes());
-        conferenceStats.totalPacketsReceived.addAndGet(incomingStats.getPackets());
-        conferenceStats.totalBytesSent.addAndGet(outgoingStats.getBytes());
-        conferenceStats.totalPacketsSent.addAndGet(outgoingStats.getPackets());
-
-        Number lossLimitedMs = bweStats.getNumber("lossLimitedMs");
-        Number lossDegradedMs = bweStats.getNumber("lossDegradedMs");
-        Number lossFreeMs = bweStats.getNumber("lossFreeMs");
-
-        if (lossLimitedMs != null && lossDegradedMs != null && lossFreeMs != null)
-        {
-            Videobridge.Statistics videobridgeStats = getConference().getVideobridge().getStatistics();
-
-            long participantMs = lossFreeMs.longValue() + lossDegradedMs.longValue() + lossLimitedMs.longValue();
-
-            videobridgeStats.totalLossControlledParticipantMs.addAndGet(participantMs);
-            videobridgeStats.totalLossLimitedParticipantMs.addAndGet(lossLimitedMs.longValue());
-            videobridgeStats.totalLossDegradedParticipantMs.addAndGet(lossDegradedMs.longValue());
-        }
-
-        if (iceTransport.isConnected() && !dtlsTransport.isConnected())
-        {
-            logger.info("Expiring an endpoint with ICE, but no DTLS.");
-            conferenceStats.dtlsFailedEndpoints.incrementAndGet();
-        }
-    }
+    protected abstract void updateStatsOnExpire();
 
     /**
      * TODO Brian

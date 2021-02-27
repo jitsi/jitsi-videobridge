@@ -294,4 +294,42 @@ class EndpointK @JvmOverloads constructor(
             }
         }
     }
+
+    /**
+     * Updates the conference statistics with value from this endpoint. Since
+     * the values are cumulative this should execute only once when the endpoint
+     * expires.
+     */
+    override fun updateStatsOnExpire() {
+        val conferenceStats = conference.statistics
+        val transceiverStats = transceiver.getTransceiverStats()
+
+        conferenceStats.apply {
+            val incomingStats = transceiverStats.incomingPacketStreamStats
+            val outgoingStats = transceiverStats.outgoingPacketStreamStats
+            totalBytesReceived.addAndGet(incomingStats.bytes)
+            totalPacketsReceived.addAndGet(incomingStats.packets)
+            totalBytesSent.addAndGet(outgoingStats.bytes)
+            totalPacketsSent.addAndGet(outgoingStats.packets)
+        }
+
+        run {
+            val bweStats = transceiverStats.bandwidthEstimatorStats
+            val lossLimitedMs = bweStats.getNumber("lossLimitedMs")?.toLong() ?: return@run
+            val lossDegradedMs = bweStats.getNumber("lossDegradedMs")?.toLong() ?: return@run
+            val lossFreeMs = bweStats.getNumber("lossFreeMs")?.toLong() ?: return@run
+
+            val participantMs = lossFreeMs + lossDegradedMs + lossLimitedMs
+            conference.videobridge.statistics.apply {
+                totalLossControlledParticipantMs.addAndGet(participantMs)
+                totalLossLimitedParticipantMs.addAndGet(lossLimitedMs)
+                totalLossDegradedParticipantMs.addAndGet(lossDegradedMs)
+            }
+        }
+
+        if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
+            logger.info("Expiring an endpoint with ICE connected, but not DTLS.")
+            conferenceStats.dtlsFailedEndpoints.incrementAndGet()
+        }
+    }
 }
