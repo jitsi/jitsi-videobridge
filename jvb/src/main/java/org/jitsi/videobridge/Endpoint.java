@@ -996,30 +996,7 @@ public abstract class Endpoint
         this.acceptVideo = acceptVideo;
     }
 
-    public void updateForceMute()
-    {
-        boolean audioForcedMuted = false;
-        boolean videoForceMuted  = false;
-
-        for (ChannelShim channelShim : channelShims)
-        {
-            if (!channelShim.allowIncomingMedia())
-            {
-                switch (channelShim.getMediaType())
-                {
-                    case AUDIO:
-                        audioForcedMuted = true;
-                        break;
-                    case VIDEO:
-                        videoForceMuted  = true;
-                        break;
-                }
-            }
-        }
-
-        transceiver.forceMuteAudio(audioForcedMuted);
-        transceiver.forceMuteVideo(videoForceMuted);
-    }
+    public abstract void updateForceMute();
 
     /**
      * @return this {@link Endpoint}'s transceiver.

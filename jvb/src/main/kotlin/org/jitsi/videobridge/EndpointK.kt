@@ -150,6 +150,23 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
+    override fun updateForceMute() {
+        var audioForceMuted = false
+        var videoForceMuted = false
+        channelShims.forEach { channelShim ->
+            if (!channelShim.allowIncomingMedia()) {
+                when (channelShim.mediaType) {
+                    MediaType.AUDIO -> audioForceMuted = true
+                    MediaType.VIDEO -> videoForceMuted = true
+                    else -> Unit
+                }
+            }
+        }
+
+        transceiver.forceMuteAudio(audioForceMuted)
+        transceiver.forceMuteVideo(videoForceMuted)
+    }
+
     override fun addPayloadType(payloadType: PayloadType) {
         transceiver.addPayloadType(payloadType)
         bitrateController.addPayloadType(payloadType)
