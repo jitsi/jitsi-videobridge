@@ -291,7 +291,6 @@ public abstract class Endpoint
         );
 
         diagnosticContext.put("endpoint_id", id);
-        conference.encodingsManager.subscribe(this);
 
         iceTransport = new IceTransport(getId(), iceControlling, logger);
         setupIceTransport();

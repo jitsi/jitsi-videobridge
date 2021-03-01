@@ -95,6 +95,10 @@ class EndpointK @JvmOverloads constructor(
         recurringRunnableExecutor.registerRecurringRunnable(it)
     }
 
+    init {
+        conference.encodingsManager.subscribe(this)
+    }
+
     // TODO: Some weirdness here with with a property for reading mediaSources but a function for setting them because
     //  only the getter is defined in AbstractEndpoint.  Will take another look at it.
     override val mediaSources: Array<out MediaSourceDesc>
