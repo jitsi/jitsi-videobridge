@@ -78,7 +78,7 @@ class EndpointK @JvmOverloads constructor(
     ).apply {
         setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
             override fun consume(packetInfo: PacketInfo) {
-                handleIncomingPacket(packetInfo)
+                this@EndpointK.handleIncomingPacket(packetInfo)
             }
 
             override fun trace(f: () -> Unit) = f.invoke()
