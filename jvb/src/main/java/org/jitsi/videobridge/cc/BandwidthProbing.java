@@ -30,27 +30,27 @@ import java.util.function.*;
 /**
   * @author George Politis
   */
- public class BandwidthProbing
+ public abstract class BandwidthProbing
      extends PeriodicRunnable implements BandwidthEstimator.Listener
  {
      /**
       * The {@link TimeSeriesLogger} to be used by this instance to print time
       * series.
       */
-     private static final TimeSeriesLogger timeSeriesLogger
+     protected static final TimeSeriesLogger timeSeriesLogger
          = TimeSeriesLogger.getTimeSeriesLogger(BandwidthProbing.class);
 
-     private static Random random = new Random();
+     protected static Random random = new Random();
 
      /**
       * The sequence number to use if probing with the JVB's SSRC.
       */
-     private int seqNum = random.nextInt(0xFFFF);
+     protected int seqNum = random.nextInt(0xFFFF);
 
      /**
       * The RTP timestamp to use if probing with the JVB's SSRC.
       */
-     private long ts = random.nextInt() & 0xFFFFFFFFL;
+     protected long ts = random.nextInt() & 0xFFFFFFFFL;
 
      /**
       * Whether or not probing is currently enabled
@@ -65,15 +65,15 @@ import java.util.function.*;
       */
      double bytesLeftOver = 0;
 
-     private Long latestBwe = -1L;
+     protected Long latestBwe = -1L;
 
-     private DiagnosticContext diagnosticContext;
+     protected DiagnosticContext diagnosticContext;
 
-     private final @NotNull Supplier<BitrateControllerStatusSnapshot> statusSnapshotSupplier;
+     protected final @NotNull Supplier<BitrateControllerStatusSnapshot> statusSnapshotSupplier;
 
-     private final @NotNull ProbingDataSender probingDataSender;
+     protected final @NotNull ProbingDataSender probingDataSender;
 
-     private static final BandwidthProbingConfig config = new BandwidthProbingConfig();
+     protected static final BandwidthProbingConfig config = new BandwidthProbingConfig();
 
      /**
       * Ctor.
@@ -180,12 +180,6 @@ import java.util.function.*;
          {
              timeSeriesLogger.trace(timeSeriesPoint);
          }
-     }
-
-     @Override
-     public void bandwidthEstimationChanged(Bandwidth newBw)
-     {
-         this.latestBwe = (long)newBw.getBps();
      }
 
      /**

@@ -43,6 +43,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.cc.BandwidthProbing
+import org.jitsi.videobridge.cc.BandwidthProbingK
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
@@ -84,9 +85,9 @@ class EndpointK @JvmOverloads constructor(
         })
     }
 
-    private val bandwidthProbing = BandwidthProbing(
-        _transceiver::sendProbing,
-        bitrateController::getStatusSnapshot
+    private val bandwidthProbing = BandwidthProbingK(
+        BandwidthProbing.ProbingDataSender { mediaSsrcs, numBytes -> _transceiver.sendProbing(mediaSsrcs, numBytes) },
+        java.util.function.Supplier { bitrateController.getStatusSnapshot() }
     ).apply {
         setDiagnosticContext(diagnosticContext)
         enabled = true
