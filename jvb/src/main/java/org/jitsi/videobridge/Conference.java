@@ -226,7 +226,7 @@ public class Conference
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
 
-        colibriQueue= new PacketQueue<>(
+        colibriQueue = new PacketQueue<>(
             100,
             true,
             "colibri-queue-" + id,
@@ -248,7 +248,10 @@ public class Conference
                 {
                     logger.warn("Failed to handle colibri request: ", e);
                     request.getCallback().invoke(
-                            IQUtils.createError(request.getRequest(), XMPPError.Condition.internal_server_error));
+                            IQUtils.createError(
+                                    request.getRequest(),
+                                    XMPPError.Condition.internal_server_error,
+                                    e.getMessage()));
                 }
                 return true;
             },
