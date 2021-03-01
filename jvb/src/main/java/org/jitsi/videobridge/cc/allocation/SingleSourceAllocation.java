@@ -31,7 +31,8 @@ import java.util.List;
  *
  * @author George Politis
  */
-class SingleSourceAllocation {
+class SingleSourceAllocation
+{
     private static final TimeSeriesLogger timeSeriesLogger
             = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator.class);
 
@@ -138,10 +139,10 @@ class SingleSourceAllocation {
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
                     || ratesList.isEmpty())
             {
-                Bandwidth layerBitrate = layer.getBitrate(nowMs);
+                double layerBitrate = layer.getBitrate(nowMs);
                 // No active layers usually happens when the source has just been signaled and we haven't received
                 // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
-                if (noActiveLayers || layerBitrate.getBps() > 0)
+                if (noActiveLayers || layerBitrate > 0)
                 {
                     ratesList.add(new LayerSnapshot(layer, layerBitrate));
 
@@ -166,7 +167,7 @@ class SingleSourceAllocation {
             {
                 ratesTimeSeriesPoint.addField(
                         layerSnapshot.layer.getHeight() + "p_" + layerSnapshot.layer.getFrameRate() + "fps_bps",
-                        layerSnapshot.bitrate.getBps());
+                        layerSnapshot.bitrate);
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
         }
@@ -194,7 +195,7 @@ class SingleSourceAllocation {
             // Boost on stage participant to preferred, if there's enough bw.
             for (int i = 0; i < layers.length; i++)
             {
-                if (i > preferredIdx || maxBps < layers[i].bitrate.getBps())
+                if (i > preferredIdx || maxBps < layers[i].bitrate)
                 {
                     break;
                 }
@@ -205,7 +206,7 @@ class SingleSourceAllocation {
         else
         {
             // Try the next element in the ratedIndices array.
-            if (targetIdx + 1 < layers.length && layers[targetIdx + 1].bitrate.getBps() < maxBps)
+            if (targetIdx + 1 < layers.length && layers[targetIdx + 1].bitrate < maxBps)
             {
                 targetIdx++;
             }
@@ -223,7 +224,7 @@ class SingleSourceAllocation {
             // TODO further: Should we just prune the list of layers we consider to not include such layers?
             for (int i = layers.length - 1; i >= targetIdx + 1; i--)
             {
-                if (layers[i].bitrate.getBps() <= layers[targetIdx].bitrate.getBps())
+                if (layers[i].bitrate <= layers[targetIdx].bitrate)
                 {
                     targetIdx = i;
                 }
@@ -237,7 +238,7 @@ class SingleSourceAllocation {
     long getTargetBitrate()
     {
         LayerSnapshot targetLayer = getTargetLayer();
-        return targetLayer != null ? (long) targetLayer.bitrate.getBps() : 0;
+        return targetLayer != null ? (long) targetLayer.bitrate : 0;
     }
 
     private LayerSnapshot getTargetLayer()
@@ -299,8 +300,8 @@ class SingleSourceAllocation {
     private static class LayerSnapshot
     {
         private final RtpLayerDesc layer;
-        private final Bandwidth bitrate;
-        private LayerSnapshot(RtpLayerDesc layer, Bandwidth bitrate)
+        private final double bitrate;
+        private LayerSnapshot(RtpLayerDesc layer, double bitrate)
         {
             this.layer = layer;
             this.bitrate = bitrate;
