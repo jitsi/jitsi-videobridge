@@ -160,11 +160,6 @@ public abstract class Endpoint
      */
     protected final BitrateController<AbstractEndpoint> bitrateController;
 
-    /**
-     * TODO Brian
-     */
-    protected final BandwidthProbing bandwidthProbing;
-
     @NotNull
     protected final IceTransport iceTransport;
 
@@ -173,11 +168,6 @@ public abstract class Endpoint
      */
     @NotNull
     protected final DtlsTransport dtlsTransport;
-
-    /**
-     * The {@link Transceiver} which handles receiving and sending of (S)RTP.
-     */
-    protected final Transceiver transceiver;
 
     /**
      * The set of {@link ChannelShim}s associated with this endpoint. This
@@ -234,9 +224,6 @@ public abstract class Endpoint
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     protected Optional<SctpServerSocket> sctpSocket = Optional.empty();
 
-    @NotNull
-    protected final TransceiverEventHandler transceiverEventHandler = new TransceiverEventHandlerImpl();
-
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
@@ -261,32 +248,6 @@ public abstract class Endpoint
 
         creationTime = clock.instant();
         diagnosticContext = conference.newDiagnosticContext();
-        transceiver = new Transceiver(
-            id,
-            TaskPools.CPU_POOL,
-            TaskPools.CPU_POOL,
-            TaskPools.SCHEDULED_POOL,
-            diagnosticContext,
-            logger,
-            transceiverEventHandler,
-            clock
-        );
-        transceiver.setIncomingPacketHandler(
-            new ConsumerNode("receiver chain handler")
-            {
-                @Override
-                protected void consume(@NotNull PacketInfo packetInfo)
-                {
-                    handleIncomingPacket(packetInfo);
-                }
-
-                @Override
-                public void trace(@NotNull Function0<Unit> f)
-                {
-                    f.invoke();
-                }
-            });
-
         BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
         {
             @Override
@@ -336,15 +297,7 @@ public abstract class Endpoint
         );
 
         diagnosticContext.put("endpoint_id", id);
-        bandwidthProbing
-                = new BandwidthProbing(
-                        Endpoint.this.transceiver::sendProbing,
-                        Endpoint.this.bitrateController::getStatusSnapshot);
-        bandwidthProbing.setDiagnosticContext(diagnosticContext);
         conference.encodingsManager.subscribe(this);
-
-        bandwidthProbing.enabled = true;
-        recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
 
         iceTransport = new IceTransport(getId(), iceControlling, logger);
         setupIceTransport();
@@ -894,6 +847,8 @@ public abstract class Endpoint
         }
     }
 
+    public abstract Transceiver getTransceiver();
+
     /**
      * Update accepted media types based on
      * {@link ChannelShim} permission to receive
@@ -928,14 +883,6 @@ public abstract class Endpoint
     }
 
     public abstract void updateForceMute();
-
-    /**
-     * @return this {@link Endpoint}'s transceiver.
-     */
-    public Transceiver getTransceiver()
-    {
-        return transceiver;
-    }
 
     /**
      * Returns how many endpoints this Endpoint is currently forwarding video for
@@ -973,32 +920,6 @@ public abstract class Endpoint
     void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message)
     {
         bitrateController.setBandwidthAllocationSettings(message);
-    }
-
-    protected class TransceiverEventHandlerImpl implements TransceiverEventHandler
-    {
-        /**
-         * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
-         * for every packet and we want to avoid the switch. The conference audio level code must not block.
-         * @param sourceSsrc
-         * @param level
-         */
-        @Override
-        public void audioLevelReceived(long sourceSsrc, long level)
-        {
-            getConference().getSpeechActivity().levelChanged(Endpoint.this, level);
-        }
-
-        /**
-         * Forward bwe events from the Transceiver.
-         */
-        @Override
-        public void bandwidthEstimationChanged(@NotNull Bandwidth newValue)
-        {
-            logger.debug(() -> "Estimated bandwidth is now " + newValue);
-            bitrateController.bandwidthChanged((long)newValue.getBps());
-            bandwidthProbing.bandwidthEstimationChanged(newValue);
-        }
     }
 
     /**

@@ -20,12 +20,16 @@ import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.Transceiver
+import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.RemoteSsrcAssociation
@@ -38,6 +42,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.videobridge.cc.BandwidthProbing
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
@@ -58,14 +63,47 @@ class EndpointK @JvmOverloads constructor(
     clock: Clock = Clock.systemUTC()
 ) : Endpoint(id, conference, parentLogger, iceControlling, clock) {
 
+    // TODO: this naming is to avoid conflicts with getTransceiver in Endpoint.  It will change back
+    // once Endpoint.java goes away
+    val _transceiver = Transceiver(
+        id,
+        TaskPools.CPU_POOL,
+        TaskPools.CPU_POOL,
+        TaskPools.SCHEDULED_POOL,
+        diagnosticContext,
+        logger,
+        TransceiverEventHandlerImpl(),
+        clock
+    ).apply {
+        setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
+            override fun consume(packetInfo: PacketInfo) {
+                handleIncomingPacket(packetInfo)
+            }
+
+            override fun trace(f: () -> Unit) = f.invoke()
+        })
+    }
+
+    private val bandwidthProbing = BandwidthProbing(
+        _transceiver::sendProbing,
+        bitrateController::getStatusSnapshot
+    ).apply {
+        setDiagnosticContext(diagnosticContext)
+        enabled = true
+    }.also {
+        recurringRunnableExecutor.registerRecurringRunnable(it)
+    }
+
     // TODO: Some weirdness here with with a property for reading mediaSources but a function for setting them because
     //  only the getter is defined in AbstractEndpoint.  Will take another look at it.
     override val mediaSources: Array<out MediaSourceDesc>
-        get() = transceiver.getMediaSources()
+        get() = _transceiver.getMediaSources()
+
+    override fun getTransceiver(): Transceiver = _transceiver
 
     override fun setMediaSources(mediaSources: Array<MediaSourceDesc>) {
-        val wasEmpty = transceiver.getMediaSources().isEmpty()
-        if (transceiver.setMediaSources(mediaSources)) {
+        val wasEmpty = _transceiver.getMediaSources().isEmpty()
+        if (_transceiver.setMediaSources(mediaSources)) {
             eventEmitter.fireEventSync { sourcesChanged() }
         }
         if (wasEmpty) {
@@ -96,7 +134,7 @@ class EndpointK @JvmOverloads constructor(
                         PacketInfo(UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)).apply {
                             this.receivedTime = receivedTime.toEpochMilli()
                         }
-                    transceiver.handleIncomingPacket(pktInfo)
+                    _transceiver.handleIncomingPacket(pktInfo)
                 }
             }
         }
@@ -104,7 +142,7 @@ class EndpointK @JvmOverloads constructor(
             override fun connected() {
                 logger.info("ICE connected")
                 eventEmitter.fireEventSync { iceSucceeded() }
-                transceiver.setOutgoingPacketHandler(object : PacketHandler {
+                _transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         outgoingSrtpPacketQueue.add(packetInfo)
                     }
@@ -118,7 +156,7 @@ class EndpointK @JvmOverloads constructor(
             }
 
             override fun consentUpdated(time: Instant) {
-                transceiver.packetIOActivity.lastIceActivityInstant = time
+                _transceiver.packetIOActivity.lastIceActivityInstant = time
             }
         }
     }
@@ -141,7 +179,7 @@ class EndpointK @JvmOverloads constructor(
                 keyingMaterial: ByteArray
             ) {
                 logger.info("DTLS handshake complete")
-                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
+                _transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
                 // TODO(brian): the old code would work even if the sctp connection was created after
                 //  the handshake had completed, but this won't (since this is a one-time event).  do
                 //  we need to worry about that case?
@@ -164,22 +202,22 @@ class EndpointK @JvmOverloads constructor(
             }
         }
 
-        transceiver.forceMuteAudio(audioForceMuted)
-        transceiver.forceMuteVideo(videoForceMuted)
+        _transceiver.forceMuteAudio(audioForceMuted)
+        _transceiver.forceMuteVideo(videoForceMuted)
     }
 
     override fun addPayloadType(payloadType: PayloadType) {
-        transceiver.addPayloadType(payloadType)
+        _transceiver.addPayloadType(payloadType)
         bitrateController.addPayloadType(payloadType)
     }
 
     override fun addRtpExtension(rtpExtension: RtpExtension) {
-        transceiver.addRtpExtension(rtpExtension)
+        _transceiver.addRtpExtension(rtpExtension)
     }
 
     override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
         logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
-        transceiver.addReceiveSsrc(ssrc, mediaType)
+        _transceiver.addReceiveSsrc(ssrc, mediaType)
     }
 
     override fun onNewSsrcAssociation(
@@ -189,41 +227,41 @@ class EndpointK @JvmOverloads constructor(
         type: SsrcAssociationType
     ) {
         if (endpointId.equals(id, ignoreCase = true)) {
-            transceiver.addSsrcAssociation(LocalSsrcAssociation(primarySsrc, secondarySsrc, type))
+            _transceiver.addSsrcAssociation(LocalSsrcAssociation(primarySsrc, secondarySsrc, type))
         } else {
-            transceiver.addSsrcAssociation(RemoteSsrcAssociation(primarySsrc, secondarySsrc, type))
+            _transceiver.addSsrcAssociation(RemoteSsrcAssociation(primarySsrc, secondarySsrc, type))
         }
     }
 
     override fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
         when (feature) {
-            EndpointDebugFeatures.PCAP_DUMP -> transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
+            EndpointDebugFeatures.PCAP_DUMP -> _transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
         }
     }
 
     override fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
         return when (feature) {
-            EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
+            EndpointDebugFeatures.PCAP_DUMP -> _transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
         }
     }
 
-    override fun isSendingAudio(): Boolean = transceiver.isReceivingAudio()
-    override fun isSendingVideo(): Boolean = transceiver.isReceivingAudio()
+    override fun isSendingAudio(): Boolean = _transceiver.isReceivingAudio()
+    override fun isSendingVideo(): Boolean = _transceiver.isReceivingAudio()
 
-    override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
+    override fun receivesSsrc(ssrc: Long): Boolean = _transceiver.receivesSsrc(ssrc)
 
-    override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
+    override fun getLastIncomingActivity(): Instant = _transceiver.packetIOActivity.lastIncomingActivityInstant
 
-    override fun requestKeyframe() = transceiver.requestKeyFrame()
+    override fun requestKeyframe() = _transceiver.requestKeyFrame()
 
-    override fun requestKeyframe(mediaSsrc: Long) = transceiver.requestKeyFrame(mediaSsrc)
+    override fun requestKeyframe(mediaSsrc: Long) = _transceiver.requestKeyFrame(mediaSsrc)
 
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> {
                 if (bitrateController.transformRtp(packetInfo)) {
                     // The original packet was transformed in place.
-                    transceiver.sendPacket(packetInfo)
+                    _transceiver.sendPacket(packetInfo)
                 } else {
                     logger.warn("Dropping a packet which was supposed to be accepted:$packet")
                     return
@@ -237,7 +275,7 @@ class EndpointK @JvmOverloads constructor(
                 }
             }
         }
-        transceiver.sendPacket(packetInfo)
+        _transceiver.sendPacket(packetInfo)
     }
 
     /**
@@ -289,14 +327,14 @@ class EndpointK @JvmOverloads constructor(
     /**
      * Set the local SSRC for [mediaType] to [ssrc] for this endpoint.
      */
-    override fun setLocalSsrc(mediaType: MediaType, ssrc: Long) = transceiver.setLocalSsrc(mediaType, ssrc)
+    override fun setLocalSsrc(mediaType: MediaType, ssrc: Long) = _transceiver.setLocalSsrc(mediaType, ssrc)
 
     /**
      * Returns true if this endpoint's transport is 'fully' connected (both ICE and DTLS), false otherwise
      */
     private fun isTransportConnected(): Boolean = iceTransport.isConnected() && dtlsTransport.isConnected
 
-    override fun getRtt(): Double = transceiver.getTransceiverStats().endpointConnectionStats.rtt
+    override fun getRtt(): Double = _transceiver.getTransceiverStats().endpointConnectionStats.rtt
 
     override fun wants(packetInfo: PacketInfo): Boolean {
         if (!isTransportConnected()) {
@@ -332,7 +370,7 @@ class EndpointK @JvmOverloads constructor(
      */
     private fun updateStatsOnExpire() {
         val conferenceStats = conference.statistics
-        val transceiverStats = transceiver.getTransceiverStats()
+        val transceiverStats = _transceiver.getTransceiverStats()
 
         conferenceStats.apply {
             val incomingStats = transceiverStats.incomingPacketStreamStats
@@ -370,7 +408,7 @@ class EndpointK @JvmOverloads constructor(
             put("bandwidthProbing", bandwidthProbing.debugState)
             put("iceTransport", iceTransport.getDebugState())
             put("dtlsTransport", dtlsTransport.getDebugState())
-            put("transceiver", transceiver.getNodeStats().toJson())
+            put("transceiver", _transceiver.getNodeStats().toJson())
             put("acceptAudio", acceptAudio)
             put("acceptVideo", acceptVideo)
             put("messageTransport", messageTransport.debugState)
@@ -392,15 +430,15 @@ class EndpointK @JvmOverloads constructor(
                 }
             }
             updateStatsOnExpire()
-            transceiver.stop()
-            logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
+            _transceiver.stop()
+            logger.cdebug { _transceiver.getNodeStats().prettyPrint(0) }
             logger.cdebug { bitrateController.debugState.toJSONString() }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
 
             logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
 
-            transceiver.teardown()
+            _transceiver.teardown()
             getMessageTransport()?.close()
             sctpHandler.stop()
             sctpManager?.closeConnection()
@@ -417,5 +455,23 @@ class EndpointK @JvmOverloads constructor(
         outgoingSrtpPacketQueue.close()
 
         logger.info("Expired.")
+    }
+
+    private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
+        /**
+         * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
+         * for every packet and we want to avoid the switch. The conference audio level code must not block.
+         */
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long) =
+            conference.speechActivity.levelChanged(this@EndpointK, level)
+
+        /**
+         * Forward bwe events from the Transceiver.
+         */
+        override fun bandwidthEstimationChanged(newValue: Bandwidth) {
+            logger.cdebug { "Estimated bandwidth is now $newValue" }
+            bitrateController.bandwidthChanged(newValue.bps.toLong())
+            bandwidthProbing.bandwidthEstimationChanged(newValue)
+        }
     }
 }
