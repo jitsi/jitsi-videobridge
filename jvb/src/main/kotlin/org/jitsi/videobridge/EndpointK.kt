@@ -265,8 +265,8 @@ class EndpointK @JvmOverloads constructor(
                     _transceiver.sendPacket(packetInfo)
                 } else {
                     logger.warn("Dropping a packet which was supposed to be accepted:$packet")
-                    return
                 }
+                return
             }
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
