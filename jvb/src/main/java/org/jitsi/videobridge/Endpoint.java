@@ -840,48 +840,11 @@ public abstract class Endpoint
 
     public abstract Transceiver getTransceiver();
 
-    /**
-     * Update accepted media types based on
-     * {@link ChannelShim} permission to receive
-     * media
-     */
-    public void updateAcceptedMediaTypes()
-    {
-        boolean acceptAudio = false;
-        boolean acceptVideo = false;
-        for (ChannelShim channelShim : channelShims)
-        {
-            // The endpoint accepts audio packets (in the sense of accepting
-            // packets from other endpoints being forwarded to it) if it has
-            // an audio channel whose direction allows sending packets.
-            if (channelShim.allowsSendingMedia())
-            {
-                switch (channelShim.getMediaType())
-                {
-                    case AUDIO:
-                        acceptAudio = true;
-                        break;
-                    case VIDEO:
-                        acceptVideo = true;
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-        this.acceptAudio = acceptAudio;
-        this.acceptVideo = acceptVideo;
-    }
+    public abstract void updateAcceptedMediaTypes();
 
     public abstract void updateForceMute();
 
-    /**
-     * Returns how many endpoints this Endpoint is currently forwarding video for
-     */
-    public int numForwardedEndpoints()
-    {
-        return bitrateController.numForwardedEndpoints();
-    }
+    public abstract int numForwardedEndpoints();
 
     /**
      * Enables/disables the given feature, if the endpoint implementation supports it.

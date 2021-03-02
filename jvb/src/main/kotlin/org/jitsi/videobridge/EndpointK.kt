@@ -261,6 +261,28 @@ class EndpointK @JvmOverloads constructor(
         return _transceiver.isReceivingVideo()
     }
 
+    /**
+     * Update accepted media types based on [ChannelShim] permission to receive media
+     */
+    override fun updateAcceptedMediaTypes() {
+        var acceptAudio = false
+        var acceptVideo = false
+        channelShims.forEach { channelShim ->
+            // The endpoint accepts audio packets (in the sense of accepting
+            // packets from other endpoints being forwarded to it) if it has
+            // an audio channel whose direction allows sending packets.
+            if (channelShim.allowsSendingMedia()) {
+                when (channelShim.mediaType) {
+                    MediaType.AUDIO -> acceptAudio = true
+                    MediaType.VIDEO -> acceptVideo = true
+                    else -> Unit
+                }
+            }
+        }
+        this.acceptAudio = acceptAudio
+        this.acceptVideo = acceptVideo
+    }
+
     override fun receivesSsrc(ssrc: Long): Boolean = _transceiver.receivesSsrc(ssrc)
 
     override fun getLastIncomingActivity(): Instant = _transceiver.packetIOActivity.lastIncomingActivityInstant
@@ -274,6 +296,11 @@ class EndpointK @JvmOverloads constructor(
     override fun setSelectedEndpoints(selectedEndpoints: MutableList<String>) {
         bitrateController.setSelectedEndpoints(selectedEndpoints)
     }
+
+    /**
+     * Returns how many endpoints this Endpoint is currently forwarding video for
+     */
+    override fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
 
     override fun setMaxFrameHeight(maxFrameHeight: Int) {
         bitrateController.setMaxFrameHeight(maxFrameHeight)
