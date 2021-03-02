@@ -52,6 +52,7 @@ import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
 import org.json.simple.JSONObject
+import java.lang.IllegalArgumentException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -259,6 +260,39 @@ class EndpointK @JvmOverloads constructor(
     override fun isSendingVideo(): Boolean {
         // The endpoint is sending video if we (the transceiver) are receiving video.
         return _transceiver.isReceivingVideo()
+    }
+
+    /**
+     * Update media direction of {@link ChannelShim}s associated
+     * with this Endpoint.
+     *
+     * When media direction is set to 'sendrecv' JVB will
+     * accept incoming media from endpoint and forward it to
+     * other endpoints in a conference. Other endpoint's media
+     * will also be forwarded to current endpoint.
+     * When media direction is set to 'sendonly' JVB will
+     * NOT accept incoming media from this endpoint (not yet implemented), but
+     * media from other endpoints will be forwarded to this endpoint.
+     * When media direction is set to 'recvonly' JVB will
+     * accept incoming media from this endpoint, but will not forward
+     * other endpoint's media to this endpoint.
+     * When media direction is set to 'inactive' JVB will
+     * neither accept incoming media nor forward media from other endpoints.
+     *
+     * @param type media type.
+     * @param direction desired media direction:
+     *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
+     */
+    @SuppressWarnings("unused") // Used by plugins (Yuri)
+    override fun updateMediaDirection(type: MediaType, direction: String) {
+        when (direction) {
+            "sendrecv", "sendonly", "recvonly", "inactive" -> {
+                channelShims.firstOrNull { it.mediaType == type }?.setDirection(direction)
+            }
+            else -> {
+                throw IllegalArgumentException("Media direction unknown: $direction")
+            }
+        }
     }
 
     /**
