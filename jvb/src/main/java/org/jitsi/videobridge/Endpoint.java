@@ -740,27 +740,7 @@ public abstract class Endpoint
         }
     }
 
-    /**
-     * Handle incoming RTP packets which have been fully processed by the
-     * transceiver's incoming pipeline.
-     * @param packetInfo the packet.
-     */
-    protected void handleIncomingPacket(PacketInfo packetInfo)
-    {
-        packetInfo.setEndpointId(getId());
-        getConference().handleIncomingPacket(packetInfo);
-    }
-
-    /**
-     * @return  the timestamp of the most recently created channel shim.
-     */
-    Instant getMostRecentChannelCreatedTime()
-    {
-        return channelShims.stream()
-            .map(ChannelShim::getCreationTimestamp)
-            .max(Comparator.comparing(Function.identity()))
-            .orElse(ClockUtils.NEVER);
-    }
+    abstract Instant getMostRecentChannelCreatedTime();
 
     public abstract void addChannel(ChannelShim channelShim);
 

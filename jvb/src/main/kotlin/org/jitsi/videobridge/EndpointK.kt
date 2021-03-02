@@ -339,6 +339,24 @@ class EndpointK @JvmOverloads constructor(
         this.acceptVideo = acceptVideo
     }
 
+    /**
+     * Handle incoming RTP packets which have been fully processed by the
+     * transceiver's incoming pipeline.
+     */
+    fun handleIncomingPacket(packetInfo: PacketInfo) {
+        packetInfo.endpointId = id
+        conference.handleIncomingPacket(packetInfo)
+    }
+
+    /**
+     * Return the timestamp of the most recently created [ChannelShim] on this endpoint
+     */
+    override fun getMostRecentChannelCreatedTime(): Instant {
+        return channelShims
+            .map(ChannelShim::getCreationTimestamp)
+            .max() ?: NEVER
+    }
+
     override fun receivesSsrc(ssrc: Long): Boolean = _transceiver.receivesSsrc(ssrc)
 
     override fun getLastIncomingActivity(): Instant = _transceiver.packetIOActivity.lastIncomingActivityInstant
