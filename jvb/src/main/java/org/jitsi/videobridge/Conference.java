@@ -236,17 +236,16 @@ public class Conference
                     // TODO: we can avoid reaching into Videobridge here by merging VideobridgeShim into ConferenceShim
                     long start = System.currentTimeMillis();
                     IQ response = videobridge.handleColibriConferenceIQ(this, request.getRequest());
-                    long end = System.currentTimeMillis() - request.getReceiveTime();
+                    long end = System.currentTimeMillis();
                     long processingDelay = end - start;
-                    request.getProcessingDelayStats().addDelay(processingDelay);
-
                     long totalDelay = end - request.getReceiveTime();
-                    if (totalDelay > 100)
-                    {
-                        logger.warn("Took " + totalDelay + " ms to handle IQ (processing took "
-                                + processingDelay + " ms): " + request.getRequest().toXML());
-                    }
+                    request.getProcessingDelayStats().addDelay(processingDelay);
                     request.getTotalDelayStats().addDelay(totalDelay);
+                    if (processingDelay > 100)
+                    {
+                        logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
+                                + totalDelay + " ms): " + request.getRequest().toXML());
+                    }
                     request.getCallback().invoke(response);
                 }
                 catch (Throwable e)
