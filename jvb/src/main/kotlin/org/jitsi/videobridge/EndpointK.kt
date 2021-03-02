@@ -55,6 +55,7 @@ import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
+import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONObject
 import java.lang.IllegalArgumentException
@@ -287,6 +288,30 @@ class EndpointK @JvmOverloads constructor(
                 updateAcceptedMediaTypes()
             }
         }
+    }
+
+    /**
+     * Sets the remote transport information (ICE candidates, DTLS fingerprints).
+     *
+     * @param transportInfo the XML extension which contains the remote
+     * transport information.
+     */
+    override fun setTransportInfo(transportInfo: IceUdpTransportPacketExtension) {
+        val remoteFingerprints = mutableMapOf<String, String>()
+        val fingerprintExtensions = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension::class.java)
+        fingerprintExtensions.forEach { fingerprintExtension ->
+            if (fingerprintExtension.hash != null && fingerprintExtension.fingerprint != null) {
+                remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
+            } else {
+                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
+            }
+        }
+        dtlsTransport.setRemoteFingerprints(remoteFingerprints)
+        if (fingerprintExtensions.isNotEmpty()) {
+            val setup = fingerprintExtensions.first().setup
+            dtlsTransport.setSetupAttribute(setup)
+        }
+        iceTransport.startConnectivityEstablishment(transportInfo)
     }
 
     override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {

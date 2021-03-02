@@ -639,38 +639,7 @@ public abstract class Endpoint
         });
     }
 
-    /**
-     * Sets the remote transport information (ICE candidates, DTLS fingerprints).
-     *
-     * @param transportInfo the XML extension which contains the remote
-     * transport information.
-     */
-    public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
-    {
-        List<DtlsFingerprintPacketExtension> fingerprintExtensions
-                = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension.class);
-        Map<String, String> remoteFingerprints = new HashMap<>();
-        fingerprintExtensions.forEach(fingerprintExtension -> {
-            if (fingerprintExtension.getHash() != null && fingerprintExtension.getFingerprint() != null)
-            {
-                remoteFingerprints.put(
-                        fingerprintExtension.getHash(),
-                        fingerprintExtension.getFingerprint());
-            }
-            else
-            {
-                logger.info("Ignoring empty DtlsFingerprint extension: " + transportInfo.toXML());
-            }
-        });
-        dtlsTransport.setRemoteFingerprints(remoteFingerprints);
-        if (!fingerprintExtensions.isEmpty())
-        {
-            String setup = fingerprintExtensions.get(0).getSetup();
-            dtlsTransport.setSetupAttribute(setup);
-        }
-
-        iceTransport.startConnectivityEstablishment(transportInfo);
-    }
+    public abstract void setTransportInfo(IceUdpTransportPacketExtension transportInfo);
 
     /**
      * Sets the media sources.
