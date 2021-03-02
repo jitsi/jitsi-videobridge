@@ -529,42 +529,6 @@ public abstract class Endpoint
         sctpSocket = Optional.of(socket);
     }
 
-    protected void acceptSctpConnection(SctpServerSocket sctpServerSocket)
-    {
-        TaskPools.IO_POOL.submit(() -> {
-            // We don't want to block the thread calling
-            // onDtlsHandshakeComplete so run the socket acceptance in an IO
-            // pool thread
-            // FIXME: This runs forever once the socket is closed (
-            // accept never returns true).
-            logger.info("Attempting to establish SCTP socket connection");
-            int attempts = 0;
-            while (!sctpServerSocket.accept())
-            {
-                attempts++;
-                try
-                {
-                    Thread.sleep(100);
-                }
-                catch (InterruptedException e)
-                {
-                    break;
-                }
-
-                if (attempts > 100)
-                {
-                    logger.error("Timed out waiting for SCTP connection from remote side");
-                    break;
-                }
-            }
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("SCTP socket " + sctpServerSocket.hashCode() +
-                    " accepted connection.");
-            }
-        });
-    }
-
     public abstract boolean acceptWebSocket(String password);
 
     protected abstract String getIcePassword();

@@ -58,6 +58,7 @@ import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
+import org.jitsi_modified.sctp4j.SctpServerSocket
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
@@ -288,6 +289,31 @@ class EndpointK @JvmOverloads constructor(
             } else {
                 updateAcceptedMediaTypes()
             }
+        }
+    }
+
+    fun acceptSctpConnection(sctpServerSocket: SctpServerSocket) {
+        TaskPools.IO_POOL.submit {
+            // We don't want to block the thread calling
+            // onDtlsHandshakeComplete so run the socket acceptance in an IO
+            // pool thread
+            // FIXME: This runs forever once the socket is closed (
+            // accept never returns true).
+            logger.info("Attempting to establish SCTP socket connection")
+            var attempts = 0
+            while (!sctpServerSocket.accept()) {
+                attempts++
+                try {
+                    Thread.sleep(100)
+                } catch (e: InterruptedException) {
+                    break
+                }
+                if (attempts > 100) {
+                    logger.error("Timed out waiting for SCTP connection from remote side")
+                    break
+                }
+            }
+            logger.cdebug { "SCTP socket ${sctpServerSocket.hashCode()} accepted connection" }
         }
     }
 
