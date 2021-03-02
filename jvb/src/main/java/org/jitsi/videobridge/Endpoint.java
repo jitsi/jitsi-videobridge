@@ -293,9 +293,7 @@ public abstract class Endpoint
         diagnosticContext.put("endpoint_id", id);
 
         iceTransport = new IceTransport(getId(), iceControlling, logger);
-        setupIceTransport();
         dtlsTransport = new DtlsTransport(logger);
-        setupDtlsTransport();
 
         conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }

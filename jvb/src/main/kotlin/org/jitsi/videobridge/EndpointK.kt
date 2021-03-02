@@ -97,6 +97,8 @@ class EndpointK @JvmOverloads constructor(
 
     init {
         conference.encodingsManager.subscribe(this)
+        setupIceTransport()
+        setupDtlsTransport()
     }
 
     // TODO: Some weirdness here with with a property for reading mediaSources but a function for setting them because
