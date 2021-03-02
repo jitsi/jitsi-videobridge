@@ -255,7 +255,7 @@ class EndpointK @JvmOverloads constructor(
     }
     override fun isSendingVideo(): Boolean {
         // The endpoint is sending video if we (the transceiver) are receiving video.
-        return _transceiver.isReceivingAudio()
+        return _transceiver.isReceivingVideo()
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = _transceiver.receivesSsrc(ssrc)
