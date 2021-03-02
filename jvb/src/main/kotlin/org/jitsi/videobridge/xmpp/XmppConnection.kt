@@ -265,7 +265,7 @@ class XmppConnection : IQListener {
         @JvmStatic
         fun getStatsJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("colibri", colibriDelayStats.toJson())
-            put("colibri_processing", colibriProcessingDelayStats)
+            put("colibri_processing", colibriProcessingDelayStats.toJson())
             put("health", healthDelayStats.toJson())
             put("version", versionDelayStats.toJson())
         }
