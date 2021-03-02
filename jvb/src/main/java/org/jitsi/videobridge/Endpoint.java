@@ -762,36 +762,9 @@ public abstract class Endpoint
             .orElse(ClockUtils.NEVER);
     }
 
-    /**
-     * Adds a channel to this endpoint.
-     * @param channelShim
-     */
-    public void addChannel(ChannelShim channelShim)
-    {
-        if (channelShims.add(channelShim))
-        {
-            updateAcceptedMediaTypes();
-        }
-    }
+    public abstract void addChannel(ChannelShim channelShim);
 
-    /**
-     * Removes a specific {@link ChannelShim} from this endpoint.
-     * @param channelShim
-     */
-    public void removeChannel(ChannelShim channelShim)
-    {
-        if (channelShims.remove(channelShim))
-        {
-            if (channelShims.isEmpty())
-            {
-                expire();
-            }
-            else
-            {
-                updateAcceptedMediaTypes();
-            }
-        }
-    }
+    public abstract void removeChannel(ChannelShim channelShim);
 
     public abstract void updateMediaDirection(MediaType type, String direction);
 

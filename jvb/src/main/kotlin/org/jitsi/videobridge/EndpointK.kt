@@ -263,6 +263,28 @@ class EndpointK @JvmOverloads constructor(
     }
 
     /**
+     * Adds [channelShim] channel to this endpoint.
+     */
+    override fun addChannel(channelShim: ChannelShim) {
+        if (channelShims.add(channelShim)) {
+            updateAcceptedMediaTypes()
+        }
+    }
+
+    /**
+     * Removes a specific [ChannelShim] from this endpoint.
+     */
+    override fun removeChannel(channelShim: ChannelShim) {
+        if (channelShims.remove(channelShim)) {
+            if (channelShims.isEmpty()) {
+                expire()
+            } else {
+                updateAcceptedMediaTypes()
+            }
+        }
+    }
+
+    /**
      * Update media direction of {@link ChannelShim}s associated
      * with this Endpoint.
      *
