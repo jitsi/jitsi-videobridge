@@ -126,9 +126,6 @@ class EndpointK @JvmOverloads constructor(
                 if (looksLikeDtls(data, offset, length)) {
                     // DTLS transport is responsible for making its own copy, because it will manage its own
                     // buffers
-
-                    // DTLS transport is responsible for making its own copy, because it will manage its own
-                    // buffers
                     dtlsTransport.dtlsDataReceived(data, offset, length)
                 } else {
                     val copy = ByteBufferPool.getBuffer(
