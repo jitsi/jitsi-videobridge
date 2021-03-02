@@ -589,24 +589,7 @@ public abstract class Endpoint
         }, 30, TimeUnit.SECONDS);
     }
 
-    /**
-     * Checks whether a WebSocket connection with a specific password string
-     * should be accepted for this {@link Endpoint}.
-     * @param password the
-     * @return {@code true} iff the password matches.
-     */
-    public boolean acceptWebSocket(String password)
-    {
-        String icePassword = getIcePassword();
-        if (!icePassword.equals(password))
-        {
-            logger.warn("Incoming web socket request with an invalid password. " +
-                    "Expected: " + icePassword + ", received " + password);
-            return false;
-        }
-
-        return true;
-    }
+    public abstract boolean acceptWebSocket(String password);
 
     protected abstract String getIcePassword();
     protected abstract void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints);

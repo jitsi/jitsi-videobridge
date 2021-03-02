@@ -291,6 +291,23 @@ class EndpointK @JvmOverloads constructor(
     }
 
     /**
+     * Checks whether a WebSocket connection with a specific password string
+     * should be accepted for this {@link Endpoint}.
+     * @param password the
+     * @return {@code true} iff the password matches.
+     */
+    override fun acceptWebSocket(password: String): Boolean {
+        if (icePassword != password) {
+            logger.warn(
+                "Incoming web socket request with an invalid password. " +
+                    "Expected: $icePassword received $password"
+            )
+            return false
+        }
+        return true
+    }
+
+    /**
      * @return the password of the ICE Agent associated with this
      * {@link Endpoint}.
      */
