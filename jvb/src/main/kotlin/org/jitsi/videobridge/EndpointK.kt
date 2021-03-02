@@ -301,6 +301,24 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
+    override fun effectiveVideoConstraintsChanged(
+        oldEffectiveConstraints: MutableMap<String, VideoConstraints>,
+        newEffectiveConstraints: MutableMap<String, VideoConstraints>
+    ) {
+        val removedEndpoints = oldEffectiveConstraints.keys.filter { it in newEffectiveConstraints.keys }
+
+        // Sources that "this" endpoint no longer receives.
+        for (removedEpId in removedEndpoints) {
+            // Remove ourself as a receiver from that endpoint
+            conference.getEndpoint(removedEpId)?.removeReceiver(id)
+        }
+
+        // Added or updated
+        newEffectiveConstraints.forEach { (epId, effectiveConstraints) ->
+            conference.getEndpoint(epId)?.addReceiver(id, effectiveConstraints)
+        }
+    }
+
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (mediaSources.isEmpty()) {

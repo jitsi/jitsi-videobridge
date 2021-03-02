@@ -409,33 +409,9 @@ public abstract class Endpoint
         sendVideoConstraints(this.maxReceiverVideoConstraints);
     }
 
-    protected void effectiveVideoConstraintsChanged(
+    protected abstract void effectiveVideoConstraintsChanged(
         Map<String, VideoConstraints> oldEffectiveConstraints,
-        Map<String, VideoConstraints> newEffectiveConstraints)
-    {
-        Set<String> removedEndpoints = new HashSet<>(oldEffectiveConstraints.keySet());
-        removedEndpoints.removeAll(newEffectiveConstraints.keySet());
-
-        // Sources that "this" endpoint no longer receives.
-        for (String id : removedEndpoints)
-        {
-            AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
-            if (senderEndpoint != null)
-            {
-                senderEndpoint.removeReceiver(getId());
-            }
-        }
-
-        // Added or updated.
-        newEffectiveConstraints.forEach((endpointId, effectiveConstraints) -> {
-            AbstractEndpoint senderEndpoint = getConference().getEndpoint(endpointId);
-            if (senderEndpoint != null)
-            {
-                senderEndpoint.addReceiver(getId(), effectiveConstraints);
-            }
-        });
-
-    }
+        Map<String, VideoConstraints> newEffectiveConstraints);
 
     public abstract void createSctpConnection();
 
