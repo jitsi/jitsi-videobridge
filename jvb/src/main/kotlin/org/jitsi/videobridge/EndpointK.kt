@@ -47,6 +47,7 @@ import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
+import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
@@ -278,6 +279,16 @@ class EndpointK @JvmOverloads constructor(
         // The endpoint is sending video if we (the transceiver) are receiving video.
         return _transceiver.isReceivingVideo()
     }
+
+    /**
+     * Notifies this [Endpoint] that the ordered list of last-n endpoints has changed
+     */
+    override fun lastNEndpointsChanged() = bitrateController.endpointOrderingChanged()
+
+    /**
+     * Sends a specific msg to this endpoint over its bridge channel
+     */
+    override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     /**
      * Adds [channelShim] channel to this endpoint.

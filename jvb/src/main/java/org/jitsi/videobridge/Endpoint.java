@@ -354,26 +354,7 @@ public abstract class Endpoint
     /**
      * Notifies this {@code Endpoint} that the ordered list of {@code Endpoint}s changed.
      */
-    void lastNEndpointsChanged()
-    {
-        bitrateController.endpointOrderingChanged();
-    }
-
-    /**
-     * Sends a specific <tt>String</tt> <tt>msg</tt> over the data channel of
-     * this <tt>Endpoint</tt>.
-     *
-     * @param msg message text to send.
-     */
-    @Override
-    public void sendMessage(BridgeChannelMessage msg)
-    {
-        EndpointMessageTransport messageTransport = getMessageTransport();
-        if (messageTransport != null)
-        {
-            messageTransport.sendMessage(msg);
-        }
-    }
+    abstract void lastNEndpointsChanged();
 
     /**
      * {@inheritDoc}
