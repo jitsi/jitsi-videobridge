@@ -51,7 +51,11 @@ import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
+import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
+import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
+import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
+import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONObject
 import java.lang.IllegalArgumentException
 import java.time.Clock
@@ -283,6 +287,25 @@ class EndpointK @JvmOverloads constructor(
                 updateAcceptedMediaTypes()
             }
         }
+    }
+
+    override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {
+        val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
+        iceTransport.describe(iceUdpTransportPacketExtension)
+        dtlsTransport.describe(iceUdpTransportPacketExtension)
+        colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
+            colibriWebsocketService.getColibriWebSocketUrl(
+                conference.id,
+                id,
+                iceTransport.icePassword
+            )?.let { wsUrl ->
+                val wsPacketExtension = WebSocketPacketExtension(wsUrl)
+                iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
+            }
+        }
+
+        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
+        channelBundle.transport = iceUdpTransportPacketExtension
     }
 
     /**

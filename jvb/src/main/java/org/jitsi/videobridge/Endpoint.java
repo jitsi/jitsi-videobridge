@@ -673,33 +673,6 @@ public abstract class Endpoint
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
-    {
-        IceUdpTransportPacketExtension iceUdpTransportPacketExtension = new IceUdpTransportPacketExtension();
-        iceTransport.describe(iceUdpTransportPacketExtension);
-        dtlsTransport.describe(iceUdpTransportPacketExtension);
-        ColibriWebSocketService colibriWebSocketService = ColibriWebSocketServiceSupplierKt.singleton().get();
-        if (colibriWebSocketService != null)
-        {
-            String wsUrl = colibriWebSocketService.getColibriWebSocketUrl(
-                    getConference().getID(),
-                    getId(),
-                    iceTransport.getIcePassword()
-            );
-            if (wsUrl != null)
-            {
-                WebSocketPacketExtension wsPacketExtension = new WebSocketPacketExtension(wsUrl);
-                iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension);
-            }
-        }
-        logger.debug(() -> "Transport description:\n " + iceUdpTransportPacketExtension.toXML());
-        channelBundle.setTransport(iceUdpTransportPacketExtension);
-    }
-
-    /**
      * Sets the media sources.
      * @param mediaSources
      */
