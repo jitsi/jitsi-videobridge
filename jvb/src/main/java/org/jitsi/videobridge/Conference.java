@@ -17,7 +17,6 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.rtp.*;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
@@ -235,13 +234,19 @@ public class Conference
                 try
                 {
                     // TODO: we can avoid reaching into Videobridge here by merging VideobridgeShim into ConferenceShim
+                    long start = System.currentTimeMillis();
                     IQ response = videobridge.handleColibriConferenceIQ(this, request.getRequest());
-                    long delay = System.currentTimeMillis() - request.getReceiveTime();
-                    if (delay > 100)
+                    long end = System.currentTimeMillis() - request.getReceiveTime();
+                    long processingDelay = end - start;
+                    request.getProcessingDelayStats().addDelay(processingDelay);
+
+                    long totalDelay = end - request.getReceiveTime();
+                    if (totalDelay > 100)
                     {
-                        logger.warn("Took " + delay + " ms to handle IQ: " + request.getRequest().toXML());
+                        logger.warn("Took " + totalDelay + " ms to handle IQ (processing took "
+                                + processingDelay + " ms): " + request.getRequest().toXML());
                     }
-                    request.getDelayStats().addDelay(delay);
+                    request.getTotalDelayStats().addDelay(totalDelay);
                     request.getCallback().invoke(response);
                 }
                 catch (Throwable e)

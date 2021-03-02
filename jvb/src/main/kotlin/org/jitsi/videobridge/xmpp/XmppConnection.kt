@@ -182,7 +182,7 @@ class XmppConnection : IQListener {
             is ColibriConferenceIQ -> {
                 // Colibri IQs are handled async.
                 handler.colibriConferenceIqReceived(
-                    ColibriRequest(iq, colibriDelayStats) { response ->
+                    ColibriRequest(iq, colibriDelayStats, colibriProcessingDelayStats) { response ->
                         mucClient.sendStanza(response.setResponseTo(iq))
                     }
                 )
@@ -230,9 +230,15 @@ class XmppConnection : IQListener {
          */
         val request: ColibriConferenceIQ,
         /**
-         * The [DelayStats] instance which is to be updated with the time it took to handle the request.
+         * The [DelayStats] instance which is to be updated with the total time it took to handle the request
+         * (including queueing delay).
          */
-        val delayStats: DelayStats,
+        val totalDelayStats: DelayStats,
+        /**
+         * The [DelayStats] instance which is to be updated with the time it took to process the request once it was
+         * picked from the queue.
+         */
+        val processingDelayStats: DelayStats,
         val receiveTime: Long = System.currentTimeMillis(),
         /**
          * The callback to use to send the response.
@@ -251,6 +257,7 @@ class XmppConnection : IQListener {
 
         private val delayThresholds = longArrayOf(5, 50, 100, 1000)
 
+        private val colibriProcessingDelayStats = DelayStats(delayThresholds)
         private val colibriDelayStats = DelayStats(delayThresholds)
         private val healthDelayStats = DelayStats(delayThresholds)
         private val versionDelayStats = DelayStats(delayThresholds)
@@ -258,6 +265,7 @@ class XmppConnection : IQListener {
         @JvmStatic
         fun getStatsJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("colibri", colibriDelayStats.toJson())
+            put("colibri_processing", colibriProcessingDelayStats)
             put("health", healthDelayStats.toJson())
             put("version", versionDelayStats.toJson())
         }
