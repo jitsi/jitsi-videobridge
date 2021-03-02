@@ -456,78 +456,7 @@ public abstract class Endpoint
         }
     }
 
-    /**
-     * TODO Brian
-     */
-    public void createSctpConnection()
-    {
-        logger.debug(() -> "Creating SCTP mananger");
-        // Create the SctpManager and provide it a method for sending SCTP data
-        this.sctpManager = new SctpManager(
-            (data, offset, length) -> {
-                dtlsTransport.sendDtlsData(data, offset, length);
-                return 0;
-            },
-            logger
-        );
-        sctpHandler.setSctpManager(sctpManager);
-        // NOTE(brian): as far as I know we always act as the 'server' for sctp
-        // connections, but if not we can make which type we use dynamic
-        SctpServerSocket socket = sctpManager.createServerSocket();
-        socket.eventHandler = new SctpSocket.SctpSocketEventHandler()
-        {
-            @Override
-            public void onReady()
-            {
-                logger.info("SCTP connection is ready, creating the Data channel stack");
-                dataChannelStack
-                    = new DataChannelStack(
-                        (data, sid, ppid) -> socket.send(data, true, sid, ppid),
-                        logger
-                    );
-                dataChannelStack.onDataChannelStackEvents(dataChannel ->
-                {
-                    logger.info("Remote side opened a data channel.");
-                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                });
-                dataChannelHandler.setDataChannelStack(dataChannelStack);
-                if (OPEN_DATA_LOCALLY)
-                {
-                    logger.info("Will open the data channel.");
-                    DataChannel dataChannel
-                        = dataChannelStack.createDataChannel(
-                            DataChannelProtocolConstants.RELIABLE,
-                            0,
-                            0,
-                            0,
-                            "default");
-                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                    dataChannel.open();
-                }
-                else
-                {
-                    logger.info("Will wait for the remote side to open the data channel.");
-                }
-            }
-
-            @Override
-            public void onDisconnected()
-            {
-                logger.info("SCTP connection is disconnected.");
-            }
-        };
-        socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
-            // We assume all data coming over SCTP will be datachannel data
-            DataChannelPacket dcp = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
-            // Post the rest of the task here because the current context is
-            // holding a lock inside the SctpSocket which can cause a deadlock
-            // if two endpoints are trying to send datachannel messages to one
-            // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
-        };
-        socket.listen();
-        sctpSocket = Optional.of(socket);
-    }
+    public abstract void createSctpConnection();
 
     public abstract boolean acceptWebSocket(String password);
 
