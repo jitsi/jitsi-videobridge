@@ -43,11 +43,13 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.cc.BandwidthProbing
+import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
 import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.ChannelShim
@@ -296,6 +298,17 @@ class EndpointK @JvmOverloads constructor(
             } else {
                 updateAcceptedMediaTypes()
             }
+        }
+    }
+
+    override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
+        // Note that it's up to the client to respect these constraints.
+        if (mediaSources.isEmpty()) {
+            logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no streams." }
+        } else {
+            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(maxVideoConstraints.maxHeight)
+            logger.cdebug { "Sender constraints changed: ${senderVideoConstraintsMessage.toJson()}" }
+            sendMessage(senderVideoConstraintsMessage)
         }
     }
 

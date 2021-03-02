@@ -437,25 +437,6 @@ public abstract class Endpoint
 
     }
 
-    @Override
-    protected void sendVideoConstraints(@NotNull VideoConstraints maxVideoConstraints)
-    {
-        // Note that it's up to the client to respect these constraints.
-        if (ArrayUtils.isNullOrEmpty(getMediaSources()))
-        {
-            logger.debug("Suppressing sending a SenderVideoConstraints message, endpoint has no streams.");
-        }
-        else
-        {
-            SenderVideoConstraintsMessage senderVideoConstraintsMessage
-                    = new SenderVideoConstraintsMessage(maxVideoConstraints.getMaxHeight());
-
-            logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
-
-            sendMessage(senderVideoConstraintsMessage);
-        }
-    }
-
     public abstract void createSctpConnection();
 
     public abstract boolean acceptWebSocket(String password);
