@@ -330,26 +330,7 @@ public abstract class Endpoint
 
     protected abstract void setupDtlsTransport();
 
-    protected boolean doSendSrtp(PacketInfo packetInfo)
-    {
-        if (PacketExtensionsKt.looksLikeRtp(packetInfo.getPacket()))
-        {
-            rtpPacketDelayStats.addPacket(packetInfo);
-            bridgeJitterStats.packetSent(packetInfo);
-        }
-        else if (PacketExtensionsKt.looksLikeRtcp(packetInfo.getPacket()))
-        {
-            rtcpPacketDelayStats.addPacket(packetInfo);
-        }
-        packetInfo.sent();
-        iceTransport.send(
-            packetInfo.getPacket().buffer,
-            packetInfo.getPacket().offset,
-            packetInfo.getPacket().length
-        );
-        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
-        return true;
-    }
+    protected abstract boolean doSendSrtp(PacketInfo packetInfo);
 
     /**
      * Notifies this {@code Endpoint} that the ordered list of {@code Endpoint}s changed.

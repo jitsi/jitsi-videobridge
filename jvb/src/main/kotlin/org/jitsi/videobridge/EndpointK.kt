@@ -35,6 +35,8 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.looksLikeRtcp
+import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
@@ -278,6 +280,20 @@ class EndpointK @JvmOverloads constructor(
     override fun isSendingVideo(): Boolean {
         // The endpoint is sending video if we (the transceiver) are receiving video.
         return _transceiver.isReceivingVideo()
+    }
+
+    override fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+        if (packetInfo.packet.looksLikeRtp()) {
+            rtpPacketDelayStats.addPacket(packetInfo)
+            bridgeJitterStats.packetSent(packetInfo)
+        } else if (packetInfo.packet.looksLikeRtcp()) {
+            rtcpPacketDelayStats.addPacket(packetInfo)
+        }
+
+        packetInfo.sent()
+        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
+        return true
     }
 
     /**
