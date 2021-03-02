@@ -43,6 +43,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.cc.BandwidthProbing
+import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.shim.ChannelShim
@@ -58,7 +59,6 @@ import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONObject
-import java.lang.IllegalArgumentException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -286,6 +286,29 @@ class EndpointK @JvmOverloads constructor(
                 expire()
             } else {
                 updateAcceptedMediaTypes()
+            }
+        }
+    }
+
+    /**
+     * @return the password of the ICE Agent associated with this
+     * {@link Endpoint}.
+     */
+    override fun getIcePassword(): String = iceTransport.icePassword
+
+    /**
+     * Sends a message to this {@link Endpoint} in order to notify it that the set of endpoints for which the bridge
+     * is sending video has changed.
+     *
+     * @param forwardedEndpoints the collection of forwarded endpoints.
+     */
+    override fun sendForwardedEndpointsMessage(forwardedEndpoints: MutableCollection<String>) {
+        val msg = ForwardedEndpointsMessage(forwardedEndpoints)
+        TaskPools.IO_POOL.submit {
+            try {
+                sendMessage(msg)
+            } catch (t: Throwable) {
+                logger.warn("Failed to send message:", t)
             }
         }
     }

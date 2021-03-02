@@ -608,36 +608,8 @@ public abstract class Endpoint
         return true;
     }
 
-    /**
-     * @return the password of the ICE Agent associated with this
-     * {@link Endpoint}.
-     */
-    protected String getIcePassword()
-    {
-        return iceTransport.getIcePassword();
-    }
-
-    /**
-     * Sends a message to this {@link Endpoint} in order to notify it that the set of endpoints for which the bridge
-     * is sending video has changed.
-     *
-     * @param forwardedEndpoints the collection of forwarded endpoints.
-     */
-    protected void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints)
-    {
-        ForwardedEndpointsMessage msg = new ForwardedEndpointsMessage(forwardedEndpoints);
-
-        TaskPools.IO_POOL.submit(() -> {
-            try
-            {
-                sendMessage(msg);
-            }
-            catch (Exception e)
-            {
-                logger.warn("Failed to send a message: ", e);
-            }
-        });
-    }
+    protected abstract String getIcePassword();
+    protected abstract void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints);
 
     public abstract void setTransportInfo(IceUdpTransportPacketExtension transportInfo);
 
