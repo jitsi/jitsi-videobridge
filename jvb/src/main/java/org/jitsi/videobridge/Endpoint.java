@@ -565,30 +565,6 @@ public abstract class Endpoint
         });
     }
 
-    /**
-     * Schedule a timeout to fire log a message and track a stat if we don't
-     * have an endpoint message transport connected within the timeout.
-     */
-    protected void scheduleEndpointMessageTransportTimeout()
-    {
-        TaskPools.SCHEDULED_POOL.schedule(() -> {
-            if (!isExpired()) {
-                EndpointMessageTransport t = getMessageTransport();
-                if (t != null)
-                {
-                    if (!t.isConnected())
-                    {
-                        logger.error("EndpointMessageTransport still not connected.");
-                        getConference()
-                            .getVideobridge()
-                            .getStatistics()
-                            .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
-                    }
-                }
-            }
-        }, 30, TimeUnit.SECONDS);
-    }
-
     public abstract boolean acceptWebSocket(String password);
 
     protected abstract String getIcePassword();

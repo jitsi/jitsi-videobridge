@@ -63,6 +63,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.function.Supplier
+import java.util.concurrent.TimeUnit
 
 class EndpointK @JvmOverloads constructor(
     id: String,
@@ -288,6 +289,25 @@ class EndpointK @JvmOverloads constructor(
                 updateAcceptedMediaTypes()
             }
         }
+    }
+
+    /**
+     * Schedule a timeout to fire log a message and track a stat if we don't
+     * have an endpoint message transport connected within the timeout.
+     */
+    fun scheduleEndpointMessageTransportTimeout() {
+        TaskPools.SCHEDULED_POOL.schedule(
+            {
+                if (!isExpired) {
+                    if (!messageTransport.isConnected) {
+                        logger.error("EndpointMessageTransport still not connected.")
+                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.incrementAndGet()
+                    }
+                }
+            },
+            30,
+            TimeUnit.SECONDS
+        )
     }
 
     /**
