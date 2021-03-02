@@ -893,25 +893,13 @@ public abstract class Endpoint
 
     public abstract boolean isFeatureEnabled(EndpointDebugFeatures feature);
 
-    public boolean isOversending()
-    {
-        return bitrateController.isOversending();
-    }
+    public abstract boolean isOversending();
 
-    void setSelectedEndpoints(List<String> selectedEndpoints)
-    {
-        bitrateController.setSelectedEndpoints(selectedEndpoints);
-    }
+    abstract void setSelectedEndpoints(List<String> selectedEndpoints);
 
-    void setMaxFrameHeight(int maxFrameHeight)
-    {
-        bitrateController.setMaxFrameHeight(maxFrameHeight);
-    }
+    abstract void setMaxFrameHeight(int maxFrameHeight);
 
-    void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message)
-    {
-        bitrateController.setBandwidthAllocationSettings(message);
-    }
+    abstract void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message);
 
     /**
      * A node which can be placed in the pipeline to cache Data channel packets

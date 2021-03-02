@@ -43,6 +43,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.cc.BandwidthProbing
+import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
@@ -267,6 +268,20 @@ class EndpointK @JvmOverloads constructor(
     override fun requestKeyframe() = _transceiver.requestKeyFrame()
 
     override fun requestKeyframe(mediaSsrc: Long) = _transceiver.requestKeyFrame(mediaSsrc)
+
+    override fun isOversending(): Boolean = bitrateController.isOversending()
+
+    override fun setSelectedEndpoints(selectedEndpoints: MutableList<String>) {
+        bitrateController.setSelectedEndpoints(selectedEndpoints)
+    }
+
+    override fun setMaxFrameHeight(maxFrameHeight: Int) {
+        bitrateController.setMaxFrameHeight(maxFrameHeight)
+    }
+
+    override fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
+        bitrateController.setBandwidthAllocationSettings(message)
+    }
 
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
