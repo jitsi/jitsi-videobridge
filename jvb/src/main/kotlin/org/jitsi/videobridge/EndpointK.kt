@@ -301,6 +301,20 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
+    // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
+    override fun endpointMessageTransportConnected() {
+        sendVideoConstraints(this.maxReceiverVideoConstraints)
+    }
+
+    /**
+     * Handle a DTLS app packet (that is, a packet of some other protocol sent
+     * over DTLS) which has just been received.
+     */
+    fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) {
+        // TODO(brian): change sctp handler to take buf, off, len
+        sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
+    }
+
     override fun effectiveVideoConstraintsChanged(
         oldEffectiveConstraints: MutableMap<String, VideoConstraints>,
         newEffectiveConstraints: MutableMap<String, VideoConstraints>

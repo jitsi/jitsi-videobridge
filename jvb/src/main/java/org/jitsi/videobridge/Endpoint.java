@@ -394,20 +394,7 @@ public abstract class Endpoint
 
     public abstract double getRtt();
 
-    /**
-     * Handle a DTLS app packet (that is, a packet of some other protocol sent
-     * over DTLS) which has just been received.
-     */
-    protected void dtlsAppPacketReceived(byte[] data, int off, int len)
-    {
-        //TODO(brian): change sctp handler to take buf, off, len
-        sctpHandler.processPacket(new PacketInfo(new UnparsedPacket(data, off, len)));
-    }
-
-    public void endpointMessageTransportConnected()
-    {
-        sendVideoConstraints(this.maxReceiverVideoConstraints);
-    }
+    public abstract void endpointMessageTransportConnected();
 
     protected abstract void effectiveVideoConstraintsChanged(
         Map<String, VideoConstraints> oldEffectiveConstraints,
