@@ -51,6 +51,7 @@ import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
+import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.json.simple.JSONObject
 import java.lang.IllegalArgumentException
 import java.time.Clock
@@ -314,6 +315,29 @@ class EndpointK @JvmOverloads constructor(
             else -> {
                 throw IllegalArgumentException("Media direction unknown: $direction")
             }
+        }
+    }
+
+    /**
+     * Re-creates this endpoint's media sources based on the sources
+     * and source groups that have been signaled.
+     */
+    override fun recreateMediaSources() {
+        val videoChannels = channelShims.filter { c -> c.mediaType == MediaType.VIDEO }
+
+        val sources = videoChannels
+            .mapNotNull(ChannelShim::getSources)
+            .flatten()
+            .toList()
+
+        val sourceGroups = videoChannels
+            .mapNotNull(ChannelShim::getSourceGroups)
+            .flatten()
+            .toList()
+
+        if (sources.isNotEmpty() || sourceGroups.isNotEmpty()) {
+            val mediaSources = MediaSourceFactory.createMediaSources(sources, sourceGroups)
+            setMediaSources(mediaSources)
         }
     }
 

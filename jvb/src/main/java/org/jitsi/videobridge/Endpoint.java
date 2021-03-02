@@ -705,41 +705,6 @@ public abstract class Endpoint
      */
     protected abstract void setMediaSources(MediaSourceDesc[] mediaSources);
 
-    /**
-     * Re-creates this endpoint's media sources based on the sources
-     * and source groups that have been signaled.
-     */
-    @Override
-    public void recreateMediaSources()
-    {
-        final Supplier<Stream<ChannelShim>> videoChannels = () -> channelShims
-            .stream()
-            .filter(c -> MediaType.VIDEO.equals(c.getMediaType()));
-
-        final List<SourcePacketExtension> sources = videoChannels
-            .get()
-            .map(ChannelShim::getSources)
-            .filter(Objects::nonNull)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toList());
-
-        final List<SourceGroupPacketExtension> sourceGroups = videoChannels
-            .get()
-            .map(ChannelShim::getSourceGroups)
-            .filter(Objects::nonNull)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toList());
-
-        if (!sources.isEmpty() || !sourceGroups.isEmpty())
-        {
-            MediaSourceDesc[] mediaSources =
-                MediaSourceFactory.createMediaSources(
-                    sources,
-                    sourceGroups);
-            setMediaSources(mediaSources);
-        }
-    }
-
     abstract Instant getMostRecentChannelCreatedTime();
 
     public abstract void addChannel(ChannelShim channelShim);
