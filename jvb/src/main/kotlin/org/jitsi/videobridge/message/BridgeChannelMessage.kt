@@ -28,7 +28,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
 import org.jitsi.utils.ResettableLazy
-import org.jitsi.utils.observableWhenChanged
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
