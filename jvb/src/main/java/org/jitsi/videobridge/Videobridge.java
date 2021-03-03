@@ -411,7 +411,7 @@ public class Videobridge
 
         if (conferenceId == null)
         {
-            return createConference(conferenceIq.getName(), VideobridgeShim.parseGid(conferenceIq.getGID()));
+            return createConference(conferenceIq.getName(), ColibriUtil.parseGid(conferenceIq.getGID()));
         }
         else
         {

@@ -26,16 +26,9 @@ import java.util.*;
 
 import static org.jitsi.videobridge.Conference.GID_NOT_SET;
 
-/**
- * Handles Colibri-related logic for a {@link Videobridge}, e.g. handles
- * incoming Colibri requests.
- *
- * @author Brian Baldino
- * @author Boris Grozev
- */
-public class VideobridgeShim
+public class ColibriUtil
 {
-    private static final Logger logger = new LoggerImpl(VideobridgeShim.class.getName());
+    private static final Logger logger = new LoggerImpl(ColibriUtil.class.getName());
 
     /**
      * This method collects all of the channel bundle IDs referenced in the
@@ -227,7 +220,7 @@ public class VideobridgeShim
     {
         return
                 content.getChannels().stream()
-                        .filter(VideobridgeShim::isOctoChannel)
+                        .filter(ColibriUtil::isOctoChannel)
                         .findAny().orElse(null);
     }
 
@@ -270,4 +263,5 @@ public class VideobridgeShim
         return gid;
     }
 
+    private ColibriUtil() {}
 }

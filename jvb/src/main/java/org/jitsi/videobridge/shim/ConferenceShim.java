@@ -390,7 +390,7 @@ public class ConferenceShim
 
             try
             {
-                VideobridgeShim.processChannels(contentIQ.getChannels(), contentShim)
+                ColibriUtil.processChannels(contentIQ.getChannels(), contentShim)
                         .forEach(responseContentIQ::addChannel);
             }
             catch (IqProcessingException e)
@@ -400,7 +400,7 @@ public class ConferenceShim
             }
 
             // We want to handle the two Octo channels together.
-            ColibriConferenceIQ.Channel octoChannel = VideobridgeShim.findOctoChannel(contentIQ);
+            ColibriConferenceIQ.Channel octoChannel = ColibriUtil.findOctoChannel(contentIQ);
             if (octoChannel != null)
             {
                 if (MediaType.VIDEO.equals(contentType))
@@ -413,13 +413,13 @@ public class ConferenceShim
                 }
 
                 ColibriConferenceIQ.OctoChannel octoChannelResponse = new ColibriConferenceIQ.OctoChannel();
-                octoChannelResponse.setID(VideobridgeShim.getOctoChannelId(contentType));
+                octoChannelResponse.setID(ColibriUtil.getOctoChannelId(contentType));
                 responseContentIQ.addChannel(octoChannelResponse);
             }
 
             try
             {
-                VideobridgeShim.processSctpConnections(contentIQ.getSctpConnections(), contentShim)
+                ColibriUtil.processSctpConnections(contentIQ.getSctpConnections(), contentShim)
                         .forEach(responseContentIQ::addSctpConnection);
             }
             catch (IqProcessingException e)
@@ -471,7 +471,7 @@ public class ConferenceShim
             endpoint.setTransportInfo(transportIq);
         }
 
-        describeChannelBundles(responseConferenceIQ, VideobridgeShim.getAllSignaledChannelBundleIds(conferenceIQ));
+        describeChannelBundles(responseConferenceIQ, ColibriUtil.getAllSignaledChannelBundleIds(conferenceIQ));
 
         // Update the endpoint information of Videobridge with the endpoint
         // information of the IQ.
