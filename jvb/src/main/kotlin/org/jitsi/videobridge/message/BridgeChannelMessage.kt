@@ -261,10 +261,9 @@ class ReceiverVideoConstraintMessage(val maxFrameHeight: Int) : BridgeChannelMes
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class DominantSpeakerMessage @JvmOverloads constructor(
-    dominantSpeakerEndpoint: String,
+    val dominantSpeakerEndpoint: String,
     val previousSpeakers: List<String>? = null
 ) : BridgeChannelMessage(TYPE) {
-    var dominantSpeakerEndpoint: String by observableWhenChanged(dominantSpeakerEndpoint) { -> resetJsonCache() }
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
     }

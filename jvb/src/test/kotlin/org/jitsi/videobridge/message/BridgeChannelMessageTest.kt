@@ -109,6 +109,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.otherFields["other_field1"] shouldBe "other_value1"
             parsed.otherFields["other_field2"] shouldBe 97
 
+            endpointsMessage.from = "new"
+            (parse(endpointsMessage.toJson()) as EndpointMessage).from shouldBe "new"
+
             context("parsing") {
                 val parsed2 = parse(ENDPOINT_MESSAGE)
                 parsed2 as EndpointMessage
@@ -129,14 +132,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed as DominantSpeakerMessage
             parsed.dominantSpeakerEndpoint shouldBe "d"
             parsed.previousSpeakers shouldBe listOf("p1", "p2")
-
-            original.dominantSpeakerEndpoint = "new"
-            original.dominantSpeakerEndpoint shouldBe "new"
-            val parsed2 = parse(original.toJson())
-            parsed2.shouldBeInstanceOf<DominantSpeakerMessage>()
-            parsed2 as DominantSpeakerMessage
-            parsed2.dominantSpeakerEndpoint shouldBe "new"
-            parsed2.previousSpeakers shouldBe listOf("p1", "p2")
         }
 
         context("serializing and parsing ServerHello") {
@@ -261,7 +256,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         xcontext("Serializing performance") {
-            val m = DominantSpeakerMessage("x")
             val times = 1_000_000
 
             val objectMapper = ObjectMapper()
@@ -286,8 +280,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             fun runTest(f: (DominantSpeakerMessage) -> String): Long {
                 val start = System.currentTimeMillis()
                 for (i in 0..times) {
-                    m.dominantSpeakerEndpoint = i.toString()
-                    f(m)
+                    f(DominantSpeakerMessage(i.toString()))
                 }
                 val end = System.currentTimeMillis()
 
