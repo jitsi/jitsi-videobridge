@@ -397,7 +397,7 @@ public class Videobridge
         }
 
         // It is now the responsibility of Conference to send a response.
-        conference.enqueueColibriRequest(request);
+        conference.getShim().enqueueColibriRequest(request);
     }
 
     private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)

@@ -25,15 +25,11 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.util.*;
-import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -167,8 +163,6 @@ public class Conference
     @NotNull
     private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
-    private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
-
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
@@ -224,43 +218,6 @@ public class Conference
         videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
-
-        colibriQueue = new PacketQueue<>(
-            100,
-            true,
-            "colibri-queue-" + id,
-            request ->
-            {
-                try
-                {
-                    // TODO: we can avoid reaching into Videobridge here by merging VideobridgeShim into ConferenceShim
-                    long start = System.currentTimeMillis();
-                    IQ response = getShim().handleColibriConferenceIQ(request.getRequest());
-                    long end = System.currentTimeMillis();
-                    long processingDelay = end - start;
-                    long totalDelay = end - request.getReceiveTime();
-                    request.getProcessingDelayStats().addDelay(processingDelay);
-                    request.getTotalDelayStats().addDelay(totalDelay);
-                    if (processingDelay > 100)
-                    {
-                        logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                                + totalDelay + " ms): " + request.getRequest().toXML());
-                    }
-                    request.getCallback().invoke(response);
-                }
-                catch (Throwable e)
-                {
-                    logger.warn("Failed to handle colibri request: ", e);
-                    request.getCallback().invoke(
-                            IQUtils.createError(
-                                    request.getRequest(),
-                                    XMPPError.Condition.internal_server_error,
-                                    e.getMessage()));
-                }
-                return true;
-            },
-            TaskPools.IO_POOL
-        );
     }
 
     /**
@@ -282,11 +239,6 @@ public class Conference
         {
             return new NoOpDiagnosticContext();
         }
-    }
-
-    public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
-    {
-        colibriQueue.add(request);
     }
 
     /**
@@ -533,7 +485,7 @@ public class Conference
 
         logger.info("Expiring.");
 
-        colibriQueue.close();
+        shim.close();
 
         epConnectionStatusMonitor.stop();
 
