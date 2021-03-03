@@ -323,6 +323,7 @@ class EndpointK @JvmOverloads constructor(
             }
             // We haven't seen any activity yet. If this continues ICE will
             // eventually fail (which is handled above).
+            return false
         }
         if (Duration.between(lastActivity, now) > maxExpireTimeFromChannelShims) {
             logger.info("Allowing to expire because of no activity in over $maxExpireTimeFromChannelShims")
