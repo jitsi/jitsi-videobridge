@@ -27,6 +27,8 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
+import org.jitsi.utils.ResettableLazy
+import org.jitsi.utils.observableWhenChanged
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -60,11 +62,23 @@ import java.util.concurrent.atomic.AtomicLong
 sealed class BridgeChannelMessage(
     val type: String
 ) {
+    private val jsonCacheDelegate = ResettableLazy { createJson() }
     /**
-     * Serialize this [BridgeChannelMessage] to a string in JSON format. Note that this default implementation is very
+     * Caches the JSON string representation of this object. Note that after any changes to state (e.g. vars being set)
+     * the cache needs to be invalidated via [resetJsonCache].
+     */
+    private val jsonCache: String by jsonCacheDelegate
+    protected fun resetJsonCache() = jsonCacheDelegate.reset()
+    /**
+     * Get a JSON representation of this [BridgeChannelMessage].
+     */
+    fun toJson(): String = jsonCache
+
+    /**
+     * Serialize this [BridgeChannelMessage] to a string in JSON format. Note that this default implementation can be
      * slow, which is why some of the messages that we serialize often override it with a custom optimized version.
      */
-    open fun toJson(): String = mapper.writeValueAsString(this)
+    protected open fun createJson(): String = mapper.writeValueAsString(this)
 
     companion object {
         private val mapper = jacksonObjectMapper()
@@ -167,7 +181,7 @@ class ServerHelloMessage @JvmOverloads constructor(
     val version: String? = null
 ) : BridgeChannelMessage(TYPE) {
 
-    override fun toJson(): String =
+    override fun createJson(): String =
         if (version == null) JSON_STRING_NO_VERSION else """{"colibriClass":"$TYPE","version":"$version"}"""
     companion object {
         const val TYPE = "ServerHello"
@@ -188,6 +202,10 @@ class ServerHelloMessage @JvmOverloads constructor(
 class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var from: String? = null
+        set(value) {
+            field = value
+            resetJsonCache()
+        }
 
     @get:JsonAnyGetter
     val otherFields = mutableMapOf<String, Any>()
@@ -241,10 +259,12 @@ class ReceiverVideoConstraintMessage(val maxFrameHeight: Int) : BridgeChannelMes
 /**
  * A message sent from the bridge to a client, indicating that the dominant speaker in the conference changed.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 class DominantSpeakerMessage @JvmOverloads constructor(
-    var dominantSpeakerEndpoint: String,
+    dominantSpeakerEndpoint: String,
     val previousSpeakers: List<String>? = null
 ) : BridgeChannelMessage(TYPE) {
+    var dominantSpeakerEndpoint: String by observableWhenChanged(dominantSpeakerEndpoint) { -> resetJsonCache() }
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
     }
@@ -265,7 +285,7 @@ class EndpointConnectionStatusMessage(
     /**
      * Serialize manually because it's faster than Jackson.
      */
-    override fun toJson(): String =
+    override fun createJson(): String =
         """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
 
     companion object {
@@ -301,7 +321,7 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
      *
      * We use the "idealHeight" format that the jitsi-meet client expects.
      */
-    override fun toJson(): String =
+    override fun createJson(): String =
         """{"colibriClass":"$TYPE", "videoConstraints":{"idealHeight":${videoConstraints.idealHeight}}}"""
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -324,7 +344,7 @@ class AddReceiverMessage(
     /**
      * Serialize manually because it's faster than Jackson.
      */
-    override fun toJson(): String =
+    override fun createJson(): String =
         """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId",""" +
             "\"videoConstraints\":$videoConstraints}"
 
@@ -344,7 +364,7 @@ class RemoveReceiverMessage(
     /**
      * Serialize manually because it's faster than Jackson.
      */
-    override fun toJson(): String =
+    override fun createJson(): String =
         """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
 
     companion object {
