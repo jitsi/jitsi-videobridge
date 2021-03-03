@@ -121,13 +121,15 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
         context("serializing and parsing DominantSpeakerMessage") {
             val id = "abc123"
-            val original = DominantSpeakerMessage(id)
+            val previousSpeakers = listOf("p1", "p2")
+            val original = DominantSpeakerMessage(id, previousSpeakers)
 
             val parsed = parse(original.toJson())
 
             parsed.shouldBeInstanceOf<DominantSpeakerMessage>()
             parsed as DominantSpeakerMessage
             parsed.dominantSpeakerEndpoint shouldBe id
+            parsed.previousSpeakers shouldBe listOf("p1", "p2")
         }
 
         context("serializing and parsing ServerHello") {
