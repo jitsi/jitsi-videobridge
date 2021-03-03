@@ -236,10 +236,4 @@ private fun startIce4j() {
 private fun stopIce4j() {
     // Shut down harvesters.
     Harvesters.closeStaticConfiguration()
-
-    System.getProperties().keys.forEach { key ->
-        if (key.toString().startsWith("org.ice4j")) {
-            System.clearProperty(key.toString())
-        }
-    }
 }
