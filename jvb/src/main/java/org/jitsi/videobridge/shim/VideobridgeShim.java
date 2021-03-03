@@ -20,8 +20,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
@@ -37,10 +35,6 @@ import static org.jitsi.videobridge.Conference.GID_NOT_SET;
  */
 public class VideobridgeShim
 {
-    /**
-     * The {@link Logger} used by the {@link VideobridgeShim} class and its
-     * instances to print debug information.
-     */
     private static final Logger logger = new LoggerImpl(VideobridgeShim.class.getName());
 
     /**
@@ -49,7 +43,7 @@ public class VideobridgeShim
      * @param conferenceIq
      * @return
      */
-    private static Set<String> getAllSignaledChannelBundleIds(
+    static Set<String> getAllSignaledChannelBundleIds(
             ColibriConferenceIQ conferenceIq)
     {
         Set<String> channelBundleIds = new HashSet<>();
@@ -108,7 +102,7 @@ public class VideobridgeShim
      * @param mediaType
      * @return
      */
-    private static String getOctoChannelId(MediaType mediaType)
+    static String getOctoChannelId(MediaType mediaType)
     {
         return "octo-" + mediaType;
     }
@@ -123,7 +117,7 @@ public class VideobridgeShim
      * (but haven't been expired).
      * @throws IqProcessingException
      */
-    private static List<ColibriConferenceIQ.Channel> processChannels(
+    static List<ColibriConferenceIQ.Channel> processChannels(
             List<ColibriConferenceIQ.Channel> channelIqs,
             ContentShim contentShim)
             throws IqProcessingException
@@ -195,7 +189,7 @@ public class VideobridgeShim
      * @throws IqProcessingException if there are any errors during the
      * processing of the incoming connections.
      */
-    private static List<ColibriConferenceIQ.SctpConnection> processSctpConnections(
+    static List<ColibriConferenceIQ.SctpConnection> processSctpConnections(
             List<ColibriConferenceIQ.SctpConnection> sctpConnections,
             ContentShim contentShim) throws IqProcessingException
     {
@@ -226,166 +220,14 @@ public class VideobridgeShim
     }
 
     /**
-     * The associated {@link Videobridge}.
-     */
-    private final Videobridge videobridge;
-
-    /**
-     * Initializes a new {@link VideobridgeShim} instance.
-     * @param videobridge
-     */
-    public VideobridgeShim(Videobridge videobridge)
-    {
-        this.videobridge = videobridge;
-    }
-
-    /**
-     * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
-     *
-     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
-     * the request to handle
-     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
-     * represents the response to the specified request or <tt>null</tt> to
-     * reply with <tt>feature-not-implemented</tt>
-     */
-    public IQ handleColibriConferenceIQ(Conference conference, ColibriConferenceIQ conferenceIQ)
-    {
-        ConferenceShim conferenceShim = conference.getShim();
-        ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
-        conference.describeShallow(responseConferenceIQ);
-        responseConferenceIQ.setGracefulShutdown(videobridge.isShutdownInProgress());
-
-        conferenceShim.initializeSignaledEndpoints(conferenceIQ);
-
-        ColibriConferenceIQ.Channel octoAudioChannel = null;
-        ColibriConferenceIQ.Channel octoVideoChannel = null;
-
-        for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
-        {
-             // The content element springs into existence whenever it gets
-             // mentioned, it does not need explicit creation (in contrast to
-             // the conference and channel elements).
-            MediaType contentType = MediaType.parseString(contentIQ.getName());
-            ContentShim contentShim = conferenceShim.getOrCreateContent(contentType);
-            if (contentShim == null)
-            {
-                return IQUtils.createError(
-                        conferenceIQ,
-                        XMPPError.Condition.internal_server_error,
-                        "Failed to create new content for type: " + contentType);
-            }
-
-            ColibriConferenceIQ.Content responseContentIQ = new ColibriConferenceIQ.Content(contentType.toString());
-
-            responseConferenceIQ.addContent(responseContentIQ);
-
-            try
-            {
-                processChannels(contentIQ.getChannels(), contentShim).forEach(responseContentIQ::addChannel);
-            }
-            catch (IqProcessingException e)
-            {
-                logger.error("Error processing channels: " + e.toString());
-                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
-            }
-
-            // We want to handle the two Octo channels together.
-            ColibriConferenceIQ.Channel octoChannel = findOctoChannel(contentIQ);
-            if (octoChannel != null)
-            {
-                if (MediaType.VIDEO.equals(contentType))
-                {
-                    octoVideoChannel = octoChannel;
-                }
-                else
-                {
-                    octoAudioChannel = octoChannel;
-                }
-
-                ColibriConferenceIQ.OctoChannel octoChannelResponse = new ColibriConferenceIQ.OctoChannel();
-                octoChannelResponse.setID(getOctoChannelId(contentType));
-                responseContentIQ.addChannel(octoChannelResponse);
-            }
-
-            try
-            {
-                processSctpConnections(contentIQ.getSctpConnections(), contentShim)
-                        .forEach(responseContentIQ::addSctpConnection);
-            }
-            catch (IqProcessingException e)
-            {
-                logger.error("Error processing sctp connections in IQ: " + e.toString());
-                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
-            }
-        }
-
-        if (octoAudioChannel != null && octoVideoChannel != null)
-        {
-            if (conference.getGid() == GID_NOT_SET)
-            {
-                return IQUtils.createError(
-                        conferenceIQ,
-                        XMPPError.Condition.bad_request,
-                        "Can not enable octo without a valid GID.");
-            }
-
-            conferenceShim.processOctoChannels(octoAudioChannel, octoVideoChannel);
-
-        }
-        else if (octoAudioChannel != null || octoVideoChannel != null)
-        {
-            logger.error("Octo must be enabled for audio and video together");
-            return IQUtils.createError(
-                    conferenceIQ,
-                    XMPPError.Condition.bad_request,
-                    "Octo only enabled for one media type");
-        }
-
-        for (ColibriConferenceIQ.ChannelBundle channelBundleIq : conferenceIQ.getChannelBundles())
-        {
-            IceUdpTransportPacketExtension transportIq = channelBundleIq.getTransport();
-            if (transportIq == null)
-            {
-                continue;
-            }
-
-            final String endpointId = channelBundleIq.getId();
-
-            final Endpoint endpoint = conference.getLocalEndpoint(endpointId);
-            if (endpoint == null)
-            {
-                // Endpoint is expired and removed as part of handling IQ
-                continue;
-            }
-
-            endpoint.setTransportInfo(transportIq);
-        }
-
-        conferenceShim.describeChannelBundles(responseConferenceIQ, getAllSignaledChannelBundleIds(conferenceIQ));
-
-        // Update the endpoint information of Videobridge with the endpoint
-        // information of the IQ.
-        for (ColibriConferenceIQ.Endpoint colibriEndpoint : conferenceIQ.getEndpoints())
-        {
-            conferenceShim.updateEndpoint(colibriEndpoint);
-        }
-
-        conferenceShim.describeEndpoints(responseConferenceIQ);
-
-        responseConferenceIQ.setType(IQ.Type.result);
-
-        return responseConferenceIQ;
-    }
-
-    /**
      * Gets the first {@code OctoChannel} in the given content, or null.
      */
-    private static ColibriConferenceIQ.Channel findOctoChannel(
+    static ColibriConferenceIQ.Channel findOctoChannel(
             ColibriConferenceIQ.Content content)
     {
         return
                 content.getChannels().stream()
-                        .filter(c -> isOctoChannel(c))
+                        .filter(VideobridgeShim::isOctoChannel)
                         .findAny().orElse(null);
     }
 

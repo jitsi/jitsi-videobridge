@@ -25,9 +25,13 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
+import org.jitsi.xmpp.util.*;
+import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
 import java.util.stream.*;
+
+import static org.jitsi.videobridge.Conference.GID_NOT_SET;
 
 /**
  * Handles Colibri-related logic for a {@link Conference}, e.g.
@@ -343,5 +347,143 @@ public class ConferenceShim
                 endpoint.setStatsId(colibriEndpoint.getStatsId());
             }
         }
+    }
+
+    /**
+     * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
+     *
+     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
+     * the request to handle
+     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
+     * represents the response to the specified request or <tt>null</tt> to
+     * reply with <tt>feature-not-implemented</tt>
+     */
+    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIQ)
+    {
+        ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
+        conference.describeShallow(responseConferenceIQ);
+        responseConferenceIQ.setGracefulShutdown(conference.getVideobridge().isShutdownInProgress());
+
+        initializeSignaledEndpoints(conferenceIQ);
+
+        ColibriConferenceIQ.Channel octoAudioChannel = null;
+        ColibriConferenceIQ.Channel octoVideoChannel = null;
+
+        for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
+        {
+            // The content element springs into existence whenever it gets
+            // mentioned, it does not need explicit creation (in contrast to
+            // the conference and channel elements).
+            MediaType contentType = MediaType.parseString(contentIQ.getName());
+            ContentShim contentShim = getOrCreateContent(contentType);
+            if (contentShim == null)
+            {
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.internal_server_error,
+                        "Failed to create new content for type: " + contentType);
+            }
+
+            ColibriConferenceIQ.Content responseContentIQ = new ColibriConferenceIQ.Content(contentType.toString());
+
+            responseConferenceIQ.addContent(responseContentIQ);
+
+            try
+            {
+                VideobridgeShim.processChannels(contentIQ.getChannels(), contentShim)
+                        .forEach(responseContentIQ::addChannel);
+            }
+            catch (IqProcessingException e)
+            {
+                logger.error("Error processing channels: " + e.toString());
+                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
+            }
+
+            // We want to handle the two Octo channels together.
+            ColibriConferenceIQ.Channel octoChannel = VideobridgeShim.findOctoChannel(contentIQ);
+            if (octoChannel != null)
+            {
+                if (MediaType.VIDEO.equals(contentType))
+                {
+                    octoVideoChannel = octoChannel;
+                }
+                else
+                {
+                    octoAudioChannel = octoChannel;
+                }
+
+                ColibriConferenceIQ.OctoChannel octoChannelResponse = new ColibriConferenceIQ.OctoChannel();
+                octoChannelResponse.setID(VideobridgeShim.getOctoChannelId(contentType));
+                responseContentIQ.addChannel(octoChannelResponse);
+            }
+
+            try
+            {
+                VideobridgeShim.processSctpConnections(contentIQ.getSctpConnections(), contentShim)
+                        .forEach(responseContentIQ::addSctpConnection);
+            }
+            catch (IqProcessingException e)
+            {
+                logger.error("Error processing sctp connections in IQ: " + e.toString());
+                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
+            }
+        }
+
+        if (octoAudioChannel != null && octoVideoChannel != null)
+        {
+            if (conference.getGid() == GID_NOT_SET)
+            {
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.bad_request,
+                        "Can not enable octo without a valid GID.");
+            }
+
+            processOctoChannels(octoAudioChannel, octoVideoChannel);
+
+        }
+        else if (octoAudioChannel != null || octoVideoChannel != null)
+        {
+            logger.error("Octo must be enabled for audio and video together");
+            return IQUtils.createError(
+                    conferenceIQ,
+                    XMPPError.Condition.bad_request,
+                    "Octo only enabled for one media type");
+        }
+
+        for (ColibriConferenceIQ.ChannelBundle channelBundleIq : conferenceIQ.getChannelBundles())
+        {
+            IceUdpTransportPacketExtension transportIq = channelBundleIq.getTransport();
+            if (transportIq == null)
+            {
+                continue;
+            }
+
+            final String endpointId = channelBundleIq.getId();
+
+            final Endpoint endpoint = conference.getLocalEndpoint(endpointId);
+            if (endpoint == null)
+            {
+                // Endpoint is expired and removed as part of handling IQ
+                continue;
+            }
+
+            endpoint.setTransportInfo(transportIq);
+        }
+
+        describeChannelBundles(responseConferenceIQ, VideobridgeShim.getAllSignaledChannelBundleIds(conferenceIQ));
+
+        // Update the endpoint information of Videobridge with the endpoint
+        // information of the IQ.
+        for (ColibriConferenceIQ.Endpoint colibriEndpoint : conferenceIQ.getEndpoints())
+        {
+            updateEndpoint(colibriEndpoint);
+        }
+
+        describeEndpoints(responseConferenceIQ);
+
+        responseConferenceIQ.setType(IQ.Type.result);
+
+        return responseConferenceIQ;
     }
 }
