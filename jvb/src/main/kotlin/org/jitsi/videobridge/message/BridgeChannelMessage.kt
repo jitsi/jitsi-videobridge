@@ -241,13 +241,10 @@ class ReceiverVideoConstraintMessage(val maxFrameHeight: Int) : BridgeChannelMes
 /**
  * A message sent from the bridge to a client, indicating that the dominant speaker in the conference changed.
  */
-class DominantSpeakerMessage(var dominantSpeakerEndpoint: String) : BridgeChannelMessage(TYPE) {
-    /**
-     * Serialize manually because it's faster than either Jackson or json-simple.
-     */
-    override fun toJson(): String =
-        """{"colibriClass":"$TYPE","dominantSpeakerEndpoint":"$dominantSpeakerEndpoint"}"""
-
+class DominantSpeakerMessage @JvmOverloads constructor(
+    var dominantSpeakerEndpoint: String,
+    val previousSpeakers: List<String>? = null
+) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
     }
@@ -266,7 +263,7 @@ class EndpointConnectionStatusMessage(
     val active: String = activeBoolean.toString()
 
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple.
+     * Serialize manually because it's faster than Jackson.
      */
     override fun toJson(): String =
         """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
@@ -300,7 +297,7 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
     constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
 
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple.
+     * Serialize manually because it's faster than Jackson.
      *
      * We use the "idealHeight" format that the jitsi-meet client expects.
      */
@@ -325,7 +322,7 @@ class AddReceiverMessage(
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage(TYPE) {
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple.
+     * Serialize manually because it's faster than Jackson.
      */
     override fun toJson(): String =
         """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId",""" +
@@ -345,7 +342,7 @@ class RemoveReceiverMessage(
     val endpointId: String
 ) : BridgeChannelMessage(TYPE) {
     /**
-     * Serialize manually because it's faster than either Jackson or json-simple.
+     * Serialize manually because it's faster than Jackson.
      */
     override fun toJson(): String =
         """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
