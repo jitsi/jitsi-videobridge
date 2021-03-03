@@ -25,6 +25,7 @@ import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.ShutdownIQ
 import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jitsi.xmpp.mucclient.IQListener
+import org.jitsi.xmpp.mucclient.MucClient
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 import org.jitsi.xmpp.mucclient.MucClientManager
 import org.jitsi.xmpp.util.IQUtils
@@ -56,7 +57,8 @@ class XmppConnection : IQListener {
         if (running.compareAndSet(false, true)) {
             mucClientManager.apply {
                 registerIQ(HealthCheckIQ())
-                registerIQ(ColibriConferenceIQ())
+                // Colibri IQs are handled async.
+                registerIQ(ColibriConferenceIQ(), false)
                 registerIQ(Version())
                 registerIQ(ShutdownIQ.createForceShutdownIQ())
                 registerIQ(ShutdownIQ.createGracefulShutdownIQ())
@@ -153,30 +155,38 @@ class XmppConnection : IQListener {
     /**
      * Process an incoming IQ
      */
-    override fun handleIq(iq: IQ?): IQ? {
+    override fun handleIq(iq: IQ?, mucClient: MucClient): IQ? {
         if (iq == null) {
             return null
         }
         logger.cdebug { "RECV: ${iq.toXML()}" }
 
         return when (iq.type) {
-            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq).also { logger.cdebug { "SENT: ${it.toXML() ?: "null"}" } }
+            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient).also {
+                logger.cdebug { "SENT: ${it?.toXML() ?: "null"}" }
+            }
             else -> null
         }
     }
 
-    private fun handleIqRequest(iq: IQ): IQ {
+    private fun handleIqRequest(iq: IQ, mucClient: MucClient): IQ? {
         val handler = eventHandler ?: return IQUtils.createError(
             iq,
             XMPPError.Condition.service_unavailable,
             "Service unavailable"
         )
-        return when (iq) {
+        val response = when (iq) {
             is Version -> measureDelay(versionDelayStats, { iq.toXML() }) {
                 handler.versionIqReceived(iq)
             }
-            is ColibriConferenceIQ -> measureDelay(colibriDelayStats, { iq.toXML() }) {
-                handler.colibriConferenceIqReceived(iq)
+            is ColibriConferenceIQ -> {
+                // Colibri IQs are handled async.
+                handler.colibriConferenceIqReceived(
+                    ColibriRequest(iq, colibriDelayStats, colibriProcessingDelayStats) { response ->
+                        mucClient.sendStanza(response.setResponseTo(iq))
+                    }
+                )
+                null
             }
             is HealthCheckIQ -> measureDelay(healthDelayStats, { iq.toXML() }) {
                 handler.healthCheckIqReceived(iq)
@@ -186,11 +196,15 @@ class XmppConnection : IQListener {
                 XMPPError.Condition.service_unavailable,
                 "Unsupported IQ request ${iq.childElementName}"
             )
-        }.apply {
-            from = iq.to
-            stanzaId = iq.stanzaId
-            to = iq.from
         }
+
+        return response?.setResponseTo(iq)
+    }
+
+    private fun IQ.setResponseTo(request: IQ) = apply {
+        from = request.to
+        stanzaId = request.stanzaId
+        to = request.from
     }
 
     private fun <T> measureDelay(delayStats: DelayStats, context: () -> CharSequence, block: () -> T): T {
@@ -205,10 +219,32 @@ class XmppConnection : IQListener {
     }
 
     interface EventHandler {
-        fun colibriConferenceIqReceived(iq: ColibriConferenceIQ): IQ
+        fun colibriConferenceIqReceived(request: ColibriRequest)
         fun versionIqReceived(iq: Version): IQ
         fun healthCheckIqReceived(iq: HealthCheckIQ): IQ
     }
+
+    data class ColibriRequest(
+        /**
+         * The IQ which was received.
+         */
+        val request: ColibriConferenceIQ,
+        /**
+         * The [DelayStats] instance which is to be updated with the total time it took to handle the request
+         * (including queueing delay).
+         */
+        val totalDelayStats: DelayStats,
+        /**
+         * The [DelayStats] instance which is to be updated with the time it took to process the request once it was
+         * picked from the queue.
+         */
+        val processingDelayStats: DelayStats,
+        val receiveTime: Long = System.currentTimeMillis(),
+        /**
+         * The callback to use to send the response.
+         */
+        val callback: (IQ) -> Unit
+    )
 
     companion object {
         private val FEATURES = arrayOf(
@@ -221,6 +257,7 @@ class XmppConnection : IQListener {
 
         private val delayThresholds = longArrayOf(5, 50, 100, 1000)
 
+        private val colibriProcessingDelayStats = DelayStats(delayThresholds)
         private val colibriDelayStats = DelayStats(delayThresholds)
         private val healthDelayStats = DelayStats(delayThresholds)
         private val versionDelayStats = DelayStats(delayThresholds)
@@ -228,6 +265,7 @@ class XmppConnection : IQListener {
         @JvmStatic
         fun getStatsJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("colibri", colibriDelayStats.toJson())
+            put("colibri_processing", colibriProcessingDelayStats.toJson())
             put("health", healthDelayStats.toJson())
             put("version", versionDelayStats.toJson())
         }
