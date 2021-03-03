@@ -53,7 +53,7 @@ public class Debug
     private Videobridge videobridge;
 
     @Inject
-    private HealthCheckServiceSupplier healthCheckServiceSupplier;
+    private HealthCheckService healthCheckService;
 
     private final Logger logger = new LoggerImpl(Debug.class.getName());
 
@@ -107,6 +107,9 @@ public class Debug
             }
             case POOL_STATS: {
                 return ByteBufferPool.statisticsEnabled();
+            }
+            case POOL_BOOKKEEPING: {
+                return ByteBufferPool.bookkeepingEnabled();
             }
             case QUEUE_STATS: {
                 return PacketQueue.getEnableStatisticsDefault();
@@ -207,6 +210,10 @@ public class Debug
                 ByteBufferPool.enableStatistics(enabled);
                 break;
             }
+            case POOL_BOOKKEEPING: {
+                ByteBufferPool.enableBookkeeping(enabled);
+                break;
+            }
             case QUEUE_STATS: {
                 PacketQueue.setEnableStatisticsDefault(enabled);
                 break;
@@ -238,7 +245,7 @@ public class Debug
         OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
 
         // Append the health status.
-        Exception result = healthCheckServiceSupplier.get().getResult();
+        Exception result = healthCheckService.getResult();
         debugState.put("health", result == null ? "OK" : result.getMessage());
 
         return debugState.toJSONString();

@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.util;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.stats.*;
 import org.json.simple.*;
@@ -68,7 +69,7 @@ class PartitionedByteBufferPool
 
     /**
      * Whether to keep track of request/return rates and other basic statistics.
-     * As opposed to {@link ByteBufferPool#ENABLE_BOOKKEEPING} this has a
+     * As opposed to {@link ByteBufferPool#bookkeepingEnabled()} this has a
      * relatively low overhead and can be kept on in production if necessary.
      */
     private boolean enableStatistics = false;
@@ -127,15 +128,32 @@ class PartitionedByteBufferPool
      * Adds statistics for this pool to the given JSON object.
      */
     @SuppressWarnings("unchecked")
-    JSONObject getStats()
+    OrderedJsonObject getStats()
     {
-        JSONObject stats = new JSONObject();
+        OrderedJsonObject stats = new OrderedJsonObject();
+
         stats.put("default_size", defaultBufferSize);
+
+        long requests = 0;
+        long returns = 0;
+        long allocations = 0;
         JSONArray partitionStats = new JSONArray();
+
         for (Partition p : partitions)
         {
+            requests += p.numRequests.sum();
+            returns += p.numReturns.sum();
+            allocations += p.numAllocations.sum();
+
             partitionStats.add(p.getStatsJson());
         }
+        stats.put("num_requests", requests);
+        stats.put("num_returns", returns);
+        stats.put("num_allocations", allocations);
+        stats.put(
+            "allocation_percent",
+            100D * allocations / Math.max(1, requests));
+
         stats.put("partitions", partitionStats);
         return stats;
     }
@@ -252,13 +270,6 @@ class PartitionedByteBufferPool
          */
         private byte[] getBuffer(int requiredSize)
         {
-            if (ByteBufferPool.ENABLE_BOOKKEEPING)
-            {
-                logger.info("partition " + id + " request number "
-                        + (numRequests.sum() + 1) + ", pool has size "
-                        + pool.size());
-            }
-
             if (enableStatistics)
             {
                 numRequests.increment();
@@ -281,7 +292,7 @@ class PartitionedByteBufferPool
             }
             else if (buf.length < requiredSize)
             {
-                if (ByteBufferPool.ENABLE_BOOKKEEPING)
+                if (ByteBufferPool.bookkeepingEnabled())
                 {
                     logger.info("Needed buffer of size " + requiredSize
                             + ", got size " + buf.length + " retrying");
@@ -315,12 +326,6 @@ class PartitionedByteBufferPool
                 numNoAllocationNeeded.increment();
             }
 
-            if (ByteBufferPool.ENABLE_BOOKKEEPING)
-            {
-                logger.info("got buffer " + System.identityHashCode(buf)
-                        + " from thread " + Thread.currentThread().getId()
-                        + ", partition " + id + " now has size " + pool.size());
-            }
             return buf;
         }
 
@@ -330,14 +335,6 @@ class PartitionedByteBufferPool
          */
         private void returnBuffer(@NotNull byte[] buf)
         {
-            if (ByteBufferPool.ENABLE_BOOKKEEPING)
-            {
-                logger.info("returned buffer " + System.identityHashCode(buf) +
-                        " from thread " + Thread.currentThread().getId() + ", partition " + id +
-                        " now has size " + pool.size());
-
-            }
-
             if (enableStatistics)
             {
                 numReturns.increment();
@@ -365,10 +362,10 @@ class PartitionedByteBufferPool
          * Gets a snapshot of the statistics of this partition in JSON format.
          */
         @SuppressWarnings("unchecked")
-        private JSONObject getStatsJson()
+        private OrderedJsonObject getStatsJson()
         {
             long now = System.currentTimeMillis();
-            JSONObject stats = new JSONObject();
+            OrderedJsonObject stats = new OrderedJsonObject();
             stats.put("id", id);
 
             long numRequestsSum = numRequests.sum();

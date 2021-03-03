@@ -22,8 +22,7 @@ import org.jitsi.metaconfig.from
 import java.util.function.Supplier
 
 /**
- * A JVB-wide last-n value which will be observed by all endpoints
- * on this bridge.
+ * A JVB-wide last-n value which will be observed by all endpoints on this bridge.
  *
  * A value of -1 means no limit is enforced.
  */
@@ -37,10 +36,7 @@ class JvbLastN : Supplier<Int> {
 @JvmField
 val jvbLastNSingleton: JvbLastN = JvbLastN()
 
-fun calculateLastN(lastN1: Int, lastN2: Int): Int {
-    return if (lastN1 != -1 && lastN2 != -1) {
-        minOf(lastN1, lastN2)
-    } else {
-        if (lastN1 == -1) lastN2 else lastN1
-    }
+fun calculateLastN(vararg lastN: Int): Int {
+    val min = lastN.map { if (it == -1) Int.MAX_VALUE else it }.min() ?: Int.MAX_VALUE
+    return if (min == Int.MAX_VALUE) -1 else min
 }

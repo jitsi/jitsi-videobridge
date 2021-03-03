@@ -248,37 +248,8 @@ public class VideobridgeShim
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
      */
-    public IQ handleColibriConferenceIQ(
-            ColibriConferenceIQ conferenceIQ)
+    public IQ handleColibriConferenceIQ(Conference conference, ColibriConferenceIQ conferenceIQ)
     {
-        logger.debug(() -> "Got ColibriConferenceIq:\n" + conferenceIQ.toXML());
-
-        Conference conference;
-
-        String conferenceId = conferenceIQ.getID();
-        if (conferenceId == null)
-        {
-            if (videobridge.isShutdownInProgress())
-            {
-                return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIQ);
-            }
-            else
-            {
-                conference = videobridge.createConference(conferenceIQ.getName(), parseGid(conferenceIQ.getGID()));
-            }
-        }
-        else
-        {
-            conference = videobridge.getConference(conferenceId);
-            if (conference == null)
-            {
-                return IQUtils.createError(
-                        conferenceIQ,
-                        XMPPError.Condition.bad_request,
-                        "Conference not found for ID: " + conferenceId);
-            }
-        }
-
         ConferenceShim conferenceShim = conference.getShim();
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
@@ -427,7 +398,7 @@ public class VideobridgeShim
      * @return the GID parsed as a {@code long}, or
      * {@link Conference#GID_NOT_SET -1} on failure.
      */
-    private static long parseGid(String gidStr)
+    public static long parseGid(String gidStr)
     {
         long gid;
 

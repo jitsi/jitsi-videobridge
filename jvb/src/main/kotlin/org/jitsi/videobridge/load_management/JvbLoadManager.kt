@@ -106,4 +106,10 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
         OVERLOADED,
         NOT_OVERLOADED
     }
+
+    companion object {
+        val averageParticipantStress: Double by config {
+            "videobridge.load-management.average-participant-stress".from(JitsiConfig.newConfig)
+        }
+    }
 }

@@ -17,7 +17,7 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.rtp.*;
+import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.collections.*;
@@ -25,11 +25,15 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.util.*;
+import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -39,7 +43,6 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.*;
 
@@ -164,6 +167,8 @@ public class Conference
     @NotNull
     private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
+    private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
+
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
@@ -219,6 +224,43 @@ public class Conference
         videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
+
+        colibriQueue = new PacketQueue<>(
+            100,
+            true,
+            "colibri-queue-" + id,
+            request ->
+            {
+                try
+                {
+                    // TODO: we can avoid reaching into Videobridge here by merging VideobridgeShim into ConferenceShim
+                    long start = System.currentTimeMillis();
+                    IQ response = videobridge.handleColibriConferenceIQ(this, request.getRequest());
+                    long end = System.currentTimeMillis();
+                    long processingDelay = end - start;
+                    long totalDelay = end - request.getReceiveTime();
+                    request.getProcessingDelayStats().addDelay(processingDelay);
+                    request.getTotalDelayStats().addDelay(totalDelay);
+                    if (processingDelay > 100)
+                    {
+                        logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
+                                + totalDelay + " ms): " + request.getRequest().toXML());
+                    }
+                    request.getCallback().invoke(response);
+                }
+                catch (Throwable e)
+                {
+                    logger.warn("Failed to handle colibri request: ", e);
+                    request.getCallback().invoke(
+                            IQUtils.createError(
+                                    request.getRequest(),
+                                    XMPPError.Condition.internal_server_error,
+                                    e.getMessage()));
+                }
+                return true;
+            },
+            TaskPools.IO_POOL
+        );
     }
 
     /**
@@ -240,6 +282,11 @@ public class Conference
         {
             return new NoOpDiagnosticContext();
         }
+    }
+
+    public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
+    {
+        colibriQueue.add(request);
     }
 
     /**
@@ -397,17 +444,11 @@ public class Conference
      */
     private void lastNEndpointsChanged()
     {
-        List<String> lastNEndpointIds
-                = speechActivity.getOrderedEndpoints().stream()
-                    .map(AbstractEndpoint::getId)
-                    .collect(Collectors.toList());
-
-        endpointsCache.forEach(e -> e.lastNEndpointsChanged(lastNEndpointIds));
+        endpointsCache.forEach(Endpoint::lastNEndpointsChanged);
     }
 
     /**
-     * Notifies this instance that {@link #speechActivity} has identified a
-     * speaker switch event in this multipoint conference and there is now a new
+     * Notifies this instance that {@link #speechActivity} has identified a speaker switch event and there is now a new
      * dominant speaker.
      */
     private void dominantSpeakerChanged()
@@ -491,6 +532,8 @@ public class Conference
         }
 
         logger.info("Expiring.");
+
+        colibriQueue.close();
 
         epConnectionStatusMonitor.stop();
 
@@ -621,7 +664,7 @@ public class Conference
 
         subscribeToEndpointEvents(endpoint);
 
-        addEndpoint(endpoint);
+        addEndpoints(Collections.singleton(endpoint));
 
         return endpoint;
     }
@@ -723,6 +766,11 @@ public class Conference
     public List<AbstractEndpoint> getEndpoints()
     {
         return new ArrayList<>(this.endpointsById.values());
+    }
+
+    List<AbstractEndpoint> getOrderedEndpoints()
+    {
+        return speechActivity.getOrderedEndpoints();
     }
 
     /**
@@ -831,30 +879,28 @@ public class Conference
     }
 
     /**
-     * Adds a specific {@link AbstractEndpoint} instance to the list of
-     * endpoints in this conference.
-     * @param endpoint the endpoint to add.
+     * Adds a set of {@link AbstractEndpoint} instances to the list of endpoints in this conference.
      */
-    public void addEndpoint(AbstractEndpoint endpoint)
+    public void addEndpoints(Set<AbstractEndpoint> endpoints)
     {
-        if (endpoint.getConference() != this)
-        {
-            throw new IllegalArgumentException("Endpoint belong to other " +
-                "conference = " + endpoint.getConference());
-        }
+        endpoints.forEach(endpoint -> {
+            if (endpoint.getConference() != this)
+            {
+                throw new IllegalArgumentException("Endpoint belong to other " +
+                        "conference = " + endpoint.getConference());
+            }
+            AbstractEndpoint replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
+            if (replacedEndpoint != null)
+            {
+                logger.info("Endpoint with id " + endpoint.getId() + ": " +
+                        replacedEndpoint + " has been replaced by new " +
+                        "endpoint with same id: " + endpoint);
+            }
+        });
 
-        final AbstractEndpoint replacedEndpoint;
-        replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
         updateEndpointsCache();
 
         endpointsChanged();
-
-        if (replacedEndpoint != null)
-        {
-            logger.info("Endpoint with id " + endpoint.getId() + ": " +
-                replacedEndpoint + " has been replaced by new " +
-                "endpoint with same id: " + endpoint);
-        }
     }
 
     /**

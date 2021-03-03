@@ -19,11 +19,11 @@ package org.jitsi.videobridge.util;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.utils.logging2.*;
-import org.json.simple.*;
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.stream.*;
 
 /**
  * A pool of reusable byte[]
@@ -65,26 +65,18 @@ public class ByteBufferPool
      */
     private static final Logger logger = new LoggerImpl(ByteBufferPool.class.getName());
 
+    private static final Set<byte[]> outstandingBuffers =
+        Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
+
+    private static final Set<byte[]> returnedBuffers =
+        Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
+
     /**
-     * A debug data structure which tracks outstanding buffers and tracks from where (via
-     * a stack trace) they were requested and returned.
+     * A debug data structure which tracks all events (requests and returns) for a given
+     * buffer
      */
-    private static final Map<Integer, String> bookkeeping
-            = new ConcurrentHashMap<>();
-
-    private static class ReturnedBufferBookkeepingInfo
-    {
-        final String allocTrace;
-        final String deallocTrace;
-        ReturnedBufferBookkeepingInfo(String a, String d)
-        {
-            allocTrace = a;
-            deallocTrace = d;
-        }
-    }
-
-    private static final Map<Integer, ReturnedBufferBookkeepingInfo> returnedBookkeeping
-        = new ConcurrentHashMap<>();
+    private static final Map<byte[], Queue<BufferEvent>> bufferEvents =
+        Collections.synchronizedMap(new IdentityHashMap<>());
 
     /**
      * Whether to enable keeping track of statistics.
@@ -94,7 +86,7 @@ public class ByteBufferPool
     /**
      * Whether to enable or disable book keeping.
      */
-    public static final Boolean ENABLE_BOOKKEEPING = false;
+    private static Boolean bookkeepingEnabled = false;
 
     /**
      * Total number of buffers requested.
@@ -164,14 +156,13 @@ public class ByteBufferPool
             numLargeRequests.increment();
         }
 
-        if (ENABLE_BOOKKEEPING)
+        if (bookkeepingEnabled)
         {
-            int arrayId = System.identityHashCode(buf);
-
-            bookkeeping.put(arrayId, UtilKt.getStackTrace());
-            returnedBookkeeping.remove(arrayId);
-            logger.info("Thread " + threadId() + " got " + buf.length + "-byte buffer "
-                    + arrayId);
+            Exception stackTrace = new Exception();
+            outstandingBuffers.add(buf);
+            returnedBuffers.remove(buf);
+            bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>())
+                .add(new BufferEvent(BufferEvent.ALLOCATION, System.currentTimeMillis(), stackTrace));
         }
         return buf;
     }
@@ -189,30 +180,31 @@ public class ByteBufferPool
 
         int len = buf.length;
 
-        if (ENABLE_BOOKKEEPING)
+        if (bookkeepingEnabled)
         {
             int arrayId = System.identityHashCode(buf);
-            logger.info("Thread " + threadId() + " returned " + len + "-byte buffer "
-                + arrayId);
-            String s;
-            ReturnedBufferBookkeepingInfo b;
-            if ((s = bookkeeping.remove(arrayId)) != null)
+            Exception s;
+            Exception stackTrace = new Exception();
+            bufferEvents.computeIfAbsent(buf, k -> new LinkedBlockingQueue<>())
+                .add(new BufferEvent(BufferEvent.RETURN, System.currentTimeMillis(), stackTrace));
+            if (outstandingBuffers.remove(buf))
             {
-                returnedBookkeeping.put(arrayId, new ReturnedBufferBookkeepingInfo(s, UtilKt.getStackTrace()));
+                returnedBuffers.add(buf);
             }
-            else if ((b = returnedBookkeeping.get(arrayId)) != null)
+            else if (returnedBuffers.contains(buf))
             {
-                logger.info("Thread " + threadId()
-                    + " returned a previously-returned " + len + "-byte buffer at\n"
-                    + UtilKt.getStackTrace() +
-                    "previously returned at\n" +
-                    b.deallocTrace);
+                String bufferTimeline = bufferEvents.get(buf).stream()
+                    .map(BufferEvent::toString)
+                    .collect(Collectors.joining());
+                logger.error("Thread " + threadId()
+                    + " returned a previously-returned " + len + "-byte buffer " + arrayId
+                    + " its timeline:\n" + bufferTimeline);
             }
             else
             {
-                logger.info("Thread " + threadId()
+                logger.error("Thread " + threadId()
                     + " returned a " + len + "-byte buffer we didn't give out from\n"
-                    + UtilKt.getStackTrace());
+                    + stackTraceAsString(stackTrace.getStackTrace()));
             }
         }
 
@@ -242,25 +234,31 @@ public class ByteBufferPool
     public static OrderedJsonObject getStatsJson()
     {
         OrderedJsonObject stats = new OrderedJsonObject();
-        long numRequestsSum = numRequests.sum();
         long numLargeRequestsSum = numLargeRequests.sum();
-        stats.put("outstanding_buffers", bookkeeping.size());
-        stats.put("num_requests", numRequestsSum);
+
         stats.put("num_large_requests", numLargeRequestsSum);
-        stats.put("num_returns", numReturns.sum());
+
         if (enableStatistics)
         {
+            long numRequestsSum = numRequests.sum();
+            long allAllocations = numLargeRequestsSum + pool1.getNumAllocations()
+                + pool2.getNumAllocations() + pool3.getNumAllocations();
+            stats.put("num_requests", numRequestsSum);
+            stats.put("num_returns", numReturns.sum());
+            stats.put("num_allocations", allAllocations);
+            stats.put(
+                "allocation_percent",
+                (100.0 * allAllocations) / numRequestsSum);
+
             stats.put("pool1", pool1.getStats());
             stats.put("pool2", pool2.getStats());
             stats.put("pool3", pool3.getStats());
         }
 
-        long allAllocations = numLargeRequestsSum + pool1.getNumAllocations()
-                + pool2.getNumAllocations() + pool3.getNumAllocations();
-
-        stats.put(
-                "allocation_percent",
-                (100.0 * allAllocations) / numRequestsSum);
+        if (bookkeepingEnabled)
+        {
+            stats.put("outstanding_buffers", outstandingBuffers.size());
+        }
 
         return stats;
     }
@@ -282,4 +280,42 @@ public class ByteBufferPool
         return enableStatistics;
     }
 
+    public static void enableBookkeeping(boolean enable)
+    {
+        bookkeepingEnabled = enable;
+        if (!enable)
+        {
+            outstandingBuffers.clear();
+            returnedBuffers.clear();
+            bufferEvents.clear();
+        }
+    }
+
+    public static boolean bookkeepingEnabled()
+    {
+        return bookkeepingEnabled;
+    }
+
+    private static class BufferEvent {
+        final String context;
+        final Long timestamp;
+        final Exception trace;
+
+        public BufferEvent(String context, Long timestamp, Exception trace)
+        {
+            this.context = context;
+            this.timestamp = timestamp;
+            this.trace = trace;
+        }
+
+        @Override
+        public String toString()
+        {
+            return context + " BufferEvent: timestamp=" + timestamp +
+                "\n" + stackTraceAsString(trace.getStackTrace());
+        }
+
+        public static final String ALLOCATION = "allocation";
+        public static final String RETURN = "return";
+    }
 }

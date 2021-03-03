@@ -1,3 +1,18 @@
+/*
+ * Copyright @ 2020 - present 8x8, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.jitsi.videobridge.cc.allocation;
 
 import kotlin.*;
@@ -22,12 +37,10 @@ import java.util.concurrent.atomic.*;
 class BitrateControllerPacketHandler
 {
     /**
-     * The time (in ms) when this instance first transformed any media. This
-     * allows to ignore the CC during the early stages of the call and ramp up
-     * the send rate faster.
+     * The time (in ms) when this instance first transformed any media. This allows to ignore the BWE during the early
+     * stages of the call.
      *
-     * NOTE This is only meant to be as a temporary hack and ideally this should
-     * be fixed in the CC.
+     * NOTE This is only meant to be as a temporary hack and ideally should be fixed.
      */
     private long firstMediaMs = -1;
 
@@ -62,9 +75,8 @@ class BitrateControllerPacketHandler
     /**
      * Transforms a video RTP packet.
      * @param packetInfo the video rtp packet
-     * @return true if the packet was successfully transformed in place; false if
-     * if the given packet is not accepted and should
-     * be dropped.
+     * @return true if the packet was successfully transformed in place; false if the given packet is not accepted and
+     * should be dropped.
      */
     boolean transformRtp(@NotNull PacketInfo packetInfo)
     {
@@ -107,13 +119,7 @@ class BitrateControllerPacketHandler
     }
 
     /**
-     * Defines a packet filter that controls which RTP packets to be written
-     * into the {@code Endpoint} that owns this {@link BitrateAllocator}.
-     *
-     * @param packetInfo that packet for which to decide whether to accept
-     * @return <tt>true</tt> to allow the specified packet to be
-     * written into the {@code Endpoint} that owns this {@link BitrateAllocator}
-     * ; otherwise, <tt>false</tt>
+     * Defines a packet filter that controls which RTP packets to be accepted.
      */
     boolean accept(@NotNull PacketInfo packetInfo)
     {
@@ -133,18 +139,10 @@ class BitrateControllerPacketHandler
     }
 
     /**
-     * Defines a packet filter that controls which RTCP Sender Report
-     * packets to be written into the {@code Endpoint} that owns this
-     * {@link BitrateAllocator}.
+     * Defines a packet filter that controls which RTCP Sender Report packets to be accepted.
      * </p>
-     * Filters out packets that match one of the streams that this
-     * {@code BitrateController} manages, but don't match the target SSRC.
-     * Allows packets for streams not managed by this {@link BitrateAllocator}.
-     *
-     * @param rtcpSrPacket that packet for which to decide whether to accept
-     * @return <tt>true</tt> to allow the specified packet to be
-     * written into the {@code Endpoint} that owns this {@link BitrateAllocator}
-     * ; otherwise, <tt>false</tt>
+     * Filters out packets that match one of the streams that this instance manages, but don't match the target SSRC.
+     * Allows packets for streams not managed by this instance.
      */
     boolean accept(RtcpSrPacket rtcpSrPacket)
     {
@@ -154,9 +152,8 @@ class BitrateControllerPacketHandler
 
         if (adaptiveSourceProjection == null)
         {
-            // This is probably for an audio stream. In any case, if it's for a
-            // stream which we are not forwarding it will be stripped off at
-            // a later stage (in RtcpSrUpdater).
+            // This is probably for an audio stream. In any case, if it's for a stream which we are not forwarding it
+            // will be stripped off at a later stage (in RtcpSrUpdater).
             return true;
         }
 
@@ -176,25 +173,28 @@ class BitrateControllerPacketHandler
     /**
      * Utility method that looks-up or creates the adaptive source projection of
      * a source.
-     *
-     * @param sourceBitrateAllocation the source bitrate allocation
-     * @return the adaptive source projection for the source bitrate allocation
-     * that is specified as an argument.
      */
-    AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(
-            SingleSourceAllocation sourceBitrateAllocation)
+    private AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(SingleAllocation singleAllocation)
     {
+        MediaSourceDesc source = singleAllocation.getSource();
+        String endpointID = singleAllocation.getEndpointId();
+
+        if (source == null)
+        {
+            return null;
+        }
+
         synchronized (adaptiveSourceProjectionMap)
         {
             AdaptiveSourceProjection adaptiveSourceProjection
-                    = adaptiveSourceProjectionMap.get(sourceBitrateAllocation.targetSSRC);
+                    = adaptiveSourceProjectionMap.get(source.getPrimarySSRC());
 
-            if (adaptiveSourceProjection != null || sourceBitrateAllocation.source == null)
+            if (adaptiveSourceProjection != null)
             {
                 return adaptiveSourceProjection;
             }
 
-            RtpEncodingDesc[] rtpEncodings = sourceBitrateAllocation.source.getRtpEncodings();
+            RtpEncodingDesc[] rtpEncodings = source.getRtpEncodings();
 
             if (ArrayUtils.isNullOrEmpty(rtpEncodings))
             {
@@ -208,20 +208,19 @@ class BitrateControllerPacketHandler
             // but a reference persists in the adaptiveSourceProjectionMap). We're
             // creating local final variables and pass that to the lambda function
             // in order to avoid that.
-            final String endpointID = sourceBitrateAllocation.endpointID;
-            final long targetSSRC = sourceBitrateAllocation.targetSSRC;
+            final long targetSSRC = source.getPrimarySSRC();
             adaptiveSourceProjection
                     = new AdaptiveSourceProjection(
                     diagnosticContext,
-                    sourceBitrateAllocation.source,
-                    () -> eventEmitter.fireEvent(handler -> {
+                    source,
+                    () -> eventEmitter.fireEventSync(handler -> {
                         handler.keyframeNeeded(endpointID, targetSSRC);
                         return Unit.INSTANCE;
                     }),
                     payloadTypes,
                     logger);
 
-            logger.debug(() -> "new source projection for " + sourceBitrateAllocation.source);
+            logger.debug(() -> "new source projection for " + source);
 
             // Route all encodings to the specified bitrate controller.
             for (RtpEncodingDesc rtpEncoding: rtpEncodings)
@@ -242,7 +241,7 @@ class BitrateControllerPacketHandler
         return clock.instant().toEpochMilli() - firstMediaMs;
     }
 
-    Map<Long, AdaptiveSourceProjection> getAdaptiveSourceProjectionMap()
+    private Map<Long, AdaptiveSourceProjection> getAdaptiveSourceProjectionMap()
     {
         return adaptiveSourceProjectionMap;
     }
@@ -266,5 +265,36 @@ class BitrateControllerPacketHandler
         debugState.put("adaptiveSourceProjectionMap", adaptiveSourceProjectionsJson);
 
         return debugState;
+    }
+
+    /**
+     * Signals to this instance that the allocation chosen by the {@code BitrateAllocator} has changed.
+     */
+    void allocationChanged(@NotNull BandwidthAllocation allocation)
+    {
+        if (allocation.getAllocations().isEmpty())
+        {
+            for (AdaptiveSourceProjection adaptiveSourceProjection : getAdaptiveSourceProjectionMap().values())
+            {
+                adaptiveSourceProjection.setTargetIndex(RtpLayerDesc.SUSPENDED_INDEX);
+            }
+        }
+        else
+        {
+            for (SingleAllocation singleAllocation : allocation.getAllocations())
+            {
+                RtpLayerDesc targetLayer = singleAllocation.getTargetLayer();
+                int sourceTargetIdx = targetLayer == null ? -1 : targetLayer.getIndex();
+
+                // Review this.
+                AdaptiveSourceProjection adaptiveSourceProjection
+                        = lookupOrCreateAdaptiveSourceProjection(singleAllocation);
+
+                if (adaptiveSourceProjection != null)
+                {
+                    adaptiveSourceProjection.setTargetIndex(sourceTargetIdx);
+                }
+            }
+        }
     }
 }

@@ -21,6 +21,8 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
+import org.jxmpp.jid.parts.*;
+import org.jxmpp.util.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -472,13 +474,43 @@ public class MediaSourceFactory
             = source == null
                 ? null : source.getFirstChildOfType(
                     SSRCInfoPacketExtension.class);
+
         if (ssrcInfoPacketExtension != null)
         {
-            return
-                ssrcInfoPacketExtension.getOwner()
-                    .getResourceOrEmpty().toString();
+            /*
+             * N.B.: this is semantically the same as
+             *    return
+             *       ssrcInfoPacketExtension.getOwner()
+             *          .getResourceOrEmpty().toString();
+             *
+             * but avoids expensive construction of a lot of JID parts we just throw away.
+             *
+             * This function is called repeatedly by {@link ConfOctoTransport#setSources}
+             * so needs to be fast.
+             */
+            String ownerAttr = ssrcInfoPacketExtension.getAttributeAsString(SSRCInfoPacketExtension.OWNER_ATTR_NAME);
+            if (ownerAttr != null)
+            {
+                return getResourceFromJid(ownerAttr);
+            }
         }
         return null;
+    }
+
+    /**
+     * Given a string containing a JID, return its StringPrep'd Resource part,
+     * or {@link Resourcepart#EMPTY}, as a string.
+     *
+     * Helper for {@link #getOwner}
+     */
+    private static String getResourceFromJid(String jid)
+    {
+        String unpreppedResource = XmppStringUtils.parseResource(jid);
+        if (unpreppedResource.isEmpty())
+        {
+            return Resourcepart.EMPTY.toString();
+        }
+        return Resourcepart.fromOrThrowUnchecked(unpreppedResource).toString();
     }
 
     /**

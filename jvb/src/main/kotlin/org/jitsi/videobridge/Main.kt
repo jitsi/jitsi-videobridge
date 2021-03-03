@@ -42,6 +42,8 @@ import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.xmpp.XmppConnection
+import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
+import org.jxmpp.stringprep.XmppStringPrepUtil
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
@@ -75,6 +77,8 @@ fun main(args: Array<String>) {
     JitsiConfig.reloadNewConfig()
 
     startIce4j()
+
+    XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.jidCacheSize)
 
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()
@@ -135,7 +139,13 @@ fun main(args: Array<String>) {
     )
     val privateHttpServer = if (privateServerConfig.isEnabled()) {
         logger.info("Starting private http server")
-        val restApp = Application(videobridge, xmppConnection, statsCollector, versionService, healthChecker)
+        val restApp = Application(
+            videobridge,
+            xmppConnection,
+            statsCollector,
+            versionService.currentVersion,
+            healthChecker
+        )
         createServer(privateServerConfig).also {
             it.servletContextHandler.addServlet(
                 ServletHolder(ServletContainer(restApp)),

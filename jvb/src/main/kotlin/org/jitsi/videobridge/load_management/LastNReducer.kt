@@ -99,7 +99,8 @@ class LastNReducer(
             logger.cdebug { "No recovery necessary, no JVB last-n is set" }
             return false
         }
-        val newLastN = (currLastN * recoverScale).toInt()
+        // We want to make sure the last-n value increases by at least 1
+        val newLastN = maxOf(currLastN + 1, (currLastN * recoverScale).toInt())
         if (newLastN >= maxEnforcedLastN) {
             logger.info(
                 "JVB last-n was $currLastN, increasing to $newLastN which is beyond the max enforced value" +
