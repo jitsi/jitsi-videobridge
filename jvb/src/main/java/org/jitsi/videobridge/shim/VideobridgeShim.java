@@ -286,7 +286,7 @@ public class VideobridgeShim
             catch (IqProcessingException e)
             {
                 logger.error("Error processing channels: " + e.toString());
-                return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
+                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
             }
 
             // We want to handle the two Octo channels together.
@@ -315,7 +315,7 @@ public class VideobridgeShim
             catch (IqProcessingException e)
             {
                 logger.error("Error processing sctp connections in IQ: " + e.toString());
-                return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
+                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
             }
         }
 
@@ -428,28 +428,4 @@ public class VideobridgeShim
         return gid;
     }
 
-    static class IqProcessingException extends Exception
-    {
-        private final XMPPError.Condition condition;
-        private final String errorMessage;
-
-        /**
-         * Initializes a new {@link IqProcessingException} with a specific
-         * condition and error message.
-         */
-        public IqProcessingException(XMPPError.Condition condition, String errorMessage)
-        {
-            this.condition = condition;
-            this.errorMessage = errorMessage;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String toString()
-        {
-            return condition.toString() + " " + errorMessage;
-        }
-    }
 }
