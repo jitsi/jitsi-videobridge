@@ -165,8 +165,10 @@ public class Conference
     private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
-     * A unique meeting ID set by the signaling server. It is exposed via ({@link #getDebugState()} for outside use.
+     * A unique meeting ID optionally set by the signaling server ({@code null} if not explicitly set). It is exposed
+     * via ({@link #getDebugState()} for outside use.
      */
+    @Nullable
     private final String meetingId;
 
     /**
@@ -184,7 +186,7 @@ public class Conference
                       String id,
                       EntityBareJid conferenceName,
                       long gid,
-                      String meetingId)
+                      @Nullable String meetingId)
     {
         if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
         {
