@@ -23,7 +23,6 @@ import org.jitsi.videobridge.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jivesoftware.smack.packet.*;
 
-import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -236,12 +235,12 @@ public class ContentShim
      *                  a channel.
      * @return the channel described by {@code channelIq}, or {@code null} if
      * the channel is expired.
-     * @throws VideobridgeShim.IqProcessingException if {@code channelIq}
+     * @throws IqProcessingException if {@code channelIq}
      * contains invalid fields.
      */
     ChannelShim getOrCreateChannelShim(
             ColibriConferenceIQ.Channel channelIq)
-            throws VideobridgeShim.IqProcessingException
+            throws IqProcessingException
     {
         String channelId = channelIq.getID();
         int channelExpire = channelIq.getExpire();
@@ -257,26 +256,26 @@ public class ContentShim
                 // equal to zero requests the immediate expiration of the
                 // channel in question. Consequently, it does not make sense
                 // to have it in a channel allocation request.
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.bad_request,
                         "Channel expire request for empty ID");
             }
             if (endpointId == null)
             {
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.bad_request,
                         "Channel creation requested without endpoint ID");
             }
             if (!endpointId.equals(channelBundleId))
             {
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.bad_request,
                         "Endpoint ID does not match channel bundle ID");
             }
             channelShim = createRtpChannel(endpointId);
             if (channelShim == null)
             {
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.internal_server_error,
                         "Error creating channel");
             }
@@ -292,7 +291,7 @@ public class ContentShim
                     // expired
                     return null;
                 }
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.internal_server_error,
                         "Error finding channel " + channelId);
             }
@@ -307,7 +306,7 @@ public class ContentShim
         }
         catch (IllegalArgumentException iae)
         {
-            throw new VideobridgeShim.IqProcessingException(
+            throw new IqProcessingException(
                     XMPPError.Condition.bad_request,
                     iae.getMessage());
         }
@@ -327,12 +326,12 @@ public class ContentShim
      *
      * @return the {@link SctpConnectionShim} described by
      * {@code sctpConnectionIq}, or {@code null} if it is expired.
-     * @throws VideobridgeShim.IqProcessingException if {@code sctpConnectionIq}
+     * @throws IqProcessingException if {@code sctpConnectionIq}
      * contains invalid fields.
      */
     SctpConnectionShim getOrCreateSctpConnectionShim(
             ColibriConferenceIQ.SctpConnection sctpConnectionIq)
-            throws VideobridgeShim.IqProcessingException
+            throws IqProcessingException
     {
         String id = sctpConnectionIq.getID();
         String endpointId = sctpConnectionIq.getEndpoint();
@@ -343,14 +342,14 @@ public class ContentShim
         {
             if (expire == 0)
             {
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.bad_request,
                         "SCTP connection expire request for empty ID");
             }
 
             if (endpointId == null)
             {
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.bad_request,
                         "No endpoint ID specified for the new SCTP connection");
             }
@@ -368,7 +367,7 @@ public class ContentShim
             }
             else if (sctpConnectionShim == null)
             {
-                throw new VideobridgeShim.IqProcessingException(
+                throw new IqProcessingException(
                         XMPPError.Condition.bad_request,
                         "No SCTP connection found for ID: " + id);
             }
@@ -383,7 +382,7 @@ public class ContentShim
         }
         catch (IllegalArgumentException iae)
         {
-            throw new VideobridgeShim.IqProcessingException(
+            throw new IqProcessingException(
                     XMPPError.Condition.bad_request,
                     iae.getMessage());
         }

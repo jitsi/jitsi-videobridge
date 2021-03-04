@@ -111,12 +111,6 @@ public class Videobridge
     private final VideobridgeExpireThread videobridgeExpireThread;
 
     /**
-     * The shim which handles Colibri-related logic for this
-     * {@link Videobridge}.
-     */
-    private final VideobridgeShim shim = new VideobridgeShim(this);
-
-    /**
      * The {@link JvbLoadManager} instance used for this bridge.
      */
     private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager;
@@ -351,41 +345,29 @@ public class Videobridge
 
     /**
      * Handles a COLIBRI request synchronously.
-     */
-    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIq)
-    {
-        return handleColibriConferenceIQ(null, conferenceIq);
-    }
-
-    /**
-     * Handles a COLIBRI request synchronously.
-     * @param conference The conference which is the target of the request. If not provided ({@code null}, it will
-     * be retrieved or created based on the ID provided in request.
      * @param conferenceIq The COLIBRI request.
      * @return The response in the form of an {@link IQ}. It is either an error or a {@link ColibriConferenceIQ}.
      */
-    public IQ handleColibriConferenceIQ(Conference conference, ColibriConferenceIQ conferenceIq)
+    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIq)
     {
-        if (conference == null)
+        Conference conference;
+        try
         {
-            try
-            {
-                conference = getOrCreateConference(conferenceIq);
-            }
-            catch (ConferenceNotFoundException e)
-            {
-                return IQUtils.createError(
-                        conferenceIq,
-                        XMPPError.Condition.bad_request,
-                        "Conference not found for ID: " + conferenceIq.getID());
-            }
-            catch (InGracefulShutdownException e)
-            {
-                return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq);
-            }
+            conference = getOrCreateConference(conferenceIq);
+        }
+        catch (ConferenceNotFoundException e)
+        {
+            return IQUtils.createError(
+                    conferenceIq,
+                    XMPPError.Condition.bad_request,
+                    "Conference not found for ID: " + conferenceIq.getID());
+        }
+        catch (InGracefulShutdownException e)
+        {
+            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq);
         }
 
-        return shim.handleColibriConferenceIQ(conference, conferenceIq);
+        return conference.getShim().handleColibriConferenceIQ(conferenceIq);
     }
 
     /**
@@ -415,7 +397,7 @@ public class Videobridge
         }
 
         // It is now the responsibility of Conference to send a response.
-        conference.enqueueColibriRequest(request);
+        conference.getShim().enqueueColibriRequest(request);
     }
 
     private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)
@@ -429,7 +411,7 @@ public class Videobridge
 
         if (conferenceId == null)
         {
-            return createConference(conferenceIq.getName(), VideobridgeShim.parseGid(conferenceIq.getGID()));
+            return createConference(conferenceIq.getName(), ColibriUtil.parseGid(conferenceIq.getGID()));
         }
         else
         {
