@@ -218,9 +218,7 @@ class EndpointK @JvmOverloads constructor(
         bitrateController.addPayloadType(payloadType)
     }
 
-    override fun addRtpExtension(rtpExtension: RtpExtension) {
-        _transceiver.addRtpExtension(rtpExtension)
-    }
+    override fun addRtpExtension(rtpExtension: RtpExtension) = _transceiver.addRtpExtension(rtpExtension)
 
     override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
         logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
@@ -317,7 +315,7 @@ class EndpointK @JvmOverloads constructor(
             if (timeSinceCreation > EP_TIMEOUT) {
                 logger.info(
                     "Endpoint's ICE connection has neither failed nor connected " +
-                        "after " + timeSinceCreation + ", expiring"
+                        "after $timeSinceCreation expiring"
                 )
                 return true
             }
@@ -417,7 +415,6 @@ class EndpointK @JvmOverloads constructor(
 
     override fun getDebugState(): JSONObject {
         return super.getDebugState().apply {
-            // debugState.put("sctpManager", sctpManager.getDebugState());
             put("bitrateController", bitrateController.debugState)
             put("bandwidthProbing", bandwidthProbing.getDebugState())
             put("iceTransport", iceTransport.getDebugState())

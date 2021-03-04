@@ -18,6 +18,7 @@ package org.jitsi.videobridge.cc
 
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.utils.concurrent.PeriodicRunnable
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -40,7 +41,7 @@ class BandwidthProbing(
     /**
      * The RTP timestamp to use if probing with the JVB's SSRC.
      */
-    private var ts: Long = Random.nextLong().and(0xFFFFFFFFL)
+    private var ts: Long = Random.nextInt().toPositiveLong()
 
     /**
      * Whether or not probing is currently enabled
@@ -77,7 +78,7 @@ class BandwidthProbing(
         // How much padding do we need?
         val totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps
         if (totalNeededBps < 1) {
-            // Don't need to send any probing
+            // Don't need to send any probing.
             bytesLeftOver = 0
             return
         }
