@@ -15,13 +15,13 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation;
 
-import org.jetbrains.annotations.*;
+import org.jetbrains.annotations.NotNull;
 import org.jitsi.utils.logging.DiagnosticContext;
 import org.jitsi.utils.logging.TimeSeriesLogger;
-import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.logging2.Logger;
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.config.SendSideBandwidthEstimationConfig;
 
-import java.time.*;
+import java.time.Duration;
 import java.util.*;
 
 /**
@@ -225,13 +225,13 @@ public class SendSideBandwidthEstimation
         {
             low_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalLowLossThreshold();
             high_loss_threshold_ = SendSideBandwidthEstimationConfig.experimentalHighLossThreshold();
-            bitrate_threshold_bps_ = (int) SendSideBandwidthEstimationConfig.experimentalBitrateThreshold().getBps();
+            bitrate_threshold_bps_ = (int) SendSideBandwidthEstimationConfig.experimentalBitrateThresholdBps();
         }
         else
         {
             low_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultLowLossThreshold();
             high_loss_threshold_ = SendSideBandwidthEstimationConfig.defaultHighLossThreshold();
-            bitrate_threshold_bps_ = (int) SendSideBandwidthEstimationConfig.defaultBitrateThreshold().getBps();
+            bitrate_threshold_bps_ = (int) SendSideBandwidthEstimationConfig.defaultBitrateThresholdBps();
         }
 
 

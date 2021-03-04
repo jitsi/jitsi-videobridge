@@ -222,7 +222,7 @@ public class RemoteBitrateEstimatorAbsSendTime
         // should be broken out from  here.
         // Check if incoming bitrate estimate is valid, and if it
         // needs to be reset.
-        long incomingBitrate_ = (long) incomingBitrate.getRate(arrivalTimeMs).getBps();
+        long incomingBitrate_ = incomingBitrate.getRateBps(arrivalTimeMs);
         if (incomingBitrate_ != 0)
         {
             incomingBitrateInitialized = true;
@@ -286,7 +286,7 @@ public class RemoteBitrateEstimatorAbsSendTime
         else if (
             detector.detector.getState() == BandwidthUsage.kBwOverusing)
         {
-            long incomingRate_ = (long) incomingBitrate.getRate(arrivalTimeMs).getBps();
+            long incomingRate_ = incomingBitrate.getRateBps(arrivalTimeMs);
 
             if (incomingRate_ > 0 && remoteRate
                 .isTimeToReduceFurther(nowMs, incomingBitrate_))
@@ -302,7 +302,7 @@ public class RemoteBitrateEstimatorAbsSendTime
             // overusing and the target bitrate is too high compared to
             // what we are receiving.
             input.bwState = detector.detector.getState();
-            input.incomingBitRate = (long) incomingBitrate.getRate(arrivalTimeMs).getBps();
+            input.incomingBitRate = incomingBitrate.getRateBps(arrivalTimeMs);
             input.noiseVar = detector.estimator.getVarNoise();
 
             remoteRate.update(input, nowMs);

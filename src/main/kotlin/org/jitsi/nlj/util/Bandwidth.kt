@@ -24,11 +24,11 @@ import kotlin.math.sign
  * [Bandwidth] models a current bandwidth, represented as a rate
  * of bits per second.
  */
-class Bandwidth(bps: Double) : Comparable<Bandwidth> {
-    val bps: Double = bps
-
-    val kbps: Double = bps / 1000
-    val mbps: Double = bps / (1000 * 1000)
+inline class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
+    val kbps: Double
+        get() = bps / 1000
+    val mbps: Double
+        get() = bps / (1000 * 1000)
 
     operator fun minus(other: Bandwidth): Bandwidth =
         Bandwidth(bps - other.bps)
@@ -79,21 +79,11 @@ class Bandwidth(bps: Double) : Comparable<Bandwidth> {
         }
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is Bandwidth) {
-            return false
-        }
-        return compareTo(other) == 0
-    }
-
-    override fun hashCode(): Int = bps.hashCode()
-
     companion object {
         fun fromString(str: String): Bandwidth {
             val (digits, notDigits) = str.partition { it.isDigit() }
             val amount = digits.toInt()
-            val unit = notDigits.trim().toLowerCase()
-            return when (unit) {
+            return when (val unit = notDigits.trim().toLowerCase()) {
                 "bps" -> amount.bps
                 "kbps" -> amount.kbps
                 "mbps" -> amount.mbps
@@ -118,11 +108,11 @@ val Float.mbps: Bandwidth
     get() = Bandwidth(this.toDouble() * 1000 * 1000)
 
 val Double.bps: Bandwidth
-    get() = Bandwidth(this.toDouble())
+    get() = Bandwidth(this)
 val Double.kbps: Bandwidth
-    get() = Bandwidth(this.toDouble() * 1000)
+    get() = Bandwidth(this * 1000)
 val Double.mbps: Bandwidth
-    get() = Bandwidth(this.toDouble() * 1000 * 1000)
+    get() = Bandwidth(this * 1000 * 1000)
 
 val Long.bps: Bandwidth
     get() = Bandwidth(this.toDouble())

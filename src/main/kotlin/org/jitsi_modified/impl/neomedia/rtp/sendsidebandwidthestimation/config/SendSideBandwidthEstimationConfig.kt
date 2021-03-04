@@ -54,6 +54,9 @@ class SendSideBandwidthEstimationConfig {
         @JvmStatic
         fun defaultBitrateThreshold() = defaultBitrateThreshold
 
+        @JvmStatic
+        fun defaultBitrateThresholdBps() = defaultBitrateThreshold.bps
+
         private const val LEGACY_BASE_NAME =
             "org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation"
 
@@ -102,6 +105,9 @@ class SendSideBandwidthEstimationConfig {
          */
         @JvmStatic
         fun experimentalBitrateThreshold() = experimentalBitrateThreshold
+
+        @JvmStatic
+        fun experimentalBitrateThresholdBps() = experimentalBitrateThreshold.bps
 
         private val timeoutExperimentProbability: Double by config {
             "$LEGACY_BASE_NAME.timeoutExperimentProbability".from(JitsiConfig.legacyConfig)

@@ -166,6 +166,9 @@
                 </executions>
                 <configuration>
                     <jvmTarget>1.8</jvmTarget>
+                    <args>
+                        <arg>-Xinline-classes</arg>
+                    </args>
                 </configuration>
             </plugin>
             <plugin>

@@ -29,6 +29,7 @@ open class BitrateTracker @JvmOverloads constructor(
     // that RateTracker uses.
     private val tracker = RateTracker(windowSize, bucketSize, clock)
     open fun getRate(nowMs: Long = clock.millis()): Bandwidth = tracker.getRate(nowMs).bps
+    open fun getRateBps(nowMs: Long = clock.millis()): Long = tracker.getRate(nowMs)
     val rate: Bandwidth
         get() = getRate()
     fun update(dataSize: DataSize, now: Long = clock.millis()) = tracker.update(dataSize.bits, now)

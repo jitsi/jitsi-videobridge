@@ -236,4 +236,8 @@ private class FakeBitrateTracker(
     override fun getRate(nowMs: Long): Bandwidth {
         return fakeRateBps.bps
     }
+
+    override fun getRateBps(nowMs: Long): Long {
+        return fakeRateBps
+    }
 }
