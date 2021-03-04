@@ -54,6 +54,7 @@ import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.function.Supplier
 
 class EndpointK @JvmOverloads constructor(
     id: String,
@@ -90,7 +91,7 @@ class EndpointK @JvmOverloads constructor(
                 return _transceiver.sendProbing(mediaSsrcs, numBytes)
             }
         },
-        java.util.function.Supplier { bitrateController.getStatusSnapshot() }
+        Supplier { bitrateController.getStatusSnapshot() }
     ).apply {
         diagnosticsContext = this@EndpointK.diagnosticContext
         enabled = true
