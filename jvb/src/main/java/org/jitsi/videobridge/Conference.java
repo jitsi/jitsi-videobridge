@@ -165,6 +165,11 @@ public class Conference
     private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
     /**
+     * A unique meeting ID set by the signaling server. It is exposed via ({@link #getDebugState()} for outside use.
+     */
+    private final String meetingId;
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID.
@@ -178,12 +183,14 @@ public class Conference
     public Conference(Videobridge videobridge,
                       String id,
                       EntityBareJid conferenceName,
-                      long gid)
+                      long gid,
+                      String meetingId)
     {
         if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
         {
             throw new IllegalArgumentException("Invalid GID:" + gid);
         }
+        this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         Map<String, String> context = JMap.ofEntries(
             entry("confId", id),
@@ -1111,6 +1118,10 @@ public class Conference
         if (conferenceName != null)
         {
             debugState.put("name", conferenceName.toString());
+        }
+        if (meetingId != null)
+        {
+            debugState.put("meeting_id", meetingId);
         }
 
         if (full)
