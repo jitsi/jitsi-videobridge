@@ -424,10 +424,6 @@ public class Videobridge
         }
     }
 
-    private class ConferenceNotFoundException extends Exception {}
-    private class InGracefulShutdownException extends Exception {}
-
-
     /**
      * Handles <tt>HealthCheckIQ</tt> by performing health check on this
      * <tt>Videobridge</tt> instance.
@@ -887,4 +883,6 @@ public class Videobridge
         void conferenceCreated(@NotNull Conference conference);
         void conferenceExpired(@NotNull Conference conference);
     }
+    private static class ConferenceNotFoundException extends Exception {}
+    private static class InGracefulShutdownException extends Exception {}
 }
