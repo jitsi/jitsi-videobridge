@@ -41,7 +41,7 @@ class ConferenceTest : ConfigTest() {
         }
 
         context("Adding local endpoints should work") {
-            with(Conference(videobridge, "id", name, Conference.GID_NOT_SET)) {
+            with(Conference(videobridge, "id", name, Conference.GID_NOT_SET, null)) {
                 endpointCount shouldBe 0
                 createLocalEndpoint("abcdabcd", true)
                 endpointCount shouldBe 1
@@ -49,7 +49,7 @@ class ConferenceTest : ConfigTest() {
             }
         }
         context("Enabling octo should fail when the GID is not set") {
-            with(Conference(videobridge, "id", name, Conference.GID_NOT_SET)) {
+            with(Conference(videobridge, "id", name, Conference.GID_NOT_SET, null)) {
                 isOctoEnabled shouldBe false
                 shouldThrow<IllegalStateException> {
                     tentacle
@@ -58,7 +58,7 @@ class ConferenceTest : ConfigTest() {
             }
         }
         context("Enabling octo should work") {
-            with(Conference(videobridge, "id", name, 1234)) {
+            with(Conference(videobridge, "id", name, 1234, null)) {
                 isOctoEnabled shouldBe false
                 tentacle
                 isOctoEnabled shouldBe true

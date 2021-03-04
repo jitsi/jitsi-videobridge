@@ -188,7 +188,7 @@ public class Videobridge
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(EntityBareJid name, long gid)
+    private @NotNull Conference doCreateConference(EntityBareJid name, long gid, String meetingId)
     {
         Conference conference = null;
         do
@@ -199,7 +199,7 @@ public class Videobridge
             {
                 if (!conferencesById.containsKey(id))
                 {
-                    conference = new Conference(this, id, name, gid);
+                    conference = new Conference(this, id, name, gid, meetingId);
                     conferencesById.put(id, conference);
                 }
             }
@@ -220,7 +220,7 @@ public class Videobridge
      */
     public @NotNull Conference createConference(EntityBareJid name)
     {
-        return createConference(name, Conference.GID_NOT_SET);
+        return createConference(name, Conference.GID_NOT_SET, null);
     }
 
     /**
@@ -235,9 +235,9 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(EntityBareJid name, long gid)
+    public @NotNull Conference createConference(EntityBareJid name, long gid, String meetingId)
     {
-        final Conference conference = doCreateConference(name, gid);
+        final Conference conference = doCreateConference(name, gid, meetingId);
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
 
@@ -411,7 +411,10 @@ public class Videobridge
 
         if (conferenceId == null)
         {
-            return createConference(conferenceIq.getName(), ColibriUtil.parseGid(conferenceIq.getGID()));
+            return createConference(
+                    conferenceIq.getName(),
+                    ColibriUtil.parseGid(conferenceIq.getGID()),
+                    conferenceIq.getMeetingId());
         }
         else
         {
@@ -423,10 +426,6 @@ public class Videobridge
             return conference;
         }
     }
-
-    private class ConferenceNotFoundException extends Exception {}
-    private class InGracefulShutdownException extends Exception {}
-
 
     /**
      * Handles <tt>HealthCheckIQ</tt> by performing health check on this
@@ -887,4 +886,6 @@ public class Videobridge
         void conferenceCreated(@NotNull Conference conference);
         void conferenceExpired(@NotNull Conference conference);
     }
+    private static class ConferenceNotFoundException extends Exception {}
+    private static class InGracefulShutdownException extends Exception {}
 }
