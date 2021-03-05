@@ -121,13 +121,6 @@ public abstract class Endpoint
     protected final DataChannelHandler dataChannelHandler = new DataChannelHandler();
 
     /**
-     * The instance which manages the Colibri messaging (over a data channel
-     * or web sockets).
-     */
-    @NotNull
-    protected final EndpointMessageTransport messageTransport;
-
-    /**
      * The diagnostic context of this instance.
      */
     protected final DiagnosticContext diagnosticContext;
@@ -136,7 +129,6 @@ public abstract class Endpoint
      * The bitrate controller.
      */
     protected final BitrateController<AbstractEndpoint> bitrateController;
-
     /**
      * The set of {@link ChannelShim}s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
@@ -257,13 +249,6 @@ public abstract class Endpoint
         );
         outgoingSrtpPacketQueue.setErrorHandler(queueErrorCounter);
 
-        messageTransport = new EndpointMessageTransport(
-            this,
-            () -> getConference().getVideobridge().getStatistics(),
-            getConference(),
-            logger
-        );
-
         diagnosticContext.put("endpoint_id", id);
 
         conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
@@ -292,10 +277,7 @@ public abstract class Endpoint
      * {@inheritDoc}
      */
     @Override
-    public EndpointMessageTransport getMessageTransport()
-    {
-        return messageTransport;
-    }
+    public abstract EndpointMessageTransport getMessageTransport();
 
     protected abstract void setupIceTransport();
 

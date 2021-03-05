@@ -126,7 +126,7 @@ public abstract class AbstractEndpoint
      * @return the {@link AbstractEndpointMessageTransport} associated with
      * this endpoint.
      */
-    public AbstractEndpointMessageTransport getMessageTransport()
+    public AbstractEndpointMessageTransport<?> getMessageTransport()
     {
         return null;
     }

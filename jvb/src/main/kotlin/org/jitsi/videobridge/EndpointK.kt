@@ -91,6 +91,19 @@ class EndpointK @JvmOverloads constructor(
     private val iceTransport = IceTransport(id, iceControlling, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
+    /**
+     * The instance which manages the Colibri messaging (over a data channel
+     * or web sockets).
+     */
+    private val _messageTransport = EndpointMessageTransport(
+        this,
+        Supplier { conference.videobridge.statistics },
+        conference,
+        logger
+    )
+
+    override fun getMessageTransport(): EndpointMessageTransport = _messageTransport
+
     // TODO: this naming is to avoid conflicts with getTransceiver in Endpoint.  It will change back
     // once Endpoint.java goes away
     val _transceiver = Transceiver(
@@ -403,7 +416,7 @@ class EndpointK @JvmOverloads constructor(
                 // This handles if the remote side will be opening the data channel
                 dataChannelStack.onDataChannelStackEvents { dataChannel ->
                     logger.info("Remote side opened a data channel.")
-                    messageTransport.setDataChannel(dataChannel)
+                    _messageTransport.setDataChannel(dataChannel)
                 }
                 dataChannelHandler.setDataChannelStack(dataChannelStack)
                 if (OPEN_DATA_LOCALLY) {
@@ -416,7 +429,7 @@ class EndpointK @JvmOverloads constructor(
                         0,
                         "default"
                     )
-                    messageTransport.setDataChannel(dataChannel)
+                    _messageTransport.setDataChannel(dataChannel)
                     dataChannel.open()
                 } else {
                     logger.info("Will wait for the remote side to open the data channel.")
@@ -883,7 +896,7 @@ class EndpointK @JvmOverloads constructor(
             logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
 
             _transceiver.teardown()
-            getMessageTransport()?.close()
+            _messageTransport.close()
             sctpHandler.stop()
             sctpManager?.closeConnection()
         } catch (t: Throwable) {
