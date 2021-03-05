@@ -67,29 +67,12 @@ public abstract class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
         EncodingsManager.EncodingsUpdateListener
 {
-    /**
-     * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
-     * Since {@link Endpoint} is the 'last place' that is aware of {@link PacketInfo} in the outgoing
-     * chain, we track this stats here.  Since they're static, these members will track the delay
-     * for packets going out to all endpoints.
-     */
-    protected static final PacketDelayStats rtpPacketDelayStats = new PacketDelayStats();
-    protected static final PacketDelayStats rtcpPacketDelayStats = new PacketDelayStats();
 
     /**
      * An average of all of the individual bridge jitter values calculated by the
      * {@link Endpoint#bridgeJitterStats} instance variables below
      */
     public static final DoubleAverage overallAverageBridgeJitter = new DoubleAverage("overall_bridge_jitter");
-
-    public static OrderedJsonObject getPacketDelayStats()
-    {
-        OrderedJsonObject packetDelayStats = new OrderedJsonObject();
-        packetDelayStats.put("rtp", Endpoint.rtpPacketDelayStats.toJson());
-        packetDelayStats.put("rtcp", Endpoint.rtcpPacketDelayStats.toJson());
-
-        return packetDelayStats;
-    }
 
     /**
      * Count the number of dropped packets and exceptions.

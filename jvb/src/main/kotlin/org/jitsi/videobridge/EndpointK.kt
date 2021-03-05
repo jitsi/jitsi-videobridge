@@ -28,10 +28,12 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.OrderedJsonObject
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
@@ -894,6 +896,23 @@ class EndpointK @JvmOverloads constructor(
         outgoingSrtpPacketQueue.close()
 
         logger.info("Expired.")
+    }
+
+    companion object {
+        /**
+         * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
+         * Since [Endpoint] is the 'last place' that is aware of [PacketInfo] in the outgoing
+         * chain, we track this stats here.  Since they're static, these members will track the delay
+         * for packets going out to all endpoints.
+         */
+        private val rtpPacketDelayStats = PacketDelayStats()
+        private val rtcpPacketDelayStats = PacketDelayStats()
+
+        @JvmStatic
+        fun getPacketDelayStats() = OrderedJsonObject().apply {
+            put("rtp", rtpPacketDelayStats.toJson())
+            put("rtcp", rtcpPacketDelayStats.toJson())
+        }
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {

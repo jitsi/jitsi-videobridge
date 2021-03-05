@@ -26,7 +26,7 @@ public class PacketTransitStats
     {
         OrderedJsonObject stats = new OrderedJsonObject();
 
-        stats.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
+        stats.put("e2e_packet_delay", EndpointK.getPacketDelayStats());
         stats.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
 
         return stats;
