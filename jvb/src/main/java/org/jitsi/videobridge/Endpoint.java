@@ -96,11 +96,6 @@ public abstract class Endpoint
     /**
      * TODO Brian
      */
-    protected final SctpHandler sctpHandler = new SctpHandler();
-
-    /**
-     * TODO Brian
-     */
     protected DataChannelStack dataChannelStack;
 
     /**
@@ -410,82 +405,6 @@ public abstract class Endpoint
                         dataChannelStack.onIncomingDataChannelPacket(
                                 ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
                     });
-                }
-            });
-        }
-
-        @Override
-        public void trace(@NotNull Function0<Unit> f)
-        {
-            f.invoke();
-        }
-    }
-
-    /**
-     * A node which can be placed in the pipeline to cache SCTP packets until
-     * the SCTPManager is ready to handle them.
-     */
-    protected static class SctpHandler extends ConsumerNode
-    {
-        protected final Object sctpManagerLock = new Object();
-        public SctpManager sctpManager = null;
-        public BlockingQueue<PacketInfo> cachedSctpPackets = new LinkedBlockingQueue<>(100);
-        protected AtomicLong numCachedSctpPackets = new AtomicLong();
-
-        /**
-         * Initializes a new {@link SctpHandler} instance.
-         */
-        public SctpHandler()
-        {
-            super("SCTP handler");
-        }
-
-        @Override
-        protected void consume(@NotNull PacketInfo packetInfo)
-        {
-            synchronized (sctpManagerLock)
-            {
-                if (SctpConfig.config.enabled())
-                {
-                    if (sctpManager == null)
-                    {
-                        numCachedSctpPackets.incrementAndGet();
-                        cachedSctpPackets.add(packetInfo);
-                    }
-                    else
-                    {
-                        sctpManager.handleIncomingSctp(packetInfo);
-                    }
-                }
-            }
-        }
-
-        @Override
-        public NodeStatsBlock getNodeStats()
-        {
-            NodeStatsBlock nodeStats = super.getNodeStats();
-            nodeStats.addNumber("num_cached_packets", numCachedSctpPackets.get());
-            return nodeStats;
-        }
-
-        /**
-         * Sets the SCTP manager of this endpoint.
-         */
-        public void setSctpManager(SctpManager sctpManager)
-        {
-            // Submit this to the pool since we wait on the lock and process any
-            // cached packets here as well
-            TaskPools.IO_POOL.submit(() -> {
-                // We grab the lock here so that we can set the SCTP manager and
-                // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via
-                // #doProcessPackets and processing packets at the same time in
-                // another thread, which would be a problem.
-                synchronized (sctpManagerLock)
-                {
-                    this.sctpManager = sctpManager;
-                    cachedSctpPackets.forEach(sctpManager::handleIncomingSctp);
-                    cachedSctpPackets.clear();
                 }
             });
         }

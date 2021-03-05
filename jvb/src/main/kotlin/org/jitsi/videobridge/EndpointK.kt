@@ -28,6 +28,7 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
@@ -57,6 +58,7 @@ import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
+import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
@@ -79,7 +81,9 @@ import java.time.Duration
 import java.time.Instant
 import java.util.function.Supplier
 import java.util.Optional
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 class EndpointK @JvmOverloads constructor(
     id: String,
@@ -93,6 +97,8 @@ class EndpointK @JvmOverloads constructor(
      * The time at which this endpoint was created
      */
     private val creationTime = clock.instant()
+
+    private val sctpHandler = SctpHandler()
 
     private val iceTransport = IceTransport(id, iceControlling, logger)
     private val dtlsTransport = DtlsTransport(logger)
@@ -960,5 +966,50 @@ class EndpointK @JvmOverloads constructor(
             bitrateController.bandwidthChanged(newValue.bps.toLong())
             bandwidthProbing.bandwidthEstimationChanged(newValue)
         }
+    }
+
+    /**
+     * A node which can be placed in the pipeline to cache SCTP packets until
+     * the SCTPManager is ready to handle them.
+     */
+    private class SctpHandler : ConsumerNode("SCTP handler") {
+        private val sctpManagerLock = Any()
+        private var sctpManager: SctpManager? = null
+        private val numCachedSctpPackets = AtomicLong(0)
+        private val cachedSctpPackets = LinkedBlockingQueue<PacketInfo>(100)
+
+        override fun consume(packetInfo: PacketInfo) {
+            synchronized(sctpManagerLock) {
+                if (SctpConfig.config.enabled) {
+                    sctpManager?.handleIncomingSctp(packetInfo) ?: run {
+                        numCachedSctpPackets.incrementAndGet()
+                        cachedSctpPackets.add(packetInfo)
+                    }
+                }
+            }
+        }
+
+        override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+            addNumber("num_cached_packets", numCachedSctpPackets.get())
+        }
+
+        fun setSctpManager(sctpManager: SctpManager) {
+            // Submit this to the pool since we wait on the lock and process any
+            // cached packets here as well
+            TaskPools.IO_POOL.submit {
+                // We grab the lock here so that we can set the SCTP manager and
+                // process any previously-cached packets as an atomic operation.
+                // It also prevents another thread from coming in via
+                // #doProcessPackets and processing packets at the same time in
+                // another thread, which would be a problem.
+                synchronized(sctpManagerLock) {
+                    this.sctpManager = sctpManager
+                    cachedSctpPackets.forEach { sctpManager.handleIncomingSctp(it) }
+                    cachedSctpPackets.clear()
+                }
+            }
+        }
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 }
