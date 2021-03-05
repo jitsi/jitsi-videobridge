@@ -94,13 +94,6 @@ public abstract class Endpoint
     protected SctpManager sctpManager;
 
     /**
-     * How long we'll give an endpoint to either successfully establish
-     * an ICE connection or fail before we expire it.
-     */
-    //TODO: make this configurable
-    protected static final Duration EP_TIMEOUT = Duration.ofMinutes(2);
-
-    /**
      * TODO Brian
      */
     protected final SctpHandler sctpHandler = new SctpHandler();

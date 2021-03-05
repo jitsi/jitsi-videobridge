@@ -46,6 +46,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.mins
 import org.jitsi.videobridge.cc.BandwidthProbing
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
@@ -763,7 +764,7 @@ class EndpointK @JvmOverloads constructor(
 
         if (lastActivity == NEVER) {
             val timeSinceCreation = Duration.between(creationTime, now)
-            if (timeSinceCreation > EP_TIMEOUT) {
+            if (timeSinceCreation > epTimeout) {
                 logger.info(
                     "Endpoint's ICE connection has neither failed nor connected " +
                         "after $timeSinceCreation expiring"
@@ -928,6 +929,13 @@ class EndpointK @JvmOverloads constructor(
          */
         private val rtpPacketDelayStats = PacketDelayStats()
         private val rtcpPacketDelayStats = PacketDelayStats()
+
+        /**
+         * How long we'll give an endpoint to either successfully establish
+         * an ICE connection or fail before we expire it.
+         */
+        // TODO: make this configurable
+        private val epTimeout = 2.mins
 
         @JvmStatic
         fun getPacketDelayStats() = OrderedJsonObject().apply {
