@@ -622,7 +622,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
+        final Endpoint endpoint = new EndpointK(id, this, logger, iceControlling);
 
         subscribeToEndpointEvents(endpoint);
 

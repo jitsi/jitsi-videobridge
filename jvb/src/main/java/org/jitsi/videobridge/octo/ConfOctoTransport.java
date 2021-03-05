@@ -557,13 +557,13 @@ public class ConfOctoTransport
             debugState.put("packets_received", packetsReceived);
             debugState.put("receive_packet_rate_pps", receivePacketRate.getRate());
             debugState.put("bytes_received", bytesReceived);
-            debugState.put("receive_bitrate_bps", receiveBitRate.getRate().getBps());
+            debugState.put("receive_bitrate_bps", receiveBitRate.getRate());
             debugState.put("incoming_packets_dropped", incomingPacketsDropped);
 
             debugState.put("packets_sent", packetsSent.sum());
             debugState.put("send_packet_rate_pps", sendPacketRate.getRate());
             debugState.put("bytes_sent", bytesSent.sum());
-            debugState.put("send_bitrate_bps", sendBitRate.getRate().getBps());
+            debugState.put("send_bitrate_bps", sendBitRate.getRate());
 
             return debugState;
         }
