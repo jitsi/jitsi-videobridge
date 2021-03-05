@@ -94,11 +94,6 @@ public abstract class Endpoint
     protected SctpManager sctpManager;
 
     /**
-     * The time at which this endpoint was created (in millis since epoch)
-     */
-    protected final Instant creationTime;
-
-    /**
      * How long we'll give an endpoint to either successfully establish
      * an ICE connection or fail before we expire it.
      */
@@ -152,11 +147,6 @@ public abstract class Endpoint
     protected volatile boolean acceptVideo = false;
 
     /**
-     * The clock used by this endpoint
-     */
-    protected final Clock clock;
-
-    /**
      * Whether or not the bridge should be the peer which opens the data channel
      * (as opposed to letting the far peer/client open it).
      */
@@ -204,9 +194,6 @@ public abstract class Endpoint
     {
         super(conference, id, parentLogger);
 
-        this.clock = clock;
-
-        creationTime = clock.instant();
         diagnosticContext = conference.newDiagnosticContext();
         BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
         {

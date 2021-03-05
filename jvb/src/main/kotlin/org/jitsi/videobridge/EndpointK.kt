@@ -85,8 +85,13 @@ class EndpointK @JvmOverloads constructor(
     conference: Conference,
     parentLogger: Logger,
     iceControlling: Boolean,
-    clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC()
 ) : Endpoint(id, conference, parentLogger, iceControlling, clock) {
+
+    /**
+     * The time at which this endpoint was created
+     */
+    private val creationTime = clock.instant()
 
     private val iceTransport = IceTransport(id, iceControlling, logger)
     private val dtlsTransport = DtlsTransport(logger)
