@@ -35,6 +35,8 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.looksLikeRtcp
+import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
@@ -43,18 +45,38 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.cc.BandwidthProbing
+import org.jitsi.videobridge.cc.allocation.VideoConstraints
+import org.jitsi.videobridge.datachannel.DataChannelStack
+import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
+import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
+import org.jitsi.videobridge.message.BridgeChannelMessage
+import org.jitsi.videobridge.message.ForwardedEndpointsMessage
+import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
+import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
+import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
+import org.jitsi.videobridge.xmpp.MediaSourceFactory
+import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
+import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
+import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
+import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
+import org.jitsi_modified.sctp4j.SctpDataCallback
+import org.jitsi_modified.sctp4j.SctpServerSocket
+import org.jitsi_modified.sctp4j.SctpSocket
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.function.Supplier
+import java.util.Optional
+import java.util.concurrent.TimeUnit
 
 class EndpointK @JvmOverloads constructor(
     id: String,
@@ -260,6 +282,394 @@ class EndpointK @JvmOverloads constructor(
         return _transceiver.isReceivingVideo()
     }
 
+    override fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+        if (packetInfo.packet.looksLikeRtp()) {
+            rtpPacketDelayStats.addPacket(packetInfo)
+            bridgeJitterStats.packetSent(packetInfo)
+        } else if (packetInfo.packet.looksLikeRtcp()) {
+            rtcpPacketDelayStats.addPacket(packetInfo)
+        }
+
+        packetInfo.sent()
+        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
+        return true
+    }
+
+    /**
+     * Notifies this [Endpoint] that the ordered list of last-n endpoints has changed
+     */
+    override fun lastNEndpointsChanged() = bitrateController.endpointOrderingChanged()
+
+    /**
+     * Sends a specific msg to this endpoint over its bridge channel
+     */
+    override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
+
+    /**
+     * Adds [channelShim] channel to this endpoint.
+     */
+    override fun addChannel(channelShim: ChannelShim) {
+        if (channelShims.add(channelShim)) {
+            updateAcceptedMediaTypes()
+        }
+    }
+
+    /**
+     * Removes a specific [ChannelShim] from this endpoint.
+     */
+    override fun removeChannel(channelShim: ChannelShim) {
+        if (channelShims.remove(channelShim)) {
+            if (channelShims.isEmpty()) {
+                expire()
+            } else {
+                updateAcceptedMediaTypes()
+            }
+        }
+    }
+
+    // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
+    override fun endpointMessageTransportConnected() =
+        sendVideoConstraints(maxReceiverVideoConstraints)
+
+    /**
+     * Handle a DTLS app packet (that is, a packet of some other protocol sent
+     * over DTLS) which has just been received.
+     */
+    // TODO(brian): change sctp handler to take buf, off, len
+    fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
+        sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
+
+    override fun effectiveVideoConstraintsChanged(
+        oldEffectiveConstraints: MutableMap<String, VideoConstraints>,
+        newEffectiveConstraints: MutableMap<String, VideoConstraints>
+    ) {
+        val removedEndpoints = oldEffectiveConstraints.keys.filter { it in newEffectiveConstraints.keys }
+
+        // Sources that "this" endpoint no longer receives.
+        for (removedEpId in removedEndpoints) {
+            // Remove ourself as a receiver from that endpoint
+            conference.getEndpoint(removedEpId)?.removeReceiver(id)
+        }
+
+        // Added or updated
+        newEffectiveConstraints.forEach { (epId, effectiveConstraints) ->
+            conference.getEndpoint(epId)?.addReceiver(id, effectiveConstraints)
+        }
+    }
+
+    override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
+        // Note that it's up to the client to respect these constraints.
+        if (mediaSources.isEmpty()) {
+            logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no streams." }
+        } else {
+            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(maxVideoConstraints.maxHeight)
+            logger.cdebug { "Sender constraints changed: ${senderVideoConstraintsMessage.toJson()}" }
+            sendMessage(senderVideoConstraintsMessage)
+        }
+    }
+
+    /**
+     * Create an SCTP connection for this Endpoint.  If [Endpoint.OPEN_DATA_LOCALLY] is true,
+     * we will create the data channel locally, otherwise we will wait for the remote side
+     * to open it.
+     */
+    override fun createSctpConnection() {
+        logger.cdebug { "Creating SCTP manager" }
+        // Create the SctpManager and provide it a method for sending SCTP data
+        sctpManager = SctpManager(
+            { data, offset, length ->
+                dtlsTransport.sendDtlsData(data, offset, length)
+                0
+            },
+            logger
+        )
+        sctpHandler.setSctpManager(sctpManager)
+        // NOTE(brian): as far as I know we always act as the 'server' for sctp
+        // connections, but if not we can make which type we use dynamic
+        val socket = sctpManager.createServerSocket()
+        socket.eventHandler = object : SctpSocket.SctpSocketEventHandler {
+            override fun onReady() {
+                logger.info("SCTP connection is ready, creating the Data channel stack")
+                dataChannelStack = DataChannelStack(
+                    { data, sid, ppid -> socket.send(data, true, sid, ppid) },
+                    logger
+                )
+                // This handles if the remote side will be opening the data channel
+                dataChannelStack.onDataChannelStackEvents { dataChannel ->
+                    logger.info("Remote side opened a data channel.")
+                    messageTransport.setDataChannel(dataChannel)
+                }
+                dataChannelHandler.setDataChannelStack(dataChannelStack)
+                if (OPEN_DATA_LOCALLY) {
+                    // This logic is for opening the data channel locally
+                    logger.info("Will open the data channel.")
+                    val dataChannel = dataChannelStack.createDataChannel(
+                        DataChannelProtocolConstants.RELIABLE,
+                        0,
+                        0,
+                        0,
+                        "default"
+                    )
+                    messageTransport.setDataChannel(dataChannel)
+                    dataChannel.open()
+                } else {
+                    logger.info("Will wait for the remote side to open the data channel.")
+                }
+            }
+
+            override fun onDisconnected() {
+                logger.info("SCTP connection is disconnected")
+            }
+        }
+
+        socket.dataCallback = object : SctpDataCallback {
+            override fun onSctpPacket(
+                data: ByteArray,
+                sid: Int,
+                ssn: Int,
+                tsn: Int,
+                ppid: Long,
+                context: Int,
+                flags: Int
+            ) {
+                // We assume all data coming over SCTP will be datachannel data
+                val dataChannelPacket = DataChannelPacket(data, 0, data.size, sid, ppid.toInt())
+                // Post the rest of the task here because the current context is
+                // holding a lock inside the SctpSocket which can cause a deadlock
+                // if two endpoints are trying to send datachannel messages to one
+                // another (with stats broadcasting it can happen often)
+                TaskPools.IO_POOL.execute { dataChannelHandler.consume(PacketInfo(dataChannelPacket)) }
+            }
+        }
+        socket.listen()
+        sctpSocket = Optional.of(socket)
+    }
+
+    fun acceptSctpConnection(sctpServerSocket: SctpServerSocket) {
+        TaskPools.IO_POOL.submit {
+            // We don't want to block the thread calling
+            // onDtlsHandshakeComplete so run the socket acceptance in an IO
+            // pool thread
+            // FIXME: This runs forever once the socket is closed (
+            // accept never returns true).
+            logger.info("Attempting to establish SCTP socket connection")
+            var attempts = 0
+            while (!sctpServerSocket.accept()) {
+                attempts++
+                try {
+                    Thread.sleep(100)
+                } catch (e: InterruptedException) {
+                    break
+                }
+                if (attempts > 100) {
+                    logger.error("Timed out waiting for SCTP connection from remote side")
+                    break
+                }
+            }
+            logger.cdebug { "SCTP socket ${sctpServerSocket.hashCode()} accepted connection" }
+        }
+    }
+
+    /**
+     * Schedule a timeout to fire log a message and track a stat if we don't
+     * have an endpoint message transport connected within the timeout.
+     */
+    fun scheduleEndpointMessageTransportTimeout() {
+        TaskPools.SCHEDULED_POOL.schedule(
+            {
+                if (!isExpired) {
+                    if (!messageTransport.isConnected) {
+                        logger.error("EndpointMessageTransport still not connected.")
+                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.incrementAndGet()
+                    }
+                }
+            },
+            30,
+            TimeUnit.SECONDS
+        )
+    }
+
+    /**
+     * Checks whether a WebSocket connection with a specific password string
+     * should be accepted for this [Endpoint].
+     * @param password the
+     * @return {@code true} iff the password matches.
+     */
+    override fun acceptWebSocket(password: String): Boolean {
+        if (icePassword != password) {
+            logger.warn(
+                "Incoming web socket request with an invalid password. " +
+                    "Expected: $icePassword received $password"
+            )
+            return false
+        }
+        return true
+    }
+
+    /**
+     * @return the password of the ICE Agent associated with this
+     * [Endpoint].
+     */
+    override fun getIcePassword(): String = iceTransport.icePassword
+
+    /**
+     * Sends a message to this [Endpoint] in order to notify it that the set of endpoints for which the bridge
+     * is sending video has changed.
+     *
+     * @param forwardedEndpoints the collection of forwarded endpoints.
+     */
+    // TODO: when Endpoint.java goes away this should take a Collection (not MutableCollection)
+    override fun sendForwardedEndpointsMessage(forwardedEndpoints: MutableCollection<String>) {
+        val msg = ForwardedEndpointsMessage(forwardedEndpoints)
+        TaskPools.IO_POOL.submit {
+            try {
+                sendMessage(msg)
+            } catch (t: Throwable) {
+                logger.warn("Failed to send message:", t)
+            }
+        }
+    }
+
+    /**
+     * Sets the remote transport information (ICE candidates, DTLS fingerprints).
+     *
+     * @param transportInfo the XML extension which contains the remote
+     * transport information.
+     */
+    override fun setTransportInfo(transportInfo: IceUdpTransportPacketExtension) {
+        val remoteFingerprints = mutableMapOf<String, String>()
+        val fingerprintExtensions = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension::class.java)
+        fingerprintExtensions.forEach { fingerprintExtension ->
+            if (fingerprintExtension.hash != null && fingerprintExtension.fingerprint != null) {
+                remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
+            } else {
+                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
+            }
+        }
+        dtlsTransport.setRemoteFingerprints(remoteFingerprints)
+        if (fingerprintExtensions.isNotEmpty()) {
+            val setup = fingerprintExtensions.first().setup
+            dtlsTransport.setSetupAttribute(setup)
+        }
+        iceTransport.startConnectivityEstablishment(transportInfo)
+    }
+
+    override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {
+        val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
+        iceTransport.describe(iceUdpTransportPacketExtension)
+        dtlsTransport.describe(iceUdpTransportPacketExtension)
+        colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
+            colibriWebsocketService.getColibriWebSocketUrl(
+                conference.id,
+                id,
+                iceTransport.icePassword
+            )?.let { wsUrl ->
+                val wsPacketExtension = WebSocketPacketExtension(wsUrl)
+                iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
+            }
+        }
+
+        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
+        channelBundle.transport = iceUdpTransportPacketExtension
+    }
+
+    /**
+     * Update media direction of the [ChannelShim]s associated
+     * with this Endpoint.
+     *
+     * When media direction is set to 'sendrecv' JVB will
+     * accept incoming media from endpoint and forward it to
+     * other endpoints in a conference. Other endpoint's media
+     * will also be forwarded to current endpoint.
+     * When media direction is set to 'sendonly' JVB will
+     * NOT accept incoming media from this endpoint (not yet implemented), but
+     * media from other endpoints will be forwarded to this endpoint.
+     * When media direction is set to 'recvonly' JVB will
+     * accept incoming media from this endpoint, but will not forward
+     * other endpoint's media to this endpoint.
+     * When media direction is set to 'inactive' JVB will
+     * neither accept incoming media nor forward media from other endpoints.
+     *
+     * @param type media type.
+     * @param direction desired media direction:
+     *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
+     */
+    @SuppressWarnings("unused") // Used by plugins (Yuri)
+    override fun updateMediaDirection(type: MediaType, direction: String) {
+        when (direction) {
+            "sendrecv", "sendonly", "recvonly", "inactive" -> {
+                channelShims.firstOrNull { it.mediaType == type }?.setDirection(direction)
+            }
+            else -> {
+                throw IllegalArgumentException("Media direction unknown: $direction")
+            }
+        }
+    }
+
+    /**
+     * Re-creates this endpoint's media sources based on the sources
+     * and source groups that have been signaled.
+     */
+    override fun recreateMediaSources() {
+        val videoChannels = channelShims.filter { c -> c.mediaType == MediaType.VIDEO }
+
+        val sources = videoChannels
+            .mapNotNull(ChannelShim::getSources)
+            .flatten()
+            .toList()
+
+        val sourceGroups = videoChannels
+            .mapNotNull(ChannelShim::getSourceGroups)
+            .flatten()
+            .toList()
+
+        if (sources.isNotEmpty() || sourceGroups.isNotEmpty()) {
+            val mediaSources = MediaSourceFactory.createMediaSources(sources, sourceGroups)
+            setMediaSources(mediaSources)
+        }
+    }
+
+    /**
+     * Update accepted media types based on [ChannelShim] permission to receive media
+     */
+    override fun updateAcceptedMediaTypes() {
+        var acceptAudio = false
+        var acceptVideo = false
+        channelShims.forEach { channelShim ->
+            // The endpoint accepts audio packets (in the sense of accepting
+            // packets from other endpoints being forwarded to it) if it has
+            // an audio channel whose direction allows sending packets.
+            if (channelShim.allowsSendingMedia()) {
+                when (channelShim.mediaType) {
+                    MediaType.AUDIO -> acceptAudio = true
+                    MediaType.VIDEO -> acceptVideo = true
+                    else -> Unit
+                }
+            }
+        }
+        this.acceptAudio = acceptAudio
+        this.acceptVideo = acceptVideo
+    }
+
+    /**
+     * Handle incoming RTP packets which have been fully processed by the
+     * transceiver's incoming pipeline.
+     */
+    fun handleIncomingPacket(packetInfo: PacketInfo) {
+        packetInfo.endpointId = id
+        conference.handleIncomingPacket(packetInfo)
+    }
+
+    /**
+     * Return the timestamp of the most recently created [ChannelShim] on this endpoint
+     */
+    override fun getMostRecentChannelCreatedTime(): Instant {
+        return channelShims
+            .map(ChannelShim::getCreationTimestamp)
+            .max() ?: NEVER
+    }
+
     override fun receivesSsrc(ssrc: Long): Boolean = _transceiver.receivesSsrc(ssrc)
 
     override fun getLastIncomingActivity(): Instant = _transceiver.packetIOActivity.lastIncomingActivityInstant
@@ -267,6 +677,23 @@ class EndpointK @JvmOverloads constructor(
     override fun requestKeyframe() = _transceiver.requestKeyFrame()
 
     override fun requestKeyframe(mediaSsrc: Long) = _transceiver.requestKeyFrame(mediaSsrc)
+
+    override fun isOversending(): Boolean = bitrateController.isOversending()
+
+    // TODO: once Endpoint.java goes away, this should take a List (not MutableList)
+    override fun setSelectedEndpoints(selectedEndpoints: MutableList<String>) =
+        bitrateController.setSelectedEndpoints(selectedEndpoints)
+
+    /**
+     * Returns how many endpoints this Endpoint is currently forwarding video for
+     */
+    override fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
+
+    override fun setMaxFrameHeight(maxFrameHeight: Int) =
+        bitrateController.setMaxFrameHeight(maxFrameHeight)
+
+    override fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) =
+        bitrateController.setBandwidthAllocationSettings(message)
 
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {

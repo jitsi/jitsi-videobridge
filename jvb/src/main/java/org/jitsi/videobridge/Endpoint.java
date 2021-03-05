@@ -330,50 +330,12 @@ public abstract class Endpoint
 
     protected abstract void setupDtlsTransport();
 
-    protected boolean doSendSrtp(PacketInfo packetInfo)
-    {
-        if (PacketExtensionsKt.looksLikeRtp(packetInfo.getPacket()))
-        {
-            rtpPacketDelayStats.addPacket(packetInfo);
-            bridgeJitterStats.packetSent(packetInfo);
-        }
-        else if (PacketExtensionsKt.looksLikeRtcp(packetInfo.getPacket()))
-        {
-            rtcpPacketDelayStats.addPacket(packetInfo);
-        }
-        packetInfo.sent();
-        iceTransport.send(
-            packetInfo.getPacket().buffer,
-            packetInfo.getPacket().offset,
-            packetInfo.getPacket().length
-        );
-        ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
-        return true;
-    }
+    protected abstract boolean doSendSrtp(PacketInfo packetInfo);
 
     /**
      * Notifies this {@code Endpoint} that the ordered list of {@code Endpoint}s changed.
      */
-    void lastNEndpointsChanged()
-    {
-        bitrateController.endpointOrderingChanged();
-    }
-
-    /**
-     * Sends a specific <tt>String</tt> <tt>msg</tt> over the data channel of
-     * this <tt>Endpoint</tt>.
-     *
-     * @param msg message text to send.
-     */
-    @Override
-    public void sendMessage(BridgeChannelMessage msg)
-    {
-        EndpointMessageTransport messageTransport = getMessageTransport();
-        if (messageTransport != null)
-        {
-            messageTransport.sendMessage(msg);
-        }
-    }
+    abstract void lastNEndpointsChanged();
 
     /**
      * {@inheritDoc}
@@ -394,310 +356,20 @@ public abstract class Endpoint
 
     public abstract double getRtt();
 
-    /**
-     * Handle a DTLS app packet (that is, a packet of some other protocol sent
-     * over DTLS) which has just been received.
-     */
-    protected void dtlsAppPacketReceived(byte[] data, int off, int len)
-    {
-        //TODO(brian): change sctp handler to take buf, off, len
-        sctpHandler.processPacket(new PacketInfo(new UnparsedPacket(data, off, len)));
-    }
+    public abstract void endpointMessageTransportConnected();
 
-    public void endpointMessageTransportConnected()
-    {
-        sendVideoConstraints(this.maxReceiverVideoConstraints);
-    }
-
-    protected void effectiveVideoConstraintsChanged(
+    protected abstract void effectiveVideoConstraintsChanged(
         Map<String, VideoConstraints> oldEffectiveConstraints,
-        Map<String, VideoConstraints> newEffectiveConstraints)
-    {
-        Set<String> removedEndpoints = new HashSet<>(oldEffectiveConstraints.keySet());
-        removedEndpoints.removeAll(newEffectiveConstraints.keySet());
+        Map<String, VideoConstraints> newEffectiveConstraints);
 
-        // Sources that "this" endpoint no longer receives.
-        for (String id : removedEndpoints)
-        {
-            AbstractEndpoint senderEndpoint = getConference().getEndpoint(id);
-            if (senderEndpoint != null)
-            {
-                senderEndpoint.removeReceiver(getId());
-            }
-        }
+    public abstract void createSctpConnection();
 
-        // Added or updated.
-        newEffectiveConstraints.forEach((endpointId, effectiveConstraints) -> {
-            AbstractEndpoint senderEndpoint = getConference().getEndpoint(endpointId);
-            if (senderEndpoint != null)
-            {
-                senderEndpoint.addReceiver(getId(), effectiveConstraints);
-            }
-        });
+    public abstract boolean acceptWebSocket(String password);
 
-    }
+    protected abstract String getIcePassword();
+    protected abstract void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints);
 
-    @Override
-    protected void sendVideoConstraints(@NotNull VideoConstraints maxVideoConstraints)
-    {
-        // Note that it's up to the client to respect these constraints.
-        if (ArrayUtils.isNullOrEmpty(getMediaSources()))
-        {
-            logger.debug("Suppressing sending a SenderVideoConstraints message, endpoint has no streams.");
-        }
-        else
-        {
-            SenderVideoConstraintsMessage senderVideoConstraintsMessage
-                    = new SenderVideoConstraintsMessage(maxVideoConstraints.getMaxHeight());
-
-            logger.debug(() -> "Sender constraints changed: " + senderVideoConstraintsMessage.toJson());
-
-            sendMessage(senderVideoConstraintsMessage);
-        }
-    }
-
-    /**
-     * TODO Brian
-     */
-    public void createSctpConnection()
-    {
-        logger.debug(() -> "Creating SCTP mananger");
-        // Create the SctpManager and provide it a method for sending SCTP data
-        this.sctpManager = new SctpManager(
-            (data, offset, length) -> {
-                dtlsTransport.sendDtlsData(data, offset, length);
-                return 0;
-            },
-            logger
-        );
-        sctpHandler.setSctpManager(sctpManager);
-        // NOTE(brian): as far as I know we always act as the 'server' for sctp
-        // connections, but if not we can make which type we use dynamic
-        SctpServerSocket socket = sctpManager.createServerSocket();
-        socket.eventHandler = new SctpSocket.SctpSocketEventHandler()
-        {
-            @Override
-            public void onReady()
-            {
-                logger.info("SCTP connection is ready, creating the Data channel stack");
-                dataChannelStack
-                    = new DataChannelStack(
-                        (data, sid, ppid) -> socket.send(data, true, sid, ppid),
-                        logger
-                    );
-                dataChannelStack.onDataChannelStackEvents(dataChannel ->
-                {
-                    logger.info("Remote side opened a data channel.");
-                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                });
-                dataChannelHandler.setDataChannelStack(dataChannelStack);
-                if (OPEN_DATA_LOCALLY)
-                {
-                    logger.info("Will open the data channel.");
-                    DataChannel dataChannel
-                        = dataChannelStack.createDataChannel(
-                            DataChannelProtocolConstants.RELIABLE,
-                            0,
-                            0,
-                            0,
-                            "default");
-                    Endpoint.this.messageTransport.setDataChannel(dataChannel);
-                    dataChannel.open();
-                }
-                else
-                {
-                    logger.info("Will wait for the remote side to open the data channel.");
-                }
-            }
-
-            @Override
-            public void onDisconnected()
-            {
-                logger.info("SCTP connection is disconnected.");
-            }
-        };
-        socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
-            // We assume all data coming over SCTP will be datachannel data
-            DataChannelPacket dcp = new DataChannelPacket(data, 0, data.length, sid, (int)ppid);
-            // Post the rest of the task here because the current context is
-            // holding a lock inside the SctpSocket which can cause a deadlock
-            // if two endpoints are trying to send datachannel messages to one
-            // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute(() -> dataChannelHandler.consume(new PacketInfo(dcp)));
-        };
-        socket.listen();
-        sctpSocket = Optional.of(socket);
-    }
-
-    protected void acceptSctpConnection(SctpServerSocket sctpServerSocket)
-    {
-        TaskPools.IO_POOL.submit(() -> {
-            // We don't want to block the thread calling
-            // onDtlsHandshakeComplete so run the socket acceptance in an IO
-            // pool thread
-            // FIXME: This runs forever once the socket is closed (
-            // accept never returns true).
-            logger.info("Attempting to establish SCTP socket connection");
-            int attempts = 0;
-            while (!sctpServerSocket.accept())
-            {
-                attempts++;
-                try
-                {
-                    Thread.sleep(100);
-                }
-                catch (InterruptedException e)
-                {
-                    break;
-                }
-
-                if (attempts > 100)
-                {
-                    logger.error("Timed out waiting for SCTP connection from remote side");
-                    break;
-                }
-            }
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("SCTP socket " + sctpServerSocket.hashCode() +
-                    " accepted connection.");
-            }
-        });
-    }
-
-    /**
-     * Schedule a timeout to fire log a message and track a stat if we don't
-     * have an endpoint message transport connected within the timeout.
-     */
-    protected void scheduleEndpointMessageTransportTimeout()
-    {
-        TaskPools.SCHEDULED_POOL.schedule(() -> {
-            if (!isExpired()) {
-                EndpointMessageTransport t = getMessageTransport();
-                if (t != null)
-                {
-                    if (!t.isConnected())
-                    {
-                        logger.error("EndpointMessageTransport still not connected.");
-                        getConference()
-                            .getVideobridge()
-                            .getStatistics()
-                            .numEndpointsNoMessageTransportAfterDelay.incrementAndGet();
-                    }
-                }
-            }
-        }, 30, TimeUnit.SECONDS);
-    }
-
-    /**
-     * Checks whether a WebSocket connection with a specific password string
-     * should be accepted for this {@link Endpoint}.
-     * @param password the
-     * @return {@code true} iff the password matches.
-     */
-    public boolean acceptWebSocket(String password)
-    {
-        String icePassword = getIcePassword();
-        if (!icePassword.equals(password))
-        {
-            logger.warn("Incoming web socket request with an invalid password. " +
-                    "Expected: " + icePassword + ", received " + password);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @return the password of the ICE Agent associated with this
-     * {@link Endpoint}.
-     */
-    protected String getIcePassword()
-    {
-        return iceTransport.getIcePassword();
-    }
-
-    /**
-     * Sends a message to this {@link Endpoint} in order to notify it that the set of endpoints for which the bridge
-     * is sending video has changed.
-     *
-     * @param forwardedEndpoints the collection of forwarded endpoints.
-     */
-    protected void sendForwardedEndpointsMessage(Collection<String> forwardedEndpoints)
-    {
-        ForwardedEndpointsMessage msg = new ForwardedEndpointsMessage(forwardedEndpoints);
-
-        TaskPools.IO_POOL.submit(() -> {
-            try
-            {
-                sendMessage(msg);
-            }
-            catch (Exception e)
-            {
-                logger.warn("Failed to send a message: ", e);
-            }
-        });
-    }
-
-    /**
-     * Sets the remote transport information (ICE candidates, DTLS fingerprints).
-     *
-     * @param transportInfo the XML extension which contains the remote
-     * transport information.
-     */
-    public void setTransportInfo(IceUdpTransportPacketExtension transportInfo)
-    {
-        List<DtlsFingerprintPacketExtension> fingerprintExtensions
-                = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension.class);
-        Map<String, String> remoteFingerprints = new HashMap<>();
-        fingerprintExtensions.forEach(fingerprintExtension -> {
-            if (fingerprintExtension.getHash() != null && fingerprintExtension.getFingerprint() != null)
-            {
-                remoteFingerprints.put(
-                        fingerprintExtension.getHash(),
-                        fingerprintExtension.getFingerprint());
-            }
-            else
-            {
-                logger.info("Ignoring empty DtlsFingerprint extension: " + transportInfo.toXML());
-            }
-        });
-        dtlsTransport.setRemoteFingerprints(remoteFingerprints);
-        if (!fingerprintExtensions.isEmpty())
-        {
-            String setup = fingerprintExtensions.get(0).getSetup();
-            dtlsTransport.setSetupAttribute(setup);
-        }
-
-        iceTransport.startConnectivityEstablishment(transportInfo);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
-    {
-        IceUdpTransportPacketExtension iceUdpTransportPacketExtension = new IceUdpTransportPacketExtension();
-        iceTransport.describe(iceUdpTransportPacketExtension);
-        dtlsTransport.describe(iceUdpTransportPacketExtension);
-        ColibriWebSocketService colibriWebSocketService = ColibriWebSocketServiceSupplierKt.singleton().get();
-        if (colibriWebSocketService != null)
-        {
-            String wsUrl = colibriWebSocketService.getColibriWebSocketUrl(
-                    getConference().getID(),
-                    getId(),
-                    iceTransport.getIcePassword()
-            );
-            if (wsUrl != null)
-            {
-                WebSocketPacketExtension wsPacketExtension = new WebSocketPacketExtension(wsUrl);
-                iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension);
-            }
-        }
-        logger.debug(() -> "Transport description:\n " + iceUdpTransportPacketExtension.toXML());
-        channelBundle.setTransport(iceUdpTransportPacketExtension);
-    }
+    public abstract void setTransportInfo(IceUdpTransportPacketExtension transportInfo);
 
     /**
      * Sets the media sources.
@@ -705,183 +377,21 @@ public abstract class Endpoint
      */
     protected abstract void setMediaSources(MediaSourceDesc[] mediaSources);
 
-    /**
-     * Re-creates this endpoint's media sources based on the sources
-     * and source groups that have been signaled.
-     */
-    @Override
-    public void recreateMediaSources()
-    {
-        final Supplier<Stream<ChannelShim>> videoChannels = () -> channelShims
-            .stream()
-            .filter(c -> MediaType.VIDEO.equals(c.getMediaType()));
+    abstract Instant getMostRecentChannelCreatedTime();
 
-        final List<SourcePacketExtension> sources = videoChannels
-            .get()
-            .map(ChannelShim::getSources)
-            .filter(Objects::nonNull)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toList());
+    public abstract void addChannel(ChannelShim channelShim);
 
-        final List<SourceGroupPacketExtension> sourceGroups = videoChannels
-            .get()
-            .map(ChannelShim::getSourceGroups)
-            .filter(Objects::nonNull)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toList());
+    public abstract void removeChannel(ChannelShim channelShim);
 
-        if (!sources.isEmpty() || !sourceGroups.isEmpty())
-        {
-            MediaSourceDesc[] mediaSources =
-                MediaSourceFactory.createMediaSources(
-                    sources,
-                    sourceGroups);
-            setMediaSources(mediaSources);
-        }
-    }
-
-    /**
-     * Handle incoming RTP packets which have been fully processed by the
-     * transceiver's incoming pipeline.
-     * @param packetInfo the packet.
-     */
-    protected void handleIncomingPacket(PacketInfo packetInfo)
-    {
-        packetInfo.setEndpointId(getId());
-        getConference().handleIncomingPacket(packetInfo);
-    }
-
-    /**
-     * @return  the timestamp of the most recently created channel shim.
-     */
-    Instant getMostRecentChannelCreatedTime()
-    {
-        return channelShims.stream()
-            .map(ChannelShim::getCreationTimestamp)
-            .max(Comparator.comparing(Function.identity()))
-            .orElse(ClockUtils.NEVER);
-    }
-
-    /**
-     * Adds a channel to this endpoint.
-     * @param channelShim
-     */
-    public void addChannel(ChannelShim channelShim)
-    {
-        if (channelShims.add(channelShim))
-        {
-            updateAcceptedMediaTypes();
-        }
-    }
-
-    /**
-     * Removes a specific {@link ChannelShim} from this endpoint.
-     * @param channelShim
-     */
-    public void removeChannel(ChannelShim channelShim)
-    {
-        if (channelShims.remove(channelShim))
-        {
-            if (channelShims.isEmpty())
-            {
-                expire();
-            }
-            else
-            {
-                updateAcceptedMediaTypes();
-            }
-        }
-    }
-
-    /**
-     * Update media direction of {@link ChannelShim}s associated
-     * with this Endpoint.
-     *
-     * When media direction is set to 'sendrecv' JVB will
-     * accept incoming media from endpoint and forward it to
-     * other endpoints in a conference. Other endpoint's media
-     * will also be forwarded to current endpoint.
-     * When media direction is set to 'sendonly' JVB will
-     * NOT accept incoming media from this endpoint (not yet implemented), but
-     * media from other endpoints will be forwarded to this endpoint.
-     * When media direction is set to 'recvonly' JVB will
-     * accept incoming media from this endpoint, but will not forward
-     * other endpoint's media to this endpoint.
-     * When media direction is set to 'inactive' JVB will
-     * neither accept incoming media nor forward media from other endpoints.
-     *
-     * @param type media type.
-     * @param direction desired media direction:
-     *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
-     */
-    @SuppressWarnings("unused") // Used by plugins (Yuri)
-    public void updateMediaDirection(MediaType type, String direction)
-    {
-        switch (direction)
-        {
-            case "sendrecv":
-            case "sendonly":
-            case "recvonly":
-            case "inactive":
-            {
-                for (ChannelShim channelShim : channelShims)
-                {
-                    if (channelShim.getMediaType() == type)
-                    {
-                        channelShim.setDirection(direction);
-                    }
-                }
-                break;
-            }
-            default:
-                throw new IllegalArgumentException("Media direction unknown: " + direction);
-        }
-    }
+    public abstract void updateMediaDirection(MediaType type, String direction);
 
     public abstract Transceiver getTransceiver();
 
-    /**
-     * Update accepted media types based on
-     * {@link ChannelShim} permission to receive
-     * media
-     */
-    public void updateAcceptedMediaTypes()
-    {
-        boolean acceptAudio = false;
-        boolean acceptVideo = false;
-        for (ChannelShim channelShim : channelShims)
-        {
-            // The endpoint accepts audio packets (in the sense of accepting
-            // packets from other endpoints being forwarded to it) if it has
-            // an audio channel whose direction allows sending packets.
-            if (channelShim.allowsSendingMedia())
-            {
-                switch (channelShim.getMediaType())
-                {
-                    case AUDIO:
-                        acceptAudio = true;
-                        break;
-                    case VIDEO:
-                        acceptVideo = true;
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-        this.acceptAudio = acceptAudio;
-        this.acceptVideo = acceptVideo;
-    }
+    public abstract void updateAcceptedMediaTypes();
 
     public abstract void updateForceMute();
 
-    /**
-     * Returns how many endpoints this Endpoint is currently forwarding video for
-     */
-    public int numForwardedEndpoints()
-    {
-        return bitrateController.numForwardedEndpoints();
-    }
+    public abstract int numForwardedEndpoints();
 
     /**
      * Enables/disables the given feature, if the endpoint implementation supports it.
@@ -893,25 +403,13 @@ public abstract class Endpoint
 
     public abstract boolean isFeatureEnabled(EndpointDebugFeatures feature);
 
-    public boolean isOversending()
-    {
-        return bitrateController.isOversending();
-    }
+    public abstract boolean isOversending();
 
-    void setSelectedEndpoints(List<String> selectedEndpoints)
-    {
-        bitrateController.setSelectedEndpoints(selectedEndpoints);
-    }
+    abstract void setSelectedEndpoints(List<String> selectedEndpoints);
 
-    void setMaxFrameHeight(int maxFrameHeight)
-    {
-        bitrateController.setMaxFrameHeight(maxFrameHeight);
-    }
+    abstract void setMaxFrameHeight(int maxFrameHeight);
 
-    void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message)
-    {
-        bitrateController.setBandwidthAllocationSettings(message);
-    }
+    abstract void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message);
 
     /**
      * A node which can be placed in the pipeline to cache Data channel packets
