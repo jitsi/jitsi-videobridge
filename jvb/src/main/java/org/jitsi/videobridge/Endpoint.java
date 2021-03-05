@@ -137,15 +137,6 @@ public abstract class Endpoint
      */
     protected final BitrateController<AbstractEndpoint> bitrateController;
 
-    @NotNull
-    protected final IceTransport iceTransport;
-
-    /**
-     * This {@link Endpoint}'s DTLS transport.
-     */
-    @NotNull
-    protected final DtlsTransport dtlsTransport;
-
     /**
      * The set of {@link ChannelShim}s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
@@ -274,9 +265,6 @@ public abstract class Endpoint
         );
 
         diagnosticContext.put("endpoint_id", id);
-
-        iceTransport = new IceTransport(getId(), iceControlling, logger);
-        dtlsTransport = new DtlsTransport(logger);
 
         conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }

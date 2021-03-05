@@ -88,6 +88,9 @@ class EndpointK @JvmOverloads constructor(
     clock: Clock = Clock.systemUTC()
 ) : Endpoint(id, conference, parentLogger, iceControlling, clock) {
 
+    private val iceTransport = IceTransport(id, iceControlling, logger)
+    private val dtlsTransport = DtlsTransport(logger)
+
     // TODO: this naming is to avoid conflicts with getTransceiver in Endpoint.  It will change back
     // once Endpoint.java goes away
     val _transceiver = Transceiver(
