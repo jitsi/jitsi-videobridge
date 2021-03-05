@@ -329,18 +329,16 @@ class EndpointK @JvmOverloads constructor(
     }
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
-    override fun endpointMessageTransportConnected() {
-        sendVideoConstraints(this.maxReceiverVideoConstraints)
-    }
+    override fun endpointMessageTransportConnected() =
+        sendVideoConstraints(maxReceiverVideoConstraints)
 
     /**
      * Handle a DTLS app packet (that is, a packet of some other protocol sent
      * over DTLS) which has just been received.
      */
-    fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) {
-        // TODO(brian): change sctp handler to take buf, off, len
+    // TODO(brian): change sctp handler to take buf, off, len
+    fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
-    }
 
     override fun effectiveVideoConstraintsChanged(
         oldEffectiveConstraints: MutableMap<String, VideoConstraints>,
@@ -494,7 +492,7 @@ class EndpointK @JvmOverloads constructor(
 
     /**
      * Checks whether a WebSocket connection with a specific password string
-     * should be accepted for this {@link Endpoint}.
+     * should be accepted for this [Endpoint].
      * @param password the
      * @return {@code true} iff the password matches.
      */
@@ -511,16 +509,17 @@ class EndpointK @JvmOverloads constructor(
 
     /**
      * @return the password of the ICE Agent associated with this
-     * {@link Endpoint}.
+     * [Endpoint].
      */
     override fun getIcePassword(): String = iceTransport.icePassword
 
     /**
-     * Sends a message to this {@link Endpoint} in order to notify it that the set of endpoints for which the bridge
+     * Sends a message to this [Endpoint] in order to notify it that the set of endpoints for which the bridge
      * is sending video has changed.
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
      */
+    // TODO: when Endpoint.java goes away this should take a Collection (not MutableCollection)
     override fun sendForwardedEndpointsMessage(forwardedEndpoints: MutableCollection<String>) {
         val msg = ForwardedEndpointsMessage(forwardedEndpoints)
         TaskPools.IO_POOL.submit {
@@ -576,7 +575,7 @@ class EndpointK @JvmOverloads constructor(
     }
 
     /**
-     * Update media direction of {@link ChannelShim}s associated
+     * Update media direction of the [ChannelShim]s associated
      * with this Endpoint.
      *
      * When media direction is set to 'sendrecv' JVB will
@@ -681,22 +680,20 @@ class EndpointK @JvmOverloads constructor(
 
     override fun isOversending(): Boolean = bitrateController.isOversending()
 
-    override fun setSelectedEndpoints(selectedEndpoints: MutableList<String>) {
+    // TODO: once Endpoint.java goes away, this should take a List (not MutableList)
+    override fun setSelectedEndpoints(selectedEndpoints: MutableList<String>) =
         bitrateController.setSelectedEndpoints(selectedEndpoints)
-    }
 
     /**
      * Returns how many endpoints this Endpoint is currently forwarding video for
      */
     override fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
 
-    override fun setMaxFrameHeight(maxFrameHeight: Int) {
+    override fun setMaxFrameHeight(maxFrameHeight: Int) =
         bitrateController.setMaxFrameHeight(maxFrameHeight)
-    }
 
-    override fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
+    override fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) =
         bitrateController.setBandwidthAllocationSettings(message)
-    }
 
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
