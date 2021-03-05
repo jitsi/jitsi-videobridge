@@ -39,7 +39,6 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.*;
 
@@ -426,7 +425,10 @@ public class Conference
 
         if (dominantSpeaker != null)
         {
-            broadcastMessage(new DominantSpeakerMessage(dominantSpeakerId, getPreviousSpeakers()));
+            broadcastMessage(
+                    new DominantSpeakerMessage(
+                            dominantSpeakerId,
+                            speechActivity.getSpeakerHistory(1, 10)));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -885,7 +887,10 @@ public class Conference
             {
                 try
                 {
-                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeaker.getId(), getPreviousSpeakers()));
+                    endpoint.sendMessage(
+                            new DominantSpeakerMessage(
+                                    dominantSpeaker.getId(),
+                                    speechActivity.getSpeakerHistory(1, 10)));
                 }
                 catch (IOException e)
                 {
@@ -895,19 +900,6 @@ public class Conference
                 }
             }
         }
-    }
-
-    /**
-     * @return the first 10 entries in the the speaker history excluding the dominant speaker.
-     */
-    @NotNull
-    private List<String> getPreviousSpeakers()
-    {
-        return speechActivity.getOrderedEndpoints().stream()
-                        .skip(1)
-                        .limit(10)
-                        .map(AbstractEndpoint::getId)
-                        .collect(Collectors.toList());
     }
 
     /**
