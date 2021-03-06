@@ -110,6 +110,10 @@ class EndpointK @JvmOverloads constructor(
     private val iceTransport = IceTransport(id, iceControlling, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
+    private val diagnosticContext = conference.newDiagnosticContext().apply {
+        put("endpoint_id", id)
+    }
+
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
      * out via the [IceTransport] on an IO thread.

@@ -94,11 +94,6 @@ public abstract class Endpoint
     protected DataChannelStack dataChannelStack;
 
     /**
-     * The diagnostic context of this instance.
-     */
-    protected final DiagnosticContext diagnosticContext;
-
-    /**
      * The set of {@link ChannelShim}s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
      * removed. The set of channels shims allows to determine if endpoint
@@ -152,10 +147,6 @@ public abstract class Endpoint
         Clock clock)
     {
         super(conference, id, parentLogger);
-
-        diagnosticContext = conference.newDiagnosticContext();
-
-        diagnosticContext.put("endpoint_id", id);
 
         conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }
