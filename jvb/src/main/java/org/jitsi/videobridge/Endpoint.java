@@ -68,13 +68,6 @@ public abstract class Endpoint
         EncodingsManager.EncodingsUpdateListener
 {
     /**
-     * The {@link SctpSocket} for this endpoint, if an SCTP connection was
-     * negotiated.
-     */
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    protected Optional<SctpServerSocket> sctpSocket = Optional.empty();
-
-    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -93,8 +86,6 @@ public abstract class Endpoint
         Clock clock)
     {
         super(conference, id, parentLogger);
-
-        conference.getVideobridge().getStatistics().totalEndpoints.incrementAndGet();
     }
 
     protected Endpoint(
@@ -104,16 +95,6 @@ public abstract class Endpoint
         boolean iceControlling)
     {
         this(id, conference, parentLogger, iceControlling, Clock.systemUTC());
-    }
-
-    /**
-     * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
-     */
-    protected List<AbstractEndpoint> getOrderedEndpoints()
-    {
-        List<AbstractEndpoint> allOrderedEndpoints = new LinkedList<>(getConference().getOrderedEndpoints());
-        allOrderedEndpoints.remove(this);
-        return allOrderedEndpoints;
     }
 
     /**

@@ -133,6 +133,12 @@ class EndpointK @JvmOverloads constructor(
     private var dataChannelStack: DataChannelStack? = null
 
     /**
+     * The [SctpSocket] for this endpoint, if an SCTP connection was
+     * negotiated.
+     */
+    private var sctpSocket: Optional<SctpServerSocket> = Optional.empty()
+
+    /**
      * The set of [ChannelShim]s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
      * removed. The set of channels shims allows to determine if endpoint
@@ -201,6 +207,12 @@ class EndpointK @JvmOverloads constructor(
 
     override fun getMessageTransport(): EndpointMessageTransport = _messageTransport
 
+    /**
+     * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
+     */
+    fun getOrderedEndpoints(): List<AbstractEndpoint> =
+        conference.orderedEndpoints.filter { it == this }
+
     // TODO: this naming is to avoid conflicts with getTransceiver in Endpoint.  It will change back
     // once Endpoint.java goes away
     val _transceiver = Transceiver(
@@ -240,6 +252,8 @@ class EndpointK @JvmOverloads constructor(
         conference.encodingsManager.subscribe(this)
         setupIceTransport()
         setupDtlsTransport()
+
+        conference.videobridge.statistics.totalEndpoints.incrementAndGet()
     }
 
     // TODO: Some weirdness here with with a property for reading mediaSources but a function for setting them because
