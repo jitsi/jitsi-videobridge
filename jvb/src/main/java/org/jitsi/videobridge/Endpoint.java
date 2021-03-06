@@ -75,11 +75,6 @@ public abstract class Endpoint
     public static final DoubleAverage overallAverageBridgeJitter = new DoubleAverage("overall_bridge_jitter");
 
     /**
-     * Count the number of dropped packets and exceptions.
-     */
-    static final CountingErrorHandler queueErrorCounter = new CountingErrorHandler();
-
-    /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
      * are sent).  This jitter value is calculated independently, per packet, by every
@@ -145,12 +140,6 @@ public abstract class Endpoint
             = new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
     /**
-     * The queue we put outgoing SRTP packets onto so they can be sent
-     * out via the {@link IceTransport} on an IO thread.
-     */
-    protected final PacketInfoQueue outgoingSrtpPacketQueue;
-
-    /**
      * The {@link SctpSocket} for this endpoint, if an SCTP connection was
      * negotiated.
      */
@@ -210,14 +199,6 @@ public abstract class Endpoint
                 bcEventHandler,
                 this::getOrderedEndpoints,
                 diagnosticContext, logger);
-
-        outgoingSrtpPacketQueue = new PacketInfoQueue(
-            getClass().getSimpleName() + "-outgoing-packet-queue",
-            TaskPools.IO_POOL,
-            this::doSendSrtp,
-            TransportConfig.getQueueSize()
-        );
-        outgoingSrtpPacketQueue.setErrorHandler(queueErrorCounter);
 
         diagnosticContext.put("endpoint_id", id);
 

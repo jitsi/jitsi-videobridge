@@ -35,6 +35,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
@@ -48,6 +49,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.mins
+import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.cc.BandwidthProbing
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
@@ -104,6 +106,19 @@ class EndpointK @JvmOverloads constructor(
 
     private val iceTransport = IceTransport(id, iceControlling, logger)
     private val dtlsTransport = DtlsTransport(logger)
+
+    /**
+     * The queue we put outgoing SRTP packets onto so they can be sent
+     * out via the [IceTransport] on an IO thread.
+     */
+    private val outgoingSrtpPacketQueue = PacketInfoQueue(
+        "${javaClass.simpleName}-outgoing-packet-queue",
+        TaskPools.IO_POOL,
+        this::doSendSrtp,
+        TransportConfig.queueSize
+    ).apply {
+        setErrorHandler(queueErrorCounter)
+    }
 
     /**
      * The instance which manages the Colibri messaging (over a data channel
@@ -937,6 +952,12 @@ class EndpointK @JvmOverloads constructor(
          */
         private val rtpPacketDelayStats = PacketDelayStats()
         private val rtcpPacketDelayStats = PacketDelayStats()
+
+        /**
+         * Count the number of dropped packets and exceptions.
+         */
+        @JvmField
+        val queueErrorCounter = CountingErrorHandler()
 
         /**
          * How long we'll give an endpoint to either successfully establish

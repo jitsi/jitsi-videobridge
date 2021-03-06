@@ -640,7 +640,7 @@ public class Videobridge
 
         queueStats.put(
                 "srtp_send_queue",
-                getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
+                getJsonFromQueueErrorHandler(EndpointK.queueErrorCounter));
         queueStats.put(
                 "octo_receive_queue",
                 getJsonFromQueueErrorHandler(ConfOctoTransport.queueErrorCounter));
