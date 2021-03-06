@@ -99,10 +99,6 @@ public abstract class Endpoint
     protected final DiagnosticContext diagnosticContext;
 
     /**
-     * The bitrate controller.
-     */
-    protected final BitrateController<AbstractEndpoint> bitrateController;
-    /**
      * The set of {@link ChannelShim}s associated with this endpoint. This
      * allows us to expire the endpoint once all of its 'channels' have been
      * removed. The set of channels shims allows to determine if endpoint
@@ -158,38 +154,6 @@ public abstract class Endpoint
         super(conference, id, parentLogger);
 
         diagnosticContext = conference.newDiagnosticContext();
-        BitrateController.EventHandler bcEventHandler = new BitrateController.EventHandler()
-        {
-            @Override
-            public void allocationChanged(@NotNull BandwidthAllocation allocation)
-            {
-                // Intentional no-op.
-            }
-
-            @Override
-            public void forwardedEndpointsChanged(@NotNull Set<String> forwardedEndpoints)
-            {
-                sendForwardedEndpointsMessage(forwardedEndpoints);
-            }
-
-            @Override
-            public void effectiveVideoConstraintsChanged(
-                    @NotNull Map<String, VideoConstraints> oldEffectiveConstraints,
-                    @NotNull Map<String, VideoConstraints> newEffectiveConstraints)
-            {
-                Endpoint.this.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints);
-            }
-
-            @Override
-            public void keyframeNeeded(String endpointId, long ssrc)
-            {
-                getConference().requestKeyframe(endpointId, ssrc);
-            }
-        };
-        bitrateController = new BitrateController<>(
-                bcEventHandler,
-                this::getOrderedEndpoints,
-                diagnosticContext, logger);
 
         diagnosticContext.put("endpoint_id", id);
 

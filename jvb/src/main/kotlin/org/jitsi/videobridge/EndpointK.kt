@@ -52,6 +52,8 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.mins
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.cc.BandwidthProbing
+import org.jitsi.videobridge.cc.allocation.BandwidthAllocation
+import org.jitsi.videobridge.cc.allocation.BitrateController
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
@@ -120,6 +122,28 @@ class EndpointK @JvmOverloads constructor(
     ).apply {
         setErrorHandler(queueErrorCounter)
     }
+
+    private val bitrateController = BitrateController<AbstractEndpoint>(
+        object : BitrateController.EventHandler {
+            override fun allocationChanged(allocation: BandwidthAllocation) {
+                // Intentional no-op
+            }
+
+            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) =
+                sendForwardedEndpointsMessage(forwardedEndpoints)
+
+            override fun effectiveVideoConstraintsChanged(
+                oldEffectiveConstraints: Map<String, VideoConstraints>,
+                newEffectiveConstraints: Map<String, VideoConstraints>
+            ) = this@EndpointK.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
+
+            override fun keyframeNeeded(endpointId: String?, ssrc: Long) =
+                conference.requestKeyframe(endpointId, ssrc)
+        },
+        Supplier { getOrderedEndpoints() },
+        diagnosticContext,
+        logger
+    )
 
     /**
      * The instance which manages the Colibri messaging (over a data channel
@@ -389,8 +413,8 @@ class EndpointK @JvmOverloads constructor(
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
     override fun effectiveVideoConstraintsChanged(
-        oldEffectiveConstraints: MutableMap<String, VideoConstraints>,
-        newEffectiveConstraints: MutableMap<String, VideoConstraints>
+        oldEffectiveConstraints: Map<String, VideoConstraints>,
+        newEffectiveConstraints: Map<String, VideoConstraints>
     ) {
         val removedEndpoints = oldEffectiveConstraints.keys.filter { it in newEffectiveConstraints.keys }
 
@@ -567,8 +591,7 @@ class EndpointK @JvmOverloads constructor(
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
      */
-    // TODO: when Endpoint.java goes away this should take a Collection (not MutableCollection)
-    override fun sendForwardedEndpointsMessage(forwardedEndpoints: MutableCollection<String>) {
+    override fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
         val msg = ForwardedEndpointsMessage(forwardedEndpoints)
         TaskPools.IO_POOL.submit {
             try {
