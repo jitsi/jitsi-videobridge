@@ -46,6 +46,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.mins
@@ -958,6 +959,14 @@ class EndpointK @JvmOverloads constructor(
          */
         @JvmField
         val queueErrorCounter = CountingErrorHandler()
+
+        /**
+         * The executor which runs bandwidth probing.
+         *
+         * TODO (brian): align the recurringRunnable stuff with whatever we end up
+         * doing with all the other executors.
+         */
+        private val recurringRunnableExecutor = RecurringRunnableExecutor(EndpointK::class.java.simpleName)
 
         /**
          * How long we'll give an endpoint to either successfully establish

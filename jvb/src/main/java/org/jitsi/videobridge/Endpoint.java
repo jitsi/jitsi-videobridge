@@ -131,15 +131,6 @@ public abstract class Endpoint
     protected static final boolean OPEN_DATA_LOCALLY = false;
 
     /**
-     * The executor which runs bandwidth probing.
-     *
-     * TODO (brian): align the recurringRunnable stuff with whatever we end up
-     * doing with all the other executors.
-     */
-    protected static final RecurringRunnableExecutor recurringRunnableExecutor
-            = new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
-
-    /**
      * The {@link SctpSocket} for this endpoint, if an SCTP connection was
      * negotiated.
      */
