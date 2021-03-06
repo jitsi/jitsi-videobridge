@@ -600,7 +600,7 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("load-management", jvbLoadManager.getStats());
-        debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
+        debugState.put(Endpoint.overallAverageBridgeJitter.name, EndpointK.overallAverageBridgeJitter.get());
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);

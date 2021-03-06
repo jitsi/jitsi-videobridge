@@ -67,60 +67,6 @@ public abstract class Endpoint
     extends AbstractEndpoint implements PotentialPacketHandler,
         EncodingsManager.EncodingsUpdateListener
 {
-
-    /**
-     * An average of all of the individual bridge jitter values calculated by the
-     * {@link Endpoint#bridgeJitterStats} instance variables below
-     */
-    public static final DoubleAverage overallAverageBridgeJitter = new DoubleAverage("overall_bridge_jitter");
-
-    /**
-     * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
-     * packets based on the time they were received by the bridge and the time they
-     * are sent).  This jitter value is calculated independently, per packet, by every
-     * individual {@link Endpoint} and their jitter values are averaged together
-     * in this static member.
-     */
-    protected final BridgeJitterStats bridgeJitterStats = new BridgeJitterStats();
-
-    /**
-     * The {@link SctpManager} instance we'll use to manage the SCTP connection
-     */
-    protected SctpManager sctpManager;
-
-    /**
-     * TODO Brian
-     */
-    protected DataChannelStack dataChannelStack;
-
-    /**
-     * The set of {@link ChannelShim}s associated with this endpoint. This
-     * allows us to expire the endpoint once all of its 'channels' have been
-     * removed. The set of channels shims allows to determine if endpoint
-     * can accept audio or video.
-     */
-    protected final Set<ChannelShim> channelShims = ConcurrentHashMap.newKeySet();
-
-    /**
-     * Whether this endpoint should accept audio packets. We set this according
-     * to whether the endpoint has an audio Colibri channel whose direction
-     * allows sending.
-     */
-    protected volatile boolean acceptAudio = false;
-
-    /**
-     * Whether this endpoint should accept video packets. We set this according
-     * to whether the endpoint has a video Colibri channel whose direction
-     * allows sending.
-     */
-    protected volatile boolean acceptVideo = false;
-
-    /**
-     * Whether or not the bridge should be the peer which opens the data channel
-     * (as opposed to letting the far peer/client open it).
-     */
-    protected static final boolean OPEN_DATA_LOCALLY = false;
-
     /**
      * The {@link SctpSocket} for this endpoint, if an SCTP connection was
      * negotiated.

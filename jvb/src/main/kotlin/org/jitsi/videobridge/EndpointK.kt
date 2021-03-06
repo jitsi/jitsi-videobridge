@@ -28,6 +28,7 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.BridgeJitterStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -66,6 +67,7 @@ import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.ChannelShim
+import org.jitsi.videobridge.stats.DoubleAverage
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -113,6 +115,43 @@ class EndpointK @JvmOverloads constructor(
     private val diagnosticContext = conference.newDiagnosticContext().apply {
         put("endpoint_id", id)
     }
+
+    /**
+     * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
+     * packets based on the time they were received by the bridge and the time they
+     * are sent).  This jitter value is calculated independently, per packet, by every
+     * individual {@link Endpoint} and their jitter values are averaged together
+     * in this static member.
+     */
+    private val bridgeJitterStats = BridgeJitterStats()
+
+    /**
+     * The [SctpManager] instance we'll use to manage the SCTP connection
+     */
+    private var sctpManager: SctpManager? = null
+
+    private var dataChannelStack: DataChannelStack? = null
+
+    /**
+     * The set of [ChannelShim]s associated with this endpoint. This
+     * allows us to expire the endpoint once all of its 'channels' have been
+     * removed. The set of channels shims allows to determine if endpoint
+     * can accept audio or video.
+     */
+    private val channelShims = mutableSetOf<ChannelShim>()
+
+    /**
+     * Whether this endpoint should accept audio packets. We set this according
+     * to whether the endpoint has an audio Colibri channel whose direction
+     * allows sending.
+     */
+    private var acceptAudio = false
+    /**
+     * Whether this endpoint should accept video packets. We set this according
+     * to whether the endpoint has a video Colibri channel whose direction
+     * allows sending.
+     */
+    private var acceptVideo = false
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
@@ -446,7 +485,7 @@ class EndpointK @JvmOverloads constructor(
     }
 
     /**
-     * Create an SCTP connection for this Endpoint.  If [Endpoint.OPEN_DATA_LOCALLY] is true,
+     * Create an SCTP connection for this Endpoint.  If [openDataChannelLocally] is true,
      * we will create the data channel locally, otherwise we will wait for the remote side
      * to open it.
      */
@@ -460,10 +499,10 @@ class EndpointK @JvmOverloads constructor(
             },
             logger
         )
-        sctpHandler.setSctpManager(sctpManager)
+        sctpHandler.setSctpManager(sctpManager!!)
         // NOTE(brian): as far as I know we always act as the 'server' for sctp
         // connections, but if not we can make which type we use dynamic
-        val socket = sctpManager.createServerSocket()
+        val socket = sctpManager!!.createServerSocket()
         socket.eventHandler = object : SctpSocket.SctpSocketEventHandler {
             override fun onReady() {
                 logger.info("SCTP connection is ready, creating the Data channel stack")
@@ -472,15 +511,15 @@ class EndpointK @JvmOverloads constructor(
                     logger
                 )
                 // This handles if the remote side will be opening the data channel
-                dataChannelStack.onDataChannelStackEvents { dataChannel ->
+                dataChannelStack!!.onDataChannelStackEvents { dataChannel ->
                     logger.info("Remote side opened a data channel.")
                     _messageTransport.setDataChannel(dataChannel)
                 }
-                dataChannelHandler.setDataChannelStack(dataChannelStack)
-                if (OPEN_DATA_LOCALLY) {
+                dataChannelHandler.setDataChannelStack(dataChannelStack!!)
+                if (openDataChannelLocally) {
                     // This logic is for opening the data channel locally
                     logger.info("Will open the data channel.")
-                    val dataChannel = dataChannelStack.createDataChannel(
+                    val dataChannel = dataChannelStack!!.createDataChannel(
                         DataChannelProtocolConstants.RELIABLE,
                         0,
                         0,
@@ -973,6 +1012,11 @@ class EndpointK @JvmOverloads constructor(
 
     companion object {
         /**
+         * Whether or not the bridge should be the peer which opens the data channel
+         * (as opposed to letting the far peer/client open it).
+         */
+        private val openDataChannelLocally = false
+        /**
          * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
          * Since [Endpoint] is the 'last place' that is aware of [PacketInfo] in the outgoing
          * chain, we track this stats here.  Since they're static, these members will track the delay
@@ -986,6 +1030,13 @@ class EndpointK @JvmOverloads constructor(
          */
         @JvmField
         val queueErrorCounter = CountingErrorHandler()
+
+        /**
+         * An average of all of the individual bridge jitter values calculated by the
+         * [bridgeJitterStats] instance variables
+         */
+        @JvmField
+        val overallAverageBridgeJitter = DoubleAverage("overall_bridge_jitter")
 
         /**
          * The executor which runs bandwidth probing.
