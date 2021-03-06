@@ -99,11 +99,6 @@ public abstract class Endpoint
     protected DataChannelStack dataChannelStack;
 
     /**
-     * TODO Brian
-     */
-    protected final DataChannelHandler dataChannelHandler = new DataChannelHandler();
-
-    /**
      * The diagnostic context of this instance.
      */
     protected final DiagnosticContext diagnosticContext;
@@ -338,81 +333,4 @@ public abstract class Endpoint
     abstract void setMaxFrameHeight(int maxFrameHeight);
 
     abstract void setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage message);
-
-    /**
-     * A node which can be placed in the pipeline to cache Data channel packets
-     * until the DataChannelStack is ready to handle them.
-     */
-    protected static class DataChannelHandler extends ConsumerNode
-    {
-        protected final Object dataChannelStackLock = new Object();
-        public DataChannelStack dataChannelStack = null;
-        public BlockingQueue<PacketInfo> cachedDataChannelPackets = new LinkedBlockingQueue<>();
-
-        /**
-         * Initializes a new {@link DataChannelHandler} instance.
-         */
-        public DataChannelHandler()
-        {
-            super("Data channel handler");
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected void consume(PacketInfo packetInfo)
-        {
-            synchronized (dataChannelStackLock)
-            {
-                if (packetInfo.getPacket() instanceof DataChannelPacket)
-                {
-                    if (dataChannelStack == null)
-                    {
-                        cachedDataChannelPackets.add(packetInfo);
-                    }
-                    else
-                    {
-                        DataChannelPacket dcp = (DataChannelPacket) packetInfo.getPacket();
-                        dataChannelStack.onIncomingDataChannelPacket(
-                                ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
-                    }
-                }
-            }
-        }
-
-        /**
-         * Sets the data channel stack
-         */
-        public void setDataChannelStack(DataChannelStack dataChannelStack)
-        {
-            // Submit this to the pool since we wait on the lock and process any
-            // cached packets here as well
-            TaskPools.IO_POOL.submit(() -> {
-                // We grab the lock here so that we can set the SCTP manager and
-                // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via
-                // #doProcessPackets and processing packets at the same time in
-                // another thread, which would be a problem.
-                synchronized (dataChannelStackLock)
-                {
-                    this.dataChannelStack = dataChannelStack;
-                    cachedDataChannelPackets.forEach(packetInfo -> {
-                        DataChannelPacket dcp
-                                = (DataChannelPacket)packetInfo.getPacket();
-                        //TODO(brian): have datachannelstack accept
-                        // DataChannelPackets?
-                        dataChannelStack.onIncomingDataChannelPacket(
-                                ByteBuffer.wrap(dcp.getBuffer()), dcp.sid, dcp.ppid);
-                    });
-                }
-            });
-        }
-
-        @Override
-        public void trace(@NotNull Function0<Unit> f)
-        {
-            f.invoke();
-        }
-    }
 }

@@ -76,6 +76,7 @@ import org.jitsi_modified.sctp4j.SctpDataCallback
 import org.jitsi_modified.sctp4j.SctpServerSocket
 import org.jitsi_modified.sctp4j.SctpSocket
 import org.json.simple.JSONObject
+import java.nio.ByteBuffer
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -99,6 +100,7 @@ class EndpointK @JvmOverloads constructor(
     private val creationTime = clock.instant()
 
     private val sctpHandler = SctpHandler()
+    private val dataChannelHandler = DataChannelHandler()
 
     private val iceTransport = IceTransport(id, iceControlling, logger)
     private val dtlsTransport = DtlsTransport(logger)
@@ -469,7 +471,7 @@ class EndpointK @JvmOverloads constructor(
                 // holding a lock inside the SctpSocket which can cause a deadlock
                 // if two endpoints are trying to send datachannel messages to one
                 // another (with stats broadcasting it can happen often)
-                TaskPools.IO_POOL.execute { dataChannelHandler.consume(PacketInfo(dataChannelPacket)) }
+                TaskPools.IO_POOL.execute { dataChannelHandler.processPacket(PacketInfo(dataChannelPacket)) }
             }
         }
         socket.listen()
@@ -966,6 +968,57 @@ class EndpointK @JvmOverloads constructor(
             bitrateController.bandwidthChanged(newValue.bps.toLong())
             bandwidthProbing.bandwidthEstimationChanged(newValue)
         }
+    }
+
+    /**
+     * A node which can be placed in the pipeline to cache Data channel packets
+     * until the DataChannelStack is ready to handle them.
+     */
+    private class DataChannelHandler : ConsumerNode("Data channel handler") {
+        private val dataChannelStackLock = Any()
+        private var dataChannelStack: DataChannelStack? = null
+        private val cachedDataChannelPackets = LinkedBlockingQueue<PacketInfo>()
+
+        override fun consume(packetInfo: PacketInfo) {
+            synchronized(dataChannelStackLock) {
+                when (val packet = packetInfo.packet) {
+                    is DataChannelPacket -> {
+                        dataChannelStack?.onIncomingDataChannelPacket(
+                            ByteBuffer.wrap(packet.buffer), packet.sid, packet.ppid
+                        ) ?: run {
+                            cachedDataChannelPackets.add(packetInfo)
+                        }
+                    }
+                    else -> Unit
+                }
+            }
+        }
+
+        fun setDataChannelStack(dataChannelStack: DataChannelStack) {
+            // Submit this to the pool since we wait on the lock and process any
+            // cached packets here as well
+
+            // Submit this to the pool since we wait on the lock and process any
+            // cached packets here as well
+            TaskPools.IO_POOL.submit {
+                // We grab the lock here so that we can set the SCTP manager and
+                // process any previously-cached packets as an atomic operation.
+                // It also prevents another thread from coming in via
+                // #doProcessPackets and processing packets at the same time in
+                // another thread, which would be a problem.
+                synchronized(dataChannelStackLock) {
+                    this.dataChannelStack = dataChannelStack
+                    cachedDataChannelPackets.forEach {
+                        val dcp = it.packet as DataChannelPacket
+                        dataChannelStack.onIncomingDataChannelPacket(
+                            ByteBuffer.wrap(dcp.buffer), dcp.sid, dcp.ppid
+                        )
+                    }
+                }
+            }
+        }
+
+        override fun trace(f: () -> Unit) = f.invoke()
     }
 
     /**
