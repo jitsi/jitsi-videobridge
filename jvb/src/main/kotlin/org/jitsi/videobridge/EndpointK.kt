@@ -93,13 +93,20 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Models a local endpoint (participant) in a [Conference]
+ */
 class EndpointK @JvmOverloads constructor(
     id: String,
     conference: Conference,
     parentLogger: Logger,
+    /**
+     * True if the ICE agent for this Endpoint will be initialized to serve
+     * as a controlling ICE agent, false otherwise
+     */
     iceControlling: Boolean,
     private val clock: Clock = Clock.systemUTC()
-) : Endpoint(id, conference, parentLogger, iceControlling, clock) {
+) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
 
     /**
      * The time at which this endpoint was created
@@ -261,9 +268,9 @@ class EndpointK @JvmOverloads constructor(
     override val mediaSources: Array<out MediaSourceDesc>
         get() = _transceiver.getMediaSources()
 
-    override fun getTransceiver(): Transceiver = _transceiver
+    fun getTransceiver(): Transceiver = _transceiver
 
-    override fun setMediaSources(mediaSources: Array<MediaSourceDesc>) {
+    fun setMediaSources(mediaSources: Array<MediaSourceDesc>) {
         val wasEmpty = _transceiver.getMediaSources().isEmpty()
         if (_transceiver.setMediaSources(mediaSources)) {
             eventEmitter.fireEventSync { sourcesChanged() }
@@ -273,7 +280,7 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
-    override fun setupIceTransport() {
+    fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
             override fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant) {
                 // DTLS data will be handled by the DtlsTransport, but SRTP data can go
@@ -320,7 +327,7 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
-    override fun setupDtlsTransport() {
+    fun setupDtlsTransport() {
         dtlsTransport.incomingDataHandler = object : DtlsTransport.IncomingDataHandler {
             override fun dtlsAppDataReceived(buf: ByteArray, off: Int, len: Int) {
                 this@EndpointK.dtlsAppPacketReceived(buf, off, len)
@@ -348,7 +355,7 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
-    override fun updateForceMute() {
+    fun updateForceMute() {
         var audioForceMuted = false
         var videoForceMuted = false
         channelShims.forEach { channelShim ->
@@ -390,13 +397,13 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
-    override fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
+    fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
         when (feature) {
             EndpointDebugFeatures.PCAP_DUMP -> _transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
         }
     }
 
-    override fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
+    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
         return when (feature) {
             EndpointDebugFeatures.PCAP_DUMP -> _transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
         }
@@ -411,7 +418,7 @@ class EndpointK @JvmOverloads constructor(
         return _transceiver.isReceivingVideo()
     }
 
-    override fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+    fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         if (packetInfo.packet.looksLikeRtp()) {
             rtpPacketDelayStats.addPacket(packetInfo)
             bridgeJitterStats.packetSent(packetInfo)
@@ -426,9 +433,9 @@ class EndpointK @JvmOverloads constructor(
     }
 
     /**
-     * Notifies this [Endpoint] that the ordered list of last-n endpoints has changed
+     * Notifies this endpoint that the ordered list of last-n endpoints has changed
      */
-    override fun lastNEndpointsChanged() = bitrateController.endpointOrderingChanged()
+    fun lastNEndpointsChanged() = bitrateController.endpointOrderingChanged()
 
     /**
      * Sends a specific msg to this endpoint over its bridge channel
@@ -438,7 +445,7 @@ class EndpointK @JvmOverloads constructor(
     /**
      * Adds [channelShim] channel to this endpoint.
      */
-    override fun addChannel(channelShim: ChannelShim) {
+    fun addChannel(channelShim: ChannelShim) {
         if (channelShims.add(channelShim)) {
             updateAcceptedMediaTypes()
         }
@@ -447,7 +454,7 @@ class EndpointK @JvmOverloads constructor(
     /**
      * Removes a specific [ChannelShim] from this endpoint.
      */
-    override fun removeChannel(channelShim: ChannelShim) {
+    fun removeChannel(channelShim: ChannelShim) {
         if (channelShims.remove(channelShim)) {
             if (channelShims.isEmpty()) {
                 expire()
@@ -458,7 +465,7 @@ class EndpointK @JvmOverloads constructor(
     }
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
-    override fun endpointMessageTransportConnected() =
+    fun endpointMessageTransportConnected() =
         sendVideoConstraints(maxReceiverVideoConstraints)
 
     /**
@@ -469,7 +476,7 @@ class EndpointK @JvmOverloads constructor(
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
-    override fun effectiveVideoConstraintsChanged(
+    fun effectiveVideoConstraintsChanged(
         oldEffectiveConstraints: Map<String, VideoConstraints>,
         newEffectiveConstraints: Map<String, VideoConstraints>
     ) {
@@ -503,7 +510,7 @@ class EndpointK @JvmOverloads constructor(
      * we will create the data channel locally, otherwise we will wait for the remote side
      * to open it.
      */
-    override fun createSctpConnection() {
+    fun createSctpConnection() {
         logger.cdebug { "Creating SCTP manager" }
         // Create the SctpManager and provide it a method for sending SCTP data
         sctpManager = SctpManager(
@@ -621,15 +628,15 @@ class EndpointK @JvmOverloads constructor(
 
     /**
      * Checks whether a WebSocket connection with a specific password string
-     * should be accepted for this [Endpoint].
+     * should be accepted for this endpoint.
      * @param password the
      * @return {@code true} iff the password matches.
      */
-    override fun acceptWebSocket(password: String): Boolean {
-        if (icePassword != password) {
+    fun acceptWebSocket(password: String): Boolean {
+        if (getIcePassword() != password) {
             logger.warn(
                 "Incoming web socket request with an invalid password. " +
-                    "Expected: $icePassword received $password"
+                    "Expected: ${getIcePassword()} received $password"
             )
             return false
         }
@@ -637,18 +644,17 @@ class EndpointK @JvmOverloads constructor(
     }
 
     /**
-     * @return the password of the ICE Agent associated with this
-     * [Endpoint].
+     * @return the password of the ICE Agent associated with this endpoint.
      */
-    override fun getIcePassword(): String = iceTransport.icePassword
+    fun getIcePassword(): String = iceTransport.icePassword
 
     /**
-     * Sends a message to this [Endpoint] in order to notify it that the set of endpoints for which the bridge
+     * Sends a message to this endpoint in order to notify it that the set of endpoints for which the bridge
      * is sending video has changed.
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
      */
-    override fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
+    fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
         val msg = ForwardedEndpointsMessage(forwardedEndpoints)
         TaskPools.IO_POOL.submit {
             try {
@@ -665,7 +671,7 @@ class EndpointK @JvmOverloads constructor(
      * @param transportInfo the XML extension which contains the remote
      * transport information.
      */
-    override fun setTransportInfo(transportInfo: IceUdpTransportPacketExtension) {
+    fun setTransportInfo(transportInfo: IceUdpTransportPacketExtension) {
         val remoteFingerprints = mutableMapOf<String, String>()
         val fingerprintExtensions = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension::class.java)
         fingerprintExtensions.forEach { fingerprintExtension ->
@@ -724,7 +730,7 @@ class EndpointK @JvmOverloads constructor(
      *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
      */
     @SuppressWarnings("unused") // Used by plugins (Yuri)
-    override fun updateMediaDirection(type: MediaType, direction: String) {
+    fun updateMediaDirection(type: MediaType, direction: String) {
         when (direction) {
             "sendrecv", "sendonly", "recvonly", "inactive" -> {
                 channelShims.firstOrNull { it.mediaType == type }?.setDirection(direction)
@@ -761,7 +767,7 @@ class EndpointK @JvmOverloads constructor(
     /**
      * Update accepted media types based on [ChannelShim] permission to receive media
      */
-    override fun updateAcceptedMediaTypes() {
+    fun updateAcceptedMediaTypes() {
         var acceptAudio = false
         var acceptVideo = false
         channelShims.forEach { channelShim ->
@@ -792,7 +798,7 @@ class EndpointK @JvmOverloads constructor(
     /**
      * Return the timestamp of the most recently created [ChannelShim] on this endpoint
      */
-    override fun getMostRecentChannelCreatedTime(): Instant {
+    fun getMostRecentChannelCreatedTime(): Instant {
         return channelShims
             .map(ChannelShim::getCreationTimestamp)
             .max() ?: NEVER
@@ -806,21 +812,19 @@ class EndpointK @JvmOverloads constructor(
 
     override fun requestKeyframe(mediaSsrc: Long) = _transceiver.requestKeyFrame(mediaSsrc)
 
-    override fun isOversending(): Boolean = bitrateController.isOversending()
+    fun isOversending(): Boolean = bitrateController.isOversending()
 
-    // TODO: once Endpoint.java goes away, this should take a List (not MutableList)
-    override fun setSelectedEndpoints(selectedEndpoints: MutableList<String>) =
+    fun setSelectedEndpoints(selectedEndpoints: List<String>) =
         bitrateController.setSelectedEndpoints(selectedEndpoints)
 
     /**
      * Returns how many endpoints this Endpoint is currently forwarding video for
      */
-    override fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
+    fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
 
-    override fun setMaxFrameHeight(maxFrameHeight: Int) =
-        bitrateController.setMaxFrameHeight(maxFrameHeight)
+    fun setMaxFrameHeight(maxFrameHeight: Int) = bitrateController.setMaxFrameHeight(maxFrameHeight)
 
-    override fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) =
+    fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) =
         bitrateController.setBandwidthAllocationSettings(message)
 
     override fun send(packetInfo: PacketInfo) {
@@ -886,23 +890,23 @@ class EndpointK @JvmOverloads constructor(
         return false
     }
 
-    override fun setLastN(lastN: Int) {
+    fun setLastN(lastN: Int) {
         bitrateController.lastN = lastN
     }
 
-    override fun getLastN(): Int = bitrateController.lastN
+    fun getLastN(): Int = bitrateController.lastN
 
     /**
      * Set the local SSRC for [mediaType] to [ssrc] for this endpoint.
      */
-    override fun setLocalSsrc(mediaType: MediaType, ssrc: Long) = _transceiver.setLocalSsrc(mediaType, ssrc)
+    fun setLocalSsrc(mediaType: MediaType, ssrc: Long) = _transceiver.setLocalSsrc(mediaType, ssrc)
 
     /**
      * Returns true if this endpoint's transport is 'fully' connected (both ICE and DTLS), false otherwise
      */
     private fun isTransportConnected(): Boolean = iceTransport.isConnected() && dtlsTransport.isConnected
 
-    override fun getRtt(): Double = _transceiver.getTransceiverStats().endpointConnectionStats.rtt
+    fun getRtt(): Double = _transceiver.getTransceiverStats().endpointConnectionStats.rtt
 
     override fun wants(packetInfo: PacketInfo): Boolean {
         if (!isTransportConnected()) {
@@ -1032,7 +1036,7 @@ class EndpointK @JvmOverloads constructor(
         private val openDataChannelLocally = false
         /**
          * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
-         * Since [Endpoint] is the 'last place' that is aware of [PacketInfo] in the outgoing
+         * Since [EndpointK] is the 'last place' that is aware of [PacketInfo] in the outgoing
          * chain, we track this stats here.  Since they're static, these members will track the delay
          * for packets going out to all endpoints.
          */

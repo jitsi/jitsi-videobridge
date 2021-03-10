@@ -511,7 +511,7 @@ public class ConferenceShim
 
             final String endpointId = channelBundleIq.getId();
 
-            final Endpoint endpoint = conference.getLocalEndpoint(endpointId);
+            final EndpointK endpoint = conference.getLocalEndpoint(endpointId);
             if (endpoint == null)
             {
                 // Endpoint is expired and removed as part of handling IQ

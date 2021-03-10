@@ -27,7 +27,7 @@ class PacketRateLoadSampler(
         var totalPacketRate: Long = 0
         videobridge.conferences.forEach { conf ->
             conf.localEndpoints.forEach { ep ->
-                with(ep.transceiver.getTransceiverStats()) {
+                with(ep.getTransceiver().getTransceiverStats()) {
                     totalPacketRate += incomingPacketStreamStats.packetRate
                     totalPacketRate += outgoingPacketStreamStats.packetRate
                 }

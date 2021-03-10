@@ -38,10 +38,10 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     isolationMode = IsolationMode.InstancePerLeaf
 
     val executor: FakeScheduledExecutorService = spyk()
-    val localEp1: Endpoint = mockk {
+    val localEp1: EndpointK = mockk {
         every { id } returns "1"
     }
-    val localEp2: Endpoint = mockk {
+    val localEp2: EndpointK = mockk {
         every { id } returns "2"
     }
     val eps = listOf(localEp1, localEp2)
@@ -85,7 +85,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
             }
             context("but haven't been around longer than first transfer timeout") {
                 eps.forEach {
-                    every { it.mostRecentChannelCreatedTime } returns clock.instant()
+                    every { it.getMostRecentChannelCreatedTime() } returns clock.instant()
                 }
                 executor.runOne()
                 should("not fire any events") {
@@ -95,7 +95,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
             }
             context("and have been around longer than first transfer timeout") {
                 eps.forEach {
-                    every { it.mostRecentChannelCreatedTime } returns clock.instant()
+                    every { it.getMostRecentChannelCreatedTime() } returns clock.instant()
                 }
                 clock.elapse(1.mins)
                 executor.runOne()
@@ -140,7 +140,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
         }
         context("when the endpoints have had activity") {
             eps.forEach {
-                every { it.mostRecentChannelCreatedTime } returns clock.instant()
+                every { it.getMostRecentChannelCreatedTime() } returns clock.instant()
                 every { it.lastIncomingActivity } returns clock.instant()
             }
             context("that is within maxInactivityLimit") {

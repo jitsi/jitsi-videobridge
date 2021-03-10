@@ -63,7 +63,7 @@ class ConferencePeriodicRunnable
     {
         List<EndpointStats> allEndpointStats = new LinkedList<>();
 
-        for (Endpoint endpoint : o.getLocalEndpoints())
+        for (EndpointK endpoint : o.getLocalEndpoints())
         {
             String id = endpoint.getStatsId();
             if (id == null)

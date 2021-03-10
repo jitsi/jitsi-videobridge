@@ -45,14 +45,14 @@ public class DebugTest extends JerseyTest
 {
     protected Videobridge videobridge;
     protected static final String BASE_URL = "/debug";
-    Endpoint endpoint;
+    EndpointK endpoint;
     Conference conference;
 
     @Override
     protected Application configure()
     {
         videobridge = mock(Videobridge.class);
-        endpoint = mock(Endpoint.class);
+        endpoint = mock(EndpointK.class);
         conference = mock(Conference.class);
 
         when(videobridge.getConference("foo")).thenReturn(conference);

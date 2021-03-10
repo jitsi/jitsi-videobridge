@@ -26,7 +26,7 @@ import io.mockk.verify
 import org.jitsi.config.setNewConfig
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.Endpoint
+import org.jitsi.videobridge.EndpointK
 import org.jitsi.videobridge.JvbLastN
 import java.util.function.Supplier
 
@@ -106,7 +106,7 @@ inline fun <T> withLastNConfig(config: String, block: () -> T): T {
  */
 private fun createMockConference(vararg epNumForwardedVideo: Int): Conference {
     val eps = epNumForwardedVideo.map {
-        mockk<Endpoint> { every { numForwardedEndpoints() } returns it }
+        mockk<EndpointK> { every { numForwardedEndpoints() } returns it }
     }.toList<AbstractEndpoint>()
     return mockk {
         every { endpoints } returns eps

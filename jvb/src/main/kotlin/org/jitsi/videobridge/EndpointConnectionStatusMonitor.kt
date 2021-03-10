@@ -70,9 +70,9 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
         conference.localEndpoints.forEach(::monitorEndpointActivity)
     }
 
-    private fun monitorEndpointActivity(endpoint: Endpoint) {
+    private fun monitorEndpointActivity(endpoint: EndpointK) {
         val now = clock.instant()
-        val mostRecentChannelCreatedTime = endpoint.mostRecentChannelCreatedTime
+        val mostRecentChannelCreatedTime = endpoint.getMostRecentChannelCreatedTime()
         val lastActivity = endpoint.lastIncomingActivity
 
         if (lastActivity == NEVER) {

@@ -68,12 +68,12 @@ public class Conference
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
-     * contains only the {@link Endpoint} instances (and not Octo endpoints).
+     * contains only the {@link EndpointK} instances (local endpoints, not Octo endpoints).
      * This is because the cache was introduced for performance reasons only
      * (we iterate over it for each RTP packet) and the Octo endpoints are not
      * needed.
      */
-    private List<Endpoint> endpointsCache = Collections.emptyList();
+    private List<EndpointK> endpointsCache = Collections.emptyList();
 
     private final Object endpointsCacheLock = new Object();
 
@@ -405,7 +405,7 @@ public class Conference
      */
     private void lastNEndpointsChanged()
     {
-        endpointsCache.forEach(Endpoint::lastNEndpointsChanged);
+        endpointsCache.forEach(EndpointK::lastNEndpointsChanged);
     }
 
     /**
@@ -452,9 +452,9 @@ public class Conference
 
     private double getRtt(AbstractEndpoint endpoint)
     {
-        if (endpoint instanceof Endpoint)
+        if (endpoint instanceof EndpointK)
         {
-            Endpoint localDominantSpeaker = (Endpoint)endpoint;
+            EndpointK localDominantSpeaker = (EndpointK)endpoint;
             return localDominantSpeaker.getRtt();
         }
         else
@@ -473,7 +473,7 @@ public class Conference
     {
         return endpointsCache.stream()
                 .filter(ep -> !ep.getId().equalsIgnoreCase(excludedEndpointId))
-                .map(Endpoint::getRtt)
+                .map(EndpointK::getRtt)
                 .mapToDouble(Double::valueOf)
                 .max()
                 .orElse(0);
@@ -606,7 +606,7 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public Endpoint createLocalEndpoint(String id, boolean iceControlling)
+    public EndpointK createLocalEndpoint(String id, boolean iceControlling)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint instanceof OctoEndpoint)
@@ -624,7 +624,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new EndpointK(id, this, logger, iceControlling);
+        final EndpointK endpoint = new EndpointK(id, this, logger, iceControlling);
 
         subscribeToEndpointEvents(endpoint);
 
@@ -687,12 +687,12 @@ public class Conference
     {
         synchronized (endpointsCacheLock)
         {
-            ArrayList<Endpoint> endpointsList = new ArrayList<>(endpointsById.size());
+            ArrayList<EndpointK> endpointsList = new ArrayList<>(endpointsById.size());
             endpointsById.values().forEach(e ->
             {
-                if (e instanceof Endpoint)
+                if (e instanceof EndpointK)
                 {
-                    endpointsList.add((Endpoint) e);
+                    endpointsList.add((EndpointK) e);
                 }
             });
 
@@ -701,9 +701,9 @@ public class Conference
     }
 
     /**
-     * Returns the number of local AND remote {@link Endpoint}s in this {@link Conference}.
+     * Returns the number of local AND remote endpoints in this {@link Conference}.
      *
-     * @return the number of local AND remote {@link Endpoint}s in this {@link Conference}.
+     * @return the number of local AND remote endpoints in this {@link Conference}.
      */
     public int getEndpointCount()
     {
@@ -711,9 +711,9 @@ public class Conference
     }
 
     /**
-     * Returns the number of local {@link Endpoint}s in this {@link Conference}.
+     * Returns the number of local endpoints in this {@link Conference}.
      *
-     * @return the number of local {@link Endpoint}s in this {@link Conference}.
+     * @return the number of local endpoints in this {@link Conference}.
      */
     public int getLocalEndpointCount()
     {
@@ -741,7 +741,7 @@ public class Conference
      * Gets the list of endpoints which are local to this bridge (as opposed
      * to being on a remote bridge through Octo).
      */
-    public List<Endpoint> getLocalEndpoints()
+    public List<EndpointK> getLocalEndpoints()
     {
         return endpointsCache;
     }
@@ -767,12 +767,12 @@ public class Conference
      * conference
      */
     @Nullable
-    public Endpoint getLocalEndpoint(String id)
+    public EndpointK getLocalEndpoint(String id)
     {
         AbstractEndpoint endpoint = getEndpoint(id);
-        if (endpoint instanceof Endpoint)
+        if (endpoint instanceof EndpointK)
         {
-            return (Endpoint) endpoint;
+            return (EndpointK) endpoint;
         }
 
         return null;
@@ -868,10 +868,10 @@ public class Conference
     }
 
     /**
-     * Notifies this {@link Conference} that one of its {@link Endpoint}s
+     * Notifies this {@link Conference} that one of its endpoints'
      * transport channel has become available.
      *
-     * @param endpoint the {@link Endpoint} whose transport channel has become
+     * @param endpoint the endpoint whose transport channel has become
      * available.
      */
     @Override
@@ -962,7 +962,7 @@ public class Conference
         // is also interested in the packet.  We'll give the last handler the
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
-        for (Endpoint endpoint : endpointsCache)
+        for (EndpointK endpoint : endpointsCache)
         {
             if (endpoint.getId().equals(sourceEndpointId))
             {
@@ -1042,9 +1042,9 @@ public class Conference
             AbstractEndpoint targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
 
             PotentialPacketHandler pph = null;
-            if (targetEndpoint instanceof Endpoint)
+            if (targetEndpoint instanceof EndpointK)
             {
-                pph = (Endpoint) targetEndpoint;
+                pph = (EndpointK) targetEndpoint;
             }
             else if (targetEndpoint instanceof OctoEndpoint)
             {
@@ -1134,7 +1134,7 @@ public class Conference
 
         JSONObject endpoints = new JSONObject();
         debugState.put("endpoints", endpoints);
-        for (Endpoint e : endpointsCache)
+        for (EndpointK e : endpointsCache)
         {
             if (endpointId == null || endpointId.equals(e.getId()))
             {

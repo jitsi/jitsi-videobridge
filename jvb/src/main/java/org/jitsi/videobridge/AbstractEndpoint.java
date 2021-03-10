@@ -53,7 +53,7 @@ public abstract class AbstractEndpoint
     private final String id;
 
     /**
-     * The {@link Logger} used by the {@link Endpoint} class to print debug
+     * The {@link Logger} used by the {@link AbstractEndpoint} class to print debug
      * information.
      */
     protected final Logger logger;
