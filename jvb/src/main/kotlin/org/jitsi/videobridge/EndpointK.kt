@@ -87,11 +87,11 @@ import java.nio.ByteBuffer
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.function.Supplier
 import java.util.Optional
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.function.Supplier
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -107,7 +107,6 @@ class EndpointK @JvmOverloads constructor(
     iceControlling: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
-
     /**
      * The time at which this endpoint was created
      */
@@ -127,8 +126,7 @@ class EndpointK @JvmOverloads constructor(
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
      * are sent).  This jitter value is calculated independently, per packet, by every
-     * individual {@link Endpoint} and their jitter values are averaged together
-     * in this static member.
+     * individual [EndpointK] and their jitter values are averaged together.
      */
     private val bridgeJitterStats = BridgeJitterStats()
 
@@ -159,6 +157,7 @@ class EndpointK @JvmOverloads constructor(
      * allows sending.
      */
     private var acceptAudio = false
+
     /**
      * Whether this endpoint should accept video packets. We set this according
      * to whether the endpoint has a video Colibri channel whose direction
