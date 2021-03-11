@@ -288,7 +288,7 @@ public class VideobridgeStatistics
                     videoChannels += contentShim.getChannelCount();
                 }
             }
-            for (EndpointK endpoint : conference.getLocalEndpoints())
+            for (Endpoint endpoint : conference.getLocalEndpoints())
             {
                 if (endpoint.isOversending())
                 {

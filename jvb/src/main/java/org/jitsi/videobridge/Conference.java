@@ -68,12 +68,12 @@ public class Conference
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
-     * contains only the {@link EndpointK} instances (local endpoints, not Octo endpoints).
+     * contains only the {@link Endpoint} instances (local endpoints, not Octo endpoints).
      * This is because the cache was introduced for performance reasons only
      * (we iterate over it for each RTP packet) and the Octo endpoints are not
      * needed.
      */
-    private List<EndpointK> endpointsCache = Collections.emptyList();
+    private List<Endpoint> endpointsCache = Collections.emptyList();
 
     private final Object endpointsCacheLock = new Object();
 
@@ -405,7 +405,7 @@ public class Conference
      */
     private void lastNEndpointsChanged()
     {
-        endpointsCache.forEach(EndpointK::lastNEndpointsChanged);
+        endpointsCache.forEach(Endpoint::lastNEndpointsChanged);
     }
 
     /**
@@ -452,9 +452,9 @@ public class Conference
 
     private double getRtt(AbstractEndpoint endpoint)
     {
-        if (endpoint instanceof EndpointK)
+        if (endpoint instanceof Endpoint)
         {
-            EndpointK localDominantSpeaker = (EndpointK)endpoint;
+            Endpoint localDominantSpeaker = (Endpoint)endpoint;
             return localDominantSpeaker.getRtt();
         }
         else
@@ -473,7 +473,7 @@ public class Conference
     {
         return endpointsCache.stream()
                 .filter(ep -> !ep.getId().equalsIgnoreCase(excludedEndpointId))
-                .map(EndpointK::getRtt)
+                .map(Endpoint::getRtt)
                 .mapToDouble(Double::valueOf)
                 .max()
                 .orElse(0);
@@ -606,7 +606,7 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public EndpointK createLocalEndpoint(String id, boolean iceControlling)
+    public Endpoint createLocalEndpoint(String id, boolean iceControlling)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint instanceof OctoEndpoint)
@@ -624,7 +624,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final EndpointK endpoint = new EndpointK(id, this, logger, iceControlling);
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
 
         subscribeToEndpointEvents(endpoint);
 
@@ -687,12 +687,12 @@ public class Conference
     {
         synchronized (endpointsCacheLock)
         {
-            ArrayList<EndpointK> endpointsList = new ArrayList<>(endpointsById.size());
+            ArrayList<Endpoint> endpointsList = new ArrayList<>(endpointsById.size());
             endpointsById.values().forEach(e ->
             {
-                if (e instanceof EndpointK)
+                if (e instanceof Endpoint)
                 {
-                    endpointsList.add((EndpointK) e);
+                    endpointsList.add((Endpoint) e);
                 }
             });
 
@@ -741,7 +741,7 @@ public class Conference
      * Gets the list of endpoints which are local to this bridge (as opposed
      * to being on a remote bridge through Octo).
      */
-    public List<EndpointK> getLocalEndpoints()
+    public List<Endpoint> getLocalEndpoints()
     {
         return endpointsCache;
     }
@@ -767,12 +767,12 @@ public class Conference
      * conference
      */
     @Nullable
-    public EndpointK getLocalEndpoint(String id)
+    public Endpoint getLocalEndpoint(String id)
     {
         AbstractEndpoint endpoint = getEndpoint(id);
-        if (endpoint instanceof EndpointK)
+        if (endpoint instanceof Endpoint)
         {
-            return (EndpointK) endpoint;
+            return (Endpoint) endpoint;
         }
 
         return null;
@@ -962,7 +962,7 @@ public class Conference
         // is also interested in the packet.  We'll give the last handler the
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
-        for (EndpointK endpoint : endpointsCache)
+        for (Endpoint endpoint : endpointsCache)
         {
             if (endpoint.getId().equals(sourceEndpointId))
             {
@@ -1042,9 +1042,9 @@ public class Conference
             AbstractEndpoint targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
 
             PotentialPacketHandler pph = null;
-            if (targetEndpoint instanceof EndpointK)
+            if (targetEndpoint instanceof Endpoint)
             {
-                pph = (EndpointK) targetEndpoint;
+                pph = (Endpoint) targetEndpoint;
             }
             else if (targetEndpoint instanceof OctoEndpoint)
             {
@@ -1134,7 +1134,7 @@ public class Conference
 
         JSONObject endpoints = new JSONObject();
         debugState.put("endpoints", endpoints);
-        for (EndpointK e : endpointsCache)
+        for (Endpoint e : endpointsCache)
         {
             if (endpointId == null || endpointId.equals(e.getId()))
             {

@@ -34,7 +34,7 @@ public class SctpConnectionShim extends ChannelShim
      */
     public SctpConnectionShim(
             @NotNull String id,
-            @NotNull EndpointK endpoint,
+            @NotNull Endpoint endpoint,
             ContentShim contentShim,
             Logger parentLogger)
     {

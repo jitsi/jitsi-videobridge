@@ -145,7 +145,7 @@ public class Debug
             throw new NotFoundException("No conference was found with the specified id.");
         }
 
-        EndpointK endpoint = conference.getLocalEndpoint(epId);
+        Endpoint endpoint = conference.getLocalEndpoint(epId);
         if (endpoint == null)
         {
             throw new NotFoundException("No endpoint was found with the specified id.");
@@ -177,7 +177,7 @@ public class Debug
             throw new NotFoundException("No conference was found with the specified id.");
         }
 
-        EndpointK endpoint = conference.getLocalEndpoint(epId);
+        Endpoint endpoint = conference.getLocalEndpoint(epId);
         if (endpoint == null)
         {
             throw new NotFoundException("No endpoint was found with the specified id.");

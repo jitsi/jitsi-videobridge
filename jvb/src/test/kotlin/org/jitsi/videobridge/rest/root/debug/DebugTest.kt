@@ -29,7 +29,7 @@ import org.glassfish.jersey.test.JerseyTest
 import org.glassfish.jersey.test.TestProperties
 import org.jitsi.health.HealthCheckService
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.EndpointK
+import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.rest.RestApis
 import org.jitsi.videobridge.rest.annotations.EnabledByConfig
@@ -47,7 +47,7 @@ import javax.ws.rs.client.Entity
 import javax.ws.rs.core.Application
 
 class DebugTest : JerseyTest() {
-    private val endpoint: EndpointK = mockk(relaxed = true)
+    private val endpoint: Endpoint = mockk(relaxed = true)
     private val conference: Conference = mockk {
         every { getEndpoint("bar") } returns endpoint
         every { getLocalEndpoint("bar") } returns endpoint

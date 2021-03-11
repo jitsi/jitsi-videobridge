@@ -96,7 +96,7 @@ import java.util.function.Supplier
 /**
  * Models a local endpoint (participant) in a [Conference]
  */
-class EndpointK @JvmOverloads constructor(
+class Endpoint @JvmOverloads constructor(
     id: String,
     conference: Conference,
     parentLogger: Logger,
@@ -126,7 +126,7 @@ class EndpointK @JvmOverloads constructor(
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
      * are sent).  This jitter value is calculated independently, per packet, by every
-     * individual [EndpointK] and their jitter values are averaged together.
+     * individual [Endpoint] and their jitter values are averaged together.
      */
     private val bridgeJitterStats = BridgeJitterStats()
 
@@ -190,7 +190,7 @@ class EndpointK @JvmOverloads constructor(
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
                 newEffectiveConstraints: Map<String, VideoConstraints>
-            ) = this@EndpointK.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
+            ) = this@Endpoint.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
 
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) =
                 conference.requestKeyframe(endpointId, ssrc)
@@ -231,7 +231,7 @@ class EndpointK @JvmOverloads constructor(
     ).apply {
         setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
             override fun consume(packetInfo: PacketInfo) {
-                this@EndpointK.handleIncomingPacket(packetInfo)
+                this@Endpoint.handleIncomingPacket(packetInfo)
             }
 
             override fun trace(f: () -> Unit) = f.invoke()
@@ -246,7 +246,7 @@ class EndpointK @JvmOverloads constructor(
         },
         Supplier { bitrateController.getStatusSnapshot() }
     ).apply {
-        diagnosticsContext = this@EndpointK.diagnosticContext
+        diagnosticsContext = this@Endpoint.diagnosticContext
         enabled = true
     }.also {
         recurringRunnableExecutor.registerRecurringRunnable(it)
@@ -322,7 +322,7 @@ class EndpointK @JvmOverloads constructor(
     private fun setupDtlsTransport() {
         dtlsTransport.incomingDataHandler = object : DtlsTransport.IncomingDataHandler {
             override fun dtlsAppDataReceived(buf: ByteArray, off: Int, len: Int) {
-                this@EndpointK.dtlsAppPacketReceived(buf, off, len)
+                this@Endpoint.dtlsAppPacketReceived(buf, off, len)
             }
         }
         dtlsTransport.outgoingDataHandler = object : DtlsTransport.OutgoingDataHandler {
@@ -1011,7 +1011,7 @@ class EndpointK @JvmOverloads constructor(
         private const val openDataChannelLocally = false
         /**
          * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
-         * Since [EndpointK] is the 'last place' that is aware of [PacketInfo] in the outgoing
+         * Since [Endpoint] is the 'last place' that is aware of [PacketInfo] in the outgoing
          * chain, we track this stats here.  Since they're static, these members will track the delay
          * for packets going out to all endpoints.
          */
@@ -1037,7 +1037,7 @@ class EndpointK @JvmOverloads constructor(
          * TODO (brian): align the recurringRunnable stuff with whatever we end up
          * doing with all the other executors.
          */
-        private val recurringRunnableExecutor = RecurringRunnableExecutor(EndpointK::class.java.simpleName)
+        private val recurringRunnableExecutor = RecurringRunnableExecutor(Endpoint::class.java.simpleName)
 
         /**
          * How long we'll give an endpoint to either successfully establish
@@ -1059,7 +1059,7 @@ class EndpointK @JvmOverloads constructor(
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
         override fun audioLevelReceived(sourceSsrc: Long, level: Long) =
-            conference.speechActivity.levelChanged(this@EndpointK, level)
+            conference.speechActivity.levelChanged(this@Endpoint, level)
 
         /**
          * Forward bwe events from the Transceiver.

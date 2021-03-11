@@ -38,10 +38,10 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     isolationMode = IsolationMode.InstancePerLeaf
 
     val executor: FakeScheduledExecutorService = spyk()
-    val localEp1: EndpointK = mockk {
+    val localEp1: Endpoint = mockk {
         every { id } returns "1"
     }
-    val localEp2: EndpointK = mockk {
+    val localEp2: Endpoint = mockk {
         every { id } returns "2"
     }
     val eps = listOf(localEp1, localEp2)

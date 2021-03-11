@@ -75,7 +75,7 @@ class OctoEndpointMessageTransport
         AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
         // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
         // only those that reference an endpoint local to this bridge.
-        if (endpoint instanceof EndpointK)
+        if (endpoint instanceof Endpoint)
         {
             endpoint.addReceiver(message.getBridgeId(), message.getVideoConstraints());
         }
@@ -91,7 +91,7 @@ class OctoEndpointMessageTransport
         AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
         // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
         // only those that reference an endpoint local to this bridge.
-        if (endpoint instanceof EndpointK)
+        if (endpoint instanceof Endpoint)
         {
             endpoint.removeReceiver(message.getBridgeId());
         }

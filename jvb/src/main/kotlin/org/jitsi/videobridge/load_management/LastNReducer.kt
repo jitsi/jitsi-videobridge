@@ -24,7 +24,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.EndpointK
+import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.JvbLastN
 import java.lang.Integer.max
 import java.time.Duration
@@ -69,7 +69,7 @@ class LastNReducer(
         return conferencesSupplier.get()
             .flatMap { it.endpoints }
             .asSequence()
-            .filterIsInstance<EndpointK>()
+            .filterIsInstance<Endpoint>()
             .map {
                 it.numForwardedEndpoints()
             }

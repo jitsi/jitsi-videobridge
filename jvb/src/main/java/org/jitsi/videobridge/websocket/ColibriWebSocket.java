@@ -73,7 +73,7 @@ public class ColibriWebSocket extends WebSocketAdapter
      * {@inheritDoc}
      * </p>
      * Handles the event of this web socket being connected. Finds the
-     * destination COLIBRI {@link EndpointK} and authenticates the request
+     * destination COLIBRI {@link Endpoint} and authenticates the request
      * based on the password.
      */
     @Override
