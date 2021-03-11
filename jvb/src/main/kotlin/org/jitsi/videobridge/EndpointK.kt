@@ -179,7 +179,7 @@ class EndpointK @JvmOverloads constructor(
         setErrorHandler(queueErrorCounter)
     }
 
-    private val bitrateController = BitrateController<AbstractEndpoint>(
+    private val bitrateController = BitrateController(
         object : BitrateController.EventHandler {
             override fun allocationChanged(allocation: BandwidthAllocation) {
                 // Intentional no-op
@@ -273,7 +273,7 @@ class EndpointK @JvmOverloads constructor(
             }
         }
 
-    fun setupIceTransport() {
+    private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
             override fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant) {
                 // DTLS data will be handled by the DtlsTransport, but SRTP data can go
@@ -320,7 +320,7 @@ class EndpointK @JvmOverloads constructor(
         }
     }
 
-    fun setupDtlsTransport() {
+    private fun setupDtlsTransport() {
         dtlsTransport.incomingDataHandler = object : DtlsTransport.IncomingDataHandler {
             override fun dtlsAppDataReceived(buf: ByteArray, off: Int, len: Int) {
                 this@EndpointK.dtlsAppPacketReceived(buf, off, len)
@@ -411,7 +411,7 @@ class EndpointK @JvmOverloads constructor(
         return transceiver.isReceivingVideo()
     }
 
-    fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+    private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         if (packetInfo.packet.looksLikeRtp()) {
             rtpPacketDelayStats.addPacket(packetInfo)
             bridgeJitterStats.packetSent(packetInfo)
@@ -551,25 +551,14 @@ class EndpointK @JvmOverloads constructor(
                 logger.info("SCTP connection is disconnected")
             }
         }
-
-        socket.dataCallback = object : SctpDataCallback {
-            override fun onSctpPacket(
-                data: ByteArray,
-                sid: Int,
-                ssn: Int,
-                tsn: Int,
-                ppid: Long,
-                context: Int,
-                flags: Int
-            ) {
-                // We assume all data coming over SCTP will be datachannel data
-                val dataChannelPacket = DataChannelPacket(data, 0, data.size, sid, ppid.toInt())
-                // Post the rest of the task here because the current context is
-                // holding a lock inside the SctpSocket which can cause a deadlock
-                // if two endpoints are trying to send datachannel messages to one
-                // another (with stats broadcasting it can happen often)
-                TaskPools.IO_POOL.execute { dataChannelHandler.processPacket(PacketInfo(dataChannelPacket)) }
-            }
+        socket.dataCallback = SctpDataCallback { data, sid, ssn, tsn, ppid, context, flags ->
+            // We assume all data coming over SCTP will be datachannel data
+            val dataChannelPacket = DataChannelPacket(data, 0, data.size, sid, ppid.toInt())
+            // Post the rest of the task here because the current context is
+            // holding a lock inside the SctpSocket which can cause a deadlock
+            // if two endpoints are trying to send datachannel messages to one
+            // another (with stats broadcasting it can happen often)
+            TaskPools.IO_POOL.execute { dataChannelHandler.processPacket(PacketInfo(dataChannelPacket)) }
         }
         socket.listen()
         sctpSocket = Optional.of(socket)
@@ -1020,7 +1009,7 @@ class EndpointK @JvmOverloads constructor(
          * Whether or not the bridge should be the peer which opens the data channel
          * (as opposed to letting the far peer/client open it).
          */
-        private val openDataChannelLocally = false
+        private const val openDataChannelLocally = false
         /**
          * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
          * Since [EndpointK] is the 'last place' that is aware of [PacketInfo] in the outgoing
