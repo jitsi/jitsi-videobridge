@@ -218,7 +218,7 @@ class EndpointK @JvmOverloads constructor(
      * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
      */
     fun getOrderedEndpoints(): List<AbstractEndpoint> =
-        conference.orderedEndpoints.filter { it == this }
+        conference.orderedEndpoints.filterNot { it == this }
 
     // TODO: this naming is to avoid conflicts with getTransceiver in Endpoint.  It will change back
     // once Endpoint.java goes away
