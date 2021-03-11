@@ -626,20 +626,15 @@ class EndpointK @JvmOverloads constructor(
      * @return {@code true} iff the password matches.
      */
     fun acceptWebSocket(password: String): Boolean {
-        if (getIcePassword() != password) {
+        if (iceTransport.icePassword != password) {
             logger.warn(
                 "Incoming web socket request with an invalid password. " +
-                    "Expected: ${getIcePassword()} received $password"
+                    "Expected: ${iceTransport.icePassword} received $password"
             )
             return false
         }
         return true
     }
-
-    /**
-     * @return the password of the ICE Agent associated with this endpoint.
-     */
-    fun getIcePassword(): String = iceTransport.icePassword
 
     /**
      * Sends a message to this endpoint in order to notify it that the set of endpoints for which the bridge
@@ -722,7 +717,7 @@ class EndpointK @JvmOverloads constructor(
      * @param direction desired media direction:
      *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
      */
-    @SuppressWarnings("unused") // Used by plugins (Yuri)
+    @Suppress("unused") // Used by plugins (Yuri)
     fun updateMediaDirection(type: MediaType, direction: String) {
         when (direction) {
             "sendrecv", "sendonly", "recvonly", "inactive" -> {
