@@ -261,20 +261,17 @@ class EndpointK @JvmOverloads constructor(
         conference.videobridge.statistics.totalEndpoints.incrementAndGet()
     }
 
-    // TODO: Some weirdness here with with a property for reading mediaSources but a function for setting them because
-    //  only the getter is defined in AbstractEndpoint.  Will take another look at it.
-    override val mediaSources: Array<out MediaSourceDesc>
+    override var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
-
-    fun setMediaSources(mediaSources: Array<MediaSourceDesc>) {
-        val wasEmpty = transceiver.getMediaSources().isEmpty()
-        if (transceiver.setMediaSources(mediaSources)) {
-            eventEmitter.fireEventSync { sourcesChanged() }
+        private set(value) {
+            val wasEmpty = transceiver.getMediaSources().isEmpty()
+            if (transceiver.setMediaSources(value)) {
+                eventEmitter.fireEventSync { sourcesChanged() }
+            }
+            if (wasEmpty) {
+                sendVideoConstraints(maxReceiverVideoConstraints)
+            }
         }
-        if (wasEmpty) {
-            sendVideoConstraints(maxReceiverVideoConstraints)
-        }
-    }
 
     fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -755,8 +752,7 @@ class EndpointK @JvmOverloads constructor(
             .toList()
 
         if (sources.isNotEmpty() || sourceGroups.isNotEmpty()) {
-            val mediaSources = MediaSourceFactory.createMediaSources(sources, sourceGroups)
-            setMediaSources(mediaSources)
+            mediaSources = MediaSourceFactory.createMediaSources(sources, sourceGroups)
         }
     }
 
