@@ -153,8 +153,7 @@ public class ContentShim
     {
         synchronized (channels)
         {
-            Endpoint endpoint
-                    = conference.getLocalEndpoint(endpointId);
+            Endpoint endpoint = conference.getLocalEndpoint(endpointId);
             if (endpoint != null)
             {
                 String sctpConnId = generateUniqueChannelID();

@@ -68,7 +68,7 @@ public class Conference
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
-     * contains only the {@link Endpoint} instances (and not Octo endpoints).
+     * contains only the {@link Endpoint} instances (local endpoints, not Octo endpoints).
      * This is because the cache was introduced for performance reasons only
      * (we iterate over it for each RTP packet) and the Octo endpoints are not
      * needed.
@@ -624,7 +624,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new EndpointK(id, this, logger, iceControlling);
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
 
         subscribeToEndpointEvents(endpoint);
 
@@ -701,9 +701,9 @@ public class Conference
     }
 
     /**
-     * Returns the number of local AND remote {@link Endpoint}s in this {@link Conference}.
+     * Returns the number of local AND remote endpoints in this {@link Conference}.
      *
-     * @return the number of local AND remote {@link Endpoint}s in this {@link Conference}.
+     * @return the number of local AND remote endpoints in this {@link Conference}.
      */
     public int getEndpointCount()
     {
@@ -711,9 +711,9 @@ public class Conference
     }
 
     /**
-     * Returns the number of local {@link Endpoint}s in this {@link Conference}.
+     * Returns the number of local endpoints in this {@link Conference}.
      *
-     * @return the number of local {@link Endpoint}s in this {@link Conference}.
+     * @return the number of local endpoints in this {@link Conference}.
      */
     public int getLocalEndpointCount()
     {
@@ -868,10 +868,10 @@ public class Conference
     }
 
     /**
-     * Notifies this {@link Conference} that one of its {@link Endpoint}s
+     * Notifies this {@link Conference} that one of its endpoints'
      * transport channel has become available.
      *
-     * @param endpoint the {@link Endpoint} whose transport channel has become
+     * @param endpoint the endpoint whose transport channel has become
      * available.
      */
     @Override

@@ -40,7 +40,7 @@ import static org.jitsi.videobridge.EndpointMessageTransportConfig.config;
  *
  * @author Boris Grozev
  */
-class EndpointMessageTransport
+public class EndpointMessageTransport
     extends AbstractEndpointMessageTransport<Endpoint>
     implements DataChannelStack.DataChannelMessageListener,
         ColibriWebSocket.EventHandler
