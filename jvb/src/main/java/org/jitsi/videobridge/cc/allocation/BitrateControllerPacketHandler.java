@@ -144,7 +144,7 @@ class BitrateControllerPacketHandler
      * Filters out packets that match one of the streams that this instance manages, but don't match the target SSRC.
      * Allows packets for streams not managed by this instance.
      */
-    boolean accept(RtcpSrPacket rtcpSrPacket)
+    boolean accept(@NotNull RtcpSrPacket rtcpSrPacket)
     {
         long ssrc = rtcpSrPacket.getSenderSsrc();
 
