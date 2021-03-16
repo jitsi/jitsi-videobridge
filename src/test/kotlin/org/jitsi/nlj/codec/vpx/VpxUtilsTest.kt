@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.codec.vp8
+package org.jitsi.nlj.codec.vpx
 
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.data.forAll
 import io.kotest.data.row
+import io.kotest.matchers.shouldBe
 
-class Vp8UtilsTest : ShouldSpec() {
+class VpxUtilsTest : ShouldSpec() {
 
     init {
         context("getPicIdDelta") {
@@ -33,7 +33,7 @@ class Vp8UtilsTest : ShouldSpec() {
                     row(32760, 1, -9),
                     row(1234, 1234, 0)
                 ) { a, b, expected ->
-                    Vp8Utils.getExtendedPictureIdDelta(a, b) shouldBe expected
+                    VpxUtils.getExtendedPictureIdDelta(a, b) shouldBe expected
                 }
             }
         }
@@ -46,7 +46,7 @@ class Vp8UtilsTest : ShouldSpec() {
                     row(1, -9, 32760),
                     row(1234, 0, 1234)
                 ) { start, delta, expected ->
-                    Vp8Utils.applyExtendedPictureIdDelta(start, delta) shouldBe expected
+                    VpxUtils.applyExtendedPictureIdDelta(start, delta) shouldBe expected
                 }
             }
         }
@@ -59,7 +59,7 @@ class Vp8UtilsTest : ShouldSpec() {
                     row(250, 1, -7),
                     row(34, 34, 0)
                 ) { a, b, expected ->
-                    Vp8Utils.getTl0PicIdxDelta(a, b) shouldBe expected
+                    VpxUtils.getTl0PicIdxDelta(a, b) shouldBe expected
                 }
             }
         }
@@ -72,7 +72,7 @@ class Vp8UtilsTest : ShouldSpec() {
                     row(1, -7, 250),
                     row(34, 0, 34)
                 ) { start, delta, expected ->
-                    Vp8Utils.applyTl0PicIdxDelta(start, delta) shouldBe expected
+                    VpxUtils.applyTl0PicIdxDelta(start, delta) shouldBe expected
                 }
             }
         }

@@ -29,7 +29,6 @@ abstract class ParsedVideoPacket(
 ) : VideoRtpPacket(buffer, offset, length, encodingIndex) {
 
     abstract val isKeyframe: Boolean
-    abstract val height: Int
     abstract val isStartOfFrame: Boolean
     abstract val isEndOfFrame: Boolean
 }

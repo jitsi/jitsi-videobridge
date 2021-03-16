@@ -127,3 +127,8 @@ val Long.mbps: Bandwidth
 fun DataSize.per(duration: Duration): Bandwidth {
     return Bandwidth(this.bits / duration.seconds.toDouble())
 }
+
+/**
+ * Returns the sum of all elements in the collection.
+ */
+fun Iterable<Bandwidth>.sum(): Bandwidth = reduce(Bandwidth::plus)

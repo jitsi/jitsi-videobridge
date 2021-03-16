@@ -60,7 +60,7 @@ constructor(
             val oldLayerMap = field.associateBy { it.layerId }
             for (newLayer in newLayers) {
                 oldLayerMap[newLayer.layerId]?.let {
-                    newLayer.inheritStatistics(it)
+                    newLayer.inheritFrom(it)
                 }
             }
             field = newLayers
@@ -92,11 +92,22 @@ constructor(
     }
 
     /**
+     * Clone an existing encoding desc, inheriting layer descs' statistics,
+     * modifying only specific values.
+     */
+    fun copy(
+        primarySSRC: Long = this.primarySSRC,
+        layers: Array<RtpLayerDesc> = Array(this.layers.size) { i -> this.layers[i].copy() }
+    ) = RtpEncodingDesc(primarySSRC, layers).also {
+        this.secondarySsrcs.forEach { (ssrc, type) -> it.addSecondarySsrc(ssrc, type) }
+    }
+
+    /**
      * {@inheritDoc}
      */
     override fun toString(): String {
         return "primary_ssrc=$primarySSRC,secondary_ssrcs=$secondarySsrcs," +
-            "layers=${layers.joinToString(separator = "\n    ")}"
+            "layers=\n    ${layers.joinToString(separator = "\n    ")}"
     }
 
     /**

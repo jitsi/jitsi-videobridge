@@ -134,7 +134,7 @@ class MediaSourceDesc
     }
 
     @Synchronized
-    private fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? =
+    fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? =
         rtpEncodings.find { it.matches(ssrc) }
 
     @Synchronized
@@ -144,8 +144,14 @@ class MediaSourceDesc
         updateLayerCache()
     }
 
+    /**
+     * Clone an existing media source desc, inheriting layer descs' statistics.
+     */
+    @Synchronized
+    fun copy() = MediaSourceDesc(Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() }, this.owner)
+
     override fun toString(): String = buildString {
-        append("MediaSourceDesc ").append(hashCode()).append(" has encodings:\n")
+        append("MediaSourceDesc ").append(hashCode()).append(" has encodings:\n  ")
         append(rtpEncodings.joinToString(separator = "\n  "))
     }
 
@@ -160,4 +166,18 @@ class MediaSourceDesc
      * for this source.
      */
     fun matches(ssrc: Long) = rtpEncodings.getOrNull(0)?.primarySSRC == ssrc
+}
+
+/**
+ * Clone an array of media source descriptions.
+ */
+fun Array<MediaSourceDesc>.copy() = Array(this.size) { i -> this[i].copy() }
+
+fun Array<MediaSourceDesc>.findRtpLayerDesc(packet: VideoRtpPacket): RtpLayerDesc? {
+    for (source in this) {
+        source.findRtpLayerDesc(packet)?.let {
+            return it
+        }
+    }
+    return null
 }

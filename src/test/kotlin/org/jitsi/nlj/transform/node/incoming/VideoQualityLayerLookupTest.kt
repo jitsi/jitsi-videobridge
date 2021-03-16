@@ -22,50 +22,15 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.mockk.every
 import io.mockk.mockk
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.format.PayloadType
-import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.resources.node.onOutput
-import org.jitsi.nlj.rtp.RtpExtension
-import org.jitsi.nlj.rtp.RtpExtensionType
-import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.RtpExtensionHandler
-import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging2.createLogger
 
-class VideoParserTest : ShouldSpec() {
+class VideoQualityLayerLookupTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val streamInformationStore = object : ReadOnlyStreamInformationStore {
-        override val rtpExtensions: List<RtpExtension> = mutableListOf()
-        override val rtpPayloadTypes: Map<Byte, PayloadType> =
-            mutableMapOf(100.toByte() to Vp8PayloadType(100.toByte()))
-        override var supportsFir: Boolean = true
-        override var supportsPli: Boolean = true
-        override var supportsRemb: Boolean = true
-        override var supportsTcc: Boolean = true
-        override fun onRtpExtensionMapping(rtpExtensionType: RtpExtensionType, handler: RtpExtensionHandler) {
-            // no-op
-        }
-        override fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler) {
-            // no-op
-        }
-
-        override val primaryMediaSsrcs: Set<Long> = setOf(123L, 456L, 789L)
-        override val primaryVideoSsrcs: Set<Long> = setOf(123L, 456L)
-        override val receiveSsrcs: Set<Long> = setOf(123L, 456L, 789L, 321L, 654L)
-
-        override fun getLocalPrimarySsrc(secondarySsrc: Long): Long? = null
-
-        override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? = null
-
-        override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("dummy")
-    }
-
-    private val parser = VideoParser(streamInformationStore, createLogger())
+    private val parser = VideoQualityLayerLookup(createLogger())
 
     private val vp8PacketBuf = org.jitsi.rtp.extensions.bytearray.byteArrayOf(
         // V=2,P=false,X=true,CC=0,M=false,PT=100,SeqNum=16535

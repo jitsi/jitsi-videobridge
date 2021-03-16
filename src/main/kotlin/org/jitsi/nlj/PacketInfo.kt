@@ -100,6 +100,12 @@ open class PacketInfo @JvmOverloads constructor(
     var endpointId: String? = null
 
     /**
+     * Whether this packet indicates a point in which its stream's layering changed, in
+     * a way that indicates that bitrate allocation may need to be recomputed.
+     */
+    var layeringChanged = false
+
+    /**
      * The payload verification string for the packet, or 'null' if payload verification is disabled. Calculating the
      * it is expensive, thus we only do it when the flag is enabled.
      */
@@ -136,6 +142,7 @@ open class PacketInfo @JvmOverloads constructor(
         }
         clone.receivedTime = receivedTime
         clone.payloadVerification = payloadVerification
+        clone.layeringChanged = layeringChanged
         @Suppress("UNCHECKED_CAST") /* ArrayList.clone() really does return ArrayList, not Object. */
         clone.onSentActions = onSentActions?.clone() as ArrayList<()->Unit>?
         return clone

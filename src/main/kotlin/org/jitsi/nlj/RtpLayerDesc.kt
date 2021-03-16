@@ -20,6 +20,7 @@ import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.sum
 
 /**
  * Keeps track of its subjective quality index,
@@ -31,17 +32,18 @@ import org.jitsi.nlj.util.DataSize
  * @author George Politis
  */
 open class RtpLayerDesc
+@JvmOverloads
 constructor(
     /**
      * The index of this instance's encoding in the source encoding array.
      */
     val eid: Int,
     /**
-     * The temporal layer ID of this instance.
+     * The temporal layer ID of this instance, or negative for unknown.
      */
     val tid: Int,
     /**
-     * The spatial layer ID of this instance.
+     * The spatial layer ID of this instance, or negative for unknown.
      */
     val sid: Int,
     /**
@@ -58,14 +60,40 @@ constructor(
      */
     val frameRate: Double,
     /**
-     * The [RtpLayerDesc] on which this layer depends.
+     * The [RtpLayerDesc]s on which this layer definitely depends.
      */
-    private val dependencyLayers: Array<RtpLayerDesc>?
+    private val dependencyLayers: Array<RtpLayerDesc> = emptyArray(),
+    /**
+     * The [RtpLayerDesc]s on which this layer possibly depends.
+     * (The intended use case is K-SVC mode.)
+     */
+    private val softDependencyLayers: Array<RtpLayerDesc> = emptyArray()
 ) {
     init {
-        if (tid > 7) throw IllegalArgumentException("Invalid temporal ID $tid")
-        if (sid > 7) throw IllegalArgumentException("Invalid spatial ID $sid")
+        require(tid < 8) { "Invalid temporal ID $tid" }
+        require(sid < 8) { "Invalid spatial ID $sid" }
     }
+
+    /**
+     * Clone an existing layer desc, inheriting its statistics,
+     * modifying only specific values.
+     */
+    fun copy(
+        eid: Int = this.eid,
+        tid: Int = this.tid,
+        sid: Int = this.sid,
+        height: Int = this.height,
+        frameRate: Double = this.frameRate,
+        dependencyLayers: Array<RtpLayerDesc> = this.dependencyLayers,
+        softDependencyLayers: Array<RtpLayerDesc> = this.softDependencyLayers
+    ) = RtpLayerDesc(eid, tid, sid, height, frameRate, dependencyLayers, softDependencyLayers).also {
+        it.inheritFrom(this)
+    }
+
+    /**
+     * Whether softDependencyLayers are to be used.
+     */
+    var useSoftDependencies = true
 
     /**
      * The [BitrateTracker] instance used to calculate the receiving bitrate of this RTP layer.
@@ -103,8 +131,9 @@ constructor(
     /**
      * Inherit another layer description's [BitrateTracker] object.
      */
-    internal fun inheritStatistics(other: RtpLayerDesc) {
+    internal fun inheritFrom(other: RtpLayerDesc) {
         inheritStatistics(other.bitrateTracker)
+        useSoftDependencies = other.useSoftDependencies
     }
 
     /**
@@ -125,17 +154,30 @@ constructor(
      * @return the cumulative bitrate (in bps) of this [RtpLayerDesc]
      * and its dependencies.
      */
-    open fun getBitrate(nowMs: Long): Bandwidth {
-        var bitrate = bitrateTracker.getRate(nowMs)
+    open fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs).values.sum()
 
-        /* TODO: does the wrong thing if we have multiple dependencies */
-        if (dependencyLayers != null) {
-            for (dependency in dependencyLayers) {
-                bitrate += dependency.getBitrate(nowMs)
-            }
+    /**
+     * Recursively adds the bitrate (in bps) of this [RTPLayerDesc] and
+     * its dependencies in the map passed in as an argument.
+     *
+     * This is necessary to ensure we don't double-count layers in cases
+     * of multiple dependencies.
+     *
+     * @param nowMs
+     */
+    private fun calcBitrate(nowMs: Long, rates: MutableMap<Int, Bandwidth> = HashMap()): MutableMap<Int, Bandwidth> {
+        if (rates.containsKey(index)) {
+            return rates
+        }
+        rates[index] = bitrateTracker.getRate(nowMs)
+
+        dependencyLayers.forEach { it.calcBitrate(nowMs, rates) }
+
+        if (useSoftDependencies) {
+            softDependencyLayers.forEach { it.calcBitrate(nowMs, rates) }
         }
 
-        return bitrate
+        return rates
     }
 
     /**
@@ -152,22 +194,27 @@ constructor(
 
     companion object {
         /**
-         * The quality that is used to represent that forwarding is suspended.
+         * The index value that is used to represent that forwarding is suspended.
          */
         const val SUSPENDED_INDEX = -1
 
         /**
+         * The encoding ID value that is used to represent that forwarding is suspended.
+         */
+        const val SUSPENDED_ENCODING_ID = -1
+
+        /**
          * A value used to designate the absence of height information.
          */
-        private const val NO_HEIGHT = -1
+        const val NO_HEIGHT = -1
 
         /**
          * A value used to designate the absence of frame rate information.
          */
-        private const val NO_FRAME_RATE = -1.0
+        const val NO_FRAME_RATE = -1.0
 
         /**
-         * Calculate the "id" of a layer based on its encoding, spatial, and temporal ID.
+         * Calculate the "index" of a layer based on its encoding, spatial, and temporal ID.
          * This is a server-side id and should not be confused with any encoding id defined
          * in the client (such as the rid) or the encodingId.  This is used by the videobridge's
          * adaptive source projection for filtering.
@@ -181,13 +228,33 @@ constructor(
             return (e shl 6) or (s shl 3) or t
         }
 
+        /**
+         * Get an encoding ID from a layer index.  If the index is [SUSPENDED_INDEX],
+         * [SUSPENDED_ENCODING_ID] will be returned.
+         */
         @JvmStatic
         fun getEidFromIndex(index: Int) = index shr 6
 
+        /**
+         * Get an spatial ID from a layer index.  If the index is [SUSPENDED_INDEX],
+         * the value is unspecified.
+         */
         @JvmStatic
         fun getSidFromIndex(index: Int) = (index and 0x38) shr 3
 
+        /**
+         * Get an temporal ID from a layer index.  If the index is [SUSPENDED_INDEX],
+         * the value is unspecified.
+         */
         @JvmStatic
         fun getTidFromIndex(index: Int) = index and 0x7
+
+        /**
+         * Get a string description of a layer index.
+         */
+        @JvmStatic
+        fun indexString(index: Int): String =
+            if (index == SUSPENDED_INDEX) "SUSP"
+            else "E${getEidFromIndex(index)}S${getSidFromIndex(index)}T${getTidFromIndex(index)}"
     }
 }

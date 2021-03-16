@@ -128,7 +128,7 @@ private fun createRTPLayerDescs(
         var frameRate = 30.toDouble() / (1 shl temporalLen - 1)
         for (temporalIdx in 0 until temporalLen) {
             val idx: Int = idx(spatialIdx, temporalIdx, temporalLen)
-            var dependencies: Array<RtpLayerDesc>?
+            var dependencies: Array<RtpLayerDesc>
             dependencies = if (spatialIdx > 0 && temporalIdx > 0) {
                 // this layer depends on spatialIdx-1 and temporalIdx-1.
                 arrayOf(
@@ -167,7 +167,7 @@ private fun createRTPLayerDescs(
                 )
             } else {
                 // this is a base layer without any dependencies.
-                null
+                emptyArray()
             }
             val temporalId = if (temporalLen > 1) temporalIdx else -1
             val spatialId = if (spatialLen > 1) spatialIdx else -1

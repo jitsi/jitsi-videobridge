@@ -16,6 +16,7 @@
 package org.jitsi.nlj.util
 
 import java.time.Duration
+import java.util.Collections
 import java.util.function.Predicate
 import org.jitsi.rtp.Packet
 
@@ -45,6 +46,19 @@ inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit) 
 
 infix fun Int.floorMod(other: Int): Int {
     return Math.floorMod(this, other)
+}
+
+/** Set the value at position [index] in a [MutableList] to [element].  If the list has fewer
+ * than [index] entries, extend the intermediate entries between its current size and
+ * [index] with [fillerElement].
+ */
+fun <T> MutableList<T>.setAndExtend(index: Int, element: T, fillerElement: T) {
+    if (index >= size) {
+        addAll(Collections.nCopies(index - size, fillerElement))
+        add(element)
+    } else {
+        this[index] = element
+    }
 }
 
 /* We inline this so getStackTrace itself doesn't show up in the stack trace. */

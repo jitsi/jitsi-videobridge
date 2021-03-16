@@ -29,7 +29,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.nlj.MediaSourceDesc
-import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.nlj.findRtpLayerDesc
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bytes
 import org.jitsi.utils.secs
@@ -55,19 +55,10 @@ class VideoBitrateCalculator(
         super.observe(packetInfo)
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
-        findRtpLayerDesc(videoRtpPacket)?.let {
+        mediaSourceDescs.findRtpLayerDesc(videoRtpPacket)?.let {
             val now = System.currentTimeMillis()
             it.updateBitrate(videoRtpPacket.length.bytes, now)
         }
-    }
-
-    private fun findRtpLayerDesc(packet: VideoRtpPacket): RtpLayerDesc? {
-        for (source in mediaSourceDescs) {
-            source.findRtpLayerDesc(packet)?.let {
-                return it
-            }
-        }
-        return null
     }
 
     override fun handleEvent(event: Event) {

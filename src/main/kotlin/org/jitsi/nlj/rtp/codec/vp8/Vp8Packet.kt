@@ -117,7 +117,7 @@ class Vp8Packet private constructor (
      * this index will correspond to an overall simulcast layer index across multiple simulcast stream.  e.g.
      * 180p stream packets will have 0, 360p -> 1, 720p -> 2
      */
-    override var height: Int = height ?: if (this.isKeyframe) {
+    val height: Int = height ?: if (this.isKeyframe) {
         Vp8Utils.getHeightFromKeyFrame(this)
     } else {
         -1
@@ -135,6 +135,10 @@ class Vp8Packet private constructor (
             val hashCode = buffer.hashCodeOfSegment(payloadOffset + vp8pdSize, rtpPayloadOffset + rtpPayloadLength)
             return "type=Vp8Packet len=$vp8PayloadLength hashCode=$hashCode"
         }
+
+    override fun toString(): String {
+        return super.toString() + ", TID=$temporalLayerIndex"
+    }
 
     override fun clone(): Vp8Packet {
         return Vp8Packet(

@@ -16,38 +16,44 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
+import org.jitsi.nlj.copy
 import org.jitsi.nlj.format.Vp8PayloadType
-import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.nlj.MediaSourceDesc
-import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.nlj.format.Vp9PayloadType
+import org.jitsi.nlj.rtp.codec.VideoCodecParser
+import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
+import org.jitsi.nlj.rtp.codec.vp8.Vp8Parser
+import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
+import org.jitsi.nlj.rtp.codec.vp9.Vp9Parser
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.logging2.cdebug
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Parse video packets at a codec level and set appropriate meta-information
+ * Parse video packets at a codec level
  */
 class VideoParser(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger
 ) : TransformerNode("Video parser") {
     private val logger = createChildLogger(parentLogger)
-    private var sources: Array<MediaSourceDesc> = arrayOf()
     private val numPacketsDroppedUnknownPt = AtomicInteger()
-    private val numPacketsDroppedNoEncoding = AtomicInteger()
+    private var numKeyframes: Int = 0
+    private var numLayeringChanges: Int = 0
 
-    // TODO: things we want to detect here:
-    // does this packet belong to a keyframe?
-    // does this packet represent the start of a frame?
-    // does this packet represent the end of a frame?
+    private var sources: Array<MediaSourceDesc> = arrayOf()
+    private var signaledSources: Array<MediaSourceDesc> = sources
+
+    private var videoCodecParser: VideoCodecParser? = null
+
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packetAs<RtpPacket>()
         val payloadType = streamInformationStore.rtpPayloadTypes[packet.payloadType.toByte()] ?: run {
@@ -55,13 +61,36 @@ class VideoParser(
             numPacketsDroppedUnknownPt.incrementAndGet()
             return null
         }
-        try {
+        val parsedPacket = try {
             when (payloadType) {
                 is Vp8PayloadType -> {
                     val vp8Packet = packetInfo.packet.toOtherType(::Vp8Packet)
                     packetInfo.packet = vp8Packet
                     packetInfo.resetPayloadVerification()
+
+                    if (videoCodecParser !is Vp8Parser) {
+                        resetSources()
+                        videoCodecParser = Vp8Parser(sources, logger)
+                    }
+                    vp8Packet
                 }
+                is Vp9PayloadType -> {
+                    val vp9Packet = packetInfo.packet.toOtherType(::Vp9Packet)
+                    packetInfo.packet = vp9Packet
+                    packetInfo.resetPayloadVerification()
+
+                    if (videoCodecParser !is Vp9Parser) {
+                        resetSources()
+                        videoCodecParser = Vp9Parser(sources, logger)
+                    }
+                    vp9Packet
+                }
+                else -> {
+                    videoCodecParser = null
+                    return packetInfo
+                }
+            }.also {
+                videoCodecParser?.parse(packetInfo)
             }
         } catch (e: Exception) {
             logger.error(
@@ -72,44 +101,53 @@ class VideoParser(
             return null
         }
 
-        val videoPacket = packetInfo.packetAs<VideoRtpPacket>()
-        val encodingDesc = findRtpLayerDesc(videoPacket) ?: run {
-            logger.warn(
-                "Unable to find encoding matching packet! packet=$videoPacket, " +
-                    "sources=${sources.joinToString(separator = "\n")}"
-            )
-            numPacketsDroppedNoEncoding.incrementAndGet()
-            return null
+        /* Some codecs mark keyframes in every packet of the keyframe - only count the start of the frame,
+         * so the count is correct. */
+        /* Alternately we could keep track of keyframes we've already seen, by timestamp, but that seems unnecessary. */
+        if (parsedPacket.isKeyframe && parsedPacket.isStartOfFrame) {
+            logger.cdebug { "Received a keyframe for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
+            numKeyframes++
         }
-        videoPacket.qualityIndex = encodingDesc.index
+        if (packetInfo.layeringChanged) {
+            logger.cdebug { "Layering structure changed for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
+            numLayeringChanges++
+        }
 
         return packetInfo
-    }
-
-    private fun findRtpLayerDesc(packet: VideoRtpPacket): RtpLayerDesc? {
-        for (source in sources) {
-            source.findRtpLayerDesc(packet)?.let {
-                return it
-            }
-        }
-        return null
     }
 
     override fun handleEvent(event: Event) {
         when (event) {
             is SetMediaSourcesEvent -> {
                 sources = event.mediaSourceDescs
+                signaledSources = sources.copy()
+                videoCodecParser?.sources = sources
             }
         }
         super.handleEvent(event)
+    }
+
+    private fun resetSources() {
+        for (signaledSource in signaledSources) {
+            for (source in sources) {
+                if (source.primarySSRC != signaledSource.primarySSRC) {
+                    continue
+                }
+                for (signaledEncoding in signaledSource.rtpEncodings) {
+                    source.setEncodingLayers(signaledEncoding.layers, signaledEncoding.primarySSRC)
+                }
+                break
+            }
+        }
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
-            addNumber("num_packets_dropped_no_encoding", numPacketsDroppedNoEncoding.get())
             addNumber("num_packets_dropped_unknown_pt", numPacketsDroppedUnknownPt.get())
+            addNumber("num_keyframes", numKeyframes)
+            addNumber("num_layering_changes", numLayeringChanges)
         }
     }
 }

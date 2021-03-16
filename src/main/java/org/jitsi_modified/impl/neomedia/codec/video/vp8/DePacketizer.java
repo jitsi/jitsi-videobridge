@@ -66,16 +66,6 @@ public class DePacketizer
     public static class VP8PayloadDescriptor
     {
         /**
-         * The bitmask for the TL0PICIDX field.
-         */
-        public static final int TL0PICIDX_MASK = 0xff;
-
-        /**
-         * The bitmask for the extended picture id field.
-         */
-        public static final int EXTENDED_PICTURE_ID_MASK = 0x7fff;
-
-        /**
          * I bit from the X byte of the Payload Descriptor.
          */
         private static final byte I_BIT = (byte) 0x80;
