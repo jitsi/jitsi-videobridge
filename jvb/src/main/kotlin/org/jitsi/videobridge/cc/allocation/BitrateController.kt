@@ -138,7 +138,13 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     // Proxy to the packet handler
-    fun accept(packetInfo: PacketInfo): Boolean = packetHandler.accept(packetInfo)
+    fun accept(packetInfo: PacketInfo): Boolean {
+        if (packetInfo.layeringChanged) {
+            // This needs to be done synchronously, so it's complete before the accept, below.
+            bandwidthAllocator.update()
+        }
+        return packetHandler.accept(packetInfo)
+    }
     fun accept(rtcpSrPacket: RtcpSrPacket): Boolean {
         // TODO: It is not clear why this is here, and why it isn't in the other accept() method.
         bandwidthAllocator.maybeUpdate()

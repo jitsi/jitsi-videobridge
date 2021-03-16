@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.codec.vp8.*;
+import org.jitsi.nlj.codec.vpx.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.util.*;
@@ -342,7 +342,7 @@ class VP8Frame
      * @param pkt the RTP packet to check whether its parameters match this frame.
      * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
-    void validateConsistent(@NotNull Vp8Packet pkt)
+    void validateConsistency(@NotNull Vp8Packet pkt)
     {
         if (temporalLayer == pkt.getTemporalLayerIndex() &&
             tl0PICIDX == pkt.getTL0PICIDX() &&
@@ -407,6 +407,6 @@ class VP8Frame
     boolean isImmediatelyAfter(@NotNull VP8Frame otherFrame)
     {
         return pictureId ==
-            Vp8Utils.applyExtendedPictureIdDelta(otherFrame.getPictureId(), 1);
+            VpxUtils.applyExtendedPictureIdDelta(otherFrame.getPictureId(), 1);
     }
 }

@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.cc.vp8;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.codec.vp8.*;
+import org.jitsi.nlj.codec.vpx.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.util.*;
@@ -69,7 +69,7 @@ public class VP8FrameMap
     {
         try
         {
-            frame.validateConsistent(packet);
+            frame.validateConsistency(packet);
         }
         catch (Exception e)
         {
@@ -88,7 +88,7 @@ public class VP8FrameMap
             return false;
         }
 
-        int picDelta = Vp8Utils.getExtendedPictureIdDelta(packet.getPictureId(), latestFrame.getPictureId());
+        int picDelta = VpxUtils.getExtendedPictureIdDelta(packet.getPictureId(), latestFrame.getPictureId());
         if (picDelta > FRAME_MAP_SIZE)
         {
             return true;
@@ -389,77 +389,6 @@ public class VP8FrameMap
                 }
             }
             return null;
-        }
-
-        /** Like Rfc3711IndexTracker, but for picture IDs (so with a rollover
-         * of 0x8000).
-         */
-        private static class PictureIdIndexTracker
-        {
-            private int roc = 0;
-            private int highestSeqNumReceived = -1;
-
-            private int getIndex(int seqNum, boolean updateRoc)
-            {
-                if (highestSeqNumReceived == -1)
-                {
-                    if (updateRoc)
-                    {
-                        highestSeqNumReceived = seqNum;
-                    }
-                    return seqNum;
-                }
-
-                int delta = Vp8Utils.getExtendedPictureIdDelta(seqNum, highestSeqNumReceived);
-
-                int v;
-
-                if (delta < 0 && highestSeqNumReceived < seqNum)
-                {
-                    v = roc - 1;
-                }
-                else if (delta > 0 && seqNum < highestSeqNumReceived)
-                {
-                    v = roc + 1;
-                    if (updateRoc)
-                        roc = v;
-                }
-                else
-                {
-                    v = roc;
-                }
-
-                if (updateRoc && delta > 0)
-                {
-                    highestSeqNumReceived = seqNum;
-                }
-
-                return 0x8000 * v + seqNum;
-            }
-
-            public int update(int seq)
-            {
-                return getIndex(seq, true);
-            }
-
-            public int interpret(int seq)
-            {
-                return getIndex(seq, false);
-            }
-
-            /** Force this sequence to be interpreted as the new highest, regardless
-             * of its rollover state.
-             */
-            public void resetAt(int seq)
-            {
-                int delta = Vp8Utils.getExtendedPictureIdDelta(seq, highestSeqNumReceived);
-                if (delta < 0)
-                {
-                    roc++;
-                    highestSeqNumReceived = seq;
-                }
-                getIndex(seq, true);
-            }
         }
     }
 }

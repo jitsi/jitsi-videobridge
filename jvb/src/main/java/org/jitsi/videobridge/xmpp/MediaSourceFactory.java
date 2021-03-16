@@ -77,6 +77,8 @@ public class MediaSourceFactory
         return secondarySsrcTypeMap;
     }
 
+    private static final RtpLayerDesc[] noDependencies = new RtpLayerDesc[0];
+
     /*
      * Creates layers for an encoding.
      *
@@ -132,7 +134,7 @@ public class MediaSourceFactory
                 else
                 {
                     // this is a base layer without any dependencies.
-                    dependencies = null;
+                    dependencies = noDependencies;
                 }
 
                 int temporalId = temporalLen > 1 ? temporalIdx : -1;

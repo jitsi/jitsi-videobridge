@@ -1380,7 +1380,7 @@ fun createLayer(
     val sid = -1
 
     // Use a real RtpLayerDesc, because mocking absolutely kills the performance.
-    return object : RtpLayerDesc(eid, tid, sid, height, frameRate, dependencyLayers = null) {
+    return object : RtpLayerDesc(eid, tid, sid, height, frameRate) {
         override fun getBitrate(nowMs: Long): Bandwidth = bitrate
     }
 }
