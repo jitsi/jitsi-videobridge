@@ -27,7 +27,7 @@ case "$1" in
 
         # the default vars
         db_get jitsi-videobridge/jvb-hostname
-        JVB_HOSTNAME_IN="$RET"
+        JVB_HOSTNAME_IN=$(echo "$RET" | xargs echo -n)
 
         # generate config on new install or when we are reconfiguring
         # and all install is different than current one

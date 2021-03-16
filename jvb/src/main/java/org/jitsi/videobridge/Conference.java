@@ -25,15 +25,11 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.util.*;
-import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -72,7 +68,7 @@ public class Conference
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
-     * contains only the {@link Endpoint} instances (and not Octo endpoints).
+     * contains only the {@link Endpoint} instances (local endpoints, not Octo endpoints).
      * This is because the cache was introduced for performance reasons only
      * (we iterate over it for each RTP packet) and the Octo endpoints are not
      * needed.
@@ -167,7 +163,12 @@ public class Conference
     @NotNull
     private final EndpointConnectionStatusMonitor epConnectionStatusMonitor;
 
-    private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
+    /**
+     * A unique meeting ID optionally set by the signaling server ({@code null} if not explicitly set). It is exposed
+     * via ({@link #getDebugState()} for outside use.
+     */
+    @Nullable
+    private final String meetingId;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -183,12 +184,14 @@ public class Conference
     public Conference(Videobridge videobridge,
                       String id,
                       EntityBareJid conferenceName,
-                      long gid)
+                      long gid,
+                      @Nullable String meetingId)
     {
         if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
         {
             throw new IllegalArgumentException("Invalid GID:" + gid);
         }
+        this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         Map<String, String> context = JMap.ofEntries(
             entry("confId", id),
@@ -224,43 +227,6 @@ public class Conference
         videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
-
-        colibriQueue = new PacketQueue<>(
-            100,
-            true,
-            "colibri-queue-" + id,
-            request ->
-            {
-                try
-                {
-                    // TODO: we can avoid reaching into Videobridge here by merging VideobridgeShim into ConferenceShim
-                    long start = System.currentTimeMillis();
-                    IQ response = videobridge.handleColibriConferenceIQ(this, request.getRequest());
-                    long end = System.currentTimeMillis();
-                    long processingDelay = end - start;
-                    long totalDelay = end - request.getReceiveTime();
-                    request.getProcessingDelayStats().addDelay(processingDelay);
-                    request.getTotalDelayStats().addDelay(totalDelay);
-                    if (processingDelay > 100)
-                    {
-                        logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                                + totalDelay + " ms): " + request.getRequest().toXML());
-                    }
-                    request.getCallback().invoke(response);
-                }
-                catch (Throwable e)
-                {
-                    logger.warn("Failed to handle colibri request: ", e);
-                    request.getCallback().invoke(
-                            IQUtils.createError(
-                                    request.getRequest(),
-                                    XMPPError.Condition.internal_server_error,
-                                    e.getMessage()));
-                }
-                return true;
-            },
-            TaskPools.IO_POOL
-        );
     }
 
     /**
@@ -282,11 +248,6 @@ public class Conference
         {
             return new NoOpDiagnosticContext();
         }
-    }
-
-    public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
-    {
-        colibriQueue.add(request);
     }
 
     /**
@@ -464,7 +425,10 @@ public class Conference
 
         if (dominantSpeaker != null)
         {
-            broadcastMessage(new DominantSpeakerMessage(dominantSpeakerId));
+            broadcastMessage(
+                    new DominantSpeakerMessage(
+                            dominantSpeakerId,
+                            speechActivity.getSpeakerHistory(1, 10)));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -533,7 +497,7 @@ public class Conference
 
         logger.info("Expiring.");
 
-        colibriQueue.close();
+        shim.close();
 
         epConnectionStatusMonitor.stop();
 
@@ -737,9 +701,9 @@ public class Conference
     }
 
     /**
-     * Returns the number of local AND remote {@link Endpoint}s in this {@link Conference}.
+     * Returns the number of local AND remote endpoints in this {@link Conference}.
      *
-     * @return the number of local AND remote {@link Endpoint}s in this {@link Conference}.
+     * @return the number of local AND remote endpoints in this {@link Conference}.
      */
     public int getEndpointCount()
     {
@@ -747,9 +711,9 @@ public class Conference
     }
 
     /**
-     * Returns the number of local {@link Endpoint}s in this {@link Conference}.
+     * Returns the number of local endpoints in this {@link Conference}.
      *
-     * @return the number of local {@link Endpoint}s in this {@link Conference}.
+     * @return the number of local endpoints in this {@link Conference}.
      */
     public int getLocalEndpointCount()
     {
@@ -904,10 +868,10 @@ public class Conference
     }
 
     /**
-     * Notifies this {@link Conference} that one of its {@link Endpoint}s
+     * Notifies this {@link Conference} that one of its endpoints'
      * transport channel has become available.
      *
-     * @param endpoint the {@link Endpoint} whose transport channel has become
+     * @param endpoint the endpoint whose transport channel has become
      * available.
      */
     @Override
@@ -923,7 +887,10 @@ public class Conference
             {
                 try
                 {
-                    endpoint.sendMessage(new DominantSpeakerMessage(dominantSpeaker.getId()));
+                    endpoint.sendMessage(
+                            new DominantSpeakerMessage(
+                                    dominantSpeaker.getId(),
+                                    speechActivity.getSpeakerHistory(1, 10)));
                 }
                 catch (IOException e)
                 {
@@ -1145,6 +1112,10 @@ public class Conference
         if (conferenceName != null)
         {
             debugState.put("name", conferenceName.toString());
+        }
+        if (meetingId != null)
+        {
+            debugState.put("meeting_id", meetingId);
         }
 
         if (full)

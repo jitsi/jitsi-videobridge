@@ -111,12 +111,6 @@ public class Videobridge
     private final VideobridgeExpireThread videobridgeExpireThread;
 
     /**
-     * The shim which handles Colibri-related logic for this
-     * {@link Videobridge}.
-     */
-    private final VideobridgeShim shim = new VideobridgeShim(this);
-
-    /**
      * The {@link JvbLoadManager} instance used for this bridge.
      */
     private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager;
@@ -194,7 +188,7 @@ public class Videobridge
      * @param gid
      * @return
      */
-    private @NotNull Conference doCreateConference(EntityBareJid name, long gid)
+    private @NotNull Conference doCreateConference(EntityBareJid name, long gid, String meetingId)
     {
         Conference conference = null;
         do
@@ -205,7 +199,7 @@ public class Videobridge
             {
                 if (!conferencesById.containsKey(id))
                 {
-                    conference = new Conference(this, id, name, gid);
+                    conference = new Conference(this, id, name, gid, meetingId);
                     conferencesById.put(id, conference);
                 }
             }
@@ -226,7 +220,7 @@ public class Videobridge
      */
     public @NotNull Conference createConference(EntityBareJid name)
     {
-        return createConference(name, Conference.GID_NOT_SET);
+        return createConference(name, Conference.GID_NOT_SET, null);
     }
 
     /**
@@ -241,9 +235,9 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(EntityBareJid name, long gid)
+    public @NotNull Conference createConference(EntityBareJid name, long gid, String meetingId)
     {
-        final Conference conference = doCreateConference(name, gid);
+        final Conference conference = doCreateConference(name, gid, meetingId);
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
 
@@ -351,41 +345,29 @@ public class Videobridge
 
     /**
      * Handles a COLIBRI request synchronously.
-     */
-    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIq)
-    {
-        return handleColibriConferenceIQ(null, conferenceIq);
-    }
-
-    /**
-     * Handles a COLIBRI request synchronously.
-     * @param conference The conference which is the target of the request. If not provided ({@code null}, it will
-     * be retrieved or created based on the ID provided in request.
      * @param conferenceIq The COLIBRI request.
      * @return The response in the form of an {@link IQ}. It is either an error or a {@link ColibriConferenceIQ}.
      */
-    public IQ handleColibriConferenceIQ(Conference conference, ColibriConferenceIQ conferenceIq)
+    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIq)
     {
-        if (conference == null)
+        Conference conference;
+        try
         {
-            try
-            {
-                conference = getOrCreateConference(conferenceIq);
-            }
-            catch (ConferenceNotFoundException e)
-            {
-                return IQUtils.createError(
-                        conferenceIq,
-                        XMPPError.Condition.bad_request,
-                        "Conference not found for ID: " + conferenceIq.getID());
-            }
-            catch (InGracefulShutdownException e)
-            {
-                return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq);
-            }
+            conference = getOrCreateConference(conferenceIq);
+        }
+        catch (ConferenceNotFoundException e)
+        {
+            return IQUtils.createError(
+                    conferenceIq,
+                    XMPPError.Condition.bad_request,
+                    "Conference not found for ID: " + conferenceIq.getID());
+        }
+        catch (InGracefulShutdownException e)
+        {
+            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq);
         }
 
-        return shim.handleColibriConferenceIQ(conference, conferenceIq);
+        return conference.getShim().handleColibriConferenceIQ(conferenceIq);
     }
 
     /**
@@ -415,7 +397,7 @@ public class Videobridge
         }
 
         // It is now the responsibility of Conference to send a response.
-        conference.enqueueColibriRequest(request);
+        conference.getShim().enqueueColibriRequest(request);
     }
 
     private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)
@@ -429,7 +411,10 @@ public class Videobridge
 
         if (conferenceId == null)
         {
-            return createConference(conferenceIq.getName(), VideobridgeShim.parseGid(conferenceIq.getGID()));
+            return createConference(
+                    conferenceIq.getName(),
+                    ColibriUtil.parseGid(conferenceIq.getGID()),
+                    conferenceIq.getMeetingId());
         }
         else
         {
@@ -441,10 +426,6 @@ public class Videobridge
             return conference;
         }
     }
-
-    private class ConferenceNotFoundException extends Exception {}
-    private class InGracefulShutdownException extends Exception {}
-
 
     /**
      * Handles <tt>HealthCheckIQ</tt> by performing health check on this
@@ -822,25 +803,25 @@ public class Videobridge
 
         /**
          * The total number of messages received from the data channels of
-         * the {@link Endpoint}s of this conference.
+         * the endpoints of this conference.
          */
         public AtomicLong totalDataChannelMessagesReceived = new AtomicLong();
 
         /**
          * The total number of messages sent via the data channels of the
-         * {@link Endpoint}s of this conference.
+         * endpoints of this conference.
          */
         public AtomicLong totalDataChannelMessagesSent = new AtomicLong();
 
         /**
          * The total number of messages received from the data channels of
-         * the {@link Endpoint}s of this conference.
+         * the endpoints of this conference.
          */
         public AtomicLong totalColibriWebSocketMessagesReceived = new AtomicLong();
 
         /**
          * The total number of messages sent via the data channels of the
-         * {@link Endpoint}s of this conference.
+         * endpoints of this conference.
          */
         public AtomicLong totalColibriWebSocketMessagesSent = new AtomicLong();
 
@@ -905,4 +886,6 @@ public class Videobridge
         void conferenceCreated(@NotNull Conference conference);
         void conferenceExpired(@NotNull Conference conference);
     }
+    private static class ConferenceNotFoundException extends Exception {}
+    private static class InGracefulShutdownException extends Exception {}
 }

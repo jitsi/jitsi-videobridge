@@ -214,6 +214,21 @@ public class ConferenceSpeechActivity
     }
 
     /**
+     * Get at most {@code limit} enties from the history of speakers skipping the first {@code skip}.
+     */
+    public List<String> getSpeakerHistory(int skip, int limit)
+    {
+        synchronized (syncRoot)
+        {
+            return endpointsBySpeechActivity.stream()
+                    .skip(skip)
+                    .limit(limit)
+                    .map(AbstractEndpoint::getId)
+                    .collect(Collectors.toList());
+        }
+    }
+
+    /**
      * Notifies this instance that a new audio level was received or measured by an <tt>Endpoint</tt>.
      *
      * @param endpoint the endpoint for which a new audio level was received or measured

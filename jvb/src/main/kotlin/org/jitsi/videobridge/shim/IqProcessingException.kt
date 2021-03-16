@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2021-Present 8x8, Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.videobridge.shim
 
-package org.jitsi.videobridge.stats;
+import org.jivesoftware.smack.packet.XMPPError
+import java.lang.Exception
 
-import org.jitsi.nlj.util.*;
-import org.jitsi.videobridge.*;
-
-public class PacketTransitStats
-{
-    public static OrderedJsonObject getStatsJson()
-    {
-        OrderedJsonObject stats = new OrderedJsonObject();
-
-        stats.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
-        stats.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
-
-        return stats;
-    }
+internal class IqProcessingException(
+    val condition: XMPPError.Condition,
+    message: String
+) : Exception(message) {
+    override fun toString() = "$condition $message"
 }

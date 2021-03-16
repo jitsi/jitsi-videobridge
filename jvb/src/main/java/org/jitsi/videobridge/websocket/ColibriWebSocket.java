@@ -38,7 +38,7 @@ public class ColibriWebSocket extends WebSocketAdapter
     private ColibriWebSocketServlet servlet;
 
     /**
-     * The {@link Endpoint}, if any, associated with this web socket.
+     * The {@link EventHandler}, if any, associated with this web socket.
      */
     private final EventHandler eventHandler;
 
@@ -107,7 +107,7 @@ public class ColibriWebSocket extends WebSocketAdapter
          */
         void webSocketConnected(ColibriWebSocket ws);
         /**
-         * Notifies this {@link Endpoint} that a message has been received from a
+         * Notifies that a message has been received from a
          * specific {@link ColibriWebSocket} instance associated with it.
          * @param ws the {@link ColibriWebSocket} from which a message was received.
          */

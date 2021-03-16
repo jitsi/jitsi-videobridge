@@ -145,7 +145,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         }
         return packetHandler.accept(packetInfo)
     }
-    fun accept(rtcpSrPacket: RtcpSrPacket?): Boolean {
+    fun accept(rtcpSrPacket: RtcpSrPacket): Boolean {
         // TODO: It is not clear why this is here, and why it isn't in the other accept() method.
         bandwidthAllocator.maybeUpdate()
 
@@ -154,15 +154,16 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun transformRtcp(rtcpSrPacket: RtcpSrPacket?): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
 
-    val debugState: JSONObject = JSONObject().apply {
-        put("bitrate_allocator", bandwidthAllocator.debugState)
-        put("packet_handler", packetHandler.debugState)
-        put("forwardedEndpoints", forwardedEndpoints.toString())
-        put("oversending", oversendingTimeTracker.state)
-        put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
-        put("supportsRtx", supportsRtx)
-        put("trust_bwe", trustBwe)
-    }
+    val debugState: JSONObject
+        get() = JSONObject().apply {
+            put("bitrate_allocator", bandwidthAllocator.debugState)
+            put("packet_handler", packetHandler.debugState)
+            put("forwardedEndpoints", forwardedEndpoints.toString())
+            put("oversending", oversendingTimeTracker.state)
+            put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
+            put("supportsRtx", supportsRtx)
+            put("trust_bwe", trustBwe)
+        }
 
     fun addPayloadType(payloadType: PayloadType) {
         packetHandler.addPayloadType(payloadType)
