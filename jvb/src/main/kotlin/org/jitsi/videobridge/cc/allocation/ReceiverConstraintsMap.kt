@@ -67,6 +67,6 @@ class ReceiverConstraintsMap {
 
     fun getDebugState() = OrderedJsonObject().apply {
         put("maxHeight", maxHeight)
-        put("constraints", map)
+        put("constraints", map.toMap())
     }
 }
