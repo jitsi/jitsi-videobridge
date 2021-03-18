@@ -49,7 +49,7 @@ fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, alloc
         val effectiveLastN = effectiveLastN(allocationSettings.lastN, endpoints.size + 1)
         return endpoints.mapIndexed { i, endpoint ->
             endpoint.id to if (i >= effectiveLastN) {
-                VideoConstraints(0)
+                VideoConstraints.NOTHING
             } else {
                 allocationSettings.getConstraints(endpoint.id)
             }

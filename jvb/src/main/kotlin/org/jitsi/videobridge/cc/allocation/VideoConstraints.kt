@@ -27,6 +27,10 @@ data class VideoConstraints(
         this["maxHeight"] = maxHeight
         this["maxFrameRate"] = maxFrameRate
     }.toJSONString()
+
+    companion object {
+        val NOTHING = VideoConstraints(0)
+    }
 }
 
 fun Map<String, VideoConstraints>.prettyPrint(): String =
