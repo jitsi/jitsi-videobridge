@@ -66,7 +66,7 @@ public abstract class AbstractEndpoint
     /**
      * The map of receiver endpoint id -> video constraints.
      */
-    private final Map<String, VideoConstraints> receiverVideoConstraintsMap = new ConcurrentHashMap<>();
+    private final ReceiverConstraintsMap receiverVideoConstraintsMap = new ReceiverConstraintsMap();
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -320,7 +320,7 @@ public abstract class AbstractEndpoint
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
-        debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap);
+        debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
         debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
         debugState.put("displayName", displayName);
         debugState.put("expired", expired);
@@ -333,25 +333,15 @@ public abstract class AbstractEndpoint
      * Computes and sets the {@link #maxReceiverVideoConstraints} from the
      * specified video constraints.
      *
-     * @param newVideoConstraints the map of receiver endpoint id -> video
-     * constraints that specifies who (which receiver endpoint) is viewing what
-     * (as determined by the video constraints) from this endpoint (which is the
-     * sender).
+     * @param newMaxHeight the maximum height resulting from the current set of constraints.
+     *                     (Currently we only support constraining the height, and not frame rate.)
      */
-    private void receiverVideoConstraintsChanged(
-        Collection<VideoConstraints> newVideoConstraints)
+    private void receiverVideoConstraintsChanged(int newMaxHeight)
     {
         VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraints;
 
-        int maxHeight = newVideoConstraints
-            .stream()
-            .mapToInt(VideoConstraints::getMaxHeight)
-            .max()
-            .orElse(0);
 
-        // Currently we only support constraining the height, and not frame rate.
-
-        VideoConstraints newReceiverMaxVideoConstraints = new VideoConstraints(maxHeight, -1.0);
+        VideoConstraints newReceiverMaxVideoConstraints = new VideoConstraints(newMaxHeight, -1.0);
 
         if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
         {
@@ -409,7 +399,7 @@ public abstract class AbstractEndpoint
         {
             logger.debug(
                 () -> "Changed receiver constraints: " + receiverId + ": " + newVideoConstraints.getMaxHeight());
-            receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
+            receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
         }
     }
 
@@ -425,7 +415,7 @@ public abstract class AbstractEndpoint
         if (receiverVideoConstraintsMap.remove(receiverId) != null)
         {
             logger.debug(() -> "Removed receiver " + receiverId);
-            receiverVideoConstraintsChanged(receiverVideoConstraintsMap.values());
+            receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
         }
     }
 
