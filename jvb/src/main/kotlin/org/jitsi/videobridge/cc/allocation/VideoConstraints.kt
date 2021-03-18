@@ -29,7 +29,7 @@ data class VideoConstraints(
     }.toJSONString()
 
     companion object {
-        val ZERO = VideoConstraints(0)
+        val NOTHING = VideoConstraints(0)
     }
 }
 
