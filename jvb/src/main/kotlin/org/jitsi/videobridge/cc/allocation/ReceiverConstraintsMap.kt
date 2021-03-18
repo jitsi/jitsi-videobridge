@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.util.OrderedJsonObject
+
 /**
  * A Map of Endpoint IDs to their receiver video constraints.  Tracks the max height of all
  * of those constraints as new constraints are added and removed.
@@ -56,5 +58,10 @@ class ReceiverConstraintsMap {
             }
         }
         return maxSeen
+    }
+
+    fun getDebugState() = OrderedJsonObject().apply {
+        put("maxHeight", maxHeight)
+        put("constraints", map)
     }
 }

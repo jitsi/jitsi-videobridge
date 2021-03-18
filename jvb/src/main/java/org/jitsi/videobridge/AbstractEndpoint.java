@@ -320,8 +320,7 @@ public abstract class AbstractEndpoint
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
-        // TODO(brian): add a .toMap or something to ReceiverConstraintsMap so we can add it to debug state
-        debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap);
+        debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
         debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
         debugState.put("displayName", displayName);
         debugState.put("expired", expired);
