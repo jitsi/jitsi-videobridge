@@ -41,18 +41,23 @@ class ReceiverConstraintsMap {
         synchronized(lock) {
             return map.remove(key)?.also { removed ->
                 if (removed.maxHeight == maxHeight) {
-                    maxHeight = findNewMax(maxHeight)
+                    maxHeight = findNextMax(maxHeight)
                 }
             }
         }
     }
 
-    // Note: this method must be called with the lock held
-    private fun findNewMax(oldMax: Int): Int {
+    /**
+     * Given the previous max, go through the constraints until we either:
+     * 1) Find a maxHeight equal to the old one or
+     * 2) Go through the whole list, and track the highest value we've seen.
+     * Note: this method must be called with the lock held
+     */
+    private fun findNextMax(oldMaxHeight: Int): Int {
         var maxSeen = 0
         map.values.forEach { constraints ->
-            if (constraints.maxHeight == oldMax) {
-                return oldMax
+            if (constraints.maxHeight == oldMaxHeight) {
+                return oldMaxHeight
             } else if (constraints.maxHeight > maxSeen) {
                 maxSeen = constraints.maxHeight
             }
