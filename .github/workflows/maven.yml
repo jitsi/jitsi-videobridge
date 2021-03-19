@@ -28,4 +28,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
     - name: Build with Maven
-      run: ./resources/build.sh
+      run: ./resources/build.sh -Pcoverage
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v1
