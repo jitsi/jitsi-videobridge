@@ -676,7 +676,8 @@ public class Conference
     public void endpointSourcesChanged(AbstractEndpoint endpoint)
     {
         // Force an update to be propagated to each endpoint's bitrate controller.
-        lastNEndpointsChanged();
+        // We run this async because this method is called in the Colibri critical path.
+        lastNEndpointsChangedAsync();
     }
 
     /**
