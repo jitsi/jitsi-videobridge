@@ -60,7 +60,7 @@ if ! [[ $pid =~ $re ]] ; then
 fi
 
 # Returns local participant count by calling JVB REST statistics API and extracting
-# participant count count from JSON stats text returned.
+# participant count from JSON stats text returned.
 function getParticipantCount {
     # Total number of participants minus the remote (octo) participants
     curl -s "$hostUrl/colibri/stats"| jq '.participants - .octo_endpoints'
