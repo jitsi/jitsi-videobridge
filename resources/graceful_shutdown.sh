@@ -3,7 +3,7 @@
 # 1. The script issues shutdown command to the bridge over REST API.
 #    If HTTP status code other than 200 is returned then it exits with 1.
 # 2. If the code is ok then it checks if the bridge has exited.
-# 3. If not then it polls bridge statistics until conference count drops to 0.
+# 3. If not then it polls bridge statistics until participant count drops to 0.
 # 4. Gives some time for the bridge to shutdown. If it does not quit after that
 #    time then it kills the process. If the process was successfully killed 0 is
 #    returned and 1 otherwise.
@@ -12,7 +12,7 @@
 #   "-p"(mandatory) the PID of jitsi Videobridge process
 #   "-h"("http://localhost:8080" by default) REST requests host URI part
 #   "-t"("25" by default) number of second we we for the bridge to shutdown
-#       gracefully after conference count drops to 0
+#       gracefully after participant count drops to 0
 #   "-s"(disabled by default) enable silent mode - no info output
 #
 #   NOTE: script depends on the tool jq, used to parse json
