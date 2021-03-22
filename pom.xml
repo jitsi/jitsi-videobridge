@@ -199,7 +199,7 @@
                                       classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
                                     <arg value="src/**/*.kt"/>
                                     <!-- to generate report in checkstyle format prepend following args: -->
-                                    <!-- 
+                                    <!--
                                 <arg value="[dash][dash]reporter=plain"/>
                                 <arg value="[dash][dash]reporter=checkstyle,output=${project.build.directory}/ktlint.xml"/>
                                 -->
@@ -286,4 +286,36 @@
             <url>https://jitpack.io</url>
         </repository>
     </repositories>
+    <profiles>
+        <profile>
+            <id>coverage</id>
+            <properties>
+                <jacoco.version>0.8.6</jacoco.version>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <!-- attached to Maven test phase -->
+                            <execution>
+                                <id>report</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
