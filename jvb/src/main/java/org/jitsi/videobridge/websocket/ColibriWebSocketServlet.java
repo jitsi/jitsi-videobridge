@@ -15,12 +15,15 @@
  */
 package org.jitsi.videobridge.websocket;
 
+import org.eclipse.jetty.websocket.api.extensions.*;
 import org.eclipse.jetty.websocket.servlet.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 
 import java.io.*;
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * @author Boris Grozev
@@ -148,6 +151,12 @@ class ColibriWebSocketServlet
             response.sendError(403, authFailed);
             return null;
         }
+
+        // Disable WebSocket compression, it uses a lot of CPU.
+        List<ExtensionConfig> extensions = response.getExtensions().stream().
+            filter((ext) -> !ext.getName().equals("permessage-deflate")).
+            collect(Collectors.toList());
+        response.setExtensions(extensions);
 
         return new ColibriWebSocket(ids[2], this, endpoint.getMessageTransport());
     }
