@@ -25,6 +25,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldNotInclude
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
@@ -100,6 +101,12 @@ class BridgeChannelMessageTest : ShouldSpec() {
             endpointsMessage.put("other_field2", 97)
 
             val json = endpointsMessage.toJson()
+            // Make sure we don't mistakenly serialize the "broadcast" flag.
+            json shouldNotInclude "broadcast"
+            // Make sure we don't mistakenly serialize the "type".
+            json shouldNotInclude """
+                "type":
+            """.trimIndent()
             val parsed = parse(json)
 
             parsed.shouldBeInstanceOf<EndpointMessage>()
