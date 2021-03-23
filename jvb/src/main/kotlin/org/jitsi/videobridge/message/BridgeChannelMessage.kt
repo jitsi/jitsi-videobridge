@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = ClientHelloMessage::class, name = ClientHelloMessage.TYPE),
     JsonSubTypes.Type(value = ServerHelloMessage::class, name = ServerHelloMessage.TYPE),
     JsonSubTypes.Type(value = EndpointMessage::class, name = EndpointMessage.TYPE),
+    JsonSubTypes.Type(value = EndpointStats::class, name = EndpointStats.TYPE),
     JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintMessage::class, name = ReceiverVideoConstraintMessage.TYPE),
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
@@ -105,6 +106,7 @@ open class MessageHandler {
             is ClientHelloMessage -> clientHello(message)
             is ServerHelloMessage -> serverHello(message)
             is EndpointMessage -> endpointMessage(message)
+            is EndpointStats -> endpointStats(message)
             is LastNMessage -> lastN(message)
             is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
             is DominantSpeakerMessage -> dominantSpeaker(message)
@@ -128,6 +130,7 @@ open class MessageHandler {
     open fun clientHello(message: ClientHelloMessage) = unhandledMessageReturnNull(message)
     open fun serverHello(message: ServerHelloMessage) = unhandledMessageReturnNull(message)
     open fun endpointMessage(message: EndpointMessage) = unhandledMessageReturnNull(message)
+    open fun endpointStats(message: EndpointStats) = unhandledMessageReturnNull(message)
     open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage) = unhandledMessageReturnNull(message)
     open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
@@ -223,6 +226,37 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
 
     companion object {
         const val TYPE = "EndpointMessage"
+    }
+}
+
+/**
+ * An endpoint statistics message, which originates from one endpoint and is routed by the bridge.
+ * When received from a client it is filtered depending on which endpoints are "interesting" to other clients.
+ *
+ * The message contains custom fields, which are to be preserved (via [otherFields]).
+ *
+ * The same class is used regardless of whether the specific message is received from a client, received from a
+ * bridge, sent to a client or sent to a bridge.
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
+class EndpointStats(val to: String) : BridgeChannelMessage(TYPE) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    var from: String? = null
+        set(value) {
+            field = value
+            resetJsonCache()
+        }
+
+    @get:JsonAnyGetter
+    val otherFields = mutableMapOf<String, Any>()
+
+    @JsonAnySetter
+    fun put(key: String, value: Any) {
+        otherFields[key] = value
+    }
+
+    companion object {
+        const val TYPE = "EndpointStats"
     }
 }
 

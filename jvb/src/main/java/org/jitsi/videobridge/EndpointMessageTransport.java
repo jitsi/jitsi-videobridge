@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
+import java.util.stream.*;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.jitsi.videobridge.EndpointMessageTransportConfig.config;
@@ -529,6 +530,36 @@ public class EndpointMessageTransport
         }
 
         conference.sendMessage(message, targets, sendToOcto);
+        return null;
+    }
+
+    /**
+     * Handles an endpoint statistics message from this {@code Endpoint} that should be forwarded to
+     * other endpoints as appropriate, and also to Octo.
+     *
+     * @param message the message that was received from the endpoint.
+     */
+    @Override
+    public BridgeChannelMessage endpointStats(@NotNull EndpointStats message)
+    {
+        // First insert/overwrite the "from" to prevent spoofing.
+        String from = endpoint.getId();
+        message.setFrom(from);
+
+        Conference conference = endpoint.getConference();
+
+        if (conference == null || conference.isExpired())
+        {
+            logger.warn("Unable to send EndpointStats, conference is null or expired");
+            return null;
+        }
+
+        List<AbstractEndpoint> targets =
+            conference.getLocalEndpoints().stream().
+            filter((ep) -> ep != endpoint && ep.wantsStatsFrom(endpoint)).
+                collect(Collectors.toList());
+
+        conference.sendMessage(message, targets, true);
         return null;
     }
 }
