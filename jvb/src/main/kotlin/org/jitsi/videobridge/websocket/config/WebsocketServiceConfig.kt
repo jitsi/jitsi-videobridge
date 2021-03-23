@@ -55,9 +55,9 @@ class WebsocketServiceConfig {
     /**
      * Whether compression (permessage-deflate) should be used for websockets
      */
-    val useCompression: Boolean by config {
+    val enableCompression: Boolean by config {
         onlyIf("Websockets are enabled", ::enabled) {
-            "videobridge.websockets.compression".from(JitsiConfig.newConfig)
+            "videobridge.websockets.enable-compression".from(JitsiConfig.newConfig)
         }
     }
 
