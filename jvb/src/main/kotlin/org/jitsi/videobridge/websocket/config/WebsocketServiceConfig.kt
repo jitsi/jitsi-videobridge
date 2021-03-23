@@ -53,6 +53,15 @@ class WebsocketServiceConfig {
     }
 
     /**
+     * Whether compression (permessage-deflate) should be used for websockets
+     */
+    val useCompression: Boolean by config {
+        onlyIf("Websockets are enabled", ::enabled) {
+            "videobridge.websockets.compression".from(JitsiConfig.newConfig)
+        }
+    }
+
+    /**
      * The server ID used in URLs advertised for COLIBRI WebSockets.
      */
     val serverId: String by config {
