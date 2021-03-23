@@ -147,4 +147,19 @@ class OctoEndpointMessageTransport
         return null;
     }
 
+    @Nullable
+    @Override
+    public BridgeChannelMessage endpointConnectionStatus(@NotNull EndpointConnectionStatusMessage message)
+    {
+        Conference conference = octoEndpoints.getConference();
+
+        if (conference == null || conference.isExpired())
+        {
+            logger.warn("Unable to send EndpointConnectionStatusMessage, conference is null or expired");
+            return null;
+        }
+
+        conference.broadcastMessage(message, false /* sendToOcto */);
+        return null;
+    }
 }
