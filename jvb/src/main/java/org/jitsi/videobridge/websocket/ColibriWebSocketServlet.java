@@ -155,7 +155,7 @@ class ColibriWebSocketServlet
             return null;
         }
 
-        if (!config.getEnableCompression())
+        if (!config.shouldEnableCompression())
         {
             List<ExtensionConfig> extensions = response.getExtensions().stream().
                     filter((ext) -> !ext.getName().equals("permessage-deflate")).
