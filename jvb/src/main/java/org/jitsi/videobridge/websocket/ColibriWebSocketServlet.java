@@ -15,12 +15,16 @@
  */
 package org.jitsi.videobridge.websocket;
 
+import org.eclipse.jetty.websocket.api.extensions.*;
 import org.eclipse.jetty.websocket.servlet.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.websocket.config.*;
 
 import java.io.*;
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * @author Boris Grozev
@@ -41,6 +45,8 @@ class ColibriWebSocketServlet
 
     @NotNull
     private final Videobridge videobridge;
+
+    private WebsocketServiceConfig config = new WebsocketServiceConfig();
 
     /**
      * Initializes a new {@link ColibriWebSocketServlet} instance.
@@ -147,6 +153,14 @@ class ColibriWebSocketServlet
         {
             response.sendError(403, authFailed);
             return null;
+        }
+
+        if (!config.shouldEnableCompression())
+        {
+            List<ExtensionConfig> extensions = response.getExtensions().stream().
+                    filter((ext) -> !ext.getName().equals("permessage-deflate")).
+                        collect(Collectors.toList());
+            response.setExtensions(extensions);
         }
 
         return new ColibriWebSocket(ids[2], this, endpoint.getMessageTransport());
