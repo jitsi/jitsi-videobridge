@@ -17,6 +17,7 @@ package org.jitsi.videobridge.message
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter
 import com.fasterxml.jackson.annotation.JsonAnySetter
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -56,9 +57,9 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE)
 )
-// The type is included as colibriClass (as we want) by the annotation above.
-@JsonIgnoreProperties("type")
 sealed class BridgeChannelMessage(
+    // The type is included as colibriClass (as it has to be on the wire) by the annotation above.
+    @JsonIgnore
     val type: String
 ) {
     private val jsonCacheDelegate = ResettableLazy { createJson() }
@@ -212,7 +213,8 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
     /**
      * Whether this message is to be broadcast or targeted to a specific endpoint.
      */
-    val isBroadcast: Boolean = isEmpty(to)
+    @JsonIgnore
+    fun isBroadcast(): Boolean = isEmpty(to)
 
     @JsonAnySetter
     fun put(key: String, value: Any) {
