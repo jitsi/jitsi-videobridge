@@ -27,23 +27,11 @@ import java.time.Duration
 
 class StatsManagerConfig {
     /**
-     * Whether or not the stats are enabled
-     */
-    val enabled: Boolean by config {
-        "org.jitsi.videobridge.ENABLE_STATISTICS".from(JitsiConfig.legacyConfig)
-        "videobridge.stats.enabled".from(JitsiConfig.newConfig)
-    }
-
-    /**
      * The interval at which the stats are pushed
      */
     val interval: Duration by config {
-        onlyIf("Stats are enabled", ::enabled) {
-            "org.jitsi.videobridge.STATISTICS_INTERVAL"
-                .from(JitsiConfig.legacyConfig)
-                .convertFrom<Long>(Duration::ofMillis)
-            "videobridge.stats.interval".from(JitsiConfig.newConfig)
-        }
+        "org.jitsi.videobridge.STATISTICS_INTERVAL".from(JitsiConfig.legacyConfig).convertFrom(Duration::ofMillis)
+        "videobridge.stats.interval".from(JitsiConfig.newConfig)
     }
 
     /**
