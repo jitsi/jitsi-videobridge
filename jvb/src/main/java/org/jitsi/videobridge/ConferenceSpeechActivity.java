@@ -36,6 +36,11 @@ import java.util.stream.*;
 public class ConferenceSpeechActivity
 {
     /**
+     * The number of speakers to consider "recent".
+     */
+    public static final int NUM_RECENT_SPEAKERS = 10;
+
+    /**
      * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
      * and its instances to print debug information.
      */
@@ -226,6 +231,14 @@ public class ConferenceSpeechActivity
                     .map(AbstractEndpoint::getId)
                     .collect(Collectors.toList());
         }
+    }
+
+    /**
+     * Get a list of recent speakers, other than the current dominant one.
+     */
+    public List<String> getRecentSpeakers()
+    {
+        return getSpeakerHistory(1, NUM_RECENT_SPEAKERS);
     }
 
     /**

@@ -428,7 +428,7 @@ public class Conference
             broadcastMessage(
                     new DominantSpeakerMessage(
                             dominantSpeakerId,
-                            speechActivity.getSpeakerHistory(1, 10)));
+                            speechActivity.getRecentSpeakers()));
             if (getEndpointCount() > 2)
             {
                 double senderRtt = getRtt(dominantSpeaker);
@@ -890,7 +890,7 @@ public class Conference
                     endpoint.sendMessage(
                             new DominantSpeakerMessage(
                                     dominantSpeaker.getId(),
-                                    speechActivity.getSpeakerHistory(1, 10)));
+                                    speechActivity.getRecentSpeakers()));
                 }
                 catch (IOException e)
                 {
