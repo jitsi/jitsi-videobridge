@@ -242,6 +242,16 @@ public class ConferenceSpeechActivity
     }
 
     /**
+     * Query whether an endpoint is a recent speaker.
+     */
+    public boolean isRecentSpeaker(AbstractEndpoint endpoint)
+    {
+        return endpointsBySpeechActivity.stream()
+            .limit(NUM_RECENT_SPEAKERS+1)
+            .anyMatch((ep) -> endpoint == ep);
+    }
+
+    /**
      * Notifies this instance that a new audio level was received or measured by an <tt>Endpoint</tt>.
      *
      * @param endpoint the endpoint for which a new audio level was received or measured
