@@ -124,8 +124,32 @@ class OctoEndpointMessageTransport
         List<AbstractEndpoint> targets;
         if (message.isBroadcast())
         {
-            // Broadcast message
-            targets = new LinkedList<>(conference.getLocalEndpoints());
+            if (message.isStats())
+            {
+                // Statistics message - filter it.
+                if (message.getFrom() == null)
+                {
+                    logger.warn("Unable to send stats in EndpointMessage, missing from");
+                    return null;
+                }
+
+                AbstractEndpoint from = conference.getEndpoint(message.getFrom());
+                if (from == null)
+                {
+                    logger.warn("Unable to send stats in EndpointMessage, unknown from " + from);
+                    return null;
+                }
+
+                targets =
+                    conference.getLocalEndpoints().stream().
+                        filter((ep) -> ep.wantsStatsFrom(from)).
+                        collect(Collectors.toList());
+            }
+            else
+            {
+                // Other broadcast message
+                targets = new LinkedList<>(conference.getLocalEndpoints());
+            }
         }
         else
         {

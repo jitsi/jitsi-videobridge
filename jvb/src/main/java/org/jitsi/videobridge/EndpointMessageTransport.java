@@ -501,10 +501,23 @@ public class EndpointMessageTransport
         List<AbstractEndpoint> targets;
         if (message.isBroadcast())
         {
-            // Broadcast message to all local endpoints + octo.
-            targets = new LinkedList<>(conference.getLocalEndpoints());
-            targets.remove(endpoint);
-            sendToOcto = true;
+            if (message.isStats())
+            {
+                // Statistics message - filter it and send to octo.
+                targets =
+                    conference.getLocalEndpoints().stream().
+                        filter((ep) -> ep != endpoint && ep.wantsStatsFrom(endpoint)).
+                        collect(Collectors.toList());
+
+                sendToOcto = true;
+            }
+            else
+            {
+                // Broadcast message to all local endpoints + octo.
+                targets = new LinkedList<>(conference.getLocalEndpoints());
+                targets.remove(endpoint);
+                sendToOcto = true;
+            }
         }
         else
         {
