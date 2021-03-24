@@ -184,7 +184,7 @@ class OctoEndpointMessageTransport
                 filter((ep) -> ep.wantsStatsFrom(from)).
                 collect(Collectors.toList());
 
-        conference.sendMessage(message, targets, true);
+        conference.sendMessage(message, targets, false);
         return null;
     }
 
