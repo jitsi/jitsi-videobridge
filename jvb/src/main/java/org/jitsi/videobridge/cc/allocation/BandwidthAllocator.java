@@ -357,6 +357,14 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 oversending);
     }
 
+    /**
+     * Query whether this allocator is forwarding a source from a given endpoint, as of its
+     * most recent allocation decision.
+     */
+    public boolean isForwarding(T endpoint)
+    {
+        return allocation.isForwarding(endpoint.getId());
+    }
 
     private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
     {

@@ -42,6 +42,12 @@ class BandwidthAllocation @JvmOverloads constructor(
                 }
             }
 
+    /**
+     * Whether this allocation is forwarding a source from an endpoint with this ID.
+     */
+    fun isForwarding(epId: String): Boolean =
+        allocations.find { it.endpointId == epId }?.isForwarded() == true
+
     override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
 }
 

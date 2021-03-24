@@ -911,8 +911,8 @@ class Endpoint @JvmOverloads constructor(
     }
 
     fun wantsStatsFrom(ep: AbstractEndpoint): Boolean {
-        // TODO
-        return true
+        return conference.speechActivity.isRecentSpeaker(ep) ||
+            bitrateController.isForwarding(ep)
     }
 
     /**
