@@ -14,7 +14,7 @@
         <kotest.version>4.1.3</kotest.version>
         <junit.version>5.2.0</junit.version>
         <bouncycastle.version>1.65</bouncycastle.version>
-        <jitsi.utils.version>1.0-78-g5d25e9b</jitsi.utils.version>
+        <jitsi.utils.version>1.0-82-gcab10f0</jitsi.utils.version>
         <ktlint.skip>false</ktlint.skip>
         <spotbugs.version>4.0.6</spotbugs.version>
         <jicoco.version>1.1-54-g5387346</jicoco.version>
