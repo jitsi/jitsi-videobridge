@@ -59,13 +59,6 @@ class StatsCollector(
      */
     private val transportRunnables: MutableList<TransportPeriodicRunnable> = CopyOnWriteArrayList()
 
-    /**
-     * Gets the [StatsTransport]s through which this [StatsCollector] periodically sends the statistics that it
-     * collects.
-     */
-    val transports: Collection<StatsTransport>
-        get() = transportRunnables.map { it.o }
-
     private val running = AtomicBoolean()
 
     init {
@@ -127,6 +120,7 @@ class StatsCollector(
             statisticsExecutor.deRegisterRecurringRunnable(statisticsRunnable)
             // Stop the StatTransports added to this StatsManager
             transportRunnables.forEach { transportExecutor.deRegisterRecurringRunnable(it) }
+            transportRunnables.clear()
         }
     }
 
