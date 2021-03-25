@@ -75,40 +75,44 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
         val mostRecentChannelCreatedTime = endpoint.getMostRecentChannelCreatedTime()
         val lastActivity = endpoint.lastIncomingActivity
 
+        val active: Boolean
+        var changed = false
         if (lastActivity == NEVER) {
             // Here we check if it's taking too long for the endpoint to connect
             // We're doing that by checking how much time has elapsed since
             // the first endpoint's channel has been created.
             val timeSinceCreation = Duration.between(mostRecentChannelCreatedTime, now)
             if (timeSinceCreation > config.firstTransferTimeout) {
-                logger.cdebug {
-                    "${endpoint.id} is having trouble establishing the connection " +
-                        "and will be marked as inactive"
-                }
+                active = false
                 synchronized(inactiveEndpointIds) {
-                    inactiveEndpointIds += endpoint.id
+                    val alreadyInactive = inactiveEndpointIds.contains(endpoint.id)
+                    if (!alreadyInactive) {
+                        logger.cdebug {
+                            "${endpoint.id} is having trouble establishing the connection " +
+                                "and will be marked as inactive"
+                        }
+                        inactiveEndpointIds += endpoint.id
+                        changed = true
+                    }
                 }
-                notifyStatusChange(endpoint.id, false, null)
-                return
             } else {
                 logger.cdebug { "${endpoint.id} not ready for activity checks yet" }
                 return
             }
-        }
-
-        val noActivityTime = Duration.between(lastActivity, now)
-        val active = noActivityTime <= config.maxInactivityLimit
-        var changed = false
-        synchronized(inactiveEndpointIds) {
-            val wasActive = !inactiveEndpointIds.contains(endpoint.id)
-            if (wasActive && !active) {
-                logger.cdebug { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
-                inactiveEndpointIds += endpoint.id
-                changed = true
-            } else if (!wasActive && active) {
-                logger.cdebug { "${endpoint.id} has reconnected" }
-                inactiveEndpointIds -= endpoint.id
-                changed = true
+        } else {
+            val noActivityTime = Duration.between(lastActivity, now)
+            active = noActivityTime <= config.maxInactivityLimit
+            synchronized(inactiveEndpointIds) {
+                val wasActive = !inactiveEndpointIds.contains(endpoint.id)
+                if (wasActive && !active) {
+                    logger.cdebug { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
+                    inactiveEndpointIds += endpoint.id
+                    changed = true
+                } else if (!wasActive && active) {
+                    logger.cdebug { "${endpoint.id} has reconnected" }
+                    inactiveEndpointIds -= endpoint.id
+                    changed = true
+                }
             }
         }
 
