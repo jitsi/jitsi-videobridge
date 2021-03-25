@@ -246,9 +246,17 @@ public class ConferenceSpeechActivity
      */
     public boolean isRecentSpeaker(AbstractEndpoint endpoint)
     {
-        return endpointsBySpeechActivity.stream()
-            .limit(NUM_RECENT_SPEAKERS+1)
-            .anyMatch((ep) -> endpoint == ep);
+        Iterator<AbstractEndpoint> it = endpointsBySpeechActivity.iterator();
+        int i = 0;
+        while (it.hasNext() && i <= NUM_RECENT_SPEAKERS + 1)
+        {
+            if (it.next() == endpoint)
+            {
+                return true;
+            }
+            i++;
+        }
+        return false;
     }
 
     /**
