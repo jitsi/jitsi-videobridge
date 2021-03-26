@@ -180,6 +180,14 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     /**
+     * Query whether this endpoint is on stage or selected, as of the most recent
+     * video constraints.
+     */
+    fun isOnStageOrSelected(endpoint: T) =
+        allocationSettings.onStageEndpoints.contains(endpoint.id) ||
+            allocationSettings.selectedEndpoints.contains(endpoint.id)
+
+    /**
      * Query whether this allocator is forwarding a source from a given endpoint, as of its
      * most recent allocation decision.
      */
