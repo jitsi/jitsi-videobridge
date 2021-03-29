@@ -93,7 +93,11 @@ open class BitrateCalculator(
      * Keep track of whether the stream is active (has packets at at least [activePacketRateThreshold])
      */
     val active: Boolean
-        get() = Duration.between(start, clock.instant()) <= GRACE_PERIOD || packetRatePps >= activePacketRateThreshold
+        get() = if (Duration.between(start, clock.instant()) <= GRACE_PERIOD) {
+            // In the grace period any received data counts, and we check the bitrate because we can only access the
+            // packet rate rounded to an Int.
+            bitrate.bps > 0
+        } else packetRatePps >= activePacketRateThreshold
 
     override fun observe(packetInfo: PacketInfo) {
         val now = System.currentTimeMillis()
