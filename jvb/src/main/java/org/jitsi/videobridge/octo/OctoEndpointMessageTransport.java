@@ -179,10 +179,9 @@ class OctoEndpointMessageTransport
             return null;
         }
 
-        List<AbstractEndpoint> targets =
-            conference.getLocalEndpoints().stream().
-                filter((ep) -> ep.wantsStatsFrom(from)).
-                collect(Collectors.toList());
+        List<AbstractEndpoint> targets = conference.getLocalEndpoints().stream()
+            .filter((ep) -> ep.wantsStatsFrom(from))
+            .collect(Collectors.toList());
 
         conference.sendMessage(message, targets, false);
         return null;

@@ -554,10 +554,9 @@ public class EndpointMessageTransport
             return null;
         }
 
-        List<AbstractEndpoint> targets =
-            conference.getLocalEndpoints().stream().
-            filter((ep) -> ep != endpoint && ep.wantsStatsFrom(endpoint)).
-                collect(Collectors.toList());
+        List<AbstractEndpoint> targets = conference.getLocalEndpoints().stream()
+            .filter((ep) -> ep != endpoint && ep.wantsStatsFrom(endpoint))
+            .collect(Collectors.toList());
 
         conference.sendMessage(message, targets, true);
         return null;
