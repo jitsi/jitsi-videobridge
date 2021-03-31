@@ -251,7 +251,7 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
  * bridge, sent to a client or sent to a bridge.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-class EndpointStats(val to: String) : BridgeChannelMessage(TYPE) {
+class EndpointStats : BridgeChannelMessage(TYPE) {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var from: String? = null
         set(value) {
