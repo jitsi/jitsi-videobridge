@@ -224,18 +224,6 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
         otherFields[key] = value
     }
 
-    /**
-     * Whether this message is an Endpoint stats message.
-     */
-    @JsonIgnore
-    fun isStats(): Boolean {
-        val msgPayload = otherFields.get("msgPayload")
-        if (!(msgPayload is Map<*, *>)) {
-            return false
-        }
-        return msgPayload.get("type") == "stats"
-    }
-
     companion object {
         const val TYPE = "EndpointMessage"
     }
