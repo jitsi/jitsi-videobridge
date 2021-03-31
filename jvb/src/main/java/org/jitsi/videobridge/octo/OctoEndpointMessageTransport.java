@@ -124,6 +124,7 @@ class OctoEndpointMessageTransport
         List<AbstractEndpoint> targets;
         if (message.isBroadcast())
         {
+            // Broadcast message
             targets = new LinkedList<>(conference.getLocalEndpoints());
         }
         else
@@ -134,7 +135,6 @@ class OctoEndpointMessageTransport
             AbstractEndpoint targetEndpoint = conference.getLocalEndpoint(to);
             if (targetEndpoint != null)
             {
-                // Broadcast message
                 targets = Collections.singletonList(targetEndpoint);
             }
             else
