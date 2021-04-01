@@ -25,8 +25,8 @@ class BandwidthAllocation @JvmOverloads constructor(
     val allocations: Set<SingleAllocation>,
     val oversending: Boolean = false
 ) {
-    val forwardedEndpoints: Set<String>
-        get() = allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
+    val forwardedEndpoints: Set<String> =
+        allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     /**
      * Whether the two allocations have the same endpoints and same layers.
@@ -41,6 +41,11 @@ class BandwidthAllocation @JvmOverloads constructor(
                         allocation.targetLayer?.index == otherAllocation.targetLayer?.index
                 }
             }
+
+    /**
+     * Whether this allocation is forwarding a source from an endpoint with this ID.
+     */
+    fun isForwarding(epId: String): Boolean = forwardedEndpoints.contains(epId)
 
     override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
 }

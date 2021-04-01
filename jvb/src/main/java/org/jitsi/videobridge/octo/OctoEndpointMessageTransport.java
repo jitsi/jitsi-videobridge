@@ -21,6 +21,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.message.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Extends {@link AbstractEndpointMessageTransport} for the purposes of Octo.
@@ -144,6 +145,45 @@ class OctoEndpointMessageTransport
         }
 
         conference.sendMessage(message, targets, false /* sendToOcto */);
+        return null;
+    }
+
+    /**
+     * Handles an endpoint statistics message on the Octo channel that should be forwarded to
+     * local endpoints as appropriate.
+     *
+     * @param message the message that was received from the endpoint.
+     */
+    @Override
+    public BridgeChannelMessage endpointStats(@NotNull EndpointStats message)
+    {
+        // We trust the "from" field, because it comes from another bridge, not an endpoint.
+
+        Conference conference = octoEndpoints.getConference();
+        if (conference == null || conference.isExpired())
+        {
+            logger.warn("Unable to send EndpointStats, conference is null or expired");
+            return null;
+        }
+
+        if (message.getFrom() == null)
+        {
+            logger.warn("Unable to send EndpointStats, missing from");
+            return null;
+        }
+
+        AbstractEndpoint from = conference.getEndpoint(message.getFrom());
+        if (from == null)
+        {
+            logger.warn("Unable to send EndpointStats, unknown endpoint " + from);
+            return null;
+        }
+
+        List<AbstractEndpoint> targets = conference.getLocalEndpoints().stream()
+            .filter((ep) -> ep.wantsStatsFrom(from))
+            .collect(Collectors.toList());
+
+        conference.sendMessage(message, targets, false);
         return null;
     }
 

@@ -910,6 +910,12 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    fun wantsStatsFrom(ep: AbstractEndpoint): Boolean {
+        return conference.speechActivity.isRecentSpeaker(ep) ||
+            bitrateController.isOnStageOrSelected(ep) ||
+            bitrateController.isForwarding(ep)
+    }
+
     /**
      * Updates the conference statistics with value from this endpoint. Since
      * the values are cumulative this should execute only once when the endpoint
