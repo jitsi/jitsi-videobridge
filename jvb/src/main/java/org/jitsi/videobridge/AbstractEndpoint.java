@@ -111,6 +111,13 @@ public abstract class AbstractEndpoint
         this.id = Objects.requireNonNull(id, "id");
     }
 
+    /**
+     * Return the {@link VideoType} that the endpoint has advertised as available. This reflects the type of stream
+     * even when the stream is suspended (e.g. due to no receivers being subscribed to it).
+     *
+     * In other words, CAMERA or SCREENSHARE means that the endpoint has an available stream, which may be suspended.
+     * NONE means that the endpoint has signaled that it has no available streams.
+     */
     @NotNull
     public VideoType getVideoType()
     {

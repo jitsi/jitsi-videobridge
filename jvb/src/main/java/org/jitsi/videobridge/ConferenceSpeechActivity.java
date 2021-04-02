@@ -160,13 +160,13 @@ public class ConferenceSpeechActivity
     {
         synchronized (syncRoot)
         {
-            Map<Boolean, List<AbstractEndpoint>> bySendingVideo
+            Map<Boolean, List<AbstractEndpoint>> byVideoAvailable
                     = endpointsBySpeechActivity.stream()
-                        .collect(Collectors.groupingBy(AbstractEndpoint::isSendingVideo));
+                        .collect(Collectors.groupingBy(ep -> ep.getVideoType() != VideoType.NONE));
 
             List<AbstractEndpoint> newEndpointsInLastNOrder = new ArrayList<>(endpointsBySpeechActivity.size());
-            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(true, Collections.emptyList()));
-            newEndpointsInLastNOrder.addAll(bySendingVideo.getOrDefault(false, Collections.emptyList()));
+            newEndpointsInLastNOrder.addAll(byVideoAvailable.getOrDefault(true, Collections.emptyList()));
+            newEndpointsInLastNOrder.addAll(byVideoAvailable.getOrDefault(false, Collections.emptyList()));
 
             if (!newEndpointsInLastNOrder.equals(endpointsInLastNOrder))
             {
