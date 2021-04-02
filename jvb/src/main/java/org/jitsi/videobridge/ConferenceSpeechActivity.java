@@ -339,13 +339,18 @@ public class ConferenceSpeechActivity
         JSONObject debugState = new JSONObject();
 
         AbstractEndpoint dominantEndpoint = getDominantEndpoint();
-        debugState.put(
-                "dominantEndpoint",
-                dominantEndpoint == null ? "null" : dominantEndpoint.getId());
+        debugState.put("dominantEndpoint", dominantEndpoint == null ? "null" : dominantEndpoint.getId());
         DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
-        debugState.put(
-                "dominantSpeakerIdentification",
-                dsi == null ? null : dsi.doGetJSON());
+        debugState.put("dominantSpeakerIdentification", dsi == null ? null : dsi.doGetJSON());
+        synchronized (syncRoot)
+        {
+            debugState.put(
+                    "endpointsBySpeechActivity",
+                    endpointsBySpeechActivity.stream().map(AbstractEndpoint::getId).collect(Collectors.toList()));
+            debugState.put(
+                    "endpointsInLastNOrder",
+                    endpointsInLastNOrder.stream().map(AbstractEndpoint::getId).collect(Collectors.toList()));
+        }
 
         return debugState;
     }
