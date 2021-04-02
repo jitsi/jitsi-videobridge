@@ -254,7 +254,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
                     this as VideoTypeMessage
                     videoType shouldBe VideoType.NONE
                 }
-
             }
         }
 

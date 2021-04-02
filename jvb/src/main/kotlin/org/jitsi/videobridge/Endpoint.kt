@@ -72,7 +72,6 @@ import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
-import org.jitsi.videobridge.util.VideoType
 import org.jitsi.videobridge.util.looksLikeDtls
 import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
