@@ -110,6 +110,8 @@ open class BitrateCalculator(
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
             addNumber("bitrate_bps", bitrate.bps)
+            addNumber("packet_rate_pps", packetRatePps)
+            addBoolean("active", active)
         }
     }
 
