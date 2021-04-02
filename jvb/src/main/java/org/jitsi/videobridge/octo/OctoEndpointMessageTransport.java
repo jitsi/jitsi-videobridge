@@ -202,4 +202,26 @@ class OctoEndpointMessageTransport
         conference.broadcastMessage(message, false /* sendToOcto */);
         return null;
     }
+
+    @Override
+    public BridgeChannelMessage videoType(VideoTypeMessage videoTypeMessage)
+    {
+        String endpointId = videoTypeMessage.getEndpointId();
+        if (endpointId == null)
+        {
+            logger.warn("Received a VideoTypeMessage with no endpoint ID specified.");
+            return null;
+        }
+
+        AbstractEndpoint endpoint = octoEndpoints.getConference().getEndpoint(endpointId);
+        if (!(endpoint instanceof OctoEndpoint))
+        {
+            logger.warn("Received a VideoTypeMessage for an invalid endpoint, id=" + endpointId + ", ep=" + endpoint);
+            return null;
+        }
+
+        endpoint.setVideoType(videoTypeMessage.getVideoType());
+
+        return null;
+    }
 }

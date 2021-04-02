@@ -25,6 +25,7 @@ import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.videobridge.message.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
@@ -93,6 +94,8 @@ public abstract class AbstractEndpoint
 
     protected final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
 
+    private VideoType videoType = VideoType.CAMERA;
+
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
@@ -106,6 +109,17 @@ public abstract class AbstractEndpoint
         context.put("epId", id);
         logger = parentLogger.createChildLogger(this.getClass().getName(), context);
         this.id = Objects.requireNonNull(id, "id");
+    }
+
+    @NotNull
+    public VideoType getVideoType()
+    {
+        return videoType;
+    }
+
+    public void setVideoType(VideoType videoType)
+    {
+        this.videoType = videoType;
     }
 
     /**

@@ -125,6 +125,13 @@ public class EndpointMessageTransport
     }
 
     @Override
+    public BridgeChannelMessage videoType(VideoTypeMessage videoTypeMessage)
+    {
+        endpoint.setVideoType(videoTypeMessage.getVideoType());
+        return null;
+    }
+
+    @Override
     public void unhandledMessage(BridgeChannelMessage message)
     {
         logger.warn("Received a message with an unexpected type: " + message.getType());

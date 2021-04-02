@@ -29,6 +29,7 @@ import io.kotest.matchers.string.shouldNotInclude
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
+import org.jitsi.videobridge.util.VideoType
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
@@ -230,6 +231,31 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed as RemoveReceiverMessage
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
+        }
+
+        context("serializing and parsing VideoType") {
+            val videoTypeMessage = VideoTypeMessage(VideoType.SCREENSHARE)
+            videoTypeMessage.videoType shouldBe VideoType.SCREENSHARE
+            parse(videoTypeMessage.toJson()).apply {
+                shouldBeInstanceOf<VideoTypeMessage>()
+                this as VideoTypeMessage
+                videoType shouldBe VideoType.SCREENSHARE
+            }
+
+            listOf("none", "NONE", "None", "nOnE").forEach {
+                val jsonString = """
+                    {
+                        "colibriClass" : "VideoTypeMessage",
+                        "videoType" : "$it"
+                    }
+                    """
+                parse(jsonString).apply {
+                    shouldBeInstanceOf<VideoTypeMessage>()
+                    this as VideoTypeMessage
+                    videoType shouldBe VideoType.NONE
+                }
+
+            }
         }
 
         context("Parsing ReceiverVideoConstraints") {
