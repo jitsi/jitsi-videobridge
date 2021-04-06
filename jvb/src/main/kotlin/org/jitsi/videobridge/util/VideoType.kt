@@ -17,6 +17,6 @@ package org.jitsi.videobridge.util
 
 enum class VideoType {
     CAMERA,
-    SCREENSHARE,
+    DESKTOP,
     NONE
 }

@@ -234,12 +234,12 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing VideoType") {
-            val videoTypeMessage = VideoTypeMessage(VideoType.SCREENSHARE)
-            videoTypeMessage.videoType shouldBe VideoType.SCREENSHARE
+            val videoTypeMessage = VideoTypeMessage(VideoType.DESKTOP)
+            videoTypeMessage.videoType shouldBe VideoType.DESKTOP
             parse(videoTypeMessage.toJson()).apply {
                 shouldBeInstanceOf<VideoTypeMessage>()
                 this as VideoTypeMessage
-                videoType shouldBe VideoType.SCREENSHARE
+                videoType shouldBe VideoType.DESKTOP
             }
 
             listOf("none", "NONE", "None", "nOnE").forEach {
