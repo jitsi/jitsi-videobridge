@@ -33,5 +33,5 @@ open class BitrateTracker @JvmOverloads constructor(
     val rate: Bandwidth
         get() = getRate()
     fun update(dataSize: DataSize, now: Long = clock.millis()) = tracker.update(dataSize.bits, now)
-    fun getAccumulatedSize(now: Long = clock.millis()) = tracker.getAccumulatedCount(now).bps
+    fun getAccumulatedSize(now: Long = clock.millis()) = tracker.getAccumulatedCount(now).bits
 }

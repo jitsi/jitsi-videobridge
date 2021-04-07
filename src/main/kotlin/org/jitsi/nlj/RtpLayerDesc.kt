@@ -140,10 +140,13 @@ constructor(
      *
      * @param packetSize
      * @param nowMs
+     * @return true if this caused the rate being tracked to transition from zero to nonzero
      */
-    fun updateBitrate(packetSize: DataSize, nowMs: Long) {
+    fun updateBitrate(packetSize: DataSize, nowMs: Long): Boolean {
+        val wasInactive = bitrateTracker.getAccumulatedSize(nowMs).bits == 0L
         // Update rate stats (this should run after padding termination).
         bitrateTracker.update(packetSize, nowMs)
+        return wasInactive && packetSize.bits > 0L
     }
 
     /**
