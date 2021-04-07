@@ -58,11 +58,6 @@ class PartitionedByteBufferPool
     private static final Logger logger = new LoggerImpl(PartitionedByteBufferPool.class.getName());
 
     /**
-     * Used to select a partition at random.
-     */
-    private static final Random random = new Random();
-
-    /**
      * The partitions.
      */
     private final Partition[] partitions = new Partition[NUM_PARTITIONS];
@@ -105,7 +100,7 @@ class PartitionedByteBufferPool
      */
     private Partition getPartition()
     {
-        return partitions[random.nextInt(NUM_PARTITIONS)];
+        return partitions[ThreadLocalRandom.current().nextInt(NUM_PARTITIONS)];
     }
 
     /**
