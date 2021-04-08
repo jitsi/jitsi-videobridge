@@ -95,7 +95,7 @@ class SingleSourceAllocation
         }
 
         long nowMs = clock.instant().toEpochMilli();
-        boolean noActiveLayers = source.getRtpLayers().stream().noneMatch(l -> l.getBitrate(nowMs) > 0);
+        boolean noActiveLayers = source.getRtpLayers().stream().allMatch(l -> l.hasZeroBitrate(nowMs));
         List<LayerSnapshot> ratesList = new ArrayList<>();
         // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
         // a couple of exceptions (see comments below).
