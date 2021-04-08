@@ -20,6 +20,7 @@ import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.bits
 import org.jitsi.nlj.util.sum
 
 /**
@@ -143,7 +144,7 @@ constructor(
      * @return true if this caused the rate being tracked to transition from zero to nonzero
      */
     fun updateBitrate(packetSize: DataSize, nowMs: Long): Boolean {
-        val wasInactive = bitrateTracker.getAccumulatedSize(nowMs).bits == 0L
+        val wasInactive = hasZeroBitrate(nowMs)
         // Update rate stats (this should run after padding termination).
         bitrateTracker.update(packetSize, nowMs)
         return wasInactive && packetSize.bits > 0L
@@ -181,6 +182,29 @@ constructor(
         }
 
         return rates
+    }
+
+    /**
+     * Returns true if this layer, alone, has a zero bitrate.
+     */
+    private fun layerHasZeroBitrate(nowMs: Long) = bitrateTracker.getAccumulatedSize(nowMs).bits == 0L
+
+    /**
+     * Recursively checks this layer and its dependencies to see if the bitrate is zero.
+     * Note that unlike [calcBitrate] this does not avoid double-visiting layers; the overhead
+     * of the hash table is usually more than the cost of any double-visits.
+     */
+    fun hasZeroBitrate(nowMs: Long): Boolean {
+        if (!layerHasZeroBitrate(nowMs)) {
+            return false
+        }
+        if (dependencyLayers.any { !it.layerHasZeroBitrate(nowMs) }) {
+            return false
+        }
+        if (useSoftDependencies && softDependencyLayers.any { !it.layerHasZeroBitrate(nowMs) }) {
+            return false
+        }
+        return true
     }
 
     /**
