@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.util;
 
-import org.jitsi.nlj.util.*;
+import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
@@ -29,7 +29,7 @@ public class TaskPools
      * A global executor service which can be used for non-CPU-intensive tasks.
      */
     public static final ExecutorService IO_POOL =
-            Executors.newCachedThreadPool(new NameableThreadFactory("Global IO pool"));
+            Executors.newCachedThreadPool(new CustomizableThreadFactory("Global IO pool", false));
 
     /**
      * An executor to be used for CPU-intensive tasks.  NOTE that tasks which block should
@@ -38,11 +38,11 @@ public class TaskPools
     public static final ExecutorService CPU_POOL =
             Executors.newFixedThreadPool(
                     Runtime.getRuntime().availableProcessors(),
-                    new NameableThreadFactory("Global CPU pool")
+                    new CustomizableThreadFactory("Global CPU pool", false)
             );
 
     public static final ScheduledExecutorService SCHEDULED_POOL =
-            Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Global scheduled pool"));
+            Executors.newSingleThreadScheduledExecutor(new CustomizableThreadFactory("Global scheduled pool", false));
 
     @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson(ExecutorService es)
