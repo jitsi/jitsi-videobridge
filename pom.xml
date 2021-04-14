@@ -27,7 +27,7 @@
         <kotlin.version>1.3.72</kotlin.version>
         <kotest.version>4.1.3</kotest.version>
         <jicoco.version>1.1-80-g6411afd</jicoco.version>
-        <jitsi.utils.version>1.0-82-gcab10f0</jitsi.utils.version>
+        <jitsi.utils.version>1.0-83-g5907056</jitsi.utils.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
         <spotbugs.version>4.1.4</spotbugs.version>
         <jersey.version>2.32</jersey.version>
