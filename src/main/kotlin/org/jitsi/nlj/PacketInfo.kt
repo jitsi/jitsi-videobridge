@@ -29,7 +29,7 @@ class EventTimeline(
      * in the timeline.  In the timeline this is used as time "0" and
      * all other times are represented as deltas from this 0.
      */
-    private var referenceTime: Long? = null
+    var referenceTime: Long? = null
 
     fun addEvent(desc: String) {
         val now = System.currentTimeMillis()
@@ -60,12 +60,10 @@ class EventTimeline(
     override fun toString(): String {
         return with(StringBuffer()) {
             referenceTime?.let {
-                appendln("Reference time: ${referenceTime}ms")
-                timeline.forEach {
-                    appendln(it.toString())
-                }
+                append("Reference time: ${referenceTime}ms; ")
+                append(timeline.joinToString(separator = "; "))
             } ?: run {
-                appendln("[No timeline]")
+                append("[No timeline]")
             }
             toString()
         }
@@ -88,6 +86,12 @@ open class PacketInfo @JvmOverloads constructor(
      * was an incoming packet and not one created by jvb itself).
      */
     var receivedTime: Long = -1L
+        set(value) {
+            field = value
+            if (ENABLE_TIMELINE && timeline.referenceTime == null) {
+                timeline.referenceTime = value
+            }
+        }
 
     /**
      * Whether this packet has been recognized to contain only shouldDiscard.
