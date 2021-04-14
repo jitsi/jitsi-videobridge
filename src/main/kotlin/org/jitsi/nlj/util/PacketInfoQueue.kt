@@ -21,8 +21,7 @@ import org.jitsi.utils.queue.PacketQueue
 import java.util.concurrent.ExecutorService
 
 /**
- * A [PacketInfo] queue. We do not want to use the copy functionality, which is why the related
- * methods always throw.
+ * A [PacketQueue] of [PacketInfo]s, returning buffers when released.
  */
 class PacketInfoQueue(
     id: String,
