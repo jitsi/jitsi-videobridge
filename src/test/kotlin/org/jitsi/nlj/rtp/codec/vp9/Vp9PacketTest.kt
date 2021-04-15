@@ -667,6 +667,38 @@ class Vp9PacketTest : ShouldSpec() {
                     RtpLayerDesc(0, 2, 0, 720, 30.0)
                 )
             )
+        ),
+
+        /* Live video - Chrome Version 91.0.4455.2 (Official Build) dev (x86_64) tab capture */
+        SampleVp9Packet(
+            "Beginning of Chrome 91 tab capture non-key frame flexible mode with 1 reference",
+            "90654720f16dcb43c426ccf7" +
+                "bede0002324aac08510b2d00" +
+                // I=1,P=1,L=1,F=1,B=1,E=0,V=0,Z=0
+                "f8" +
+                // M=1,PID=0x6c57=27735
+                "ec57" +
+                // TID=0,U=0,SID=0,D=0
+                "00" +
+                // P_DIFF=1,N=0
+                "02" +
+                // VP9 media. Truncated.
+                "870100093f1c120e0cd0198080e030180f824f01",
+            isStartOfFrame = true,
+            isEndOfFrame = false,
+            isEndOfPicture = false,
+            isKeyframe = false,
+            isInterPicturePredicted = true,
+            pictureId = 27735,
+            hasExtendedPictureId = true,
+            isUpperLevelReference = true,
+            tid = 0,
+            sid = 0,
+            isSwitchingUpPoint = false,
+            usesInterLayerDependency = false,
+            tL0PICIDX = null,
+            descriptorSize = 5,
+            scalabilityStructure = null
         )
     )
 

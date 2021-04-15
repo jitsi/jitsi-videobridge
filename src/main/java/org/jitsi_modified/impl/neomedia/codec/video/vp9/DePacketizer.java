@@ -717,9 +717,14 @@ public class DePacketizer
 
             if ((buf[off] & F_BIT) != 0 && (buf[off] & P_BIT) != 0)
             {
-                do {
+                for (int i = 0; i < 3; i++) {
+                    int hasNext = buf[pos] & N_BIT;
                     pos++;
-                } while ((buf[pos] & N_BIT) != 0);
+
+                    if (hasNext == 0) {
+                        break;
+                    }
+                }
             }
 
             if ((buf[off] & V_BIT) != 0)
