@@ -122,6 +122,8 @@ class Endpoint @JvmOverloads constructor(
         put("endpoint_id", id)
     }
 
+    private val timelineLogger = logger.createChildLogger("timeline.${this.javaClass.name}")
+
     /**
      * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
      * packets based on the time they were received by the bridge and the time they
@@ -419,6 +421,9 @@ class Endpoint @JvmOverloads constructor(
         }
 
         packetInfo.sent()
+        if (timelineLogger.isTraceEnabled() && logTimeline()) {
+            timelineLogger.trace { packetInfo.timeline.toString() }
+        }
         iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
         ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
@@ -1057,6 +1062,11 @@ class Endpoint @JvmOverloads constructor(
             put("rtp", rtpPacketDelayStats.toJson())
             put("rtcp", rtcpPacketDelayStats.toJson())
         }
+
+        private val timelineCounter = AtomicLong()
+        private val TIMELINE_FRACTION = 10000L
+
+        fun logTimeline() = timelineCounter.getAndIncrement() % TIMELINE_FRACTION == 0L
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
