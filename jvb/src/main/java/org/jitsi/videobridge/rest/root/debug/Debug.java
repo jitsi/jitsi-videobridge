@@ -115,6 +115,9 @@ public class Debug
             case QUEUE_STATS: {
                 return PacketQueue.getEnableStatisticsDefault();
             }
+            case QUEUE_TIMING_STATS: {
+                return QueueStatistics.TRACK_TIMES;
+            }
             case NODE_TRACING: {
                 return Node.Companion.isNodeTracingEnabled();
             }
@@ -217,6 +220,10 @@ public class Debug
             }
             case QUEUE_STATS: {
                 PacketQueue.setEnableStatisticsDefault(enabled);
+                break;
+            }
+            case QUEUE_TIMING_STATS: {
+                QueueStatistics.TRACK_TIMES = enabled;
                 break;
             }
             case NODE_TRACING: {
