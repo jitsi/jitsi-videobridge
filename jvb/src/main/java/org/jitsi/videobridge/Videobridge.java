@@ -654,6 +654,11 @@ public class Videobridge
                 "rtp_sender_queue",
                 getJsonFromQueueErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter()));
 
+        /* TODO: combine these stats with the ones above? */
+        queueStats.put(
+               "by_id",
+                QueueStatistics.Companion.getStatistics());
+
         return queueStats;
     }
 
