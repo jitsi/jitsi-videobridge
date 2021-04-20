@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.xmpp
 
 import org.jitsi.nlj.stats.DelayStats
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig

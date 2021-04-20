@@ -26,7 +26,7 @@ import org.ice4j.ice.IceProcessingState
 import org.ice4j.ice.LocalCandidate
 import org.ice4j.ice.RemoteCandidate
 import org.ice4j.socket.SocketClosedException
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger

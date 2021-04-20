@@ -16,11 +16,11 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
-import org.apache.commons.lang3.*;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.shutdown.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;

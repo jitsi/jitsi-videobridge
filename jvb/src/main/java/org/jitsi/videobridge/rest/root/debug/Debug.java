@@ -19,7 +19,7 @@ package org.jitsi.videobridge.rest.root.debug;
 import org.jitsi.health.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.debug.*;
-import org.jitsi.nlj.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
@@ -33,6 +33,7 @@ import org.jitsi.videobridge.xmpp.*;
 import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
+import javax.ws.rs.core.MediaType;
 import java.net.*;
 
 /**
