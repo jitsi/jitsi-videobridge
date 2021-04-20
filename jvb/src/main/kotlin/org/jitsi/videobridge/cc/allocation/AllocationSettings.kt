@@ -31,12 +31,16 @@ data class AllocationSettings(
     val lastN: Int = -1,
     val defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 ) {
-    override fun toString(): String = OrderedJsonObject().apply {
+
+    fun toJson() = OrderedJsonObject().apply {
         put("on_stage_endpoints", onStageEndpoints)
         put("selected_endpoints", selectedEndpoints)
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
-    }.toJSONString()
+        put("default_constraints", defaultConstraints)
+    }
+
+    override fun toString(): String = toJson().toJSONString()
 
     fun getConstraints(endpointId: String) = videoConstraints.getOrDefault(endpointId, defaultConstraints)
 }
