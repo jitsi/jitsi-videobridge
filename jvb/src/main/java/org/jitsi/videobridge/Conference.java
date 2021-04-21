@@ -202,10 +202,10 @@ public class Conference
             context.put("conf_name", conferenceName.toString());
         }
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
-        this.shim = new ConferenceShim(this, logger);
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
         this.conferenceName = conferenceName;
+        this.shim = new ConferenceShim(this, logger);
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
