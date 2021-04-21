@@ -639,36 +639,41 @@ public class Videobridge
         JSONObject queueStats = new JSONObject();
 
         queueStats.put(
-                "srtp_send_queue",
-                getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
+            "srtp_send_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(Endpoint.queueErrorCounter,
+                "Endpoint-outgoing-packet-queue"));
         queueStats.put(
-                "octo_receive_queue",
-                getJsonFromQueueErrorHandler(ConfOctoTransport.queueErrorCounter));
+            "octo_receive_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(ConfOctoTransport.queueErrorCounter,
+                "octo-tentacle-outgoing-packet-queue"));
         queueStats.put(
-                "octo_send_queue",
-                getJsonFromQueueErrorHandler(OctoRtpReceiver.queueErrorCounter));
+            "octo_send_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(OctoRtpReceiver.queueErrorCounter,
+                "octo-transceiver-incoming-packet-queue"));
         queueStats.put(
-                "rtp_receiver_queue",
-                getJsonFromQueueErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter()));
+            "rtp_receiver_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter(),
+                "rtp-receiver-incoming-packet-queue"));
         queueStats.put(
-                "rtp_sender_queue",
-                getJsonFromQueueErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter()));
-
-        /* TODO: combine these stats with the ones above? */
-        queueStats.put(
-               "by_id",
-                QueueStatistics.Companion.getStatistics());
+            "rtp_sender_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter(),
+                "rtp-sender-incoming-packet-queue"));
 
         return queueStats;
     }
 
     @SuppressWarnings("unchecked")
-    private JSONObject getJsonFromQueueErrorHandler(
-            CountingErrorHandler countingErrorHandler)
+    private OrderedJsonObject getJsonFromQueueStatisticsAndErrorHandler(
+            CountingErrorHandler countingErrorHandler,
+            String queueName)
     {
-        JSONObject json = new JSONObject();
-        json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
+        OrderedJsonObject json = (OrderedJsonObject)QueueStatistics.Companion.getStatistics().get(queueName);
+        if (json == null) {
+            json = new OrderedJsonObject();
+            json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
+        }
         json.put("exceptions", countingErrorHandler.getNumExceptions());
+
         return json;
     }
 
