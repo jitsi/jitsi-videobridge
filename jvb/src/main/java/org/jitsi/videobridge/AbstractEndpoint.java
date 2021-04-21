@@ -122,7 +122,7 @@ public abstract class AbstractEndpoint
      * In other words, CAMERA or SCREENSHARE means that the endpoint has an available stream, which may be suspended.
      * NONE means that the endpoint has signaled that it has no available streams.
      *
-     * Note that when the endpoint has not advertised any sources, the video type is necessarily {@code NONE}.
+     * Note that when the endpoint has not advertised any video sources, the video type is necessarily {@code NONE}.
      */
     @NotNull
     public VideoType getVideoType()
