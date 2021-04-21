@@ -31,6 +31,7 @@ import org.jitsi.rest.servletContextHandler
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.health.JvbHealthChecker
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
@@ -79,6 +80,8 @@ fun main(args: Array<String>) {
     startIce4j()
 
     XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.jidCacheSize)
+
+    PacketQueue.setEnableStatisticsDefault(true)
 
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()

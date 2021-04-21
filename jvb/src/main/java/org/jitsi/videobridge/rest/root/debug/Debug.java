@@ -113,7 +113,7 @@ public class Debug
                 return ByteBufferPool.bookkeepingEnabled();
             }
             case QUEUE_STATS: {
-                return PacketQueue.getEnableStatisticsDefault();
+                return QueueStatistics.DEBUG;
             }
             case QUEUE_TIMING_STATS: {
                 return QueueStatistics.TRACK_TIMES;
@@ -219,7 +219,7 @@ public class Debug
                 break;
             }
             case QUEUE_STATS: {
-                PacketQueue.setEnableStatisticsDefault(enabled);
+                QueueStatistics.DEBUG = enabled;
                 break;
             }
             case QUEUE_TIMING_STATS: {
