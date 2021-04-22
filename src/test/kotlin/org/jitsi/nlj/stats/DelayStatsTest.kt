@@ -20,7 +20,7 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import java.lang.IllegalArgumentException
 
 class DelayStatsTest : ShouldSpec() {
@@ -33,14 +33,14 @@ class DelayStatsTest : ShouldSpec() {
             should("calculate the average correctly") {
                 repeat(100) { delayStats.addDelay(1) }
                 repeat(100) { delayStats.addDelay(5) }
-                delayStats.snapshot.averageDelayMs shouldBe 3.0
+                delayStats.snapshot.average shouldBe 3.0
             }
 
             should("calculate the max correctly") {
                 repeat(100) { delayStats.addDelay(1) }
                 repeat(100) { delayStats.addDelay(5) }
                 delayStats.addDelay(100)
-                delayStats.snapshot.maxDelayMs shouldBe 100
+                delayStats.snapshot.maxValue shouldBe 100
             }
 
             should("export the buckets correctly to json") {

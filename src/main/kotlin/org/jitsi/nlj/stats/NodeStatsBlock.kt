@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.nlj.util.appendLnIndent
 
 class NodeStatsBlock(val name: String) {

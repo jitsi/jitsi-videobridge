@@ -20,7 +20,7 @@ import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
