@@ -27,6 +27,7 @@ public enum DebugFeatures
     POOL_STATS("pool-stats"),
     POOL_BOOKKEEPING("pool-bookkeeping"),
     QUEUE_STATS("queue-stats"),
+    QUEUE_TIMING_STATS("queue-timing-stats"),
     TRANSIT_STATS("transit-stats"),
     TASK_POOL_STATS("task-pool-stats"),
     NODE_TRACING("node-tracing"),

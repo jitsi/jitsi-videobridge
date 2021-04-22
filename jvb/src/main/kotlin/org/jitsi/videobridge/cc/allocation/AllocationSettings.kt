@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig as config
 import java.util.stream.Collectors

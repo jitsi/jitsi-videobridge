@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.load_management
 
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import java.time.Duration
 
 interface JvbLoadReducer {

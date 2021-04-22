@@ -19,7 +19,7 @@ package org.jitsi.videobridge.rest.root.debug;
 import org.jitsi.health.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.debug.*;
-import org.jitsi.nlj.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
@@ -33,6 +33,7 @@ import org.jitsi.videobridge.xmpp.*;
 import javax.inject.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
+import javax.ws.rs.core.MediaType;
 import java.net.*;
 
 /**
@@ -112,7 +113,10 @@ public class Debug
                 return ByteBufferPool.bookkeepingEnabled();
             }
             case QUEUE_STATS: {
-                return PacketQueue.getEnableStatisticsDefault();
+                return QueueStatistics.DEBUG;
+            }
+            case QUEUE_TIMING_STATS: {
+                return QueueStatistics.TRACK_TIMES;
             }
             case NODE_TRACING: {
                 return Node.Companion.isNodeTracingEnabled();
@@ -215,7 +219,11 @@ public class Debug
                 break;
             }
             case QUEUE_STATS: {
-                PacketQueue.setEnableStatisticsDefault(enabled);
+                QueueStatistics.DEBUG = enabled;
+                break;
+            }
+            case QUEUE_TIMING_STATS: {
+                QueueStatistics.TRACK_TIMES = enabled;
                 break;
             }
             case NODE_TRACING: {

@@ -20,7 +20,7 @@ import org.jitsi.nlj.dtls.DtlsClient
 import org.jitsi.nlj.dtls.DtlsServer
 import org.jitsi.nlj.dtls.DtlsStack
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension

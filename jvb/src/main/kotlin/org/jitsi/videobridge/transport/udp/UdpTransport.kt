@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.transport.udp
 
 import org.jitsi.nlj.util.BitrateTracker
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.nlj.util.bytes
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger

@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.cc.allocation
 
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 
 /**
  * A Map of Endpoint IDs to their receiver video constraints.  Tracks the max height of all

@@ -16,11 +16,11 @@
 package org.jitsi.videobridge;
 
 import kotlin.*;
-import org.apache.commons.lang3.*;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.util.*;
 import org.jitsi.shutdown.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
@@ -639,31 +639,41 @@ public class Videobridge
         JSONObject queueStats = new JSONObject();
 
         queueStats.put(
-                "srtp_send_queue",
-                getJsonFromQueueErrorHandler(Endpoint.queueErrorCounter));
+            "srtp_send_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(Endpoint.queueErrorCounter,
+                "Endpoint-outgoing-packet-queue"));
         queueStats.put(
-                "octo_receive_queue",
-                getJsonFromQueueErrorHandler(ConfOctoTransport.queueErrorCounter));
+            "octo_receive_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(ConfOctoTransport.queueErrorCounter,
+                "octo-tentacle-outgoing-packet-queue"));
         queueStats.put(
-                "octo_send_queue",
-                getJsonFromQueueErrorHandler(OctoRtpReceiver.queueErrorCounter));
+            "octo_send_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(OctoRtpReceiver.queueErrorCounter,
+                "octo-transceiver-incoming-packet-queue"));
         queueStats.put(
-                "rtp_receiver_queue",
-                getJsonFromQueueErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter()));
+            "rtp_receiver_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter(),
+                "rtp-receiver-incoming-packet-queue"));
         queueStats.put(
-                "rtp_sender_queue",
-                getJsonFromQueueErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter()));
+            "rtp_sender_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter(),
+                "rtp-sender-incoming-packet-queue"));
 
         return queueStats;
     }
 
     @SuppressWarnings("unchecked")
-    private JSONObject getJsonFromQueueErrorHandler(
-            CountingErrorHandler countingErrorHandler)
+    private OrderedJsonObject getJsonFromQueueStatisticsAndErrorHandler(
+            CountingErrorHandler countingErrorHandler,
+            String queueName)
     {
-        JSONObject json = new JSONObject();
-        json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
+        OrderedJsonObject json = (OrderedJsonObject)QueueStatistics.Companion.getStatistics().get(queueName);
+        if (json == null) {
+            json = new OrderedJsonObject();
+            json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
+        }
         json.put("exceptions", countingErrorHandler.getNumExceptions());
+
         return json;
     }
 

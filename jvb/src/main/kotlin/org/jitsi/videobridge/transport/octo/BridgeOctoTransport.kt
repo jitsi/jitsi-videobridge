@@ -17,7 +17,7 @@
 package org.jitsi.videobridge.transport.octo
 
 import org.jitsi.nlj.PacketHandler
-import org.jitsi.nlj.util.OrderedJsonObject
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtp.RtpPacket
