@@ -144,6 +144,7 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
     /**
      * @return the current list of media stream tracks.
      */
+    @NotNull
     MediaSourceDesc[] getMediaSources()
     {
         return mediaSources.getMediaSources();
