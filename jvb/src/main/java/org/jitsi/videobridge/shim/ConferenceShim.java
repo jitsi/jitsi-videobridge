@@ -92,7 +92,6 @@ public class ConferenceShim
                                     + totalDelay + " ms): " + request.getRequest().toXML());
                         }
                         request.getCallback().invoke(response);
-                        logger.debug(() -> "SENT Colibri response: " + response.toXML());
                     }
                     catch (Throwable e)
                     {
