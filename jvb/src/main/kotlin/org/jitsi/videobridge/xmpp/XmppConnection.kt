@@ -162,8 +162,8 @@ class XmppConnection : IQListener {
         logger.cdebug { "RECV: ${iq.toXML()}" }
 
         return when (iq.type) {
-            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient).also {
-                logger.cdebug { "SENT: ${it?.toXML() ?: "null"}" }
+            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient)?.also {
+                logger.cdebug { "SENT: ${it.toXML()}" }
             }
             else -> null
         }
