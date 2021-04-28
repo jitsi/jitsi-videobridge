@@ -162,8 +162,8 @@ class XmppConnection : IQListener {
         logger.cdebug { "RECV: ${iq.toXML()}" }
 
         return when (iq.type) {
-            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient).also {
-                logger.cdebug { "SENT: ${it?.toXML() ?: "null"}" }
+            IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient)?.also {
+                logger.cdebug { "SENT: ${it.toXML()}" }
             }
             else -> null
         }
@@ -183,6 +183,7 @@ class XmppConnection : IQListener {
                 // Colibri IQs are handled async.
                 handler.colibriConferenceIqReceived(
                     ColibriRequest(iq, colibriDelayStats, colibriProcessingDelayStats) { response ->
+                        logger.debug { "SENT: ${response.toXML()}" }
                         mucClient.sendStanza(response.setResponseTo(iq))
                     }
                 )
