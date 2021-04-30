@@ -477,7 +477,7 @@ class Endpoint @JvmOverloads constructor(
         oldEffectiveConstraints: Map<String, VideoConstraints>,
         newEffectiveConstraints: Map<String, VideoConstraints>
     ) {
-        val removedEndpoints = oldEffectiveConstraints.keys.filter { it in newEffectiveConstraints.keys }
+        val removedEndpoints = oldEffectiveConstraints.keys.filterNot { it in newEffectiveConstraints.keys }
 
         // Sources that "this" endpoint no longer receives.
         for (removedEpId in removedEndpoints) {
