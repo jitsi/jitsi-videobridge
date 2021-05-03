@@ -44,7 +44,7 @@ class SingleSourceAllocation
     /**
      * The ID of the {@code Endpoint} that this instance pertains to.
      */
-    private final String endpointId;
+    final String endpointId;
 
     /**
      * The constraints to use while allocating bandwidth to this endpoint.
@@ -230,6 +230,14 @@ class SingleSourceAllocation
                 }
             }
         }
+    }
+
+    /**
+     * The source is suspended if we've not selected a layer AND the source has active layers.
+     */
+    boolean isSuspended()
+    {
+        return targetIdx == -1 && layers.length > 0 && layers[0].bitrate > 0;
     }
 
     /**

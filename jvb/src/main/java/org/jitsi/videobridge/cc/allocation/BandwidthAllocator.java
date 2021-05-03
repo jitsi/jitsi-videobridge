@@ -352,6 +352,16 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             numAllocationsWithVideo = newNumAllocationsWithVideo;
         }
 
+        // The endpoints which are in lastN, and are sending video, but were suspended due to bwe.
+        List<String> suspendedIds = sourceBitrateAllocations.stream()
+                .filter(SingleSourceAllocation::isSuspended)
+                .map(ssa -> ssa.endpointId).collect(Collectors.toList());
+        if (!suspendedIds.isEmpty())
+        {
+            logger.info("Endpoints were suspended due to insufficient bandwidth (bwe="
+                    + getAvailableBandwidth() + " bps): " + String.join(",", suspendedIds));
+        }
+
         return new BandwidthAllocation(
                 sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()),
                 oversending);
