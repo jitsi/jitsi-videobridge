@@ -58,7 +58,8 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
-    JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE)
+    JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
+    JsonSubTypes.Type(value = VideoTypeMessage::class, name = VideoTypeMessage.TYPE)
 )
 sealed class BridgeChannelMessage(
     // The type is included as colibriClass (as it has to be on the wire) by the annotation above.
@@ -436,6 +437,6 @@ class VideoTypeMessage(
     val endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {
     companion object {
-        const val TYPE = "VideoType"
+        const val TYPE = "VideoTypeMessage"
     }
 }
