@@ -358,7 +358,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 .map(ssa -> ssa.endpointId).collect(Collectors.toList());
         if (!suspendedIds.isEmpty())
         {
-            logger.info("Endpoints were suspended due to insufficient bandwidth: " + String.join(",", suspendedIds));
+            logger.info("Endpoints were suspended due to insufficient bandwidth (bwe="
+                    + getAvailableBandwidth() + " bps): " + String.join(",", suspendedIds));
         }
 
         return new BandwidthAllocation(
