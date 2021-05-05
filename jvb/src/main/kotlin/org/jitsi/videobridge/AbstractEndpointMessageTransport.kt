@@ -16,18 +16,38 @@
 package org.jitsi.videobridge
 
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.jitsi.videobridge.message.MessageHandler
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
 import java.io.IOException
+import java.time.Clock
 
 abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogger: Logger) : MessageHandler() {
 
     protected val logger: Logger = parentLogger.createChildLogger(javaClass.name)
 
     abstract val isConnected: Boolean
+
+    private val incomingMessageQueue: PacketQueue<MessageAndSource> = PacketQueue(
+        50,
+        true,
+        INCOMING_MESSAGE_QUEUE_ID,
+        { messageAndSource ->
+            try {
+                handleMessage(messageAndSource.message)?.let { response ->
+                    sendMessage(messageAndSource.source, response)
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to handle message: ", e)
+            }
+            true
+        },
+        TaskPools.IO_POOL,
+        Clock.systemUTC()
+    )
 
     /**
      * Fires the message transport ready event for the associated endpoint.
@@ -41,14 +61,15 @@ abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogg
      * @param msg the message that was received.
      */
     fun onMessage(src: Any, msg: String) {
-        val message: BridgeChannelMessage = try {
+        val message = try {
             parse(msg)
         } catch (ioe: IOException) {
             logger.warn("Invalid message received (" + ioe.message + "): " + msg)
             return
         }
+
         logger.debug { "RECV: $msg" }
-        TaskPools.IO_POOL.submit { handleMessage(message)?.let { response -> sendMessage(src, response) } }
+        incomingMessageQueue.add(MessageAndSource(message, src))
     }
 
     /**
@@ -70,5 +91,11 @@ abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogg
      */
     internal interface EndpointMessageTransportEventHandler {
         fun endpointMessageTransportConnected(endpoint: AbstractEndpoint)
+    }
+
+    private data class MessageAndSource(val message: BridgeChannelMessage, val source: Any)
+
+    companion object {
+        const val INCOMING_MESSAGE_QUEUE_ID = "bridge-channel-message-incoming-queue"
     }
 }
