@@ -64,7 +64,7 @@ abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogg
         val message = try {
             parse(msg)
         } catch (ioe: IOException) {
-            logger.warn("Invalid message received (" + ioe.message + "): " + msg)
+            logger.warn("Invalid message received (${ioe.message}: $msg")
             return
         }
 

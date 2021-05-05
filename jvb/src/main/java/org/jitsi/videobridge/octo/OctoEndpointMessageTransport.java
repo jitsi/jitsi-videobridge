@@ -216,7 +216,8 @@ class OctoEndpointMessageTransport
         AbstractEndpoint endpoint = octoEndpoints.getConference().getEndpoint(endpointId);
         if (!(endpoint instanceof OctoEndpoint))
         {
-            getLogger().warn("Received a VideoTypeMessage for an invalid endpoint, id=" + endpointId + ", ep=" + endpoint);
+            getLogger().warn(
+                    "Received a VideoTypeMessage for an invalid endpoint, id=" + endpointId + ", ep=" + endpoint);
             return null;
         }
 
