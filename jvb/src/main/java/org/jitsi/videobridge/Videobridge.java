@@ -659,6 +659,12 @@ public class Videobridge
             getJsonFromQueueStatisticsAndErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter(),
                 "rtp-sender-incoming-packet-queue"));
 
+        queueStats.put(
+            AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID,
+            getJsonFromQueueStatisticsAndErrorHandler(
+                    null,
+                    AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID));
+
         return queueStats;
     }
 
@@ -668,11 +674,15 @@ public class Videobridge
             String queueName)
     {
         OrderedJsonObject json = (OrderedJsonObject)QueueStatistics.Companion.getStatistics().get(queueName);
-        if (json == null) {
-            json = new OrderedJsonObject();
-            json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
+        if (countingErrorHandler != null)
+        {
+            if (json == null)
+            {
+                json = new OrderedJsonObject();
+                json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
+            }
+            json.put("exceptions", countingErrorHandler.getNumExceptions());
         }
-        json.put("exceptions", countingErrorHandler.getNumExceptions());
 
         return json;
     }
