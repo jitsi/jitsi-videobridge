@@ -41,6 +41,9 @@ class ReceiverConstraintsMapTest : ShouldSpec({
             constraints.put("a", vc(4))
             constraints.maxHeight shouldBe 4
 
+            constraints.put("a", vc(3))
+            constraints.maxHeight shouldBe 3
+
             constraints.remove("a")
             constraints.maxHeight shouldBe 2
 
