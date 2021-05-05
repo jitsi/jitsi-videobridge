@@ -28,24 +28,26 @@ class ReceiverConstraintsMapTest : ShouldSpec({
     context("receiver constraints map") {
         should("track the max height correctly") {
             constraints.maxHeight shouldBe 0
-            constraints.put("1", VideoConstraints(1, 30.0))
+            constraints.put("a", vc(1))
             constraints.maxHeight shouldBe 1
-            constraints.put("2", VideoConstraints(2, 30.0))
+            constraints.put("b", vc(2))
             constraints.maxHeight shouldBe 2
-            constraints.put("3", VideoConstraints(3, 30.0))
+            constraints.put("c", vc(3))
             constraints.maxHeight shouldBe 3
 
-            constraints.remove("3")
+            constraints.remove("c")
             constraints.maxHeight shouldBe 2
 
-            constraints.put("1", VideoConstraints(4, 30.0))
+            constraints.put("a", vc(4))
             constraints.maxHeight shouldBe 4
 
-            constraints.remove("1")
+            constraints.remove("a")
             constraints.maxHeight shouldBe 2
 
-            constraints.remove("2")
+            constraints.remove("b")
             constraints.maxHeight shouldBe 0
         }
     }
 })
+
+private fun vc(maxHeight: Int) = VideoConstraints(maxHeight, 30.0)
