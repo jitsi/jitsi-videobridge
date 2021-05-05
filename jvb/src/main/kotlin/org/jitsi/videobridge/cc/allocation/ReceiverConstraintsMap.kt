@@ -30,10 +30,13 @@ class ReceiverConstraintsMap {
 
     fun put(key: String, value: VideoConstraints): VideoConstraints? {
         synchronized(lock) {
-            if (maxHeight < value.maxHeight) {
-                maxHeight = value.maxHeight
+            return map.put(key, value).also { removed ->
+                maxHeight = when {
+                    value.maxHeight >= maxHeight -> value.maxHeight
+                    value.maxHeight < maxHeight && removed?.maxHeight == maxHeight -> findNextMax(maxHeight)
+                    else -> maxHeight
+                }
             }
-            return map.put(key, value)
         }
     }
 
@@ -69,4 +72,6 @@ class ReceiverConstraintsMap {
         put("maxHeight", maxHeight)
         put("constraints", map.toMap())
     }
+
+    override fun toString() = getDebugState().toJSONString()
 }
