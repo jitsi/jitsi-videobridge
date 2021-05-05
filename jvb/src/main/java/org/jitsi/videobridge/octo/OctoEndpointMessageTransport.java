@@ -59,7 +59,7 @@ class OctoEndpointMessageTransport
     @Override
     public void unhandledMessage(BridgeChannelMessage message)
     {
-        logger.warn("Received a message with an unexpected type: " + message.getType());
+        getLogger().warn("Received a message with an unexpected type: " + message.getType());
     }
 
     /**
@@ -107,7 +107,7 @@ class OctoEndpointMessageTransport
      * @param message the message that was received from the endpoint.
      */
     @Override
-    public BridgeChannelMessage endpointMessage(EndpointMessage message)
+    public BridgeChannelMessage endpointMessage(@NotNull EndpointMessage message)
     {
         // We trust the "from" field, because it comes from another bridge, not an endpoint.
         //String from = getId(message.getFrom());
@@ -117,7 +117,7 @@ class OctoEndpointMessageTransport
 
         if (conference == null || conference.isExpired())
         {
-            logger.warn("Unable to send EndpointMessage, conference is null or expired");
+            getLogger().warn("Unable to send EndpointMessage, conference is null or expired");
             return null;
         }
 
@@ -139,7 +139,7 @@ class OctoEndpointMessageTransport
             }
             else
             {
-                logger.warn("Unable to find endpoint to send EndpointMessage to: " + to);
+                getLogger().warn("Unable to find endpoint to send EndpointMessage to: " + to);
                 return null;
             }
         }
@@ -162,20 +162,20 @@ class OctoEndpointMessageTransport
         Conference conference = octoEndpoints.getConference();
         if (conference == null || conference.isExpired())
         {
-            logger.warn("Unable to send EndpointStats, conference is null or expired");
+            getLogger().warn("Unable to send EndpointStats, conference is null or expired");
             return null;
         }
 
         if (message.getFrom() == null)
         {
-            logger.warn("Unable to send EndpointStats, missing from");
+            getLogger().warn("Unable to send EndpointStats, missing from");
             return null;
         }
 
         AbstractEndpoint from = conference.getEndpoint(message.getFrom());
         if (from == null)
         {
-            logger.warn("Unable to send EndpointStats, unknown endpoint " + from);
+            getLogger().warn("Unable to send EndpointStats, unknown endpoint " + from);
             return null;
         }
 
@@ -195,7 +195,7 @@ class OctoEndpointMessageTransport
 
         if (conference == null || conference.isExpired())
         {
-            logger.warn("Unable to send EndpointConnectionStatusMessage, conference is null or expired");
+            getLogger().warn("Unable to send EndpointConnectionStatusMessage, conference is null or expired");
             return null;
         }
 
@@ -209,14 +209,14 @@ class OctoEndpointMessageTransport
         String endpointId = videoTypeMessage.getEndpointId();
         if (endpointId == null)
         {
-            logger.warn("Received a VideoTypeMessage with no endpoint ID specified.");
+            getLogger().warn("Received a VideoTypeMessage with no endpoint ID specified.");
             return null;
         }
 
         AbstractEndpoint endpoint = octoEndpoints.getConference().getEndpoint(endpointId);
         if (!(endpoint instanceof OctoEndpoint))
         {
-            logger.warn("Received a VideoTypeMessage for an invalid endpoint, id=" + endpointId + ", ep=" + endpoint);
+            getLogger().warn("Received a VideoTypeMessage for an invalid endpoint, id=" + endpointId + ", ep=" + endpoint);
             return null;
         }
 

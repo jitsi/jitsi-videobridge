@@ -134,7 +134,7 @@ public class EndpointMessageTransport
     @Override
     public void unhandledMessage(BridgeChannelMessage message)
     {
-        logger.warn("Received a message with an unexpected type: " + message.getType());
+        getLogger().warn("Received a message with an unexpected type: " + message.getType());
     }
 
     /**
@@ -207,7 +207,7 @@ public class EndpointMessageTransport
         Object dst = getActiveTransportChannel();
         if (dst == null)
         {
-            logger.debug("No available transport channel, can't send a message");
+            getLogger().debug("No available transport channel, can't send a message");
             numOutgoingMessagesDropped.incrementAndGet();
         }
         else
@@ -318,7 +318,7 @@ public class EndpointMessageTransport
             {
                 webSocket = null;
                 webSocketLastActive = false;
-                logger.debug(() -> "Web socket closed, statusCode " + statusCode + " ( " + reason + ").");
+                getLogger().debug(() -> "Web socket closed, statusCode " + statusCode + " ( " + reason + ").");
             }
         }
 
@@ -338,7 +338,7 @@ public class EndpointMessageTransport
                 // available and will not be available again.
                 webSocket.getSession().close(410, "replaced");
                 webSocket = null;
-                logger.debug(() -> "Endpoint expired, closed colibri web-socket.");
+                getLogger().debug(() -> "Endpoint expired, closed colibri web-socket.");
             }
         }
     }
@@ -351,7 +351,7 @@ public class EndpointMessageTransport
     {
         if (ws == null || !ws.equals(webSocket))
         {
-            logger.warn("Received text from an unknown web socket.");
+            getLogger().warn("Received text from an unknown web socket.");
             return;
         }
 
@@ -438,7 +438,7 @@ public class EndpointMessageTransport
     {
         List<String> newSelectedEndpoints = new ArrayList<>(message.getSelectedEndpoints());
 
-        logger.debug(() -> "Selected " + newSelectedEndpoints);
+        getLogger().debug(() -> "Selected " + newSelectedEndpoints);
         endpoint.setSelectedEndpoints(newSelectedEndpoints);
         return null;
     }
@@ -461,7 +461,7 @@ public class EndpointMessageTransport
     public BridgeChannelMessage receiverVideoConstraint(ReceiverVideoConstraintMessage message)
     {
         int maxFrameHeight = message.getMaxFrameHeight();
-        logger.debug(
+        getLogger().debug(
                 () -> "Received a maxFrameHeight video constraint from " + endpoint.getId() + ": " + maxFrameHeight);
 
         endpoint.setMaxFrameHeight(maxFrameHeight);
@@ -499,7 +499,7 @@ public class EndpointMessageTransport
 
         if (conference == null || conference.isExpired())
         {
-            logger.warn("Unable to send EndpointMessage, conference is null or expired");
+            getLogger().warn("Unable to send EndpointMessage, conference is null or expired");
             return null;
         }
 
@@ -531,7 +531,7 @@ public class EndpointMessageTransport
             }
             else
             {
-                logger.warn("Unable to find endpoint to send EndpointMessage to: " + to);
+                getLogger().warn("Unable to find endpoint to send EndpointMessage to: " + to);
                 return null;
             }
         }
@@ -557,7 +557,7 @@ public class EndpointMessageTransport
 
         if (conference == null || conference.isExpired())
         {
-            logger.warn("Unable to send EndpointStats, conference is null or expired");
+            getLogger().warn("Unable to send EndpointStats, conference is null or expired");
             return null;
         }
 
