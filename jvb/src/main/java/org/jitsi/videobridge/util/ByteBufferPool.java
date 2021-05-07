@@ -244,12 +244,15 @@ public class ByteBufferPool
             long numRequestsSum = numRequests.sum();
             long allAllocations = numLargeRequestsSum + pool1.getNumAllocations()
                 + pool2.getNumAllocations() + pool3.getNumAllocations();
+            long storedBytes = pool1.getStoredBytes() + pool2.getStoredBytes()
+                + pool3.getStoredBytes();
             stats.put("num_requests", numRequestsSum);
             stats.put("num_returns", numReturns.sum());
             stats.put("num_allocations", allAllocations);
             stats.put(
                 "allocation_percent",
                 (100.0 * allAllocations) / numRequestsSum);
+            stats.put("stored_bytes", storedBytes);
 
             stats.put("pool1", pool1.getStats());
             stats.put("pool2", pool2.getStats());

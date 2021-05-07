@@ -23,7 +23,6 @@ import org.jitsi.utils.stats.*;
 import org.json.simple.*;
 
 import java.time.*;
-import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
@@ -132,6 +131,7 @@ class PartitionedByteBufferPool
         long requests = 0;
         long returns = 0;
         long allocations = 0;
+        long storedBytes = 0;
         JSONArray partitionStats = new JSONArray();
 
         for (Partition p : partitions)
@@ -139,12 +139,14 @@ class PartitionedByteBufferPool
             requests += p.numRequests.sum();
             returns += p.numReturns.sum();
             allocations += p.numAllocations.sum();
+            storedBytes += p.storedBytes.get();
 
             partitionStats.add(p.getStatsJson());
         }
         stats.put("num_requests", requests);
         stats.put("num_returns", returns);
         stats.put("num_allocations", allocations);
+        stats.put("stored_bytes", storedBytes);
         stats.put(
             "allocation_percent",
             100D * allocations / Math.max(1, requests));
@@ -165,6 +167,20 @@ class PartitionedByteBufferPool
         }
 
         return allocations;
+    }
+
+    /**
+     * Gets the total number of bytes currently stored in the pool
+     */
+    long getStoredBytes()
+    {
+        long storedBytes = 0;
+        for (int i = 0; i < NUM_PARTITIONS; i++)
+        {
+            storedBytes += partitions[i].storedBytes.get();
+        }
+
+        return storedBytes;
     }
 
     /**
@@ -232,6 +248,11 @@ class PartitionedByteBufferPool
          * The number of times a large buffer (>1500 bytes) was requested.
          */
         private final LongAdder numLargeRequests = new LongAdder();
+
+        /**
+         * The total size of buffers stored in the pool.
+         */
+        private final AtomicLong storedBytes = new AtomicLong();
 
         /**
          * Request rate in requests per second over the last 10 seconds.
@@ -306,6 +327,7 @@ class PartitionedByteBufferPool
                 }
                 else if (enableStatistics)
                 {
+                    storedBytes.getAndAdd(-buf.length);
                     numSmallBuffersDiscarded.increment();
                 }
 
@@ -318,6 +340,7 @@ class PartitionedByteBufferPool
             }
             else if (enableStatistics)
             {
+                storedBytes.getAndAdd(-buf.length);
                 numNoAllocationNeeded.increment();
             }
 
@@ -345,11 +368,19 @@ class PartitionedByteBufferPool
                 if (ACCEPT_SMALL_BUFFERS)
                 {
                     pool.offer(buf);
+                    if (enableStatistics)
+                    {
+                        storedBytes.getAndAdd(buf.length);
+                    }
                 }
             }
             else
             {
                 pool.offer(buf);
+                if (enableStatistics)
+                {
+                    storedBytes.getAndAdd(buf.length);
+                }
             }
         }
 
@@ -371,6 +402,7 @@ class PartitionedByteBufferPool
             stats.put("requests_rate_rps", requestRate.getRate(now));
             stats.put("returns_rate_rps", returnRate.getRate(now));
             stats.put("current_size", pool.size());
+            stats.put("stored_bytes", storedBytes.get());
 
             stats.put("num_allocations", numAllocationsSum);
             stats.put("num_allocations_empty_pool", numEmptyPoolAllocations.sum());
