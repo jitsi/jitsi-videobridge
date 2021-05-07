@@ -60,7 +60,7 @@ abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogg
      * @param src the transport channel on which the message has been received.
      * @param msg the message that was received.
      */
-    fun onMessage(src: Any, msg: String) {
+    fun onMessage(src: Any?, msg: String) {
         val message = try {
             parse(msg)
         } catch (ioe: IOException) {
@@ -76,7 +76,7 @@ abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogg
      * Sends [msg] over the active transport channel of this [EndpointMessageTransport].
      */
     protected open fun sendMessage(msg: BridgeChannelMessage) {}
-    protected open fun sendMessage(dst: Any, message: BridgeChannelMessage) =
+    protected open fun sendMessage(dst: Any?, message: BridgeChannelMessage) =
         logger.debug { "SEND: " + message.toJson() }
 
     protected open fun close() {}
@@ -93,7 +93,7 @@ abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogg
         fun endpointMessageTransportConnected(endpoint: AbstractEndpoint)
     }
 
-    private data class MessageAndSource(val message: BridgeChannelMessage, val source: Any)
+    private data class MessageAndSource(val message: BridgeChannelMessage, val source: Any?)
 
     companion object {
         const val INCOMING_MESSAGE_QUEUE_ID = "bridge-channel-message-incoming-queue"
