@@ -23,7 +23,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.secs
 import org.jitsi.utils.stats.RateTracker
-import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -93,12 +92,21 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             } catch (sce: SocketException) {
                 logger.info("Socket closed, stopping reader")
                 break
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 logger.warn("Exception while reading ", e)
+                stats.exceptionOccurred()
+                continue
             }
+
             val now = clock.instant()
             stats.packetReceived(packet.length, now)
-            incomingDataHandler?.dataReceived(buf, packet.offset, packet.length, now) ?: stats.incomingPacketDropped()
+            try {
+                incomingDataHandler?.dataReceived(buf, packet.offset, packet.length, now)
+                    ?: stats.incomingPacketDropped()
+            } catch (e: Exception) {
+                stats.exceptionOccurred()
+                logger.warn("Exception while handling:", e)
+            }
         }
     }
 
@@ -150,6 +158,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
         private val receiveBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL, RATE_BUCKET_SIZE)
         private val sendPacketRate: RateTracker = RateTracker(RATE_INTERVAL, RATE_BUCKET_SIZE)
         private val sendBitRate: BitrateTracker = BitrateTracker(RATE_INTERVAL, RATE_BUCKET_SIZE)
+        private val exceptions = LongAdder()
 
         fun packetReceived(numBytes: Int, time: Instant) {
             packetsReceived.increment()
@@ -169,13 +178,9 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             }
         }
 
-        fun incomingPacketDropped() {
-            incomingPacketsDropped.increment()
-        }
-
-        fun outgoingPacketDropped() {
-            outgoingPacketsDropped.increment()
-        }
+        fun incomingPacketDropped() = incomingPacketsDropped.increment()
+        fun outgoingPacketDropped() = outgoingPacketsDropped.increment()
+        fun exceptionOccurred() = exceptions.increment()
 
         fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
             put("packets_received", packetsReceived.sum())
@@ -186,6 +191,7 @@ class UdpTransport @JvmOverloads @Throws(SocketException::class, UnknownHostExce
             put("send_packet_rate_pps", sendPacketRate.rate)
             put("outgoing_packets_dropped", outgoingPacketsDropped.sum())
             put("bytes_sent", bytesSent.sum())
+            put("exceptions", exceptions.sum())
         }
 
         fun toSnapshot(): StatsSnapshot = StatsSnapshot(
