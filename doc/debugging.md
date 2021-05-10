@@ -181,7 +181,6 @@ Enable:
 ```
 POST /debug/features/jvb/node-tracing/true
 ```
-```
 
 Disable:
 ```
