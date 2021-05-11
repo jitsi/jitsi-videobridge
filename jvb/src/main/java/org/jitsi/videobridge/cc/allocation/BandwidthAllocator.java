@@ -19,7 +19,6 @@ import edu.umd.cs.findbugs.annotations.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
@@ -355,7 +354,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         // The endpoints which are in lastN, and are sending video, but were suspended due to bwe.
         List<String> suspendedIds = sourceBitrateAllocations.stream()
                 .filter(SingleSourceAllocation::isSuspended)
-                .map(ssa -> ssa.endpointId).collect(Collectors.toList());
+                .map(ssa -> ssa.endpoint.getId()).collect(Collectors.toList());
         if (!suspendedIds.isEmpty())
         {
             logger.info("Endpoints were suspended due to insufficient bandwidth (bwe="
@@ -383,28 +382,24 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         for (MediaSourceContainer endpoint : conferenceEndpoints)
         {
-            MediaSourceDesc[] sources = endpoint.getMediaSources();
+            MediaSourceDesc source = endpoint.getMediaSource();
 
-            if (!ArrayUtils.isNullOrEmpty(sources))
+            if (source != null)
             {
-                for (MediaSourceDesc source : sources)
-                {
-                    sourceBitrateAllocations.add(
-                            new SingleSourceAllocation(
-                                    endpoint.getId(),
-                                    source,
-                                    // Note that we use the effective constraints and not the receiver's constraints
-                                    // directly. This means we never even try to allocate bitrate to endpoints "outside
-                                    // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
-                                    // stream with bitrate higher that the available bandwidth, we will forward no
-                                    // video at all instead of going to the second endpoint in the list.
-                                    // I think this is not desired behavior. However, it is required for the "effective
-                                    // constraints" to work as designed.
-                                    effectiveConstraints.get(endpoint.getId()),
-                                    allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
-                                    diagnosticContext,
-                                    clock));
-                }
+                sourceBitrateAllocations.add(
+                        new SingleSourceAllocation(
+                                endpoint,
+                                // Note that we use the effective constraints and not the receiver's constraints
+                                // directly. This means we never even try to allocate bitrate to endpoints "outside
+                                // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
+                                // stream with bitrate higher that the available bandwidth, we will forward no
+                                // video at all instead of going to the second endpoint in the list.
+                                // I think this is not desired behavior. However, it is required for the "effective
+                                // constraints" to work as designed.
+                                effectiveConstraints.get(endpoint.getId()),
+                                allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
+                                diagnosticContext,
+                                clock));
             }
         }
 

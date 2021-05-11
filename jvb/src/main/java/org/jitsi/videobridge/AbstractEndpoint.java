@@ -32,7 +32,6 @@ import org.json.simple.*;
 import java.io.*;
 import java.time.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -127,7 +126,7 @@ public abstract class AbstractEndpoint
     @NotNull
     public VideoType getVideoType()
     {
-        if (getMediaSources().length == 0)
+        if (getMediaSource() == null)
         {
             return VideoType.NONE;
         }
@@ -163,10 +162,11 @@ public abstract class AbstractEndpoint
     }
 
     /**
-     * Gets the list of media sources that belong to this endpoint.
+     * Gets the description of the video {@link MediaSourceDesc} that this endpoint has advertised, or {@code null} if
+     * it hasn't advertised any video sources.
      */
-    @NotNull
-    abstract public MediaSourceDesc[] getMediaSources();
+    @Nullable
+    public abstract MediaSourceDesc getMediaSource();
 
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
