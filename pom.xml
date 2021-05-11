@@ -13,7 +13,7 @@
         <kotlin.version>1.3.72</kotlin.version>
         <kotest.version>4.1.3</kotest.version>
         <junit.version>5.2.0</junit.version>
-        <bouncycastle.version>1.65</bouncycastle.version>
+        <bouncycastle.version>1.68</bouncycastle.version>
         <jitsi.utils.version>1.0-84-gc347abb</jitsi.utils.version>
         <ktlint.skip>false</ktlint.skip>
         <spotbugs.version>4.0.6</spotbugs.version>
