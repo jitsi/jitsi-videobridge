@@ -317,8 +317,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 sourceBitrateAllocation.improve(maxBandwidth);
                 if (i == 0
                         && sourceBitrateAllocation.isOnStage()
-                        && sourceBitrateAllocation.endpoint.getVideoType() == VideoType.DESKTOP
-                        && BitrateControllerConfig.allowOversendOnStage())
+                        && BitrateControllerConfig.allowOversendOnStage()
+                        && sourceBitrateAllocation.endpoint.getVideoType() == VideoType.DESKTOP)
                 {
                     oversending |= sourceBitrateAllocation.tryLowestLayer();
                 }
