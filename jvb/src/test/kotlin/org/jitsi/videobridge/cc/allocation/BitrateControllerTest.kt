@@ -38,6 +38,7 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.util.VideoType
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -368,18 +369,6 @@ class BitrateControllerTest : ShouldSpec() {
 
         bc.allocationHistory.shouldMatchInOrder(
             Event(
-                0.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation(A, targetLayer = ld7_5),
-                        SingleAllocation(B, targetLayer = noVideo),
-                        SingleAllocation(C, targetLayer = noVideo),
-                        SingleAllocation(D, targetLayer = noVideo)
-                    ),
-                    oversending = true
-                )
-            ),
-            Event(
                 50.kbps,
                 BandwidthAllocation(
                     setOf(
@@ -387,8 +376,7 @@ class BitrateControllerTest : ShouldSpec() {
                         SingleAllocation(B, targetLayer = noVideo),
                         SingleAllocation(C, targetLayer = noVideo),
                         SingleAllocation(D, targetLayer = noVideo)
-                    ),
-                    oversending = false
+                    )
                 )
             ),
             Event(
@@ -649,18 +637,6 @@ class BitrateControllerTest : ShouldSpec() {
 
         bc.allocationHistory.shouldMatchInOrder(
             Event(
-                0.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation(A, targetLayer = ld7_5),
-                        SingleAllocation(B, targetLayer = noVideo),
-                        SingleAllocation(C, targetLayer = noVideo),
-                        SingleAllocation(D, targetLayer = noVideo)
-                    ),
-                    oversending = true
-                )
-            ),
-            Event(
                 50.kbps,
                 BandwidthAllocation(
                     setOf(
@@ -668,8 +644,7 @@ class BitrateControllerTest : ShouldSpec() {
                         SingleAllocation(B, targetLayer = noVideo),
                         SingleAllocation(C, targetLayer = noVideo),
                         SingleAllocation(D, targetLayer = noVideo)
-                    ),
-                    oversending = false
+                    )
                 )
             ),
             Event(
@@ -1314,7 +1289,8 @@ data class Event<T>(
 
 class Endpoint(
     override val id: String,
-    override val mediaSource: MediaSourceDesc? = null
+    override val mediaSource: MediaSourceDesc? = null,
+    override val videoType: VideoType = VideoType.CAMERA
 ) : MediaSourceContainer
 
 fun createEndpoints(vararg ids: String): MutableList<Endpoint> {

@@ -315,7 +315,10 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 // In stage view improve greedily until preferred, in tile view go step-by-step.
                 sourceBitrateAllocation.improve(maxBandwidth);
-                if (i == 0 && sourceBitrateAllocation.isOnStage() && BitrateControllerConfig.allowOversendOnStage())
+                if (i == 0
+                        && sourceBitrateAllocation.isOnStage()
+                        && sourceBitrateAllocation.endpoint.getVideoType() == VideoType.DESKTOP
+                        && BitrateControllerConfig.allowOversendOnStage())
                 {
                     oversending |= sourceBitrateAllocation.tryLowestLayer();
                 }

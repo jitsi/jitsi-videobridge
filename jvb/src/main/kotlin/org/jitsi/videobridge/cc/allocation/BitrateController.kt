@@ -28,6 +28,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
+import org.jitsi.videobridge.util.VideoType
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
@@ -309,6 +310,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
  */
 interface MediaSourceContainer {
     val id: String
+    val videoType: VideoType
     val mediaSource: MediaSourceDesc?
 }
 
