@@ -91,8 +91,8 @@ class OctoEndpoint(
 
     override fun shouldExpire(): Boolean = !transceiver.hasReceiveSsrcs()
 
-    override val mediaSources: Array<MediaSourceDesc>
-        get() = transceiver.mediaSources
+    override val mediaSource: MediaSourceDesc?
+        get() = transceiver.mediaSources.firstOrNull()
 
     /**
      * This [OctoEndpoint] aggregates the constraints from the local endpoints on this bridge, and propagates the max

@@ -262,7 +262,7 @@ class Endpoint @JvmOverloads constructor(
         conference.videobridge.statistics.totalEndpoints.incrementAndGet()
     }
 
-    override var mediaSources: Array<MediaSourceDesc>
+    private var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
         private set(value) {
             val wasEmpty = transceiver.getMediaSources().isEmpty()
@@ -273,6 +273,9 @@ class Endpoint @JvmOverloads constructor(
                 sendVideoConstraints(maxReceiverVideoConstraints)
             }
         }
+
+    override val mediaSource: MediaSourceDesc?
+        get() = mediaSources.firstOrNull()
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -493,7 +496,7 @@ class Endpoint @JvmOverloads constructor(
 
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
-        if (mediaSources.isEmpty()) {
+        if (mediaSource == null) {
             logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no streams." }
         } else {
             val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(maxVideoConstraints.maxHeight)

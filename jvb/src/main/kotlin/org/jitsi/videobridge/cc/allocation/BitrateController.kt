@@ -28,6 +28,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
+import org.jitsi.videobridge.util.VideoType
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
@@ -212,7 +213,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         allocation.allocations.forEach {
             it.targetLayer?.getBitrate(nowMs)?.let { targetBitrate ->
                 totalTargetBitrate += targetBitrate
-                it.source?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
+                it.endpoint.mediaSource?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
             }
             it.idealLayer?.getBitrate(nowMs)?.let { idealBitrate ->
                 totalIdealBitrate += idealBitrate
@@ -244,7 +245,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             trace(
                 diagnosticContext
                     .makeTimeSeriesPoint("allocation_for_source", nowMs)
-                    .addField("remote_endpoint_id", it.endpointId)
+                    .addField("remote_endpoint_id", it.endpoint.id)
                     .addField("target_idx", it.targetLayer?.index ?: -1)
                     .addField("ideal_idx", it.idealLayer?.index ?: -1)
                     .addField("target_bps", it.targetLayer?.getBitrate(nowMs)?.bps ?: -1)
@@ -309,7 +310,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
  */
 interface MediaSourceContainer {
     val id: String
-    val mediaSources: Array<MediaSourceDesc>?
+    val videoType: VideoType
+    val mediaSource: MediaSourceDesc?
 }
 
 data class BitrateControllerStatusSnapshot(

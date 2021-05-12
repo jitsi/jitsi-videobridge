@@ -26,7 +26,7 @@ class BandwidthAllocation @JvmOverloads constructor(
     val oversending: Boolean = false
 ) {
     val forwardedEndpoints: Set<String> =
-        allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
+        allocations.filter { it.isForwarded() }.map { it.endpoint.id }.toSet()
 
     /**
      * Whether the two allocations have the same endpoints and same layers.
@@ -36,8 +36,9 @@ class BandwidthAllocation @JvmOverloads constructor(
             oversending == other.oversending &&
             allocations.all { allocation ->
                 other.allocations.any { otherAllocation ->
-                    allocation.endpointId == otherAllocation.endpointId &&
-                        allocation.source?.primarySSRC == otherAllocation.source?.primarySSRC &&
+                    allocation.endpoint == otherAllocation.endpoint &&
+                        allocation.endpoint.mediaSource?.primarySSRC ==
+                        otherAllocation.endpoint.mediaSource?.primarySSRC &&
                         allocation.targetLayer?.index == otherAllocation.targetLayer?.index
                 }
             }
@@ -54,8 +55,7 @@ class BandwidthAllocation @JvmOverloads constructor(
  * The result of bandwidth allocation for a specific endpoint and a [MediaSourceDesc].
  */
 data class SingleAllocation(
-    val endpointId: String,
-    val source: MediaSourceDesc? = null,
+    val endpoint: MediaSourceContainer,
     /**
      * The layer which has been selected to be forwarded.
      */
@@ -69,9 +69,6 @@ data class SingleAllocation(
         get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1
 
-    /**
-     * Exclude [source]
-     */
-    override fun toString(): String = "[id=$endpointId target=${targetLayer?.height}/${targetLayer?.frameRate} " +
+    override fun toString(): String = "[id=${endpoint.id} target=${targetLayer?.height}/${targetLayer?.frameRate} " +
         "ideal=${idealLayer?.height}/${idealLayer?.frameRate}"
 }
