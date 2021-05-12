@@ -88,16 +88,23 @@ class BitrateControllerTest : ShouldSpec() {
                     context("and the dominant speaker is on stage") {
                         listOf(true, false).forEach { legacy ->
                             context("With ${if (legacy) "legacy" else "new"} signaling") {
-                                bc.setEndpointOrdering(A, B, C, D)
-                                bc.setStageView("A", legacy = legacy)
+                                listOf(true, false).forEach { screensharing ->
+                                    context("With ${if (screensharing) "screensharing" else "camera"}") {
+                                        if (screensharing) {
+                                            A.videoType = VideoType.DESKTOP
+                                        }
+                                        bc.setEndpointOrdering(A, B, C, D)
+                                        bc.setStageView("A", legacy = legacy)
 
-                                bc.bc.allocationSettings.lastN shouldBe -1
-                                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
-                                bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
+                                        bc.bc.allocationSettings.lastN shouldBe -1
+                                        bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
+                                        bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
 
-                                runBweLoop()
+                                        runBweLoop()
 
-                                verifyStageView()
+                                        verifyStageView(screensharing)
+                                    }
+                                }
                             }
                         }
                     }
@@ -345,7 +352,7 @@ class BitrateControllerTest : ShouldSpec() {
         logger.info("Allocation history: ${bc.allocationHistory}")
     }
 
-    private fun verifyStageView() {
+    private fun verifyStageView(screensharing: Boolean = false) {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
         bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
@@ -368,6 +375,25 @@ class BitrateControllerTest : ShouldSpec() {
         bc.allocationHistory.removeIf { it.bwe < 0.bps }
 
         bc.allocationHistory.shouldMatchInOrder(
+            // We expect to be oversending when screensharing is used.
+            *(
+                if (screensharing) {
+                    arrayOf(
+                        Event(
+                            0.kbps,
+                            BandwidthAllocation(
+                                setOf(
+                                    SingleAllocation(A, targetLayer = ld7_5),
+                                    SingleAllocation(B, targetLayer = noVideo),
+                                    SingleAllocation(C, targetLayer = noVideo),
+                                    SingleAllocation(D, targetLayer = noVideo)
+                                ),
+                                oversending = true
+                            )
+                        )
+                    )
+                } else arrayOf()
+                ),
             Event(
                 50.kbps,
                 BandwidthAllocation(
@@ -376,7 +402,8 @@ class BitrateControllerTest : ShouldSpec() {
                         SingleAllocation(B, targetLayer = noVideo),
                         SingleAllocation(C, targetLayer = noVideo),
                         SingleAllocation(D, targetLayer = noVideo)
-                    )
+                    ),
+                    oversending = false
                 )
             ),
             Event(
@@ -1290,7 +1317,7 @@ data class Event<T>(
 class Endpoint(
     override val id: String,
     override val mediaSource: MediaSourceDesc? = null,
-    override val videoType: VideoType = VideoType.CAMERA
+    override var videoType: VideoType = VideoType.CAMERA
 ) : MediaSourceContainer
 
 fun createEndpoints(vararg ids: String): MutableList<Endpoint> {
