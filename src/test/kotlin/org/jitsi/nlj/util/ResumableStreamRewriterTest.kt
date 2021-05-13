@@ -259,6 +259,18 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
                     ret = snr.rewriteSequenceNumber(true, 0)
                     ret shouldBe 0xffff
                 }
+
+                context("Roll forward by the full gap") {
+                    for (seq in 5..1005) {
+                        ret = snr.rewriteSequenceNumber(true, seq)
+                        ret shouldBe seq - 3
+                    }
+                }
+
+                context("Accept packet older than wraparound.") {
+                    ret = snr.rewriteSequenceNumber(true, 3)
+                    ret shouldBe 0
+                }
             }
         }
     }

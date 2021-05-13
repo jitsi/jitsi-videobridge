@@ -198,7 +198,7 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
                     /* Older than previous oldest, but still in range of the map.
                        Project map backwards. */
 
-                    val oldestIndex = Math.max(index - size, firstIndex)
+                    val oldestIndex = Math.max(lastIndex - size + 1, firstIndex)
                     val oldest = getContainer(oldestIndex)
                         ?: throw IllegalStateException("No oldest container found")
 
@@ -220,7 +220,7 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
                 else -> {
                     /* Older than the map. */
 
-                    val oldestIndex = Math.max(index - size, firstIndex)
+                    val oldestIndex = Math.max(lastIndex - size + 1, firstIndex)
                     val oldest = getContainer(oldestIndex)
                         ?: throw IllegalStateException("No oldest container found")
                     val oldestDelta = oldestIndex - oldest.item!!.newIndex
