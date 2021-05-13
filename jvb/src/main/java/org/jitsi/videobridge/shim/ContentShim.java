@@ -291,7 +291,7 @@ public class ContentShim
                     return null;
                 }
                 throw new IqProcessingException(
-                        XMPPError.Condition.internal_server_error,
+                        XMPPError.Condition.item_not_found,
                         "Error finding channel " + channelId);
             }
         }
