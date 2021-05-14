@@ -38,7 +38,7 @@ import kotlin.time.seconds
 class WebSocketClientTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val wsPort = Random.nextInt(1024, 65535).also {
+    private val wsPort = Random.nextInt(49152, 65535).also {
         println("Server running on port $it")
     }
 
