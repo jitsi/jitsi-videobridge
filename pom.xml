@@ -114,7 +114,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-stats</artifactId>
-                <version>1.0-4-g6d906b2</version>
+                <version>1.0-7-g2a9b765</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
