@@ -83,7 +83,6 @@ public class Debug
         @PathParam("feature") DebugFeatures feature,
         @PathParam("enabled") Boolean enabled)
     {
-        System.out.println("Here with get instead of post!");
         logger.info((enabled ? "Enabling" : "Disabling") + " feature " + feature.getValue());
         setFeature(feature, enabled);
         return Response.ok().build();
