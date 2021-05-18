@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.datachannel.protocol;
 
+import org.jitsi.utils.logging2.*;
+
 import java.nio.*;
 
 /**
@@ -25,6 +27,7 @@ import java.nio.*;
  */
 public class DataChannelProtocolMessageParser
 {
+    private static Logger logger = new LoggerImpl(DataChannelProtocolMessageParser.class.getName());
     /**
      * Reads the message type from a byte array.
      * @param data
@@ -51,9 +54,9 @@ public class DataChannelProtocolMessageParser
                 case DataChannelProtocolConstants.MSG_TYPE_CHANNEL_OPEN: {
                     return OpenChannelMessage.parse(data);
                 }
-                default: {
-                    // TODO
-                    System.out.println("Unrecognized datachannel control message type: " + messageType);
+                default:
+                {
+                    logger.warn("Unrecognized datachannel control message type: " + messageType);
                     return null;
                 }
             }
@@ -68,8 +71,7 @@ public class DataChannelProtocolMessageParser
         }
         else
         {
-            // TODO
-            System.out.println("Unrecognized data channel ppid: " + ppid);
+            logger.warn("Unrecognized data channel ppid: " + ppid);
         }
         return null;
     }
