@@ -77,15 +77,17 @@ fun main(args: Array<String>) {
     // properties were set.
     JitsiConfig.reloadNewConfig()
 
+    val versionService = JvbVersionService().also {
+        logger.info("Starting jitsi-videobridge version ${it.currentVersion}")
+    }
+
     startIce4j()
 
     XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.jidCacheSize)
-
     PacketQueue.setEnableStatisticsDefault(true)
 
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()
-    val versionService = JvbVersionService()
     val videobridge = Videobridge(xmppConnection, shutdownService, versionService.currentVersion).apply { start() }
     val healthChecker = JvbHealthChecker().apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
