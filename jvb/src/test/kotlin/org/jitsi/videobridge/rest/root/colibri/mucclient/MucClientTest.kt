@@ -26,6 +26,7 @@ import org.glassfish.jersey.test.JerseyTest
 import org.glassfish.jersey.test.TestProperties
 import org.jitsi.videobridge.rest.MockBinder
 import org.jitsi.videobridge.xmpp.XmppConnection
+import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import org.junit.Test
 import javax.ws.rs.client.Entity
@@ -91,25 +92,37 @@ class MucClientTest : JerseyTest() {
     fun testRemoveMuc() {
         val jsonConfigSlot = slot<JSONObject>()
 
-        every { xmppConnection.addMucClient(capture(jsonConfigSlot)) } returns true
+        every { xmppConnection.removeMucClient(capture(jsonConfigSlot)) } returns true
 
         val json = JSONObject().apply {
             put("id", "id")
         }
 
-        val resp = target("$baseUrl/add").request().post(Entity.json(json.toJSONString()))
+        val resp = target("$baseUrl/remove").request().post(Entity.json(json.toJSONString()))
         resp.status shouldBe HttpStatus.OK_200
         jsonConfigSlot.captured shouldBe json
     }
 
     @Test
     fun testRemoveMucFailure() {
-        every { xmppConnection.addMucClient(any()) } returns false
+        every { xmppConnection.removeMucClient(any()) } returns false
 
         val json = JSONObject().apply {
             put("id", "id")
         }
-        val resp = target("$baseUrl/add").request().post(Entity.json(json.toJSONString()))
+        val resp = target("$baseUrl/remove").request().post(Entity.json(json.toJSONString()))
         resp.status shouldBe HttpStatus.BAD_REQUEST_400
     }
+
+    @Test
+    fun testGetIds() {
+        val fakeIds = JSONArray().apply {
+            add("id1")
+        }
+        every { xmppConnection.getMucClientIds() } returns fakeIds.toJSONString()
+
+        val resp = target("$baseUrl/ids").request().get()
+        resp.readEntity(String::class.java) shouldBe "[\"id1\"]"
+    }
+
 }
