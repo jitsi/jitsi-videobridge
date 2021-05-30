@@ -180,6 +180,20 @@ class Endpoint @JvmOverloads constructor(
         setErrorHandler(queueErrorCounter)
     }
 
+    /**
+     * The queue which enforces sequential processing of incoming data channel messages
+     * to maintain processing order.
+     */
+    private val incomingDataChannelMessagesQueue = PacketInfoQueue(
+        "${javaClass.simpleName}-incoming-data-channel-queue",
+        TaskPools.IO_POOL,
+        { packetInfo ->
+            dataChannelHandler.consume(packetInfo)
+            true
+        },
+        TransportConfig.queueSize
+    )
+
     private val bitrateController = BitrateController(
         object : BitrateController.EventHandler {
             override fun allocationChanged(allocation: BandwidthAllocation) {
@@ -562,7 +576,7 @@ class Endpoint @JvmOverloads constructor(
             // holding a lock inside the SctpSocket which can cause a deadlock
             // if two endpoints are trying to send datachannel messages to one
             // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute { dataChannelHandler.processPacket(PacketInfo(dataChannelPacket)) }
+            incomingDataChannelMessagesQueue.add(PacketInfo(dataChannelPacket))
         }
         socket.listen()
         sctpSocket = Optional.of(socket)
@@ -1096,7 +1110,7 @@ class Endpoint @JvmOverloads constructor(
         private var dataChannelStack: DataChannelStack? = null
         private val cachedDataChannelPackets = LinkedBlockingQueue<PacketInfo>()
 
-        override fun consume(packetInfo: PacketInfo) {
+        public override fun consume(packetInfo: PacketInfo) {
             synchronized(dataChannelStackLock) {
                 when (val packet = packetInfo.packet) {
                     is DataChannelPacket -> {
