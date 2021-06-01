@@ -175,7 +175,7 @@ class OctoEndpointMessageTransport
         AbstractEndpoint from = conference.getEndpoint(message.getFrom());
         if (from == null)
         {
-            getLogger().warn("Unable to send EndpointStats, unknown endpoint " + from);
+            getLogger().warn("Unable to send EndpointStats, unknown endpoint " + message.getFrom());
             return null;
         }
 
