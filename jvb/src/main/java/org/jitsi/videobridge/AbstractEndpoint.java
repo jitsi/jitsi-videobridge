@@ -135,7 +135,11 @@ public abstract class AbstractEndpoint
 
     public void setVideoType(VideoType videoType)
     {
-        this.videoType = videoType;
+        if (this.videoType != videoType)
+        {
+            this.videoType = videoType;
+            conference.getSpeechActivity().endpointVideoAvailabilityChanged();
+        }
     }
 
     /**
