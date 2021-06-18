@@ -23,6 +23,7 @@ import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
+import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.isPadding
 /**
@@ -47,7 +48,8 @@ import org.jitsi.rtp.util.isPadding
  */
 @SuppressFBWarnings(
     value = ["EI_EXPOSE_REP2"],
-    justification = "We intentionally pass a reference to our buffer when using observableWhenChanged.")
+    justification = "We intentionally pass a reference to our buffer when using observableWhenChanged."
+)
 open class RtpPacket(
     buffer: ByteArray,
     offset: Int,
@@ -64,7 +66,7 @@ open class RtpPacket(
         get() = RtpHeader.hasPadding(buffer, offset)
         set(value) = RtpHeader.setPadding(buffer, offset, value)
 
-    var hasExtensions: Boolean
+    private var hasEncodedExtensions: Boolean
         get() = RtpHeader.hasExtensions(buffer, offset)
         set(value) = RtpHeader.setHasExtensions(buffer, offset, value)
 
@@ -159,11 +161,11 @@ open class RtpPacket(
             }
         }
 
-    private val _headerExtensions: HeaderExtensions = HeaderExtensions()
-    private val headerExtensions: HeaderExtensions
+    private val _encodedHeaderExtensions: EncodedHeaderExtensions = EncodedHeaderExtensions()
+    private val encodedHeaderExtensions: EncodedHeaderExtensions
         get() {
-            _headerExtensions.reset()
-            return _headerExtensions
+            _encodedHeaderExtensions.reset()
+            return _encodedHeaderExtensions
         }
 
     /**
@@ -173,15 +175,75 @@ open class RtpPacket(
         get() = "type=RtpPacket len=$payloadLength " +
             "hashCode=${buffer.hashCodeOfSegment(payloadOffset, payloadOffset + payloadLength)}"
 
-    fun getHeaderExtension(extensionId: Int): HeaderExtension? {
-        if (!hasExtensions) return null
+    private var pendingHeaderExtensions: MutableList<HeaderExtension>? = null
 
-        headerExtensions.forEach { ext ->
+    private fun getEncodedHeaderExtension(extensionId: Int): HeaderExtension? {
+        if (!hasEncodedExtensions) return null
+
+        encodedHeaderExtensions.forEach { ext ->
             if (ext.id == extensionId) {
                 return ext
             }
         }
         return null
+    }
+
+    var hasExtensions: Boolean
+        get() = pendingHeaderExtensions?.isNotEmpty() ?: hasEncodedExtensions
+        set(value) {
+            val p = pendingHeaderExtensions
+            if (p != null) {
+                if (value && p.isEmpty()) {
+                    throw java.lang.IllegalStateException(
+                        "Cannot set hasExtensions to true with empty pending extensions"
+                    )
+                }
+                if (!value) {
+                    p.clear()
+                }
+            } else {
+                hasEncodedExtensions = value
+            }
+        }
+
+    fun getHeaderExtension(extensionId: Int): HeaderExtension? {
+        val activeHeaderExtensions = pendingHeaderExtensions?.iterator() ?: encodedHeaderExtensions
+
+        activeHeaderExtensions.forEach { ext ->
+            if (ext.id == extensionId) {
+                return ext
+            }
+        }
+        return null
+    }
+
+    private fun createPendingHeaderExtensions(removeIf: ((HeaderExtension) -> Boolean)?) {
+        if (pendingHeaderExtensions != null) {
+            return
+        }
+        pendingHeaderExtensions = ArrayList<HeaderExtension>().also { l ->
+            encodedHeaderExtensions.forEach {
+                if (removeIf == null || !removeIf(it)) {
+                    l.add(PendingHeaderExtension(it))
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes the header extension (or all header extensions) with the given ID.
+     */
+    fun removeHeaderExtension(id: Int) {
+        pendingHeaderExtensions?.removeIf { h -> h.id == id }
+            ?: createPendingHeaderExtensions { h -> h.id == id }
+    }
+
+    /**
+     * Removes all header extensions except those with ID values in [retain]
+     */
+    fun removeHeaderExtensionsExcept(retain: Set<Int>) {
+        pendingHeaderExtensions?.removeIf { h -> !retain.contains(h.id) }
+            ?: createPendingHeaderExtensions { h -> !retain.contains(h.id) }
     }
 
     /**
@@ -199,6 +261,21 @@ open class RtpPacket(
         if (id !in 1..15 || extDataLength !in 1..16) {
             throw IllegalArgumentException("id=$id len=$extDataLength)")
         }
+
+        val newHeader = PendingHeaderExtension(id, extDataLength)
+
+        if (pendingHeaderExtensions == null) {
+            createPendingHeaderExtensions(null)
+        }
+
+        pendingHeaderExtensions!!.add(newHeader)
+
+        return newHeader
+    }
+
+    fun encodeHeaderExtensions() {
+        val pendingHeaderExtensions = this.pendingHeaderExtensions ?: return
+
         // The byte[] of an RtpPacket has the following structure:
         // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
         // | A: unused | B: hdr + ext | C: payload | D: unused |
@@ -208,28 +285,32 @@ open class RtpPacket(
         // B: this.getHeaderLength()
         // C: this.getPayloadLength()
         // D: this.buffer.length - this.length - this.offset
-        // We will try to extend the packet so that it uses A and/or D if
+
+        // If the newly-encoded header extensions block results in a header
+        // longer than the current one,
+        // we will try to extend the packet so that it uses A and/or D if
         // possible, in order to avoid allocating new memory.
 
         // We get this early, before we modify the buffer.
+        val currHeaderLength = headerLength
         val currPayloadLength = payloadLength
-        val extensionBit = hasExtensions
-        val extHeaderOffset = RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4
+        val baseHeaderLength = RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4
 
-        // This is an upper bound on the required length for the packet after
-        // the addition of the new extension. It is easier to calculate than
-        // the exact number, and is relatively close (it may be off by a few
-        // bytes due to padding)
-        val maxRequiredLength = length +
-                (if (extensionBit) 0 else RtpHeader.EXT_HEADER_SIZE_BYTES) +
-                1 /* the 1-byte header of the extension element */ +
-                extDataLength +
-                3 /* padding */
+        val newExtHeaderLength = if (pendingHeaderExtensions.isEmpty()) {
+            0
+        } else {
+            val rawHeaderLength = RtpHeader.EXT_HEADER_SIZE_BYTES +
+                pendingHeaderExtensions.sumBy { h -> h.totalLengthBytes }
+            rawHeaderLength + RtpUtils.getNumPaddingBytes(rawHeaderLength)
+        }
+
+        val newHeaderLength = baseHeaderLength + newExtHeaderLength
+        val newPacketLength = newHeaderLength + currPayloadLength
 
         val newPayloadOffset: Int
-        val newBuffer = if (buffer.size >= (maxRequiredLength + BYTES_TO_LEAVE_AT_END_OF_PACKET)) {
+        val newBuffer = if (buffer.size >= (newPacketLength + BYTES_TO_LEAVE_AT_END_OF_PACKET)) {
             // We don't need a new buffer
-            if ((offset + headerLength) >= (maxRequiredLength - currPayloadLength)) {
+            if ((offset + currHeaderLength) >= (newPacketLength - currPayloadLength)) {
                 // Region A (see above) is enough to accommodate the new
                 // packet, keep the payload where it is.
                 newPayloadOffset = payloadOffset
@@ -242,88 +323,36 @@ open class RtpPacket(
         } else {
             // We need a new buffer. We will place the payload almost to the end
             // (leaving room for an SRTP tag)
-            BufferPool.getArray(maxRequiredLength + BYTES_TO_LEAVE_AT_END_OF_PACKET).apply {
+            BufferPool.getArray(newPacketLength + BYTES_TO_LEAVE_AT_END_OF_PACKET).apply {
                 newPayloadOffset = size - currPayloadLength - BYTES_TO_LEAVE_AT_END_OF_PACKET
                 System.arraycopy(buffer, payloadOffset, this, newPayloadOffset, currPayloadLength)
             }
         }
-
-        // By now we have the payload in a position which leaves enough space
-        // for the whole new header.
-        // Next, we are going to construct a new header + extensions (including
-        // the one we are adding) at offset 0, and once finished, we will move
-        // them to the correct offset.
-
-        var newHeaderLength = extHeaderOffset
-
-        // The bytes in the header extensions, excluding the (0xBEDE, length)
-        // field and any padding.
-        var extensionBytes = 0
-        if (extensionBit) {
-            // (0xBEDE, length)
-            newHeaderLength += 4
-
-            // We can't find the actual length without an iteration because
-            // of padding. It is safe to iterate, because we have not yet
-            // modified the header (we only might have moved the offset right)
-            headerExtensions.forEach { ext ->
-                extensionBytes += ext.totalLengthBytes
-            }
-
-            newHeaderLength += extensionBytes
-        }
-
-        // Copy the header (and extensions, excluding padding, if there are any) to
-        // the very beginning of the buffer
-        if (buffer != newBuffer || offset != 0) {
-            System.arraycopy(
-                buffer, offset,
-                newBuffer, 0,
-                newHeaderLength)
-        }
-
-        if (!extensionBit) {
-            // If the original packet didn't have any extensions, we need to
-            // add the extension header (RFC 5285):
-            //  0                   1                   2                   3
-            //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            // |       0xBE    |    0xDE       |           length              |
-            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            newBuffer.putShort(extHeaderOffset, 0xBEDE.toShort())
-            // We will set the length field later
-            newHeaderLength += 4
-        }
-
-        // Finally we get to add our extension
-        newBuffer[newHeaderLength++] = ((id and 0x0F) shl 4).toByte() or ((extDataLength - 1) and 0x0F).toByte()
-        extensionBytes++
-
-        // This is where the data of the extension that we add begins. We just
-        // skip 'len' bytes, and let the caller fill them in. We have to go
-        // back one byte, because newHeaderLength already moved.
-        val extensionDataOffset = newHeaderLength - 1
-        newHeaderLength += extDataLength
-        extensionBytes += extDataLength
-
-        val numPaddingBytes = (4 - (extensionBytes % 4)) % 4
-        repeat(numPaddingBytes) {
-            // Set the padding to 0 (we have to do this because we may be
-            // reusing a buffer).
-            newBuffer[newHeaderLength++] = 0
-        }
-
-        newBuffer.putShort(extHeaderOffset + 2, ((extensionBytes + numPaddingBytes) / 4).toShort())
-
-        // Now we have the new header, with the added header extension and with
-        // the correct padding, in newBuffer at offset 0. Lets move it to the
-        // correct place (right before the payload).
         val newOffset = newPayloadOffset - newHeaderLength
-        if (newOffset != 0) {
-            System.arraycopy(newBuffer, 0, newBuffer, newOffset, newHeaderLength)
+
+        if (buffer !== newBuffer || offset != newOffset) {
+            // Copy the base header into place.
+            System.arraycopy(buffer, offset, newBuffer, newOffset, baseHeaderLength)
         }
 
-        // All that is left to do is update the NewRawPacket state.
+        if (pendingHeaderExtensions.isNotEmpty()) {
+            var off = newOffset + baseHeaderLength
+            // Write the header extension
+            newBuffer.putShort(off, 0xBEDE.toShort())
+            newBuffer.putShort(off + 2, ((newExtHeaderLength - RtpHeader.EXT_HEADER_SIZE_BYTES) / 4).toShort())
+            off += 4
+            // Write pending header extension elements
+            pendingHeaderExtensions.forEach { h ->
+                System.arraycopy(h.currExtBuffer, h.currExtOffset, newBuffer, off, h.currExtLength)
+                off += h.currExtLength
+            }
+            // Write padding
+            while (off < newOffset + newHeaderLength) {
+                newBuffer[off] = 0
+                off++
+            }
+        }
+
         val oldBuffer = buffer
         buffer = newBuffer
         // Reference comparison to see if we got a new buffer.  If so, return the old one to the pool
@@ -331,39 +360,23 @@ open class RtpPacket(
             BufferPool.returnArray(oldBuffer)
         }
         offset = newOffset
-        length = newHeaderLength + currPayloadLength
+        length = newPacketLength
+        headerLength = newHeaderLength
 
         // ... and set the extension bit.
-        hasExtensions = true
+        hasEncodedExtensions = pendingHeaderExtensions.isNotEmpty()
 
-        // Setup the single HeaderExtension instance of this NewRawPacket and
-        // return it.
-        val newExt = headerExtensions.currHeaderExtension
-        newExt.setOffsetLength(offset + extensionDataOffset, extDataLength + 1)
-
-        // Update the header length
-        headerLength = RtpHeader.getTotalLength(buffer, offset)
-
-        return newExt
+        // Clear pending extensions.
+        this.pendingHeaderExtensions = null
     }
 
-    /**
-     * Return the total length of the extensions in this packet, including the extension header
-     */
-    private val extensionBlockLength: Int
-        get() {
-            if (!hasExtensions) {
-                return 0
-            }
-            return HeaderExtensionHelpers.getExtensionsTotalLength(
-                buffer, offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4)
-        }
-
-    override fun clone(): RtpPacket =
-        RtpPacket(
+    override fun clone(): RtpPacket {
+        return RtpPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length)
+            length
+        ).also { if (pendingHeaderExtensions != null) it.pendingHeaderExtensions = ArrayList(pendingHeaderExtensions) }
+    }
 
     override fun toString(): String = with(StringBuilder()) {
         append("RtpPacket: ")
@@ -371,7 +384,7 @@ open class RtpPacket(
         append(", Ssrc=$ssrc")
         append(", SeqNum=$sequenceNumber")
         append(", M=$isMarked")
-        append(", X=$hasExtensions")
+        append(", X=$hasEncodedExtensions")
         append(", Ts=$timestamp")
         toString()
     }
@@ -390,14 +403,13 @@ open class RtpPacket(
      * offset and length, which are specific to the current header extension).
      *
      */
-    inner class HeaderExtension {
+    abstract class HeaderExtension {
         var currExtOffset: Int = 0
-            private set
+            protected set
         var currExtLength: Int = 0
-            private set
+            protected set
 
-        val currExtBuffer: ByteArray
-            get() = this@RtpPacket.buffer
+        abstract val currExtBuffer: ByteArray
 
         fun setOffsetLength(nextHeaderExtOffset: Int, nextHeaderExtLength: Int) {
             currExtOffset = nextHeaderExtOffset
@@ -425,7 +437,29 @@ open class RtpPacket(
             get() = 1 + dataLengthBytes
     }
 
-    inner class HeaderExtensions : Iterator<HeaderExtension> {
+    inner class EncodedHeaderExtension : HeaderExtension() {
+        override val currExtBuffer: ByteArray
+            get() = this@RtpPacket.buffer
+    }
+
+    @SuppressFBWarnings(
+        value = ["EI_EXPOSE_REP"],
+        justification = "We intentionally expose the internal buffer."
+    )
+    class PendingHeaderExtension(id: Int, extDataLength: Int) : HeaderExtension() {
+        override val currExtBuffer = ByteArray(extDataLength + 1)
+
+        init {
+            currExtLength = extDataLength + 1
+            currExtBuffer[0] = ((id and 0x0F) shl 4).toByte() or ((extDataLength - 1) and 0x0F).toByte()
+        }
+
+        constructor(other: HeaderExtension) : this(other.id, other.dataLengthBytes) {
+            System.arraycopy(other.currExtBuffer, other.currExtOffset + 1, currExtBuffer, 1, dataLengthBytes)
+        }
+    }
+
+    inner class EncodedHeaderExtensions : Iterator<HeaderExtension> {
         /**
          * The offset of the next extension
          */
@@ -436,7 +470,7 @@ open class RtpPacket(
          */
         private var remainingLength = 0
 
-        val currHeaderExtension: HeaderExtension = HeaderExtension()
+        val currHeaderExtension: HeaderExtension = EncodedHeaderExtension()
 
         override fun hasNext(): Boolean {
             // Consume any padding
@@ -480,8 +514,13 @@ open class RtpPacket(
          */
         internal fun reset() {
             val extLength =
-                if (hasExtensions) extensionBlockLength - HeaderExtensionHelpers.TOP_LEVEL_EXT_HEADER_SIZE_BYTES
-                else 0
+                if (hasEncodedExtensions) {
+                    val extensionBlockLength = HeaderExtensionHelpers.getExtensionsTotalLength(
+                        buffer, offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4
+                    )
+
+                    extensionBlockLength - HeaderExtensionHelpers.TOP_LEVEL_EXT_HEADER_SIZE_BYTES
+                } else 0
 
             if (extLength <= 0) {
                 // No extensions
@@ -489,9 +528,9 @@ open class RtpPacket(
                 remainingLength = -1
             } else {
                 nextOffset = offset +
-                        RtpHeader.FIXED_HEADER_SIZE_BYTES +
-                        csrcCount * 4 +
-                        RtpHeader.EXT_HEADER_SIZE_BYTES
+                    RtpHeader.FIXED_HEADER_SIZE_BYTES +
+                    csrcCount * 4 +
+                    RtpHeader.EXT_HEADER_SIZE_BYTES
 
                 remainingLength = extLength
             }
