@@ -94,6 +94,12 @@ public class VideobridgeStatistics
     public static final String OUTGOING_LOSS = "outgoing_loss";
 
     /**
+     * The number of times our AIMDs have expired the incoming bitrate
+     * (and which would otherwise result in video suspension).
+     */
+    private static final String AIMD_BWE_EXPIRATIONS = "aimd_bwe_expirations";
+
+    /**
      * Fraction of incoming and outgoing packets that were lost.
      */
     public static final String OVERALL_LOSS = "overall_loss";
@@ -211,6 +217,7 @@ public class VideobridgeStatistics
         double bitrateUploadBps = 0;
         long packetRateUpload = 0;
         long packetRateDownload = 0;
+        int incomingBitrateExpirations = 0;
 
         // Packets we received
         long incomingPacketsReceived = 0;
@@ -329,6 +336,13 @@ public class VideobridgeStatistics
                 bitrateUploadBps += outgoingStats.getBitrate();
                 packetRateUpload += outgoingStats.getPacketRate();
 
+                Number incomingEstimateExpirations
+                    = transceiverStats.getBandwidthEstimatorStats().getNumber("incomingEstimateExpirations");
+                if (incomingEstimateExpirations != null)
+                {
+                    incomingBitrateExpirations += incomingEstimateExpirations.intValue();
+                }
+
                 EndpointConnectionStats.Snapshot endpointConnectionStats
                         = transceiverStats.getEndpointConnectionStats();
                 double endpointRtt = endpointConnectionStats.getRtt();
@@ -439,6 +453,7 @@ public class VideobridgeStatistics
                     bitrateUploadBps / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
+            unlockedSetStat(AIMD_BWE_EXPIRATIONS, incomingBitrateExpirations);
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
