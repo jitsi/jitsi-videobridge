@@ -122,7 +122,8 @@ class SingleSourceAllocation
 
             boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
             boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getMaxHeight();
-            boolean atLeastPreferredFps = layer.getFrameRate() >= preferredFps;
+            // If frame rate is unknown, consider it to be sufficient.
+            boolean atLeastPreferredFps = layer.getFrameRate() < 0 || layer.getFrameRate() >= preferredFps;
 
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
