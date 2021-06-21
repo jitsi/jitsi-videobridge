@@ -154,8 +154,10 @@ class SingleSourceAllocation
                         .addField("remote_endpoint_id", endpoint.getId());
             for (LayerSnapshot layerSnapshot : ratesList)
             {
+                RtpLayerDesc l = layerSnapshot.layer;
                 ratesTimeSeriesPoint.addField(
-                        layerSnapshot.layer.getHeight() + "p_" + layerSnapshot.layer.getFrameRate() + "fps_bps",
+                        RtpLayerDesc.indexString(l.getIndex()) +
+                            "_" + l.getHeight() + "p_" + l.getFrameRate() + "fps_bps",
                         layerSnapshot.bitrate);
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
