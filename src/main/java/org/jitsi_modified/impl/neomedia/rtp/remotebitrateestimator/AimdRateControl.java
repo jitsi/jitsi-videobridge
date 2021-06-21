@@ -44,6 +44,8 @@ class AimdRateControl
 
     private static final long kInitializationTimeMs = 5000;
 
+    private static final long kFirstIncomingEstimateExpirationMs = 2 * kInitializationTimeMs;
+
     private static final long kLogIntervalMs = 1000;
 
     private static final long kMaxFeedbackIntervalMs = 1000;
@@ -61,6 +63,11 @@ class AimdRateControl
     private float beta;
 
     private boolean bitrateIsInitialized;
+
+    /**
+     * the number of time we've expired the initial incoming estimate.
+     */
+    private int incomingBitrateExpirations = 0;
 
     private long currentBitrateBps;
 
@@ -344,6 +351,14 @@ class AimdRateControl
     }
 
     /**
+     * @return the number of time we've expired the initial incoming estimate.
+     */
+    public int getIncomingEstimateExpirations()
+    {
+        return incomingBitrateExpirations;
+    }
+
+    /**
      * Returns <tt>true</tt> if there is a valid estimate of the incoming
      * bitrate, <tt>false</tt> otherwise.
      *
@@ -435,11 +450,28 @@ class AimdRateControl
                 if (input.incomingBitRate > 0L)
                     timeFirstIncomingEstimate = nowMs;
             }
-            else if (nowMs - timeFirstIncomingEstimate > kInitializationTimeMs
-                    && input.incomingBitRate > 0L)
+            else
             {
-                currentBitrateBps = input.incomingBitRate;
-                bitrateIsInitialized = true;
+                long timeSinceFirstIncomingEstimate = nowMs - timeFirstIncomingEstimate;
+                if (timeSinceFirstIncomingEstimate > kFirstIncomingEstimateExpirationMs)
+                {
+                    if (input.incomingBitRate > 0L)
+                    {
+                        timeFirstIncomingEstimate = nowMs;
+                    }
+                    else
+                    {
+                        timeFirstIncomingEstimate = -1L;
+                    }
+
+                    incomingBitrateExpirations++;
+                }
+                else if (timeSinceFirstIncomingEstimate > kInitializationTimeMs
+                    && input.incomingBitRate > 0L)
+                {
+                    currentBitrateBps = input.incomingBitRate;
+                    bitrateIsInitialized = true;
+                }
             }
         }
 

@@ -156,6 +156,17 @@ public class RemoteBitrateEstimatorAbsSendTime
     private final Logger logger;
 
     /**
+     * The number of expirations of the initial estimate of the underlying AIMD.
+     *
+     * @return the number of expirations of the initial estimate of the
+     * underlying AIMD.
+     */
+    public int getIncomingEstimateExpirations()
+    {
+        return remoteRate.getIncomingEstimateExpirations();
+    }
+
+    /**
      * Ctor.
      *
      * @param diagnosticContext the {@link DiagnosticContext} of this instance.
@@ -387,12 +398,12 @@ public class RemoteBitrateEstimatorAbsSendTime
         /**
          * Computes the send-time and recv-time deltas to feed to the estimator.
          */
-        private InterArrival interArrival;
+        private final InterArrival interArrival;
 
         /**
          * The Kalman filter implementation that estimates the jitter.
          */
-        private OveruseEstimator estimator;
+        private final OveruseEstimator estimator;
 
         /**
          * The overuse detector that compares the jitter to an adaptive threshold.

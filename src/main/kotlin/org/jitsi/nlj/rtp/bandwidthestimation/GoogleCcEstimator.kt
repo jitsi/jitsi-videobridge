@@ -110,6 +110,7 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
     override fun getStats(now: Instant): StatisticsSnapshot = StatisticsSnapshot(
         "GoogleCcEstimator", getCurrentBw(now)
     ).apply {
+        addNumber("incomingEstimateExpirations", bitrateEstimatorAbsSendTime.incomingEstimateExpirations)
         addNumber("latestDelayEstimate", sendSideBandwidthEstimation.latestREMB)
         addNumber("latestLossFraction", sendSideBandwidthEstimation.latestFractionLoss / 256.0)
         with(sendSideBandwidthEstimation.statistics) {
