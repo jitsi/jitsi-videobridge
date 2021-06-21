@@ -57,15 +57,7 @@ class TccSeqNumTagger(
 
                     currTccSeqNum++
                 }
-                else -> {
-                    rtpPacket.getHeaderExtension(tccExtId)?.let {
-                        // This is a hack: we don't want to do TCC for audio (since some browsers
-                        // don't support it) but we don't want to strip the existing extension
-                        // either (as its costly), so we merely change its ID to something we
-                        // know (based on Jicofo's offer) is unused.
-                        it.id = 14
-                    }
-                }
+                else -> Unit
             }
         }
 

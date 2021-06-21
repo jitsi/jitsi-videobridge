@@ -44,10 +44,12 @@ import org.jitsi.nlj.transform.node.SrtcpEncryptNode
 import org.jitsi.nlj.transform.node.SrtpEncryptNode
 import org.jitsi.nlj.transform.node.ToggleablePcapWriter
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
+import org.jitsi.nlj.transform.node.outgoing.HeaderExtEncoder
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
+import org.jitsi.nlj.transform.node.outgoing.HeaderExtStripper
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.PacketInfoQueue
@@ -139,10 +141,12 @@ class RtpSenderImpl(
 
         outgoingRtpRoot = pipeline {
             node(AudioRedHandler(streamInformationStore))
+            node(HeaderExtStripper(streamInformationStore))
             node(outgoingPacketCache)
             node(absSendTime)
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
+            node(HeaderExtEncoder())
             node(toggleablePcapWriter.newObserverNode())
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
