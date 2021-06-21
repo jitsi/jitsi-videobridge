@@ -329,6 +329,28 @@ public class ConferenceSpeechActivity
         }
     }
 
+    public void endpointVideoAvailabilityChanged()
+    {
+        boolean endpointsListChanged;
+        synchronized (syncRoot)
+        {
+            endpointsListChanged = updateLastNEndpoints();
+        }
+        if (endpointsListChanged)
+        {
+            TaskPools.IO_POOL.submit(() -> {
+                try
+                {
+                    listener.lastNEndpointsChanged();
+                }
+                catch (Throwable e)
+                {
+                    logger.warn("Failed to fire event", e);
+                }
+            });
+        }
+    }
+
     /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.

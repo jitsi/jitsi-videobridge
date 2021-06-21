@@ -68,10 +68,12 @@ fun main(args: Array<String>) {
     // Before initializing the application programming interfaces (APIs) of
     // Jitsi Videobridge, set any System properties which they use and which
     // may be specified by the command-line arguments.
-    System.setProperty(
-        Videobridge.REST_API_PNAME,
-        cmdLine.getOptionValue("--apis").contains(Videobridge.REST_API).toString()
-    )
+    cmdLine.getOptionValue("--apis")?.let {
+        System.setProperty(
+            Videobridge.REST_API_PNAME,
+            it.contains(Videobridge.REST_API).toString()
+        )
+    }
 
     // Reload the Typesafe config used by ice4j, because the original was initialized before the new system
     // properties were set.
