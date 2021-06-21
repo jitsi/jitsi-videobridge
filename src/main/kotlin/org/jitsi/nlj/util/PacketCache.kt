@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.util
 
-import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.rtp.rtp.RtpPacket
+import java.util.Collections
 
 /**
  * Creates a packet cache for packets by SSRC
@@ -35,11 +35,36 @@ class PacketCache(
      */
     val size: Int = 500
 ) : NodeStatsProducer {
-    private val packetCaches: MutableMap<Long, RtpPacketCache> = ConcurrentHashMap()
+    private val packetCaches = Collections.synchronizedMap(
+        LinkedHashMap<Long, RtpPacketCache>(
+            // These are the default values of initialCapacity and loadFactor - we have to set them to be able to set
+            // accessOrder
+            16, /* initialCapacity */
+            0.75F, /* loadFactor */
+            true /* accessOrder */
+        )
+    )
+
     private var stopped = false
 
     private fun getCache(ssrc: Long): RtpPacketCache {
-        return packetCaches.computeIfAbsent(ssrc) { RtpPacketCache(size) }
+        return packetCaches.computeIfAbsent(ssrc) { RtpPacketCache(size) }.also { it.setLastAccess() }
+            .also { expireCaches(it.lastAccessMillis) }
+    }
+
+    private fun expireCaches(now: Long) {
+        synchronized(packetCaches) {
+            val i = packetCaches.iterator()
+            while (i.hasNext()) {
+                val cache = i.next().value
+                if (now - cache.lastAccessMillis >= MAX_CACHE_LIFETIME_MILLIS) {
+                    cache.flush()
+                    i.remove()
+                } else {
+                    break
+                }
+            }
+        }
     }
 
     /**
@@ -75,6 +100,10 @@ class PacketCache(
             aggregate(it.getNodeStats())
         }
     }
+
+    companion object {
+        val MAX_CACHE_LIFETIME_MILLIS = 15000
+    }
 }
 
 /**
@@ -88,11 +117,30 @@ class RtpPacketCache(
     cloneItem = RtpPacket::clone,
     synchronize = synchronize
 ) {
+    var lastAccessMillis: Long = 0
+        private set
 
     private val rfc3711IndexTracker = Rfc3711IndexTracker()
 
     override fun discardItem(item: RtpPacket) {
         BufferPool.returnBuffer(item.buffer)
+    }
+
+    fun setLastAccess() {
+        if (synchronize) {
+            synchronized(syncRoot) {
+                doSetLastAccess()
+            }
+        } else {
+            doSetLastAccess()
+        }
+    }
+
+    private fun doSetLastAccess() {
+        val t = clock.millis()
+        if (lastAccessMillis < t) {
+            lastAccessMillis = t
+        }
     }
 
     /**

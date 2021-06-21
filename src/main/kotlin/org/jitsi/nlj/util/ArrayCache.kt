@@ -32,11 +32,11 @@ import org.jitsi.nlj.transform.NodeStatsProducer
 open class ArrayCache<T>(
     val size: Int,
     private val cloneItem: (T) -> T,
-    private val synchronize: Boolean = true,
+    protected val synchronize: Boolean = true,
     /**
      * The function to use to clone items. The cache always saves copies of the items that are inserted.
      */
-    private val clock: Clock = Clock.systemUTC()
+    protected val clock: Clock = Clock.systemUTC()
 ) : NodeStatsProducer {
     private val cache: Array<Container> = Array(size) { Container() }
     protected val syncRoot = Any()
