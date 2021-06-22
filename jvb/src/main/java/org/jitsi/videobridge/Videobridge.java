@@ -747,6 +747,13 @@ public class Videobridge
     public static class Statistics
     {
         /**
+         * The total number of times our AIMDs have expired the incoming bitrate
+         * (and which would otherwise result in video suspension).
+         * (see {@link AimdRateControl#incomingBitrateExpirations}).
+         */
+        public AtomicInteger incomingBitrateExpirations = new AtomicInteger(0);
+
+        /**
          * The cumulative/total number of conferences that had all of their
          * channels failed because there was no transport activity (which
          * includes those that failed because there was no payload activity).

@@ -438,7 +438,7 @@ class Endpoint @JvmOverloads constructor(
         }
 
         packetInfo.sent()
-        if (timelineLogger.isTraceEnabled() && logTimeline()) {
+        if (timelineLogger.isTraceEnabled && logTimeline()) {
             timelineLogger.trace { packetInfo.timeline.toString() }
         }
         iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
@@ -954,6 +954,13 @@ class Endpoint @JvmOverloads constructor(
             totalPacketsReceived.addAndGet(incomingStats.packets)
             totalBytesSent.addAndGet(outgoingStats.bytes)
             totalPacketsSent.addAndGet(outgoingStats.packets)
+        }
+
+        conference.videobridge.statistics.apply {
+            val bweStats = transceiverStats.bandwidthEstimatorStats
+            bweStats.getNumber("incomingEstimateExpirations")?.toInt()?.let {
+                incomingBitrateExpirations.addAndGet(it)
+            }
         }
 
         run {
