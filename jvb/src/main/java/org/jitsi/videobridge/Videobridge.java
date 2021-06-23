@@ -125,7 +125,7 @@ public class Videobridge
 
     @NotNull private final ShutdownServiceImpl shutdownService;
 
-    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
+    private final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
     static
     {
@@ -241,7 +241,7 @@ public class Videobridge
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
 
-        eventEmitter.fireEventSync(handler ->
+        eventEmitter.fireEvent(handler ->
         {
             handler.conferenceCreated(conference);
             return Unit.INSTANCE;
@@ -283,7 +283,7 @@ public class Videobridge
             {
                 conferencesById.remove(id);
                 conference.expire();
-                eventEmitter.fireEventSync(handler ->
+                eventEmitter.fireEvent(handler ->
                 {
                     handler.conferenceExpired(conference);
                     return Unit.INSTANCE;
