@@ -102,7 +102,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
     private final Clock clock;
 
-    private final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
+    private final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
     /**
      * Whether bandwidth allocation should be constrained to the available bandwidth (when {@code true}), or assume
@@ -237,7 +237,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
         if (allocationChanged)
         {
-            eventEmitter.fireEventSync(handler -> {
+            eventEmitter.fireEvent(handler -> {
                 handler.allocationChanged(newAllocation);
                 return Unit.INSTANCE;
             });
@@ -249,7 +249,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 + " effectiveConstraintsChanged=" + effectiveConstraintsChanged);
         if (effectiveConstraintsChanged)
         {
-            eventEmitter.fireEventSync(handler ->
+            eventEmitter.fireEvent(handler ->
             {
                 handler.effectiveVideoConstraintsChanged(oldEffectiveConstraints, effectiveConstraints);
                 return Unit.INSTANCE;

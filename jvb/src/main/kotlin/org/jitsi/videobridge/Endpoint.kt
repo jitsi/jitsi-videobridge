@@ -281,7 +281,7 @@ class Endpoint @JvmOverloads constructor(
         private set(value) {
             val wasEmpty = transceiver.getMediaSources().isEmpty()
             if (transceiver.setMediaSources(value)) {
-                eventEmitter.fireEventSync { sourcesChanged() }
+                eventEmitter.fireEvent { sourcesChanged() }
             }
             if (wasEmpty) {
                 sendVideoConstraints(maxReceiverVideoConstraints)
@@ -318,7 +318,7 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.eventHandler = object : IceTransport.EventHandler {
             override fun connected() {
                 logger.info("ICE connected")
-                eventEmitter.fireEventSync { iceSucceeded() }
+                eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         outgoingSrtpPacketQueue.add(packetInfo)
@@ -329,7 +329,7 @@ class Endpoint @JvmOverloads constructor(
             }
 
             override fun failed() {
-                eventEmitter.fireEventSync { iceFailed() }
+                eventEmitter.fireEvent { iceFailed() }
             }
 
             override fun consentUpdated(time: Instant) {

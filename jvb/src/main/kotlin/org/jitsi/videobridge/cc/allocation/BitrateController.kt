@@ -21,7 +21,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.utils.event.EventEmitter
+import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -51,7 +51,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
-    val eventEmitter = EventEmitter<EventHandler>()
+    val eventEmitter = SyncEventEmitter<EventHandler>()
 
     private val bitrateAllocatorEventHandler = BitrateAllocatorEventHandler()
     /**
@@ -284,13 +284,13 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             val newForwardedEndpoints = allocation.forwardedEndpoints
             if (forwardedEndpoints != newForwardedEndpoints) {
                 forwardedEndpoints = newForwardedEndpoints
-                eventEmitter.fireEventSync { forwardedEndpointsChanged(newForwardedEndpoints) }
+                eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
             }
 
             oversendingTimeTracker.setState(allocation.oversending)
 
             // TODO: this is for testing only. Should we change the tests to work with [BitrateAllocator] directly?
-            eventEmitter.fireEventSync { allocationChanged(allocation) }
+            eventEmitter.fireEvent { allocationChanged(allocation) }
         }
 
         override fun effectiveVideoConstraintsChanged(
@@ -298,7 +298,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             newEffectiveConstraints: Map<String, VideoConstraints>
         ) {
             // Forward to the outer EventHandler.
-            eventEmitter.fireEventSync {
+            eventEmitter.fireEvent {
                 effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
             }
         }
