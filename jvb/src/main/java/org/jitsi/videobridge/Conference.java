@@ -17,6 +17,7 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.rtp.AudioRtpPacket;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
@@ -208,6 +209,7 @@ public class Conference
         this.shim = new ConferenceShim(this, logger);
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
+        speechActivity.setTossedPacketsEnergyStats(videobridge.getStatistics().tossedPacketsEnergy);
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
             try
             {
@@ -962,29 +964,35 @@ public class Conference
         // is also interested in the packet.  We'll give the last handler the
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
-        for (Endpoint endpoint : endpointsCache)
-        {
-            if (endpoint.getId().equals(sourceEndpointId))
-            {
-                continue;
-            }
 
-            if (endpoint.wants(packetInfo))
+        boolean discard = packetInfo.getPacket() instanceof AudioRtpPacket
+            && !speechActivity.isAmongLoudest(sourceEndpointId);
+        if(!discard)
+        {
+            for (Endpoint endpoint : endpointsCache)
+            {
+                if (endpoint.getId().equals(sourceEndpointId))
+                {
+                    continue;
+                }
+
+                if (endpoint.wants(packetInfo))
+                {
+                    if (prevHandler != null)
+                    {
+                        prevHandler.send(packetInfo.clone());
+                    }
+                    prevHandler = endpoint;
+                }
+            }
+            if (tentacle != null && tentacle.wants(packetInfo))
             {
                 if (prevHandler != null)
                 {
                     prevHandler.send(packetInfo.clone());
                 }
-                prevHandler = endpoint;
+                prevHandler = tentacle;
             }
-        }
-        if (tentacle != null && tentacle.wants(packetInfo))
-        {
-            if (prevHandler != null)
-            {
-                prevHandler.send(packetInfo.clone());
-            }
-            prevHandler = tentacle;
         }
 
         if (prevHandler != null)

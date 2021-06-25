@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.stats.BucketStats;
 import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
@@ -103,6 +104,10 @@ public class ConferenceSpeechActivity
                         parentLogger.createChildLogger(ConferenceSpeechActivity.class.getName());
 
         dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
+        dominantSpeakerIdentification.setLoudestConfig(LoudestConfig.Companion.getNumLoudest(),
+                LoudestConfig.Companion.getAlwaysRouteDominant(),
+                LoudestConfig.Companion.getEnergyExpireTimeMs(),
+                LoudestConfig.Companion.getEnergyAlphaPct());
     }
 
     /**
@@ -257,6 +262,16 @@ public class ConferenceSpeechActivity
             i++;
         }
         return false;
+    }
+
+    public boolean isAmongLoudest(String endpointId)
+    {
+        return dominantSpeakerIdentification.isAmongLoudestSpeakers(endpointId);
+    }
+
+    public void setTossedPacketsEnergyStats(BucketStats tossedPacketsEnergyStats_)
+    {
+        dominantSpeakerIdentification.setTossedPacketsEnergyStats(tossedPacketsEnergyStats_);
     }
 
     /**
