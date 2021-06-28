@@ -28,10 +28,25 @@ class TransportConfig {
 
 class LoudestConfig {
     companion object {
-        @JvmStatic val numLoudest: Int by config("videobridge.loudest.numLoudest".from(JitsiConfig.newConfig))
-        @JvmStatic val alwaysRouteDominant: Boolean by config("videobridge.loudest.alwaysRouteDominant".from(JitsiConfig.newConfig))
-        @JvmStatic val energyExpireTimeMs: Int by config("videobridge.loudest.energyExpireTimeMs".from(JitsiConfig.newConfig))
-        @JvmStatic val energyAlphaPct: Int by config("videobridge.loudest.energyAlphaPct".from(JitsiConfig.newConfig))
-        @JvmStatic val energyDiscardAlarmThreshold: Int by config("videobridge.loudest.energyDiscardAlarmThreshold".from(JitsiConfig.newConfig))
+        @JvmStatic
+        val numLoudest: Int by config(
+            "videobridge.loudest.numLoudest".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val alwaysRouteDominant: Boolean by config(
+            "videobridge.loudest.alwaysRouteDominant".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val energyExpireTimeMs: Int by config(
+            "videobridge.loudest.energyExpireTimeMs".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val energyAlphaPct: Int by config(
+            "videobridge.loudest.energyAlphaPct".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val energyDiscardAlarmThreshold: Int by config(
+            "videobridge.loudest.energyDiscardAlarmThreshold".from(JitsiConfig.newConfig)
+        )
     }
 }
