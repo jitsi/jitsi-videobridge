@@ -16,8 +16,8 @@
 package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.util.byteBufferOf
 
@@ -25,42 +25,44 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     val rembPacket1Buf = byteBufferOf(
-            0x8f, 0xce, 0x00, 0x05,
-            0xfe, 0x93, 0x23, 0x03,
-            0x00, 0x00, 0x00, 0x00,
-            0x52, 0x45, 0x4d, 0x42,
-            0x01, 0x0b, 0xa4, 0x5a,
-            0x9e, 0x72, 0x01, 0xc1
+        0x8f, 0xce, 0x00, 0x05,
+        0xfe, 0x93, 0x23, 0x03,
+        0x00, 0x00, 0x00, 0x00,
+        0x52, 0x45, 0x4d, 0x42,
+        0x01, 0x0b, 0xa4, 0x5a,
+        0x9e, 0x72, 0x01, 0xc1
     )
 
     val rembPacket2Buf = byteBufferOf(
-            0x8f, 0xce, 0x00, 0x06,
-            0xfe, 0x93, 0x23, 0x03,
-            0x00, 0x00, 0x00, 0x00,
-            0x52, 0x45, 0x4d, 0x42,
-            0x02, 0x0b, 0xb4, 0x5a,
-            0x9e, 0x72, 0x01, 0xc1,
-            0x9e, 0x23, 0x54, 0xa3
+        0x8f, 0xce, 0x00, 0x06,
+        0xfe, 0x93, 0x23, 0x03,
+        0x00, 0x00, 0x00, 0x00,
+        0x52, 0x45, 0x4d, 0x42,
+        0x02, 0x0b, 0xb4, 0x5a,
+        0x9e, 0x72, 0x01, 0xc1,
+        0x9e, 0x23, 0x54, 0xa3
     )
 
     val rembPacket3Buf = byteBufferOf(
-            0x8f, 0xce, 0x00, 0x06,
-            0xfe, 0x93, 0x23, 0x03,
-            0x00, 0x00, 0x00, 0x00,
-            0x52, 0x45, 0x4d, 0x42,
-            0x02, 0xff, 0xff, 0xff,
-            0x9e, 0x72, 0x01, 0xc1,
-            0x9e, 0x23, 0x54, 0xa3
+        0x8f, 0xce, 0x00, 0x06,
+        0xfe, 0x93, 0x23, 0x03,
+        0x00, 0x00, 0x00, 0x00,
+        0x52, 0x45, 0x4d, 0x42,
+        0x02, 0xff, 0xff, 0xff,
+        0x9e, 0x72, 0x01, 0xc1,
+        0x9e, 0x23, 0x54, 0xa3
     )
 
     init {
         context("Creating an RtcpFbRembPacket") {
             context("from normal values") {
-                val rembPacket = RtcpFbRembPacketBuilder(rtcpHeader = RtcpHeaderBuilder(
+                val rembPacket = RtcpFbRembPacketBuilder(
+                    rtcpHeader = RtcpHeaderBuilder(
                         senderSsrc = 4567L
-                ),
-                        ssrcs = listOf(1234L),
-                        brBps = 1_000_000L).build()
+                    ),
+                    ssrcs = listOf(1234L),
+                    brBps = 1_000_000L
+                ).build()
 
                 should("set the values correctly") {
                     rembPacket.senderSsrc shouldBe 4567L
@@ -69,11 +71,13 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
                 }
             }
             context("from values which overflow the field size by a lot") {
-                val rembPacket = RtcpFbRembPacketBuilder(rtcpHeader = RtcpHeaderBuilder(
+                val rembPacket = RtcpFbRembPacketBuilder(
+                    rtcpHeader = RtcpHeaderBuilder(
                         senderSsrc = 4567L
-                ),
-                        ssrcs = listOf(1234L),
-                        brBps = Long.MAX_VALUE).build()
+                    ),
+                    ssrcs = listOf(1234L),
+                    brBps = Long.MAX_VALUE
+                ).build()
 
                 should("set the values correctly") {
                     rembPacket.senderSsrc shouldBe 4567L
@@ -84,11 +88,13 @@ internal class RtcpFbRembPacketTest : ShouldSpec() {
                 }
             }
             context("from values which overflow the field size by a little") {
-                val rembPacket = RtcpFbRembPacketBuilder(rtcpHeader = RtcpHeaderBuilder(
+                val rembPacket = RtcpFbRembPacketBuilder(
+                    rtcpHeader = RtcpHeaderBuilder(
                         senderSsrc = 4567L
-                ),
-                        ssrcs = listOf(1234L),
-                        brBps = 50_000_000L).build()
+                    ),
+                    ssrcs = listOf(1234L),
+                    brBps = 50_000_000L
+                ).build()
 
                 should("set the values correctly") {
                     rembPacket.senderSsrc shouldBe 4567L

@@ -17,9 +17,9 @@
 package org.jitsi.rtp.rtp
 
 import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
-import io.kotest.core.spec.style.ShouldSpec
 import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 
 // TODO: sets shouldn't change any other field

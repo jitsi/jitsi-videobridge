@@ -41,11 +41,11 @@ class RtpUtilsTest : ShouldSpec() {
         context("applySequenceNumberDelta") {
             should("work correctly") {
                 forAll(
-                        row(10, -9, 1),
-                        row(1, 9, 10),
-                        row(65530, 7, 1),
-                        row(1, -7, 65530),
-                        row(1234, 0, 1234)
+                    row(10, -9, 1),
+                    row(1, 9, 10),
+                    row(65530, 7, 1),
+                    row(1, -7, 65530),
+                    row(1234, 0, 1234)
                 ) { start, delta, expected ->
                     RtpUtils.applySequenceNumberDelta(start, delta) shouldBe expected
                 }
@@ -109,11 +109,11 @@ class RtpUtilsTest : ShouldSpec() {
         context("sequenceNumbersBetween") {
             should("contain all sequence numbers between 2 values") {
                 RtpUtils.sequenceNumbersBetween(1, 10).toList() shouldContainInOrder
-                        listOf(2, 3, 4, 5, 6, 7, 8, 9)
+                    listOf(2, 3, 4, 5, 6, 7, 8, 9)
             }
             should("contain all sequence numbers between 2 values, even with rollover") {
                 RtpUtils.sequenceNumbersBetween(65530, 5).toList() shouldContainInOrder
-                        listOf(65531, 65532, 65533, 65535, 0, 1, 2, 3, 4)
+                    listOf(65531, 65532, 65533, 65535, 0, 1, 2, 3, 4)
             }
         }
     }

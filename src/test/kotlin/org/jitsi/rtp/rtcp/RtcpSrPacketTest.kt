@@ -17,12 +17,12 @@
 package org.jitsi.rtp.rtcp
 
 import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.core.spec.style.ShouldSpec
-import java.nio.ByteBuffer
 import org.jitsi.rtp.util.byteBufferOf
+import java.nio.ByteBuffer
 
 internal class RtcpSrPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

@@ -17,7 +17,6 @@
 package org.jitsi.rtp.rtp
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import kotlin.experimental.or
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.rtp.extensions.bytearray.putShort
@@ -26,6 +25,7 @@ import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.isPadding
+import kotlin.experimental.or
 /**
  *
  * https://tools.ietf.org/html/rfc3550#section-5.1

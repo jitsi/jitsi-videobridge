@@ -57,7 +57,8 @@ class RtcpReportBlock(
         interarrivalJitter: Long,
         lastSrTimestamp: Long,
         delaySinceLastSr: Long
-    ) : this(ssrc, fractionLost, cumulativePacketsLost,
+    ) : this(
+        ssrc, fractionLost, cumulativePacketsLost,
         ((seqNumCycles shl 16) + seqNum.toShort()).toPositiveLong(),
         interarrivalJitter, lastSrTimestamp, delaySinceLastSr
     )
@@ -98,8 +99,10 @@ class RtcpReportBlock(
             val lastSrTimestamp = getLastSrTimestamp(buffer, offset)
             val delaySinceLastSr = getDelaySinceLastSr(buffer, offset)
 
-            return RtcpReportBlock(ssrc, fractionLost, cumulativePacketsLost, extendedHighestSeqNum,
-                interarrivalJitter, lastSrTimestamp, delaySinceLastSr)
+            return RtcpReportBlock(
+                ssrc, fractionLost, cumulativePacketsLost, extendedHighestSeqNum,
+                interarrivalJitter, lastSrTimestamp, delaySinceLastSr
+            )
         }
 
         fun getSsrc(buffer: ByteArray, offset: Int): Long =

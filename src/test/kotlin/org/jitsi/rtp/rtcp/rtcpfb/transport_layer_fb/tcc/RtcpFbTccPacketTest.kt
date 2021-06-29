@@ -152,7 +152,8 @@ class RtcpFbTccPacketTest : ShouldSpec() {
             }
             context("with mixed chunk types and a negative delta") {
                 val rtcpFbTccPacket = RtcpFbTccPacket(
-                    tccMixedChunkTypeData.array(), tccMixedChunkTypeData.arrayOffset(), tccMixedChunkTypeData.limit())
+                    tccMixedChunkTypeData.array(), tccMixedChunkTypeData.arrayOffset(), tccMixedChunkTypeData.limit()
+                )
                 should("parse the values correctly") {
                     rtcpFbTccPacket.forEach {
                         it should beInstanceOf<ReceivedPacketReport>()

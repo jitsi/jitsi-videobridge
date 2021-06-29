@@ -53,7 +53,8 @@ abstract class Packet(
             System.arraycopy(
                 buffer, offset,
                 this, bytesToLeaveAtStart,
-                length)
+                length
+            )
         }
 
     companion object {

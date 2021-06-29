@@ -16,10 +16,10 @@
 
 package org.jitsi.rtp.rtp.header_extensions
 
-import kotlin.experimental.and
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.getShortAsInt
 import unsigned.ushr
+import kotlin.experimental.and
 import kotlin.experimental.or
 
 class HeaderExtensionHelpers {

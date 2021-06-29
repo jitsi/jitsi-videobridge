@@ -34,5 +34,6 @@ class UnparsedPacket(
         UnparsedPacket(
             cloneBuffer(RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET),
             RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length)
+            length
+        )
 }

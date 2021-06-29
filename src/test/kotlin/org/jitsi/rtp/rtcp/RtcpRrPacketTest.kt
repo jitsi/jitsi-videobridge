@@ -17,10 +17,10 @@
 package org.jitsi.rtp.rtcp
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.should
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.haveSize
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
 import java.nio.ByteBuffer
 
 internal class RtcpRrPacketTest : ShouldSpec() {

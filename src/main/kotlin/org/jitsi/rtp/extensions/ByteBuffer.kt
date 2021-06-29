@@ -15,9 +15,9 @@
  */
 package org.jitsi.rtp.extensions
 
-import java.nio.ByteBuffer
 import org.jitsi.rtp.util.BufferPool
 import unsigned.toUInt
+import java.nio.ByteBuffer
 
 /**
  * Return a (deep) copy of this ByteBuffer.
@@ -138,8 +138,10 @@ fun ByteBuffer.toHex(): String {
  */
 fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer {
     if (startPosition + size > limit()) {
-        throw Exception("SubBuffer goes beyond the buffer's limit " +
-                "(limit ${limit()}, requested end of buffer ${startPosition + size})")
+        throw Exception(
+            "SubBuffer goes beyond the buffer's limit " +
+                "(limit ${limit()}, requested end of buffer ${startPosition + size})"
+        )
     }
     return (duplicate().position(startPosition).limit(startPosition + size) as ByteBuffer).slice()
 }

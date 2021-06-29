@@ -47,9 +47,9 @@ class RtcpByePacket(
     val ssrcs: List<Long> by lazy {
         val ssrcStartOffset = offset + 4
         (0 until reportCount)
-                .map { buffer.getInt(ssrcStartOffset + it * 4) }
-                .map(Int::toPositiveLong)
-                .toList()
+            .map { buffer.getInt(ssrcStartOffset + it * 4) }
+            .map(Int::toPositiveLong)
+            .toList()
     }
 
     val reason: String? by lazy {

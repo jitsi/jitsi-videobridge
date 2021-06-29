@@ -73,7 +73,7 @@ class RtpUtils {
          */
         @JvmStatic
         fun applySequenceNumberDelta(start: Int, delta: Int): Int =
-                (start + delta) and 0xffff
+            (start + delta) and 0xffff
 
         /**
          * Apply a delta to a given RTP timestamp and return the result (taking

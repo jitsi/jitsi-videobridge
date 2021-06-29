@@ -43,7 +43,8 @@ class RedPacketParser<PacketType : RtpPacket>(
         do {
             if (currentOffset > length) {
                 throw IllegalArgumentException(
-                    "Invalid RED packet: no last header block found within the allowed length.")
+                    "Invalid RED packet: no last header block found within the allowed length."
+                )
             }
             val blockHeader = BlockHeader.parse(buffer, currentOffset)
             when (blockHeader) {
@@ -175,8 +176,8 @@ class RedundancyBlockHeader(
      */
     val timestampOffset: Int,
     /**
-    * The length of the block's payload in bytes.
-    */
+     * The length of the block's payload in bytes.
+     */
     val length: Int
 ) : BlockHeader(pt) {
     override val headerLength = 4
@@ -195,7 +196,8 @@ internal class RtpRedPacket(buffer: ByteArray, offset: Int, length: Int) : RtpPa
         RtpRedPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length)
+            length
+        )
 
     companion object {
         val parser = RedPacketParser { b, o, l -> RtpPacket(b, o, l) }
@@ -218,7 +220,8 @@ class RedPacketBuilder<PacketType : RtpPacket>(val createPacket: (ByteArray, Int
         System.arraycopy(
             primary.buffer, primary.offset,
             buf, currentOffset,
-            primaryHeaderLength)
+            primaryHeaderLength
+        )
         currentOffset += primaryHeaderLength
 
         var redHeaderOffset = currentOffset
@@ -232,7 +235,8 @@ class RedPacketBuilder<PacketType : RtpPacket>(val createPacket: (ByteArray, Int
             val header = RedundancyBlockHeader(
                 it.payloadType.toByte(),
                 getTimestampDiffAsInt(primary.timestamp, it.timestamp),
-                payloadLength)
+                payloadLength
+            )
             redHeaderOffset += header.write(buf, redHeaderOffset)
 
             System.arraycopy(

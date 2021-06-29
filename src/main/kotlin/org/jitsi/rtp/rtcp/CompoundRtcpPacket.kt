@@ -69,6 +69,8 @@ class CompoundRtcpContainedInvalidDataException(
     compoundRtcpLength: Int,
     invalidDataOffset: Int,
     invalidDataReason: String
-) : Exception("Compound RTCP contained invalid data.  Compound RTCP packet data is: " +
-    "${compoundRtcpBuf.toHex(compoundRtcpOffset, compoundRtcpLength)} Invalid data " +
-    "started at offset ${invalidDataOffset - compoundRtcpOffset} and failed due to '$invalidDataReason'")
+) : Exception(
+    "Compound RTCP contained invalid data.  Compound RTCP packet data is: " +
+        "${compoundRtcpBuf.toHex(compoundRtcpOffset, compoundRtcpLength)} Invalid data " +
+        "started at offset ${invalidDataOffset - compoundRtcpOffset} and failed due to '$invalidDataReason'"
+)

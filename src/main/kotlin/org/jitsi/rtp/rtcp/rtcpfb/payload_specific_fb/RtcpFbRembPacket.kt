@@ -90,7 +90,7 @@ class RtcpFbRembPacket(
         fun getBrExp(buf: ByteArray, baseOffset: Int): Int =
             buf.getBitsAsInt(baseOffset + BR_OFF, 0, 6)
         fun getBrMantissa(buf: ByteArray, baseOffset: Int): Int =
-                (buf.getBitsAsInt(baseOffset + BR_OFF, 6, 2) shl 16) + buf.getShortAsInt(baseOffset + BR_OFF + 1)
+            (buf.getBitsAsInt(baseOffset + BR_OFF, 6, 2) shl 16) + buf.getShortAsInt(baseOffset + BR_OFF + 1)
         fun getBitrate(buf: ByteArray, baseOffset: Int): Long {
             val mantissa = getBrMantissa(buf, baseOffset)
             val exp = getBrExp(buf, baseOffset)
@@ -163,7 +163,7 @@ class RtcpFbRembPacketBuilder(
     val brBps: Long
 ) {
     private val sizeBytes: Int = RtcpFbPacket.HEADER_SIZE +
-            REMB_LEN + NUM_SSRC_LEN + BR_LEN + ssrcs.size * 4
+        REMB_LEN + NUM_SSRC_LEN + BR_LEN + ssrcs.size * 4
 
     fun build(): RtcpFbRembPacket {
         val buf = BufferPool.getArray(sizeBytes)

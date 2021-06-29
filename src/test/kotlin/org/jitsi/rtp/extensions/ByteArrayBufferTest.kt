@@ -1,9 +1,9 @@
 package org.jitsi.rtp.extensions
 
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
-import org.jitsi.rtp.extensions.bytearray.byteArrayOf
+import io.kotest.matchers.shouldBe
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 
 class ByteArrayBufferTest : ShouldSpec() {
     private val buffer = byteArrayOf(

@@ -15,14 +15,14 @@
  */
 package org.jitsi.rtp.extensions
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.style.ShouldSpec
-import java.nio.ByteBuffer
 import org.jitsi.rtp.util.byteBufferOf
 import org.jitsi.test_helpers.matchers.haveSameContentAs
+import java.nio.ByteBuffer
 
 class ByteBufferExtensionsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

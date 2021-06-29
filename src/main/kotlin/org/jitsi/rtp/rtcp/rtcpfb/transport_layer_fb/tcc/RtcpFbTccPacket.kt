@@ -17,8 +17,6 @@
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import java.time.Duration
-import java.time.temporal.ChronoUnit
 import org.jitsi.rtp.extensions.bytearray.put3Bytes
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
@@ -40,6 +38,8 @@ import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.get3BytesAsInt
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getShortAsInt
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 
 sealed class PacketReport(val seqNum: Int)
 
@@ -66,7 +66,8 @@ class ReceivedPacketReport(seqNum: Int, val deltaTicks: Short) : PacketReport(se
  */
 @SuppressFBWarnings(
     value = ["NM_METHOD_NAMING_CONVENTION"],
-    justification = "This class is a port and use the original names.")
+    justification = "This class is a port and use the original names."
+)
 class RtcpFbTccPacketBuilder(
     val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
     var mediaSourceSsrc: Long = -1,
@@ -262,7 +263,8 @@ class RtcpFbTccPacketBuilder(
  */
 @SuppressFBWarnings(
     value = ["NM_METHOD_NAMING_CONVENTION"],
-    justification = "This class is a port and use the original names.")
+    justification = "This class is a port and use the original names."
+)
 class RtcpFbTccPacket(
     buffer: ByteArray,
     offset: Int,
