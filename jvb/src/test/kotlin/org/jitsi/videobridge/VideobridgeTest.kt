@@ -21,8 +21,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.mockk
 import io.mockk.verify
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.shutdown.ShutdownServiceImpl
+import org.jitsi.utils.OrderedJsonObject
 import org.jivesoftware.smack.packet.ErrorIQ
 import org.jivesoftware.smack.packet.XMPPError
 import org.json.simple.parser.JSONParser
