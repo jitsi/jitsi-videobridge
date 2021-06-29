@@ -22,13 +22,13 @@ import org.jitsi.nlj.format.OtherAudioPayloadType
 import org.jitsi.nlj.format.OtherVideoPayloadType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.PayloadTypeEncoding.Companion.createFrom
-import org.jitsi.nlj.format.PayloadTypeEncoding.VP8
-import org.jitsi.nlj.format.PayloadTypeEncoding.VP9
 import org.jitsi.nlj.format.PayloadTypeEncoding.H264
 import org.jitsi.nlj.format.PayloadTypeEncoding.OPUS
-import org.jitsi.nlj.format.PayloadTypeEncoding.RTX
-import org.jitsi.nlj.format.PayloadTypeEncoding.RED
 import org.jitsi.nlj.format.PayloadTypeEncoding.OTHER
+import org.jitsi.nlj.format.PayloadTypeEncoding.RED
+import org.jitsi.nlj.format.PayloadTypeEncoding.RTX
+import org.jitsi.nlj.format.PayloadTypeEncoding.VP8
+import org.jitsi.nlj.format.PayloadTypeEncoding.VP9
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.format.VideoRedPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType

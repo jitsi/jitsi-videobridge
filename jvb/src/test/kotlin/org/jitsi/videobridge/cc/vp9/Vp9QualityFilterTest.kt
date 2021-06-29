@@ -16,8 +16,8 @@
 
 package org.jitsi.videobridge.cc.vp9
 
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging

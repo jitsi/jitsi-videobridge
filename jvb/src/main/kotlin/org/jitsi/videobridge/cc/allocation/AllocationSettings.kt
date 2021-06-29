@@ -17,9 +17,9 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
-import org.jitsi.videobridge.cc.config.BitrateControllerConfig as config
 import java.util.stream.Collectors
 import kotlin.math.min
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig as config
 
 /**
  * This class encapsulates all of the client-controlled settings for bandwidth allocation.
