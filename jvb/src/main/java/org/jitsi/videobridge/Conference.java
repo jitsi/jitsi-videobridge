@@ -210,7 +210,6 @@ public class Conference
         this.shim = new ConferenceShim(this, logger);
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
-        speechActivity.setTossedPacketsEnergyStats(videobridge.getStatistics().tossedPacketsEnergy);
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
             try
             {
