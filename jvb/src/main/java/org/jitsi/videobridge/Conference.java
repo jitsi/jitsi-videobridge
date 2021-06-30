@@ -22,6 +22,7 @@ import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.collections.*;
+import org.jitsi.utils.dsi.DominantSpeakerIdentification;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
@@ -951,6 +952,22 @@ public class Conference
     }
 
     /**
+     * Determine whether to forward an audio packet.
+     * @param sourceEndpointId the source endpoint.
+     * @return whether to forward the packet.
+     */
+    private boolean shouldSendAudio(String sourceEndpointId)
+    {
+        DominantSpeakerIdentification<String>.SpeakerRanking ranking = speechActivity.getRanking(sourceEndpointId);
+        if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
+            return true;
+        if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
+            return true;
+        videobridge.getStatistics().tossedPacketsEnergy.addValue(ranking.energyScore);
+        return false;
+    }
+
+    /**
      * Broadcasts the packet to all endpoints and tentacles that want it.
      *
      * @param packetInfo the packet
@@ -966,8 +983,8 @@ public class Conference
         PotentialPacketHandler prevHandler = null;
 
         boolean discard = packetInfo.getPacket() instanceof AudioRtpPacket
-            && !speechActivity.isAmongLoudest(sourceEndpointId);
-        if(!discard)
+            && !shouldSendAudio(sourceEndpointId);
+        if (!discard)
         {
             for (Endpoint endpoint : endpointsCache)
             {

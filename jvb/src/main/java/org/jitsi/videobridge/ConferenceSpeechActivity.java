@@ -105,7 +105,6 @@ public class ConferenceSpeechActivity
 
         dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
         dominantSpeakerIdentification.setLoudestConfig(LoudestConfig.Companion.getNumLoudest(),
-                LoudestConfig.Companion.getAlwaysRouteDominant(),
                 LoudestConfig.Companion.getEnergyExpireTimeMs(),
                 LoudestConfig.Companion.getEnergyAlphaPct());
     }
@@ -264,14 +263,9 @@ public class ConferenceSpeechActivity
         return false;
     }
 
-    public boolean isAmongLoudest(String endpointId)
+    public DominantSpeakerIdentification<String>.SpeakerRanking getRanking(String endpointId)
     {
-        return dominantSpeakerIdentification.isAmongLoudestSpeakers(endpointId);
-    }
-
-    public void setTossedPacketsEnergyStats(BucketStats tossedPacketsEnergyStats_)
-    {
-        dominantSpeakerIdentification.setTossedPacketsEnergyStats(tossedPacketsEnergyStats_);
+        return dominantSpeakerIdentification.getRanking(endpointId);
     }
 
     /**

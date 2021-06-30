@@ -44,9 +44,5 @@ class LoudestConfig {
         val energyAlphaPct: Int by config(
             "videobridge.loudest.energyAlphaPct".from(JitsiConfig.newConfig)
         )
-        @JvmStatic
-        val energyDiscardAlarmThreshold: Int by config(
-            "videobridge.loudest.energyDiscardAlarmThreshold".from(JitsiConfig.newConfig)
-        )
     }
 }
