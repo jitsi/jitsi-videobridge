@@ -240,7 +240,7 @@ public class Conference
         if (conferenceName != null)
         {
             DiagnosticContext diagnosticContext = new DiagnosticContext();
-            diagnosticContext.put("conf_name", conferenceName);
+            diagnosticContext.put("conf_name", conferenceName.toString());
             diagnosticContext.put("conf_creation_time_ms", creationTime);
             return diagnosticContext;
         }
