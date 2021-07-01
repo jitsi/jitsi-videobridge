@@ -29,6 +29,10 @@ class TransportConfig {
 class LoudestConfig {
     companion object {
         @JvmStatic
+        val routeLoudestOnly: Boolean by config(
+            "videobridge.loudest.routeLoudestOnly".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
         val numLoudest: Int by config(
             "videobridge.loudest.numLoudest".from(JitsiConfig.newConfig)
         )

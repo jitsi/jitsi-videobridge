@@ -981,7 +981,8 @@ public class Conference
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
 
-        boolean discard = packetInfo.getPacket() instanceof AudioRtpPacket
+        boolean discard = LoudestConfig.Companion.getRouteLoudestOnly()
+            && packetInfo.getPacket() instanceof AudioRtpPacket
             && !shouldSendAudio(sourceEndpointId);
         if (!discard)
         {

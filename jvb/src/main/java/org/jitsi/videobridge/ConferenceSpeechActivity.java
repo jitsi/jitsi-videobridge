@@ -103,7 +103,9 @@ public class ConferenceSpeechActivity
                         parentLogger.createChildLogger(ConferenceSpeechActivity.class.getName());
 
         dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
-        dominantSpeakerIdentification.setLoudestConfig(LoudestConfig.Companion.getNumLoudest(),
+        int numLoudestToTrack = LoudestConfig.Companion.getRouteLoudestOnly() ?
+                LoudestConfig.Companion.getNumLoudest() : 0;
+        dominantSpeakerIdentification.setLoudestConfig(numLoudestToTrack,
                 LoudestConfig.Companion.getEnergyExpireTimeMs(),
                 LoudestConfig.Companion.getEnergyAlphaPct());
     }
