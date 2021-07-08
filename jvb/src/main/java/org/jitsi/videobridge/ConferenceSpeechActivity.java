@@ -103,6 +103,11 @@ public class ConferenceSpeechActivity
                         parentLogger.createChildLogger(ConferenceSpeechActivity.class.getName());
 
         dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
+        int numLoudestToTrack = LoudestConfig.Companion.getRouteLoudestOnly() ?
+                LoudestConfig.Companion.getNumLoudest() : 0;
+        dominantSpeakerIdentification.setLoudestConfig(numLoudestToTrack,
+                (int)(LoudestConfig.Companion.getEnergyExpireTime().toMillis()),
+                LoudestConfig.Companion.getEnergyAlphaPct());
     }
 
     /**
@@ -257,6 +262,11 @@ public class ConferenceSpeechActivity
             i++;
         }
         return false;
+    }
+
+    public DominantSpeakerIdentification<String>.SpeakerRanking getRanking(String endpointId)
+    {
+        return dominantSpeakerIdentification.getRanking(endpointId);
     }
 
     /**
