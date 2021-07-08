@@ -19,9 +19,27 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 
-class TransportConfig {
+class LoudestConfig {
     companion object {
         @JvmStatic
-        val queueSize: Int by config("videobridge.transport.send.queue-size".from(JitsiConfig.newConfig))
+        val routeLoudestOnly: Boolean by config(
+            "videobridge.loudest.route-loudest-only".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val numLoudest: Int by config(
+            "videobridge.loudest.num-loudest".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val alwaysRouteDominant: Boolean by config(
+            "videobridge.loudest.always-route-dominant".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val energyExpireTimeMs: Int by config(
+            "videobridge.loudest.energy-expire-time-ms".from(JitsiConfig.newConfig)
+        )
+        @JvmStatic
+        val energyAlphaPct: Int by config(
+            "videobridge.loudest.energy-alpha-pct".from(JitsiConfig.newConfig)
+        )
     }
 }
