@@ -18,6 +18,7 @@ package org.jitsi.videobridge
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
+import java.time.Duration
 
 class LoudestConfig {
     companion object {
@@ -34,8 +35,8 @@ class LoudestConfig {
             "videobridge.loudest.always-route-dominant".from(JitsiConfig.newConfig)
         )
         @JvmStatic
-        val energyExpireTimeMs: Int by config(
-            "videobridge.loudest.energy-expire-time-ms".from(JitsiConfig.newConfig)
+        val energyExpireTime: Duration by config(
+            "videobridge.loudest.energy-expire-time".from(JitsiConfig.newConfig)
         )
         @JvmStatic
         val energyAlphaPct: Int by config(

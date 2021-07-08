@@ -106,7 +106,7 @@ public class ConferenceSpeechActivity
         int numLoudestToTrack = LoudestConfig.Companion.getRouteLoudestOnly() ?
                 LoudestConfig.Companion.getNumLoudest() : 0;
         dominantSpeakerIdentification.setLoudestConfig(numLoudestToTrack,
-                LoudestConfig.Companion.getEnergyExpireTimeMs(),
+                (int)(LoudestConfig.Companion.getEnergyExpireTime().toMillis()),
                 LoudestConfig.Companion.getEnergyAlphaPct());
     }
 
