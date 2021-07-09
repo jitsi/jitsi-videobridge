@@ -124,5 +124,4 @@ class MucClientTest : JerseyTest() {
         val resp = target("$baseUrl/list").request().get()
         resp.readEntity(String::class.java) shouldBe "[\"id1\"]"
     }
-
 }

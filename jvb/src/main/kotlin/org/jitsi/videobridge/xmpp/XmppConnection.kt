@@ -135,10 +135,7 @@ class XmppConnection : IQListener {
      * @return JSON string of the list of ids
      */
     fun getMucClientIds(): String {
-        val jsonArray = JSONArray()
-        mucClientManager.getMucClientIds().forEach { id -> jsonArray.add(id) }
-
-        return jsonArray.toJSONString()
+        return JSONArray().apply { addAll(mucClientManager.mucClientIds) }.toJSONString()
     }
 
     /**
