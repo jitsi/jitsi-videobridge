@@ -2,8 +2,4 @@
 # Comma-separated list of rules to disable (Since 0.34.0)
 # Note that rules in any ruleset other than the standard ruleset will need to be prefixed 
 # by the ruleset identifier.
-# intellij currently has no setting to set sort order, and its
-# default behavior directly contradicts what this rule wants. see
-# https://youtrack.jetbrains.com/issue/KT-10974
-disabled_rules=import-ordering
 max_line_length=120

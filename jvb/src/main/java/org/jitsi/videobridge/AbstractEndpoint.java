@@ -91,7 +91,7 @@ public abstract class AbstractEndpoint
      */
     protected VideoConstraints maxReceiverVideoConstraints = new VideoConstraints(0, 0.0);
 
-    protected final EventEmitter<EventHandler> eventEmitter = new EventEmitter<>();
+    protected final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
     /**
      * The latest {@link VideoType} signaled by the endpoint (defaulting to {@code CAMERA} if nothing has been
@@ -135,7 +135,11 @@ public abstract class AbstractEndpoint
 
     public void setVideoType(VideoType videoType)
     {
-        this.videoType = videoType;
+        if (this.videoType != videoType)
+        {
+            this.videoType = videoType;
+            conference.getSpeechActivity().endpointVideoAvailabilityChanged();
+        }
     }
 
     /**

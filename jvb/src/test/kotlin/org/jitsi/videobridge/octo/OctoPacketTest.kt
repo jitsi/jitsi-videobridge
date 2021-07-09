@@ -18,8 +18,8 @@ package org.jitsi.videobridge.octo
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import org.jitsi.utils.MediaType
 import org.jitsi.rtp.extensions.bytearray.byteArrayOf
+import org.jitsi.utils.MediaType
 import java.lang.IllegalArgumentException
 
 class OctoPacketTest : ShouldSpec() {

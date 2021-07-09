@@ -35,7 +35,6 @@ import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.NEVER
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.rtp.Packet
@@ -47,6 +46,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -180,6 +180,20 @@ class Endpoint @JvmOverloads constructor(
         setErrorHandler(queueErrorCounter)
     }
 
+    /**
+     * The queue which enforces sequential processing of incoming data channel messages
+     * to maintain processing order.
+     */
+    private val incomingDataChannelMessagesQueue = PacketInfoQueue(
+        "${javaClass.simpleName}-incoming-data-channel-queue",
+        TaskPools.IO_POOL,
+        { packetInfo ->
+            dataChannelHandler.consume(packetInfo)
+            true
+        },
+        TransportConfig.queueSize
+    )
+
     private val bitrateController = BitrateController(
         object : BitrateController.EventHandler {
             override fun allocationChanged(allocation: BandwidthAllocation) {
@@ -267,7 +281,7 @@ class Endpoint @JvmOverloads constructor(
         private set(value) {
             val wasEmpty = transceiver.getMediaSources().isEmpty()
             if (transceiver.setMediaSources(value)) {
-                eventEmitter.fireEventSync { sourcesChanged() }
+                eventEmitter.fireEvent { sourcesChanged() }
             }
             if (wasEmpty) {
                 sendVideoConstraints(maxReceiverVideoConstraints)
@@ -304,7 +318,7 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.eventHandler = object : IceTransport.EventHandler {
             override fun connected() {
                 logger.info("ICE connected")
-                eventEmitter.fireEventSync { iceSucceeded() }
+                eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         outgoingSrtpPacketQueue.add(packetInfo)
@@ -315,7 +329,7 @@ class Endpoint @JvmOverloads constructor(
             }
 
             override fun failed() {
-                eventEmitter.fireEventSync { iceFailed() }
+                eventEmitter.fireEvent { iceFailed() }
             }
 
             override fun consentUpdated(time: Instant) {
@@ -424,7 +438,7 @@ class Endpoint @JvmOverloads constructor(
         }
 
         packetInfo.sent()
-        if (timelineLogger.isTraceEnabled() && logTimeline()) {
+        if (timelineLogger.isTraceEnabled && logTimeline()) {
             timelineLogger.trace { packetInfo.timeline.toString() }
         }
         iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
@@ -565,7 +579,7 @@ class Endpoint @JvmOverloads constructor(
             // holding a lock inside the SctpSocket which can cause a deadlock
             // if two endpoints are trying to send datachannel messages to one
             // another (with stats broadcasting it can happen often)
-            TaskPools.IO_POOL.execute { dataChannelHandler.processPacket(PacketInfo(dataChannelPacket)) }
+            incomingDataChannelMessagesQueue.add(PacketInfo(dataChannelPacket))
         }
         socket.listen()
         sctpSocket = Optional.of(socket)
@@ -942,6 +956,13 @@ class Endpoint @JvmOverloads constructor(
             totalPacketsSent.addAndGet(outgoingStats.packets)
         }
 
+        conference.videobridge.statistics.apply {
+            val bweStats = transceiverStats.bandwidthEstimatorStats
+            bweStats.getNumber("incomingEstimateExpirations")?.toInt()?.let {
+                incomingBitrateExpirations.addAndGet(it)
+            }
+        }
+
         run {
             val bweStats = transceiverStats.bandwidthEstimatorStats
             val lossLimitedMs = bweStats.getNumber("lossLimitedMs")?.toLong() ?: return@run
@@ -1099,7 +1120,7 @@ class Endpoint @JvmOverloads constructor(
         private var dataChannelStack: DataChannelStack? = null
         private val cachedDataChannelPackets = LinkedBlockingQueue<PacketInfo>()
 
-        override fun consume(packetInfo: PacketInfo) {
+        public override fun consume(packetInfo: PacketInfo) {
             synchronized(dataChannelStackLock) {
                 when (val packet = packetInfo.packet) {
                     is DataChannelPacket -> {

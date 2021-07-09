@@ -17,10 +17,12 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.collections.*;
+import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
@@ -240,7 +242,7 @@ public class Conference
         if (conferenceName != null)
         {
             DiagnosticContext diagnosticContext = new DiagnosticContext();
-            diagnosticContext.put("conf_name", conferenceName);
+            diagnosticContext.put("conf_name", conferenceName.toString());
             diagnosticContext.put("conf_creation_time_ms", creationTime);
             return diagnosticContext;
         }
@@ -949,6 +951,22 @@ public class Conference
     }
 
     /**
+     * Determine whether to forward an audio packet.
+     * @param sourceEndpointId the source endpoint.
+     * @return whether to forward the packet.
+     */
+    private boolean shouldSendAudio(String sourceEndpointId)
+    {
+        DominantSpeakerIdentification<String>.SpeakerRanking ranking = speechActivity.getRanking(sourceEndpointId);
+        if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
+            return true;
+        if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
+            return true;
+        videobridge.getStatistics().tossedPacketsEnergy.addValue(ranking.energyScore);
+        return false;
+    }
+
+    /**
      * Broadcasts the packet to all endpoints and tentacles that want it.
      *
      * @param packetInfo the packet
@@ -962,29 +980,36 @@ public class Conference
         // is also interested in the packet.  We'll give the last handler the
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
-        for (Endpoint endpoint : endpointsCache)
-        {
-            if (endpoint.getId().equals(sourceEndpointId))
-            {
-                continue;
-            }
 
-            if (endpoint.wants(packetInfo))
+        boolean discard = LoudestConfig.Companion.getRouteLoudestOnly()
+            && packetInfo.getPacket() instanceof AudioRtpPacket
+            && !shouldSendAudio(sourceEndpointId);
+        if (!discard)
+        {
+            for (Endpoint endpoint : endpointsCache)
+            {
+                if (endpoint.getId().equals(sourceEndpointId))
+                {
+                    continue;
+                }
+
+                if (endpoint.wants(packetInfo))
+                {
+                    if (prevHandler != null)
+                    {
+                        prevHandler.send(packetInfo.clone());
+                    }
+                    prevHandler = endpoint;
+                }
+            }
+            if (tentacle != null && tentacle.wants(packetInfo))
             {
                 if (prevHandler != null)
                 {
                     prevHandler.send(packetInfo.clone());
                 }
-                prevHandler = endpoint;
+                prevHandler = tentacle;
             }
-        }
-        if (tentacle != null && tentacle.wants(packetInfo))
-        {
-            if (prevHandler != null)
-            {
-                prevHandler.send(packetInfo.clone());
-            }
-            prevHandler = tentacle;
         }
 
         if (prevHandler != null)

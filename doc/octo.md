@@ -18,10 +18,29 @@ You need to make sure that all of the bridges can communicate via the socket
 addresses described in the properties above, and that the network is secure.
 
 ## Jicofo configuration
-To enable the use of Octo in jicofo, you need to set the "selection strategy" by
-setting this property in `/etc/jitsi/jicofo/sip-communicator.properties`:
+To enable the use of Octo in jicofo, you need to enable octo in
+`/etc/jitsi/jicofo/jicofo.conf` by adding the following linesi within the
+"jicofo { }" part:
 ```
-org.jitsi.jicofo.BridgeSelector.BRIDGE_SELECTION_STRATEGY=RegionBasedBridgeSelectionStrategy
+octo {
+      // Whether or not to use Octo. Note that when enabled, its use will be determined by
+      // $jicofo.bridge.selection-strategy. There's a corresponding flag in the JVB and these
+      // two MUST be in sync (otherwise bridges will crash because they won't know how to
+      // deal with octo channels).
+      enabled = true
+
+      // An identifier of the Jicofo instance, used for the purpose of generating conference IDs unique across a set of
+      // Jicofo instances. Valid values are [1, 65535]. The value 0 is used when none is explicitly configured.
+      id = "1"
+    }
+```
+
+Additionally you need to set the "selection strategy" in the same file:
+
+```
+  bridge {
+    selection-strategy = RegionBasedBridgeSelectionStrategy
+  }
 ```
 
 The `RegionBasedBridgeSelectionStrategy` matches the region of the clients to

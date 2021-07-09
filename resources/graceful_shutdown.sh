@@ -3,7 +3,7 @@
 # 1. The script issues shutdown command to the bridge over REST API.
 #    If HTTP status code other than 200 is returned then it exits with 1.
 # 2. If the code is ok then it checks if the bridge has exited.
-# 3. If not then it polls bridge statistics until conference count drops to 0.
+# 3. If not then it polls bridge statistics until participant count drops to 0.
 # 4. Gives some time for the bridge to shutdown. If it does not quit after that
 #    time then it kills the process. If the process was successfully killed 0 is
 #    returned and 1 otherwise.
@@ -12,7 +12,7 @@
 #   "-p"(mandatory) the PID of jitsi Videobridge process
 #   "-h"("http://localhost:8080" by default) REST requests host URI part
 #   "-t"("25" by default) number of second we we for the bridge to shutdown
-#       gracefully after conference count drops to 0
+#       gracefully after participant count drops to 0
 #   "-s"(disabled by default) enable silent mode - no info output
 #
 #   NOTE: script depends on the tool jq, used to parse json
@@ -59,11 +59,11 @@ if ! [[ $pid =~ $re ]] ; then
    echo "error: PID is not a number" >&2; exit 1
 fi
 
-# Returns conference count by calling JVB REST statistics API and extracting
-# conference count from JSON stats text returned.
-function getConferenceCount {
-    # Total number of conferences minus the empty conferences
-    curl -s "$hostUrl/colibri/stats"| jq '.conferences - .conference_sizes[0]'
+# Returns local participant count by calling JVB REST statistics API and extracting
+# participant count from JSON stats text returned.
+function getParticipantCount {
+    # Total number of participants minus the remote (octo) participants
+    curl -s "$hostUrl/colibri/stats"| jq '.participants - .octo_endpoints'
 }
 
 # Prints info messages
@@ -83,11 +83,11 @@ shutdownStatus=`curl -s -o /dev/null -H "Content-Type: application/json" -d '{ "
 if [ "$shutdownStatus" == "200" ]
 then
 	printInfo "Graceful shutdown started"
-	confCount=`getConferenceCount`
-	while [[ $confCount -gt 0 ]] ; do
-		printInfo "There are still $confCount conferences"
+	participantCount=`getParticipantCount`
+	while [[ $participantCount -gt 0 ]] ; do
+		printInfo "There are still $participantCount participants"
 		sleep 10
-		confCount=`getConferenceCount`
+		participantCount=`getParticipantCount`
 	done
 
 	sleep 5

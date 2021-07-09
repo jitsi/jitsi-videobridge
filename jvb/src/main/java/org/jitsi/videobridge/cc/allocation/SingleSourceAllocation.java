@@ -122,7 +122,8 @@ class SingleSourceAllocation
 
             boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
             boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getMaxHeight();
-            boolean atLeastPreferredFps = layer.getFrameRate() >= preferredFps;
+            // If frame rate is unknown, consider it to be sufficient.
+            boolean atLeastPreferredFps = layer.getFrameRate() < 0 || layer.getFrameRate() >= preferredFps;
 
             if ((lessThanPreferredResolution
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
@@ -154,8 +155,10 @@ class SingleSourceAllocation
                         .addField("remote_endpoint_id", endpoint.getId());
             for (LayerSnapshot layerSnapshot : ratesList)
             {
+                RtpLayerDesc l = layerSnapshot.layer;
                 ratesTimeSeriesPoint.addField(
-                        layerSnapshot.layer.getHeight() + "p_" + layerSnapshot.layer.getFrameRate() + "fps_bps",
+                        RtpLayerDesc.indexString(l.getIndex()) +
+                            "_" + l.getHeight() + "p_" + l.getFrameRate() + "fps_bps",
                         layerSnapshot.bitrate);
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
