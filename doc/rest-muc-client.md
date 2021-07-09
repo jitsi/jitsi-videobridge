@@ -17,7 +17,7 @@ A new XMPP client connection (i.e. a MucClient) can be added by posting a JSON w
 
 If a configuration with the specified ID already exists, the request will succeed (return 200), but the configuration will NOT be updated. If you need to update an existing configuration, you need to remove it first and then re-add it.
 
-# Removing an XMPP client connection.
+# Removing an XMPP client connection
 An XMPP client connection (i.e. a MucClient) can be removed by posting a JSON which contains its ID to `/colibri/muc-client/remove`:
 ```
 {
@@ -26,3 +26,7 @@ An XMPP client connection (i.e. a MucClient) can be removed by posting a JSON wh
 ```
 
 The request will be successful (return 200) if an XMPP client connection was removed. 
+
+
+# Listing XMPP client connections
+IDs of previously added XMPP client connections can be listed using a GET call to `/colibri/muc-client/list`.

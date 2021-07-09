@@ -75,10 +75,10 @@ public class MucClient
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
     }
 
-    @Path("/ids")
+    @Path("/list")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public String getIds()
+    public String listMucClientIDs()
     {
         return xmppConnection.getMucClientIds();
     }

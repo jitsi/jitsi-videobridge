@@ -121,7 +121,7 @@ class MucClientTest : JerseyTest() {
         }
         every { xmppConnection.getMucClientIds() } returns fakeIds.toJSONString()
 
-        val resp = target("$baseUrl/ids").request().get()
+        val resp = target("$baseUrl/list").request().get()
         resp.readEntity(String::class.java) shouldBe "[\"id1\"]"
     }
 
