@@ -74,4 +74,12 @@ public class MucClient
         }
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
     }
+
+    @Path("/list")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public String listMucClientIDs()
+    {
+        return xmppConnection.getMucClientIds();
+    }
 }

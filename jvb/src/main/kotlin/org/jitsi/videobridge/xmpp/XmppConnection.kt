@@ -33,6 +33,7 @@ import org.jivesoftware.smack.packet.ExtensionElement
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.XMPPError
 import org.jivesoftware.smackx.iqversion.packet.Version
+import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -127,6 +128,14 @@ class XmppConnection : IQListener {
         // exists as success. Note however, that the existing client's
         // configuration was NOT modified.
         return true
+    }
+
+    /**
+     * Returns ids of [MucClient] that have been added.
+     * @return JSON string of the list of ids
+     */
+    fun getMucClientIds(): String {
+        return JSONArray().apply { addAll(mucClientManager.mucClientIds) }.toJSONString()
     }
 
     /**
