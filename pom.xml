@@ -130,7 +130,7 @@
         <profile>
             <id>coverage</id>
             <properties>
-                <jacoco.version>0.8.6</jacoco.version>
+                <jacoco.version>0.8.7</jacoco.version>
             </properties>
             <build>
                 <plugins>
