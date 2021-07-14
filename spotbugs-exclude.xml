@@ -17,8 +17,14 @@
 </Match>
 
 <Match>
-  <!-- Tests have a valid reason to ignore return values (expecting exceptions, etc). -->
-  <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+  <Or>
+    <!-- Tests have a valid reason to ignore return values (expecting exceptions, etc). -->
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+
+    <!-- False positives with kotlin 1.5 -->
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+  </Or>
   <Or>
     <Source name="~.*\.*Test.kt" />
     <Source name="~.*\.*Test.java" />

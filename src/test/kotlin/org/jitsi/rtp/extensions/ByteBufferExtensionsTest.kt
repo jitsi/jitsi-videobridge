@@ -25,7 +25,7 @@ import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.ByteBuffer
 
 class ByteBufferExtensionsTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
 
     init {
         context("ByteBuffer") {

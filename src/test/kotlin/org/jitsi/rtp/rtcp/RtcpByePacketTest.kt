@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContain
@@ -26,6 +27,10 @@ import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 import org.jitsi.test_helpers.matchers.haveSameContentAs
 import java.nio.charset.StandardCharsets
 
+@SuppressFBWarnings(
+    value = ["SA_LOCAL_SELF_ASSIGNMENT"],
+    justification = "False positive"
+)
 internal class RtcpByePacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 

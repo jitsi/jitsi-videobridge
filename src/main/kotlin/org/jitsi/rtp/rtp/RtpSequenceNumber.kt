@@ -26,7 +26,8 @@ import org.jitsi.rtp.util.RtpUtils
  * be marked private. Use [Int.toRtpSequenceNumber] to create instances.
  */
 @Suppress("NON_PUBLIC_PRIMARY_CONSTRUCTOR_OF_INLINE_CLASS")
-inline class RtpSequenceNumber internal constructor(val value: Int) : Comparable<RtpSequenceNumber> {
+@JvmInline
+value class RtpSequenceNumber internal constructor(val value: Int) : Comparable<RtpSequenceNumber> {
     // These are intentionally not implemented, because using them as operators leads to inconsistent results. The
     // following code:
     // var n1 = RtpSequenceNumber(65535)

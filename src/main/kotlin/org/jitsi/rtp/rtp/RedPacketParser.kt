@@ -1,5 +1,6 @@
 package org.jitsi.rtp.rtp
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.Packet.Companion.BYTES_TO_LEAVE_AT_END_OF_PACKET
 import org.jitsi.rtp.extensions.bytearray.getBitAsBool
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
@@ -15,6 +16,10 @@ import kotlin.experimental.or
 /**
  * Parses RED (RFC2198) packets.
  */
+@SuppressFBWarnings(
+    value = ["NP_ALWAYS_NULL"],
+    justification = "False positives due to 'lateinit'."
+)
 class RedPacketParser<PacketType : RtpPacket>(
     /**
      * A function to create packets from redundancy blocks (used so we can create a packet with the correct class).

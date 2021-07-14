@@ -9,10 +9,10 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <kotlin.version>1.3.72</kotlin.version>
-        <kotest.version>4.1.3</kotest.version>
+        <kotlin.version>1.5.20</kotlin.version>
+        <kotest.version>4.6.1</kotest.version>
         <junit.version>5.2.0</junit.version>
-        <jitsi.utils.version>1.0-58-gaa5a28f</jitsi.utils.version>
+        <jitsi.utils.version>1.0-94-ge7c7a43</jitsi.utils.version>
         <spotbugs.version>4.0.0-RC1</spotbugs.version>
     </properties>
 
@@ -58,12 +58,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.kotest</groupId>
-            <artifactId>kotest-runner-console-jvm</artifactId>
-            <version>${kotest.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>io.pkts</groupId>
             <artifactId>pkts-core</artifactId>
             <version>3.0.3</version>
@@ -99,9 +93,6 @@
                 </executions>
                 <configuration>
                     <jvmTarget>1.8</jvmTarget>
-                    <args>
-                        <arg>-XXLanguage:+InlineClasses</arg>
-                    </args>
                 </configuration>
             </plugin>
             <plugin>
@@ -264,7 +255,7 @@
         <profile>
             <id>coverage</id>
             <properties>
-                <jacoco.version>0.8.6</jacoco.version>
+                <jacoco.version>0.8.7</jacoco.version>
             </properties>
             <build>
                 <plugins>

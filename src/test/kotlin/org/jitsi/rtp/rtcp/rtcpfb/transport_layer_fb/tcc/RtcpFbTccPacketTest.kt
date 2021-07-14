@@ -18,10 +18,10 @@ package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
-import io.kotest.matchers.beInstanceOf
 import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.util.byteBufferOf
 import java.time.Duration
