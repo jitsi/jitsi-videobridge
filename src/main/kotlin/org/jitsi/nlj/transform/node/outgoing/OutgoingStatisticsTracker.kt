@@ -17,6 +17,8 @@ package org.jitsi.nlj.transform.node.outgoing
 
 import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.utils.OrderedJsonObject
@@ -28,8 +30,16 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
      */
     private val ssrcStats: MutableMap<Long, OutgoingSsrcStats> = ConcurrentHashMap()
 
+    private var numAudioPackets = 0
+    private var numVideoPackets = 0
+
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
+
+        when (rtpPacket) {
+            is AudioRtpPacket -> numAudioPackets++
+            is VideoRtpPacket -> numVideoPackets++
+        }
 
         val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
             OutgoingSsrcStats(rtpPacket.ssrc)
@@ -47,7 +57,10 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
     /**
      * Don't aggregate the per-SSRC stats.
      */
-    override fun getNodeStatsToAggregate(): NodeStatsBlock = super.getNodeStats()
+    override fun getNodeStatsToAggregate(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("num_audio_packets", numAudioPackets)
+        addNumber("num_video_packets", numVideoPackets)
+    }
 
     override fun trace(f: () -> Unit) = f.invoke()
 
