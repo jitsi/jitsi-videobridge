@@ -73,7 +73,7 @@ class LastNReducer(
             .map {
                 it.numForwardedEndpoints()
             }
-            .max()
+            .maxOrNull()
     }
 
     override fun reduceLoad() {
