@@ -333,7 +333,7 @@ public class VideobridgeStatistics
                 }
 
                 PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
-                bitrateUploadBps += outgoingStats.getBitrate();
+                bitrateUploadBps += outgoingStats.getBitrateBps();
                 packetRateUpload += outgoingStats.getPacketRate();
 
                 EndpointConnectionStats.Snapshot endpointConnectionStats
