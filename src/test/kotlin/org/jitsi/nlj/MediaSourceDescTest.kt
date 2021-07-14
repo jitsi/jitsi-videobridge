@@ -25,7 +25,7 @@ import org.jitsi.utils.secs
 
 class MediaSourceDescTest : ShouldSpec() {
     init {
-        val ssrcs = arrayOf(0xdeadbeef, 0xcafebabe, 0x01234567)
+        val ssrcs = arrayOf(0xdeadbeefL, 0xcafebabeL, 0x01234567L)
         val source = createSource(
             ssrcs,
             1, 3, "Fake owner"

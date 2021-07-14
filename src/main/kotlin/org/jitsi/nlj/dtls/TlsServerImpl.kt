@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.dtls
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.nio.ByteBuffer
 import java.util.Hashtable
 import java.util.Vector
@@ -47,6 +48,10 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.utils.logging2.Logger
 
+@SuppressFBWarnings(
+    value = ["NP_ALWAYS_NULL"],
+    justification = "False positives with 'lateinit'."
+)
 class TlsServerImpl(
     private val certificateInfo: CertificateInfo,
     /**

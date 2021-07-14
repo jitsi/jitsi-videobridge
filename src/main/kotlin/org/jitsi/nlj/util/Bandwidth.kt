@@ -21,10 +21,10 @@ import java.time.Duration
 import kotlin.math.sign
 
 /**
- * [Bandwidth] models a current bandwidth, represented as a rate
- * of bits per second.
+ * [Bandwidth] models a current bandwidth, represented as a rate of bits per second.
  */
-inline class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
+@JvmInline
+value class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
     val kbps: Double
         get() = bps / 1000
     val mbps: Double

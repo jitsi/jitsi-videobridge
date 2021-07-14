@@ -20,7 +20,6 @@ import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.bits
 import org.jitsi.nlj.util.sum
 
 /**
@@ -159,6 +158,12 @@ constructor(
      * and its dependencies.
      */
     open fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs).values.sum()
+
+    /**
+     * Expose [getBitrate] as a [Double] in order to make it accessible from java (since [Bandwidth] is an inline
+     * class).
+     */
+    fun getBitrateBps(nowMs: Long): Double = getBitrate(nowMs).bps
 
     /**
      * Recursively adds the bitrate (in bps) of this [RTPLayerDesc] and

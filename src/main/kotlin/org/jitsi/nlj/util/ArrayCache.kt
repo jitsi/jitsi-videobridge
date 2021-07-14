@@ -28,7 +28,10 @@ import org.jitsi.nlj.transform.NodeStatsProducer
  *
  * @author Boris Grozev
  */
-@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
+@SuppressFBWarnings(
+    value = ["CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE", "RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"],
+    justification = "False positives."
+)
 open class ArrayCache<T>(
     val size: Int,
     private val cloneItem: (T) -> T,

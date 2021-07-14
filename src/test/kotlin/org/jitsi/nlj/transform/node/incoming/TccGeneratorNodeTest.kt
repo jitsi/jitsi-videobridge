@@ -1,13 +1,14 @@
 package org.jitsi.nlj.transform.node.incoming
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
-import io.kotest.matchers.beInstanceOf
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
@@ -24,6 +25,10 @@ import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import org.jitsi.utils.ms
 import java.util.Random
 
+@SuppressFBWarnings(
+    value = ["NP_ALWAYS_NULL"],
+    justification = "False positives with 'lateinit'."
+)
 class TccGeneratorNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 

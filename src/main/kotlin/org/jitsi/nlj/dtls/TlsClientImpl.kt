@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.dtls
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.nio.ByteBuffer
 import java.util.Hashtable
 import org.bouncycastle.crypto.util.PrivateKeyFactory
@@ -49,6 +50,10 @@ import org.jitsi.utils.logging2.Logger
 /**
  * Implementation of [DefaultTlsClient].
  */
+@SuppressFBWarnings(
+    value = ["NP_ALWAYS_NULL"],
+    justification = "False positives with 'lateinit'."
+)
 class TlsClientImpl(
     private val certificateInfo: CertificateInfo,
     /**

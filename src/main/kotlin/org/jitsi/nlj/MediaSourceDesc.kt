@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
@@ -33,6 +34,10 @@ import java.util.TreeMap
  *
  * @author George Politis
  */
+@SuppressFBWarnings(
+    value = ["NP_ALWAYS_NULL"],
+    justification = "False positives with 'lateinit'."
+)
 class MediaSourceDesc
 @JvmOverloads constructor(
     /**

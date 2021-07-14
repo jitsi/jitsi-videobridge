@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtcp
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -33,6 +34,10 @@ import org.jitsi.utils.logging2.Logger
  * When a nack packet is received, the [NackHandler] will try to retrieve the
  * nacked packets from the cache and then send them to the RTX output pipeline.
  */
+@SuppressFBWarnings(
+    value = ["RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"],
+    justification = "False positives."
+)
 class NackHandler(
     private val packetCache: PacketCache,
     private val onNackedPacketsReady: PacketHandler,
