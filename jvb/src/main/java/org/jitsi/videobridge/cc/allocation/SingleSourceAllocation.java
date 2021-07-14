@@ -129,7 +129,8 @@ class SingleSourceAllocation
                     || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
                     || ratesList.isEmpty())
             {
-                double layerBitrate = layer.getBitrate(nowMs);
+
+                double layerBitrate = layer.getBitrateBps(nowMs);
                 // No active layers usually happens when the source has just been signaled and we haven't received
                 // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
                 if (noActiveLayers || layerBitrate > 0)

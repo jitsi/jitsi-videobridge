@@ -37,6 +37,6 @@ class JvbLastN : Supplier<Int> {
 val jvbLastNSingleton: JvbLastN = JvbLastN()
 
 fun calculateLastN(vararg lastN: Int): Int {
-    val min = lastN.map { if (it == -1) Int.MAX_VALUE else it }.min() ?: Int.MAX_VALUE
+    val min = lastN.map { if (it == -1) Int.MAX_VALUE else it }.minOrNull() ?: Int.MAX_VALUE
     return if (min == Int.MAX_VALUE) -1 else min
 }
