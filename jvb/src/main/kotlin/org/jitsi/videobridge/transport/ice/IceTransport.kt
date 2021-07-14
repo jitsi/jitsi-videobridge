@@ -19,12 +19,8 @@ package org.jitsi.videobridge.transport.ice
 import com.google.common.net.InetAddresses
 import org.ice4j.Transport
 import org.ice4j.TransportAddress
-import org.ice4j.ice.Agent
-import org.ice4j.ice.CandidateType
-import org.ice4j.ice.IceMediaStream
-import org.ice4j.ice.IceProcessingState
-import org.ice4j.ice.LocalCandidate
-import org.ice4j.ice.RemoteCandidate
+import org.ice4j.ice.*
+import org.ice4j.ice.harvest.SinglePortUdpHarvester
 import org.ice4j.socket.SocketClosedException
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
@@ -50,6 +46,7 @@ class IceTransport @JvmOverloads constructor(
      * 'controlling' role.
      */
     controlling: Boolean,
+    isJvbClient: Boolean,
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
@@ -97,7 +94,7 @@ class IceTransport @JvmOverloads constructor(
     private val running = AtomicBoolean(true)
 
     private val iceAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
-        appendHarvesters(this)
+        appendHarvesters(this, isJvbClient)
         isControlling = controlling
         performConsentFreshness = true
         nominationStrategy = IceConfig.config.nominationStrategy
@@ -347,8 +344,11 @@ class IceTransport @JvmOverloads constructor(
     }
 
     companion object {
-        fun appendHarvesters(iceAgent: Agent) {
+        fun appendHarvesters(iceAgent: Agent, isJvbClient: Boolean) {
             Harvesters.initializeStaticConfiguration()
+            if (isJvbClient) {
+                Harvesters.singlePortHarvesters = SinglePortUdpHarvester.createHarvesters(0)
+            }
             Harvesters.tcpHarvester?.let {
                 iceAgent.addCandidateHarvester(it)
             }

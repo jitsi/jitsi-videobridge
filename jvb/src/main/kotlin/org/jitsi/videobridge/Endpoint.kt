@@ -105,6 +105,10 @@ class Endpoint @JvmOverloads constructor(
      * as a controlling ICE agent, false otherwise
      */
     iceControlling: Boolean,
+    /**
+     * True if the this endpoint is connecting to another JVB as a client to distribute the conference.
+     */
+    isJvbClient: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
     /**
@@ -115,7 +119,7 @@ class Endpoint @JvmOverloads constructor(
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
 
-    private val iceTransport = IceTransport(id, iceControlling, logger)
+    private val iceTransport = IceTransport(id, iceControlling, isJvbClient, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {
