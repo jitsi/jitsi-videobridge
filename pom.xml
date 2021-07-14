@@ -95,7 +95,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-31-g924f40c</version>
+                <version>3.0-33-g311a495</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
