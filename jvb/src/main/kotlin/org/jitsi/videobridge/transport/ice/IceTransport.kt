@@ -352,7 +352,7 @@ class IceTransport @JvmOverloads constructor(
         fun appendHarvesters(iceAgent: Agent, isJvbClient: Boolean) {
             Harvesters.initializeStaticConfiguration()
             if (isJvbClient) {
-                Harvesters.singlePortHarvesters = SinglePortUdpHarvester.createHarvesters(0)
+                SinglePortUdpHarvester.createHarvesters(0).forEach(iceAgent::addCandidateHarvester)
             }
             Harvesters.tcpHarvester?.let {
                 iceAgent.addCandidateHarvester(it)
