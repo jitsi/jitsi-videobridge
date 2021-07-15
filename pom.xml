@@ -28,11 +28,6 @@
             <version>${kotlin.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.github.kotlin-graphics</groupId>
-            <artifactId>kotlin-unsigned</artifactId>
-            <version>v3.1.3</version>
-        </dependency>
-        <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-utils</artifactId>
             <version>${jitsi.utils.version}</version>

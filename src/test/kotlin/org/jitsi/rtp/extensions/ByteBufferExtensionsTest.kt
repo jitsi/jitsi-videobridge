@@ -68,11 +68,11 @@ class ByteBufferExtensionsTest : ShouldSpec() {
             context("get3Bytes") {
                 val buf = ByteBuffer.allocate(4)
                 context("for a 3 byte value") {
-                    val num: Int = 424242
+                    val num: Int = 0xb1b1b1
                     buf.put3Bytes(num)
                     buf.rewind()
                     should("read them correctly") {
-                        buf.get3Bytes() shouldBe 424242.toInt()
+                        buf.get3Bytes() shouldBe 0xb1b1b1.toInt()
                     }
                 }
                 context("for a 2 byte value") {

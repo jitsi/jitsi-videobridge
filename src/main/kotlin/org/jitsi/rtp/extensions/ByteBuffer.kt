@@ -16,7 +16,6 @@
 package org.jitsi.rtp.extensions
 
 import org.jitsi.rtp.util.BufferPool
-import unsigned.toUInt
 import java.nio.ByteBuffer
 
 /**
@@ -67,16 +66,16 @@ fun ByteBuffer.put3Bytes(index: Int, value: Int) {
  * 3 bytes of an Int
  */
 fun ByteBuffer.get3Bytes(): Int {
-    val byte1 = get().toInt() shl 16
-    val byte2 = get().toInt() shl 8
+    val byte1 = (get().toInt() and 0xFF) shl 16
+    val byte2 = (get().toInt() and 0xFF) shl 8
     val byte3 = get().toInt() and 0xFF
     return byte1 or byte2 or byte3
 }
 
 fun ByteBuffer.get3Bytes(index: Int): Int {
-    val byte1 = get(index).toUInt() shl 16
-    val byte2 = get(index + 1).toUInt() shl 8
-    val byte3 = get(index + 2).toUInt()
+    val byte1 = (get(index).toInt() and 0xFF) shl 16
+    val byte2 = (get(index + 1).toInt() and 0xFF) shl 8
+    val byte3 = get(index + 2).toInt() and 0xFF
     return byte1 or byte2 or byte3
 }
 

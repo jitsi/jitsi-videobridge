@@ -18,7 +18,6 @@ package org.jitsi.rtp.rtp.header_extensions
 
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.util.getShortAsInt
-import unsigned.ushr
 import kotlin.experimental.and
 import kotlin.experimental.or
 
@@ -31,7 +30,7 @@ class HeaderExtensionHelpers {
         const val TOP_LEVEL_EXT_HEADER_SIZE_BYTES = 4
 
         fun getId(buf: ByteArray, offset: Int): Int =
-            ((buf.get(offset) and 0xF0.toByte()) ushr 4).toPositiveInt()
+            (buf.get(offset).toInt() ushr 4) and 0x0F
 
         fun setId(id: Int, buf: ByteArray, offset: Int) {
             // Clear the old extension ID
