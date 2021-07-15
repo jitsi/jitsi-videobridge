@@ -25,4 +25,8 @@
             <property name="option" value="alone_or_singleline"/>
         </module>
     </module>
-</module>
+
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+s</module>

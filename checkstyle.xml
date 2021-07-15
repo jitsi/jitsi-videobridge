@@ -9,4 +9,24 @@
         <property name="max" value="120"/>
         <property name="ignorePattern" value="http://|https://"/>
     </module>
+
+    <module name="TreeWalker">
+        <module name="LeftCurly">
+            <property name="option" value="nl"/>
+            <property name="tokens" value="LITERAL_CATCH"/>
+            <property name="tokens" value="LITERAL_ELSE"/>
+            <property name="tokens" value="LITERAL_FINALLY"/>
+            <property name="tokens" value="LITERAL_IF"/>
+            <property name="tokens" value="LITERAL_TRY"/>
+        </module>
+
+        <!-- Skips empty blocks {}, to not skip them: value="alone" -->
+        <module name="RightCurly">
+            <property name="option" value="alone_or_singleline"/>
+        </module>
+    </module>
+
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
 </module>
