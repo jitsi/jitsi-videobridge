@@ -46,16 +46,26 @@ class SingleSourceAllocation
             VideoConstraints constraints
             )
     {
-
+        int idealHeight = constraints.getMaxHeight();
+        int preferredHeight = -1;
+        double preferredFps = -1.0;
+        if (constraints.getMaxHeight() > 180)
+        {
+            // For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
+            // temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
+            // consider frame rates at least as high as the preferred. In practice this means we consider
+            // 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
+            preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
+            preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
+        }
         boolean noActiveLayers = allLayers.stream().allMatch(l -> l.hasZeroBitrate(nowMs));
+
         List<LayerSnapshot> ratesList = new ArrayList<>();
         // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
         // a couple of exceptions (see comments below).
         int ratedPreferredIdx = 0;
         for (RtpLayerDesc layer : allLayers)
         {
-
-            int idealHeight = constraints.getMaxHeight();
             // Skip layers that do not satisfy the constraints. If no layers satisfy the constraints, add the lowest
             // layer anyway (the constraints are "soft", and given enough bandwidth we prefer to exceed them rather than
             // sending no video at all).
@@ -69,18 +79,6 @@ class SingleSourceAllocation
                 {
                     continue;
                 }
-            }
-
-            int preferredHeight = -1;
-            double preferredFps = -1.0;
-            if (constraints.getMaxHeight() > 180)
-            {
-                // For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
-                // temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
-                // consider frame rates at least as high as the preferred. In practice this means we consider
-                // 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
-                preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
-                preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
             }
 
             boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
