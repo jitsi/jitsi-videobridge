@@ -15,10 +15,172 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.onstagePreferredFramerate
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.onstagePreferredHeightPx
 import java.lang.Integer.max
+import java.time.Clock
+
+/**
+ * A bitrate allocation that pertains to a specific source. This is the internal representation used in the allocation
+ * algorithm, as opposed to [SingleAllocation] which is the end result.
+ *
+ * @author George Politis
+ */
+internal class SingleSourceAllocation(
+    val endpoint: MediaSourceContainer,
+    /** The constraints to use while allocating bandwidth to this endpoint. */
+    val constraints: VideoConstraints,
+    /** Whether the endpoint is on stage. */
+    private val onStage: Boolean,
+    diagnosticContext: DiagnosticContext,
+    clock: Clock
+) {
+    /** An array that holds the layers to be considered when allocating bandwidth. Exposed for testing only. */
+    val layers: List<LayerSnapshot>
+
+    /** The index (into [.layers]) of the "preferred" layer, i.e. the layer up to which we allocate eagerly. */
+    val preferredIdx: Int
+
+    /**
+     * The index of the current target layer. It can be improved in the `improve()` step, if there is enough
+     * bandwidth.
+     */
+    var targetIdx = -1
+
+    init {
+        val (layers, preferredIdx) = selectLayers(
+            endpoint.mediaSource,
+            constraints,
+            clock.instant().toEpochMilli()
+        )
+        this.preferredIdx = preferredIdx
+        this.layers = layers
+
+        if (timeSeriesLogger.isTraceEnabled) {
+            val ratesTimeSeriesPoint = diagnosticContext.makeTimeSeriesPoint("layers_considered")
+                .addField("remote_endpoint_id", endpoint.id)
+            for ((l, bitrate) in layers) {
+                ratesTimeSeriesPoint.addField(
+                    "${indexString(l.index)}_${l.height}p_${l.frameRate}fps_bps",
+                    bitrate
+                )
+            }
+            timeSeriesLogger.trace(ratesTimeSeriesPoint)
+        }
+    }
+
+    fun isOnStage() = onStage
+
+    /**
+     * Implements an "improve" step, incrementing [.targetIdx] to the next layer if there is sufficient
+     * bandwidth. Note that this works eagerly up until the "preferred" layer (if any), and as a single step from
+     * then on.
+     *
+     * @param maxBps the bandwidth available.
+     */
+    fun improve(maxBps: Long) {
+        if (layers.isEmpty()) {
+            return
+        }
+        if (targetIdx == -1 && preferredIdx > -1 && onStage) {
+            // Boost on stage participant to preferred, if there's enough bw.
+            for (i in layers.indices) {
+                if (i > preferredIdx || maxBps < layers[i].bitrate) {
+                    break
+                }
+                targetIdx = i
+            }
+        } else {
+            // Try the next element in the ratedIndices array.
+            if (targetIdx + 1 < layers.size && layers[targetIdx + 1].bitrate < maxBps) {
+                targetIdx++
+            }
+        }
+        if (targetIdx > -1) {
+            // If there's a higher layer available with a lower bitrate, skip to it.
+            //
+            // For example, if 1080p@15fps is configured as a better subjective quality than 720p@30fps (i.e. it sits
+            // on a higher index in the ratedIndices array) and the bitrate that we measure for the 1080p stream is less
+            // than the bitrate that we measure for the 720p stream, then we "jump over" the 720p stream and immediately
+            // select the 1080p stream.
+            //
+            // TODO further: Should we just prune the list of layers we consider to not include such layers?
+            for (i in layers.size - 1 downTo targetIdx + 1) {
+                if (layers[i].bitrate <= layers[targetIdx].bitrate) {
+                    targetIdx = i
+                }
+            }
+        }
+    }
+
+    /** The source is suspended if we've not selected a layer AND the source has active layers. */
+    val isSuspended: Boolean
+        get() = targetIdx == -1 && layers.isNotEmpty() && layers[0].bitrate > 0
+
+    /**
+     * Gets the target bitrate (in bps) for this endpoint allocation, i.e. the bitrate of the currently chosen layer.
+     */
+    val targetBitrate: Long
+        get() {
+            val targetLayer = targetLayer
+            return targetLayer?.bitrate?.toLong() ?: 0
+        }
+
+    private val targetLayer: LayerSnapshot?
+        get() = if (targetIdx != -1) layers[targetIdx] else null
+
+    /**
+     * Exposed for testing only.
+     */
+    val preferredLayer: RtpLayerDesc?
+        get() = if (preferredIdx != -1) layers[preferredIdx].layer else null
+
+    private val idealLayer: LayerSnapshot?
+        get() = layers.lastOrNull()
+
+    /**
+     * If there is no target layer, switch to the lowest layer (if any are available).
+     * @return true if the target layer was changed.
+     */
+    fun tryLowestLayer(): Boolean {
+        if (targetIdx < 0 && layers.isNotEmpty()) {
+            targetIdx = 0
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Creates the final immutable result of this allocation. Should be called once the allocation algorithm has
+     * completed.
+     */
+    val result: SingleAllocation
+        get() {
+            val targetLayer = targetLayer
+            val idealLayer = idealLayer
+            return SingleAllocation(
+                endpoint,
+                targetLayer?.layer,
+                idealLayer?.layer
+            )
+        }
+
+    override fun toString(): String {
+        return ("[id=" + endpoint.id
+                + " constraints=" + constraints
+                + " ratedPreferredIdx=" + preferredIdx
+                + " ratedTargetIdx=" + targetIdx)
+    }
+
+    companion object {
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator::class.java)
+    }
+}
 
 /**
  * Gets the "preferred" height and frame rate based on the constraints signaled from the received.
@@ -45,12 +207,16 @@ fun getPreferred(constraints: VideoConstraints): Pair<Int, Double> {
  * @return the subset of [layers] which should be considered when allocating bandwidth, and the index of the "preferred"
  * layer.
  */
-fun selectLayers(
-    layers: List<LayerSnapshot>,
-    constraints: VideoConstraints
+private fun selectLayers(
+    source: MediaSourceDesc?,
+    constraints: VideoConstraints,
+    nowMs: Long
 ): Pair<List<LayerSnapshot>, Int> {
-    if (constraints.maxHeight == 0 || layers.isEmpty()) return Pair(emptyList(), -1)
+    if (constraints.maxHeight <= 0 || source == null || !source.hasRtpLayers()) {
+        return Pair(emptyList(), -1)
+    }
 
+    val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs))}
     val minHeight = layers.map { it.layer.height }.minOrNull() ?: return Pair(emptyList(), -1)
     val noActiveLayers = layers.none { (_, bitrate) -> bitrate > 0 }
     val (preferredHeight, preferredFps) = getPreferred(constraints)
