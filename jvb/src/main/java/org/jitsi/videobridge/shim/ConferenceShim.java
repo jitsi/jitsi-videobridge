@@ -447,9 +447,12 @@ public class ConferenceShim
             {
                 // Item not found conditions are assumed to be less critical, as they often happen in case a request
                 // arrives late for an expired endpoint.
-                if (XMPPError.Condition.item_not_found.equals(e.getCondition())) {
+                if (XMPPError.Condition.item_not_found.equals(e.getCondition()))
+                {
                     logger.warn("Error processing channels: " + e);
-                } else {
+                }
+                else
+                {
                     logger.error("Error processing channels: " + e);
                 }
                 return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());

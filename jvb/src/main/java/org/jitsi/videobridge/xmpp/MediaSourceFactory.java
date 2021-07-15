@@ -394,7 +394,8 @@ public class MediaSourceFactory
             });
         });
 
-        if (!sourceGroupsCopy.isEmpty()) {
+        if (!sourceGroupsCopy.isEmpty())
+        {
             logger.warn(
                 "Unprocessed source groups: " +
                     sourceGroupsCopy.stream()
