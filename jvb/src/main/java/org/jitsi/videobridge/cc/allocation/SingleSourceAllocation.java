@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation;
 
+import kotlin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.videobridge.cc.config.*;
@@ -39,57 +40,19 @@ class SingleSourceAllocation
      */
     private static final LayerSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new LayerSnapshot[0];
 
-    final MediaSourceContainer endpoint;
-
-    /**
-     * The constraints to use while allocating bandwidth to this endpoint.
-     */
-    final VideoConstraints constraints;
-
-    /**
-     * An array that holds the layers to be considered when allocating bandwidth.
-     */
-    private final LayerSnapshot[] layers;
-
-    private final boolean onStage;
-
-    /**
-     * The index (into {@link #layers}) of the "preferred" layer, i.e. the layer up to which we allocate eagerly.
-     */
-    final int preferredIdx;
-
-    /**
-     * The index of the current target layer. It can be improved in the {@code improve()} step, if there is enough
-     * bandwidth.
-     */
-    int targetIdx = -1;
-
-    SingleSourceAllocation(
-            MediaSourceContainer endpoint,
-            VideoConstraints constraints,
-            boolean onStage,
-            DiagnosticContext diagnosticContext,
-            Clock clock)
+    private static Pair<List<LayerSnapshot>, Integer> selectLayers(
+            List<RtpLayerDesc> allLayers,
+            long nowMs,
+            VideoConstraints constraints
+            )
     {
-        this.endpoint = endpoint;
-        this.constraints = constraints;
-        this.onStage = onStage;
 
-        MediaSourceDesc source = endpoint.getMediaSource();
-        if (source == null || constraints.getMaxHeight() <= 0)
-        {
-            preferredIdx = -1;
-            layers = EMPTY_RATE_SNAPSHOT_ARRAY;
-            return;
-        }
-
-        long nowMs = clock.instant().toEpochMilli();
-        boolean noActiveLayers = source.getRtpLayers().stream().allMatch(l -> l.hasZeroBitrate(nowMs));
+        boolean noActiveLayers = allLayers.stream().allMatch(l -> l.hasZeroBitrate(nowMs));
         List<LayerSnapshot> ratesList = new ArrayList<>();
         // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
         // a couple of exceptions (see comments below).
         int ratedPreferredIdx = 0;
-        for (RtpLayerDesc layer : source.getRtpLayers())
+        for (RtpLayerDesc layer : allLayers)
         {
 
             int idealHeight = constraints.getMaxHeight();
@@ -149,6 +112,58 @@ class SingleSourceAllocation
 
         }
 
+        return new Pair(ratesList, ratedPreferredIdx);
+    }
+
+    final MediaSourceContainer endpoint;
+
+    /**
+     * The constraints to use while allocating bandwidth to this endpoint.
+     */
+    final VideoConstraints constraints;
+
+    /**
+     * An array that holds the layers to be considered when allocating bandwidth.
+     */
+    private final LayerSnapshot[] layers;
+
+    private final boolean onStage;
+
+    /**
+     * The index (into {@link #layers}) of the "preferred" layer, i.e. the layer up to which we allocate eagerly.
+     */
+    final int preferredIdx;
+
+    /**
+     * The index of the current target layer. It can be improved in the {@code improve()} step, if there is enough
+     * bandwidth.
+     */
+    int targetIdx = -1;
+
+    SingleSourceAllocation(
+            MediaSourceContainer endpoint,
+            VideoConstraints constraints,
+            boolean onStage,
+            DiagnosticContext diagnosticContext,
+            Clock clock)
+    {
+        this.endpoint = endpoint;
+        this.constraints = constraints;
+        this.onStage = onStage;
+
+        MediaSourceDesc source = endpoint.getMediaSource();
+        if (source == null || constraints.getMaxHeight() <= 0)
+        {
+            preferredIdx = -1;
+            layers = EMPTY_RATE_SNAPSHOT_ARRAY;
+            return;
+        }
+
+        long nowMs = clock.instant().toEpochMilli();
+        Pair<List<LayerSnapshot>, Integer> ratesListAndPreferredIdx
+                = selectLayers(source.getRtpLayers(), nowMs, constraints);
+        List<LayerSnapshot> ratesList = ratesListAndPreferredIdx.getFirst();
+
         if (timeSeriesLogger.isTraceEnabled())
         {
             DiagnosticContext.TimeSeriesPoint ratesTimeSeriesPoint
@@ -165,7 +180,7 @@ class SingleSourceAllocation
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
         }
 
-        this.preferredIdx = ratedPreferredIdx;
+        this.preferredIdx = ratesListAndPreferredIdx.getSecond();
         layers = ratesList.toArray(new LayerSnapshot[0]);
     }
 
