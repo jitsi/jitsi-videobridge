@@ -23,6 +23,7 @@ import org.jitsi.videobridge.cc.config.*;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.*;
 
 /**
  * A bitrate allocation that pertains to a specific source. This is the internal representation used in the allocation
@@ -41,10 +42,8 @@ class SingleSourceAllocation
     private static final LayerSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new LayerSnapshot[0];
 
     private static Pair<List<LayerSnapshot>, Integer> selectLayers(
-            List<RtpLayerDesc> allLayers,
-            long nowMs,
-            VideoConstraints constraints
-            )
+            List<LayerSnapshot> allLayers,
+            VideoConstraints constraints)
     {
         int idealHeight = constraints.getMaxHeight();
         int preferredHeight = -1;
@@ -58,14 +57,16 @@ class SingleSourceAllocation
             preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
             preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
         }
-        boolean noActiveLayers = allLayers.stream().allMatch(l -> l.hasZeroBitrate(nowMs));
+        boolean noActiveLayers = allLayers.stream().noneMatch(l -> l.bitrate > 0);
 
         List<LayerSnapshot> ratesList = new ArrayList<>();
         // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
         // a couple of exceptions (see comments below).
         int ratedPreferredIdx = 0;
-        for (RtpLayerDesc layer : allLayers)
+        for (LayerSnapshot layerSnapshot : allLayers)
         {
+            RtpLayerDesc layer = layerSnapshot.layer;
+
             // Skip layers that do not satisfy the constraints. If no layers satisfy the constraints, add the lowest
             // layer anyway (the constraints are "soft", and given enough bandwidth we prefer to exceed them rather than
             // sending no video at all).
@@ -91,12 +92,11 @@ class SingleSourceAllocation
                     || ratesList.isEmpty())
             {
 
-                double layerBitrate = layer.getBitrateBps(nowMs);
                 // No active layers usually happens when the source has just been signaled and we haven't received
                 // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
-                if (noActiveLayers || layerBitrate > 0)
+                if (noActiveLayers || layerSnapshot.bitrate > 0)
                 {
-                    ratesList.add(new LayerSnapshot(layer, layerBitrate));
+                    ratesList.add(layerSnapshot);
 
                     if (layer.getHeight() <= preferredHeight)
                     {
@@ -110,7 +110,7 @@ class SingleSourceAllocation
 
         }
 
-        return new Pair(ratesList, ratedPreferredIdx);
+        return new Pair<>(ratesList, ratedPreferredIdx);
     }
 
     final MediaSourceContainer endpoint;
@@ -159,7 +159,10 @@ class SingleSourceAllocation
 
         long nowMs = clock.instant().toEpochMilli();
         Pair<List<LayerSnapshot>, Integer> ratesListAndPreferredIdx
-                = selectLayers(source.getRtpLayers(), nowMs, constraints);
+                = selectLayers(
+                        source.getRtpLayers().stream()
+                                .map(l -> new LayerSnapshot(l, l.getBitrate(nowMs))).collect(Collectors.toList()),
+                        constraints);
         List<LayerSnapshot> ratesList = ratesListAndPreferredIdx.getFirst();
 
         if (timeSeriesLogger.isTraceEnabled())
