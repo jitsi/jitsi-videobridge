@@ -247,6 +247,14 @@ class SingleSourceAllocation
         return targetIdx != -1 ? layers[targetIdx] : null;
     }
 
+    /**
+     * Exposed for testing only.
+     */
+    RtpLayerDesc getPreferredLayer()
+    {
+        return preferredIdx != -1 ? layers[preferredIdx].layer : null;
+    }
+
     private LayerSnapshot getIdealLayer()
     {
         return layers.length != 0 ? layers[layers.length - 1] : null;
@@ -295,11 +303,19 @@ class SingleSourceAllocation
     }
 
     /**
+     * Exposed for testing only.
+     */
+    LayerSnapshot[] getLayers()
+    {
+        return layers;
+    }
+
+    /**
      * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
      */
-    private static class LayerSnapshot
+    static class LayerSnapshot
     {
-        private final RtpLayerDesc layer;
+        final RtpLayerDesc layer;
         private final double bitrate;
         private LayerSnapshot(RtpLayerDesc layer, double bitrate)
         {

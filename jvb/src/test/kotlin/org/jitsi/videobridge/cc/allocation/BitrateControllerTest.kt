@@ -1383,5 +1383,6 @@ fun createLayer(
     // Use a real RtpLayerDesc, because mocking absolutely kills the performance.
     return object : RtpLayerDesc(eid, tid, sid, height, frameRate) {
         override fun getBitrate(nowMs: Long): Bandwidth = bitrate
+        override fun hasZeroBitrate(nowMs: Long): Boolean = bitrate == 0.bps
     }
 }
