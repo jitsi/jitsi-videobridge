@@ -61,6 +61,34 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     allocation.preferredLayer shouldBe sd30
                     allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd30)
                 }
+                context("With constraints unmet by any layer") {
+                    // Single high-res stream with 3 temporal layers.
+                    val endpoint = Endpoint(
+                        "id",
+                        MediaSourceDesc(
+                            // No simulcast.
+                            arrayOf(RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30)))
+                        )
+                    )
+
+                    context("Non-zero constraints") {
+                        val allocation =
+                            SingleSourceAllocation(endpoint, VideoConstraints(360), false, diagnosticContext, clock)
+
+                        // The receiver set 360p constraints, but we only have a 720p stream.
+                        allocation.preferredLayer shouldBe hd30
+                        allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
+                    }
+                    context("Zero constraints") {
+                        val allocation =
+                            SingleSourceAllocation(endpoint, VideoConstraints(0), false, diagnosticContext, clock)
+
+                        // The receiver set 360p constraints, but we only have a 720p stream.
+                        allocation.preferredLayer shouldBe null
+                        allocation.layers.map { it.layer } shouldBe emptyList()
+
+                    }
+                }
             }
             context("When some layers are inactive") {
                 // Override layers with bitrate=0. Simulate only up to 360p/15 being active.

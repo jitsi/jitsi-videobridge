@@ -18,12 +18,12 @@ package org.jitsi.videobridge.cc.allocation;
 import kotlin.*;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.videobridge.cc.config.*;
 
 import java.time.Clock;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.*;
+
+import static org.jitsi.videobridge.cc.allocation.SingleSourceAllocationKt.selectLayers;
 
 /**
  * A bitrate allocation that pertains to a specific source. This is the internal representation used in the allocation
@@ -41,77 +41,6 @@ class SingleSourceAllocation
      */
     private static final LayerSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY = new LayerSnapshot[0];
 
-    private static Pair<List<LayerSnapshot>, Integer> selectLayers(
-            List<LayerSnapshot> allLayers,
-            VideoConstraints constraints)
-    {
-        int idealHeight = constraints.getMaxHeight();
-        int preferredHeight = -1;
-        double preferredFps = -1.0;
-        if (constraints.getMaxHeight() > 180)
-        {
-            // For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
-            // temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
-            // consider frame rates at least as high as the preferred. In practice this means we consider
-            // 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
-            preferredHeight = BitrateControllerConfig.onstagePreferredHeightPx();
-            preferredFps = BitrateControllerConfig.onstagePreferredFramerate();
-        }
-        boolean noActiveLayers = allLayers.stream().noneMatch(l -> l.bitrate > 0);
-
-        List<LayerSnapshot> ratesList = new ArrayList<>();
-        // Initialize the list of layers to be considered. These are the layers that satisfy the constraints, with
-        // a couple of exceptions (see comments below).
-        int ratedPreferredIdx = 0;
-        for (LayerSnapshot layerSnapshot : allLayers)
-        {
-            RtpLayerDesc layer = layerSnapshot.layer;
-
-            // Skip layers that do not satisfy the constraints. If no layers satisfy the constraints, add the lowest
-            // layer anyway (the constraints are "soft", and given enough bandwidth we prefer to exceed them rather than
-            // sending no video at all).
-            if (!ratesList.isEmpty())
-            {
-                if (idealHeight >= 0 && layer.getHeight() > idealHeight)
-                {
-                    continue;
-                }
-                if (constraints.getMaxFrameRate() > 0 && layer.getFrameRate() > constraints.getMaxFrameRate())
-                {
-                    continue;
-                }
-            }
-
-            boolean lessThanPreferredResolution = layer.getHeight() < preferredHeight;
-            boolean lessThanOrEqualIdealResolution = layer.getHeight() <= constraints.getMaxHeight();
-            // If frame rate is unknown, consider it to be sufficient.
-            boolean atLeastPreferredFps = layer.getFrameRate() < 0 || layer.getFrameRate() >= preferredFps;
-
-            if ((lessThanPreferredResolution
-                    || (lessThanOrEqualIdealResolution && atLeastPreferredFps))
-                    || ratesList.isEmpty())
-            {
-
-                // No active layers usually happens when the source has just been signaled and we haven't received
-                // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
-                if (noActiveLayers || layerSnapshot.bitrate > 0)
-                {
-                    ratesList.add(layerSnapshot);
-
-                    if (layer.getHeight() <= preferredHeight)
-                    {
-                        // Set the layer up to which allocation will be "eager", meaning it will continue to allocate
-                        // to this endpoint before moving on to the next. This is only set for the "on-stage" endpoint,
-                        // to the "preferred" resolution with the highest bitrate.
-                        ratedPreferredIdx = ratesList.size() - 1;
-                    }
-                }
-            }
-
-        }
-
-        return new Pair<>(ratesList, ratedPreferredIdx);
-    }
 
     final MediaSourceContainer endpoint;
 
@@ -161,7 +90,7 @@ class SingleSourceAllocation
         Pair<List<LayerSnapshot>, Integer> ratesListAndPreferredIdx
                 = selectLayers(
                         source.getRtpLayers().stream()
-                                .map(l -> new LayerSnapshot(l, l.getBitrate(nowMs))).collect(Collectors.toList()),
+                                .map(l -> new LayerSnapshot(l, l.getBitrateBps(nowMs))).collect(Collectors.toList()),
                         constraints);
         List<LayerSnapshot> ratesList = ratesListAndPreferredIdx.getFirst();
 
@@ -172,11 +101,11 @@ class SingleSourceAllocation
                         .addField("remote_endpoint_id", endpoint.getId());
             for (LayerSnapshot layerSnapshot : ratesList)
             {
-                RtpLayerDesc l = layerSnapshot.layer;
+                RtpLayerDesc l = layerSnapshot.getLayer();
                 ratesTimeSeriesPoint.addField(
                         RtpLayerDesc.indexString(l.getIndex()) +
                             "_" + l.getHeight() + "p_" + l.getFrameRate() + "fps_bps",
-                        layerSnapshot.bitrate);
+                        layerSnapshot.getBitrate());
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint);
         }
@@ -204,7 +133,7 @@ class SingleSourceAllocation
             // Boost on stage participant to preferred, if there's enough bw.
             for (int i = 0; i < layers.length; i++)
             {
-                if (i > preferredIdx || maxBps < layers[i].bitrate)
+                if (i > preferredIdx || maxBps < layers[i].getBitrate())
                 {
                     break;
                 }
@@ -215,7 +144,7 @@ class SingleSourceAllocation
         else
         {
             // Try the next element in the ratedIndices array.
-            if (targetIdx + 1 < layers.length && layers[targetIdx + 1].bitrate < maxBps)
+            if (targetIdx + 1 < layers.length && layers[targetIdx + 1].getBitrate() < maxBps)
             {
                 targetIdx++;
             }
@@ -233,7 +162,7 @@ class SingleSourceAllocation
             // TODO further: Should we just prune the list of layers we consider to not include such layers?
             for (int i = layers.length - 1; i >= targetIdx + 1; i--)
             {
-                if (layers[i].bitrate <= layers[targetIdx].bitrate)
+                if (layers[i].getBitrate() <= layers[targetIdx].getBitrate())
                 {
                     targetIdx = i;
                 }
@@ -246,7 +175,7 @@ class SingleSourceAllocation
      */
     boolean isSuspended()
     {
-        return targetIdx == -1 && layers.length > 0 && layers[0].bitrate > 0;
+        return targetIdx == -1 && layers.length > 0 && layers[0].getBitrate() > 0;
     }
 
     /**
@@ -255,7 +184,7 @@ class SingleSourceAllocation
     long getTargetBitrate()
     {
         LayerSnapshot targetLayer = getTargetLayer();
-        return targetLayer != null ? (long) targetLayer.bitrate : 0;
+        return targetLayer != null ? (long) targetLayer.getBitrate() : 0;
     }
 
     private LayerSnapshot getTargetLayer()
@@ -268,7 +197,7 @@ class SingleSourceAllocation
      */
     RtpLayerDesc getPreferredLayer()
     {
-        return preferredIdx != -1 ? layers[preferredIdx].layer : null;
+        return preferredIdx != -1 ? layers[preferredIdx].getLayer() : null;
     }
 
     private LayerSnapshot getIdealLayer()
@@ -300,8 +229,8 @@ class SingleSourceAllocation
         LayerSnapshot idealLayer = getIdealLayer();
         return new SingleAllocation(
                 endpoint,
-                targetLayer == null ? null : targetLayer.layer,
-                idealLayer == null ? null : idealLayer.layer
+                targetLayer == null ? null : targetLayer.getLayer(),
+                idealLayer == null ? null : idealLayer.getLayer()
         );
     }
 
@@ -326,17 +255,4 @@ class SingleSourceAllocation
         return layers;
     }
 
-    /**
-     * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
-     */
-    static class LayerSnapshot
-    {
-        final RtpLayerDesc layer;
-        private final double bitrate;
-        private LayerSnapshot(RtpLayerDesc layer, double bitrate)
-        {
-            this.layer = layer;
-            this.bitrate = bitrate;
-        }
-    }
 }
