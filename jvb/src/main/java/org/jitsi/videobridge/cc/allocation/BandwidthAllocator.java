@@ -314,12 +314,12 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
                 maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 // In stage view improve greedily until preferred, in tile view go step-by-step.
-                sourceBitrateAllocation.improve(maxBandwidth);
-                if (i == 0)
-                {
-                    oversending |= sourceBitrateAllocation.maybeEnableOversending();
-                }
+                sourceBitrateAllocation.improve(maxBandwidth, i == 0);
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
+                if (maxBandwidth < 0)
+                {
+                    oversending = true;
+                }
 
                 newTargetIndices[i] = sourceBitrateAllocation.getTargetIdx();
                 if (sourceBitrateAllocation.getTargetIdx() != -1)

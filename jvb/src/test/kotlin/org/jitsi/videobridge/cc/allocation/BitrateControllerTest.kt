@@ -380,6 +380,18 @@ class BitrateControllerTest : ShouldSpec() {
                 0.kbps,
                 BandwidthAllocation(
                     setOf(
+                        SingleAllocation(A, targetLayer = sd30),
+                        SingleAllocation(B, targetLayer = noVideo),
+                        SingleAllocation(C, targetLayer = noVideo),
+                        SingleAllocation(D, targetLayer = noVideo)
+                    ),
+                    oversending = true
+                )
+            ),
+            Event(
+                160.kbps,
+                BandwidthAllocation(
+                    setOf(
                         SingleAllocation(A, targetLayer = hd7_5),
                         SingleAllocation(B, targetLayer = noVideo),
                         SingleAllocation(C, targetLayer = noVideo),

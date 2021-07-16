@@ -93,7 +93,7 @@ internal class SingleSourceAllocation(
      *
      * @param maxBps the bandwidth available.
      */
-    fun improve(maxBps: Long) {
+    fun improve(maxBps: Long, allowOversending: Boolean) {
         if (layers.isEmpty()) {
             return
         }
@@ -126,9 +126,25 @@ internal class SingleSourceAllocation(
                 }
             }
         }
+
+        // If oversending is allowed, look for a better layer which doesn't exceed maxBps by more than
+        // `maxOversendBitrate`.
+        if (allowOversending && oversendIdx >= 0 && targetIdx < oversendIdx) {
+            for (i in oversendIdx downTo targetIdx + 1) {
+                if (layers[i].bitrate <= maxBps + BitrateControllerConfig.maxOversendBitrateBps()) {
+                    targetIdx = i
+                }
+            }
+        }
     }
 
-    /** The source is suspended if we've not selected a layer AND the source has active layers. */
+    /**
+     * The source is suspended if we've not selected a layer AND the source has active layers.
+     *
+     * TODO: this is not exactly correct because it only looks at the layers we consider. E.g. if the receiver set
+     * a maxHeight=0 constraint for an endpoint, it will appear suspended. This is not critical, because this val is
+     * only used for logging.
+     */
     val isSuspended: Boolean
         get() = targetIdx == -1 && layers.isNotEmpty() && layers[0].bitrate > 0
 
@@ -155,18 +171,6 @@ internal class SingleSourceAllocation(
 
     val oversendLayer: RtpLayerDesc?
         get() = layers.getOrNull(oversendIdx)?.layer
-
-    /**
-     * If there is no target layer, switch to the layer chosen for oversending (if any are available).
-     * @return true if the target layer was changed.
-     */
-    fun maybeEnableOversending(): Boolean {
-        if (oversendIdx >= 0 && targetIdx < oversendIdx) {
-            targetIdx = oversendIdx
-            return true
-        }
-        return false
-    }
 
     /**
      * Creates the final immutable result of this allocation. Should be called once the allocation algorithm has
