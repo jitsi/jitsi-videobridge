@@ -170,6 +170,13 @@
       <artifactId>jackson-module-kotlin</artifactId>
       <version>${jackson.version}</version>
     </dependency>
+    <!-- jackson-module-kotlin uses kotlin-reflect; avoid pulling
+         in an old version. -->
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-reflect</artifactId>
+      <version>${kotlin.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
