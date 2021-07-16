@@ -36,13 +36,13 @@ public class H264
     /**
      * Constants used to detect H264 keyframes in rtp packet
      */
-    static final byte kTypeMask = 0x1F;// Nalu
+    static final byte kTypeMask = 0x1F; // Nalu
     static final byte kIdr = 5;
     static final byte kSei = 6;
     static final byte kSps = 7;
     static final byte kPps = 8;
     static final byte kStapA = 24;
-    static final byte kFuA = 28;// Header sizes
+    static final byte kFuA = 28; // Header sizes
     static final int kNalHeaderSize = 1;
     static final int kFuAHeaderSize = 2;
     static final int kLengthFieldSize = 2;

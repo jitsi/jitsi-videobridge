@@ -149,9 +149,7 @@ class InterArrival
             long arrivalTimeMs,
             int packetSize,
             long[] deltas){
-
-                return computeDeltas(timestamp,arrivalTimeMs,
-                        packetSize,deltas,-1L);
+        return computeDeltas(timestamp, arrivalTimeMs, packetSize, deltas, -1L);
     }
 
     public boolean computeDeltas(
@@ -203,7 +201,8 @@ class InterArrival
                 if (prevTimestampGroup.lastSystemTimeMs != -1L &&
                         currentTimestampGroup.lastSystemTimeMs != -1L &&
                         arrivalTimeDeltaMs - systemTimeDeltaMs >=
-                    kArrivalTimeOffsetThresholdMs) {
+                    kArrivalTimeOffsetThresholdMs)
+                {
                     logger.warn( "The arrival time clock offset has changed (diff = "
                             + (arrivalTimeDeltaMs - systemTimeDeltaMs)
                             +  " ms), resetting.");
@@ -214,7 +213,8 @@ class InterArrival
                 if (arrivalTimeDeltaMs < 0)
                 {
                     ++numConsecutiveReorderedPackets;
-                    if (numConsecutiveReorderedPackets >= kReorderedResetThreshold) {
+                    if (numConsecutiveReorderedPackets >= kReorderedResetThreshold)
+                    {
                         // The group of packets has been reordered since receiving
                         // its local arrival timestamp.
                         logger.warn(

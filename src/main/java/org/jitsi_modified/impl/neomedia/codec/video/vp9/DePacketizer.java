@@ -721,7 +721,8 @@ public class DePacketizer
                     int hasNext = buf[pos] & N_BIT;
                     pos++;
 
-                    if (hasNext == 0) {
+                    if (hasNext == 0)
+                    {
                         break;
                     }
                 }

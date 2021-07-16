@@ -110,7 +110,8 @@ class AimdRateControl
 
         double beta = 0.0;
 
-        if (lastMs > 0) {
+        if (lastMs > 0)
+        {
             beta
                 = Math.min((nowMs - lastMs) / (double) responseTimeMs, 1.0);
             if (inExperiment)
@@ -376,7 +377,8 @@ class AimdRateControl
     {
         double alpha = 1.08;
 
-        if (lastMs > -1) {
+        if (lastMs > -1)
+        {
             long timeSinceLastUpdateMs = Math.min(nowMs - lastMs, 1000);
 
             alpha = Math.pow(alpha,  timeSinceLastUpdateMs / 1000.0);

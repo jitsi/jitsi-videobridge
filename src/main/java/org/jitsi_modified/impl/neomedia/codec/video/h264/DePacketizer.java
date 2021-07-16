@@ -101,7 +101,8 @@ public class DePacketizer
                 logger.error("StapA header truncated.");
                 return false;
             }
-            if (!verifyStapANaluLengths(buf, naluStart, naluLength)) {
+            if (!verifyStapANaluLengths(buf, naluStart, naluLength))
+            {
                 logger.error("StapA packet with incorrect NALU packet lengths.");
                 return false;
             }

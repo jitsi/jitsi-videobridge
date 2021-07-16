@@ -335,7 +335,8 @@ public class RemoteBitrateEstimatorAbsSendTime
      */
     private synchronized void checkTimeouts(long nowMs)
     {
-        if (nowMs - lastPacketTimeMs > kStreamTimeOutMs) {
+        if (nowMs - lastPacketTimeMs > kStreamTimeOutMs)
+        {
             detector = null;
             // We deliberately don't reset the first_packet_time_ms_
             // here for now since we only probe for bandwidth in the
