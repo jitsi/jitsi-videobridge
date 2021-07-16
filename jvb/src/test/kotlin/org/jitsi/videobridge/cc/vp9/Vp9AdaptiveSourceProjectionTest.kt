@@ -1,6 +1,7 @@
 package org.jitsi.videobridge.cc.vp9
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.getIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
@@ -943,7 +944,6 @@ class Vp9AdaptiveSourceProjectionTest {
                     getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
                 )
             )
-            val endOfPicture = packet.isEndOfPicture
             context.rewriteRtp(packetInfo)
 
             /* Allow any values after a gap. */
@@ -951,7 +951,7 @@ class Vp9AdaptiveSourceProjectionTest {
             expectedTs = packet.timestamp
             expectedPicId = packet.pictureId
             expectedTl0PicIdx = packet.TL0PICIDX
-            if (endOfPicture) {
+            if (packet.isEndOfPicture) {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
                 expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
             }
@@ -1010,6 +1010,163 @@ class Vp9AdaptiveSourceProjectionTest {
         runLargeDropoutTest(generator, 0)
     }
 
+    private fun runSourceSuspensionTest(generator: Vp9PacketGenerator, targetIndex: Int) {
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Vp9AdaptiveSourceProjectionContext(
+            diagnosticContext,
+            payloadType,
+            initialState, logger
+        )
+        var expectedSeq = 10001
+        var expectedTs: Long = 1003000
+        var expectedPicId = 0
+        var expectedTl0PicIdx = 0
+        val targetSid = getSidFromIndex(targetIndex)
+        val targetTid = getTidFromIndex(targetIndex)
+
+        var packetInfo: PacketInfo
+        var packet: Vp9Packet
+
+        for (i in 0..999) {
+            packetInfo = generator.nextPacket()
+            packet = packetInfo.packetAs()
+            val accepted = context.accept(
+                packetInfo,
+                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+            )
+            if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
+                expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
+            }
+            val endOfPicture = packet.isEndOfPicture
+            if (packet.temporalLayerIndex <= targetTid &&
+                (
+                    packet.spatialLayerIndex == targetSid ||
+                        (packet.isUpperLevelReference && packet.spatialLayerIndex < targetSid)
+                    )
+            ) {
+                Assert.assertTrue(accepted)
+                context.rewriteRtp(packetInfo)
+                Assert.assertEquals(expectedSeq, packet.sequenceNumber)
+                Assert.assertEquals(expectedTs, packet.timestamp)
+                Assert.assertEquals(expectedPicId, packet.pictureId)
+                Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
+                expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+            } else {
+                Assert.assertFalse(accepted)
+            }
+            if (endOfPicture) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
+            }
+        }
+        var suspended = 64
+        while (suspended < 65536) {
+            /* Turn the source off for a time. */
+            for (i in 0 until suspended) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                val accepted = context.accept(
+                    packetInfo,
+                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), RtpLayerDesc.SUSPENDED_INDEX
+                )
+                Assert.assertFalse(accepted)
+                if (packet.isEndOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+
+            /* Switch back to wanting [targetIndex], but don't send a keyframe for a while.
+             * Should still be dropped. */
+            for (i in 0 until 30) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                val accepted = context.accept(
+                    packetInfo,
+                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                )
+                Assert.assertFalse(accepted)
+                if (packet.isEndOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+
+            /* Request a keyframe.  Will be sent as of the next frame. */
+            generator.requestKeyframe()
+            while (generator.packetOfFrame != 0) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                val accepted = context.accept(
+                    packetInfo,
+                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                )
+                Assert.assertFalse(accepted)
+                if (packet.isEndOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+
+            for (i in 0..999) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                val accepted = context.accept(
+                    packetInfo,
+                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                )
+                if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
+                    expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
+                }
+                val endOfPicture = packet.isEndOfPicture
+                if (packet.temporalLayerIndex <= targetTid &&
+                    (
+                        packet.spatialLayerIndex == targetSid ||
+                            (packet.isUpperLevelReference && packet.spatialLayerIndex < targetSid)
+                        )
+                ) {
+                    Assert.assertTrue(accepted)
+                    context.rewriteRtp(packetInfo)
+                    Assert.assertEquals(expectedSeq, packet.sequenceNumber)
+                    Assert.assertEquals(expectedTs, packet.timestamp)
+                    Assert.assertEquals(expectedPicId, packet.pictureId)
+                    Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
+                    expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                } else {
+                    Assert.assertFalse(accepted)
+                }
+                if (endOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                    expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
+                }
+            }
+            suspended *= 2
+        }
+    }
+
+    @Test
+    fun sourceSuspensionTest() {
+        val generator = ScalableVp9PacketGenerator(1)
+        runSourceSuspensionTest(generator, 2)
+    }
+
+    @Test
+    fun filteredSourceSuspensionTest() {
+        val generator = ScalableVp9PacketGenerator(1)
+        runSourceSuspensionTest(generator, 0)
+    }
+
+    @Test
+    fun largeFrameSourceSuspensionTest() {
+        val generator = ScalableVp9PacketGenerator(3)
+        runSourceSuspensionTest(generator, 2)
+    }
+
+    @Test
+    fun filteredLargeFrameSourceSuspensionTest() {
+        val generator = ScalableVp9PacketGenerator(3)
+        runSourceSuspensionTest(generator, 0)
+    }
+
     private abstract class Vp9PacketGenerator {
         open val packetsPerFrame: Int = 1
         abstract val ts: Long
@@ -1017,6 +1174,8 @@ class Vp9AdaptiveSourceProjectionTest {
 
         abstract fun reset()
         abstract fun nextPacket(): PacketInfo
+        abstract fun requestKeyframe()
+        abstract val packetOfFrame: Int
 
         init {
             reset()
@@ -1032,7 +1191,7 @@ class Vp9AdaptiveSourceProjectionTest {
         override var ts: Long = 0
             private set
         private var picId = 0
-        private var packetOfFrame = 0
+        override var packetOfFrame = 0
         private var keyframePicture = false
         private var keyframeRequested = false
         private var frameCount = 0
@@ -1106,6 +1265,14 @@ class Vp9AdaptiveSourceProjectionTest {
             }
             return info
         }
+        override fun requestKeyframe() {
+            if (packetOfFrame == 0) {
+                keyframePicture = true
+                keyframeRequested = false
+            } else {
+                keyframeRequested = true
+            }
+        }
         companion object {
             private val vp9PacketTemplate = DatatypeConverter.parseHexBinary( /* RTP Header */
                 "80" + /* V, P, X, CC */
@@ -1136,7 +1303,7 @@ class Vp9AdaptiveSourceProjectionTest {
             private set
         private var picId = 0
         private var tl0picidx = 0
-        private var packetOfFrame = 0
+        override var packetOfFrame = 0
         private var keyframePicture = false
         private var keyframeRequested = false
         private var sid = 0
@@ -1262,7 +1429,7 @@ class Vp9AdaptiveSourceProjectionTest {
             return info
         }
 
-        fun requestKeyframe() {
+        override fun requestKeyframe() {
             if (packetOfFrame == 0) {
                 keyframePicture = true
                 keyframeRequested = false
