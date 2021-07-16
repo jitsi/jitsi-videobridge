@@ -150,12 +150,12 @@ constructor(
     }
 
     /**
-     * Gets the cumulative bitrate (in bps) of this [RtpLayerDesc] and
-     * its dependencies.
+     * Gets the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.
+     *
+     * This is left open for use in testing.
      *
      * @param nowMs
-     * @return the cumulative bitrate (in bps) of this [RtpLayerDesc]
-     * and its dependencies.
+     * @return the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.
      */
     open fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs).values.sum()
 
@@ -198,8 +198,10 @@ constructor(
      * Recursively checks this layer and its dependencies to see if the bitrate is zero.
      * Note that unlike [calcBitrate] this does not avoid double-visiting layers; the overhead
      * of the hash table is usually more than the cost of any double-visits.
+     *
+     * This is left open for use in testing.
      */
-    fun hasZeroBitrate(nowMs: Long): Boolean {
+    open fun hasZeroBitrate(nowMs: Long): Boolean {
         if (!layerHasZeroBitrate(nowMs)) {
             return false
         }
