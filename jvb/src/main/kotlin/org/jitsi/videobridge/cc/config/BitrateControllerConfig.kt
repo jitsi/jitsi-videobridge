@@ -19,6 +19,7 @@ package org.jitsi.videobridge.cc.config
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
+import org.jitsi.nlj.util.Bandwidth
 import java.time.Duration
 
 class BitrateControllerConfig {
@@ -87,6 +88,17 @@ class BitrateControllerConfig {
 
         @JvmStatic
         fun allowOversendOnStage(): Boolean = allowOversendOnStage
+
+        /**
+         * The maximum bitrate by which the bridge may exceed the estimated available bandwidth when oversending.
+         */
+        private val maxOversendBitrate: Bandwidth by config {
+            "videobridge.cc.max-oversend-bitrate".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it) }
+        }
+
+        @JvmStatic
+        fun maxOversendBitrateBps(): Double = maxOversendBitrate.bps
 
         /**
          * Whether or not we should trust the bandwidth
