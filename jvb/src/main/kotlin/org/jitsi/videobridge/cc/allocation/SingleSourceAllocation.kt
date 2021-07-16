@@ -42,39 +42,22 @@ internal class SingleSourceAllocation(
     diagnosticContext: DiagnosticContext,
     clock: Clock
 ) {
-    /** An array that holds the layers to be considered when allocating bandwidth. Exposed for testing only. */
-    val layers: List<LayerSnapshot>
-
-    /** The index (into [.layers]) of the "preferred" layer, i.e. the layer up to which we allocate eagerly. */
-    val preferredIdx: Int
+    /**
+     * The immutable list of layers to be considered when allocating bandwidth.
+     */
+    val layers: Layers = selectLayers(endpoint, onStage, constraints, clock.instant().toEpochMilli())
 
     /**
-     * The index of the current target layer. It can be improved in the `improve()` step, if there is enough
-     * bandwidth.
+     * The index (into [layers] of the current target layer). It can be improved in the `improve()` step, if there is
+     * enough bandwidth.
      */
     var targetIdx = -1
 
-    /**
-     * The index (into [layers]) of the layer which will be selected if oversending is enabled. If set to -1,
-     * oversending is disabled.
-     */
-    val oversendIdx: Int
-
     init {
-        val (layers, preferredIdx, oversendIdx) = selectLayers(
-            endpoint,
-            onStage,
-            constraints,
-            clock.instant().toEpochMilli()
-        )
-        this.preferredIdx = preferredIdx
-        this.layers = layers
-        this.oversendIdx = oversendIdx
-
         if (timeSeriesLogger.isTraceEnabled) {
             val ratesTimeSeriesPoint = diagnosticContext.makeTimeSeriesPoint("layers_considered")
                 .addField("remote_endpoint_id", endpoint.id)
-            for ((l, bitrate) in layers) {
+            for ((l, bitrate) in layers.layers) {
                 ratesTimeSeriesPoint.addField(
                     "${indexString(l.index)}_${l.height}p_${l.frameRate}fps_bps",
                     bitrate
@@ -85,6 +68,7 @@ internal class SingleSourceAllocation(
     }
 
     fun isOnStage() = onStage
+    fun hasReachedPreferred(): Boolean = targetIdx >= layers.preferredIndex
 
     /**
      * Implements an "improve" step, incrementing [.targetIdx] to the next layer if there is sufficient
@@ -97,10 +81,10 @@ internal class SingleSourceAllocation(
         if (layers.isEmpty()) {
             return
         }
-        if (targetIdx == -1 && preferredIdx > -1 && onStage) {
+        if (targetIdx == -1 && layers.preferredIndex > -1 && onStage) {
             // Boost on stage participant to preferred, if there's enough bw.
             for (i in layers.indices) {
-                if (i > preferredIdx || maxBps < layers[i].bitrate) {
+                if (i > layers.preferredIndex || maxBps < layers[i].bitrate) {
                     break
                 }
                 targetIdx = i
@@ -129,8 +113,8 @@ internal class SingleSourceAllocation(
 
         // If oversending is allowed, look for a better layer which doesn't exceed maxBps by more than
         // `maxOversendBitrate`.
-        if (allowOversending && oversendIdx >= 0 && targetIdx < oversendIdx) {
-            for (i in oversendIdx downTo targetIdx + 1) {
+        if (allowOversending && layers.oversendIndex >= 0 && targetIdx < layers.oversendIndex) {
+            for (i in layers.oversendIndex downTo targetIdx + 1) {
                 if (layers[i].bitrate <= maxBps + BitrateControllerConfig.maxOversendBitrateBps()) {
                     targetIdx = i
                 }
@@ -152,10 +136,7 @@ internal class SingleSourceAllocation(
      * Gets the target bitrate (in bps) for this endpoint allocation, i.e. the bitrate of the currently chosen layer.
      */
     val targetBitrate: Long
-        get() {
-            val targetLayer = targetLayer
-            return targetLayer?.bitrate?.toLong() ?: 0
-        }
+        get() = targetLayer?.bitrate?.toLong() ?: 0
 
     private val targetLayer: LayerSnapshot?
         get() = layers.getOrNull(targetIdx)
@@ -164,13 +145,13 @@ internal class SingleSourceAllocation(
      * Exposed for testing only.
      */
     val preferredLayer: RtpLayerDesc?
-        get() = layers.getOrNull(preferredIdx)?.layer
+        get() = layers.preferredLayer?.layer
 
-    private val idealLayer: LayerSnapshot?
-        get() = layers.lastOrNull()
-
+    /**
+     * Exposed for testing only.
+     */
     val oversendLayer: RtpLayerDesc?
-        get() = layers.getOrNull(oversendIdx)?.layer
+        get() = layers.oversendLayer?.layer
 
     /**
      * Creates the final immutable result of this allocation. Should be called once the allocation algorithm has
@@ -180,14 +161,14 @@ internal class SingleSourceAllocation(
         get() = SingleAllocation(
             endpoint,
             targetLayer?.layer,
-            idealLayer?.layer
+            layers.idealLayer?.layer
         )
 
     override fun toString(): String {
         return (
             "[id=" + endpoint.id +
                 " constraints=" + constraints +
-                " ratedPreferredIdx=" + preferredIdx +
+                " ratedPreferredIdx=" + layers.preferredIndex +
                 " ratedTargetIdx=" + targetIdx
             )
     }
@@ -241,8 +222,6 @@ private fun selectLayers(
     }
 }
 
-typealias Layers = Triple<List<LayerSnapshot>, Int, Int>
-private val noLayers = Layers(emptyList(), -1, -1)
 
 private fun selectLayersForScreensharing(
     layers: List<LayerSnapshot>,
@@ -274,7 +253,7 @@ private fun selectLayersForScreensharing(
     } else {
         -1
     }
-    return Triple(selectedLayers, selectedLayers.size - 1, oversendIdx)
+    return Layers(selectedLayers, selectedLayers.size - 1, oversendIdx)
 }
 
 private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
@@ -333,3 +312,19 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
  * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
  */
 data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Double)
+
+data class Layers(
+    val layers: List<LayerSnapshot>,
+    /** The index (into [.layers]) of the "preferred" layer, i.e. the layer up to which we allocate eagerly. */
+    val preferredIndex: Int,
+    /**
+     * The index (into [layers]) of the layer which will be selected if oversending is enabled. If set to -1,
+     * oversending is disabled.
+     */
+    val oversendIndex: Int
+): List<LayerSnapshot> by layers {
+    val preferredLayer = layers.getOrNull(preferredIndex)
+    val oversendLayer = layers.getOrNull(oversendIndex)
+    val idealLayer = layers.lastOrNull()
+}
+private val noLayers = Layers(emptyList(), -1, -1)

@@ -330,8 +330,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 // In stage view, do not allocate bandwidth for thumbnails until the on-stage reaches "preferred".
                 // This prevents enabling thumbnail only to disable them when bwe slightly increases allowing on-stage
                 // to take more.
-                if (sourceBitrateAllocation.isOnStage() &&
-                        sourceBitrateAllocation.getTargetIdx() < sourceBitrateAllocation.getPreferredIdx())
+                if (sourceBitrateAllocation.isOnStage() && !sourceBitrateAllocation.hasReachedPreferred())
                 {
                     break;
                 }
