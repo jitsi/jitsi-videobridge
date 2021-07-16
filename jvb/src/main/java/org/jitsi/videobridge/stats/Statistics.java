@@ -46,7 +46,7 @@ public abstract class Statistics
     {
         ColibriStatsExtension ext = new ColibriStatsExtension();
 
-        for (Map.Entry<String,Object> e : statistics.getStats().entrySet())
+        for (Map.Entry<String, Object> e : statistics.getStats().entrySet())
         {
             ext.addStat(
                     new ColibriStatsExtension.Stat(e.getKey(), e.getValue()));
@@ -65,7 +65,7 @@ public abstract class Statistics
     /**
      * Map of the names of the statistics and their values.
      */
-    private final Map<String,Object> stats = new HashMap<>();
+    private final Map<String, Object> stats = new HashMap<>();
 
     /**
      * Generates/updates the statistics represented by this instance.
@@ -230,10 +230,10 @@ public abstract class Statistics
      *
      * @return the map with the names of the statistics and their values.
      */
-    public Map<String,Object> getStats()
+    public Map<String, Object> getStats()
     {
         Lock lock = this.lock.readLock();
-        Map<String,Object> stats;
+        Map<String, Object> stats;
 
         lock.lock();
         try
@@ -275,7 +275,7 @@ public abstract class Statistics
     {
         StringBuilder s = new StringBuilder();
 
-        for(Map.Entry<String,Object> e : getStats().entrySet())
+        for (Map.Entry<String, Object> e : getStats().entrySet())
         {
             s.append(e.getKey()).append(":").append(e.getValue()).append("\n");
         }

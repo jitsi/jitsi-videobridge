@@ -462,7 +462,8 @@ public class VP8AdaptiveSourceProjectionContext
             tl0PicIdx = VpxUtils.applyTl0PicIdxDelta(lastVP8FrameProjection.getTl0PICIDX(),
                 1);
         }
-        else {
+        else
+        {
             picId = frame.getPictureId();
             tl0PicIdx = frame.getTl0PICIDX();
         }
@@ -708,7 +709,8 @@ public class VP8AdaptiveSourceProjectionContext
             throw new RewriteException("Frame not in tracker (aged off?)");
         }
 
-        if (vp8Frame.getProjection() == null) {
+        if (vp8Frame.getProjection() == null)
+        {
             /* Shouldn't happen for an accepted packet whose frame is still known? */
             throw new RewriteException("Frame does not have projection?");
         }

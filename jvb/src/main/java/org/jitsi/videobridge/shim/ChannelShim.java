@@ -245,7 +245,8 @@ public class ChannelShim
                 iq.addSource(bridgeSource);
             }
 
-            if (sources != null) {
+            if (sources != null)
+            {
                 int[] ssrcs = sources.stream()
                         .map(SourcePacketExtension::getSSRC)
                         .filter(ssrc -> ssrc != -1L)
@@ -255,7 +256,8 @@ public class ChannelShim
                 iq.setSSRCs(ssrcs);
             }
 
-            if (sourceGroups != null) {
+            if (sourceGroups != null)
+            {
                 sourceGroups.forEach(iq::addSourceGroup);
             }
         }
