@@ -121,5 +121,108 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30)
             }
         }
+        context("Screensharing") {
+            context("When all layers are active") {
+                val endpoint = Endpoint(
+                    "id",
+                    MediaSourceDesc(
+                        arrayOf(
+                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        )
+                    ),
+                    videoType = VideoType.DESKTOP
+                )
+
+                context("With no constraints") {
+                    val allocation =
+                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+
+                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
+                    // endpoints.
+                    allocation.preferredLayer shouldBe hd30
+                    allocation.oversendLayer shouldBe hd7_5
+                    allocation.layers.map { it.layer } shouldBe
+                            listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30, hd7_5, hd15, hd30)
+                }
+                context("With 360p constraints") {
+                    val allocation =
+                        SingleSourceAllocation(endpoint, VideoConstraints(360), true, diagnosticContext, clock)
+
+                    allocation.preferredLayer shouldBe sd30
+                    allocation.oversendLayer shouldBe sd7_5
+                    allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30)
+                }
+            }
+            context("The high layers are inactive (send-side bwe restrictions)") {
+                // Override layers with bitrate=0. Simulate only up to 360p/30 being active.
+                val hd7_5 = createLayer(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
+                val hd15 = createLayer(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
+                val hd30 = createLayer(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
+                val endpoint = Endpoint(
+                    "id",
+                    MediaSourceDesc(
+                        arrayOf(
+                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        )
+                    ),
+                    videoType = VideoType.DESKTOP
+                )
+
+                val allocation =
+                    SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+
+                // For screensharing the "preferred" layer should be the highest -- always prioritized over other
+                // endpoints.
+                allocation.preferredLayer shouldBe sd30
+                allocation.oversendLayer shouldBe sd7_5
+                allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30)
+            }
+            context("The low layers are inactive (simulcast signaled but not used)") {
+                // Override layers with bitrate=0. Simulate simulcast being signaled but effectively disabled.
+                val ld7_5 = createLayer(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
+                val ld15 = createLayer(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
+                val ld30 = createLayer(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
+                val sd7_5 = createLayer(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = 0.bps)
+                val sd15 = createLayer(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = 0.bps)
+                val sd30 = createLayer(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = 0.bps)
+                val endpoint = Endpoint(
+                    "id",
+                    MediaSourceDesc(
+                        arrayOf(
+                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        )
+                    ),
+                    videoType = VideoType.DESKTOP
+                )
+
+                context("With no constraints") {
+                    val allocation =
+                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+
+                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
+                    // endpoints.
+                    allocation.preferredLayer shouldBe hd30
+                    allocation.oversendLayer shouldBe hd7_5
+                    allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
+                }
+                context("With 180p constraints") {
+                    val allocation =
+                        SingleSourceAllocation(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
+
+                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
+                    // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
+                    // lowest available resolution (which is high).
+                    allocation.preferredLayer shouldBe hd30
+                    allocation.oversendLayer shouldBe hd7_5
+                    allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
+                }
+            }
+        }
     }
 }

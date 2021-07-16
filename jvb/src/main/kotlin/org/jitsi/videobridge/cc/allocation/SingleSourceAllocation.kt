@@ -61,24 +61,15 @@ internal class SingleSourceAllocation(
     val oversendIdx: Int
 
     init {
-        val (layers, preferredIdx) = selectLayers(
-            endpoint.mediaSource,
+        val (layers, preferredIdx, oversendIdx) = selectLayers(
+            endpoint,
+            onStage,
             constraints,
             clock.instant().toEpochMilli()
         )
         this.preferredIdx = preferredIdx
         this.layers = layers
-        oversendIdx = if (
-            BitrateControllerConfig.allowOversendOnStage() &&
-            onStage &&
-            endpoint.videoType != VideoType.DESKTOP &&
-            layers.isNotEmpty()
-        ) {
-            // Enable oversending for the lowest layer.
-            0
-        } else {
-            -1
-        }
+        this.oversendIdx = oversendIdx
 
         if (timeSeriesLogger.isTraceEnabled) {
             val ratesTimeSeriesPoint = diagnosticContext.makeTimeSeriesPoint("layers_considered")
@@ -170,7 +161,7 @@ internal class SingleSourceAllocation(
      * @return true if the target layer was changed.
      */
     fun maybeEnableOversending(): Boolean {
-        if (targetIdx < 0 && oversendIdx >= 0) {
+        if (oversendIdx >= 0 && targetIdx < oversendIdx) {
             targetIdx = oversendIdx
             return true
         }
@@ -219,25 +210,82 @@ fun getPreferred(constraints: VideoConstraints): Pair<Int, Double> {
 }
 
 /**
- * Selects from [layers] the ones which should be considered when allocating bandwidth for an endpoint. Also returns
- * the index of the "preferred" layer.
+ * Selects from the layers of a [MediaSourceDesc] the ones which should be considered when allocating bandwidth for
+ * an endpoint. Also returns the index of the "preferred" layer.
  *
- * @param layers all available layers from the endpoint.
+ * @param endpoint the [MediaSourceContainer] that describes the available layers.
  * @param constraints the constraints signaled for the endpoint.
- * @return the subset of [layers] which should be considered when allocating bandwidth, and the index of the "preferred"
- * layer.
+ * @return the subset of [endpoint]'s layers which should be considered when allocating bandwidth, and the index of the
+ * "preferred" layer.
  */
 private fun selectLayers(
-    source: MediaSourceDesc?,
+    endpoint: MediaSourceContainer,
+    onStage: Boolean,
     constraints: VideoConstraints,
     nowMs: Long
-): Pair<List<LayerSnapshot>, Int> {
+): Layers {
+    val source = endpoint.mediaSource
     if (constraints.maxHeight <= 0 || source == null || !source.hasRtpLayers()) {
-        return Pair(emptyList(), -1)
+        return noLayers
+    }
+    val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
+
+    return when (endpoint.videoType) {
+        VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
+        VideoType.NONE -> noLayers
+        VideoType.DESKTOP -> selectLayersForScreensharing(layers, constraints, onStage)
+    }
+}
+
+typealias Layers = Triple<List<LayerSnapshot>, Int, Int>
+private val noLayers = Layers(emptyList(), -1, -1)
+
+private fun selectLayersForScreensharing(
+    layers: List<LayerSnapshot>,
+    constraints: VideoConstraints,
+    onStage: Boolean
+): Layers {
+
+    var activeLayers = layers.filter { it.bitrate > 0 }
+    // No active layers usually happens when the source has just been signaled and we haven't received
+    // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
+    if (activeLayers.isEmpty()) activeLayers = layers
+
+    // We select all layers that satisfy the constraints.
+    var selectedLayers =
+        if (constraints.maxHeight < 0) {
+            activeLayers
+        } else {
+            activeLayers.filter { it.layer.height <= constraints.maxHeight }
+        }
+    // If no layers satisfy the constraints, we use the layers with the lowest resolution.
+    if (selectedLayers.isEmpty()) {
+        val minHeight = activeLayers.map { it.layer.height }.minOrNull() ?: return noLayers
+        selectedLayers = activeLayers.filter { it.layer.height == minHeight }
     }
 
-    val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
-    val minHeight = layers.map { it.layer.height }.minOrNull() ?: return Pair(emptyList(), -1)
+    val oversendIdx = if (onStage && BitrateControllerConfig.allowOversendOnStage()) {
+        val maxHeight = selectedLayers.map { it.layer.height }.maxOrNull() ?: return noLayers
+        selectedLayers.firstIndexWhich { it.layer.height == maxHeight }
+    } else {
+        -1
+    }
+    return Triple(selectedLayers, selectedLayers.size - 1, oversendIdx)
+}
+
+private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
+    forEachIndexed { index, item ->
+        if (predicate(item)) return index
+    }
+    return -1
+}
+
+private fun selectLayersForCamera(
+    layers: List<LayerSnapshot>,
+    constraints: VideoConstraints,
+): Layers {
+
+    val minHeight = layers.map { it.layer.height }.minOrNull() ?: return noLayers
     val noActiveLayers = layers.none { (_, bitrate) -> bitrate > 0 }
     val (preferredHeight, preferredFps) = getPreferred(constraints)
 
@@ -265,7 +313,7 @@ private fun selectLayers(
 
     val effectivePreferredHeight = max(preferredHeight, minHeight)
     val preferredIndex = ratesList.lastIndexWhich { it.layer.height <= effectivePreferredHeight }
-    return Pair(ratesList, preferredIndex)
+    return Layers(ratesList, preferredIndex, -1)
 }
 
 /**
