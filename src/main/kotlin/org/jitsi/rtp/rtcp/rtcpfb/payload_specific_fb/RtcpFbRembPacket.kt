@@ -125,10 +125,10 @@ class RtcpFbRembPacket(
         }
 
         fun setRemb(buf: ByteArray, baseOffset: Int) {
-            buf[baseOffset + REMB_OFF + 0] = 'R'.toByte()
-            buf[baseOffset + REMB_OFF + 1] = 'E'.toByte()
-            buf[baseOffset + REMB_OFF + 2] = 'M'.toByte()
-            buf[baseOffset + REMB_OFF + 3] = 'B'.toByte()
+            buf[baseOffset + REMB_OFF + 0] = 'R'.code.toByte()
+            buf[baseOffset + REMB_OFF + 1] = 'E'.code.toByte()
+            buf[baseOffset + REMB_OFF + 2] = 'M'.code.toByte()
+            buf[baseOffset + REMB_OFF + 3] = 'B'.code.toByte()
         }
 
         fun setNumSsrc(buf: ByteArray, off: Int, value: Int) {

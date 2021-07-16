@@ -300,7 +300,7 @@ open class RtpPacket(
             0
         } else {
             val rawHeaderLength = RtpHeader.EXT_HEADER_SIZE_BYTES +
-                pendingHeaderExtensions.sumBy { h -> h.totalLengthBytes }
+                pendingHeaderExtensions.sumOf { h -> h.totalLengthBytes }
             rawHeaderLength + RtpUtils.getNumPaddingBytes(rawHeaderLength)
         }
 

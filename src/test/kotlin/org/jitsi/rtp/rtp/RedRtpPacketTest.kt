@@ -25,7 +25,6 @@ class RedRtpPacketTest : ShouldSpec() {
             context("Redundancy") {
                 val block = BlockHeader.parse(byteArrayOf(0x85, 0xff, 0xff, 0xff), 0)
                 block.shouldBeTypeOf<RedundancyBlockHeader>()
-                block as RedundancyBlockHeader
                 block.pt shouldBe 5.toByte()
                 block.timestampOffset shouldBe 0x3fff
                 block.length shouldBe 0x3ff
@@ -48,7 +47,6 @@ class RedRtpPacketTest : ShouldSpec() {
 
                 val parsed = BlockHeader.parse(buf, 0)
                 parsed.shouldBeTypeOf<RedundancyBlockHeader>()
-                parsed as RedundancyBlockHeader
                 parsed.pt shouldBe 111.toByte()
                 parsed.timestampOffset shouldBe 960
                 parsed.length shouldBe 55
