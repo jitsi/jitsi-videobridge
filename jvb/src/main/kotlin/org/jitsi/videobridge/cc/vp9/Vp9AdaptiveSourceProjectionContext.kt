@@ -106,7 +106,7 @@ class Vp9AdaptiveSourceProjectionContext(
                 val projection: Vp9FrameProjection
                 try {
                     projection = createProjection(
-                        frame = frame, initialPacket = packet,
+                        frame = frame, initialPacket = packet, isResumption = acceptResult.isResumption,
                         isReset = result.isReset, mark = acceptResult.mark, receivedMs = receivedMs
                     )
                 } catch (e: Exception) {
@@ -231,6 +231,7 @@ class Vp9AdaptiveSourceProjectionContext(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
+        isResumption: Boolean,
         isReset: Boolean,
         receivedMs: Long
     ): Vp9FrameProjection {
