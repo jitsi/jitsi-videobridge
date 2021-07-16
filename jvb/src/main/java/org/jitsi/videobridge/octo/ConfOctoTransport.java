@@ -229,7 +229,7 @@ public class ConfOctoTransport
             {
                 bridgeOctoTransport.removeHandler(conferenceId, this);
             }
-            else if(remoteBridges.isEmpty())
+            else if (remoteBridges.isEmpty())
             {
                 bridgeOctoTransport.addHandler(conferenceId, this);
             }

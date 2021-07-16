@@ -24,9 +24,14 @@
         <module name="RightCurly">
             <property name="option" value="alone_or_singleline"/>
         </module>
+
+        <module name="WhitespaceAfter">
+            <!-- Drops TYPECAST from default tokens -->
+            <property name="tokens" value="COMMA , SEMI , LITERAL_IF , LITERAL_ELSE , LITERAL_WHILE , LITERAL_DO , LITERAL_FOR , DO_WHILE"/>
+        </module>
     </module>
 
     <module name="FileTabCharacter">
         <property name="eachLine" value="true"/>
     </module>
-s</module>
+</module>
