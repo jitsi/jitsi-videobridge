@@ -101,7 +101,7 @@ class Vp9AdaptiveSourceProjectionContext(
             val receivedMs = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
                 .acceptFrame(frame, incomingIndex, targetIndex, receivedMs)
-            frame.isAccepted = acceptResult.accept && checkDecodability(frame)
+            frame.isAccepted = acceptResult.accept
             if (frame.isAccepted) {
                 val projection: Vp9FrameProjection
                 try {
@@ -223,16 +223,6 @@ class Vp9AdaptiveSourceProjectionContext(
      */
     private fun findNextBaseTl0(frame: Vp9Frame) =
         vp9PictureMaps.get(frame.ssrc)?.findNextBaseTl0(frame)
-
-    /**
-     * For a frame that's been accepted by the quality filter, verify that
-     * it's decodable given the projection decisions about previous frames
-     * (in case the targetIndex has changed).
-     */
-    private fun checkDecodability(frame: Vp9Frame): Boolean {
-        /* TODO - use SS or flexible mode reference list */
-        return true
-    }
 
     /**
      * Create a projection for this frame.
