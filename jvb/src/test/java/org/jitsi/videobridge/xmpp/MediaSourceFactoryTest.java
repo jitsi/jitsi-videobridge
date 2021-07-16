@@ -20,15 +20,11 @@ import org.jitsi.nlj.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.junit.*;
-import org.junit.runner.*;
-import org.powermock.modules.junit4.*;
 
 import java.util.*;
 
 import static org.junit.Assert.*;
-import static org.powermock.api.easymock.PowerMock.*;
 
-@RunWith(PowerMockRunner.class)
 public class MediaSourceFactoryTest
 {
     private SourceGroupPacketExtension createGroup(
@@ -55,18 +51,10 @@ public class MediaSourceFactoryTest
         return spe;
     }
 
-    @After
-    public void tearDown()
-    {
-        verifyAll();
-    }
-
     // 1 video stream -> 1 source, 1 layer
     @Test
     public void createMediaSource()
     {
-        replayAll();
-
         long videoSsrc = 12345;
 
         SourcePacketExtension videoSource = createSource(videoSsrc);
@@ -85,8 +73,6 @@ public class MediaSourceFactoryTest
     @Test
     public void createMediaSources1()
     {
-        replayAll();
-
         long videoSsrc = 12345;
         long rtxSsrc = 54321;
 
@@ -111,8 +97,6 @@ public class MediaSourceFactoryTest
     @Test
     public void createMediaSources2()
     {
-        replayAll();
-
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
         long videoSsrc3 = 34567;
@@ -159,8 +143,6 @@ public class MediaSourceFactoryTest
     @Test
     public void createMediaSources3()
     {
-        replayAll();
-
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
         long videoSsrc3 = 34567;
@@ -205,8 +187,6 @@ public class MediaSourceFactoryTest
     @Test
     public void createMediaSources4()
     {
-        replayAll();
-
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
         long videoSsrc3 = 34567;
@@ -264,8 +244,6 @@ public class MediaSourceFactoryTest
     @Test
     public void testEmptySimGroup()
     {
-        replayAll();
-
         long videoSsrc1 = 12345;
 
         SourcePacketExtension videoSource1 = createSource(videoSsrc1);
@@ -289,8 +267,6 @@ public class MediaSourceFactoryTest
     @Test
     public void testEmptySource()
     {
-        replayAll();
-
         SourcePacketExtension videoSource1 = createSource(null);
 
         MediaSourceDesc[] sources =
