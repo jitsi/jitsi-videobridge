@@ -222,7 +222,6 @@ private fun selectLayers(
     }
 }
 
-
 private fun selectLayersForScreensharing(
     layers: List<LayerSnapshot>,
     constraints: VideoConstraints,
@@ -322,7 +321,7 @@ data class Layers(
      * oversending is disabled.
      */
     val oversendIndex: Int
-): List<LayerSnapshot> by layers {
+) : List<LayerSnapshot> by layers {
     val preferredLayer = layers.getOrNull(preferredIndex)
     val oversendLayer = layers.getOrNull(oversendIndex)
     val idealLayer = layers.lastOrNull()

@@ -144,7 +144,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     allocation.preferredLayer shouldBe hd30
                     allocation.oversendLayer shouldBe hd7_5
                     allocation.layers.map { it.layer } shouldBe
-                            listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30, hd7_5, hd15, hd30)
+                        listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30, hd7_5, hd15, hd30)
                 }
                 context("With 360p constraints") {
                     val allocation =
