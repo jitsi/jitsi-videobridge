@@ -50,6 +50,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                     // "preferred FPS") layers for higher resolutions.
                     allocation.preferredLayer shouldBe sd30
+                    allocation.oversendLayer shouldBe null
                     allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd30, hd30)
                 }
                 context("With constraints") {
@@ -59,6 +60,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                     // "preferred FPS") layers for higher resolutions.
                     allocation.preferredLayer shouldBe sd30
+                    allocation.oversendLayer shouldBe null
                     allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd30)
                 }
                 context("With constraints unmet by any layer") {
@@ -77,16 +79,17 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                         // The receiver set 360p constraints, but we only have a 720p stream.
                         allocation.preferredLayer shouldBe hd30
+                        allocation.oversendLayer shouldBe null
                         allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
                     }
                     context("Zero constraints") {
                         val allocation =
                             SingleSourceAllocation(endpoint, VideoConstraints(0), false, diagnosticContext, clock)
 
-                        // The receiver set 360p constraints, but we only have a 720p stream.
+                        // The receiver set a maxHeight=0 constraint.
                         allocation.preferredLayer shouldBe null
+                        allocation.oversendLayer shouldBe null
                         allocation.layers.map { it.layer } shouldBe emptyList()
-
                     }
                 }
             }
@@ -114,6 +117,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                 // "preferred FPS") layers for higher resolutions.
                 allocation.preferredLayer shouldBe ld30
+                allocation.oversendLayer shouldBe null
                 allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30)
             }
         }

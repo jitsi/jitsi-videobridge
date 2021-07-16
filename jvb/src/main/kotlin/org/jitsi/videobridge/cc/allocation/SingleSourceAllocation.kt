@@ -20,8 +20,10 @@ import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.onstagePreferredFramerate
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.onstagePreferredHeightPx
+import org.jitsi.videobridge.util.VideoType
 import java.lang.Integer.max
 import java.time.Clock
 
@@ -52,6 +54,12 @@ internal class SingleSourceAllocation(
      */
     var targetIdx = -1
 
+    /**
+     * The index (into [layers]) of the layer which will be selected if oversending is enabled. If set to -1,
+     * oversending is disabled.
+     */
+    val oversendIdx: Int
+
     init {
         val (layers, preferredIdx) = selectLayers(
             endpoint.mediaSource,
@@ -60,6 +68,17 @@ internal class SingleSourceAllocation(
         )
         this.preferredIdx = preferredIdx
         this.layers = layers
+        oversendIdx = if (
+            BitrateControllerConfig.allowOversendOnStage() &&
+            onStage &&
+            endpoint.videoType != VideoType.DESKTOP &&
+            layers.isNotEmpty()
+        ) {
+            // Enable oversending for the lowest layer.
+            0
+        } else {
+            -1
+        }
 
         if (timeSeriesLogger.isTraceEnabled) {
             val ratesTimeSeriesPoint = diagnosticContext.makeTimeSeriesPoint("layers_considered")
@@ -132,24 +151,27 @@ internal class SingleSourceAllocation(
         }
 
     private val targetLayer: LayerSnapshot?
-        get() = if (targetIdx != -1) layers[targetIdx] else null
+        get() = layers.getOrNull(targetIdx)
 
     /**
      * Exposed for testing only.
      */
     val preferredLayer: RtpLayerDesc?
-        get() = if (preferredIdx != -1) layers[preferredIdx].layer else null
+        get() = layers.getOrNull(preferredIdx)?.layer
 
     private val idealLayer: LayerSnapshot?
         get() = layers.lastOrNull()
 
+    val oversendLayer: RtpLayerDesc?
+        get() = layers.getOrNull(oversendIdx)?.layer
+
     /**
-     * If there is no target layer, switch to the lowest layer (if any are available).
+     * If there is no target layer, switch to the layer chosen for oversending (if any are available).
      * @return true if the target layer was changed.
      */
-    fun tryLowestLayer(): Boolean {
-        if (targetIdx < 0 && layers.isNotEmpty()) {
-            targetIdx = 0
+    fun maybeEnableOversending(): Boolean {
+        if (targetIdx < 0 && oversendIdx >= 0) {
+            targetIdx = oversendIdx
             return true
         }
         return false
@@ -160,21 +182,19 @@ internal class SingleSourceAllocation(
      * completed.
      */
     val result: SingleAllocation
-        get() {
-            val targetLayer = targetLayer
-            val idealLayer = idealLayer
-            return SingleAllocation(
-                endpoint,
-                targetLayer?.layer,
-                idealLayer?.layer
-            )
-        }
+        get() = SingleAllocation(
+            endpoint,
+            targetLayer?.layer,
+            idealLayer?.layer
+        )
 
     override fun toString(): String {
-        return ("[id=" + endpoint.id
-                + " constraints=" + constraints
-                + " ratedPreferredIdx=" + preferredIdx
-                + " ratedTargetIdx=" + targetIdx)
+        return (
+            "[id=" + endpoint.id +
+                " constraints=" + constraints +
+                " ratedPreferredIdx=" + preferredIdx +
+                " ratedTargetIdx=" + targetIdx
+            )
     }
 
     companion object {
@@ -216,7 +236,7 @@ private fun selectLayers(
         return Pair(emptyList(), -1)
     }
 
-    val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs))}
+    val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
     val minHeight = layers.map { it.layer.height }.minOrNull() ?: return Pair(emptyList(), -1)
     val noActiveLayers = layers.none { (_, bitrate) -> bitrate > 0 }
     val (preferredHeight, preferredFps) = getPreferred(constraints)
@@ -230,9 +250,9 @@ private fun selectLayers(
         val lessThanOrEqualMaxHeight = layer.height <= constraints.maxHeight
         // If frame rate is unknown, consider it to be sufficient.
         val atLeastPreferredFps = layer.frameRate < 0 || layer.frameRate >= preferredFps
-        if (lessThanPreferredHeight
-            || (lessThanOrEqualMaxHeight && atLeastPreferredFps)
-            || layer.height == minHeight
+        if (lessThanPreferredHeight ||
+            (lessThanOrEqualMaxHeight && atLeastPreferredFps) ||
+            layer.height == minHeight
         ) {
 
             // No active layers usually happens when the source has just been signaled and we haven't received
@@ -260,4 +280,4 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
 /**
  * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
  */
-data class LayerSnapshot (val layer: RtpLayerDesc, val bitrate: Double)
+data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Double)
