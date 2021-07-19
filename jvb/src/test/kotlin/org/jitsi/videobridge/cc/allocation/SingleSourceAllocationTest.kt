@@ -5,6 +5,7 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.util.bps
+import org.jitsi.nlj.util.kbps
 import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.videobridge.util.VideoType
@@ -221,6 +222,43 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     allocation.preferredLayer shouldBe hd30
                     allocation.oversendLayer shouldBe hd7_5
                     allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
+                }
+            }
+            context("VP9") {
+                val l1 = createLayer(tid = 0, eid = 0, sid = 0, height = 720, frameRate = -1.0, bitrate = 150.kbps)
+                val l2 = createLayer(tid = 0, eid = 0, sid = 1, height = 720, frameRate = -1.0, bitrate = 370.kbps)
+                val l3 = createLayer(tid = 0, eid = 0, sid = 2, height = 720, frameRate = -1.0, bitrate = 750.kbps)
+
+                val endpoint = Endpoint(
+                    "id",
+                    MediaSourceDesc(
+                        arrayOf(
+                            RtpEncodingDesc(1L, arrayOf(l1)),
+                            RtpEncodingDesc(1L, arrayOf(l2)),
+                            RtpEncodingDesc(1L, arrayOf(l3))
+                        )
+                    ),
+                    videoType = VideoType.DESKTOP
+                )
+
+                context("With no constraints") {
+                    val allocation =
+                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+
+                    allocation.preferredLayer shouldBe l3
+                    allocation.oversendLayer shouldBe l1
+                    allocation.layers.map { it.layer } shouldBe listOf(l1, l2, l3)
+                }
+                context("With 180p constraints") {
+                    val allocation =
+                        SingleSourceAllocation(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
+
+                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
+                    // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
+                    // lowest available resolution (which is high).
+                    allocation.preferredLayer shouldBe l1
+                    allocation.oversendLayer shouldBe l1
+                    allocation.layers.map { it.layer } shouldBe listOf(l1)
                 }
             }
         }

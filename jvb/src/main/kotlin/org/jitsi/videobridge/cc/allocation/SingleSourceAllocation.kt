@@ -280,6 +280,12 @@ private fun selectLayersForScreensharing(
     if (selectedLayers.isEmpty()) {
         val minHeight = activeLayers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
         selectedLayers = activeLayers.filter { it.layer.height == minHeight }
+
+        // This recognizes the structure used with VP9 (multiple encodings with the same resolution and unknown frame
+        // rate). In this case, we only want the low quality layer.
+        if (selectedLayers.isNotEmpty() && selectedLayers[0].layer.frameRate < 0) {
+            selectedLayers = listOf(selectedLayers[0])
+        }
     }
 
     val oversendIdx = if (onStage && BitrateControllerConfig.allowOversendOnStage()) {

@@ -1548,9 +1548,9 @@ fun createLayer(
     /**
      * Note: this mock impl does not model the dependency layers, so the cumulative bitrate should be provided.
      */
-    bitrate: Bandwidth
+    bitrate: Bandwidth,
+    sid: Int = -1
 ): RtpLayerDesc {
-    val sid = -1
 
     // Use a real RtpLayerDesc, because mocking absolutely kills the performance.
     return object : RtpLayerDesc(eid, tid, sid, height, frameRate) {
