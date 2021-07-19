@@ -454,7 +454,8 @@ private class SingleLayerFrameGenerator : FrameGenerator() {
             usesInterLayerDependency = false,
             isInterPicturePredicted = (pictureCount > 0),
             pictureId = pictureCount,
-            tl0PICIDX = pictureCount,
+            index = pictureCount,
+            tl0PICIDX = pictureCount and 0xff,
             isKeyframe = (pictureCount == 0),
             numSpatialLayers = if (pictureCount == 0) 1 else -1
         )
@@ -496,7 +497,8 @@ private class TemporallyScaledFrameGenerator : FrameGenerator() {
             usesInterLayerDependency = false,
             isInterPicturePredicted = (pictureCount > 0),
             pictureId = pictureCount,
-            tl0PICIDX = tl0Count,
+            index = pictureCount,
+            tl0PICIDX = tl0Count and 0xff,
             isKeyframe = (pictureCount == 0),
             numSpatialLayers = if (pictureCount == 0) 1 else -1
         )
@@ -543,7 +545,8 @@ private class SVCFrameGenerator : FrameGenerator() {
             usesInterLayerDependency = sLayer > 0,
             isInterPicturePredicted = !keyframePicture,
             pictureId = pictureCount,
-            tl0PICIDX = tl0Count,
+            index = pictureCount,
+            tl0PICIDX = tl0Count and 0xff,
             isKeyframe = keyframePicture && sLayer == 0,
             numSpatialLayers = if (keyframePicture && sLayer == 0) 3 else -1
         )
@@ -595,7 +598,8 @@ private class KSVCFrameGenerator : FrameGenerator() {
             usesInterLayerDependency = keyframePicture && sLayer > 0,
             isInterPicturePredicted = !keyframePicture,
             pictureId = pictureCount,
-            tl0PICIDX = tl0Count,
+            index = pictureCount,
+            tl0PICIDX = tl0Count and 0xff,
             isKeyframe = keyframePicture && sLayer == 0,
             numSpatialLayers = if (keyframePicture && sLayer == 0) 3 else -1
         )
@@ -647,7 +651,8 @@ private class SimulcastFrameGenerator : FrameGenerator() {
             usesInterLayerDependency = false,
             isInterPicturePredicted = !keyframePicture,
             pictureId = pictureCount,
-            tl0PICIDX = tl0Count,
+            index = pictureCount,
+            tl0PICIDX = tl0Count and 0xff,
             isKeyframe = keyframePicture,
             numSpatialLayers = if (keyframePicture) 1 else -1
         )

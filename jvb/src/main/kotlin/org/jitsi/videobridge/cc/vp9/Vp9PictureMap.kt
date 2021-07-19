@@ -81,12 +81,9 @@ class Vp9PictureMap(
         }
         if (isLargeJump(packet)) {
             pictureHistory.indexTracker.resetAt(pictureId)
-            val picture = Vp9Picture(packet)
-            return if (!pictureHistory.insert(pictureId, picture)) {
-                null
-            } else {
-                PacketInsertionResult(picture.frame(packet)!!, picture, true, isReset = true)
-            }
+            val picture = pictureHistory.insert(packet) ?: return null
+
+            return PacketInsertionResult(picture.frame(packet)!!, picture, true, isReset = true)
         }
         val picture = pictureHistory[pictureId]
         if (picture != null) {
@@ -118,12 +115,9 @@ class Vp9PictureMap(
             return picture.addPacket(packet)
         }
 
-        val newPicture = Vp9Picture(packet)
-        return if (!pictureHistory.insert(pictureId, newPicture)) {
-            null
-        } else {
-            PacketInsertionResult(newPicture.frame(packet)!!, newPicture, true)
-        }
+        val newPicture = pictureHistory.insert(packet) ?: return null
+
+        return PacketInsertionResult(newPicture.frame(packet)!!, newPicture, true)
     }
 
     @Synchronized
@@ -199,16 +193,20 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
     val latestPicture: Vp9Picture?
         get() = getIndex(lastIndex)
 
-    fun insert(pictureId: Int, picture: Vp9Picture): Boolean {
+    /** Insert a new picture for the given Vp9 packet */
+    fun insert(packet: Vp9Packet): Vp9Picture? {
+        val pictureId = packet.pictureId
         val index = indexTracker.update(pictureId)
-        val ret = super.insertItem(picture, index)
-        if (ret) {
+        val picture = Vp9Picture(packet, index)
+        val inserted = super.insertItem(picture, index)
+        if (inserted) {
             numCached++
             if (firstIndex == -1 || index < firstIndex) {
                 firstIndex = index
             }
+            return picture
         }
-        return ret
+        return null
     }
 
     /**

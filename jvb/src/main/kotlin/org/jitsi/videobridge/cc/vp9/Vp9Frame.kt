@@ -111,6 +111,11 @@ class Vp9Frame internal constructor(
     val pictureId: Int,
 
     /**
+     * The PictureID index (PictureID plus cycles) of this frame.
+     */
+    val index: Int,
+
+    /**
      * The VP9 TL0PICIDX of the incoming VP9 frame that this instance refers to
      * (RFC7741).
      */
@@ -179,7 +184,10 @@ class Vp9Frame internal constructor(
     val effectiveSpatialLayer: Int
         get() = if (spatialLayer >= 0) spatialLayer else 0
 
-    constructor(packet: Vp9Packet) : this(
+    // Validate that the index matches the pictureId
+    init { assert((index and 0x7fff) == pictureId) }
+
+    constructor(packet: Vp9Packet, index: Int) : this(
         ssrc = packet.ssrc,
         timestamp = packet.timestamp,
         earliestKnownSequenceNumber = packet.sequenceNumber,
@@ -194,6 +202,7 @@ class Vp9Frame internal constructor(
         usesInterLayerDependency = packet.usesInterLayerDependency,
         isInterPicturePredicted = packet.isInterPicturePredicted,
         pictureId = packet.pictureId,
+        index = index,
         tl0PICIDX = packet.TL0PICIDX,
         isKeyframe = packet.isKeyframe,
         numSpatialLayers = packet.scalabilityStructureNumSpatial
