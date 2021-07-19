@@ -214,13 +214,13 @@ private fun selectLayers(
 ): Layers {
     val source = endpoint.mediaSource
     if (constraints.maxHeight <= 0 || source == null || !source.hasRtpLayers()) {
-        return noLayers
+        return Layers.noLayers
     }
     val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
 
     return when (endpoint.videoType) {
         VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
-        VideoType.NONE -> noLayers
+        VideoType.NONE -> Layers.noLayers
         VideoType.DESKTOP -> selectLayersForScreensharing(layers, constraints, onStage)
     }
 }
@@ -251,12 +251,12 @@ private fun selectLayersForScreensharing(
         }
     // If no layers satisfy the constraints, we use the layers with the lowest resolution.
     if (selectedLayers.isEmpty()) {
-        val minHeight = activeLayers.map { it.layer.height }.minOrNull() ?: return noLayers
+        val minHeight = activeLayers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
         selectedLayers = activeLayers.filter { it.layer.height == minHeight }
     }
 
     val oversendIdx = if (onStage && BitrateControllerConfig.allowOversendOnStage()) {
-        val maxHeight = selectedLayers.map { it.layer.height }.maxOrNull() ?: return noLayers
+        val maxHeight = selectedLayers.map { it.layer.height }.maxOrNull() ?: return Layers.noLayers
         selectedLayers.firstIndexWhich { it.layer.height == maxHeight }
     } else {
         -1
@@ -283,7 +283,7 @@ private fun selectLayersForCamera(
     constraints: VideoConstraints,
 ): Layers {
 
-    val minHeight = layers.map { it.layer.height }.minOrNull() ?: return noLayers
+    val minHeight = layers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
     val noActiveLayers = layers.none { (_, bitrate) -> bitrate > 0 }
     val (preferredHeight, preferredFps) = getPreferred(constraints)
 
@@ -343,5 +343,8 @@ data class Layers(
     val preferredLayer = layers.getOrNull(preferredIndex)
     val oversendLayer = layers.getOrNull(oversendIndex)
     val idealLayer = layers.lastOrNull()
+
+    companion object {
+        val noLayers = Layers(emptyList(), -1, -1)
+    }
 }
-private val noLayers = Layers(emptyList(), -1, -1)
