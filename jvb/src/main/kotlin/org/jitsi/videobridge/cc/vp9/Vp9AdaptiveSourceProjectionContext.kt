@@ -68,6 +68,13 @@ class Vp9AdaptiveSourceProjectionContext(
         rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp
     )
 
+    /**
+     * The picture ID index that started the latest stream resumption.
+     * We can't send frames with picIdIdx less than this, because we don't have
+     * space in the projected sequence number/picId/tl0PicIdx counts.
+     */
+    private var lastPicIdIndexResumption = -1
+
     @Synchronized
     override fun accept(
         packetInfo: PacketInfo,
@@ -101,7 +108,7 @@ class Vp9AdaptiveSourceProjectionContext(
             val receivedMs = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
                 .acceptFrame(frame, incomingIndex, targetIndex, receivedMs)
-            frame.isAccepted = acceptResult.accept
+            frame.isAccepted = acceptResult.accept && frame.index >= lastPicIdIndexResumption
             if (frame.isAccepted) {
                 val projection: Vp9FrameProjection
                 try {
@@ -256,6 +263,7 @@ class Vp9AdaptiveSourceProjectionContext(
         receivedMs: Long
     ): Vp9FrameProjection {
         assert(frame.isKeyframe)
+        lastPicIdIndexResumption = frame.index
 
         var projectedSeqGap = if (!initialPacket.isStartOfFrame) {
             val f = prevFrame(frame)
@@ -336,6 +344,8 @@ class Vp9AdaptiveSourceProjectionContext(
         mark: Boolean,
         receivedMs: Long
     ): Vp9FrameProjection {
+        lastPicIdIndexResumption = frame.index
+
         /* These must be non-null because we don't execute this function unless
             frameIsNewSsrc has returned false.
         */
