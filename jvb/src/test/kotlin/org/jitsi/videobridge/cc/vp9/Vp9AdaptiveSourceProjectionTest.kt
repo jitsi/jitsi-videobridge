@@ -1030,6 +1030,7 @@ class Vp9AdaptiveSourceProjectionTest {
         var packet: Vp9Packet
 
         var lastPacketAccepted = false
+        var lastPidAccepted = -1
 
         for (i in 0..999) {
             packetInfo = generator.nextPacket()
@@ -1056,6 +1057,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
                 lastPacketAccepted = true
+                lastPidAccepted = packet.pictureId
             } else {
                 Assert.assertFalse(accepted)
                 lastPacketAccepted = false
@@ -1128,6 +1130,7 @@ class Vp9AdaptiveSourceProjectionTest {
                     expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
                 }
             }
+            expectedPicId = applyExtendedPictureIdDelta(lastPidAccepted, 1)
 
             for (i in 0..999) {
                 packetInfo = generator.nextPacket()
@@ -1154,6 +1157,7 @@ class Vp9AdaptiveSourceProjectionTest {
                     Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                     expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
                     lastPacketAccepted = true
+                    lastPidAccepted = packet.pictureId
                 } else {
                     Assert.assertFalse(accepted)
                     lastPacketAccepted = false
