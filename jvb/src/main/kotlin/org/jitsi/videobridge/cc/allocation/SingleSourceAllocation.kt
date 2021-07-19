@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
-import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.utils.logging.DiagnosticContext
@@ -179,33 +178,37 @@ internal class SingleSourceAllocation(
 }
 
 /**
- * Gets the "preferred" height and frame rate based on the constraints signaled from the received.
+ * Gets the "preferred" height and frame rate based on the constraints signaled from the receiver.
  *
  * For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
  * temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
  * consider frame rates at least as high as the preferred. In practice this means we consider
  * 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
  */
-fun getPreferred(constraints: VideoConstraints): Pair<Int, Double> {
+private fun getPreferred(constraints: VideoConstraints): Pair<Int, Double> {
     return if (constraints.maxHeight > 180) {
         Pair(onstagePreferredHeightPx(), onstagePreferredFramerate())
     } else {
-        Pair(-1, -1.0)
+        noPreferredHeightAndFrameRate
     }
 }
 
+private val noPreferredHeightAndFrameRate = Pair(-1, -1.0)
+
 /**
- * Selects from the layers of a [MediaSourceDesc] the ones which should be considered when allocating bandwidth for
- * an endpoint. Also returns the index of the "preferred" layer.
+ * Selects from the layers of a [MediaSourceContainer] the ones which should be considered when allocating bandwidth for
+ * an endpoint. Also selects the indices of the "preferred", and "oversend" layers.
  *
  * @param endpoint the [MediaSourceContainer] that describes the available layers.
  * @param constraints the constraints signaled for the endpoint.
- * @return the subset of [endpoint]'s layers which should be considered when allocating bandwidth, and the index of the
- * "preferred" layer.
+ * @return the ordered list of [endpoint]'s layers which should be considered when allocating bandwidth, as well as the
+ * indices of the "preferred" an "oversend" layers.
  */
 private fun selectLayers(
+    /** The endpoint which is the source of the stream(s). */
     endpoint: MediaSourceContainer,
     onStage: Boolean,
+    /** The constraints that the receiver specified for [endpoint]. */
     constraints: VideoConstraints,
     nowMs: Long
 ): Layers {
@@ -222,6 +225,12 @@ private fun selectLayers(
     }
 }
 
+/**
+ * Selects from a list of layers the ones which should be considered when allocating bandwidth, as well as the
+ * "preferred" and "oversend" layers. Logic specific to screensharing: we prioritize resolution over framerate,
+ * prioritize the highest layer over other endpoints (by setting the highest layer as "preferred"), and allow
+ * oversending up to the highest resolution (with low frame rate).
+ */
 private fun selectLayersForScreensharing(
     layers: List<LayerSnapshot>,
     constraints: VideoConstraints,
@@ -255,6 +264,7 @@ private fun selectLayersForScreensharing(
     return Layers(selectedLayers, selectedLayers.size - 1, oversendIdx)
 }
 
+/** Return the index of the first item in the list which satisfies a predicate, or -1 if none do. */
 private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
     forEachIndexed { index, item ->
         if (predicate(item)) return index
@@ -262,6 +272,12 @@ private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
     return -1
 }
 
+/**
+ * Selects from a list of layers the ones which should be considered when allocating bandwidth, as well as the
+ * "preferred" and "oversend" layers. Logic specific to a camera stream: once the "preferred" height is reached we
+ * require a high frame rate, we preconfigured values for the "preferred" height and frame rate, and we do not allow
+ * oversending.
+ */
 private fun selectLayersForCamera(
     layers: List<LayerSnapshot>,
     constraints: VideoConstraints,
@@ -284,7 +300,6 @@ private fun selectLayersForCamera(
             (lessThanOrEqualMaxHeight && atLeastPreferredFps) ||
             layer.height == minHeight
         ) {
-
             // No active layers usually happens when the source has just been signaled and we haven't received
             // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
             if (noActiveLayers || layerSnapshot.bitrate > 0) {
@@ -312,13 +327,16 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
  */
 data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Double)
 
+/**
+ * An immutable representation of the layers to be considered when allocating bandwidth for an endpoint. The order is
+ * ascending by preference (and not necessarily bitrate).
+ */
 data class Layers(
     val layers: List<LayerSnapshot>,
-    /** The index (into [.layers]) of the "preferred" layer, i.e. the layer up to which we allocate eagerly. */
+    /** The index of the "preferred" layer, i.e. the layer up to which we allocate eagerly. */
     val preferredIndex: Int,
     /**
-     * The index (into [layers]) of the layer which will be selected if oversending is enabled. If set to -1,
-     * oversending is disabled.
+     * The index of the layer which will be selected if oversending is enabled. If set to -1, oversending is disabled.
      */
     val oversendIndex: Int
 ) : List<LayerSnapshot> by layers {
