@@ -178,6 +178,33 @@ internal class SingleSourceAllocation(
 }
 
 /**
+ * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
+ */
+data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Double)
+
+/**
+ * An immutable representation of the layers to be considered when allocating bandwidth for an endpoint. The order is
+ * ascending by preference (and not necessarily bitrate).
+ */
+data class Layers(
+    val layers: List<LayerSnapshot>,
+    /** The index of the "preferred" layer, i.e. the layer up to which we allocate eagerly. */
+    val preferredIndex: Int,
+    /**
+     * The index of the layer which will be selected if oversending is enabled. If set to -1, oversending is disabled.
+     */
+    val oversendIndex: Int
+) : List<LayerSnapshot> by layers {
+    val preferredLayer = layers.getOrNull(preferredIndex)
+    val oversendLayer = layers.getOrNull(oversendIndex)
+    val idealLayer = layers.lastOrNull()
+
+    companion object {
+        val noLayers = Layers(emptyList(), -1, -1)
+    }
+}
+
+/**
  * Gets the "preferred" height and frame rate based on the constraints signaled from the receiver.
  *
  * For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
@@ -320,31 +347,4 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
     var lastIndex = -1
     forEachIndexed { i, e -> if (predicate(e)) lastIndex = i }
     return lastIndex
-}
-
-/**
- * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
- */
-data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Double)
-
-/**
- * An immutable representation of the layers to be considered when allocating bandwidth for an endpoint. The order is
- * ascending by preference (and not necessarily bitrate).
- */
-data class Layers(
-    val layers: List<LayerSnapshot>,
-    /** The index of the "preferred" layer, i.e. the layer up to which we allocate eagerly. */
-    val preferredIndex: Int,
-    /**
-     * The index of the layer which will be selected if oversending is enabled. If set to -1, oversending is disabled.
-     */
-    val oversendIndex: Int
-) : List<LayerSnapshot> by layers {
-    val preferredLayer = layers.getOrNull(preferredIndex)
-    val oversendLayer = layers.getOrNull(oversendIndex)
-    val idealLayer = layers.lastOrNull()
-
-    companion object {
-        val noLayers = Layers(emptyList(), -1, -1)
-    }
 }
