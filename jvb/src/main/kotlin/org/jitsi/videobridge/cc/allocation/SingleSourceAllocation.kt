@@ -224,12 +224,12 @@ private val noPreferredHeightAndFrameRate = Pair(-1, -1.0)
 
 /**
  * Selects from the layers of a [MediaSourceContainer] the ones which should be considered when allocating bandwidth for
- * an endpoint. Also selects the indices of the "preferred", and "oversend" layers.
+ * an endpoint. Also selects the indices of the "preferred" and "oversend" layers.
  *
  * @param endpoint the [MediaSourceContainer] that describes the available layers.
  * @param constraints the constraints signaled for the endpoint.
  * @return the ordered list of [endpoint]'s layers which should be considered when allocating bandwidth, as well as the
- * indices of the "preferred" an "oversend" layers.
+ * indices of the "preferred" and "oversend" layers.
  */
 private fun selectLayers(
     /** The endpoint which is the source of the stream(s). */
@@ -302,7 +302,7 @@ private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
 /**
  * Selects from a list of layers the ones which should be considered when allocating bandwidth, as well as the
  * "preferred" and "oversend" layers. Logic specific to a camera stream: once the "preferred" height is reached we
- * require a high frame rate, we preconfigured values for the "preferred" height and frame rate, and we do not allow
+ * require a high frame rate, with preconfigured values for the "preferred" height and frame rate, and we do not allow
  * oversending.
  */
 private fun selectLayersForCamera(
