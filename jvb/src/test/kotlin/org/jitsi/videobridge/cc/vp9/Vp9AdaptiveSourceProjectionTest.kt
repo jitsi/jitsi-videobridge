@@ -1029,6 +1029,8 @@ class Vp9AdaptiveSourceProjectionTest {
         var packetInfo: PacketInfo
         var packet: Vp9Packet
 
+        var lastPacketAccepted = false
+
         for (i in 0..999) {
             packetInfo = generator.nextPacket()
             packet = packetInfo.packetAs()
@@ -1053,8 +1055,10 @@ class Vp9AdaptiveSourceProjectionTest {
                 Assert.assertEquals(expectedPicId, packet.pictureId)
                 Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                 expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                lastPacketAccepted = true
             } else {
                 Assert.assertFalse(accepted)
+                lastPacketAccepted = false
             }
             if (endOfPicture) {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
@@ -1063,6 +1067,24 @@ class Vp9AdaptiveSourceProjectionTest {
         }
         var suspended = 64
         while (suspended < 65536) {
+            /* If the last frame was accepted, finish the current frame. */
+            if (lastPacketAccepted) {
+                while (generator.packetOfFrame != 0) {
+                    packetInfo = generator.nextPacket()
+                    packet = packetInfo.packetAs()
+                    val accepted = context.accept(
+                        packetInfo,
+                        getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    )
+                    Assert.assertTrue(accepted)
+                    context.rewriteRtp(packetInfo)
+                    expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                    if (packet.isEndOfPicture) {
+                        expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                        expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
+                    }
+                }
+            }
             /* Turn the source off for a time. */
             for (i in 0 until suspended) {
                 packetInfo = generator.nextPacket()
@@ -1131,8 +1153,10 @@ class Vp9AdaptiveSourceProjectionTest {
                     Assert.assertEquals(expectedPicId, packet.pictureId)
                     Assert.assertEquals(expectedTl0PicIdx, packet.TL0PICIDX)
                     expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                    lastPacketAccepted = true
                 } else {
                     Assert.assertFalse(accepted)
+                    lastPacketAccepted = false
                 }
                 if (endOfPicture) {
                     expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
