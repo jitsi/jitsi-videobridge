@@ -237,6 +237,8 @@ class Vp9AdaptiveSourceProjectionContext(
     ): Vp9FrameProjection {
         if (frameIsNewSsrc(frame)) {
             return createEncodingSwitchProjection(frame, initialPacket, mark, receivedMs)
+        } else if (isResumption) {
+            return createResumptionProjection(frame, initialPacket, mark, receivedMs)
         } else if (isReset) {
             return createResetProjection(frame, initialPacket, mark, receivedMs)
         }
@@ -322,6 +324,47 @@ class Vp9AdaptiveSourceProjectionContext(
             tl0PICIDX = tl0PicIdx,
             mark = mark,
             createdMs = receivedMs
+        )
+    }
+
+    /**
+     * Create a projection for the first frame after a resumption, i.e. when a source is turned back on.
+     */
+    private fun createResumptionProjection(
+        frame: Vp9Frame,
+        initialPacket: Vp9Packet,
+        mark: Boolean,
+        receivedMs: Long
+    ): Vp9FrameProjection {
+        /* These must be non-null because we don't execute this function unless
+            frameIsNewSsrc has returned false.
+        */
+        val lastFrame = prevFrame(frame)!!
+        val lastProjectedFrame = lastVp9FrameProjection.vp9Frame!!
+
+        /* Project timestamps linearly. */
+        val tsDelta = getTimestampDiff(
+            lastVp9FrameProjection.timestamp,
+            lastProjectedFrame.timestamp
+        )
+        val projectedTs = applyTimestampDelta(frame.timestamp, tsDelta)
+
+        /* Increment picId and tl0picidx by 1 from the last projected frame. */
+        val projectedPicId = applyExtendedPictureIdDelta(lastVp9FrameProjection.pictureId, 1)
+        val projectedTl0PicIdx = applyTl0PicIdxDelta(lastVp9FrameProjection.tl0PICIDX, 1)
+
+        /* Increment sequence numbers based on the last projected frame, but leave a gap
+         * for packet reordering in case this isn't the first packet of the keyframe.
+         */
+        val seqGap = getSequenceNumberDelta(initialPacket.sequenceNumber, lastFrame.latestKnownSequenceNumber)
+        val newSeq = applySequenceNumberDelta(lastVp9FrameProjection.latestProjectedSeqNum, seqGap)
+        val seqDelta = getSequenceNumberDelta(newSeq, initialPacket.sequenceNumber)
+
+        return Vp9FrameProjection(
+            diagnosticContext,
+            frame, lastVp9FrameProjection.ssrc, projectedTs,
+            seqDelta,
+            projectedPicId, projectedTl0PicIdx, mark, receivedMs
         )
     }
 
