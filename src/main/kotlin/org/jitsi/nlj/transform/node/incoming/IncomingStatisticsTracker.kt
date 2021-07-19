@@ -29,7 +29,6 @@ import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.numPacketsTo
 import org.jitsi.rtp.util.rolledOverTo
-import toUInt
 
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
@@ -47,7 +46,7 @@ class IncomingStatisticsTracker(
                 val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
                     IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber)
                 }
-                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toUInt(), it.clockRate)
+                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toInt(), it.clockRate)
                 stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
             }
         }
