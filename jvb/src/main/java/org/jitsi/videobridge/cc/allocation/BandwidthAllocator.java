@@ -307,25 +307,22 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             {
                 SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
 
-                if (sourceBitrateAllocation.constraints.getMaxHeight() <= 0)
+                if (sourceBitrateAllocation.getConstraints().getMaxHeight() <= 0)
                 {
                     continue;
                 }
 
                 maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 // In stage view improve greedily until preferred, in tile view go step-by-step.
-                sourceBitrateAllocation.improve(maxBandwidth);
-                if (i == 0
-                        && sourceBitrateAllocation.isOnStage()
-                        && BitrateControllerConfig.allowOversendOnStage()
-                        && sourceBitrateAllocation.endpoint.getVideoType() == VideoType.DESKTOP)
-                {
-                    oversending |= sourceBitrateAllocation.tryLowestLayer();
-                }
+                sourceBitrateAllocation.improve(maxBandwidth, i == 0);
                 maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
+                if (maxBandwidth < 0)
+                {
+                    oversending = true;
+                }
 
-                newTargetIndices[i] = sourceBitrateAllocation.targetIdx;
-                if (sourceBitrateAllocation.targetIdx != -1)
+                newTargetIndices[i] = sourceBitrateAllocation.getTargetIdx();
+                if (sourceBitrateAllocation.getTargetIdx() != -1)
                 {
                     newNumAllocationsWithVideo++;
                 }
@@ -333,8 +330,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 // In stage view, do not allocate bandwidth for thumbnails until the on-stage reaches "preferred".
                 // This prevents enabling thumbnail only to disable them when bwe slightly increases allowing on-stage
                 // to take more.
-                if (sourceBitrateAllocation.isOnStage() &&
-                        sourceBitrateAllocation.targetIdx < sourceBitrateAllocation.preferredIdx)
+                if (sourceBitrateAllocation.isOnStage() && !sourceBitrateAllocation.hasReachedPreferred())
                 {
                     break;
                 }
@@ -345,7 +341,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                 // rollback state to prevent jumps in the number of forwarded participants.
                 for (int i = 0; i < sourceBitrateAllocations.size(); i++)
                 {
-                    sourceBitrateAllocations.get(i).targetIdx = oldTargetIndices[i];
+                    sourceBitrateAllocations.get(i).setTargetIdx(oldTargetIndices[i]);
                 }
 
                 break;
@@ -357,7 +353,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         // The endpoints which are in lastN, and are sending video, but were suspended due to bwe.
         List<String> suspendedIds = sourceBitrateAllocations.stream()
                 .filter(SingleSourceAllocation::isSuspended)
-                .map(ssa -> ssa.endpoint.getId()).collect(Collectors.toList());
+                .map(ssa -> ssa.getEndpoint().getId()).collect(Collectors.toList());
         if (!suspendedIds.isEmpty())
         {
             logger.info("Endpoints were suspended due to insufficient bandwidth (bwe="
