@@ -112,7 +112,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             getSidFromIndex(incomingIndex) == getSidFromIndex(externalTargetIndex)
         }
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
-        if (isResumption) assert(accept) // Pretty sure this has to be true?
+        if (isResumption) assert(accept) // Every code path that can turn off SUSPENDED_INDEX also accepts
         return AcceptResult(accept = accept, isResumption = isResumption, mark = mark)
     }
 
