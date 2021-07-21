@@ -101,6 +101,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         externalTargetIndex: Int,
         receivedMs: Long
     ): AcceptResult {
+        val prevIndex = currentIndex
         val accept = doAcceptFrame(frame, incomingIndex, externalTargetIndex, receivedMs)
         val mark = if (frame.isInterPicturePredicted) {
             getSidFromIndex(incomingIndex) == getSidFromIndex(currentIndex)
@@ -110,7 +111,9 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                I think this shouldn't be a problem? */
             getSidFromIndex(incomingIndex) == getSidFromIndex(externalTargetIndex)
         }
-        return AcceptResult(accept, mark)
+        val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
+        if (isResumption) assert(accept) // Every code path that can turn off SUSPENDED_INDEX also accepts
+        return AcceptResult(accept = accept, isResumption = isResumption, mark = mark)
     }
 
     private fun doAcceptFrame(
@@ -447,7 +450,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
     data class AcceptResult(
         val accept: Boolean,
-        val mark: Boolean = false
+        val isResumption: Boolean,
+        val mark: Boolean
     )
 
     companion object {

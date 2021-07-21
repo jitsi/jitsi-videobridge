@@ -29,13 +29,13 @@ import kotlin.collections.ArrayList
  *
  * @author Jonathan Lennox
  */
-class Vp9Picture(packet: Vp9Packet) {
+class Vp9Picture(packet: Vp9Packet, index: Int) {
     val frames = ArrayList<Vp9Frame?>()
 
     init {
         val sid = packet.effectiveSpatialLayerIndex
 
-        setFrameAtSid(Vp9Frame(packet), sid)
+        setFrameAtSid(Vp9Frame(packet, index), sid)
     }
 
     fun frame(sid: Int) = frames.getOrNull(sid)
@@ -83,6 +83,9 @@ class Vp9Picture(packet: Vp9Packet) {
     val pictureId: Int
         get() = firstFrame().pictureId
 
+    val index: Int
+        get() = firstFrame().index
+
     val tl0PICIDX: Int
         get() = firstFrame().tl0PICIDX
 
@@ -105,7 +108,7 @@ class Vp9Picture(packet: Vp9Packet) {
             return PacketInsertionResult(f, this, false)
         }
 
-        val newF = Vp9Frame(packet)
+        val newF = Vp9Frame(packet, index)
 
         setFrameAtSid(newF, sid)
 
