@@ -927,8 +927,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
             }
         }
-        var gap = 64
-        while (gap < 65536) {
+        for (gap in 64..65536 step { it * 2 }) {
             for (i in 0 until gap) {
                 generator.nextPacket()
             }
@@ -982,7 +981,6 @@ class Vp9AdaptiveSourceProjectionTest {
                     expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
                 }
             }
-            gap *= 2
         }
     }
 
@@ -1067,9 +1065,9 @@ class Vp9AdaptiveSourceProjectionTest {
                 expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
             }
         }
-        var suspended = 64
-        while (suspended < 65536) {
-            /* If the last frame was accepted, finish the current frame. */
+        for (suspended in 64..65536 step { it * 2 }) {
+            /* If the last frame was accepted, finish the current frame if this generator is creating multi-packet
+                frames. */
             if (lastPacketAccepted) {
                 while (generator.packetOfFrame != 0) {
                     packetInfo = generator.nextPacket()
@@ -1118,6 +1116,7 @@ class Vp9AdaptiveSourceProjectionTest {
 
             /* Request a keyframe.  Will be sent as of the next frame. */
             generator.requestKeyframe()
+            /* If this generator is creating multi-packet frames, finish the previous frame. */
             while (generator.packetOfFrame != 0) {
                 packetInfo = generator.nextPacket()
                 packet = packetInfo.packetAs()
@@ -1167,7 +1166,6 @@ class Vp9AdaptiveSourceProjectionTest {
                     expectedPicId = applyExtendedPictureIdDelta(expectedPicId, 1)
                 }
             }
-            suspended *= 2
         }
     }
 
@@ -1510,3 +1508,6 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 }
+
+private infix fun IntRange.step(next: (Int) -> Int) =
+    generateSequence(first, next).takeWhile { if (first < last) it <= last else it >= last }
