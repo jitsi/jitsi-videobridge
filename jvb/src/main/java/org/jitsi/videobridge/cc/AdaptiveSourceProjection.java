@@ -234,7 +234,6 @@ public class AdaptiveSourceProjection
 
             /* Check whether this stream is projectable by the VP8AdaptiveSourceProjectionContext. */
             boolean projectable = rtpPacket instanceof Vp8Packet &&
-                /* Work around Firefox 75 bug - https://bugzilla.mozilla.org/show_bug.cgi?id=1628851 */
                 ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex() &&
                 ((Vp8Packet)rtpPacket).getHasPictureId();
 
