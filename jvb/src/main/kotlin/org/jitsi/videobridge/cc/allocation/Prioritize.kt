@@ -47,14 +47,21 @@ fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, alloc
 
         // Add 1 for the receiver endpoint, which is not in the list.
         val effectiveLastN = effectiveLastN(allocationSettings.lastN, endpoints.size + 1)
-        return endpoints.mapIndexed { i, endpoint ->
-            endpoint.id to if (i >= effectiveLastN) {
+
+        // Keep track of the number of endpoints with non-zero constraints. Once [effectiveLastN] of them have been
+        // added, all other endpoints have effectiveConstraints 0, because they would never be forwarded by the
+        // algorithm.
+        var endpointsWithNonZeroConstraints = 0
+        return endpoints.associate { endpoint ->
+            endpoint.id to if (endpointsWithNonZeroConstraints >= effectiveLastN) {
                 VideoConstraints.NOTHING
             } else {
-                allocationSettings.getConstraints(endpoint.id)
+                allocationSettings.getConstraints(endpoint.id).also {
+                    if (it.maxHeight > 0) endpointsWithNonZeroConstraints++
+                }
             }
-        }.toMap()
-    }
+        }
+}
 
 /**
  * The LastN value adjusted according to the limits configured on the bridge, or [Int.MAX_VALUE] if LastN is disabled.
