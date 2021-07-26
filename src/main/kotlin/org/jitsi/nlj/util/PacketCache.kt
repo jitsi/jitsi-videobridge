@@ -92,12 +92,16 @@ class PacketCache(
 
     fun stop() {
         stopped = true
-        packetCaches.forEach { (_, cache) -> cache.flush() }
+        synchronized(packetCaches) {
+            packetCaches.forEach { (_, cache) -> cache.flush() }
+        }
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("PacketCache").apply {
-        packetCaches.values.forEach {
-            aggregate(it.getNodeStats())
+        synchronized(packetCaches) {
+            packetCaches.values.forEach {
+                aggregate(it.getNodeStats())
+            }
         }
     }
 
