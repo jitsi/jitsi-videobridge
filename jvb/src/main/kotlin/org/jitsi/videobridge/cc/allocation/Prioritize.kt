@@ -45,22 +45,22 @@ fun <T : MediaSourceContainer> prioritize(
 fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, allocationSettings: AllocationSettings):
     Map<String, VideoConstraints> {
 
-        // Add 1 for the receiver endpoint, which is not in the list.
-        val effectiveLastN = effectiveLastN(allocationSettings.lastN, endpoints.size + 1)
+    // Add 1 for the receiver endpoint, which is not in the list.
+    val effectiveLastN = effectiveLastN(allocationSettings.lastN, endpoints.size + 1)
 
-        // Keep track of the number of endpoints with non-zero constraints. Once [effectiveLastN] of them have been
-        // added, all other endpoints have effectiveConstraints 0, because they would never be forwarded by the
-        // algorithm.
-        var endpointsWithNonZeroConstraints = 0
-        return endpoints.associate { endpoint ->
-            endpoint.id to if (endpointsWithNonZeroConstraints >= effectiveLastN) {
-                VideoConstraints.NOTHING
-            } else {
-                allocationSettings.getConstraints(endpoint.id).also {
-                    if (it.maxHeight > 0) endpointsWithNonZeroConstraints++
-                }
+    // Keep track of the number of endpoints with non-zero constraints. Once [effectiveLastN] of them have been
+    // added, all other endpoints have effectiveConstraints 0, because they would never be forwarded by the
+    // algorithm.
+    var endpointsWithNonZeroConstraints = 0
+    return endpoints.associate { endpoint ->
+        endpoint.id to if (endpointsWithNonZeroConstraints >= effectiveLastN) {
+            VideoConstraints.NOTHING
+        } else {
+            allocationSettings.getConstraints(endpoint.id).also {
+                if (it.maxHeight > 0) endpointsWithNonZeroConstraints++
             }
         }
+    }
 }
 
 /**
