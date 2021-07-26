@@ -13,6 +13,7 @@
     <Bug pattern="SE_BAD_FIELD_STORE"/>
     <!-- False positives with lazy vals -->
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Or>
 </Match>
 
