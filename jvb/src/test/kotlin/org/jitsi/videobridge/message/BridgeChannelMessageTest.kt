@@ -238,7 +238,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             videoTypeMessage.videoType shouldBe VideoType.DESKTOP
             parse(videoTypeMessage.toJson()).apply {
                 shouldBeInstanceOf<VideoTypeMessage>()
-                this as VideoTypeMessage
                 videoType shouldBe VideoType.DESKTOP
             }
 
@@ -251,9 +250,18 @@ class BridgeChannelMessageTest : ShouldSpec() {
                     """
                 parse(jsonString).apply {
                     shouldBeInstanceOf<VideoTypeMessage>()
-                    this as VideoTypeMessage
                     videoType shouldBe VideoType.NONE
                 }
+            }
+            val jsonString = """
+                    {
+                        "colibriClass" : "VideoTypeMessage",
+                        "videoType" : "desktop_high_fps"
+                    }
+                    """
+            parse(jsonString).apply {
+                shouldBeInstanceOf<VideoTypeMessage>()
+                videoType shouldBe VideoType.DESKTOP_HIGH_FPS
             }
         }
 
