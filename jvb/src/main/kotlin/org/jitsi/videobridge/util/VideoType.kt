@@ -18,5 +18,6 @@ package org.jitsi.videobridge.util
 enum class VideoType {
     CAMERA,
     DESKTOP,
+    DESKTOP_HIGH_FPS,
     NONE
 }
