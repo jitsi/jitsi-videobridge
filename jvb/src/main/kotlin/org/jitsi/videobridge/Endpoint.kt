@@ -935,7 +935,7 @@ class Endpoint @JvmOverloads constructor(
     fun wantsStatsFrom(ep: AbstractEndpoint): Boolean {
         return conference.speechActivity.isRecentSpeaker(ep) ||
             bitrateController.isOnStageOrSelected(ep) ||
-            bitrateController.isForwarding(ep)
+            bitrateController.hasNonZeroEffectiveConstraints(ep)
     }
 
     /**
