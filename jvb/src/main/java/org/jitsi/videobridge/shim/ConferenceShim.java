@@ -72,9 +72,9 @@ public class ConferenceShim
         this.logger = parentLogger.createChildLogger(ConferenceShim.class.getName());
         this.conference = conference;
         colibriQueue = new PacketQueue<>(
-                100,
+                Integer.MAX_VALUE,
                 true,
-                "colibri-queue-" + conference.getID(),
+                "colibri-queue",
                 request ->
                 {
                     try

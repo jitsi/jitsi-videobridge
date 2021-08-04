@@ -660,6 +660,10 @@ public class Videobridge
             "rtp_sender_queue",
             getJsonFromQueueStatisticsAndErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter(),
                 "rtp-sender-incoming-packet-queue"));
+        queueStats.put(
+            "colibri_queue",
+            QueueStatistics.Companion.getStatistics().get("colibri-queue")
+        );
 
         queueStats.put(
             AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID,
