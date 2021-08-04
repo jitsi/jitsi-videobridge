@@ -32,7 +32,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
     init {
         context("Camera") {
             context("When all layers are active") {
-                val endpoint = Endpoint(
+                val endpoint = TestEndpoint(
                     "id",
                     MediaSourceDesc(
                         arrayOf(
@@ -66,7 +66,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With constraints unmet by any layer") {
                     // Single high-res stream with 3 temporal layers.
-                    val endpoint = Endpoint(
+                    val endpoint = TestEndpoint(
                         "id",
                         MediaSourceDesc(
                             // No simulcast.
@@ -100,7 +100,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val hd7_5 = createLayer(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
                 val hd15 = createLayer(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
                 val hd30 = createLayer(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
-                val endpoint = Endpoint(
+                val endpoint = TestEndpoint(
                     "id",
                     MediaSourceDesc(
                         arrayOf(
@@ -124,7 +124,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
         }
         context("Screensharing") {
             context("When all layers are active") {
-                val endpoint = Endpoint(
+                val endpoint = TestEndpoint(
                     "id",
                     MediaSourceDesc(
                         arrayOf(
@@ -161,7 +161,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val hd7_5 = createLayer(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
                 val hd15 = createLayer(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
                 val hd30 = createLayer(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
-                val endpoint = Endpoint(
+                val endpoint = TestEndpoint(
                     "id",
                     MediaSourceDesc(
                         arrayOf(
@@ -190,7 +190,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val sd7_5 = createLayer(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = 0.bps)
                 val sd15 = createLayer(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = 0.bps)
                 val sd30 = createLayer(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = 0.bps)
-                val endpoint = Endpoint(
+                val endpoint = TestEndpoint(
                     "id",
                     MediaSourceDesc(
                         arrayOf(
@@ -229,7 +229,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val l2 = createLayer(tid = 0, eid = 0, sid = 1, height = 720, frameRate = -1.0, bitrate = 370.kbps)
                 val l3 = createLayer(tid = 0, eid = 0, sid = 2, height = 720, frameRate = -1.0, bitrate = 750.kbps)
 
-                val endpoint = Endpoint(
+                val endpoint = TestEndpoint(
                     "id",
                     MediaSourceDesc(
                         arrayOf(

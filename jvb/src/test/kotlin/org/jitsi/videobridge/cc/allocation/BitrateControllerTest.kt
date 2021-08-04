@@ -48,10 +48,10 @@ class BitrateControllerTest : ShouldSpec() {
     private val logger = createLogger()
     private val clock = FakeClock()
     private val bc = BitrateControllerWrapper("A", "B", "C", "D", clock = clock)
-    private val A: Endpoint = bc.endpoints.find { it.id == "A" }!!
-    private val B: Endpoint = bc.endpoints.find { it.id == "B" }!!
-    private val C: Endpoint = bc.endpoints.find { it.id == "C" }!!
-    private val D: Endpoint = bc.endpoints.find { it.id == "D" }!!
+    private val A: TestEndpoint = bc.endpoints.find { it.id == "A" }!!
+    private val B: TestEndpoint = bc.endpoints.find { it.id == "B" }!!
+    private val C: TestEndpoint = bc.endpoints.find { it.id == "C" }!!
+    private val D: TestEndpoint = bc.endpoints.find { it.id == "D" }!!
 
     init {
         context("Prioritization") {
@@ -1362,7 +1362,7 @@ fun BandwidthAllocation.shouldMatch(other: BandwidthAllocation) {
 }
 
 private class BitrateControllerWrapper(vararg endpointIds: String, val clock: FakeClock = FakeClock()) {
-    var endpoints: List<Endpoint> = createEndpoints(*endpointIds)
+    var endpoints: List<TestEndpoint> = createEndpoints(*endpointIds)
     val logger = createLogger()
 
     var bwe = (-1).bps
@@ -1415,7 +1415,7 @@ private class BitrateControllerWrapper(vararg endpointIds: String, val clock: Fa
         clock
     )
 
-    fun setEndpointOrdering(vararg endpoints: Endpoint) {
+    fun setEndpointOrdering(vararg endpoints: TestEndpoint) {
         logger.info("Set endpoints ${endpoints.map{ it.id }.joinToString(",")}")
         this.endpoints = endpoints.toList()
         bc.endpointOrderingChanged()
@@ -1486,15 +1486,15 @@ data class Event<T>(
     }
 }
 
-class Endpoint(
+class TestEndpoint(
     override val id: String,
     override val mediaSource: MediaSourceDesc? = null,
     override var videoType: VideoType = VideoType.CAMERA
 ) : MediaSourceContainer
 
-fun createEndpoints(vararg ids: String): MutableList<Endpoint> {
+fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
     return MutableList(ids.size) { i ->
-        Endpoint(
+        TestEndpoint(
             ids[i],
             createSource(
                 3 * i + 1,
