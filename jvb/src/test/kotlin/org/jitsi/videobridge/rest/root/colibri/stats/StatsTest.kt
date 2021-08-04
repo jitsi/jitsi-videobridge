@@ -67,6 +67,6 @@ class StatsTest : JerseyTest() {
     private fun Response.getResultAsJson(): JSONObject {
         val obj = JSONParser().parse(readEntity(String::class.java))
         obj.shouldBeInstanceOf<JSONObject>()
-        return obj as JSONObject
+        return obj
     }
 }

@@ -52,7 +52,6 @@ class VideobridgeTest : ShouldSpec() {
                         val confCreateIq = ColibriUtilities.createConferenceIq(JidCreate.from("focusJid"))
                         val resp = videobridge.handleColibriConferenceIQ(confCreateIq)
                         resp.shouldBeInstanceOf<ErrorIQ>()
-                        resp as ErrorIQ
                         resp.error.condition shouldBe XMPPError.Condition.service_unavailable
                     }
                     context("and once the conference expires") {
