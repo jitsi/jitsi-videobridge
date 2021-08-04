@@ -195,6 +195,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun isForwarding(endpoint: T) = bandwidthAllocator.isForwarding(endpoint.id)
 
     /**
+     * Query whether this allocator has non-zero effective constraints for a given endpoint.
+     */
+    fun hasNonZeroEffectiveConstraints(endpoint: T) = bandwidthAllocator.hasNonZeroEffectiveConstraints(endpoint.id)
+
+    /**
      * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being
      * forwarded, for use in probing.
      *

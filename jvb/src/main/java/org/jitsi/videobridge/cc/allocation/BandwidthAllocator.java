@@ -374,6 +374,19 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         return allocation.isForwarding(endpointId);
     }
 
+    /**
+     * Query whether the allocator has non-zero effective constraints for the given endpoint.
+     */
+    public boolean hasNonZeroEffectiveConstraints(String endpointId)
+    {
+        VideoConstraints constraints = effectiveConstraints.get(endpointId);
+        if (constraints == null)
+        {
+            return false;
+        }
+        return constraints.getMaxHeight() > 0;
+    }
+
     private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
     {
         // Init.
