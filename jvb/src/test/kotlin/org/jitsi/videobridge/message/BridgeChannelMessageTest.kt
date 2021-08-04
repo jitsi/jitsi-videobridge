@@ -44,10 +44,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
                 val parsed = JSONParser().parse(message.toJson())
                 parsed.shouldBeInstanceOf<JSONObject>()
-                parsed as JSONObject
                 val parsedColibriClass = parsed["colibriClass"]
                 parsedColibriClass.shouldBeInstanceOf<String>()
-                parsedColibriClass as String
                 parsedColibriClass shouldBe message.type
             }
         }
@@ -66,7 +64,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 val serialized = SelectedEndpointsMessage(selectedEndpoints).toJson()
                 val parsed2 = parse(serialized)
                 parsed2.shouldBeInstanceOf<SelectedEndpointsMessage>()
-                parsed2 as SelectedEndpointsMessage
                 parsed2.selectedEndpoints shouldBe selectedEndpoints
             }
         }
@@ -111,7 +108,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val parsed = parse(json)
 
             parsed.shouldBeInstanceOf<EndpointMessage>()
-            parsed as EndpointMessage
             parsed.from shouldBe null
             parsed.to shouldBe "to_value"
             parsed.otherFields["other_field1"] shouldBe "other_value1"
@@ -137,7 +133,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val parsed = parse(original.toJson())
 
             parsed.shouldBeInstanceOf<DominantSpeakerMessage>()
-            parsed as DominantSpeakerMessage
             parsed.dominantSpeakerEndpoint shouldBe "d"
             parsed.previousSpeakers shouldBe listOf("p1", "p2")
         }
@@ -146,7 +141,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             context("without a version") {
                 val parsed = parse(ServerHelloMessage().toJson())
                 parsed.shouldBeInstanceOf<ServerHelloMessage>()
-                parsed as ServerHelloMessage
                 parsed.version shouldBe null
             }
             context("with a version") {
@@ -154,7 +148,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
                 val parsed = parse(message.toJson())
                 parsed.shouldBeInstanceOf<ServerHelloMessage>()
-                parsed as ServerHelloMessage
                 parsed.version shouldBe "v"
             }
         }
@@ -169,7 +162,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
             val parsed = parse(EndpointConnectionStatusMessage("abcdabcd", true).toJson())
             parsed.shouldBeInstanceOf<EndpointConnectionStatusMessage>()
-            parsed as EndpointConnectionStatusMessage
 
             parsed.endpoint shouldBe "abcdabcd"
             parsed.active shouldBe "true"
@@ -182,17 +174,14 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<ForwardedEndpointsMessage>()
-            parsed as ForwardedEndpointsMessage
 
             parsed.forwardedEndpoints shouldContainExactly forwardedEndpoints
 
             // Make sure the forwardedEndpoints field is serialized as lastNEndpoints as the client (presumably) expects
             val parsedJson = JSONParser().parse(message.toJson())
             parsedJson.shouldBeInstanceOf<JSONObject>()
-            parsedJson as JSONObject
             val parsedForwardedEndpoints = parsedJson["lastNEndpoints"]
             parsedForwardedEndpoints.shouldBeInstanceOf<JSONArray>()
-            parsedForwardedEndpoints as JSONArray
             parsedForwardedEndpoints.toList() shouldContainExactly forwardedEndpoints
         }
 
@@ -207,7 +196,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val parsed = parse(senderVideoConstraintsMessage.toJson())
 
             parsed.shouldBeInstanceOf<SenderVideoConstraintsMessage>()
-            parsed as SenderVideoConstraintsMessage
 
             parsed.videoConstraints.idealHeight shouldBe 1080
         }
@@ -217,7 +205,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<AddReceiverMessage>()
-            parsed as AddReceiverMessage
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
             parsed.videoConstraints shouldBe VideoConstraints(360)
@@ -228,7 +215,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<RemoveReceiverMessage>()
-            parsed as RemoveReceiverMessage
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
         }
@@ -270,7 +256,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 val parsed = parse(RECEIVER_VIDEO_CONSTRAINTS)
 
                 parsed.shouldBeInstanceOf<ReceiverVideoConstraintsMessage>()
-                parsed as ReceiverVideoConstraintsMessage
                 parsed.lastN shouldBe 3
                 parsed.onStageEndpoints shouldBe listOf("onstage1", "onstage2")
                 parsed.selectedEndpoints shouldBe listOf("selected1", "selected2")
@@ -286,7 +271,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             context("With fields missing") {
                 val parsed = parse(RECEIVER_VIDEO_CONSTRAINTS_EMPTY)
                 parsed.shouldBeInstanceOf<ReceiverVideoConstraintsMessage>()
-                parsed as ReceiverVideoConstraintsMessage
                 parsed.lastN shouldBe null
                 parsed.onStageEndpoints shouldBe null
                 parsed.selectedEndpoints shouldBe null
