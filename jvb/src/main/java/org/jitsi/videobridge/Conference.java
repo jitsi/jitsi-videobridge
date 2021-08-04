@@ -967,6 +967,20 @@ public class Conference
     }
 
     /**
+     * Determine whether a given endpointId is currently a ranked speaker, if
+     * speaker ranking is currently enabled.
+     */
+    public boolean isRankedSpeaker(AbstractEndpoint ep)
+    {
+        if (!LoudestConfig.Companion.getRouteLoudestOnly())
+        {
+            return false;
+        }
+        DominantSpeakerIdentification<String>.SpeakerRanking ranking = speechActivity.getRanking(ep.getId());
+        return ranking.energyRanking < LoudestConfig.Companion.getNumLoudest();
+    }
+
+    /**
      * Broadcasts the packet to all endpoints and tentacles that want it.
      *
      * @param packetInfo the packet
