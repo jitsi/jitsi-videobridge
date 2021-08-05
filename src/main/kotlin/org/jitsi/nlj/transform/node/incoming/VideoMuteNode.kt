@@ -11,7 +11,7 @@ class VideoMuteNode : ObserverNode("Video mute node") {
     var forceMute: Boolean = false
 
     override fun observe(packetInfo: PacketInfo) {
-        val videoRtpPacket = packetInfo.packet as? VideoRtpPacket ?: return
+        if (packetInfo.packet !is VideoRtpPacket) return
         if (this.forceMute) {
             packetInfo.shouldDiscard = true
             numMutedPackets++

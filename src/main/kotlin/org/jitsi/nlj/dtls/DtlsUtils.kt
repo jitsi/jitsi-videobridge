@@ -166,7 +166,7 @@ class DtlsUtils {
                 throw DtlsException("No remote fingerprints.")
             }
             for (currCertificate in certificateInfo.certificateList) {
-                val x509Cert = org.bouncycastle.asn1.x509.Certificate.getInstance(currCertificate.encoded)
+                val x509Cert = Certificate.getInstance(currCertificate.encoded)
                 verifyAndValidateCertificate(x509Cert, remoteFingerprints)
             }
         }
@@ -182,7 +182,7 @@ class DtlsUtils {
          * via the signaling path.
          */
         private fun verifyAndValidateCertificate(
-            certificate: org.bouncycastle.asn1.x509.Certificate,
+            certificate: Certificate,
             remoteFingerprints: Map<String, String>
         ) {
             // RFC 4572 "Connection-Oriented Media Transport over the Transport
@@ -237,21 +237,21 @@ class DtlsUtils {
         /**
          * Determine and return the hash function (as a [String]) used by this certificate
          */
-        private fun org.bouncycastle.asn1.x509.Certificate.getHashFunction(): String {
+        private fun Certificate.getHashFunction(): String {
             val digAlgId = DefaultDigestAlgorithmIdentifierFinder().find(signatureAlgorithm)
 
             return BcDefaultDigestProvider.INSTANCE
                 .get(digAlgId)
                 .algorithmName
-                .toLowerCase()
+                .lowercase()
         }
 
         /**
          * Computes the fingerprint of a [org.bouncycastle.asn1.x509.Certificate] using [hashFunction] and returns it
          * as a [String]
          */
-        private fun org.bouncycastle.asn1.x509.Certificate.getFingerprint(hashFunction: String): String {
-            val digAlgId = DefaultDigestAlgorithmIdentifierFinder().find(hashFunction.toUpperCase())
+        private fun Certificate.getFingerprint(hashFunction: String): String {
+            val digAlgId = DefaultDigestAlgorithmIdentifierFinder().find(hashFunction.uppercase())
             val digest = BcDefaultDigestProvider.INSTANCE.get(digAlgId)
             val input: ByteArray = getEncoded(ASN1Encoding.DER)
             val output = ByteArray(digest.digestSize)
@@ -338,7 +338,7 @@ inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, 
             val stack = with(StringBuffer()) {
                 val e = Exception()
                 for (el in e.stackTrace) {
-                    appendln(el.toString())
+                    appendLine(el.toString())
                 }
                 toString()
             }

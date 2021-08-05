@@ -51,7 +51,6 @@ class DelayStatsTest : ShouldSpec() {
                 val bucketsJson = delayStats.toJson()["buckets"]
                 bucketsJson.shouldBeInstanceOf<OrderedJsonObject>()
 
-                bucketsJson as OrderedJsonObject
                 bucketsJson["<= 2 ms"] shouldBe 100
                 bucketsJson["<= 5 ms"] shouldBe 100
                 bucketsJson["<= 200 ms"] shouldBe 1

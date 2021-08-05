@@ -17,5 +17,5 @@
 package org.jitsi.nlj.util
 
 fun StringBuffer.appendLnIndent(numSpaces: Int, msg: String) {
-    append(" ".repeat(numSpaces)).appendln(msg)
+    append(" ".repeat(numSpaces)).appendLine(msg)
 }

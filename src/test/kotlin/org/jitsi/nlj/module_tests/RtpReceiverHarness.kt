@@ -36,7 +36,7 @@ import kotlin.system.measureTimeMillis
  * N receivers given a certain input bit rate (determined by the PCAP file)
  */
 
-fun main(args: Array<String>) {
+fun main() {
     val pcap = Pcaps.Incoming.ONE_PARTICIPANT_RTP_RTCP_SIM_RTX
 
     val producer = PcapPacketProducer(pcap.filePath)

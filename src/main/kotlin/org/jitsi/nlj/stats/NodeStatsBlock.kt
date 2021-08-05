@@ -136,7 +136,7 @@ class NodeStatsBlock(val name: String) {
             stats.forEach { (statName, statValue) ->
                 when (statValue) {
                     is NodeStatsBlock -> {
-                        appendln(statValue.prettyPrint(indentLevel + 2))
+                        appendLine(statValue.prettyPrint(indentLevel + 2))
                     }
                     else -> {
                         // statValue is Any, so we know it's non-null

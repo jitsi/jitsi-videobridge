@@ -82,7 +82,6 @@ class KeyframeRequesterTest : ShouldSpec() {
                     sentKeyframeRequests shouldHaveSize 1
                     val packet = sentKeyframeRequests.last().packet
                     packet.shouldBeInstanceOf<RtcpFbPliPacket>()
-                    packet as RtcpFbPliPacket
                     packet.mediaSourceSsrc shouldBe 123L
                 }
             }
@@ -92,7 +91,6 @@ class KeyframeRequesterTest : ShouldSpec() {
                     sentKeyframeRequests shouldHaveSize 1
                     val packet = sentKeyframeRequests.last().packet
                     packet.shouldBeInstanceOf<RtcpFbPliPacket>()
-                    packet as RtcpFbPliPacket
                     packet.mediaSourceSsrc shouldBe 123L
                 }
                 context("and then requesting again") {
@@ -111,7 +109,6 @@ class KeyframeRequesterTest : ShouldSpec() {
                                 sentKeyframeRequests shouldHaveSize 1
                                 val packet = sentKeyframeRequests.last().packet
                                 packet.shouldBeInstanceOf<RtcpFbPliPacket>()
-                                packet as RtcpFbPliPacket
                                 packet.mediaSourceSsrc shouldBe 456L
                             }
                         }
@@ -123,7 +120,6 @@ class KeyframeRequesterTest : ShouldSpec() {
                             sentKeyframeRequests shouldHaveSize 1
                             val packet = sentKeyframeRequests.last().packet
                             packet.shouldBeInstanceOf<RtcpFbPliPacket>()
-                            packet as RtcpFbPliPacket
                             packet.mediaSourceSsrc shouldBe 123L
                         }
                     }
@@ -136,7 +132,6 @@ class KeyframeRequesterTest : ShouldSpec() {
                     sentKeyframeRequests shouldHaveSize 1
                     val packet = sentKeyframeRequests.last().packet
                     packet.shouldBeInstanceOf<RtcpFbFirPacket>()
-                    packet as RtcpFbFirPacket
                     packet.mediaSenderSsrc shouldBe 123L
                 }
             }

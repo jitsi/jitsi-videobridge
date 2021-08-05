@@ -205,7 +205,6 @@ class AudioRedHandlerTest : ShouldSpec() {
         forEach {
             it.payloadType shouldBe 112
             it.shouldBeTypeOf<RedAudioRtpPacket>()
-            it as RedAudioRtpPacket
 
             val parsedRedundancy = it.removeRedAndGetRedundancyPackets()
             when (it.sequenceNumber) {

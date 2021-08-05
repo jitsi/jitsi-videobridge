@@ -95,7 +95,7 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
                     65530,
                     2,
                     10
-                ) shouldBe 17 + 65536
+                ) shouldBe 17 + 65536L
             }
         }
         context("When receiving a series of packets with loss") {

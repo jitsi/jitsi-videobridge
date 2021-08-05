@@ -85,7 +85,7 @@ enum class PayloadTypeEncoding {
          */
         fun createFrom(value: String): PayloadTypeEncoding {
             return try {
-                valueOf(value.toUpperCase())
+                valueOf(value.uppercase())
             } catch (e: IllegalArgumentException) {
                 return OTHER
             }

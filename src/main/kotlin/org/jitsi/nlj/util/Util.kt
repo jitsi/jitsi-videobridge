@@ -65,7 +65,7 @@ fun <T> MutableList<T>.setAndExtend(index: Int, element: T, fillerElement: T) {
 @Suppress("NOTHING_TO_INLINE")
 inline fun getStackTrace(): String = with(StringBuffer()) {
     for (ste in Thread.currentThread().stackTrace) {
-        appendln(ste.toString())
+        appendLine(ste.toString())
     }
     toString()
 }

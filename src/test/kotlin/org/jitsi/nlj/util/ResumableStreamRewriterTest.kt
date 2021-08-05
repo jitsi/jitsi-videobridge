@@ -35,53 +35,53 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
             context("Accept first packet.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
-                snr.highestSequenceNumberSent shouldBe 0xffff - 2
-                ret shouldBe 0xffff - 2
+                snr.highestSequenceNumberSent shouldBe 0xffff - 2L
+                ret shouldBe 0xffff - 2L
             }
 
             context("Retransmission.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
-                snr.highestSequenceNumberSent shouldBe 0xffff - 2
-                ret shouldBe 0xffff - 2
+                snr.highestSequenceNumberSent shouldBe 0xffff - 2L
+                ret shouldBe 0xffff - 2L
             }
 
             context("Retransmission & accept toggle.") {
                 snr.rewriteSequenceNumber(false, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
-                snr.highestSequenceNumberSent shouldBe 0xffff - 2
+                snr.highestSequenceNumberSent shouldBe 0xffff - 2L
             }
 
             context("Retransmission & accept toggle again.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
                 snr.seqnumDelta shouldBe 0
-                snr.highestSequenceNumberSent shouldBe 0xffff - 2
-                ret shouldBe 0xffff - 2
+                snr.highestSequenceNumberSent shouldBe 0xffff - 2L
+                ret shouldBe 0xffff - 2L
             }
 
             context("Drop ordered packet.") {
                 snr.rewriteSequenceNumber(false, 0xffff - 1)
                 snr.seqnumDelta shouldBe 1
-                snr.highestSequenceNumberSent shouldBe 0xffff - 2
+                snr.highestSequenceNumberSent shouldBe 0xffff - 2L
             }
 
             context("Drop re-ordered packet.") {
                 snr.rewriteSequenceNumber(false, 0xffff - 3)
                 snr.seqnumDelta shouldBe 1
-                snr.highestSequenceNumberSent shouldBe 0xffff - 2
+                snr.highestSequenceNumberSent shouldBe 0xffff - 2L
             }
 
             context("Accept after re-ordered drop.") {
                 ret = snr.rewriteSequenceNumber(true, 0xffff)
                 snr.seqnumDelta shouldBe 1
-                snr.highestSequenceNumberSent shouldBe 0xffff - 1
-                ret shouldBe 0xffff - 1
+                snr.highestSequenceNumberSent shouldBe 0xffff - 1L
+                ret shouldBe 0xffff - 1L
             }
 
             context("Drop ordered packet again.") {
                 snr.rewriteSequenceNumber(false, 0)
                 snr.seqnumDelta shouldBe 2
-                snr.highestSequenceNumberSent shouldBe 0xffff - 1
+                snr.highestSequenceNumberSent shouldBe 0xffff - 1L
             }
 
             context("Accept ordered packet.") {
@@ -130,12 +130,12 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
 
                 context("Accept first packet.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
-                    ret shouldBe 0xffff - 2
+                    ret shouldBe 0xffff - 2L
                 }
 
                 context("Retransmission.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
-                    ret shouldBe 0xffff - 2
+                    ret shouldBe 0xffff - 2L
                 }
 
                 context("Retransmission & accept toggle.") {
@@ -144,7 +144,7 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
 
                 context("Retransmission & accept toggle again.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
-                    ret shouldBe 0xffff - 2
+                    ret shouldBe 0xffff - 2L
                 }
 
                 context("Drop ordered packet.") {
@@ -157,7 +157,7 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
 
                 context("Accept after re-ordered drop.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff)
-                    ret shouldBe 0xffff - 1
+                    ret shouldBe 0xffff - 1L
                 }
 
                 context("Drop ordered packet again.") {
@@ -198,7 +198,7 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
 
                 context("Accept first packet.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 2)
-                    ret shouldBe 0xffff - 2
+                    ret shouldBe 0xffff - 2L
                 }
 
                 context("Drop packet one after.") {
@@ -207,7 +207,7 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
 
                 context("Accept next packet.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff)
-                    ret shouldBe 0xffff - 1
+                    ret shouldBe 0xffff - 1L
                 }
 
                 context("Drop packet before first.") {
@@ -216,7 +216,7 @@ internal class ResumableStreamRewriterTest : ShouldSpec() {
 
                 context("Accept packet before that.") {
                     ret = snr.rewriteSequenceNumber(true, 0xffff - 4)
-                    ret shouldBe 0xffff - 3
+                    ret shouldBe 0xffff - 3L
                 }
 
                 context("Drop packet after a gap") {

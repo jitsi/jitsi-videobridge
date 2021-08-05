@@ -40,7 +40,7 @@ internal class PictureIdIndexTrackerTest : ShouldSpec() {
                 context("and then another which does roll over") {
                     val rollOverIndex = indexTracker.update(2)
                     should("return the proper index") {
-                        rollOverIndex shouldBe 1 /* roc */ * 0x8000 + 2
+                        rollOverIndex shouldBe 1L /* roc */ * 0x8000 + 2
                     }
                     context("and then a sequence number from the previous rollover") {
                         val prevRollOverIndex = indexTracker.update(32002)
