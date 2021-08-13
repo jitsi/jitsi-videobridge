@@ -141,6 +141,13 @@ internal class SingleSourceAllocation(
         get() = layers.getOrNull(targetIdx)
 
     /**
+     * Gets the ideal bitrate (in bps) for this endpoint allocation, i.e. the bitrate of the layer the bridge would
+     * forward if there were no (bandwidth) constraints.
+     */
+    val idealBitrate: Long
+        get() = layers.idealLayer?.bitrate?.toLong() ?: 0
+
+    /**
      * Exposed for testing only.
      */
     val preferredLayer: RtpLayerDesc?
