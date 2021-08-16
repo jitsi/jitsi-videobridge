@@ -157,6 +157,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         JSONObject debugState = new JSONObject();
         debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
         debugState.put("bweBps", bweBps);
+        debugState.put("allocation", allocation.getDebugState());
         debugState.put("allocationSettings", allocationSettings.toJson());
         debugState.put("effectiveConstraints", effectiveConstraints);
         return debugState;
@@ -360,9 +361,15 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                     + getAvailableBandwidth() + " bps): " + String.join(",", suspendedIds));
         }
 
-        return new BandwidthAllocation(
-                sourceBitrateAllocations.stream().map(SingleSourceAllocation::getResult).collect(Collectors.toSet()),
-                oversending);
+        Set<SingleAllocation> allocations = new HashSet<>();
+
+        long targetBps = 0, idealBps = 0;
+        for (SingleSourceAllocation sourceBitrateAllocation : sourceBitrateAllocations) {
+            allocations.add(sourceBitrateAllocation.getResult());
+            targetBps += sourceBitrateAllocation.getTargetBitrate();
+            idealBps += sourceBitrateAllocation.getIdealBitrate();
+        }
+        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps);
     }
 
     /**

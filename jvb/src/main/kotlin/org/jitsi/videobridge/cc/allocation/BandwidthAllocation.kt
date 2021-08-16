@@ -17,13 +17,16 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
+import org.json.simple.JSONObject
 
 /**
  * The result of bandwidth allocation.
  */
 class BandwidthAllocation @JvmOverloads constructor(
     val allocations: Set<SingleAllocation>,
-    val oversending: Boolean = false
+    val oversending: Boolean = false,
+    val idealBps: Long = -1,
+    val targetBps: Long = -1,
 ) {
     val forwardedEndpoints: Set<String> =
         allocations.filter { it.isForwarded() }.map { it.endpoint.id }.toSet()
@@ -49,6 +52,12 @@ class BandwidthAllocation @JvmOverloads constructor(
     fun isForwarding(epId: String): Boolean = forwardedEndpoints.contains(epId)
 
     override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
+
+    val debugState: JSONObject
+        get() = JSONObject().apply {
+            put("idealBps", idealBps)
+            put("targetBps", targetBps)
+        }
 }
 
 /**
