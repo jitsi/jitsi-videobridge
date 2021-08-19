@@ -150,7 +150,7 @@ class ColibriWebSocketServlet
 
         Endpoint endpoint = (Endpoint) abstractEndpoint;
         String pwd = getPwd(request.getRequestURI().getQuery());
-        if (!endpoint.acceptWebSocket(pwd))
+        if (pwd == null || !endpoint.acceptWebSocket(pwd))
         {
             response.sendError(403, authFailed);
             return null;
