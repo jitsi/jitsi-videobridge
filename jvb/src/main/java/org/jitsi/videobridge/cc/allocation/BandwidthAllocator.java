@@ -287,23 +287,14 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             return new BandwidthAllocation(Collections.emptySet());
         }
 
-        long maxBandwidth = getAvailableBandwidth();
+        long remainingBandwidth = getAvailableBandwidth();
         long oldMaxBandwidth = -1;
 
-        int[] oldTargetIndices = new int[sourceBitrateAllocations.size()];
-        int[] newTargetIndices = new int[sourceBitrateAllocations.size()];
-        Arrays.fill(newTargetIndices, -1);
-
-        // The number of allocations with a selected layer.
-        int numAllocationsWithVideo = 0;
-
         boolean oversending = false;
-        while (oldMaxBandwidth != maxBandwidth)
+        while (oldMaxBandwidth != remainingBandwidth)
         {
-            oldMaxBandwidth = maxBandwidth;
-            System.arraycopy(newTargetIndices, 0, oldTargetIndices, 0, oldTargetIndices.length);
+            oldMaxBandwidth = remainingBandwidth;
 
-            int newNumAllocationsWithVideo = 0;
             for (int i = 0; i < sourceBitrateAllocations.size(); i++)
             {
                 SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
@@ -313,19 +304,13 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                     continue;
                 }
 
-                maxBandwidth += sourceBitrateAllocation.getTargetBitrate();
+                remainingBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 // In stage view improve greedily until preferred, in tile view go step-by-step.
-                sourceBitrateAllocation.improve(maxBandwidth, i == 0);
-                maxBandwidth -= sourceBitrateAllocation.getTargetBitrate();
-                if (maxBandwidth < 0)
+                sourceBitrateAllocation.improve(remainingBandwidth, i == 0);
+                remainingBandwidth -= sourceBitrateAllocation.getTargetBitrate();
+                if (remainingBandwidth < 0)
                 {
                     oversending = true;
-                }
-
-                newTargetIndices[i] = sourceBitrateAllocation.getTargetIdx();
-                if (sourceBitrateAllocation.getTargetIdx() != -1)
-                {
-                    newNumAllocationsWithVideo++;
                 }
 
                 // In stage view, do not allocate bandwidth for thumbnails until the on-stage reaches "preferred".
@@ -336,19 +321,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                     break;
                 }
             }
-
-            if (numAllocationsWithVideo > newNumAllocationsWithVideo)
-            {
-                // rollback state to prevent jumps in the number of forwarded participants.
-                for (int i = 0; i < sourceBitrateAllocations.size(); i++)
-                {
-                    sourceBitrateAllocations.get(i).setTargetIdx(oldTargetIndices[i]);
-                }
-
-                break;
-            }
-
-            numAllocationsWithVideo = newNumAllocationsWithVideo;
         }
 
         // The endpoints which are in lastN, and are sending video, but were suspended due to bwe.
