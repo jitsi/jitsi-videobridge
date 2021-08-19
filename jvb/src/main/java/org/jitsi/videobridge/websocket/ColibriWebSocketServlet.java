@@ -23,6 +23,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.websocket.config.*;
 
 import java.io.*;
+import java.net.URLDecoder;
 import java.util.*;
 import java.util.stream.*;
 
@@ -173,15 +174,34 @@ class ColibriWebSocketServlet
      */
     private String getPwd(String query)
     {
-        // TODO: this only deals with the simplest case.
-        if (query == null)
-        {
-            return null;
+        try {
+            Map<String, List<String>> parametersMap = splitQuery(query);
+            if (parametersMap.get("pwd") != null){
+                return parametersMap.get("pwd").get(0);
+            }
+        }catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
         }
-        if (!query.startsWith("pwd="))
-        {
-            return null;
+        return null;
+    }
+
+    /**
+     * Converts query string to Map<String, List<String>> format. Supports multiple parameters with the same key.
+     * @param query query string
+     * @return parsed list
+     */
+    public static Map<String, List<String>> splitQuery(String query) throws UnsupportedEncodingException {
+        final Map<String, List<String>> query_pairs = new LinkedHashMap<>();
+        final String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            final int idx = pair.indexOf("=");
+            final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), "UTF-8") : pair;
+            if (!query_pairs.containsKey(key)) {
+                query_pairs.put(key, new LinkedList<>());
+            }
+            final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), "UTF-8") : null;
+            query_pairs.get(key).add(value);
         }
-        return query.substring("pwd=".length());
+        return query_pairs;
     }
 }
