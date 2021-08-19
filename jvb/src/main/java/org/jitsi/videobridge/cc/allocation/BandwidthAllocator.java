@@ -288,26 +288,23 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         }
 
         long remainingBandwidth = getAvailableBandwidth();
-        long oldMaxBandwidth = -1;
+        long oldRemainingBandwidth = -1;
 
         boolean oversending = false;
-        while (oldMaxBandwidth != remainingBandwidth)
+        while (oldRemainingBandwidth != remainingBandwidth)
         {
-            oldMaxBandwidth = remainingBandwidth;
+            oldRemainingBandwidth = remainingBandwidth;
 
             for (int i = 0; i < sourceBitrateAllocations.size(); i++)
             {
                 SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
-
                 if (sourceBitrateAllocation.getConstraints().getMaxHeight() <= 0)
                 {
                     continue;
                 }
 
-                remainingBandwidth += sourceBitrateAllocation.getTargetBitrate();
                 // In stage view improve greedily until preferred, in tile view go step-by-step.
-                sourceBitrateAllocation.improve(remainingBandwidth, i == 0);
-                remainingBandwidth -= sourceBitrateAllocation.getTargetBitrate();
+                remainingBandwidth -= sourceBitrateAllocation.improve(remainingBandwidth, i == 0);
                 if (remainingBandwidth < 0)
                 {
                     oversending = true;
