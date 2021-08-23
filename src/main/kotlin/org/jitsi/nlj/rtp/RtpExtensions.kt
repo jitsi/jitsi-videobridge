@@ -91,7 +91,12 @@ enum class RtpExtensionType(val uri: String) {
     /**
      * The URN which identifies the RTP Header Extension for Video Content Type.
      */
-    VIDEO_CONTENT_TYPE("http://www.webrtc.org/experiments/rtp-hdrext/video-content-type");
+    VIDEO_CONTENT_TYPE("http://www.webrtc.org/experiments/rtp-hdrext/video-content-type"),
+
+    /**
+     * The URN which identifies the RTP Header Extension for Video Orientation.
+     */
+    VIDEO_ORIENTATION("urn:3gpp:video-orientation");
 
     companion object {
         private val uriMap = RtpExtensionType.values().associateBy(RtpExtensionType::uri)

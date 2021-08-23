@@ -22,7 +22,7 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 
 /**
- * Strip all hop-by-hop header extensions.  Currently this leaves only ssrc-audio-level.
+ * Strip all hop-by-hop header extensions.  Currently this leaves only ssrc-audio-level and video-orientation.
  */
 class HeaderExtStripper(
     streamInformationStore: ReadOnlyStreamInformationStore
@@ -30,8 +30,10 @@ class HeaderExtStripper(
     private var retainedExts: Set<Int> = emptySet()
 
     init {
-        streamInformationStore.onRtpExtensionMapping(RtpExtensionType.SSRC_AUDIO_LEVEL) {
-            retainedExts = if (it != null) setOf(it) else emptySet()
+        retainedExtTypes.forEach { rtpExtensionType ->
+            streamInformationStore.onRtpExtensionMapping(rtpExtensionType) {
+                it?.let { retainedExts = retainedExts.plus(it) }
+            }
         }
     }
 
@@ -44,4 +46,10 @@ class HeaderExtStripper(
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
+
+    companion object {
+        private val retainedExtTypes: Set<RtpExtensionType> = setOf(
+            RtpExtensionType.SSRC_AUDIO_LEVEL, RtpExtensionType.VIDEO_ORIENTATION
+        )
+    }
 }
