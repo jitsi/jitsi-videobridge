@@ -36,7 +36,7 @@ import org.jitsi.videobridge.ice.TransportUtils
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RtcpmuxPacketExtension
-import java.beans.PropertyChangeEvent
+import java.beans.PropertyChangeListener
 import java.io.IOException
 import java.net.DatagramPacket
 import java.time.Clock
@@ -96,19 +96,50 @@ class IceTransport @JvmOverloads constructor(
      */
     private val running = AtomicBoolean(true)
 
+    private val iceStateChangeListener: PropertyChangeListener = PropertyChangeListener { ev ->
+        val oldState = ev.oldValue as IceProcessingState
+        val newState = ev.newValue as IceProcessingState
+        val transition = IceProcessingStateTransition(oldState, newState)
+
+        logger.info("ICE state changed old=$oldState new=$newState")
+
+        when {
+            transition.completed() -> {
+                if (iceConnected.compareAndSet(false, true)) {
+                    eventHandler?.connected()
+                }
+            }
+            transition.failed() -> {
+                if (iceFailed.compareAndSet(false, true)) {
+                    eventHandler?.failed()
+                }
+            }
+        }
+    }
+
+    private val iceStreamPairChangedListener: PropertyChangeListener = PropertyChangeListener { ev ->
+        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
+            /* TODO: Currently ice4j only triggers this event for the selected
+             * pair, but should we double-check the pair anyway?
+             */
+            val time = Instant.ofEpochMilli(ev.newValue as Long)
+            eventHandler?.consentUpdated(time)
+        }
+    }
+
     private val iceAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
         appendHarvesters(this)
         isControlling = controlling
         performConsentFreshness = true
         nominationStrategy = IceConfig.config.nominationStrategy
-        addStateChangeListener(this@IceTransport::iceStateChanged)
+        addStateChangeListener(iceStateChangeListener)
     }.also {
         logger.addContext("local_ufrag", it.localUfrag)
     }
 
     // TODO: Do we still need the id here now that we have logContext?
     private val iceStream = iceAgent.createMediaStream("stream-$id").apply {
-        addPairChangeListener(this@IceTransport::iceStreamPairChanged)
+        addPairChangeListener(iceStreamPairChangedListener)
     }
 
     private val iceComponent = iceAgent.createComponent(
@@ -235,8 +266,8 @@ class IceTransport @JvmOverloads constructor(
     fun stop() {
         if (running.compareAndSet(true, false)) {
             logger.info("Stopping")
-            iceAgent.removeStateChangeListener(this::iceStateChanged)
-            iceStream.removePairStateChangeListener(this::iceStreamPairChanged)
+            iceAgent.removeStateChangeListener(iceStateChangeListener)
+            iceStream.removePairStateChangeListener(iceStreamPairChangedListener)
             iceAgent.free()
         }
     }
@@ -313,37 +344,6 @@ class IceTransport @JvmOverloads constructor(
         }
 
         return remoteCandidateCount
-    }
-
-    private fun iceStateChanged(ev: PropertyChangeEvent) {
-        val oldState = ev.oldValue as IceProcessingState
-        val newState = ev.newValue as IceProcessingState
-        val transition = IceProcessingStateTransition(oldState, newState)
-
-        logger.info("ICE state changed old=$oldState new=$newState")
-
-        when {
-            transition.completed() -> {
-                if (iceConnected.compareAndSet(false, true)) {
-                    eventHandler?.connected()
-                }
-            }
-            transition.failed() -> {
-                if (iceFailed.compareAndSet(false, true)) {
-                    eventHandler?.failed()
-                }
-            }
-        }
-    }
-
-    private fun iceStreamPairChanged(ev: PropertyChangeEvent) {
-        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
-            /* TODO: Currently ice4j only triggers this event for the selected
-             * pair, but should we double-check the pair anyway?
-             */
-            val time = Instant.ofEpochMilli(ev.newValue as Long)
-            eventHandler?.consentUpdated(time)
-        }
     }
 
     companion object {
