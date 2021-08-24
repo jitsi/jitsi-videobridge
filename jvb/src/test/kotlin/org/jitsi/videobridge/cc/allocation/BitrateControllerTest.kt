@@ -1352,8 +1352,8 @@ fun List<Event<BandwidthAllocation>>.shouldMatchInOrder(vararg events: Event<Ban
 fun BandwidthAllocation.shouldMatch(other: BandwidthAllocation) {
     allocations.size shouldBe other.allocations.size
     allocations.forEach { thisSingleAllocation ->
-        withClue("Allocation for ${thisSingleAllocation.endpoint.id}") {
-            val otherSingleAllocation = other.allocations.find { it.endpoint == thisSingleAllocation.endpoint }
+        withClue("Allocation for ${thisSingleAllocation.endpointId}") {
+            val otherSingleAllocation = other.allocations.find { it.endpointId == thisSingleAllocation.endpointId }
             otherSingleAllocation.shouldNotBeNull()
             thisSingleAllocation.targetLayer?.height shouldBe otherSingleAllocation.targetLayer?.height
             thisSingleAllocation.targetLayer?.frameRate shouldBe otherSingleAllocation.targetLayer?.frameRate

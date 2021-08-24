@@ -176,8 +176,8 @@ class BitrateControllerPacketHandler
      */
     private AdaptiveSourceProjection lookupOrCreateAdaptiveSourceProjection(SingleAllocation singleAllocation)
     {
-        MediaSourceDesc source = singleAllocation.getEndpoint().getMediaSource();
-        String endpointID = singleAllocation.getEndpoint().getId();
+        MediaSourceDesc source = singleAllocation.getMediaSource();
+        String endpointID = singleAllocation.getEndpointId();
 
         if (source == null)
         {
