@@ -36,7 +36,6 @@ import org.jitsi.videobridge.ice.TransportUtils
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RtcpmuxPacketExtension
-import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.io.IOException
 import java.net.DatagramPacket
@@ -118,6 +117,16 @@ class IceTransport @JvmOverloads constructor(
         }
     }
 
+    private val iceStreamPairChangedListener: PropertyChangeListener = PropertyChangeListener { ev ->
+        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
+            /* TODO: Currently ice4j only triggers this event for the selected
+             * pair, but should we double-check the pair anyway?
+             */
+            val time = Instant.ofEpochMilli(ev.newValue as Long)
+            eventHandler?.consentUpdated(time)
+        }
+    }
+
     private val iceAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
         appendHarvesters(this)
         isControlling = controlling
@@ -130,7 +139,7 @@ class IceTransport @JvmOverloads constructor(
 
     // TODO: Do we still need the id here now that we have logContext?
     private val iceStream = iceAgent.createMediaStream("stream-$id").apply {
-        addPairChangeListener(this@IceTransport::iceStreamPairChanged)
+        addPairChangeListener(iceStreamPairChangedListener)
     }
 
     private val iceComponent = iceAgent.createComponent(
@@ -258,7 +267,7 @@ class IceTransport @JvmOverloads constructor(
         if (running.compareAndSet(true, false)) {
             logger.info("Stopping")
             iceAgent.removeStateChangeListener(iceStateChangeListener)
-            iceStream.removePairStateChangeListener(this::iceStreamPairChanged)
+            iceStream.removePairStateChangeListener(iceStreamPairChangedListener)
             iceAgent.free()
         }
     }
@@ -335,17 +344,6 @@ class IceTransport @JvmOverloads constructor(
         }
 
         return remoteCandidateCount
-    }
-
-
-    private fun iceStreamPairChanged(ev: PropertyChangeEvent) {
-        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
-            /* TODO: Currently ice4j only triggers this event for the selected
-             * pair, but should we double-check the pair anyway?
-             */
-            val time = Instant.ofEpochMilli(ev.newValue as Long)
-            eventHandler?.consentUpdated(time)
-        }
     }
 
     companion object {
