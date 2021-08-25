@@ -218,7 +218,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         allocation.allocations.forEach {
             it.targetLayer?.getBitrate(nowMs)?.let { targetBitrate ->
                 totalTargetBitrate += targetBitrate
-                it.endpoint.mediaSource?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
+                it.mediaSource?.primarySSRC?.let { primarySsrc -> activeSsrcs.add(primarySsrc) }
             }
             it.idealLayer?.getBitrate(nowMs)?.let { idealBitrate ->
                 totalIdealBitrate += idealBitrate
@@ -250,7 +250,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             trace(
                 diagnosticContext
                     .makeTimeSeriesPoint("allocation_for_source", nowMs)
-                    .addField("remote_endpoint_id", it.endpoint.id)
+                    .addField("remote_endpoint_id", it.endpointId)
                     .addField("target_idx", it.targetLayer?.index ?: -1)
                     .addField("ideal_idx", it.idealLayer?.index ?: -1)
                     .addField("target_bps", it.targetLayer?.getBitrate(nowMs)?.bps ?: -1)

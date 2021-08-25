@@ -29,7 +29,7 @@ class BandwidthAllocation @JvmOverloads constructor(
     val targetBps: Long = -1,
 ) {
     val forwardedEndpoints: Set<String> =
-        allocations.filter { it.isForwarded() }.map { it.endpoint.id }.toSet()
+        allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     /**
      * Whether the two allocations have the same endpoints and same layers.
@@ -39,9 +39,9 @@ class BandwidthAllocation @JvmOverloads constructor(
             oversending == other.oversending &&
             allocations.all { allocation ->
                 other.allocations.any { otherAllocation ->
-                    allocation.endpoint == otherAllocation.endpoint &&
-                        allocation.endpoint.mediaSource?.primarySSRC ==
-                        otherAllocation.endpoint.mediaSource?.primarySSRC &&
+                    allocation.endpointId == otherAllocation.endpointId &&
+                        allocation.mediaSource?.primarySSRC ==
+                        otherAllocation.mediaSource?.primarySSRC &&
                         allocation.targetLayer?.index == otherAllocation.targetLayer?.index
                 }
             }
@@ -64,7 +64,10 @@ class BandwidthAllocation @JvmOverloads constructor(
  * The result of bandwidth allocation for a specific endpoint and a [MediaSourceDesc].
  */
 data class SingleAllocation(
-    val endpoint: MediaSourceContainer,
+    /** The ID of the endpoint which owns the media source */
+    val endpointId: String,
+    /** The media source */
+    val mediaSource: MediaSourceDesc?,
     /**
      * The layer which has been selected to be forwarded.
      */
@@ -74,10 +77,12 @@ data class SingleAllocation(
      */
     val idealLayer: RtpLayerDesc? = null
 ) {
+    constructor(endpoint: MediaSourceContainer, targetLayer: RtpLayerDesc? = null, idealLayer: RtpLayerDesc? = null) :
+        this(endpoint.id, endpoint.mediaSource, targetLayer, idealLayer)
     private val targetIndex: Int
         get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1
 
-    override fun toString(): String = "[id=${endpoint.id} target=${targetLayer?.height}/${targetLayer?.frameRate} " +
+    override fun toString(): String = "[id=$endpointId target=${targetLayer?.height}/${targetLayer?.frameRate} " +
         "ideal=${idealLayer?.height}/${idealLayer?.frameRate}"
 }

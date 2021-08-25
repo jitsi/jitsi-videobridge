@@ -165,7 +165,8 @@ internal class SingleSourceAllocation(
      */
     val result: SingleAllocation
         get() = SingleAllocation(
-            endpoint,
+            endpoint.id,
+            endpoint.mediaSource,
             targetLayer?.layer,
             layers.idealLayer?.layer
         )
