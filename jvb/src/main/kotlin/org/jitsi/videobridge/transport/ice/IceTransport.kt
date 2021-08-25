@@ -36,6 +36,7 @@ import org.jitsi.videobridge.ice.TransportUtils
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RtcpmuxPacketExtension
+import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.io.IOException
 import java.net.DatagramPacket
@@ -96,36 +97,8 @@ class IceTransport @JvmOverloads constructor(
      */
     private val running = AtomicBoolean(true)
 
-    private val iceStateChangeListener: PropertyChangeListener = PropertyChangeListener { ev ->
-        val oldState = ev.oldValue as IceProcessingState
-        val newState = ev.newValue as IceProcessingState
-        val transition = IceProcessingStateTransition(oldState, newState)
-
-        logger.info("ICE state changed old=$oldState new=$newState")
-
-        when {
-            transition.completed() -> {
-                if (iceConnected.compareAndSet(false, true)) {
-                    eventHandler?.connected()
-                }
-            }
-            transition.failed() -> {
-                if (iceFailed.compareAndSet(false, true)) {
-                    eventHandler?.failed()
-                }
-            }
-        }
-    }
-
-    private val iceStreamPairChangedListener: PropertyChangeListener = PropertyChangeListener { ev ->
-        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
-            /* TODO: Currently ice4j only triggers this event for the selected
-             * pair, but should we double-check the pair anyway?
-             */
-            val time = Instant.ofEpochMilli(ev.newValue as Long)
-            eventHandler?.consentUpdated(time)
-        }
-    }
+    private val iceStateChangeListener = PropertyChangeListener { ev -> iceStateChanged(ev) }
+    private val iceStreamPairChangedListener = PropertyChangeListener { ev -> iceStreamPairChanged(ev) }
 
     private val iceAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
         appendHarvesters(this)
@@ -344,6 +317,37 @@ class IceTransport @JvmOverloads constructor(
         }
 
         return remoteCandidateCount
+    }
+
+    private fun iceStateChanged(ev: PropertyChangeEvent) {
+        val oldState = ev.oldValue as IceProcessingState
+        val newState = ev.newValue as IceProcessingState
+        val transition = IceProcessingStateTransition(oldState, newState)
+
+        logger.info("ICE state changed old=$oldState new=$newState")
+
+        when {
+            transition.completed() -> {
+                if (iceConnected.compareAndSet(false, true)) {
+                    eventHandler?.connected()
+                }
+            }
+            transition.failed() -> {
+                if (iceFailed.compareAndSet(false, true)) {
+                    eventHandler?.failed()
+                }
+            }
+        }
+    }
+
+    private fun iceStreamPairChanged(ev: PropertyChangeEvent) {
+        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
+            /* TODO: Currently ice4j only triggers this event for the selected
+             * pair, but should we double-check the pair anyway?
+             */
+            val time = Instant.ofEpochMilli(ev.newValue as Long)
+            eventHandler?.consentUpdated(time)
+        }
     }
 
     companion object {
