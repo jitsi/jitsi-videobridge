@@ -70,8 +70,8 @@ class IncomingStatisticsTracker(
 
     fun getSnapshot(): IncomingStatisticsSnapshot {
         return IncomingStatisticsSnapshot(
-            ssrcStats.map { (ssrc, stats) ->
-                Pair(ssrc, stats.getSnapshot())
+            ssrcStats.mapNotNull { (ssrc, stats) ->
+                stats.getSnapshot()?.let { Pair(ssrc, it) }
             }.toMap()
         )
     }
@@ -119,6 +119,7 @@ class IncomingSsrcStats(
     private val jitterStats = JitterStats()
     private var numReceivedPackets: Int = 0
     private var numReceivedBytes: Int = 0
+    private var activitySinceLastSnapshot: Boolean = false
     // End variables protected by statsLock
 
     private var probation: Int = INITIAL_MIN_SEQUENTIAL
@@ -158,8 +159,12 @@ class IncomingSsrcStats(
         }
     }
 
-    fun getSnapshot(): Snapshot {
+    fun getSnapshot(): Snapshot? {
         synchronized(statsLock) {
+            if (!activitySinceLastSnapshot) {
+                return null
+            }
+            activitySinceLastSnapshot = false
             return Snapshot(
                 numReceivedPackets, numReceivedBytes, maxSeqNum, seqNumCycles, numExpectedPackets,
                 cumulativePacketsLost, jitterStats.jitter
@@ -192,6 +197,7 @@ class IncomingSsrcStats(
     ) {
         val packetSequenceNumber = packet.sequenceNumber
         synchronized(statsLock) {
+            activitySinceLastSnapshot = true
             numReceivedPackets++
             numReceivedBytes += packet.length
             if (packetSequenceNumber isNewerThan maxSeqNum) {

@@ -19,6 +19,7 @@ package org.jitsi.nlj.transform.node.incoming
 import io.kotest.core.spec.IsolationMode
 import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
 
@@ -127,12 +128,34 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
             val statSnapshot = streamStatistics.getSnapshot()
             context("expected packets") {
                 should("be calculated correctly") {
-                    statSnapshot.numExpectedPackets shouldBe 17
+                    statSnapshot?.numExpectedPackets shouldBe 17
                 }
             }
             context("cumulative lost") {
                 should("be calculated correctly") {
-                    statSnapshot.cumulativePacketsLost shouldBe 6
+                    statSnapshot?.cumulativePacketsLost shouldBe 6
+                }
+            }
+            context("querying a second time with no update") {
+                should("be null") {
+                    streamStatistics.getSnapshot() shouldBe null
+                }
+            }
+
+            val packetSequence2 = listOf(
+                createStatPacketInfo(17, 0, 0)
+            )
+            packetSequence2.forEach {
+                streamStatistics.packetReceived(
+                    it.packetInfo.packetAs<RtpPacket>(),
+                    it.sentTimeMs,
+                    it.packetInfo.receivedTime
+                )
+            }
+
+            context("querying after a new update") {
+                should("not be null") {
+                    streamStatistics.getSnapshot() shouldNotBe null
                 }
             }
         }
