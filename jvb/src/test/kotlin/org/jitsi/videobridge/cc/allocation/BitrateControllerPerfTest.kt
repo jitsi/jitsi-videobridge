@@ -58,7 +58,7 @@ class BitrateControllerPerfTest : StringSpec() {
     private val random = Random(93232)
 
     private val endpointIds = mutableListOf("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
-    private val endpoints: MutableList<Endpoint> = createEndpoints(*endpointIds.toTypedArray())
+    private val endpoints: MutableList<TestEndpoint> = createEndpoints(*endpointIds.toTypedArray())
     private val bc = BitrateController(
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
