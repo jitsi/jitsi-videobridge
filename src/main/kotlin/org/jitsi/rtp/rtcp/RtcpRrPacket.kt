@@ -69,8 +69,12 @@ class RtcpRrPacket(
 
 data class RtcpRrPacketBuilder(
     var rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
-    val reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
+    val reportBlocks: List<RtcpReportBlock> = listOf()
 ) {
+
+    init {
+        require(reportBlocks.size <= 31) { "Too many report blocks ${reportBlocks.size}: RR can contain at most 31" }
+    }
 
     private fun getLengthValue(): Int =
         RtpUtils.calculateRtcpLengthFieldValue(sizeBytes)

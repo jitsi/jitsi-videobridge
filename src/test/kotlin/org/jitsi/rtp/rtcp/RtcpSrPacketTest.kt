@@ -16,12 +16,14 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.rtp.util.byteBufferOf
+import java.lang.IllegalArgumentException
 import java.nio.ByteBuffer
 
 internal class RtcpSrPacketTest : ShouldSpec() {
@@ -210,5 +212,17 @@ internal class RtcpSrPacketTest : ShouldSpec() {
 //                }
 //            }
 //        }
+
+        context("building") {
+            context("with too many report blocks") {
+                should("throw") {
+                    shouldThrow<IllegalArgumentException> {
+                        RtcpSrPacketBuilder(
+                            reportBlocks = generateSequence { reportBlock1 }.take(32).toList()
+                        ).build()
+                    }
+                }
+            }
+        }
     }
 }

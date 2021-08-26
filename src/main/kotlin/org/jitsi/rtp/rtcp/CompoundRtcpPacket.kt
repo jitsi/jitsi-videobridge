@@ -58,9 +58,48 @@ class CompoundRtcpPacket(
 
             return CompoundRtcpPacket(buf, 0, totalLength)
         }
+
+        /**
+         * Create one or more compound RTCP packets from [packets], with each compound packet being
+         * no more than [mtu] bytes in size (unless an individual packet is bigger than that, in which
+         * case it will be in a compound packet on its own).
+         */
+        fun createWithMtu(packets: List<RtcpPacket>, mtu: Int = 1500): List<CompoundRtcpPacket> {
+            return packets.chunkMaxSize(mtu) { it.length }.map { CompoundRtcpPacket(it) }
+        }
     }
 
     override fun clone(): RtcpPacket = CompoundRtcpPacket(cloneBuffer(0), 0, length)
+}
+
+/**
+ * Return a List of Lists, where sub-list is made up of an ordered list
+ * of values pulled from [this], such that the total size of each sub-list
+ * is not more than maxSize.  (Sizes are evaluated by [evaluate]. If an
+ * individual element's size is more than [maxSize] it will be returned
+ * in a sub-list on its own.)
+ */
+private fun <T : Any> List<T>.chunkMaxSize(maxSize: Int, evaluate: (T) -> Int): List<List<T>> {
+    val chunks = mutableListOf<List<T>>()
+    if (this.isEmpty()) {
+        return chunks
+    }
+    var currentChunk = mutableListOf(first())
+    chunks.add(currentChunk)
+    var chunkSize = evaluate(currentChunk.first())
+    // Ignore the first value which we already put in the current chunk
+    drop(1).forEach {
+        val size = evaluate(it)
+        if (chunkSize + size > maxSize) {
+            currentChunk = mutableListOf(it)
+            chunks.add(currentChunk)
+            chunkSize = size
+        } else {
+            currentChunk.add(it)
+            chunkSize += size
+        }
+    }
+    return chunks
 }
 
 class CompoundRtcpContainedInvalidDataException(
