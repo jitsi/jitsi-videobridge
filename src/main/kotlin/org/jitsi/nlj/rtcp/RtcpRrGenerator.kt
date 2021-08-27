@@ -110,14 +110,16 @@ class RtcpRrGenerator(
 
             val packets = mutableListOf<RtcpPacket>()
             if (reportBlocks.isNotEmpty()) {
-                packets.add(RtcpRrPacketBuilder(reportBlocks = reportBlocks).build())
+                for (blocks in reportBlocks.chunked(31)) {
+                    packets.add(RtcpRrPacketBuilder(reportBlocks = blocks).build())
+                }
             }
             packets.addAll(additionalPacketSupplier())
 
             when (packets.size) {
                 0 -> {}
                 1 -> rtcpSender(packets.first())
-                else -> rtcpSender(CompoundRtcpPacket(packets))
+                else -> for (packet in CompoundRtcpPacket.createWithMtu(packets)) { rtcpSender(packet) }
             }
             backgroundExecutor.schedule(this::doWork, reportingInterval)
         }
