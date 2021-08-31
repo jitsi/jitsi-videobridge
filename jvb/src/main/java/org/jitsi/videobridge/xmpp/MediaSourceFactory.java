@@ -458,9 +458,9 @@ public class MediaSourceFactory
 
     /**
      * Extracts the owner/endpoint ID as a {@link String} from a {@link SourcePacketExtension}.
-     * Jicofo includes either the full occupant JID, or the raw ID (which encodes as a domain-bare JID in
-     * XML) of the endpoint as the owner of a {@link SSRCInfoPacketExtension}. In jitsi-videobridge we only
-     * care about the endpoint ID which coincides with either the resource part, or the domain part.
+     * Jicofo includes either the full occupant JID, or the raw ID of the endpoint (which should not parse as a JID
+     * with a resource part) as the owner of a {@link SSRCInfoPacketExtension}. In jitsi-videobridge we only
+     * care about the endpoint ID.
      *
      * @param source the {@link SourcePacketExtension} from which to extract the owner.
      * @return the owner/endpoint ID as a {@link String}.
@@ -493,8 +493,8 @@ public class MediaSourceFactory
     }
 
     /**
-     * Given a string containing a JID, return its StringPrep'd Resource part, or if it doesn't have a Resource part,
-     * return its StringPrep'd Domain part. Otherwise return an empty string.
+     * Given a string, if it is a valid JID with a Resource part return its StringPrep'd Resource part. Otherwise,
+     * return the string itself.
      *
      * Helper for {@link #getOwner}.
      */
@@ -503,12 +503,7 @@ public class MediaSourceFactory
         String unpreppedResource = XmppStringUtils.parseResource(jid);
         if (unpreppedResource == null || unpreppedResource.isEmpty())
         {
-            String unpreppedDomain = XmppStringUtils.parseDomain(jid);
-            if (unpreppedDomain == null || unpreppedDomain.isEmpty())
-            {
-                return "";
-            }
-            return Domainpart.fromOrThrowUnchecked(unpreppedDomain).toString();
+            return jid;
         }
         return Resourcepart.fromOrThrowUnchecked(unpreppedResource).toString();
     }
