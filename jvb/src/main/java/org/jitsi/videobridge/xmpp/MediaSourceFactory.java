@@ -457,23 +457,18 @@ public class MediaSourceFactory
     }
 
     /**
-     * Extracts the owner/endpoint ID as a {@link String} from a
-     * {@link SourcePacketExtension}.
-     * Jicofo includes the full occupant JID of the endpoint as the owner of
-     * a {@link SSRCInfoPacketExtension}, but in jitsi-videobridge we only
-     * care about the resource part, which coincides with the ID of the Colibri
-     * endpoint associated with the owner.
+     * Extracts the owner/endpoint ID as a {@link String} from a {@link SourcePacketExtension}.
+     * Jicofo includes either the full occupant JID, or the raw ID (which encodes as a domain-bare JID in
+     * XML) of the endpoint as the owner of a {@link SSRCInfoPacketExtension}. In jitsi-videobridge we only
+     * care about the endpoint ID which coincides with either the resource part, or the domain part.
      *
-     * @param source the {@link SourcePacketExtension} from which to extract
-     * the owner.
+     * @param source the {@link SourcePacketExtension} from which to extract the owner.
      * @return the owner/endpoint ID as a {@link String}.
      */
     public static String getOwner(SourcePacketExtension source)
     {
         SSRCInfoPacketExtension ssrcInfoPacketExtension
-            = source == null
-                ? null : source.getFirstChildOfType(
-                    SSRCInfoPacketExtension.class);
+            = source == null ? null : source.getFirstChildOfType(SSRCInfoPacketExtension.class);
 
         if (ssrcInfoPacketExtension != null)
         {
@@ -491,24 +486,29 @@ public class MediaSourceFactory
             String ownerAttr = ssrcInfoPacketExtension.getAttributeAsString(SSRCInfoPacketExtension.OWNER_ATTR_NAME);
             if (ownerAttr != null)
             {
-                return getResourceFromJid(ownerAttr);
+                return getResourceOrDomainFromJid(ownerAttr);
             }
         }
         return null;
     }
 
     /**
-     * Given a string containing a JID, return its StringPrep'd Resource part,
-     * or {@link Resourcepart#EMPTY}, as a string.
+     * Given a string containing a JID, return its StringPrep'd Resource part, or if it doesn't have a Resource part,
+     * return its StringPrep'd Domain part. Otherwise return an empty string.
      *
-     * Helper for {@link #getOwner}
+     * Helper for {@link #getOwner}.
      */
-    private static String getResourceFromJid(String jid)
+    private static String getResourceOrDomainFromJid(String jid)
     {
         String unpreppedResource = XmppStringUtils.parseResource(jid);
-        if (unpreppedResource.isEmpty())
+        if (unpreppedResource == null || unpreppedResource.isEmpty())
         {
-            return Resourcepart.EMPTY.toString();
+            String unpreppedDomain = XmppStringUtils.parseDomain(jid);
+            if (unpreppedDomain == null || unpreppedDomain.isEmpty())
+            {
+                return "";
+            }
+            return Domainpart.fromOrThrowUnchecked(unpreppedDomain).toString();
         }
         return Resourcepart.fromOrThrowUnchecked(unpreppedResource).toString();
     }
