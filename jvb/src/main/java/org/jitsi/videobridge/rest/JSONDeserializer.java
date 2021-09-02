@@ -727,7 +727,8 @@ public final class JSONDeserializer
 
             Object rtcpFbs = payloadType.get(JSONSerializer.RTCP_FBS);
 
-            if (rtcpFbs != null && rtcpFbs instanceof JSONArray) {
+            if (rtcpFbs != null && rtcpFbs instanceof JSONArray)
+            {
                 deserializeRtcpFbs((JSONArray) rtcpFbs, payloadTypeIQ);
             }
 

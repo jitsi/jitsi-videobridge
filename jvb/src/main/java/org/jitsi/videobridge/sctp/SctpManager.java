@@ -129,8 +129,10 @@ public class SctpManager {
     /**
      * Close the active {@link SctpSocket}, if there is one
      */
-    public void closeConnection() {
-        if (socket != null) {
+    public void closeConnection()
+    {
+        if (socket != null)
+        {
             if (logger.isDebugEnabled())
             {
                 logger.debug("Closing SCTP socket " + socket.hashCode());
