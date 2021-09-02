@@ -256,26 +256,26 @@ public class ContentShim
                 // channel in question. Consequently, it does not make sense
                 // to have it in a channel allocation request.
                 throw new IqProcessingException(
-                        XMPPError.Condition.bad_request,
+                        StanzaError.Condition.bad_request,
                         "Channel expire request for empty ID");
             }
             if (endpointId == null)
             {
                 throw new IqProcessingException(
-                        XMPPError.Condition.bad_request,
+                        StanzaError.Condition.bad_request,
                         "Channel creation requested without endpoint ID");
             }
             if (!endpointId.equals(channelBundleId))
             {
                 throw new IqProcessingException(
-                        XMPPError.Condition.bad_request,
+                        StanzaError.Condition.bad_request,
                         "Endpoint ID does not match channel bundle ID");
             }
             channelShim = createRtpChannel(endpointId);
             if (channelShim == null)
             {
                 throw new IqProcessingException(
-                        XMPPError.Condition.internal_server_error,
+                        StanzaError.Condition.internal_server_error,
                         "Error creating channel");
             }
         }
@@ -291,7 +291,7 @@ public class ContentShim
                     return null;
                 }
                 throw new IqProcessingException(
-                        XMPPError.Condition.item_not_found,
+                        StanzaError.Condition.item_not_found,
                         "Error finding channel " + channelId);
             }
         }
@@ -306,7 +306,7 @@ public class ContentShim
         catch (IllegalArgumentException iae)
         {
             throw new IqProcessingException(
-                    XMPPError.Condition.bad_request,
+                    StanzaError.Condition.bad_request,
                     iae.getMessage());
         }
 
@@ -342,14 +342,14 @@ public class ContentShim
             if (expire == 0)
             {
                 throw new IqProcessingException(
-                        XMPPError.Condition.bad_request,
+                        StanzaError.Condition.bad_request,
                         "SCTP connection expire request for empty ID");
             }
 
             if (endpointId == null)
             {
                 throw new IqProcessingException(
-                        XMPPError.Condition.bad_request,
+                        StanzaError.Condition.bad_request,
                         "No endpoint ID specified for the new SCTP connection");
             }
 
@@ -367,7 +367,7 @@ public class ContentShim
             else if (sctpConnectionShim == null)
             {
                 throw new IqProcessingException(
-                        XMPPError.Condition.bad_request,
+                        StanzaError.Condition.bad_request,
                         "No SCTP connection found for ID: " + id);
             }
         }
@@ -382,7 +382,7 @@ public class ContentShim
         catch (IllegalArgumentException iae)
         {
             throw new IqProcessingException(
-                    XMPPError.Condition.bad_request,
+                    StanzaError.Condition.bad_request,
                     iae.getMessage());
         }
 

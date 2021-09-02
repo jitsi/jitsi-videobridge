@@ -24,7 +24,7 @@ import io.mockk.verify
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.utils.OrderedJsonObject
 import org.jivesoftware.smack.packet.ErrorIQ
-import org.jivesoftware.smack.packet.XMPPError
+import org.jivesoftware.smack.packet.StanzaError
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
 
@@ -52,7 +52,7 @@ class VideobridgeTest : ShouldSpec() {
                         val confCreateIq = ColibriUtilities.createConferenceIq(JidCreate.from("focusJid"))
                         val resp = videobridge.handleColibriConferenceIQ(confCreateIq)
                         resp.shouldBeInstanceOf<ErrorIQ>()
-                        resp.error.condition shouldBe XMPPError.Condition.service_unavailable
+                        resp.error.condition shouldBe StanzaError.Condition.service_unavailable
                     }
                     context("and once the conference expires") {
                         videobridge.expireConference(conf)

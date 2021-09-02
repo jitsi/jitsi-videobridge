@@ -361,7 +361,7 @@ public class Videobridge
         {
             return IQUtils.createError(
                     conferenceIq,
-                    XMPPError.Condition.bad_request,
+                    StanzaError.Condition.bad_request,
                     "Conference not found for ID: " + conferenceIq.getID());
         }
         catch (InGracefulShutdownException e)
@@ -388,7 +388,7 @@ public class Videobridge
             request.getCallback().invoke(
                     IQUtils.createError(
                             conferenceIq,
-                            XMPPError.Condition.bad_request,
+                            StanzaError.Condition.bad_request,
                             "Conference not found for ID: " + conferenceIq.getID()));
             return;
         }
@@ -436,8 +436,8 @@ public class Videobridge
      * @param healthCheckIQ the <tt>HealthCheckIQ</tt> to be handled.
      * @return IQ with &quot;result&quot; type if the health check succeeded or
      * IQ with &quot;error&quot; type if something went wrong.
-     * {@link XMPPError.Condition#internal_server_error} is returned when the
-     * health check fails or {@link XMPPError.Condition#not_authorized} if the
+     * {@link StanzaError.Condition#internal_server_error} is returned when the
+     * health check fails or {@link StanzaError.Condition#not_authorized} if the
      * request comes from a JID that is not authorized to do health checks on
      * this instance.
      */
@@ -453,7 +453,7 @@ public class Videobridge
             return
                 IQUtils.createError(
                         healthCheckIQ,
-                        XMPPError.Condition.internal_server_error,
+                        StanzaError.Condition.internal_server_error,
                         e.getMessage());
         }
     }

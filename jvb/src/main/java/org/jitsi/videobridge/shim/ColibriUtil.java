@@ -164,7 +164,7 @@ public class ColibriUtil
                         "Received a COLIBRI request with 'transport' inside " +
                         "'channel'. This legacy mode is no longer supported";
                 logger.warn(message);
-                throw new IqProcessingException(XMPPError.Condition.bad_request, message);
+                throw new IqProcessingException(StanzaError.Condition.bad_request, message);
             }
         }
 
@@ -192,7 +192,7 @@ public class ColibriUtil
             if (!SctpConfig.config.enabled())
             {
                 throw new IqProcessingException(
-                        XMPPError.Condition.feature_not_implemented,
+                        StanzaError.Condition.feature_not_implemented,
                         "SCTP support is not configured");
             }
             SctpConnectionShim sctpConnectionShim = contentShim.getOrCreateSctpConnectionShim(sctpConnIq);
