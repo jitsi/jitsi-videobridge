@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge.shim
 
-import org.jivesoftware.smack.packet.XMPPError
+import org.jivesoftware.smack.packet.StanzaError
 import java.lang.Exception
 
 internal class IqProcessingException(
-    val condition: XMPPError.Condition,
+    val condition: StanzaError.Condition,
     message: String
 ) : Exception(message) {
     override fun toString() = "$condition $message"
