@@ -15,6 +15,8 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
+import org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator.config.OveruseDetectorConfig;
+
 /**
  * Bandwidth over-use detector options.  These are used to drive experimentation
  * with bandwidth estimation parameters.
@@ -36,7 +38,7 @@ class OverUseDetectorOptions
 
     public double initialSlope = 8.0D / 512.0D;
 
-    public double initialThreshold = 25.0D;
+    public double initialThreshold = OveruseDetectorConfig.Companion.getInitialThreshold();
 
     public double initialVarNoise = 50.0D;
 }

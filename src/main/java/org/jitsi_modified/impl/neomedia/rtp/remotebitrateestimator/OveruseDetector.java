@@ -18,6 +18,7 @@ package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging.*;
+import org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator.config.OveruseDetectorConfig;
 
 import java.util.*;
 
@@ -46,7 +47,7 @@ class OveruseDetector
 
     private int overuseCounter;
 
-    private static final double overusingTimeThreshold = 100D;
+    private static final double overusingTimeThreshold = OveruseDetectorConfig.Companion.getOverusingTimeThreshold();
 
     private double prevOffset;
 
