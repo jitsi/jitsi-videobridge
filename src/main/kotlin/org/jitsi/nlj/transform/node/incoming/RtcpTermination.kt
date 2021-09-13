@@ -113,7 +113,7 @@ class RtcpTermination(
         }
 
         return forwardedRtcp?.let {
-            if (it.buffer != packetInfo.packet.buffer) {
+            if (it.buffer !== packetInfo.packet.buffer) {
                 // We're not using the original packet's buffer, so we can return it to the pool
                 BufferPool.returnBuffer(packetInfo.packet.buffer)
             }
@@ -126,7 +126,7 @@ class RtcpTermination(
 
     override fun getNodeStats(): NodeStatsBlock {
         return super.getNodeStats().apply {
-            packetReceiveCounts.forEach { type, count ->
+            packetReceiveCounts.forEach { (type, count) ->
                 addNumber("num_${type}_rx", count)
             }
             addNumber("num_failed_to_forward", numFailedToForward)
