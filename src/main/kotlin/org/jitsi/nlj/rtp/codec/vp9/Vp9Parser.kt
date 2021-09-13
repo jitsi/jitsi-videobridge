@@ -68,10 +68,6 @@ class Vp9Parser(
                     }
                 }
             }
-
-            /* TODO: we need a way to restore the encoding desc's old layer set if it switches back to some other codec
-             *  (i.e. VP8)
-             */
         }
         if (vp9Packet.spatialLayerIndex > 0 && vp9Packet.isInterPicturePredicted) {
             /* Check if this layer is using K-SVC. */

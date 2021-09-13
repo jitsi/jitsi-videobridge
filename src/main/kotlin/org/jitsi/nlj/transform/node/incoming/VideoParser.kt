@@ -69,7 +69,11 @@ class VideoParser(
                     packetInfo.resetPayloadVerification()
 
                     if (videoCodecParser !is Vp8Parser) {
+                        logger.cdebug {
+                            "Creating new VP8Parser, current videoCodecParser is ${videoCodecParser?.javaClass}"
+                        }
                         resetSources()
+                        packetInfo.layeringChanged = true
                         videoCodecParser = Vp8Parser(sources, logger)
                     }
                     vp8Packet
@@ -80,13 +84,25 @@ class VideoParser(
                     packetInfo.resetPayloadVerification()
 
                     if (videoCodecParser !is Vp9Parser) {
+                        logger.cdebug {
+                            "Creating new VP9Parser, current videoCodecParser is ${videoCodecParser?.javaClass}"
+                        }
                         resetSources()
+                        packetInfo.layeringChanged = true
                         videoCodecParser = Vp9Parser(sources, logger)
                     }
                     vp9Packet
                 }
                 else -> {
-                    videoCodecParser = null
+                    if (videoCodecParser != null) {
+                        logger.cdebug {
+                            "Removing videoCodecParser on ${payloadType.javaClass} packet, " +
+                                "current videoCodecParser is ${videoCodecParser?.javaClass}"
+                        }
+                        resetSources()
+                        packetInfo.layeringChanged = true
+                        videoCodecParser = null
+                    }
                     return packetInfo
                 }
             }.also {
@@ -128,6 +144,7 @@ class VideoParser(
     }
 
     private fun resetSources() {
+        logger.cdebug { "Resetting sources to signaled sources: ${signaledSources.joinToString(separator = "\n")}" }
         for (signaledSource in signaledSources) {
             for (source in sources) {
                 if (source.primarySSRC != signaledSource.primarySSRC) {
