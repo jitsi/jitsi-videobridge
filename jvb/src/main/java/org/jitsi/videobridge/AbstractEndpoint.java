@@ -69,11 +69,6 @@ public abstract class AbstractEndpoint
     private final ReceiverConstraintsMap receiverVideoConstraintsMap = new ReceiverConstraintsMap();
 
     /**
-     * The (human readable) display name of this <tt>Endpoint</tt>.
-     */
-    private String displayName;
-
-    /**
      * The statistic Id of this <tt>Endpoint</tt>.
      */
     private String statsId;
@@ -173,16 +168,6 @@ public abstract class AbstractEndpoint
     public abstract MediaSourceDesc getMediaSource();
 
     /**
-     * Returns the display name of this <tt>Endpoint</tt>.
-     *
-     * @return the display name of this <tt>Endpoint</tt>.
-     */
-    public String getDisplayName()
-    {
-        return displayName;
-    }
-
-    /**
      * Returns the stats Id of this <tt>Endpoint</tt>.
      *
      * @return the stats Id of this <tt>Endpoint</tt>.
@@ -232,16 +217,6 @@ public abstract class AbstractEndpoint
     public boolean isExpired()
     {
         return expired;
-    }
-
-    /**
-     * Sets the display name of this <tt>Endpoint</tt>.
-     *
-     * @param displayName the display name to set on this <tt>Endpoint</tt>.
-     */
-    public void setDisplayName(String displayName)
-    {
-        this.displayName = displayName;
     }
 
     /**
@@ -358,7 +333,6 @@ public abstract class AbstractEndpoint
         JSONObject debugState = new JSONObject();
         debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
         debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
-        debugState.put("displayName", displayName);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
 

@@ -348,7 +348,6 @@ public final class JSONSerializer
         {
             String id = endpoint.getId();
             String statsId = endpoint.getStatsId();
-            String displayName = endpoint.getDisplayName();
 
             jsonObject = new JSONObject();
             // id
@@ -364,13 +363,6 @@ public final class JSONSerializer
                 jsonObject.put(
                     ColibriConferenceIQ.Endpoint.STATS_ID_ATTR_NAME,
                     statsId);
-            }
-            // displayName
-            if (displayName != null)
-            {
-                jsonObject.put(
-                        ColibriConferenceIQ.Endpoint.DISPLAYNAME_ATTR_NAME,
-                    displayName);
             }
         }
         return jsonObject;

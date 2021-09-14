@@ -375,7 +375,6 @@ public class ConferenceShim
 
             if (endpoint != null)
             {
-                endpoint.setDisplayName(colibriEndpoint.getDisplayName());
                 endpoint.setStatsId(colibriEndpoint.getStatsId());
             }
         }
