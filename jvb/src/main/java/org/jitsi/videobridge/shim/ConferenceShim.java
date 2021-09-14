@@ -175,19 +175,6 @@ public class ConferenceShim
     }
 
     /**
-     * Adds the endpoint of this <tt>Conference</tt> as
-     * <tt>ColibriConferenceIQ.Endpoint</tt> instances in <tt>iq</tt>.
-     * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
-     */
-    void describeEndpoints(ColibriConferenceIQ iq)
-    {
-        conference.getEndpoints().forEach(
-                en -> iq.addEndpoint(
-                        new ColibriConferenceIQ.Endpoint(
-                                en.getId(), en.getStatsId(), en.getDisplayName())));
-    }
-
-    /**
      * Sets the attributes of this conference to an IQ.
      */
     public void describeShallow(ColibriConferenceIQ iq)
@@ -538,8 +525,6 @@ public class ConferenceShim
         {
             updateEndpoint(colibriEndpoint);
         }
-
-        describeEndpoints(responseConferenceIQ);
 
         responseConferenceIQ.setType(IQ.Type.result);
 
