@@ -434,8 +434,15 @@ class VideoTypeMessage(
      * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
      * message was received on (non-null values are needed only for Octo).
      */
-    val endpointId: String? = null
+    endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    var endpointId: String? = endpointId
+        set(value) {
+            field = value
+            resetJsonCache()
+        }
+
     companion object {
         const val TYPE = "VideoTypeMessage"
     }

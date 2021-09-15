@@ -225,6 +225,10 @@ public class ConfOctoTransport
                     .filter(r -> !newRelays.containsKey(r))
                     .forEach(this::remoteRelayRemoved);
 
+            Collection<SocketAddress> newBridgeAddresses = newRelays.entrySet().stream()
+                .filter(e -> !remoteBridges.containsKey(e.getKey()))
+                .map(Map.Entry::getValue).collect(Collectors.toList());
+
             if (newRelays.isEmpty())
             {
                 bridgeOctoTransport.removeHandler(conferenceId, this);
@@ -234,12 +238,28 @@ public class ConfOctoTransport
                 bridgeOctoTransport.addHandler(conferenceId, this);
             }
             remoteBridges = Collections.unmodifiableMap(newRelays);
+
+            newRelaysAdded(newBridgeAddresses);
         }
     }
 
     private void remoteRelayRemoved(String relayId)
     {
         conference.getLocalEndpoints().forEach(e -> e.removeReceiver(relayId));
+    }
+
+    private void newRelaysAdded(Collection<SocketAddress> newBridgeAddresses)
+    {
+        /* Inform new bridges of existing local endpoints' video types. */
+        conference.getLocalEndpoints().forEach((e) -> {
+                VideoTypeMessage msg = new VideoTypeMessage(e.getVideoType(), e.getId());
+                bridgeOctoTransport.sendString(
+                    msg.toJson(),
+                    newBridgeAddresses,
+                    conferenceId
+                );
+            }
+        );
     }
 
     /**
