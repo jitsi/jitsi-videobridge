@@ -291,16 +291,13 @@ public final class JSONDeserializer
                 = endpoint.get(ColibriConferenceIQ.Endpoint.ID_ATTR_NAME);
             Object statsId
                 = endpoint.get(ColibriConferenceIQ.Endpoint.STATS_ID_ATTR_NAME);
-            Object displayName
-                = endpoint.get(
-                    ColibriConferenceIQ.Endpoint.DISPLAYNAME_ATTR_NAME);
 
 
             endpointIQ
                 = new ColibriConferenceIQ.Endpoint(
                         Objects.toString(id, null),
                         Objects.toString(statsId, null),
-                        Objects.toString(displayName, null));
+                        null);
 
             conferenceIQ.addEndpoint(endpointIQ);
         }
