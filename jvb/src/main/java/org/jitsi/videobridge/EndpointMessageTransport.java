@@ -128,6 +128,20 @@ public class EndpointMessageTransport
     public BridgeChannelMessage videoType(VideoTypeMessage videoTypeMessage)
     {
         endpoint.setVideoType(videoTypeMessage.getVideoType());
+
+        Conference conference = endpoint.getConference();
+
+        if (conference == null || conference.isExpired())
+        {
+            getLogger().warn("Unable to forward VideoTypeMessage, conference is null or expired");
+            return null;
+        }
+
+        videoTypeMessage.setEndpointId(endpoint.getId());
+
+        /* Forward videoType messages to Octo. */
+        conference.sendMessage(videoTypeMessage, Collections.emptyList(), true);
+
         return null;
     }
 
