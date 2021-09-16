@@ -18,10 +18,12 @@ package org.jitsi.videobridge.cc.allocation
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
+import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import org.jitsi.config.setNewConfig
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingDesc
@@ -52,6 +54,18 @@ class BitrateControllerTest : ShouldSpec() {
     private val B: TestEndpoint = bc.endpoints.find { it.id == "B" }!! as TestEndpoint
     private val C: TestEndpoint = bc.endpoints.find { it.id == "C" }!! as TestEndpoint
     private val D: TestEndpoint = bc.endpoints.find { it.id == "D" }!! as TestEndpoint
+
+    /**
+     * We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
+     * because these tests are designed to test the decisions themselves and not necessariry when they are made.
+     */
+    override fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
+        setNewConfig("videobridge.cc.bwe-change-threshold=0", true)
+    }
+
+    override fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
+        setNewConfig("", true)
+    }
 
     init {
         context("Prioritization") {

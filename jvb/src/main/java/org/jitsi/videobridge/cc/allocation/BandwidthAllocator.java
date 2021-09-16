@@ -57,23 +57,20 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             return true;
         }
 
-        long deltaBwe = currentBwe - previousBwe;
-
-        // If the bwe has increased, we should act upon it, otherwise we may end up in this broken situation: Suppose
-        // that the target bitrate is 2.5Mbps, and that the last bandwidth allocation was performed with a 2.4Mbps
-        // bandwidth estimate.  The bridge keeps probing and, suppose that, eventually the bandwidth estimate reaches
-        // 2.6Mbps, which is plenty to accommodate the target bitrate; but the minimum bandwidth estimate that would
-        // trigger a new bandwidth allocation is 2.4Mbps + 2.4Mbps * 15% = 2.76Mbps.
-        if (deltaBwe > 0)
-        {
-            return true;
-        }
+        // We supress re-allocation when BWE has changed less than 15% (by default) of its previous value in order to
+        // prevent excessive changes during ramp-up.
+        // When BWE increases it should eventually increase past the threshold because of probing.
+        // When BWE decreases it is probably above the threshold because of AIMD. It's not clear to me whether we need
+        // the threshold in this case.
+        // In any case, there are other triggers for re-allocation, so any suppression we do here will only last up to
+        // a few seconds.
+        long deltaBwe = Math.abs(currentBwe - previousBwe);
+        return deltaBwe > previousBwe * BitrateControllerConfig.bweChangeThreshold();
 
         // If, on the other hand, the bwe has decreased, we require at least a 15% drop in order to update the bitrate
         // allocation. This is an ugly hack to prevent too many resolution/UI changes in case the bridge produces too
         // low bandwidth estimate, at the risk of clogging the receiver's pipe.
         // TODO: do we still need this? Do we ever ever see BWE drop by <%15?
-        return deltaBwe < -1 * previousBwe * BitrateControllerConfig.bweChangeThreshold();
     }
 
     private final Logger logger;
