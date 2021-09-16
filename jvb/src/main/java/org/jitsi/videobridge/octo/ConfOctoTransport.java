@@ -239,7 +239,10 @@ public class ConfOctoTransport
             }
             remoteBridges = Collections.unmodifiableMap(newRelays);
 
-            newRelaysAdded(newBridgeAddresses);
+            if (!newBridgeAddresses.isEmpty())
+            {
+                newRelaysAdded(newBridgeAddresses);
+            }
         }
     }
 
