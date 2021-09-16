@@ -253,16 +253,18 @@ public class ConfOctoTransport
 
     private void newRelaysAdded(Collection<SocketAddress> newBridgeAddresses)
     {
-        /* Inform new bridges of existing local endpoints' video types. */
-        conference.getLocalEndpoints().forEach((e) -> {
-                VideoTypeMessage msg = new VideoTypeMessage(e.getVideoType(), e.getId());
-                bridgeOctoTransport.sendString(
-                    msg.toJson(),
-                    newBridgeAddresses,
-                    conferenceId
-                );
-            }
-        );
+        /* Wait a second to make sure the other bridges know about this conference already. */
+        TaskPools.SCHEDULED_POOL.schedule(() ->
+            /* Inform new bridges of existing local endpoints' video types. */
+            conference.getLocalEndpoints().forEach((e) -> {
+                    VideoTypeMessage msg = new VideoTypeMessage(e.getVideoType(), e.getId());
+                    bridgeOctoTransport.sendString(
+                        msg.toJson(),
+                        newBridgeAddresses,
+                        conferenceId
+                    );
+                }
+            ), 1, TimeUnit.SECONDS);
     }
 
     /**
