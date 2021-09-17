@@ -159,7 +159,7 @@ public class ConferenceSpeechActivity
         }
 
         TaskPools.IO_POOL.submit(() -> {
-            listener.dominantSpeakerChanged();
+            listener.recentSpeakersChanged();
             if (endpointListChanged)
             {
                 listener.lastNEndpointsChanged();
@@ -319,7 +319,7 @@ public class ConferenceSpeechActivity
             TaskPools.IO_POOL.submit(() -> {
                 if (finalRecentSpeakersChanged)
                 {
-                    listener.dominantSpeakerChanged();
+                    listener.recentSpeakersChanged();
                 }
                 if (finalEndpointsChanged)
                 {
@@ -379,7 +379,11 @@ public class ConferenceSpeechActivity
 
     interface Listener
     {
-        void dominantSpeakerChanged();
+        /**
+         * The list of recent speakers changed (either because a new dominant speaker was promoted, or because an
+         * endpoint was removed).
+         */
+        void recentSpeakersChanged();
         void lastNEndpointsChanged();
     }
 }

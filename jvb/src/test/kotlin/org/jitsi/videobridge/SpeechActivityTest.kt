@@ -34,7 +34,7 @@ class SpeechActivityTest : ShouldSpec() {
     private val d = mockEndpoint("d")
     private val conferenceSpeechActivity = ConferenceSpeechActivity(object : ConferenceSpeechActivity.Listener {
         override fun lastNEndpointsChanged() {}
-        override fun dominantSpeakerChanged() {}
+        override fun recentSpeakersChanged() {}
     })
 
     init {

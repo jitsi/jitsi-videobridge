@@ -1312,7 +1312,7 @@ public class Conference
     private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
         @Override
-        public void dominantSpeakerChanged()
+        public void recentSpeakersChanged()
         {
             Conference.this.dominantSpeakerChanged();
         }
