@@ -66,13 +66,6 @@ interface ReadOnlyStreamInformationStore : NodeStatsProducer {
      */
     val primaryMediaSsrcs: Set<Long>
 
-    /**
-     * A list of all primary video SSRCs for which the endpoint associated
-     * with this stream information store sends video (does not include
-     * RTX)
-     */
-    val primaryVideoSsrcs: Set<Long>
-
     val supportsPli: Boolean
     val supportsFir: Boolean
     val supportsRemb: Boolean
@@ -116,8 +109,6 @@ class StreamInformationStoreImpl : StreamInformationStore {
         get() = receiveSsrcStore.receiveSsrcs
     override val primaryMediaSsrcs: Set<Long>
         get() = receiveSsrcStore.primaryMediaSsrcs
-    override val primaryVideoSsrcs: Set<Long>
-        get() = receiveSsrcStore.primaryVideoSsrcs
 
     // Support for FIR, PLI, REMB and TCC is declared per-payload type, but currently our code is not payload-type
     // aware. So until this changes we will just check if any of the PTs supports the relevant feedback.

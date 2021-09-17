@@ -57,7 +57,6 @@ class KeyframeRequesterTest : ShouldSpec() {
         }
 
         override val primaryMediaSsrcs: Set<Long> = setOf(123L, 456L, 789L)
-        override val primaryVideoSsrcs: Set<Long> = setOf(123L, 456L)
         override val receiveSsrcs: Set<Long> = setOf(123L, 456L, 789L, 321L, 654L)
 
         override fun getLocalPrimarySsrc(secondarySsrc: Long): Long? = null
