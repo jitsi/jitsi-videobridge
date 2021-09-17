@@ -41,6 +41,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.stream.*;
 
 import static org.jitsi.utils.collections.JMap.*;
 
@@ -413,42 +414,36 @@ public class Conference
     /**
      * Notifies this instance that {@link #speechActivity} has identified a speaker switch event and there is now a new
      * dominant speaker.
+     * @param recentSpeakers the list of recent speakers (including the dominant speaker at index 0).
      */
-    private void dominantSpeakerChanged()
+    private void dominantSpeakerChanged(List<AbstractEndpoint> recentSpeakers)
     {
-        AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
-        String dominantSpeakerId = dominantSpeaker == null ? null : dominantSpeaker.getId();
-
+        List<String> recentSpeakersIds
+                = recentSpeakers.stream().map(AbstractEndpoint::getId).collect(Collectors.toList());
         if (logger.isInfoEnabled())
         {
-            logger.info("ds_change ds_id=" + dominantSpeakerId);
+            logger.info("Recent speakers changed: " + recentSpeakersIds);
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
+        broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds));
 
-        if (dominantSpeaker != null)
+        AbstractEndpoint dominantSpeaker = recentSpeakers.get(0);
+        if (getEndpointCount() > 2 && dominantSpeaker != null)
         {
-            broadcastMessage(
-                    new DominantSpeakerMessage(
-                            dominantSpeakerId,
-                            speechActivity.getRecentSpeakers()));
-            if (getEndpointCount() > 2)
+            double senderRtt = getRtt(dominantSpeaker);
+            double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getId());
+            // We add an additional 10ms delay to reduce the risk of the keyframe arriving too early
+            double keyframeDelay = maxReceiveRtt - senderRtt + 10;
+            if (logger.isDebugEnabled())
             {
-                double senderRtt = getRtt(dominantSpeaker);
-                double maxReceiveRtt = getMaxReceiverRtt(dominantSpeakerId);
-                // We add an additional 10ms delay to reduce the risk of the keyframe arriving
-                // too early
-                double keyframeDelay = maxReceiveRtt - senderRtt + 10;
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Scheduling keyframe request from " + dominantSpeakerId + " after a delay" +
-                            " of " + keyframeDelay + "ms");
-                }
-                TaskPools.SCHEDULED_POOL.schedule(
-                        (Runnable)dominantSpeaker::requestKeyframe,
-                        (long)keyframeDelay,
-                        TimeUnit.MILLISECONDS
-                );
+                logger.debug("Scheduling keyframe request from " + dominantSpeaker.getId() + " after a delay" +
+                        " of " + keyframeDelay + "ms");
             }
+            TaskPools.SCHEDULED_POOL.schedule(
+                    (Runnable)dominantSpeaker::requestKeyframe,
+                    (long)keyframeDelay,
+                    TimeUnit.MILLISECONDS
+            );
         }
     }
 
@@ -890,10 +885,7 @@ public class Conference
             {
                 try
                 {
-                    endpoint.sendMessage(
-                            new DominantSpeakerMessage(
-                                    dominantSpeaker.getId(),
-                                    speechActivity.getRecentSpeakers()));
+                    endpoint.sendMessage(new DominantSpeakerMessage(speechActivity.getRecentSpeakers()));
                 }
                 catch (IOException e)
                 {
@@ -1312,9 +1304,9 @@ public class Conference
     private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
         @Override
-        public void recentSpeakersChanged()
+        public void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers)
         {
-            Conference.this.dominantSpeakerChanged();
+            Conference.this.dominantSpeakerChanged(recentSpeakers);
         }
 
         @Override

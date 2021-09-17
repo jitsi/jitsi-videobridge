@@ -159,7 +159,7 @@ public class ConferenceSpeechActivity
         }
 
         TaskPools.IO_POOL.submit(() -> {
-            listener.recentSpeakersChanged();
+            listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers());
             if (endpointListChanged)
             {
                 listener.lastNEndpointsChanged();
@@ -237,12 +237,12 @@ public class ConferenceSpeechActivity
     }
 
     /**
-     * Get a list of recent speakers, other than the current dominant one.
+     * Get a list of recent speakers (including the current dominant one at the top of the list).
      */
     public List<String> getRecentSpeakers()
     {
         return recentSpeakers.getRecentSpeakers().stream()
-                .skip(1).map(AbstractEndpoint::getId).collect(Collectors.toList());
+                .map(AbstractEndpoint::getId).collect(Collectors.toList());
     }
 
     /**
@@ -319,7 +319,7 @@ public class ConferenceSpeechActivity
             TaskPools.IO_POOL.submit(() -> {
                 if (finalRecentSpeakersChanged)
                 {
-                    listener.recentSpeakersChanged();
+                    listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers());
                 }
                 if (finalEndpointsChanged)
                 {
@@ -382,8 +382,9 @@ public class ConferenceSpeechActivity
         /**
          * The list of recent speakers changed (either because a new dominant speaker was promoted, or because an
          * endpoint was removed).
+         * @param recentSpeakers the new list of recent speakers (including the dominant speaker at index 0).
          */
-        void recentSpeakersChanged();
+        void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers);
         void lastNEndpointsChanged();
     }
 }
