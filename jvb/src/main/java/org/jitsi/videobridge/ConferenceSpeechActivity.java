@@ -36,11 +36,6 @@ import java.util.stream.*;
 public class ConferenceSpeechActivity
 {
     /**
-     * The number of speakers to consider "recent".
-     */
-    public final int numRecentSpeakers = ConferenceSpeechActivityConfig.getConfig().getRecentSpeakersCount();
-
-    /**
      * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
      * and its instances to print debug information.
      */
@@ -68,7 +63,10 @@ public class ConferenceSpeechActivity
 
     /**
      * The list of endpoints ordered by speech activity alone with the dominant speaker at the beginning of the list
-     * i.e. the dominant speaker history.
+     * i.e. the dominant speaker history. This contains all endpoints in the conference, including those that have
+     * never been the dominant speaker. Such endpoints are listed after endpoints which have been the dominant speaker,
+     * but the order among themselves is not specified.
+     * This is used internally when the list of all endpoints is required (e.g. for bandwidth allocation decisions).
      */
     private final List<AbstractEndpoint> endpointsBySpeechActivity = new ArrayList<>();
 
@@ -77,6 +75,19 @@ public class ConferenceSpeechActivity
      * ordered by speech activity, followed by the rest of the endpoints (again in speech activity order).
      */
     private @NotNull List<AbstractEndpoint> endpointsInLastNOrder = new ArrayList<>();
+
+    /**
+     * The list of endpoints which have been "dominant speaker" ordered by speech activity (with the current dominant
+     * speaker at the beginning). This differs from {@link #endpointsBySpeechActivity} in that it does not necessarily
+     * contain all endpoints in the conference.
+     *
+     * This is used when signaling "recent speakers" to endpoints.
+     *
+     * We add 1 to the configured number of recent speakers to account for the dominant speaker.
+     */
+    @NotNull
+    private final RecentSpeakersList<AbstractEndpoint> recentSpeakers
+            = new RecentSpeakersList<>(ConferenceSpeechActivityConfig.getConfig().getRecentSpeakersCount() + 1);
 
     /**
      * The <tt>Object</tt> used to synchronize the access to the state of this
@@ -142,11 +153,13 @@ public class ConferenceSpeechActivity
             }
             endpointsBySpeechActivity.add(0, endpoint);
 
+            recentSpeakers.promote(endpoint);
+
             endpointListChanged = updateLastNEndpoints();
         }
 
         TaskPools.IO_POOL.submit(() -> {
-            listener.dominantSpeakerChanged();
+            listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), true);
             if (endpointListChanged)
             {
                 listener.lastNEndpointsChanged();
@@ -224,26 +237,12 @@ public class ConferenceSpeechActivity
     }
 
     /**
-     * Get at most {@code limit} enties from the history of speakers skipping the first {@code skip}.
-     */
-    private List<String> getSpeakerHistory(int skip, int limit)
-    {
-        synchronized (syncRoot)
-        {
-            return endpointsBySpeechActivity.stream()
-                    .skip(skip)
-                    .limit(limit)
-                    .map(AbstractEndpoint::getId)
-                    .collect(Collectors.toList());
-        }
-    }
-
-    /**
-     * Get a list of recent speakers, other than the current dominant one.
+     * Get a list of recent speakers (including the current dominant one at the top of the list).
      */
     public List<String> getRecentSpeakers()
     {
-        return getSpeakerHistory(1, numRecentSpeakers);
+        return recentSpeakers.getRecentSpeakers().stream()
+                .map(AbstractEndpoint::getId).collect(Collectors.toList());
     }
 
     /**
@@ -251,17 +250,7 @@ public class ConferenceSpeechActivity
      */
     public boolean isRecentSpeaker(AbstractEndpoint endpoint)
     {
-        Iterator<AbstractEndpoint> it = endpointsBySpeechActivity.iterator();
-        int i = 0;
-        while (it.hasNext() && i <= numRecentSpeakers)
-        {
-            if (it.next() == endpoint)
-            {
-                return true;
-            }
-            i++;
-        }
-        return false;
+        return recentSpeakers.isRecentSpeaker(endpoint);
     }
 
     public DominantSpeakerIdentification<String>.SpeakerRanking getRanking(String endpointId)
@@ -289,8 +278,9 @@ public class ConferenceSpeechActivity
      */
     public void endpointsChanged(List<AbstractEndpoint> conferenceEndpoints)
     {
-        boolean endpointsListChanged = false;
-        boolean dominantSpeakerChanged = false;
+        boolean endpointsListChanged;
+        boolean dominantSpeakerChanged;
+        boolean recentSpeakersChanged;
         // The list of endpoints may have changed, sync our list to make sure it matches.
         synchronized (syncRoot)
         {
@@ -298,6 +288,7 @@ public class ConferenceSpeechActivity
             AbstractEndpoint previousDominantSpeaker
                     = endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
             endpointsListChanged = endpointsBySpeechActivity.removeIf(ep -> !conferenceEndpoints.contains(ep));
+            recentSpeakersChanged = recentSpeakers.removeAllExcept(conferenceEndpoints);
             // Add any endpoints from the conf we don't have to the end of our list
             for (AbstractEndpoint conferenceEndpoint : conferenceEndpoints)
             {
@@ -310,6 +301,7 @@ public class ConferenceSpeechActivity
             AbstractEndpoint newDominantSpeaker
                     = endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
             dominantSpeakerChanged = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+            recentSpeakersChanged |= dominantSpeakerChanged;
 
             if (endpointsListChanged)
             {
@@ -317,9 +309,9 @@ public class ConferenceSpeechActivity
             }
         }
 
-        if (dominantSpeakerChanged || endpointsListChanged)
+        if (recentSpeakersChanged || endpointsListChanged)
         {
-            final boolean finalDominantSpeakerChanged = dominantSpeakerChanged;
+            final boolean finalRecentSpeakersChanged = recentSpeakersChanged;
             final boolean finalEndpointsChanged = endpointsListChanged;
             final Listener listener = this.listener;
             if (listener == null)
@@ -327,9 +319,9 @@ public class ConferenceSpeechActivity
                 return;
             }
             TaskPools.IO_POOL.submit(() -> {
-                if (finalDominantSpeakerChanged)
+                if (finalRecentSpeakersChanged)
                 {
-                    listener.dominantSpeakerChanged();
+                    listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), dominantSpeakerChanged);
                 }
                 if (finalEndpointsChanged)
                 {
@@ -389,7 +381,13 @@ public class ConferenceSpeechActivity
 
     interface Listener
     {
-        void dominantSpeakerChanged();
+        /**
+         * The list of recent speakers changed (either because a new dominant speaker was promoted, or because an
+         * endpoint was removed).
+         * @param recentSpeakers the new list of recent speakers (including the dominant speaker at index 0).
+         * @param dominantSpeakerChanged whether the dominant speaker changed.
+         */
+        void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged);
         void lastNEndpointsChanged();
     }
 }
