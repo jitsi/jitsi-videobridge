@@ -607,6 +607,8 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     MUCS_JOINED,
                     xmppConnection.getMucClientManager().getMucJoinedCount());
+            unlockedSetStat("preemptive_kfr_sent", jvbStats.preemptiveKeyframeRequestsSent);
+            unlockedSetStat("preemptive_kfr_suppressed", jvbStats.preemptiveKeyframeRequestsSuppressed);
         }
         finally
         {
