@@ -917,6 +917,13 @@ public class Videobridge
         /** Distribution of energy scores for discarded audio packets  */
         public BucketStats tossedPacketsEnergy = new BucketStats(
                 LongStream.range(1, 16).map(w -> 8 * w - 1).toArray(), "", "");
+
+        /** Number of preemptive keyframe requests that were sent. */
+        public AtomicInteger preemptiveKeyframeRequestsSent = new AtomicInteger();
+
+        /** Number of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
+        public AtomicInteger preemptiveKeyframeRequestsSuppressed = new AtomicInteger();
+
     }
 
     public interface EventHandler {
