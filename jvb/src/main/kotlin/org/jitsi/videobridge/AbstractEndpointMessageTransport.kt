@@ -77,7 +77,7 @@ abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogg
      */
     protected open fun sendMessage(msg: BridgeChannelMessage) {}
     protected open fun sendMessage(dst: Any?, message: BridgeChannelMessage) =
-        logger.debug { "SEND: " + message.toJson() }
+        logger.debug { "SENT: " + message.toJson() }
 
     protected open fun close() {}
 
