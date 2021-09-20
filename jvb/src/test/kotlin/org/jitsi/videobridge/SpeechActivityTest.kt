@@ -22,7 +22,6 @@ import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import org.jitsi.videobridge.message.DominantSpeakerMessage
 import org.jitsi.videobridge.util.VideoType.CAMERA
 import org.jitsi.videobridge.util.VideoType.NONE
 
