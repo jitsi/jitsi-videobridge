@@ -22,6 +22,7 @@ import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import org.jitsi.videobridge.message.DominantSpeakerMessage
 import org.jitsi.videobridge.util.VideoType.CAMERA
 import org.jitsi.videobridge.util.VideoType.NONE
 
@@ -34,7 +35,7 @@ class SpeechActivityTest : ShouldSpec() {
     private val d = mockEndpoint("d")
     private val conferenceSpeechActivity = ConferenceSpeechActivity(object : ConferenceSpeechActivity.Listener {
         override fun lastNEndpointsChanged() {}
-        override fun recentSpeakersChanged(recentSpeakers: List<AbstractEndpoint>) {}
+        override fun recentSpeakersChanged(recentSpeakers: List<AbstractEndpoint>, dominantSpeakerChanged: Boolean) {}
     })
 
     init {

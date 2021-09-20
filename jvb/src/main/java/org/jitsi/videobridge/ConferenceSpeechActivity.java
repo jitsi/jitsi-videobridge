@@ -159,7 +159,7 @@ public class ConferenceSpeechActivity
         }
 
         TaskPools.IO_POOL.submit(() -> {
-            listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers());
+            listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), true);
             if (endpointListChanged)
             {
                 listener.lastNEndpointsChanged();
@@ -278,8 +278,9 @@ public class ConferenceSpeechActivity
      */
     public void endpointsChanged(List<AbstractEndpoint> conferenceEndpoints)
     {
-        boolean endpointsListChanged = false;
-        boolean recentSpeakersChanged = false;
+        boolean endpointsListChanged;
+        boolean dominantSpeakerChanged;
+        boolean recentSpeakersChanged;
         // The list of endpoints may have changed, sync our list to make sure it matches.
         synchronized (syncRoot)
         {
@@ -299,7 +300,8 @@ public class ConferenceSpeechActivity
             }
             AbstractEndpoint newDominantSpeaker
                     = endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
-            recentSpeakersChanged |= !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+            dominantSpeakerChanged = !Objects.equals(previousDominantSpeaker, newDominantSpeaker);
+            recentSpeakersChanged |= dominantSpeakerChanged;
 
             if (endpointsListChanged)
             {
@@ -319,7 +321,7 @@ public class ConferenceSpeechActivity
             TaskPools.IO_POOL.submit(() -> {
                 if (finalRecentSpeakersChanged)
                 {
-                    listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers());
+                    listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), dominantSpeakerChanged);
                 }
                 if (finalEndpointsChanged)
                 {
@@ -383,8 +385,9 @@ public class ConferenceSpeechActivity
          * The list of recent speakers changed (either because a new dominant speaker was promoted, or because an
          * endpoint was removed).
          * @param recentSpeakers the new list of recent speakers (including the dominant speaker at index 0).
+         * @param dominantSpeakerChanged whether the dominant speaker changed.
          */
-        void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers);
+        void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged);
         void lastNEndpointsChanged();
     }
 }

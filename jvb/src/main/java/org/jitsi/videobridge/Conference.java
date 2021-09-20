@@ -416,7 +416,7 @@ public class Conference
      * dominant speaker.
      * @param recentSpeakers the list of recent speakers (including the dominant speaker at index 0).
      */
-    private void dominantSpeakerChanged(List<AbstractEndpoint> recentSpeakers)
+    private void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged)
     {
         List<String> recentSpeakersIds
                 = recentSpeakers.stream().map(AbstractEndpoint::getId).collect(Collectors.toList());
@@ -427,24 +427,37 @@ public class Conference
         }
         broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds));
 
-        AbstractEndpoint dominantSpeaker = recentSpeakers.get(0);
-        if (getEndpointCount() > 2 && dominantSpeaker != null)
+        if (dominantSpeakerChanged && getEndpointCount() > 2)
         {
-            double senderRtt = getRtt(dominantSpeaker);
-            double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getId());
-            // We add an additional 10ms delay to reduce the risk of the keyframe arriving too early
-            double keyframeDelay = maxReceiveRtt - senderRtt + 10;
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Scheduling keyframe request from " + dominantSpeaker.getId() + " after a delay" +
-                        " of " + keyframeDelay + "ms");
-            }
-            TaskPools.SCHEDULED_POOL.schedule(
-                    (Runnable)dominantSpeaker::requestKeyframe,
-                    (long)keyframeDelay,
-                    TimeUnit.MILLISECONDS
-            );
+            maybeSendKeyframeRequest(recentSpeakers.get(0));
         }
+    }
+
+    /**
+     * Schedules sending a pre-emptive keyframe request (if necessay) when a neww dominant speaker is elected.
+     * @param dominantSpeaker the new dominant speaker.
+     */
+    private void maybeSendKeyframeRequest(AbstractEndpoint dominantSpeaker)
+    {
+        if (dominantSpeaker == null)
+        {
+            return;
+        }
+
+        double senderRtt = getRtt(dominantSpeaker);
+        double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getId());
+        // We add an additional 10ms delay to reduce the risk of the keyframe arriving too early
+        double keyframeDelay = maxReceiveRtt - senderRtt + 10;
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Scheduling keyframe request from " + dominantSpeaker.getId() + " after a delay" +
+                    " of " + keyframeDelay + "ms");
+        }
+        TaskPools.SCHEDULED_POOL.schedule(
+                (Runnable)dominantSpeaker::requestKeyframe,
+                (long)keyframeDelay,
+                TimeUnit.MILLISECONDS
+        );
     }
 
     private double getRtt(AbstractEndpoint endpoint)
@@ -1304,9 +1317,9 @@ public class Conference
     private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
         @Override
-        public void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers)
+        public void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged)
         {
-            Conference.this.dominantSpeakerChanged(recentSpeakers);
+            Conference.this.recentSpeakersChanged(recentSpeakers, dominantSpeakerChanged);
         }
 
         @Override
