@@ -918,11 +918,11 @@ public class Videobridge
         public BucketStats tossedPacketsEnergy = new BucketStats(
                 LongStream.range(1, 16).map(w -> 8 * w - 1).toArray(), "", "");
 
-        /** Numner of preemptive keyframe requests that were sent. */
+        /** Number of preemptive keyframe requests that were sent. */
         public AtomicInteger preemptiveKeyframeRequestsSent = new AtomicInteger();
 
-        /** Numner of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
-        public AtomicInteger preemptiveKeyframeRequestsSupressed = new AtomicInteger();
+        /** Number of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
+        public AtomicInteger preemptiveKeyframeRequestsSuppressed = new AtomicInteger();
 
     }
 

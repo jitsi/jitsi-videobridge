@@ -458,7 +458,7 @@ public class Conference
         {
             // If all other endpoints are in tile view, there is no switch to anticipate. Don't trigger an unnecessary
             // keyframe.
-            getVideobridge().getStatistics().preemptiveKeyframeRequestsSupressed.incrementAndGet();
+            getVideobridge().getStatistics().preemptiveKeyframeRequestsSuppressed.incrementAndGet();
             return;
         }
         getVideobridge().getStatistics().preemptiveKeyframeRequestsSent.incrementAndGet();
