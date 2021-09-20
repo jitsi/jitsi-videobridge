@@ -45,8 +45,8 @@ if [ ! -z $RUNNING ]; then
     # Wait for the JVM to finish writing the heapdump.
     while lsof ${HEAPDUMP_FILE}; do sleep 1; done
 
-    sudo -u jvb jstack ${PID} > ${THREADS_FILE}
-    sudo -u jvb jmap -dump:live,format=b,file=${HEAP_FILE} ${PID}
+    sudo jstack ${PID} > ${THREADS_FILE}
+    sudo jmap -dump:live,format=b,file=${HEAP_FILE} ${PID}
 
     tar zcvf jvb-dumps-${STAMP}-${PID}.tgz ${THREADS_FILE} ${HEAP_FILE} ${HEAPDUMP_FILE} ${CRASH_FILES} /var/log/jitsi/jvb.log /tmp/hs_err_*
     rm ${HEAP_FILE} ${THREADS_FILE}
