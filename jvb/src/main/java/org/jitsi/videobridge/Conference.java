@@ -444,6 +444,25 @@ public class Conference
             return;
         }
 
+        boolean anyEndpointInStageView = false;
+        for (Endpoint otherEndpoint : getLocalEndpoints())
+        {
+            if (otherEndpoint != dominantSpeaker && otherEndpoint.isInStageView())
+            {
+                anyEndpointInStageView = true;
+                break;
+            }
+        }
+
+        if (!anyEndpointInStageView)
+        {
+            // If all other endpoints are in tile view, there is no switch to anticipate. Don't trigger an unnecessary
+            // keyframe.
+            getVideobridge().getStatistics().preemptiveKeyframeRequestsSupressed.incrementAndGet();
+            return;
+        }
+        getVideobridge().getStatistics().preemptiveKeyframeRequestsSent.incrementAndGet();
+
         double senderRtt = getRtt(dominantSpeaker);
         double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getId());
         // We add an additional 10ms delay to reduce the risk of the keyframe arriving too early
