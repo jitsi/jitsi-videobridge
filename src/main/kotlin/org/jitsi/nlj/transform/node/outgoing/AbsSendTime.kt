@@ -24,19 +24,19 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AbsSendTimeHeaderExtension
 
 class AbsSendTime(
-    streamInformationStore: ReadOnlyStreamInformationStore
+    val streamInformationStore: ReadOnlyStreamInformationStore
 ) : ModifierNode("Absolute send time") {
     private var extensionId: Int? = null
 
     init {
-        if (!streamInformationStore.supportsTcc) {
-            streamInformationStore.onRtpExtensionMapping(ABS_SEND_TIME) {
-                extensionId = it
-            }
+        streamInformationStore.onRtpExtensionMapping(ABS_SEND_TIME) {
+            extensionId = it
         }
     }
 
     override fun modify(packetInfo: PacketInfo): PacketInfo {
+        if (streamInformationStore.supportsTcc) return packetInfo
+
         extensionId?.let { absSendTimeExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             val ext = rtpPacket.getHeaderExtension(absSendTimeExtId)
