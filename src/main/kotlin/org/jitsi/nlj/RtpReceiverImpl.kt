@@ -133,7 +133,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
     private val retransmissionRequester = RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger)
-    private val rembHandler = RembHandler(logger).apply {
+    private val rembHandler = RembHandler(streamInformationStore, logger).apply {
         addListener(object : BandwidthEstimator.Listener {
             override fun bandwidthEstimationChanged(newValue: Bandwidth) {
                 eventHandler.bandwidthEstimationChanged(newValue)
