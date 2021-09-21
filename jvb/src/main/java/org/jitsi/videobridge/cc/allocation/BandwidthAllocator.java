@@ -152,7 +152,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
-        debugState.put("trustBwe", BitrateControllerConfig.trustBwe());
+        debugState.put("trustBwe", trustBwe);
         debugState.put("bweBps", bweBps);
         debugState.put("allocation", allocation.getDebugState());
         debugState.put("allocationSettings", allocationSettings.toJson());
