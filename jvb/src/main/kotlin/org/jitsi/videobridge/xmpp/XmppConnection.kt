@@ -192,8 +192,9 @@ class XmppConnection : IQListener {
                 // Colibri IQs are handled async.
                 handler.colibriConferenceIqReceived(
                     ColibriRequest(iq, colibriDelayStats, colibriProcessingDelayStats) { response ->
+                        response.setResponseTo(iq)
                         logger.debug { "SENT: ${response.toXML()}" }
-                        mucClient.sendStanza(response.setResponseTo(iq))
+                        mucClient.sendStanza(response)
                     }
                 )
                 null
