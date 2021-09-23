@@ -305,7 +305,14 @@ public class EndpointMessageTransport
             sendMessage(ws, createServerHello());
         }
 
-        notifyTransportChannelConnected();
+        try
+        {
+            notifyTransportChannelConnected();
+        }
+        catch (Exception e)
+        {
+            getLogger().warn("Caught an exception in notifyTransportConnected", e);
+        }
     }
 
     private ServerHelloMessage createServerHello()
