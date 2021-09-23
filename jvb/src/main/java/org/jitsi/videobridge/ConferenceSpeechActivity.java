@@ -239,6 +239,7 @@ public class ConferenceSpeechActivity
     /**
      * Get a list of recent speakers (including the current dominant one at the top of the list).
      */
+    @NotNull
     public List<String> getRecentSpeakers()
     {
         return recentSpeakers.getRecentSpeakers().stream()
