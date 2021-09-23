@@ -278,4 +278,55 @@ public class MediaSourceFactoryTest
         assertNotNull(sources);
         assertEquals(0, sources.length);
     }
+
+    @Test
+    public void testSourceNameWithSingleSource()
+    {
+        String testName = "endpoint1-v0";
+        SourcePacketExtension videoSource1 = createSource(1L);
+
+        videoSource1.setName(testName);
+
+        MediaSourceDesc[] sources =
+            MediaSourceFactory.createMediaSources(
+                    Collections.singletonList(videoSource1),
+                    Collections.emptyList()
+            );
+
+        assertEquals(testName, sources[0].getSourceName());
+    }
+
+    @Test
+    public void testSourceNameThreeSources()
+    {
+        String testName = "endpoint1-v0";
+        long videoSsrc1 = 12345;
+        long videoSsrc2 = 23456;
+        long videoSsrc3 = 34567;
+
+        SourcePacketExtension videoSource1 = createSource(videoSsrc1);
+        SourcePacketExtension videoSource2 = createSource(videoSsrc2);
+        SourcePacketExtension videoSource3 = createSource(videoSsrc3);
+
+        SourceGroupPacketExtension simGroup
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_SIMULCAST,
+                videoSource1,
+                videoSource2,
+                videoSource3);
+
+        // Only primary SSRC matters
+        videoSource1.setName(testName);
+        videoSource2.setName("something else");
+        videoSource3.setName("something3");
+
+        MediaSourceDesc[] sources =
+                MediaSourceFactory.createMediaSources(
+                        Arrays.asList(
+                                videoSource1, videoSource2, videoSource3),
+                        Arrays.asList(simGroup));
+
+        assertEquals(1, sources.length);
+        assertEquals(testName, sources[0].getSourceName());
+    }
 }
