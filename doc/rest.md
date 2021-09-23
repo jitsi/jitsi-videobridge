@@ -21,6 +21,11 @@ For the _private_ interface, use the following block and values:
 
 ```hocon
 videobridge {
+    apis {
+        rest {
+            enabled = true
+        }
+    }
     http-servers {
         private {
             // The port for the private HTTP interface (or -1 to disable it).  Defaults to 8080.
