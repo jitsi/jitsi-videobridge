@@ -49,7 +49,11 @@ class MediaSourceDesc
      * A string which identifies the owner of this source (e.g. the endpoint
      * which is the sender of the source).
      */
-    val owner: String? = null
+    val owner: String? = null,
+    /**
+     * A string which identifies this source.
+     */
+    val sourceName: String? = null
 ) {
     /**
      * Current single-list view of all the encodings' layers.
