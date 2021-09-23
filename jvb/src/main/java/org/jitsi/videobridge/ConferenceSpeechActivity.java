@@ -222,7 +222,7 @@ public class ConferenceSpeechActivity
     {
         synchronized (syncRoot)
         {
-            return endpointsBySpeechActivity.isEmpty() ? null : endpointsBySpeechActivity.get(0);
+            return recentSpeakers.getRecentSpeakers().stream().findFirst().orElse(null);
         }
     }
 
