@@ -307,7 +307,8 @@ class DominantSpeakerMessage @JvmOverloads constructor(
     val previousSpeakers: List<String>? = null
 ) : BridgeChannelMessage(TYPE) {
     /**
-     * Construct a message from a list of speakers with the dominant speaker on top.
+     * Construct a message from a list of speakers with the dominant speaker on top. The list must have at least one
+     * element.
      */
     constructor(previousSpeakers: List<String>) : this(previousSpeakers[0], previousSpeakers.drop(1))
     companion object {

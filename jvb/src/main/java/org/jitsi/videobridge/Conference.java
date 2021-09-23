@@ -911,9 +911,9 @@ public class Conference
 
         if (!isExpired())
         {
-            AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
+            List<String> recentSpeakers = speechActivity.getRecentSpeakers();
 
-            if (dominantSpeaker != null)
+            if (!recentSpeakers.isEmpty())
             {
                 try
                 {
@@ -921,9 +921,7 @@ public class Conference
                 }
                 catch (IOException e)
                 {
-                    logger.error(
-                            "Failed to send dominant speaker update on data channel to " + endpoint.getId(),
-                            e);
+                    logger.error("Failed to send dominant speaker update on data channel to " + endpoint.getId(), e);
                 }
             }
         }
