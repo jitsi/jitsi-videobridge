@@ -50,8 +50,24 @@ import org.jitsi.videobridge.octo.singleton as octoRelayService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 
 fun main(args: Array<String>) {
-    val cmdLine = CmdLine().apply { parse(args) }
     val logger = LoggerImpl("org.jitsi.videobridge.Main")
+
+    // We only support command line arguments for backward compatibility. The --apis options is the last one supported,
+    // and it is only used to enable/disable the REST API (XMPP is only controlled through the config files).
+    // TODO: fully remove support for --apis
+    CmdLine().apply {
+        parse(args)
+        getOptionValue("--apis")?.let {
+            logger.warn(
+                "A deprecated command line argument (--apis) is present. Please use the config file to control the " +
+                    "REST API instead (see rest.md). Support for --apis will be removed in a future version."
+            )
+            System.setProperty(
+                Videobridge.REST_API_PNAME,
+                it.contains(Videobridge.REST_API).toString()
+            )
+        }
+    }
 
     setupMetaconfigLogger()
 
@@ -64,16 +80,6 @@ fun main(args: Array<String>) {
     // TODO: Instead of setting this here, we should integrate it with the infra/debian scripts
     //  to be passed.
     System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog")
-
-    // Before initializing the application programming interfaces (APIs) of
-    // Jitsi Videobridge, set any System properties which they use and which
-    // may be specified by the command-line arguments.
-    cmdLine.getOptionValue("--apis")?.let {
-        System.setProperty(
-            Videobridge.REST_API_PNAME,
-            it.contains(Videobridge.REST_API).toString()
-        )
-    }
 
     // Reload the Typesafe config used by ice4j, because the original was initialized before the new system
     // properties were set.
