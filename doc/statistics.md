@@ -29,7 +29,7 @@ generated (in UTC).
  * **jitter_aggregate** - Experimental. An average value (in milliseconds) of the jitter calculated for incoming and outgoing streams. This hasn't been tested and it is currently not known whether the values are correct or not.
  * **rtt_aggregate** - An average value (in milliseconds) of the RTT across all streams.
  * **largest_conference** - The number of participants in the largest conference currently hosted on the bridge.
- * **conference_sizes** - The distribution of conference sizes hosted on the bridge. It is an array of integers of size 15, and the value at (zero-based) index *i* is the number of conferences with *i* participants. The last element (index 14) also includes conferences with more than 14 participants.
+ * **conference_sizes** - The distribution of conference sizes hosted on the bridge. It is an array of integers of size 22, and the value at (zero-based) index *i* is the number of conferences with *i* participants. The last element (index 21) also includes conferences with more than 21 participants.
  * **audiochannels** - The current number of audio channels.
  * **videochannels** - The current number of video channels.
  * **conferences** - The current number of conferences.
