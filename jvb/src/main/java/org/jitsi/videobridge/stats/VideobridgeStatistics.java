@@ -214,6 +214,7 @@ public class VideobridgeStatistics
         int conferences = 0;
         int octoConferences = 0;
         int endpoints = 0;
+        int localEndpoints = 0;
         int octoEndpoints = 0;
         double bitrateDownloadBps = 0;
         double bitrateUploadBps = 0;
@@ -277,6 +278,7 @@ public class VideobridgeStatistics
             }
             int numConferenceEndpoints = conference.getEndpointCount();
             int numLocalEndpoints = conference.getLocalEndpointCount();
+            localEndpoints += numLocalEndpoints;
             if (numConferenceEndpoints > largestConferenceSize)
             {
                 largestConferenceSize = numConferenceEndpoints;
@@ -508,7 +510,9 @@ public class VideobridgeStatistics
             unlockedSetStat(OCTO_CONFERENCES, octoConferences);
             unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);
             unlockedSetStat(P2P_CONFERENCES, p2pConferences);
+            unlockedSetStat("endpoints", endpoints);
             unlockedSetStat(PARTICIPANTS, endpoints);
+            unlockedSetStat("local_endpoints", localEndpoints);
             unlockedSetStat(RECEIVE_ONLY_ENDPOINTS, receiveOnlyEndpoints);
             unlockedSetStat(INACTIVE_ENDPOINTS, inactiveEndpoints);
             unlockedSetStat(OCTO_ENDPOINTS, octoEndpoints);

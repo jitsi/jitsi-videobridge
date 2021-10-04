@@ -46,6 +46,7 @@ are exactly `v` conferences in which `i` endpoints are sending audio.
 * `conferences_by_video_senders` - like `conferences_by_audio_senders`, but for video senders.
 * `current_timestamp` - the UTC time at which the report was generated.
 * `dtls_failed_endpoints` - the total number of endpoints which failed to establish a DTLS connection.
+* `endpoints` - the current number of endpoints, including `octo` endpoints.
 * `endpoints_sending_audio` - current number of endpoints sending (non-silence) audio.
 * `endpoints_sending_video` - current number of endpoints sending video.
 * `endpoints_with_spurious_remb` - total number of endpoints which have sent an RTCP REMB packet when REMB was not
@@ -59,6 +60,7 @@ this includes conferences which are currently using a peer-to-peer transport.
 endpoints which are connected to a different jitsi-videobridge instance)
 * `local_active_endpoints` - the current number of local endpoints (not `octo`) which are in an active conference. This
 includes endpoints which are not sending audio or video, but are in an active conference (i.e. they are receive-only).
+* `local_endpoints` - the current number of local (non-`octo`) endpoints.
 * `num_eps_oversending` - current number of endpoints to which we are oversending.
 * `octo_conferences` - current number of conferences in which `octo` is enabled.
 * `octo_endpoints` - current number of `octo` endpoints (connected to remove jitsi-videobridge instances).
@@ -74,7 +76,7 @@ packets per second.
 is sending audio not video. Presumably the endpoints are using a peer-to-peer transport at this time.
 * `packet_rate_download` - current RTP incoming packet rate in packets per second.
 * `packet_rate_upload` - current RTP outgoing packet rate in packets per second.
-* `participants` - current number of endpoints, including `octo` endpoints.
+* `participants` - current number of endpoints, including `octo` endpoints. Deprecated.
 * `preemptive_kfr_sent` - total number of preemptive keyframe requests sent.
 * `receive_only_endpoints` - current number of endpoints which are not sending audio nor video.
 * `region` - preconfigured region used for bridge selection in jicofo.
