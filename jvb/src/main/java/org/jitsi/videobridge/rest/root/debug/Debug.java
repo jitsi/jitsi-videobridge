@@ -27,6 +27,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.transport.ice.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -308,6 +309,9 @@ public class Debug
             }
             case PAYLOAD_VERIFICATION: {
                 return PayloadVerificationPlugin.getStatsJson().toJSONString();
+            }
+            case ICE_STATS: {
+                return IceStatistics.Companion.getStats().toJson().toJSONString();
             }
             default: {
                 throw new NotFoundException();

@@ -31,6 +31,7 @@ public enum DebugFeatures
     TRANSIT_STATS("transit-stats"),
     TASK_POOL_STATS("task-pool-stats"),
     NODE_TRACING("node-tracing"),
+    ICE_STATS("ice-stats"),
     XMPP_DELAY_STATS("xmpp-delay-stats");
 
     private final String value;

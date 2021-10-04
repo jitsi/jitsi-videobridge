@@ -29,6 +29,7 @@ import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.BridgeJitterStats
+import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -235,6 +236,20 @@ class Endpoint @JvmOverloads constructor(
     fun getOrderedEndpoints(): List<AbstractEndpoint> =
         conference.orderedEndpoints.filterNot { it == this }
 
+    /**
+     * Listen for RTT updates from [transceiver] and update the ICE stats the first time an RTT is available. Note that
+     * the RTT is measured via RTCP, since we don't expose response time for STUN requests.
+     */
+    private val rttListener: EndpointConnectionStats.EndpointConnectionStatsListener =
+        object : EndpointConnectionStats.EndpointConnectionStatsListener {
+            override fun onRttUpdate(newRttMs: Double) {
+                if (newRttMs > 0) {
+                    transceiver.removeEndpointConnectionStatsListener(this)
+                    iceTransport.updateStatsOnInitialRtt(newRttMs)
+                }
+            }
+        }
+
     val transceiver = Transceiver(
         id,
         TaskPools.CPU_POOL,
@@ -252,6 +267,7 @@ class Endpoint @JvmOverloads constructor(
 
             override fun trace(f: () -> Unit) = f.invoke()
         })
+        addEndpointConnectionStatsListener(rttListener)
     }
 
     private val bandwidthProbing = BandwidthProbing(
