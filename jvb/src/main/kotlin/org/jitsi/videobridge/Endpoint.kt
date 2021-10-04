@@ -814,6 +814,7 @@ class Endpoint @JvmOverloads constructor(
 
     override fun requestKeyframe(mediaSsrc: Long) = transceiver.requestKeyFrame(mediaSsrc)
 
+    /** Whether we are currently oversending to this endpoint. */
     fun isOversending(): Boolean = bitrateController.isOversending()
 
     fun setSelectedEndpoints(selectedEndpoints: List<String>) =

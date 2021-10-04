@@ -1,132 +1,120 @@
 Introduction
 ============
-**Jitsi Videobridge implements reports for the following statistics (and more):**
+Jitsi Videobridge exports statistics/metrics as key-value pairs in two ways: via a REST interface which can be
+queried on demand and as periodic reports published in an XMPP MUC.
 
- * Number of threads used by the JVM.
- * Current bitrate, packet rate, and packet loss rate.
- * Current number of audio and video channels, and conferences.
- * Current estimated number of video streams.
- * The size of the largest conference in progress.
- * The distribution of the sizes of the conferences currently in progress.
- * Aggregates of RTT and jitter across all users.
- * The total number of created, completed, failed and partially failed conferences.
- * The total number of messages sent and received through WebRTC data channels and COLIBRI web sockets.
- * The total duration of all completed conferences.
- * The number of ICE sessions established over UDP or TCP.
-
-Implementation
-==============
-**Jitsi Videobridge uses the following statistics names in the reports:**
-
- * **current_timestamp** - The value is the date and time when the statistics are
-generated (in UTC).
- * **threads** - The number of Java threads that the video bridge is using.
- * **bit_rate_download / bit_rate_upload** - the total incoming and outgoing (respectively) bitrate for the video bridge in kilobits per second.
- * **packet_rate_download / packet_rate_upload** - the total incoming and outgoing (respectively) packet rate for the video bridge in packets per second.
- * **loss_rate_download** - The fraction of lost incoming RTP packets. This is based on RTP sequence numbers and is relatively accurate.
- * **loss_rate_upload** - The fraction of lost outgoing RTP packets. This is based on incoming RTCP Receiver Reports, and an attempt to subtract the fraction of packets that were not sent (i.e. were lost before they reached the bridge). Further, this is averaged over all streams of all users as opposed to all packets, so it is not correctly weighted. This is not accurate, but may be a useful metric nonetheless.
- * **rtp_loss** - Deprecated. The sum of **loss_rate_download** and **loss_rate_upload**.
- * **jitter_aggregate** - Experimental. An average value (in milliseconds) of the jitter calculated for incoming and outgoing streams. This hasn't been tested and it is currently not known whether the values are correct or not.
- * **rtt_aggregate** - An average value (in milliseconds) of the RTT across all streams.
- * **largest_conference** - The number of participants in the largest conference currently hosted on the bridge.
- * **conference_sizes** - The distribution of conference sizes hosted on the bridge. It is an array of integers of size 15, and the value at (zero-based) index *i* is the number of conferences with *i* participants. The last element (index 14) also includes conferences with more than 14 participants.
- * **audiochannels** - The current number of audio channels.
- * **videochannels** - The current number of video channels.
- * **conferences** - The current number of conferences.
- * **participants** - The current number of participants.
- * **videostreams** - An estimation of the number of current video streams forwarded by the bridge.
- * **total_loss_controlled_participant_seconds** -- The total number of participant-seconds that are loss-controlled.
- * **total_loss_limited_participant_seconds** -- The total number of participant-seconds that are loss-limited.
- * **total_loss_degraded_participant_seconds** -- The total number of participant-seconds that are loss-degraded.
- * **total_conference_seconds** - The sum of the lengths of all completed conferences, in seconds.
- * **total_conferences_created** - The total number of conferences created on the bridge.
- * **total_failed_conferences** - The total number of failed conferences on the bridge. A conference is marked as failed when all of its channels have failed. A channel is marked as failed if it had no payload activity.
- * **total_partially_failed_conferences** - The total number of partially failed conferences on the bridge. A conference is marked as partially failed when some of its channels has failed. A channel is marked as failed if it had no payload activity.
- * **total_data_channel_messages_received / total_data_channel_messages_sent** - The total number messages received and sent through data channels.
- * **total_colibri_web_socket_messages_received / total_colibri_web_socket_messages_sent** - The total number messages received and sent through COLIBRI web sockets.
-
-The statistics are available through the `/colibri/stats` endpoint on the [private REST interface](rest.md) (if it has been enabled) in JSON format:
+# REST
+The statistics are available through the `/colibri/stats` endpoint on the [private REST interface](rest.md) 
+(if it has been enabled) in JSON format:
 ```json
 {
-  "audiochannels": 0,
-  "bit_rate_download": 0,
-  "bit_rate_upload": 0,
-  "conference_sizes": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
-  "conferences": 0,
-  "current_timestamp": "2019-03-14 11:02:15.184",
-  "graceful_shutdown": false,
-  "jitter_aggregate": 0,
-  "largest_conference": 0,
-  "loss_rate_download": 0,
-  "loss_rate_upload": 0,
-  "packet_rate_download": 0,
-  "packet_rate_upload": 0,
-  "participants": 0,
-  "region": "eu-west-1",
-  "relay_id": "10.0.0.5:4096",
-  "rtp_loss": 0,
-  "rtt_aggregate": 0,
-  "threads": 59,
-  "total_bytes_received": 257628359,
-  "total_bytes_received_octo": 0,
-  "total_bytes_sent": 257754048,
-  "total_bytes_sent_octo": 0,
-  "total_colibri_web_socket_messages_received": 0,
-  "total_colibri_web_socket_messages_sent": 0,
-  "total_conference_seconds": 470,
-  "total_conferences_completed": 1,
-  "total_conferences_created": 1,
-  "total_data_channel_messages_received": 602,
-  "total_data_channel_messages_sent": 600,
-  "total_failed_conferences": 0,
-  "total_ice_failed": 0,
-  "total_ice_succeeded": 2,
-  "total_ice_succeeded_tcp": 0,
-  "total_loss_controlled_participant_seconds": 847,
-  "total_loss_degraded_participant_seconds": 1,
-  "total_loss_limited_participant_seconds": 0,
-  "total_packets_dropped_octo": 0,
-  "total_packets_received": 266644,
-  "total_packets_received_octo": 0,
-  "total_packets_sent": 266556,
-  "total_packets_sent_octo": 0,
-  "total_partially_failed_conferences": 0,
-  "total_participants": 2,
-  "videochannels": 0,
-  "videostreams": 0
+  "key": "value"
 }
 ```
 
-The statistics can also be published periodically via XMPP (which allows jicofo to monitor a set of bridges and perform load balancing). In this case the statistics are represented in XML format with a `stats` element like this:
+Note that the report itself is generated periodically and a cached version is returned. The period defaults to 5 seconds
+and can be configured with the `videobridge.stats.interval` property in `jvb.conf`.
+
+# XMPP MUC
+The statistics can also be published periodically via XMPP (which allows jicofo to monitor a set of bridges and perform
+load balancing, or allows an application to monitor the MUC and collect metrics from multiple bridges). In this case the
+key-vlue pairrs are represented in XML format with a `stats` element like this:
 ```xml
 <stats xmlns=' http://jitsi.org/protocol/colibri'>
-	<stat value='2014-07-30 10:13:11.595' name='current_timestamp'/>
-	<stat value='229' name='threads'/>
-	<stat value='689.0096' name='bit_rate_download'/>
-	<stat value='0.00299' name='rtp_loss'/>
-	<stat value='4' name='audiochannels'/>
-	<stat value='700.9024' name='bit_rate_upload'/>
-	<stat value='2' name='conferences'/>
-	<stat value='4' name='videochannels'/>
-	<stat value='4' name='participants'/>
-	<stat value='1' name='total_failed_conferences'/>
-	<stat value='1' name='total_partially_failed_conferences'/>
-	<stat value='1' name='total_no_payload_channels'/>
-	<stat value='2' name='total_no_transport_channels'/>
-	<stat value='8' name='total_channels'/>
+	<stat value='value' name='key'/>
 </stats>
 ```
 
-The statistics reporting functionality can be configured with the following properties:
+By default, statistics are pushed every 5 seconds and this can be configured in `jvb.conf` with the
+[`videobridge.apis.xmpp-client.presence-interval`](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L65) property.
 
- * **org.jitsi.videobridge.ENABLE_STATISTICS** - boolean property.
-The default value is `false`
- * **org.jitsi.videobridge.STATISTICS_TRANSPORT** - string property.
-A comma-separated list of transports. The supported transports are "muc"
-and "callstats.io".
- * **org.jitsi.videobridge.STATISTICS_INTERVAL** - integer property.
-This property specifies the reporting time in milliseconds between generation of the
-statistics. By default the interval is 1000 milliseconds.
 
-With the `muc` transport the `stats` element is added to the Presence in the MUCs that have been configured
-(TODO document how).
+# Supported metrics
+Below is a non-exhaustive list of currently supported metrics. In the descriptions "current" means an instantaneous 
+value (when the report was generated), and "total" means a cumulative value since the application was started.
+
+* `bit_rate_download` - the current incoming bitrate (RTP) in kilobits per second.
+* `bit_rate_upload` - the current outgoing bitrate (RTP) in kilobits per second.
+* `conference_sizes` - the current distribution of conference sizes (counting all endpoints, including `octo` endpoints
+which are connected to a different jitsi-videobridge instance). The value is an array of integers of size 22,
+and the value at (zero-based) index `i` is the number of conferences with `i` participants. The last element (index 21)
+also includes conferences with more than 21 participants.
+* `conferences` - The current number of conferences.
+* `conferences_by_audio_senders` - the current distribution of the number of endpoints which are sending (non-silence)
+in all conferences. The semantics are similar to `conference_sizes`, e.g. a value of `v` at index `i` means that there
+are exactly `v` conferences in which `i` endpoints are sending audio.
+* `conferences_by_video_senders` - like `conferences_by_audio_senders`, but for video senders.
+* `current_timestamp` - the UTC time at which the report was generated.
+* `dtls_failed_endpoints` - the total number of endpoints which failed to establish a DTLS connection.
+* `endpoints_sending_audio` - current number of endpoints sending (non-silence) audio.
+* `endpoints_sending_video` - current number of endpoints sending video.
+* `endpoints_with_spurious_remb` - total number of endpoints which have sent an RTCP REMB packet when REMB was not
+signaled.
+* `graceful_shutdown` - whether jitsi-videobridge is currently in graceful shutdown mode (hosting existing conferences,
+but not accepting new ones).
+* `inactive_conferences` - current number of conferences in which no endpoints are sending audio nor video. Note that
+this includes conferences which are currently using a peer-to-peer transport.
+* `inactive_endpoints` - current number of endpoints in inactive conferences (see `inactive_conferences`).
+* `largest_conference` - the size of the current largest conference (counting all endpoints, including `octo` 
+endpoints which are connected to a different jitsi-videobridge instance)
+* `local_active_endpoints` - the current number of local endpoints (not `octo`) which are in an active conference. This
+includes endpoints which are not sending audio or video, but are in an active conference (i.e. they are receive-only).
+* `num_eps_oversending` - current number of endpoints to which we are oversending.
+* `octo_conferences` - current number of conferences in which `octo` is enabled.
+* `octo_endpoints` - current number of `octo` endpoints (connected to remove jitsi-videobridge instances).
+* `octo_receive_bitrate` - current incoming bitrate on the `octo` channel (combined for all conferences) in bits per 
+second.
+* `octo_receive_packet_rate` - current incoming packet rate on the `octo` channel (combined for all conferences) in
+packets per second.
+* `octo_send_bitrate` - current outgoing bitrate on the `octo` channel (combined for all conferences) in bits per
+second.
+* `octo_send_packet_rate` - current outgoing packet rate on the `octo` channel (combined for all conferences) in
+packets per second.
+* `p2p_conferences` - current number of peer-to-peer conferences. These are conferences of size 2 in which no endpoint
+is sending audio not video. Presumably the endpoints are using a peer-to-peer transport at this time.
+* `packet_rate_download` - current RTP incoming packet rate in packets per second.
+* `packet_rate_upload` - current RTP outgoing packet rate in packets per second.
+* `participants` - current number of endpoints, including `octo` endpoints.
+* `preemptive_kfr_sent` - total number of preemptive keyframe requests sent.
+* `receive_only_endpoints` - current number of endpoints which are not sending audio nor video.
+* `region` - preconfigured region used for bridge selection in jicofo.
+* `relay_id` - encodes the `octo` address of this bridge.
+* `rtt_aggregate` - round-trip-time measured via RTCP averaged over all local endpoints with a valid RTT measurement in
+milliseconds.
+* `stress_level` - current stress level on the bridge, with 0 indicating no load and 1 indicating the load is at full
+capacity (though values >1 are permitted).
+* `threads` - current number of JVM threads.
+* `tossedPacketsEnergy` - statistics about the energy level of packets which were discarded due to not coming from one
+of the loudest speakers in a conference.
+* `total_bytes_received` - total number of bytes received in RTP.
+* `total_bytes_received_octo` - total number of bytes received on the `octo` channel.
+* `total_bytes_sent` - total number of bytes sent in RTP.
+* `total_bytes_sent_octo` - total number of bytes sent on the `octo` channel.
+* `total_colibri_web_socket_messages_received` - total number of messages received on a Colibri "bridge channel" 
+messages received on a WebSocket.
+* `total_colibri_web_socket_messages_sent` - total number of messages sent over a Colibri "bridge channel" messages 
+sent over a WebSocket.
+* `total_conference_seconds` - total number of conference-seconds served (only updates once a conference expires).
+* `total_conferences_completed` - total number of conferences completed.
+* `total_conferences_created` - total number of conferences created.
+* `total_data_channel_messages_received` - total number of Colibri "bridge channel" messages received on SCTP data
+channels.
+* `total_data_channel_messages_sent` - total number of Colibri "bridge channel" messages sent over SCTP data
+channels.
+* `total_dominant_speaker_changes` - total number of times the dominant speaker in a conference changed.
+* `total_failed_conferences` - total number of conferences in which no endpoints succeeded to establish an ICE 
+connection.
+* `total_ice_failed` - total number of endpoints which failed to establish an ICE connection.
+* `total_ice_succeeded` - total number of endpoints which successfully established an ICE connection.
+* `total_ice_succeeded_relayed` - total number of endpoints which connected through a TURN relay (currently broken).
+* `total_ice_succeeded_tcp` - total number of endpoints which connected through via ICE/TCP (currently broken).
+* `total_packets_dropped_octo` - total number of packets dropped on the `octo` channel.
+* `total_packets_received` - total number of RTP packets received.
+* `total_packets_received_octo` - total number packets received on the `octo` channel.
+* `total_packets_sent` - total number of RTP packets sent.
+* `total_packets_sent_octo` - total number packets sent over the `octo` channel.
+* `total_partially_failed_conferences` - total number of conferences in which at least one endpoint failed to establish
+an ICE connection.
+* `total_participants` - total number of endpoints created.
+* `version` - the version of jitsi-videobridge.
+* `videochannels` - current number of endpoints with a video channel (i.e. which support receiving video). Deprecated.
