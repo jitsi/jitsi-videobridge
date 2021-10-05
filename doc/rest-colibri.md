@@ -121,20 +121,16 @@ The respective response could look like:
 		<td>GET</td>
 		<td>/colibri/stats</td>
 		<td>
-		200 OK with a JSON object which represents the statistics report.
+		200 OK with a JSON object which represents the statistics report (see a list of supported metrics <a href="statistics.md#supported-metrics">here</a>).
 <pre>
 {
-    "rtp_loss":"0",
     "bit_rate_download":"0",
-    "audiochannels":0,
     "bit_rate_upload":"0",
     "conferences":0,
     "participants":0,
     "current_timestamp":"2014-08-14 23:26:14.782",
-    "threads":17,
-    "videochannels":0
+    "threads":17
 }</pre>
-		(Make sure <a href="statistics.md#implementation">statistics are enabled</a>.)
 		</td>
 	</tr>
 </table>
