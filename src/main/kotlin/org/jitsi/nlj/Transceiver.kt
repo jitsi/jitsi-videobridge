@@ -315,6 +315,11 @@ class Transceiver(
         )
     }
 
+    fun addEndpointConnectionStatsListener(listener: EndpointConnectionStats.EndpointConnectionStatsListener) =
+        endpointConnectionStats.addListener(listener)
+    fun removeEndpointConnectionStatsListener(listener: EndpointConnectionStats.EndpointConnectionStatsListener) =
+        endpointConnectionStats.removeListener(listener)
+
     override fun stop() {
         rtpReceiver.stop()
         rtpSender.stop()

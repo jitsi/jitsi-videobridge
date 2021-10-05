@@ -96,6 +96,10 @@ class EndpointConnectionStats(
         endpointConnectionStatsListeners.add(listener)
     }
 
+    fun removeListener(listener: EndpointConnectionStatsListener) {
+        endpointConnectionStatsListeners.remove(listener)
+    }
+
     fun getSnapshot(): Snapshot {
         return synchronized(lock) {
             Snapshot(
