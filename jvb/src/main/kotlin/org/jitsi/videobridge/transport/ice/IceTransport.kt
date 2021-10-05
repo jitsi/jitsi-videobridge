@@ -21,10 +21,12 @@ import org.ice4j.Transport
 import org.ice4j.TransportAddress
 import org.ice4j.ice.Agent
 import org.ice4j.ice.CandidateType
+import org.ice4j.ice.HostCandidate
 import org.ice4j.ice.IceMediaStream
 import org.ice4j.ice.IceProcessingState
 import org.ice4j.ice.LocalCandidate
 import org.ice4j.ice.RemoteCandidate
+import org.ice4j.ice.harvest.MappingCandidateHarvesters
 import org.ice4j.socket.SocketClosedException
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
@@ -338,6 +340,19 @@ class IceTransport @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    /** Update IceStatistics once an initial round-trip-time measurement is available. */
+    fun updateStatsOnInitialRtt(rttMs: Double) {
+        val selectedPair = iceComponent.selectedPair
+        val localCandidate = selectedPair?.localCandidate ?: return
+        val harvesterName = if (localCandidate is HostCandidate) {
+            "host"
+        } else {
+            MappingCandidateHarvesters.findHarvesterForAddress(localCandidate.transportAddress)?.name ?: "other"
+        }
+
+        IceStatistics.stats.add(harvesterName, rttMs)
     }
 
     private fun iceStreamPairChanged(ev: PropertyChangeEvent) {
