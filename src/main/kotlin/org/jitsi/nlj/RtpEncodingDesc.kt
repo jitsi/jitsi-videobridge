@@ -35,8 +35,16 @@ constructor(
     /**
      * The [RtpLayerDesc]s describing the encoding's layers.
      */
-    initialLayers: Array<RtpLayerDesc> = arrayOf()
+    initialLayers: Array<RtpLayerDesc>,
+    /**
+     * The ID of this encoding.
+     */
+    val eid: Int = requireNotNull(initialLayers.getOrNull(0)?.eid) {
+        "initialLayers may not be empty if no explicit EID is provided"
+    }
 ) {
+    constructor(primarySSRC: Long, eid: Int) : this(primarySSRC, arrayOf(), eid)
+
     /**
      * The ssrcs associated with this encoding (for example, RTX or FLEXFEC)
      * Maps ssrc -> type [SsrcAssociationType] (rtx, etc.)
@@ -47,8 +55,16 @@ constructor(
         secondarySsrcs[ssrc] = type
     }
 
+    private fun validateLayerEids(layers: Array<RtpLayerDesc>) {
+        for (layer in layers) {
+            require(layer.eid == eid) { "Cannot add layer with EID ${layer.eid} to encoding with EID $eid" }
+        }
+    }
+    init { validateLayerEids(initialLayers) }
+
     internal var layers = initialLayers
         set(newLayers) {
+            validateLayerEids(newLayers)
             /* Copy the rate statistics objects from the old layers to the new layers
              * with matching layer IDs.
              */

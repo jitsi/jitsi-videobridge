@@ -324,7 +324,7 @@ class Vp9Packet private constructor (
                 }
             }
 
-            return RtpEncodingDesc(ssrc, layers.toArray(arrayOf()))
+            return RtpEncodingDesc(ssrc, layers.toArray(arrayOf()), eid)
         }
     }
 }

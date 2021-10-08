@@ -59,7 +59,7 @@ class Vp9Parser(
                 numSpatialLayers = packetSpatialLayers
             }
             findSourceDescAndRtpEncodingDesc(vp9Packet)?.let { (src, enc) ->
-                vp9Packet.getScalabilityStructure(eid = enc.layers[0].eid)?.let {
+                vp9Packet.getScalabilityStructure(eid = enc.eid)?.let {
                     src.setEncodingLayers(it.layers, vp9Packet.ssrc)
                 }
                 for (otherEnc in src.rtpEncodings) {

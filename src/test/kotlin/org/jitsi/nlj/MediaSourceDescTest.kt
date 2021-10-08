@@ -47,6 +47,7 @@ class MediaSourceDescTest : ShouldSpec() {
             for (i in source.rtpEncodings.indices) {
                 val e = source.rtpEncodings[i]
                 e.primarySSRC shouldBe ssrcs[i]
+                e.eid shouldBe i
                 e.layers.size shouldBe 3
                 for (j in e.layers.indices) {
                     val l = e.layers[j]
