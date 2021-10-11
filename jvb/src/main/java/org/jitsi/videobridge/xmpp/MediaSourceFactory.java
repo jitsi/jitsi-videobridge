@@ -172,7 +172,7 @@ public class MediaSourceFactory
         RtpLayerDesc[] layers = createRTPLayerDescs(spatialLen, temporalLen,
             encodingIdx, height);
 
-        RtpEncodingDesc enc = new RtpEncodingDesc(primarySsrc, layers);
+        RtpEncodingDesc enc = new RtpEncodingDesc(primarySsrc, layers, encodingIdx);
 
         if (secondarySsrcs != null)
         {
