@@ -157,7 +157,9 @@ class MediaSourceDesc
      * Clone an existing media source desc, inheriting layer descs' statistics.
      */
     @Synchronized
-    fun copy() = MediaSourceDesc(Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() }, this.owner)
+    fun copy() = MediaSourceDesc(
+        Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() }, this.owner, this.sourceName
+    )
 
     override fun toString(): String = buildString {
         append("MediaSourceDesc ").append(hashCode()).append(" has encodings:\n  ")
