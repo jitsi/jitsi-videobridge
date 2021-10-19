@@ -251,6 +251,8 @@ class IceTransport @JvmOverloads constructor(
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
         put("useComponentSocket", IceConfig.config.useComponentSocket)
         put("keepAliveStrategy", IceConfig.config.keepAliveStrategy.toString())
+        put("nominationStrategy", IceConfig.config.nominationStrategy.toString())
+        put("advertisePrivateCandidates", IceConfig.config.advertisePrivateCandidates)
         put("closed", !running.get())
         put("iceConnected", iceConnected.get())
         put("iceFailed", iceFailed.get())
