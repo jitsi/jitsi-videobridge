@@ -104,6 +104,14 @@ class IceConfig {
             .convertFrom<String> { NominationStrategy.fromString(it) }
     }
 
+    /**
+     * Whether to advertise ICE candidates with private IP addresses (RFC1918 IPv4 addresses and
+     * fec0::/10 or fc00::/7 IPv6 addresses).
+     */
+    val advertisePrivateCandidates: Boolean by config(
+        "videobridge.ice.advertise-private-candidates".from(JitsiConfig.newConfig)
+    )
+
     companion object {
         @JvmField
         val config = IceConfig()

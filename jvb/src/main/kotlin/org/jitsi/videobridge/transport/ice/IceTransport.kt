@@ -42,6 +42,7 @@ import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.io.IOException
 import java.net.DatagramPacket
+import java.net.Inet6Address
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
@@ -250,6 +251,8 @@ class IceTransport @JvmOverloads constructor(
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
         put("useComponentSocket", IceConfig.config.useComponentSocket)
         put("keepAliveStrategy", IceConfig.config.keepAliveStrategy.toString())
+        put("nominationStrategy", IceConfig.config.nominationStrategy.toString())
+        put("advertisePrivateCandidates", IceConfig.config.advertisePrivateCandidates)
         put("closed", !running.get())
         put("iceConnected", iceConnected.get())
         put("iceFailed", iceFailed.get())
@@ -263,7 +266,9 @@ class IceTransport @JvmOverloads constructor(
         with(pe) {
             password = iceAgent.localPassword
             ufrag = iceAgent.localUfrag
-            iceComponent.localCandidates?.forEach { pe.addChildExtension(it.toCandidatePacketExtension()) }
+            iceComponent.localCandidates?.forEach { cand ->
+                cand.toCandidatePacketExtension()?.let { pe.addChildExtension(it) }
+            }
             addChildExtension(RtcpmuxPacketExtension())
         }
     }
@@ -438,6 +443,9 @@ private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean =
 private fun CandidatePacketExtension.ipNeedsResolution(): Boolean =
     !InetAddresses.isInetAddress(ip)
 
+private fun TransportAddress.isPrivateAddress(): Boolean = address.isLinkLocalAddress ||
+    /* 0xfc00::/7 */ ((address is Inet6Address) && ((addressBytes[0].toInt() and 0xfe) == 0xfc))
+
 private fun Transport.isTcpType(): Boolean = this == Transport.TCP || this == Transport.SSLTCP
 
 private fun generateCandidateId(candidate: LocalCandidate): String = buildString {
@@ -447,7 +455,10 @@ private fun generateCandidateId(candidate: LocalCandidate): String = buildString
     append(java.lang.Long.toHexString(candidate.hashCode().toLong()))
 }
 
-private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtension {
+private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtension? {
+    if (!IceConfig.config.advertisePrivateCandidates && transportAddress.isPrivateAddress()) {
+        return null
+    }
     val cpe = CandidatePacketExtension()
     cpe.component = parentComponent.componentID
     cpe.foundation = foundation
@@ -471,8 +482,10 @@ private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtensio
     cpe.port = transportAddress.port
 
     relatedAddress?.let {
-        cpe.relAddr = it.hostAddress
-        cpe.relPort = it.port
+        if (IceConfig.config.advertisePrivateCandidates || !it.isPrivateAddress()) {
+            cpe.relAddr = it.hostAddress
+            cpe.relPort = it.port
+        }
     }
 
     return cpe
