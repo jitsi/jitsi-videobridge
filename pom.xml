@@ -110,7 +110,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-29-g3c269f8</version>
+                <version>1.0-30-g48113ca</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>

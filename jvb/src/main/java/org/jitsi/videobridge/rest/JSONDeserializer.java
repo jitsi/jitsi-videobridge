@@ -259,7 +259,7 @@ public final class JSONDeserializer
                         ColibriConferenceIQ.ChannelBundle.ID_ATTR_NAME);
             Object transport
                 = channelBundle.get(
-                        IceUdpTransportPacketExtension.ELEMENT_NAME);
+                        IceUdpTransportPacketExtension.ELEMENT);
 
             channelBundleIQ
                 = new ColibriConferenceIQ.ChannelBundle(
@@ -351,7 +351,7 @@ public final class JSONDeserializer
             = channel.get(
                     ColibriConferenceIQ.ChannelCommon.INITIATOR_ATTR_NAME);
         Object transport
-            = channel.get(IceUdpTransportPacketExtension.ELEMENT_NAME);
+            = channel.get(IceUdpTransportPacketExtension.ELEMENT);
 
         // id
         if (id != null)
@@ -422,10 +422,10 @@ public final class JSONDeserializer
                 = conference.get(JSONSerializer.ENDPOINTS);
             Object strategy
                 = conference.get(ColibriConferenceIQ
-                        .RTCPTerminationStrategy.ELEMENT_NAME);
+                        .RTCPTerminationStrategy.ELEMENT);
             Object shutdownExt
                 = conference.get(ColibriConferenceIQ
-                        .GracefulShutdown.ELEMENT_NAME);
+                        .GracefulShutdown.ELEMENT);
 
             conferenceIQ = new ColibriConferenceIQ();
             // id
@@ -553,7 +553,7 @@ public final class JSONDeserializer
         else
         {
             Object theFingerprint
-                = fingerprint.get(DtlsFingerprintPacketExtension.ELEMENT_NAME);
+                = fingerprint.get(DtlsFingerprintPacketExtension.ELEMENT);
 
             fingerprintIQ = new DtlsFingerprintPacketExtension();
             // fingerprint
@@ -574,7 +574,7 @@ public final class JSONDeserializer
              * DtlsFingerprintPacketExtension instance.
              */
             fingerprintIQ.removeAttribute(
-                    DtlsFingerprintPacketExtension.ELEMENT_NAME);
+                    DtlsFingerprintPacketExtension.ELEMENT);
 
             transportIQ.addChildExtension(fingerprintIQ);
         }
@@ -1006,8 +1006,8 @@ public final class JSONDeserializer
             Object fingerprints = transport.get(JSONSerializer.FINGERPRINTS);
             Object candidateList = transport.get(JSONSerializer.CANDIDATE_LIST);
             Object remoteCandidate
-                = transport.get(RemoteCandidatePacketExtension.ELEMENT_NAME);
-            Object rtcpMux = transport.get(RtcpmuxPacketExtension.ELEMENT_NAME);
+                = transport.get(RemoteCandidatePacketExtension.ELEMENT);
+            Object rtcpMux = transport.get(RtcpmuxPacketExtension.ELEMENT);
 
             if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlns))
             {

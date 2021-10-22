@@ -39,35 +39,35 @@ public final class JSONSerializer
      * <tt>IceUdpTransportPacketExtension</tt>.
      */
     static final String CANDIDATE_LIST
-        = CandidatePacketExtension.ELEMENT_NAME + "s";
+        = CandidatePacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>channelBundles</tt> property of <tt>ColibriConferenceIQ</tt>.
      */
     static final String CHANNEL_BUNDLES
-        = ColibriConferenceIQ.ChannelBundle.ELEMENT_NAME + "s";
+        = ColibriConferenceIQ.ChannelBundle.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>endpoints</tt> property of <tt>ColibriConferenceIQ</tt>.
      */
     static final String ENDPOINTS
-        = ColibriConferenceIQ.Endpoint.ELEMENT_NAME + "s";
+        = ColibriConferenceIQ.Endpoint.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>channels</tt> property of <tt>ColibriConferenceIQ.Content</tt>.
      */
     static final String CHANNELS
-        = ColibriConferenceIQ.Channel.ELEMENT_NAME + "s";
+        = ColibriConferenceIQ.Channel.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>contents</tt> property of <tt>ColibriConferenceIQ</tt>.
      */
     static final String CONTENTS
-        = ColibriConferenceIQ.Content.ELEMENT_NAME + "s";
+        = ColibriConferenceIQ.Content.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the array of
@@ -75,28 +75,28 @@ public final class JSONSerializer
      * <tt>IceUdpTransportPacketExtension</tt>.
      */
     static final String FINGERPRINTS
-        = DtlsFingerprintPacketExtension.ELEMENT_NAME + "s";
+        = DtlsFingerprintPacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>parameters</tt> property of <tt>PayloadTypePacketExtension</tt>.
      */
     static final String PARAMETERS
-        = ParameterPacketExtension.ELEMENT_NAME + "s";
+        = ParameterPacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>payloadTypes</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
      */
     static final String PAYLOAD_TYPES
-        = PayloadTypePacketExtension.ELEMENT_NAME + "s";
+        = PayloadTypePacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>rtcp-fb</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
      */
     static final String RTCP_FBS
-            = RtcpFbPacketExtension.ELEMENT_NAME + "s";
+            = RtcpFbPacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
@@ -104,41 +104,41 @@ public final class JSONSerializer
      * <tt>ColibriConferenceIQ.Content</tt>.
      */
     static final String SCTP_CONNECTIONS
-        = ColibriConferenceIQ.SctpConnection.ELEMENT_NAME + "s";
+        = ColibriConferenceIQ.SctpConnection.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>sourceGroups</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
      */
     static final String SOURCE_GROUPS
-        = SourceGroupPacketExtension.ELEMENT_NAME + "s";
+        = SourceGroupPacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>sources</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
      */
-    static final String SOURCES = SourcePacketExtension.ELEMENT_NAME + "s";
+    static final String SOURCES = SourcePacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>ssrcs</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
      */
     static final String SSRCS
-        = ColibriConferenceIQ.Channel.SSRC_ELEMENT_NAME + "s";
+        = ColibriConferenceIQ.Channel.SSRC_ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifics the value of the
      * <tt>rtp-hdrexts</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
      */
     static final String RTP_HEADER_EXTS
-        = RTPHdrExtPacketExtension.ELEMENT_NAME + "s";
+        = RTPHdrExtPacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
      *  <tt>webSockets</tt> property of <tt>WebSocketPacketExtension</tt>.
      */
     static final String WEBSOCKET_LIST
-            = WebSocketPacketExtension.ELEMENT_NAME + "s";
+            = WebSocketPacketExtension.ELEMENT + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
@@ -539,7 +539,7 @@ public final class JSONSerializer
             if (isGracefulShutdown)
             {
                 jsonObject.put(
-                    ColibriConferenceIQ.GracefulShutdown.ELEMENT_NAME,
+                    ColibriConferenceIQ.GracefulShutdown.ELEMENT,
                     "true");
             }
         }
@@ -989,7 +989,7 @@ public final class JSONSerializer
             if (rtcpMux)
             {
                 jsonObject.put(
-                        RtcpmuxPacketExtension.ELEMENT_NAME,
+                        RtcpmuxPacketExtension.ELEMENT,
                         Boolean.valueOf(rtcpMux));
             }
         }

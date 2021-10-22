@@ -531,13 +531,13 @@ public class Videobridge
 
         // <conference>
         ProviderManager.addIQProvider(
-                ColibriConferenceIQ.ELEMENT_NAME,
+                ColibriConferenceIQ.ELEMENT,
                 ColibriConferenceIQ.NAMESPACE,
                 new ColibriIQProvider());
 
         // ICE-UDP <transport>
         ProviderManager.addExtensionProvider(
-                IceUdpTransportPacketExtension.ELEMENT_NAME,
+                IceUdpTransportPacketExtension.ELEMENT,
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(IceUdpTransportPacketExtension.class));
 
@@ -546,23 +546,23 @@ public class Videobridge
 
         // ICE-UDP <candidate>
         ProviderManager.addExtensionProvider(
-                CandidatePacketExtension.ELEMENT_NAME,
+                CandidatePacketExtension.ELEMENT,
                 IceUdpTransportPacketExtension.NAMESPACE,
                 candidatePacketExtensionProvider);
         ProviderManager.addExtensionProvider(
-                RtcpmuxPacketExtension.ELEMENT_NAME,
+                RtcpmuxPacketExtension.ELEMENT,
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(RtcpmuxPacketExtension.class));
 
         // DTLS-SRTP <fingerprint>
         ProviderManager.addExtensionProvider(
-                DtlsFingerprintPacketExtension.ELEMENT_NAME,
+                DtlsFingerprintPacketExtension.ELEMENT,
                 DtlsFingerprintPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(DtlsFingerprintPacketExtension.class));
 
         // Health-check
         ProviderManager.addIQProvider(
-                HealthCheckIQ.ELEMENT_NAME,
+                HealthCheckIQ.ELEMENT,
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());
     }
