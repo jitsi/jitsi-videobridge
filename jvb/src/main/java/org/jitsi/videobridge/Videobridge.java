@@ -377,7 +377,8 @@ public class Videobridge
      */
     private void handleColibriRequest(XmppConnection.ColibriRequest request)
     {
-        ColibriConferenceIQ conferenceIq = request.getRequest();
+        /* TODO handle Colibri2 */
+        ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ)request.getRequest();
         Conference conference;
         try
         {

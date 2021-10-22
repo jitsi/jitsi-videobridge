@@ -22,10 +22,12 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.Endpoint;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -80,7 +82,20 @@ public class ConferenceShim
                     try
                     {
                         long start = System.currentTimeMillis();
-                        IQ response = handleColibriConferenceIQ(request.getRequest());
+                        IQ requestIQ = request.getRequest();
+                        IQ response;
+                        if (requestIQ instanceof ColibriConferenceIQ)
+                        {
+                            response = handleColibriConferenceIQ((ColibriConferenceIQ)requestIQ);
+                        }
+                        else if (requestIQ instanceof ConferenceModifyIQ)
+                        {
+                            response = handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
+                        }
+                        else
+                        {
+                            throw new IllegalStateException("Bad IQ " + request.getClass().toString() + " passed to colibriIQ");
+                        }
                         long end = System.currentTimeMillis();
                         long processingDelay = end - start;
                         long totalDelay = end - request.getReceiveTime();
@@ -528,5 +543,16 @@ public class ConferenceShim
         responseConferenceIQ.setType(IQ.Type.result);
 
         return responseConferenceIQ;
+    }
+
+    public IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
+    {
+        ConferenceModifiedIQ.Builder responseBuilder =
+            ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ));
+        /* TODO */
+        return IQUtils.createError(
+            conferenceModifyIQ,
+            StanzaError.Condition.feature_not_implemented,
+            "ConferenceModifyIQ not implemented yet");
     }
 }
