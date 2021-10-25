@@ -443,7 +443,7 @@ private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean =
 private fun CandidatePacketExtension.ipNeedsResolution(): Boolean =
     !InetAddresses.isInetAddress(ip)
 
-private fun TransportAddress.isPrivateAddress(): Boolean = address.isLinkLocalAddress ||
+private fun TransportAddress.isPrivateAddress(): Boolean = address.isSiteLocalAddress ||
     /* 0xfc00::/7 */ ((address is Inet6Address) && ((addressBytes[0].toInt() and 0xfe) == 0xfc))
 
 private fun Transport.isTcpType(): Boolean = this == Transport.TCP || this == Transport.SSLTCP
