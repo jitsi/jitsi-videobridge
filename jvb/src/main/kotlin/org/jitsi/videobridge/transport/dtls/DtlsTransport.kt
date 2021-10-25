@@ -101,7 +101,7 @@ class DtlsTransport(parentLogger: Logger) {
     fun startDtlsHandshake() {
         logger.info("Starting DTLS handshake")
         if (dtlsStack.role == null) {
-            logger.warn("Staring the DTLS stack before it knows its role")
+            logger.warn("Starting the DTLS stack before it knows its role")
         }
         try {
             dtlsStack.start()
