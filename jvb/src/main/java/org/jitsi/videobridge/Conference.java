@@ -32,6 +32,7 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.colibri2.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -383,6 +384,26 @@ public class Conference
             logger.error("Error converting conference name to a BareJid ", e);
             iq.setName(null);
         }
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>ConferenceModifyIQ.Builder</tt> to the values of the respective
+     * properties of this instance. Thus, the specified <tt>iq</tt> may be
+     * thought of as a description of this instance.
+     * <p>
+     * <b>Note</b>: The copying of the values is shallow i.e. the
+     * <tt>Content</tt>s of this instance are not described in the specified
+     * <tt>iq</tt>.
+     * </p>
+     *
+     * @param b the <tt>ConferenceModifyIQ.Builder</tt> to set the values of the
+     * properties of this instance on
+    */
+    public void describeShallow(ConferenceModifiedIQ.Builder b)
+    {
+        b.setMeetingId(meetingId);
+        b.setConferenceName(conferenceName.toString());
     }
 
     /**
@@ -784,6 +805,16 @@ public class Conference
     public final String getID()
     {
         return id;
+    }
+
+    /**
+     * Gets the signaling-server-defined meetingId of this conference, if set.
+     *
+     * @return The signaling-server-defined meetingId of this conference, or null.
+     */
+    public final @Nullable String getMeetingId()
+    {
+        return meetingId;
     }
 
     /**

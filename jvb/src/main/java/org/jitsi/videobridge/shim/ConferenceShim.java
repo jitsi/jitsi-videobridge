@@ -94,7 +94,7 @@ public class ConferenceShim
                         }
                         else
                         {
-                            throw new IllegalStateException("Bad IQ " + request.getClass().toString() + " passed to colibriIQ");
+                            throw new IllegalStateException("Bad IQ " + request.getClass() + " passed to colibriIQ");
                         }
                         long end = System.currentTimeMillis();
                         long processingDelay = end - start;
@@ -549,6 +549,10 @@ public class ConferenceShim
     {
         ConferenceModifiedIQ.Builder responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ));
+
+        conference.describeShallow(responseBuilder);
+
+
         /* TODO */
         return IQUtils.createError(
             conferenceModifyIQ,

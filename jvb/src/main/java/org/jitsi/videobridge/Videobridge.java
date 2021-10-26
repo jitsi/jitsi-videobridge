@@ -34,6 +34,7 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
@@ -41,6 +42,8 @@ import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
+import org.jxmpp.stringprep.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -92,9 +95,15 @@ public class Videobridge
 
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
-     * IDs.
+     * local IDs.
      */
     private final Map<String, Conference> conferencesById = new HashMap<>();
+
+    /**
+     * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
+     * meeting IDs.
+     */
+    private final Map<String, Conference> conferencesByMeetingId = new HashMap<>();
 
     /**
      * Indicates if this bridge instance has entered graceful shutdown mode.
@@ -199,10 +208,19 @@ public class Videobridge
 
             synchronized (conferencesById)
             {
+                if (meetingId != null && conferencesByMeetingId.containsKey(meetingId))
+                {
+                    throw new IllegalStateException("Already have a meeting with meetingId " + meetingId);
+                }
+
                 if (!conferencesById.containsKey(id))
                 {
                     conference = new Conference(this, id, name, gid, meetingId);
                     conferencesById.put(id, conference);
+                    if (meetingId != null)
+                    {
+                        conferencesByMeetingId.put(meetingId, conference);
+                    }
                 }
             }
         }
@@ -241,7 +259,8 @@ public class Videobridge
     {
         final Conference conference = doCreateConference(name, gid, meetingId);
 
-        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
+        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid() +
+            " meetingId=" + meetingId);
 
         eventEmitter.fireEvent(handler ->
         {
@@ -278,12 +297,17 @@ public class Videobridge
     public void expireConference(Conference conference)
     {
         String id = conference.getID();
+        String meetingId = conference.getMeetingId();
 
         synchronized (conferencesById)
         {
             if (conference.equals(conferencesById.get(id)))
             {
                 conferencesById.remove(id);
+                if (meetingId != null)
+                {
+                    conferencesByMeetingId.remove(meetingId);
+                }
                 conference.expire();
                 eventEmitter.fireEvent(handler ->
                 {
@@ -333,6 +357,18 @@ public class Videobridge
     }
 
     /**
+     * Gets an existing {@link Conference} with a specific meeting ID.
+     */
+    public Conference getConferenceByMeetingId(String meetingId)
+    {
+        /* Note that conferenceByMeetingId is synchronzied on conferencesById. */
+        synchronized (conferencesById)
+        {
+            return conferencesByMeetingId.get(meetingId);
+        }
+    }
+
+    /**
      * Gets the <tt>Conference</tt>s of this <tt>Videobridge</tt>.
      *
      * @return the <tt>Conference</tt>s of this <tt>Videobridge</tt>
@@ -378,24 +414,50 @@ public class Videobridge
     private void handleColibriRequest(XmppConnection.ColibriRequest request)
     {
         /* TODO handle Colibri2 */
-        ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ)request.getRequest();
+        IQ iq = request.getRequest();
+        String id = null;
         Conference conference;
         try
         {
-            conference = getOrCreateConference(conferenceIq);
+            if (request.getRequest() instanceof ColibriConferenceIQ)
+            {
+                ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ)request.getRequest();
+                id = conferenceIq.getID();
+                conference = getOrCreateConference(conferenceIq);
+            }
+            else if (request.getRequest() instanceof ConferenceModifyIQ)
+            {
+                ConferenceModifyIQ conferenceModifyIq = (ConferenceModifyIQ)request.getRequest();
+                id = conferenceModifyIq.getMeetingId();
+                conference = getOrCreateConference((ConferenceModifyIQ)request.getRequest());
+            }
+            else
+            {
+                throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() +
+                    " in handleColibriRequest");
+            }
         }
         catch (ConferenceNotFoundException e)
         {
             request.getCallback().invoke(
                     IQUtils.createError(
-                            conferenceIq,
+                            iq,
                             StanzaError.Condition.bad_request,
-                            "Conference not found for ID: " + conferenceIq.getID()));
+                            "Conference not found for ID: " + id));
             return;
         }
         catch (InGracefulShutdownException e)
         {
-            request.getCallback().invoke(ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq));
+            request.getCallback().invoke(ColibriConferenceIQ.createGracefulShutdownErrorResponse(iq));
+            return;
+        }
+        catch (XmppStringprepException e)
+        {
+            request.getCallback().invoke(
+                IQUtils.createError(
+                    iq,
+                    StanzaError.Condition.bad_request,
+                    "Invalid conference name (not a JID)"));
             return;
         }
 
@@ -428,6 +490,30 @@ public class Videobridge
             }
             return conference;
         }
+    }
+
+    private @NotNull Conference getOrCreateConference(ConferenceModifyIQ conferenceModifyIQ)
+        throws InGracefulShutdownException, XmppStringprepException
+    {
+        String meetingId = conferenceModifyIQ.getMeetingId();
+
+        Conference conference = getConferenceByMeetingId(meetingId);
+
+        if (conference != null)
+        {
+            return conference;
+        }
+
+        if (isShutdownInProgress())
+        {
+            throw new InGracefulShutdownException();
+        }
+
+        /* TODO: race condition if something else created a meeting with this meetingId since the lookup above? */
+        return createConference(
+            JidCreate.entityBareFrom(conferenceModifyIQ.getConferenceName()),
+            Conference.GID_NOT_SET,
+            meetingId);
     }
 
     /**
