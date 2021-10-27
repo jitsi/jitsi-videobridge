@@ -390,7 +390,7 @@ public class Conference
      */
     private void lastNEndpointsChangedAsync()
     {
-        TaskPools.IO_POOL.submit(() ->
+        TaskPools.IO_POOL.execute(() ->
         {
             try
             {
