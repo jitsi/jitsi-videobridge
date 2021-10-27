@@ -917,7 +917,7 @@ public class Conference
             {
                 try
                 {
-                    endpoint.sendMessage(new DominantSpeakerMessage(speechActivity.getRecentSpeakers()));
+                    endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
                 }
                 catch (IOException e)
                 {
