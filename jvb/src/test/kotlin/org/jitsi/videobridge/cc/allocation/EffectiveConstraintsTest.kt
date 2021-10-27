@@ -18,7 +18,7 @@ package org.jitsi.videobridge.cc.allocation
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import org.jitsi.videobridge.util.VideoType
+import org.jitsi.nlj.VideoType
 
 @Suppress("NAME_SHADOWING")
 class EffectiveConstraintsTest : ShouldSpec() {

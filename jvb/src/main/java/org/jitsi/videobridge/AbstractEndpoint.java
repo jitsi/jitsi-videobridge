@@ -17,6 +17,7 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.VideoType;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
@@ -25,7 +26,6 @@ import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.videobridge.message.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
@@ -91,7 +91,10 @@ public abstract class AbstractEndpoint
     /**
      * The latest {@link VideoType} signaled by the endpoint (defaulting to {@code CAMERA} if nothing has been
      * signaled).
+     *
+     * Deprecated: the video type has been moved to {@link MediaSourceDesc}.
      */
+    @Deprecated
     private VideoType videoType = VideoType.CAMERA;
 
     /**
@@ -117,8 +120,11 @@ public abstract class AbstractEndpoint
      * NONE means that the endpoint has signaled that it has no available streams.
      *
      * Note that when the endpoint has not advertised any video sources, the video type is necessarily {@code NONE}.
+     *
+     * Deprecated: use {@link #getVideoType(String)} instead.
      */
     @NotNull
+    @Deprecated
     public VideoType getVideoType()
     {
         if (getMediaSource() == null)
@@ -128,6 +134,38 @@ public abstract class AbstractEndpoint
         return videoType;
     }
 
+    /**
+     * Return the {@link VideoType} of a specific media source that the endpoint has advertised.
+     *
+     * Deprecated: use {@link #getVideoType(String)} instead.
+     */
+    @NotNull
+    public VideoType getVideoType(@NotNull String sourceName)
+    {
+        MediaSourceDesc mediaSourceDesc = findMediaSourceDesc(sourceName);
+
+        return mediaSourceDesc != null ? mediaSourceDesc.getVideoType() : VideoType.NONE;
+    }
+
+    public void setVideoType(String sourceName, VideoType videoType) {
+        MediaSourceDesc mediaSourceDesc = findMediaSourceDesc(sourceName);
+
+        if (mediaSourceDesc != null)
+        {
+            if (mediaSourceDesc.getVideoType() != videoType)
+            {
+                mediaSourceDesc.setVideoType(videoType);
+                conference.getSpeechActivity().endpointVideoAvailabilityChanged();
+            }
+        }
+        else
+        {
+            logger.error("setVideoType - source description not found for: " + sourceName);
+        }
+    }
+
+    // Use setVideoType(String sourceName, VideoType videoType) instead.
+    @Deprecated
     public void setVideoType(VideoType videoType)
     {
         if (this.videoType != videoType)
@@ -166,6 +204,19 @@ public abstract class AbstractEndpoint
      */
     @Nullable
     public abstract MediaSourceDesc getMediaSource();
+
+    protected MediaSourceDesc findMediaSourceDesc(String sourceName)
+    {
+        for (MediaSourceDesc desc : getMediaSources())
+        {
+            if (sourceName.equals(desc.getSourceName()))
+            {
+                return desc;
+            }
+        }
+
+        return null;
+    }
 
     /**
      * Returns the stats Id of this <tt>Endpoint</tt>.

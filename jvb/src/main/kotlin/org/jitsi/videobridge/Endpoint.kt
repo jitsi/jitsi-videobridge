@@ -292,7 +292,7 @@ class Endpoint @JvmOverloads constructor(
         conference.videobridge.statistics.totalEndpoints.incrementAndGet()
     }
 
-    private var mediaSources: Array<MediaSourceDesc>
+    override var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
         private set(value) {
             val wasEmpty = transceiver.getMediaSources().isEmpty()

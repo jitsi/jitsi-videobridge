@@ -22,8 +22,8 @@ import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import org.jitsi.videobridge.util.VideoType.CAMERA
-import org.jitsi.videobridge.util.VideoType.NONE
+import org.jitsi.nlj.VideoType.CAMERA
+import org.jitsi.nlj.VideoType.NONE
 
 class SpeechActivityTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

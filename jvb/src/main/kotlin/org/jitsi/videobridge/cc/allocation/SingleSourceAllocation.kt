@@ -17,12 +17,12 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.nlj.VideoType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.onstagePreferredFramerate
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.onstagePreferredHeightPx
-import org.jitsi.videobridge.util.VideoType
 import java.lang.Integer.max
 import java.time.Clock
 

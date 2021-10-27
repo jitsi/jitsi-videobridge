@@ -28,6 +28,7 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.Bandwidth
@@ -40,7 +41,6 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
-import org.jitsi.videobridge.util.VideoType
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -1503,8 +1503,13 @@ data class Event<T>(
 class TestEndpoint(
     override val id: String,
     override val mediaSource: MediaSourceDesc? = null,
-    override var videoType: VideoType = VideoType.CAMERA
-) : MediaSourceContainer
+    override var videoType: VideoType = VideoType.CAMERA,
+    override val mediaSources: Array<MediaSourceDesc> = emptyArray(),
+) : MediaSourceContainer {
+    override fun getVideoType(sourceName: String): VideoType {
+        TODO("Not yet implemented")
+    }
+}
 
 fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
     return MutableList(ids.size) { i ->

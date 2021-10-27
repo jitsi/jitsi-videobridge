@@ -257,12 +257,49 @@ public class ConfOctoTransport
         TaskPools.SCHEDULED_POOL.schedule(() ->
             /* Inform new bridges of existing local endpoints' video types. */
             conference.getLocalEndpoints().forEach((e) -> {
-                    VideoTypeMessage msg = new VideoTypeMessage(e.getVideoType(), e.getId());
-                    bridgeOctoTransport.sendString(
-                        msg.toJson(),
-                        newBridgeAddresses,
-                        conferenceId
-                    );
+                    if (SourceNameSignalingConfig.config.isEnabled())
+                    {
+                        Arrays.stream(e.getMediaSources()).forEach((msd) -> {
+                            String sourceName = msd.getSourceName();
+                            if (sourceName != null)
+                            {
+                                VideoType videoType = e.getVideoType(sourceName);
+                                // Do not send the initial value for CAMERA, because it's the default
+                                if (VideoType.CAMERA != videoType)
+                                {
+                                    SourceVideoTypeMessage videoTypeMsg = new SourceVideoTypeMessage(
+                                            videoType,
+                                            sourceName,
+                                            e.getId()
+                                    );
+                                    bridgeOctoTransport.sendString(
+                                            videoTypeMsg.toJson(),
+                                            newBridgeAddresses,
+                                            conferenceId
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                // Legacy mobile clients which do not signal the source name yet
+                                VideoTypeMessage msg = new VideoTypeMessage(e.getVideoType(), e.getId());
+                                bridgeOctoTransport.sendString(
+                                    msg.toJson(),
+                                    newBridgeAddresses,
+                                    conferenceId
+                                );
+                            }
+                        });
+                    }
+                    else
+                    {
+                        VideoTypeMessage msg = new VideoTypeMessage(e.getVideoType(), e.getId());
+                        bridgeOctoTransport.sendString(
+                            msg.toJson(),
+                            newBridgeAddresses,
+                            conferenceId
+                        );
+                    }
                 }
             ), 1, TimeUnit.SECONDS);
     }
