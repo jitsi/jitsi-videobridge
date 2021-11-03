@@ -26,6 +26,7 @@ import org.jitsi.videobridge.Endpoint;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.jingle.*;
@@ -547,16 +548,92 @@ public class ConferenceShim
 
     public IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
     {
-        ConferenceModifiedIQ.Builder responseBuilder =
-            ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ));
+        try
+        {
+            ConferenceModifiedIQ.Builder responseBuilder =
+                ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ));
 
-        conference.describeShallow(responseBuilder);
+            conference.describeShallow(responseBuilder);
 
+            /* TODO: rename colibri2.endpoint so as not to conflict here? */
+            /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
+            for (org.jitsi.xmpp.extensions.colibri2.Endpoint e : conferenceModifyIQ.getEndpoints())
+            {
+                responseBuilder.addEndpoint(handleColibri2Endpoint(e));
+            }
 
-        /* TODO */
-        return IQUtils.createError(
-            conferenceModifyIQ,
-            StanzaError.Condition.feature_not_implemented,
-            "ConferenceModifyIQ not implemented yet");
+            for (Relay r : conferenceModifyIQ.getRelays())
+            {
+                /* TODO */
+            }
+
+            return responseBuilder.build();
+        }
+        catch (IqProcessingException e)
+        {
+            // Item not found conditions are assumed to be less critical, as they often happen in case a request
+            // arrives late for an expired endpoint.
+            if (StanzaError.Condition.item_not_found.equals(e.getCondition()))
+            {
+                logger.warn("Error processing conference-modify IQ: " + e);
+            }
+            else
+            {
+                logger.error("Error processing conference-modify IQ: " + e);
+            }
+            return IQUtils.createError(conferenceModifyIQ, e.getCondition(), e.getMessage());
+        }
+    }
+
+    /**
+     * Process a colibri2 Endpoint in a conference-modify, return the response to be put in
+     * the conference-modified.
+     */
+    private org.jitsi.xmpp.extensions.colibri2.Endpoint
+    handleColibri2Endpoint(org.jitsi.xmpp.extensions.colibri2.Endpoint eDesc)
+    throws IqProcessingException
+    {
+        String id = eDesc.getId();
+        Transport t = eDesc.getTransport();
+        org.jitsi.xmpp.extensions.colibri2.Endpoint.Builder respBuilder =
+            org.jitsi.xmpp.extensions.colibri2.Endpoint.getBuilder();
+
+        respBuilder.setId(eDesc.getId());
+
+        boolean iceControlling;
+        if (t != null)
+        {
+            iceControlling = Boolean.TRUE.equals(t.getInitiator());
+        }
+        else
+        {
+            iceControlling = false;
+        }
+
+        /* TODO: does iceControlling really need to be set here? */
+        ensureEndpointCreated(id, iceControlling);
+
+        Endpoint ep = conference.getLocalEndpoint(id);
+
+        if (eDesc.getExpire())
+        {
+
+        }
+
+        for (Media m: eDesc.getMedia())
+        {
+            MediaType type = m.getType();
+            Media.Builder mRespBuilder = Media.getBuilder();
+
+            /* TODO: organize these data structures more sensibly for Colibri2 */
+            ContentShim contentShim = getOrCreateContent(type);
+            ChannelShim channelShim = ep.getChannel(type);
+            if (channelShim == null) {
+
+            }
+
+        }
+
+        return respBuilder.build();
     }
 }

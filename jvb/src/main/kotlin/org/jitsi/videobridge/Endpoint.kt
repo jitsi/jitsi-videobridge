@@ -478,6 +478,12 @@ class Endpoint @JvmOverloads constructor(
     override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     /**
+     * Gets the endpoint's [ChannelShim] of the given media type.
+     */
+    fun getChannel(mediaType: MediaType): ChannelShim? =
+        channelShims.firstOrNull { channelShim -> channelShim.mediaType == mediaType }
+
+    /**
      * Adds [channelShim] channel to this endpoint.
      */
     fun addChannel(channelShim: ChannelShim) {
