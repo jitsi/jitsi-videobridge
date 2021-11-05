@@ -361,14 +361,15 @@ public class ConferenceShim
      * @param iceControlling ICE control role of transport of newly created
      * endpoint
      */
-    private void ensureEndpointCreated(String endpointId, boolean iceControlling)
+    private @NotNull Endpoint ensureEndpointCreated(String endpointId, boolean iceControlling)
     {
-        if (conference.getLocalEndpoint(endpointId) != null)
+        Endpoint ep = conference.getLocalEndpoint(endpointId);
+        if (ep != null)
         {
-            return;
+            return ep;
         }
 
-        conference.createLocalEndpoint(endpointId, iceControlling);
+        return conference.createLocalEndpoint(endpointId, iceControlling);
     }
 
     /**
@@ -611,27 +612,29 @@ public class ConferenceShim
         }
 
         /* TODO: does iceControlling really need to be set here? */
-        ensureEndpointCreated(id, iceControlling);
-
-        Endpoint ep = conference.getLocalEndpoint(id);
+        Endpoint ep = ensureEndpointCreated(id, iceControlling);
 
         if (eDesc.getExpire())
         {
-
+            ep.expire();
+            respBuilder.setExpire(true);
+            return respBuilder.build();
         }
 
         for (Media m: eDesc.getMedia())
         {
             MediaType type = m.getType();
-            Media.Builder mRespBuilder = Media.getBuilder();
 
             /* TODO: organize these data structures more sensibly for Colibri2 */
             ContentShim contentShim = getOrCreateContent(type);
             ChannelShim channelShim = ep.getChannel(type);
             if (channelShim == null) {
-
+                channelShim = contentShim.createRtpChannel(id);
             }
+            channelShim.addPayloadTypes(m.getPayloadTypes());
+            channelShim.addRtpHeaderExtensions(m.getRtpHdrExts());
 
+            /* No need to put media in conference-modified. */
         }
 
         return respBuilder.build();

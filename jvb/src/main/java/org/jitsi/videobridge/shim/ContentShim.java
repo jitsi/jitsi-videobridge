@@ -123,7 +123,7 @@ public class ContentShim
      * @param endpointId the ID of the endpoint the channel belongs to.
      * @return the created channel.
      */
-    private ChannelShim createRtpChannel(String endpointId)
+    public ChannelShim createRtpChannel(String endpointId)
     {
         synchronized (channels)
         {
