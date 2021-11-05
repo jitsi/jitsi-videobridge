@@ -20,6 +20,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jivesoftware.smack.ConnectionConfiguration
 
 internal class XmppClientConnectionConfigTest : ConfigTest() {
     init {
@@ -39,6 +40,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                             this.password shouldBe "s3cr3t"
                             this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
                             this.iqHandlerMode shouldBe "sync"
+                            this.securityMode shouldBe null
                         }
                     }
                 }
@@ -58,6 +60,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                             this.password shouldBe "s3cr3t"
                             this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
                             this.iqHandlerMode shouldBe "sync"
+                            this.securityMode shouldBe null
                         }
                     }
                 }
@@ -77,12 +80,13 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                             this.password shouldBe "s3cr3t"
                             this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
                             this.iqHandlerMode shouldBe "sync"
+                            this.securityMode shouldBe ConnectionConfiguration.SecurityMode.required
                         }
                     }
                 }
             }
             context("when defined in new config with some incomplete") {
-                withNewConfig(newConfigOneCompleteConnectionOneIncomplete, true) {
+                withNewConfig(newConfigOneCompleteConnectionOneIncompleteOneBroken, true) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
                         configs shouldHaveSize 1
@@ -96,6 +100,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                             this.password shouldBe "s3cr3t"
                             this.mucJids shouldContainExactly listOf("JvbBrewery@internal.some.domain.net")
                             this.iqHandlerMode shouldBe "sync"
+                            this.securityMode shouldBe null
                         }
                     }
                 }
@@ -127,7 +132,7 @@ private val legacyConfigOneCompleteConnectionOneIncomplete = """
     org.jitsi.videobridge.xmpp.user.shard.MUC_NICKNAME=test_nick
     org.jitsi.videobridge.xmpp.user.shard.IQ_HANDLER_MODE=sync
     
-    org.jitsi.videobridge.xmpp.user.incomlpete.USERNAME=jvb
+    org.jitsi.videobridge.xmpp.user.incomplete.USERNAME=jvb
 """.trimIndent()
 
 private val newConfigSingleXmppConnection = """
@@ -145,6 +150,7 @@ private val newConfigSingleXmppConnection = """
                         PASSWORD="s3cr3t"
                         MUC_NICKNAME="test_nick"
                         IQ_HANDLER_MODE="sync"
+                        SECURITY_MODE="required"
                     }
                 }
             }
@@ -152,7 +158,7 @@ private val newConfigSingleXmppConnection = """
     }
 """.trimIndent()
 
-private val newConfigOneCompleteConnectionOneIncomplete = """
+private val newConfigOneCompleteConnectionOneIncompleteOneBroken = """
     videobridge {
         apis {
             xmpp-client {
@@ -170,6 +176,16 @@ private val newConfigOneCompleteConnectionOneIncomplete = """
                     }
                     incomplete {
                         DOMAIN="incomplete"
+                    }
+                    broken {
+                        DOMAIN=auth.some.domain.net
+                        MUC_JIDS="JvbBrewery@internal.some.domain.net"
+                        MUC="JvbBrewery@internal.some.domain.net"
+                        HOSTNAME="localhost"
+                        USERNAME="jvb"
+                        PASSWORD="s3cr3t"
+                        MUC_NICKNAME="test_nick"
+                        SECURITY_MODE="somethingBusted"
                     }
                 }
             }
