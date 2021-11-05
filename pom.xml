@@ -26,7 +26,7 @@
         <jetty.version>9.4.40.v20210413</jetty.version>
         <kotlin.version>1.5.20</kotlin.version>
         <kotest.version>4.6.1</kotest.version>
-        <jicoco.version>1.1-95-gd8fd866</jicoco.version>
+        <jicoco.version>1.1-97-g593325c</jicoco.version>
         <jitsi.utils.version>1.0-99-gf60ac15</jitsi.utils.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
         <spotbugs.version>4.1.4</spotbugs.version>
@@ -110,7 +110,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-30-g48113ca</version>
+                <version>1.0-31-ga0e3d14</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
