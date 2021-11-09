@@ -19,12 +19,12 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 
-class SourceNameSignalingConfig {
-    val enabled: Boolean by config("videobridge.source-name-signaling.enabled".from(JitsiConfig.newConfig))
+class MultiStreamConfig {
+    val enabled: Boolean by config("videobridge.multi-stream.enabled".from(JitsiConfig.newConfig))
     fun isEnabled() = enabled
 
     companion object {
         @JvmField
-        val config = SourceNameSignalingConfig()
+        val config = MultiStreamConfig()
     }
 }

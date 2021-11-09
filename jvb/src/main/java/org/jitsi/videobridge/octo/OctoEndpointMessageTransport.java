@@ -229,7 +229,7 @@ class OctoEndpointMessageTransport
     @Override
     public BridgeChannelMessage sourceVideoType(SourceVideoTypeMessage sourceVideoTypeMessage)
     {
-        if (!SourceNameSignalingConfig.config.isEnabled())
+        if (!MultiStreamConfig.config.isEnabled())
         {
             return null;
         }

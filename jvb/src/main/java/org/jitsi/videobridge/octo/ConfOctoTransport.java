@@ -257,7 +257,7 @@ public class ConfOctoTransport
         TaskPools.SCHEDULED_POOL.schedule(() ->
             /* Inform new bridges of existing local endpoints' video types. */
             conference.getLocalEndpoints().forEach((e) -> {
-                    if (SourceNameSignalingConfig.config.isEnabled())
+                    if (MultiStreamConfig.config.isEnabled())
                     {
                         Arrays.stream(e.getMediaSources()).forEach((msd) -> {
                             String sourceName = msd.getSourceName();
