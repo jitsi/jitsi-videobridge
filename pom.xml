@@ -105,8 +105,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-media-transform</artifactId>
-                <!-- TODO replace after the JMT PR lands -->
-                <version>1.0-SNAPSHOT</version>
+                <version>1.0-265-g06e5308</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
