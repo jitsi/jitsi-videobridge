@@ -263,7 +263,7 @@ public class ConfOctoTransport
                             String sourceName = msd.getSourceName();
                             if (sourceName != null)
                             {
-                                VideoType videoType = e.getVideoType(sourceName);
+                                VideoType videoType = msd.getVideoType();
                                 // Do not send the initial value for CAMERA, because it's the default
                                 if (VideoType.CAMERA != videoType)
                                 {

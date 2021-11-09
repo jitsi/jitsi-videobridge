@@ -1505,11 +1505,7 @@ class TestEndpoint(
     override val mediaSource: MediaSourceDesc? = null,
     override var videoType: VideoType = VideoType.CAMERA,
     override val mediaSources: Array<MediaSourceDesc> = emptyArray(),
-) : MediaSourceContainer {
-    override fun getVideoType(sourceName: String): VideoType {
-        TODO("Not yet implemented")
-    }
-}
+) : MediaSourceContainer
 
 fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
     return MutableList(ids.size) { i ->

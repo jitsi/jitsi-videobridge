@@ -121,7 +121,7 @@ public abstract class AbstractEndpoint
      *
      * Note that when the endpoint has not advertised any video sources, the video type is necessarily {@code NONE}.
      *
-     * Deprecated: use {@link #getVideoType(String)} instead.
+     * Deprecated: use {@link MediaSourceDesc#getVideoType()} instead.
      */
     @NotNull
     @Deprecated
@@ -132,19 +132,6 @@ public abstract class AbstractEndpoint
             return VideoType.NONE;
         }
         return videoType;
-    }
-
-    /**
-     * Return the {@link VideoType} of a specific media source that the endpoint has advertised.
-     *
-     * Deprecated: use {@link #getVideoType(String)} instead.
-     */
-    @NotNull
-    public VideoType getVideoType(@NotNull String sourceName)
-    {
-        MediaSourceDesc mediaSourceDesc = findMediaSourceDesc(sourceName);
-
-        return mediaSourceDesc != null ? mediaSourceDesc.getVideoType() : VideoType.NONE;
     }
 
     public void setVideoType(String sourceName, VideoType videoType) {

@@ -315,8 +315,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
  */
 interface MediaSourceContainer {
     val id: String
-    fun getVideoType(sourceName: String): VideoType
-    @Deprecated("", ReplaceWith("getVideoType"), DeprecationLevel.WARNING)
+    @Deprecated("", ReplaceWith("MediaSourceDesc.getVideoType"), DeprecationLevel.WARNING)
     val videoType: VideoType
     @Deprecated("", ReplaceWith("mediaSources"), DeprecationLevel.WARNING)
     val mediaSource: MediaSourceDesc?
