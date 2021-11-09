@@ -452,7 +452,7 @@ class SourceVideoTypeMessage(
             resetJsonCache()
         }
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     var sourceName: String = sourceName
         set(value) {
             field = value
