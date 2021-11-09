@@ -28,12 +28,17 @@ class MediaSourceDescTest : ShouldSpec() {
         val ssrcs = arrayOf(0xdeadbeefL, 0xcafebabeL, 0x01234567L)
         val source = createSource(
             ssrcs,
-            1, 3, "Fake owner", "Fake name"
+            1,
+            3,
+            "Fake owner",
+            "Fake name",
+            VideoType.DESKTOP
         )
 
         context("Source properties should be correct") {
             source.owner shouldBe "Fake owner"
             source.sourceName shouldBe "Fake name"
+            source.videoType shouldBe VideoType.DESKTOP
             source.rtpEncodings.size shouldBe 3
 
             source.rtpLayers.size shouldBe 9
@@ -214,7 +219,8 @@ private fun createSource(
     numSpatialLayersPerStream: Int,
     numTemporalLayersPerStream: Int,
     owner: String,
-    name: String?
+    name: String,
+    videoType: VideoType,
 ): MediaSourceDesc {
     var height = 720
 
@@ -229,7 +235,7 @@ private fun createSource(
         ret
     }
 
-    return MediaSourceDesc(encodings, owner, name)
+    return MediaSourceDesc(encodings, owner, name, videoType)
 }
 
 /** A fake rate statistics object, for testing */

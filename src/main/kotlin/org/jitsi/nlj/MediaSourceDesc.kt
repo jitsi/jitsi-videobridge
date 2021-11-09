@@ -53,7 +53,11 @@ class MediaSourceDesc
     /**
      * A string which identifies this source.
      */
-    val sourceName: String? = null
+    val sourceName: String? = null,
+    /**
+     * The {@link VideoType} signaled for this media source (defaulting to {@code CAMERA} if nothing has been signaled).
+     */
+    var videoType: VideoType = VideoType.CAMERA,
 ) {
     /**
      * Current single-list view of all the encodings' layers.
@@ -158,7 +162,7 @@ class MediaSourceDesc
      */
     @Synchronized
     fun copy() = MediaSourceDesc(
-        Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() }, this.owner, this.sourceName
+        Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() }, this.owner, this.sourceName, this.videoType
     )
 
     override fun toString(): String = buildString {
