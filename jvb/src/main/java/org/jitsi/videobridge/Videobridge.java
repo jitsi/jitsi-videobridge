@@ -106,10 +106,9 @@ public class Videobridge
     private Clock clock = Clock.systemUTC();
 
     /**
-     * The {@link clock} time in milliseconds at which graceful shutdown was requested, or -1 if it has never been
-     * requested.
+     * The {@link clock} time at which graceful shutdown was requested, or null if it has never been requested.
      */
-    private long shutdownRequestedTime = -1;
+    private Instant shutdownRequestedTime = null;
 
     /**
      * A class that holds some instance statistics.
@@ -269,11 +268,11 @@ public class Videobridge
      */
     private void enableGracefulShutdownMode()
     {
-        if (shutdownRequestedTime < 0)
+        if (shutdownRequestedTime == null)
         {
             logger.info("Entered graceful shutdown mode");
         }
-        this.shutdownRequestedTime = clock.millis();
+        this.shutdownRequestedTime = clock.instant();
         maybeDoShutdown();
     }
 
@@ -509,7 +508,7 @@ public class Videobridge
      */
     public boolean isShutdownInProgress()
     {
-        return shutdownRequestedTime >= 0;
+        return shutdownRequestedTime != null;
     }
 
     /**
@@ -518,7 +517,7 @@ public class Videobridge
      */
     private void maybeDoShutdown()
     {
-        if (shutdownRequestedTime < 0)
+        if (shutdownRequestedTime == null)
         {
             return;
         }
@@ -527,19 +526,19 @@ public class Videobridge
         {
             if (conferencesById.isEmpty())
             {
-                long timeSinceShutdownRequest = clock.millis() - shutdownRequestedTime;
-
+                Duration timeSinceShutdownRequested = Duration.between(shutdownRequestedTime, clock.instant());
                 // Make sure that enough time passes for the "graceful shutdown" mode to be announced in presence.
                 // Otherwise, other components may detect this as a bridge going down non-gracefully.
-                long delay = 60000 - timeSinceShutdownRequest;
-                if (delay <= 0)
+                Duration delay
+                        = VideobridgeConfig.Companion.getGracefulShutdownDelay().minus(timeSinceShutdownRequested);
+                if (delay.isNegative() || delay.isZero())
                 {
                     doShutdown();
                 }
                 else
                 {
-                    logger.info("Videobridge will shut down in " + delay + " ms.");
-                    TaskPools.SCHEDULED_POOL.schedule(this::doShutdown, delay, TimeUnit.MILLISECONDS);
+                    logger.info("Videobridge will shut down in " + delay);
+                    TaskPools.SCHEDULED_POOL.schedule(this::doShutdown, delay.toMillis(), TimeUnit.MILLISECONDS);
                 }
             }
         }
@@ -631,7 +630,7 @@ public class Videobridge
     public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
-        debugState.put("shutdownInProgress", (shutdownRequestedTime >= 0));
+        debugState.put("shutdownInProgress", (shutdownRequestedTime != null));
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("load-management", jvbLoadManager.getStats());
