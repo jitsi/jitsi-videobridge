@@ -263,8 +263,8 @@ private fun selectLayers(
 
     return when (endpoint.videoType) {
         VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
-        VideoType.NONE -> Layers.noLayers
         VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(layers, constraints, onStage)
+        else -> Layers.noLayers
     }
 }
 
