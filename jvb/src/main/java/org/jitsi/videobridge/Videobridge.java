@@ -271,8 +271,8 @@ public class Videobridge
         if (shutdownRequestedTime == null)
         {
             logger.info("Entered graceful shutdown mode");
+            this.shutdownRequestedTime = clock.instant();
         }
-        this.shutdownRequestedTime = clock.instant();
         maybeDoShutdown();
     }
 
