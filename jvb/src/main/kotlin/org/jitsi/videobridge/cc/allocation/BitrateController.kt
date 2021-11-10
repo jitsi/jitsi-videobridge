@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.util.bps
@@ -28,7 +29,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
-import org.jitsi.videobridge.util.VideoType
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
@@ -315,8 +315,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
  */
 interface MediaSourceContainer {
     val id: String
+    @Deprecated("", ReplaceWith("MediaSourceDesc.getVideoType"), DeprecationLevel.WARNING)
     val videoType: VideoType
+    @Deprecated("", ReplaceWith("mediaSources"), DeprecationLevel.WARNING)
     val mediaSource: MediaSourceDesc?
+    val mediaSources: Array<MediaSourceDesc>
 }
 
 data class BitrateControllerStatusSnapshot(

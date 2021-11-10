@@ -21,11 +21,11 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpEncodingDesc
+import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
 import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
-import org.jitsi.videobridge.util.VideoType
 
 /**
  * Test the logic for selecting the layers to be considered for an endpoint and the "preferred" layer.

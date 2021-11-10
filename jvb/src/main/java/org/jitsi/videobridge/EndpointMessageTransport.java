@@ -146,6 +146,39 @@ public class EndpointMessageTransport
     }
 
     @Override
+    public BridgeChannelMessage sourceVideoType(SourceVideoTypeMessage sourceVideoTypeMessage)
+    {
+        if (!MultiStreamConfig.config.isEnabled())
+        {
+            return null;
+        }
+
+        String sourceName = sourceVideoTypeMessage.getSourceName();
+
+        if (getLogger().isDebugEnabled())
+        {
+            getLogger().debug("Received video type of " + sourceName +": " + sourceVideoTypeMessage.getVideoType());
+        }
+
+        endpoint.setVideoType(sourceName, sourceVideoTypeMessage.getVideoType());
+
+        Conference conference = endpoint.getConference();
+
+        if (conference == null || conference.isExpired())
+        {
+            getLogger().warn("Unable to forward SourceVideoTypeMessage, conference is null or expired");
+            return null;
+        }
+
+        sourceVideoTypeMessage.setEndpointId(endpoint.getId());
+
+        /* Forward videoType messages to Octo. */
+        conference.sendMessage(sourceVideoTypeMessage, Collections.emptyList(), true);
+
+        return null;
+    }
+
+    @Override
     public void unhandledMessage(BridgeChannelMessage message)
     {
         getLogger().warn("Received a message with an unexpected type: " + message.getType());

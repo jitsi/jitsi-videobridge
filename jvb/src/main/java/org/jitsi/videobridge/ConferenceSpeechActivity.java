@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;

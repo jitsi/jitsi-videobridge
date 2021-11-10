@@ -27,9 +27,9 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotInclude
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jitsi.nlj.VideoType
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
-import org.jitsi.videobridge.util.VideoType
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
@@ -248,6 +248,44 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parse(jsonString).apply {
                 shouldBeInstanceOf<VideoTypeMessage>()
                 videoType shouldBe VideoType.DESKTOP_HIGH_FPS
+            }
+        }
+
+        context("serializing and parsing SourceVideoType") {
+            val testSourceName = "source1234"
+            val srcVideoTypeMessage = SourceVideoTypeMessage(VideoType.DESKTOP, testSourceName)
+            srcVideoTypeMessage.videoType shouldBe VideoType.DESKTOP
+            parse(srcVideoTypeMessage.toJson()).apply {
+                shouldBeInstanceOf<SourceVideoTypeMessage>()
+                videoType shouldBe VideoType.DESKTOP
+                sourceName shouldBe testSourceName
+            }
+
+            listOf("none", "NONE", "None", "nOnE").forEach {
+                val jsonString = """
+                    {
+                        "colibriClass" : "SourceVideoTypeMessage",
+                        "sourceName": "$testSourceName",
+                        "videoType" : "$it"
+                    }
+                    """
+                parse(jsonString).apply {
+                    shouldBeInstanceOf<SourceVideoTypeMessage>()
+                    videoType shouldBe VideoType.NONE
+                    sourceName shouldBe testSourceName
+                }
+            }
+            val jsonString = """
+                    {
+                        "colibriClass" : "SourceVideoTypeMessage",
+                        "sourceName" : "source1234",
+                        "videoType" : "desktop_high_fps"
+                    }
+                    """
+            parse(jsonString).apply {
+                shouldBeInstanceOf<SourceVideoTypeMessage>()
+                videoType shouldBe VideoType.DESKTOP_HIGH_FPS
+                sourceName shouldBe testSourceName
             }
         }
 
