@@ -484,7 +484,7 @@ private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtensio
     relatedAddress?.let {
         if (!IceConfig.config.advertisePrivateCandidates && it.isPrivateAddress()) {
             cpe.relAddr = "0.0.0.0"
-            cpe.relPort = 0
+            cpe.relPort = 9
         } else {
             cpe.relAddr = it.hostAddress
             cpe.relPort = it.port
