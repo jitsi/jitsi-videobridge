@@ -482,7 +482,10 @@ private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtensio
     cpe.port = transportAddress.port
 
     relatedAddress?.let {
-        if (IceConfig.config.advertisePrivateCandidates || !it.isPrivateAddress()) {
+        if (!IceConfig.config.advertisePrivateCandidates && it.isPrivateAddress()) {
+            cpe.relAddr = "0.0.0.0"
+            cpe.relPort = 0
+        } else {
             cpe.relAddr = it.hostAddress
             cpe.relPort = it.port
         }
