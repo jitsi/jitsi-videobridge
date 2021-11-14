@@ -10,7 +10,6 @@
 
 
 
-  <groupId>org.jitsi</groupId>
   <artifactId>jitsi-videobridge</artifactId>
   <packaging>jar</packaging>
   <name>jitsi-videobridge</name>
@@ -61,7 +60,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>30.1.1-jre</version>
+      <version>31.0.1-jre</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -81,7 +80,7 @@
     <dependency>
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
-      <version>15.0</version>
+      <version>23.0.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
     <dependency>
@@ -108,7 +107,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.30</version>
+      <version>1.7.32</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -192,7 +191,7 @@
     <dependency>
       <groupId>io.sentry</groupId>
       <artifactId>sentry</artifactId>
-      <version>4.3.0</version>
+      <version>5.3.0</version>
       <scope>runtime</scope>
     </dependency>
     <!-- test -->
@@ -206,30 +205,42 @@
       <groupId>org.glassfish.jersey.test-framework</groupId>
       <artifactId>jersey-test-framework-core</artifactId>
       <version>${jersey.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
       <artifactId>jersey-test-framework-provider-jetty</artifactId>
       <version>${jersey.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
       <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
       <version>${jersey.version}</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.1</version>
-      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- We need this so that maven-surefire-plugin can run junit4 tests -->
     <dependency>
       <groupId>org.junit.vintage</groupId>
       <artifactId>junit-vintage-engine</artifactId>
-      <version>5.7.0</version>
+      <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -254,32 +265,12 @@
     <dependency>
         <groupId>org.junit.platform</groupId>
         <artifactId>junit-platform-engine</artifactId>
-        <version>1.6.2</version>
+        <version>1.8.1</version>
         <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.0.0-M3</version>
-        <executions>
-          <execution>
-            <id>enforce-maven</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireMavenVersion>
-                  <version>3.5.0</version>
-                </requireMavenVersion>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -448,7 +439,7 @@
           <source>1.8</source>
           <target>1.8</target>
           <compilerArgs>
-            <arg>-Xlint:all</arg>
+            <arg>-Xlint:all,-serial</arg>
           </compilerArgs>
         </configuration>
       </plugin>
@@ -456,26 +447,16 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.1.1</version>
         <configuration>
-          <configLocation>checkstyle.xml</configLocation>
+          <systemPropertyVariables>
+            <java.util.logging.config.file>${project.basedir}/lib/logging.properties</java.util.logging.config.file>
+          </systemPropertyVariables>
         </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.0.0</version>
+        <version>4.4.2.2</version>
         <configuration>
           <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
           <includeTests>true</includeTests>
@@ -489,51 +470,25 @@
         </dependencies>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.8</version>
+        <groupId>com.github.gantsign.maven</groupId>
+        <artifactId>ktlint-maven-plugin</artifactId>
+        <version>${ktlint-maven-plugin.version}</version>
+        <configuration>
+          <sourceRoots>
+            <sourceRoot>${project.basedir}/src/main/kotlin</sourceRoot>
+          </sourceRoots>
+          <testSourceRoots>
+            <testSourceRoot>${project.basedir}/src/test/kotlin</testSourceRoot>
+          </testSourceRoots>
+        </configuration>
         <executions>
           <execution>
-            <id>ktlint</id>
-            <phase>verify</phase>
-            <configuration>
-              <target name="ktlint">
-                <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                      classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
-                  <arg value="src/**/*.kt"/>
-                  <!-- to generate report in checkstyle format prepend following args: -->
-                  <!--
-                  <arg value="[dash][dash]reporter=plain"/>
-                  <arg value="[dash][dash]reporter=checkstyle,output=${project.build.directory}/ktlint.xml"/>
-                  -->
-                  <!-- see https://github.com/shyiko/ktlint#usage for more -->
-                </java>
-              </target>
-            </configuration>
-            <goals><goal>run</goal></goals>
-          </execution>
-          <execution>
-            <id>ktlint-format</id>
-            <configuration>
-              <target name="ktlint">
-                <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                      classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
-                  <arg value="-F"/>
-                  <arg value="src/**/*.kt"/>
-                </java>
-              </target>
-            </configuration>
-            <goals><goal>run</goal></goals>
+            <id>check</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
           </execution>
         </executions>
-        <dependencies>
-          <dependency>
-            <groupId>com.pinterest</groupId>
-            <artifactId>ktlint</artifactId>
-            <version>0.41.0</version>
-          </dependency>
-          <!-- additional 3rd party ruleset(s) can be specified here -->
-        </dependencies>
       </plugin>
       <plugin>
         <!-- Instructs the plugin to add the current package version in the jar manifest
@@ -551,19 +506,26 @@
         </configuration>
       </plugin>
       <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>3.1.1</version>
-          <configuration>
-              <configLocation>checkstyle.xml</configLocation>
-          </configuration>
-          <executions>
-              <execution>
-                  <goals>
-                      <goal>check</goal>
-                  </goals>
-              </execution>
-          </executions>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.1.2</version>
+        <configuration>
+          <configLocation>checkstyle.xml</configLocation>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>9.1</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

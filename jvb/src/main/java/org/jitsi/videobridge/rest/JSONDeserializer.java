@@ -792,15 +792,6 @@ public final class JSONDeserializer
         }
     }
 
-    public static ShutdownIQ deserializeShutdownIQ(
-        JSONObject requestJSONObject)
-    {
-        String element = (String) requestJSONObject.keySet().iterator().next();
-
-        return ShutdownIQ.isValidElementName(element) ?
-            ShutdownIQ.createShutdownIQ(element) : null;
-    }
-
     public static SourcePacketExtension deserializeSource(
             Object source)
     {
@@ -1007,7 +998,7 @@ public final class JSONDeserializer
             Object candidateList = transport.get(JSONSerializer.CANDIDATE_LIST);
             Object remoteCandidate
                 = transport.get(RemoteCandidatePacketExtension.ELEMENT);
-            Object rtcpMux = transport.get(RtcpmuxPacketExtension.ELEMENT);
+            Object rtcpMux = transport.get(IceRtcpmuxPacketExtension.ELEMENT);
 
             if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlns))
             {
@@ -1049,7 +1040,8 @@ public final class JSONDeserializer
                 // rtcpMux
                 if (rtcpMux != null && objectToBoolean(rtcpMux))
                 {
-                    transportIQ.addChildExtension(new RtcpmuxPacketExtension());
+                    transportIQ.addChildExtension(
+                        new IceRtcpmuxPacketExtension());
                 }
             }
         }

@@ -195,9 +195,6 @@ public class Videobridge
     /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
-     * @param name
-     * @param gid
-     * @return
      */
     private @NotNull Conference doCreateConference(EntityBareJid name, long gid, String meetingId)
     {
@@ -565,7 +562,16 @@ public class Videobridge
         ProviderManager.addIQProvider(
                 ColibriConferenceIQ.ELEMENT,
                 ColibriConferenceIQ.NAMESPACE,
-                new ColibriIQProvider());
+                new ColibriConferenceIqProvider());
+        
+        // <force-shutdown>
+        ForcefulShutdownIqProvider.registerIQProvider();
+
+        // <graceful-shutdown>
+        GracefulShutdownIqProvider.registerIQProvider();
+
+        // <stats>
+        new ColibriStatsIqProvider(); // registers itself with Smack
 
         // ICE-UDP <transport>
         ProviderManager.addExtensionProvider(
@@ -582,9 +588,9 @@ public class Videobridge
                 IceUdpTransportPacketExtension.NAMESPACE,
                 candidatePacketExtensionProvider);
         ProviderManager.addExtensionProvider(
-                RtcpmuxPacketExtension.ELEMENT,
-                IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(RtcpmuxPacketExtension.class));
+                IceRtcpmuxPacketExtension.ELEMENT,
+                IceRtcpmuxPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider<>(IceRtcpmuxPacketExtension.class));
 
         // DTLS-SRTP <fingerprint>
         ProviderManager.addExtensionProvider(
@@ -593,10 +599,7 @@ public class Videobridge
                 new DefaultPacketExtensionProvider<>(DtlsFingerprintPacketExtension.class));
 
         // Health-check
-        ProviderManager.addIQProvider(
-                HealthCheckIQ.ELEMENT,
-                HealthCheckIQ.NAMESPACE,
-                new HealthCheckIQProvider());
+        HealthCheckIQProvider.registerIQProvider();
     }
 
     /**
@@ -706,7 +709,6 @@ public class Videobridge
         return queueStats;
     }
 
-    @SuppressWarnings("unchecked")
     private OrderedJsonObject getJsonFromQueueStatisticsAndErrorHandler(
             CountingErrorHandler countingErrorHandler,
             String queueName)
@@ -742,7 +744,6 @@ public class Videobridge
 
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
     {
-        @NotNull
         @Override
         public void colibriConferenceIqReceived(@NotNull XmppConnection.ColibriRequest request)
         {
