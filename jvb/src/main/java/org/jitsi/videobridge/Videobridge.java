@@ -229,6 +229,7 @@ public class Videobridge
      */
     public @NotNull Conference createConference(EntityBareJid name)
     {
+        // we default to rtcstatsEnabled=false because this is only used for testing
         return createConference(name, Conference.GID_NOT_SET, null, false);
     }
 
