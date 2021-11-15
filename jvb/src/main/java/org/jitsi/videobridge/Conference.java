@@ -1181,7 +1181,7 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("rtcstatsEnabled", isRtcStatsEnabled);
+        debugState.put("enableRtcStats", isRtcStatsEnabled);
 
         if (conferenceName != null)
         {
