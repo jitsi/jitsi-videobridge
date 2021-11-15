@@ -1,13 +1,5 @@
 #!/bin/bash
 
-if [[ "$1" == "--help"  || $# -lt 1 ]]; then
-    echo -e "Usage:"
-    echo -e "$0 [OPTIONS], where options can be:"
-    echo -e "\t--apis=APIS where APIS is a comma separated list of APIs to enable. Currently the only supported API is 'rest'. The default is none."
-    echo
-    exit 1
-fi
-
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
 mainClass="org.jitsi.videobridge.MainKt"
