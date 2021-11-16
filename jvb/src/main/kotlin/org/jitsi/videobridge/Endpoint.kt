@@ -974,7 +974,7 @@ class Endpoint @JvmOverloads constructor(
         val transceiverStats = transceiver.getTransceiverStats()
 
         conferenceStats.apply {
-            val incomingStats = transceiverStats.incomingPacketStreamStats
+            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
             val outgoingStats = transceiverStats.outgoingPacketStreamStats
             totalBytesReceived.addAndGet(incomingStats.bytes)
             totalPacketsReceived.addAndGet(incomingStats.packets)

@@ -319,8 +319,9 @@ public class VideobridgeStatistics
                     receiveOnlyEndpoints++;
                 }
                 TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
-                IncomingStatisticsSnapshot incomingStats = transceiverStats.getIncomingStats();
-                PacketStreamStats.Snapshot incomingPacketStreamStats = transceiverStats.getIncomingPacketStreamStats();
+                IncomingStatisticsSnapshot incomingStats = transceiverStats.getRtpReceiverStats().getIncomingStats();
+                PacketStreamStats.Snapshot incomingPacketStreamStats
+                        = transceiverStats.getRtpReceiverStats().getPacketStreamStats();
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
