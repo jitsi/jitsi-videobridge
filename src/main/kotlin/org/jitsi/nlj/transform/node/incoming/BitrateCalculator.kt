@@ -56,7 +56,7 @@ class VideoBitrateCalculator(
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         mediaSourceDescs.findRtpLayerDesc(videoRtpPacket)?.let {
-            val now = System.currentTimeMillis()
+            val now = clock.millis()
             if (it.updateBitrate(videoRtpPacket.length.bytes, now)) {
                 /* When a layer is started when it was previously inactive,
                  * we want to recalculate bandwidth allocation.
@@ -84,7 +84,7 @@ open class BitrateCalculator(
      * At what threshold the stream is considered active.
      */
     private val activePacketRateThreshold: Int = 5,
-    private val clock: Clock = Clock.systemUTC()
+    protected val clock: Clock = Clock.systemUTC()
 ) : ObserverNode(name) {
     private val bitrateTracker = createBitrateTracker()
     private val packetRateTracker = createRateTracker()
@@ -105,7 +105,7 @@ open class BitrateCalculator(
         } else packetRatePps >= activePacketRateThreshold
 
     override fun observe(packetInfo: PacketInfo) {
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         bitrateTracker.update(packetInfo.packet.length.bytes, now)
         packetRateTracker.update(1, now)
     }
