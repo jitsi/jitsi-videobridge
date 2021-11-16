@@ -126,6 +126,11 @@ class IncomingSsrcStats(
     private val jitterStats = JitterStats()
     private var numReceivedPackets: Int = 0
     private var numReceivedBytes: Int = 0
+    /** How long this SSRC has been active, in milliseconds. */
+    private var durationActiveMs = 0L
+    /** The receiveTime of the last packet */
+    private var lastPacketReceivedTimeMs = -1L
+
     /**
      * Whether there has been any activity (packets received) since the last time the stats were queried with
      * onlyActive = true.
@@ -153,6 +158,12 @@ class IncomingSsrcStats(
         const val MAX_DROPOUT = 3000
 
         /**
+         * The maximum delay between two packets that counts as activity (as opposed to the stream going inactive and
+         * back to active).
+         */
+        const val ACTIVITY_TIMEOUT_MS = 1000
+
+        /**
          * Find how many packets we would expected to have received in the range [[baseSeqNum], [currSeqNum]], taking
          * into account the amount of cycles present when we received [baseSeqNum] ([baseSeqNumCycles]) and the
          * amount of cycles when we received [currSeqNum] ([currCycles])
@@ -177,7 +188,8 @@ class IncomingSsrcStats(
         seqNumCycles = seqNumCycles,
         numExpectedPackets = numExpectedPackets,
         cumulativePacketsLost = cumulativePacketsLost,
-        jitter = jitterStats.jitter
+        jitter = jitterStats.jitter,
+        durationActiveMs = durationActiveMs
     )
 
     fun getSnapshotIfActive(): Snapshot? {
@@ -218,6 +230,12 @@ class IncomingSsrcStats(
             activitySinceLastSnapshot = true
             numReceivedPackets++
             numReceivedBytes += packet.length
+            val timeSincePreviousPacket = packetReceivedTimeMs - lastPacketReceivedTimeMs
+            if (timeSincePreviousPacket in 1..ACTIVITY_TIMEOUT_MS) {
+                durationActiveMs += timeSincePreviousPacket
+            }
+            lastPacketReceivedTimeMs = packetReceivedTimeMs
+
             if (packetSequenceNumber isNewerThan maxSeqNum) {
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {
@@ -281,7 +299,8 @@ class IncomingSsrcStats(
         val seqNumCycles: Int = 0,
         val numExpectedPackets: Int = 0,
         val cumulativePacketsLost: Int = 0,
-        val jitter: Double = 0.0
+        val jitter: Double = 0.0,
+        val durationActiveMs: Long = 0
     ) {
         fun computeFractionLost(previousSnapshot: Snapshot): Int {
             val numExpectedPacketsInterval = numExpectedPackets - previousSnapshot.numExpectedPackets
@@ -302,6 +321,7 @@ class IncomingSsrcStats(
             put("num_expected_packets", numExpectedPackets)
             put("cumulative_packets_lost", cumulativePacketsLost)
             put("jitter", jitter)
+            put("duration_active_ms", durationActiveMs)
         }
     }
 }
