@@ -29,6 +29,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
@@ -144,6 +145,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
     private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
 
+    private val videoParser = VideoParser(streamInformationStore, logger)
+
     override fun isReceivingAudio() = audioBitrateCalculator.active
     override fun isReceivingVideo() = videoBitrateCalculator.active
 
@@ -237,7 +240,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(DuplicateTermination())
                                     node(retransmissionRequester)
                                     node(paddingOnlyDiscarder)
-                                    node(VideoParser(streamInformationStore, logger))
+                                    node(videoParser)
                                     node(VideoQualityLayerLookup(logger))
                                     node(videoBitrateCalculator)
                                     node(packetHandlerWrapper)
@@ -299,9 +302,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
         NodeEventVisitor(event).visit(inputTreeRoot)
     }
 
-    override fun getStreamStats() = statsTracker.getSnapshot()
-
-    override fun getPacketStreamStats() = packetStreamStats.snapshot()
+    override fun getStats(): RtpReceiverStats = RtpReceiverStats(
+        incomingStats = statsTracker.getSnapshot(),
+        packetStreamStats = packetStreamStats.snapshot(),
+        videoParserStats = videoParser.getStats()
+    )
 
     override fun forceMuteAudio(shouldMute: Boolean) {
         audioLevelReader.forceMute = shouldMute

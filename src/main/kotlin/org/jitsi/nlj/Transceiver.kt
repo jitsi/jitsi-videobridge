@@ -306,8 +306,7 @@ class Transceiver(
     fun getTransceiverStats(): TransceiverStats {
         return TransceiverStats(
             endpointConnectionStats.getSnapshot(),
-            rtpReceiver.getStreamStats(),
-            rtpReceiver.getPacketStreamStats(),
+            rtpReceiver.getStats(),
             rtpSender.getStreamStats(),
             rtpSender.getPacketStreamStats(),
             rtpSender.bandwidthEstimator.getStats(clock.instant()),

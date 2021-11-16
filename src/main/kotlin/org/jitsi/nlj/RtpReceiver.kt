@@ -17,9 +17,8 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
-import org.jitsi.nlj.stats.PacketStreamStats
+import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
-import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.util.Bandwidth
 
 abstract class RtpReceiver :
@@ -44,9 +43,7 @@ abstract class RtpReceiver :
      */
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
 
-    abstract fun getStreamStats(): IncomingStatisticsSnapshot
-
-    abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
+    abstract fun getStats(): RtpReceiverStats
 
     abstract fun tearDown()
 

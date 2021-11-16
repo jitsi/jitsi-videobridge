@@ -19,13 +19,13 @@ package org.jitsi.nlj.stats
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
+import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 import org.jitsi.utils.OrderedJsonObject
 
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
-    val incomingStats: IncomingStatisticsSnapshot,
-    val incomingPacketStreamStats: PacketStreamStats.Snapshot,
+    val rtpReceiverStats: RtpReceiverStats,
     val outgoingStats: OutgoingStatisticsSnapshot,
     val outgoingPacketStreamStats: PacketStreamStats.Snapshot,
     val bandwidthEstimatorStats: BandwidthEstimator.StatisticsSnapshot,
@@ -33,11 +33,22 @@ data class TransceiverStats(
 ) {
     fun toJson() = OrderedJsonObject().apply {
         put("endpoint_connection_stats", endpointConnectionStats.toJson())
-        put("incoming_stats", incomingStats.toJson())
-        put("incoming_packet_stream_stats", incomingPacketStreamStats.toJson())
+        put("rtp_receiver_stats", rtpReceiverStats.toJson())
         put("outgoing_stats", outgoingStats.toJson())
         put("outgoing_packet_stream_stats", outgoingPacketStreamStats.toJson())
         put("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
         put("tcc_engine_stats", tccEngineStats.toJson())
+    }
+}
+
+data class RtpReceiverStats(
+    val incomingStats: IncomingStatisticsSnapshot,
+    val packetStreamStats: PacketStreamStats.Snapshot,
+    val videoParserStats: VideoParser.Stats.Snapshot
+) {
+    fun toJson() = OrderedJsonObject().apply {
+        put("incoming_stats", incomingStats.toJson())
+        put("packet_stream_stats", packetStreamStats.toJson())
+        put("video_parser_stats", videoParserStats.toJson())
     }
 }
