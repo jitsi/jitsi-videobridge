@@ -120,12 +120,12 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
             )
             packetSequence.forEach {
                 streamStatistics.packetReceived(
-                    it.packetInfo.packetAs<RtpPacket>(),
+                    it.packetInfo.packetAs(),
                     it.sentTimeMs,
                     it.packetInfo.receivedTime
                 )
             }
-            val statSnapshot = streamStatistics.getSnapshot()
+            val statSnapshot = streamStatistics.getSnapshotIfActive()
             context("expected packets") {
                 should("be calculated correctly") {
                     statSnapshot?.numExpectedPackets shouldBe 17
@@ -138,7 +138,7 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
             }
             context("querying a second time with no update") {
                 should("be null") {
-                    streamStatistics.getSnapshot() shouldBe null
+                    streamStatistics.getSnapshotIfActive() shouldBe null
                 }
             }
 
@@ -155,7 +155,7 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
 
             context("querying after a new update") {
                 should("not be null") {
-                    streamStatistics.getSnapshot() shouldNotBe null
+                    streamStatistics.getSnapshotIfActive() shouldNotBe null
                 }
             }
         }

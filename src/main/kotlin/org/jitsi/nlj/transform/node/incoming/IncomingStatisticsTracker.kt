@@ -68,13 +68,20 @@ class IncomingStatisticsTracker(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    fun getSnapshot(): IncomingStatisticsSnapshot {
-        return IncomingStatisticsSnapshot(
-            ssrcStats.mapNotNull { (ssrc, stats) ->
-                stats.getSnapshot()?.let { Pair(ssrc, it) }
-            }.toMap()
-        )
-    }
+    /**
+     * Gets a snapshot of the SSRCs which have received a packet since the last call to this method. There is a single
+     * flag keeping track of activity, so this should not be used in more than one place. Currently, it is used for RR
+     * generation. Other code should use [getSnapshot].
+     */
+    fun getSnapshotOfActiveSsrcs() = IncomingStatisticsSnapshot(
+        ssrcStats.mapNotNull { (ssrc, stats) ->
+            stats.getSnapshotIfActive()?.let { Pair(ssrc, it) }
+        }.toMap()
+    )
+
+    fun getSnapshot() = IncomingStatisticsSnapshot(
+        ssrcStats.map { (ssrc, stats) -> Pair(ssrc, stats.getSnapshot()) }.toMap()
+    )
 }
 
 class IncomingStatisticsSnapshot(
@@ -119,6 +126,10 @@ class IncomingSsrcStats(
     private val jitterStats = JitterStats()
     private var numReceivedPackets: Int = 0
     private var numReceivedBytes: Int = 0
+    /**
+     * Whether there has been any activity (packets received) since the last time the stats were queried with
+     * onlyActive = true.
+     */
     private var activitySinceLastSnapshot: Boolean = false
     // End variables protected by statsLock
 
@@ -159,18 +170,25 @@ class IncomingSsrcStats(
         }
     }
 
-    fun getSnapshot(): Snapshot? {
+    private fun createSnapshot() = Snapshot(
+        numReceivedPackets = numReceivedPackets,
+        numReceivedBytes = numReceivedBytes,
+        maxSeqNum = maxSeqNum,
+        seqNumCycles = seqNumCycles,
+        numExpectedPackets = numExpectedPackets,
+        cumulativePacketsLost = cumulativePacketsLost,
+        jitter = jitterStats.jitter
+    )
+
+    fun getSnapshotIfActive(): Snapshot? {
         synchronized(statsLock) {
-            if (!activitySinceLastSnapshot) {
-                return null
-            }
+            if (!activitySinceLastSnapshot) return null
             activitySinceLastSnapshot = false
-            return Snapshot(
-                numReceivedPackets, numReceivedBytes, maxSeqNum, seqNumCycles, numExpectedPackets,
-                cumulativePacketsLost, jitterStats.jitter
-            )
+            return createSnapshot()
         }
     }
+
+    fun getSnapshot(): Snapshot = synchronized(statsLock) { createSnapshot() }
 
     /**
      * Resets this [IncomingSsrcStats]'s tracking variables such that:
