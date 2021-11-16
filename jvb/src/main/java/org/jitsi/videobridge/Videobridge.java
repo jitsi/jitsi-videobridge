@@ -956,6 +956,22 @@ public class Videobridge
         /** Number of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
         public AtomicInteger preemptiveKeyframeRequestsSuppressed = new AtomicInteger();
 
+        /** The total number of keyframes that were received (updated on endpoint expiration). */
+        public AtomicInteger totalKeyframesReceived = new AtomicInteger();
+
+        /**
+         * The total number of times the layering of an incoming video stream changed (updated on endpoint expiration).
+         */
+        public AtomicInteger totalLayeringChangesReceived = new AtomicInteger();
+
+        /**
+         * The total duration, in milliseconds, of video streams (SSRCs) that were received. For example, if an
+         * endpoint sends simulcast with 3 SSRCs for 1 minute it would contribute a total of 3 minutes. Suspended
+         * streams do not contribute to this duration.
+         *
+         * This is updated on endpoint expiration.
+         */
+        public AtomicLong totalVideoStreamMillisecondsReceived = new AtomicLong();
     }
 
     public interface EventHandler {

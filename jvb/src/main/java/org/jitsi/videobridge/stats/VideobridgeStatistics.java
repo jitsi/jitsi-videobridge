@@ -498,6 +498,9 @@ public class VideobridgeStatistics
                 EPS_NO_MSG_TRANSPORT_AFTER_DELAY,
                 jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
             );
+            unlockedSetStat("total_keyframes_received", jvbStats.totalKeyframesReceived.get());
+            unlockedSetStat("total_layering_changes_received", jvbStats.totalLayeringChangesReceived.get());
+            unlockedSetStat("total_video_stream_milliseconds_received", jvbStats.totalVideoStreamMillisecondsReceived);
             unlockedSetStat(
                 "stress_level",
                 jvbStats.stressLevel
