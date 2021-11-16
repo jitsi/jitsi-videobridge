@@ -34,8 +34,8 @@ import org.jitsi.nlj.rtp.codec.vp8.Vp8Parser
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Parser
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Parse video packets at a codec level
@@ -45,9 +45,7 @@ class VideoParser(
     parentLogger: Logger
 ) : TransformerNode("Video parser") {
     private val logger = createChildLogger(parentLogger)
-    private val numPacketsDroppedUnknownPt = AtomicInteger()
-    private var numKeyframes: Int = 0
-    private var numLayeringChanges: Int = 0
+    private val stats = Stats()
 
     private var sources: Array<MediaSourceDesc> = arrayOf()
     private var signaledSources: Array<MediaSourceDesc> = sources
@@ -58,7 +56,7 @@ class VideoParser(
         val packet = packetInfo.packetAs<RtpPacket>()
         val payloadType = streamInformationStore.rtpPayloadTypes[packet.payloadType.toByte()] ?: run {
             logger.error("Unrecognized video payload type ${packet.payloadType}, cannot parse video information")
-            numPacketsDroppedUnknownPt.incrementAndGet()
+            stats.numPacketsDroppedUnknownPt++
             return null
         }
         val parsedPacket = try {
@@ -122,11 +120,11 @@ class VideoParser(
         /* Alternately we could keep track of keyframes we've already seen, by timestamp, but that seems unnecessary. */
         if (parsedPacket.isKeyframe && parsedPacket.isStartOfFrame) {
             logger.cdebug { "Received a keyframe for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
-            numKeyframes++
+            stats.numKeyframes++
         }
         if (packetInfo.layeringChanged) {
             logger.cdebug { "Layering structure changed for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
-            numLayeringChanges++
+            stats.numLayeringChanges++
         }
 
         return packetInfo
@@ -160,11 +158,33 @@ class VideoParser(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("num_packets_dropped_unknown_pt", numPacketsDroppedUnknownPt.get())
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply { stats.addToNodeStatsBlock(this) }
+
+    fun getStats() = stats.snapshot()
+
+    class Stats {
+        var numKeyframes = 0
+        var numLayeringChanges = 0
+        var numPacketsDroppedUnknownPt = 0
+
+        fun snapshot() = Snapshot(numKeyframes, numLayeringChanges, numPacketsDroppedUnknownPt)
+
+        fun addToNodeStatsBlock(nodeStatsBlock: NodeStatsBlock) = nodeStatsBlock.apply {
+            addNumber("num_packets_dropped_unknown_pt", numPacketsDroppedUnknownPt)
             addNumber("num_keyframes", numKeyframes)
             addNumber("num_layering_changes", numLayeringChanges)
+        }
+
+        data class Snapshot(
+            val numKeyframes: Int,
+            var numLayeringChanges: Int,
+            var numPacketsDroppedUnknownPt: Int
+        ) {
+            fun toJson() = OrderedJsonObject().apply {
+                put("num_packets_dropped_unknown_pt", numPacketsDroppedUnknownPt)
+                put("num_keyframes", numKeyframes)
+                put("num_layering_changes", numLayeringChanges)
+            }
         }
     }
 }
