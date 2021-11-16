@@ -714,7 +714,7 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.startConnectivityEstablishment(transportInfo)
     }
 
-    override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {
+    fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
@@ -730,7 +730,12 @@ class Endpoint @JvmOverloads constructor(
         }
 
         logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
-        channelBundle.transport = iceUdpTransportPacketExtension
+
+        return iceUdpTransportPacketExtension
+    }
+
+    override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {
+        channelBundle.transport = describeTransport()
     }
 
     /**

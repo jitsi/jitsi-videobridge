@@ -637,6 +637,19 @@ public class ConferenceShim
             /* No need to put media in conference-modified. */
         }
 
+        if (t != null)
+        {
+            IceUdpTransportPacketExtension udpTransportPacketExtension = t.getIceUdpTransport();
+            if (udpTransportPacketExtension != null)
+            {
+                ep.setTransportInfo(udpTransportPacketExtension);
+            }
+
+            Transport.Builder transBuilder = Transport.getBuilder();
+            transBuilder.setIceUdpExtension(ep.describeTransport());
+            respBuilder.setTransport(transBuilder.build());
+        }
+
         return respBuilder.build();
     }
 }
