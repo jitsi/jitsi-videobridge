@@ -74,6 +74,9 @@ public class Conference
      */
     private final boolean isRtcStatsEnabled;
 
+    /**
+     * A boolean that indicates whether or not to report to CallStats for this call.
+     */
     private final boolean isCallStatsEnabled;
 
     /**
