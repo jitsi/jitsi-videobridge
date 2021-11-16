@@ -22,6 +22,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.MediaType
 
 private data class StatPacketInfo(
     val packetInfo: PacketInfo,
@@ -116,7 +117,8 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
             )
             val streamStatistics = IncomingSsrcStats(
                 123L,
-                packetSequence.first().packetInfo.packetAs<RtpPacket>().sequenceNumber
+                packetSequence.first().packetInfo.packetAs<RtpPacket>().sequenceNumber,
+                mediaType = MediaType.VIDEO
             )
             packetSequence.forEach {
                 streamStatistics.packetReceived(

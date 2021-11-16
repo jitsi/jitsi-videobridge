@@ -29,6 +29,7 @@ import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.numPacketsTo
 import org.jitsi.rtp.util.rolledOverTo
+import org.jitsi.utils.MediaType
 
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
@@ -40,13 +41,13 @@ class IncomingStatisticsTracker(
 
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
-        streamInformationStore.rtpPayloadTypes[rtpPacket.payloadType.toByte()]?.let {
+        streamInformationStore.rtpPayloadTypes[rtpPacket.payloadType.toByte()]?.let { payloadType ->
             // We don't want to track jitter, etc. for RTX streams
-            if (it !is RtxPayloadType) {
+            if (payloadType !is RtxPayloadType) {
                 val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
-                    IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber)
+                    IncomingSsrcStats(rtpPacket.ssrc, rtpPacket.sequenceNumber, payloadType.mediaType)
                 }
-                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toInt(), it.clockRate)
+                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.timestamp.toInt(), payloadType.clockRate)
                 stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
             }
         }
@@ -105,7 +106,8 @@ class IncomingStatisticsSnapshot(
  */
 class IncomingSsrcStats(
     private val ssrc: Long,
-    private var baseSeqNum: Int
+    private var baseSeqNum: Int,
+    private val mediaType: MediaType
 ) {
     // TODO: for now we'll synchronize access to all the stats so we can create a consistent snapshot when it's
     // requested from another context.  it'd be great to be able to avoid this (coroutines make it easy to switch
@@ -189,7 +191,8 @@ class IncomingSsrcStats(
         numExpectedPackets = numExpectedPackets,
         cumulativePacketsLost = cumulativePacketsLost,
         jitter = jitterStats.jitter,
-        durationActiveMs = durationActiveMs
+        durationActiveMs = durationActiveMs,
+        mediaType = mediaType
     )
 
     fun getSnapshotIfActive(): Snapshot? {
@@ -300,7 +303,8 @@ class IncomingSsrcStats(
         val numExpectedPackets: Int = 0,
         val cumulativePacketsLost: Int = 0,
         val jitter: Double = 0.0,
-        val durationActiveMs: Long = 0
+        val durationActiveMs: Long = 0,
+        val mediaType: MediaType
     ) {
         fun computeFractionLost(previousSnapshot: Snapshot): Int {
             val numExpectedPacketsInterval = numExpectedPackets - previousSnapshot.numExpectedPackets
@@ -322,6 +326,7 @@ class IncomingSsrcStats(
             put("cumulative_packets_lost", cumulativePacketsLost)
             put("jitter", jitter)
             put("duration_active_ms", durationActiveMs)
+            put("media_type", mediaType.toString())
         }
     }
 }

@@ -25,6 +25,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacketBuilder
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.utils.MediaType
 import org.jitsi.utils.ms
 
 /**
@@ -35,7 +36,8 @@ import org.jitsi.utils.ms
 private data class SenderInfo(
     var lastSrCompactedTimestamp: Long = 0,
     var lastSrReceivedTime: Long = 0,
-    var statsSnapshot: IncomingSsrcStats.Snapshot = IncomingSsrcStats.Snapshot()
+    // The media type doesn't affect RTCP RR/SR generation. Initialize with a dummy value.
+    var statsSnapshot: IncomingSsrcStats.Snapshot = IncomingSsrcStats.Snapshot(mediaType = MediaType.VIDEO)
 ) {
     private fun hasReceivedSr(): Boolean = lastSrReceivedTime != 0L
 
