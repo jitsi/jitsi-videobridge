@@ -650,6 +650,32 @@ public class ConferenceShim
             respBuilder.setTransport(transBuilder.build());
         }
 
+        Sources sources = eDesc.getSources();
+        if (sources != null)
+        {
+            /* A bit clunky, to load the new signaling into the old shims. */
+            Map<MediaType, List<SourcePacketExtension>> sourcesByType = new HashMap<>();
+            Map<MediaType, List<SourceGroupPacketExtension>> sourceGroupsByType = new HashMap<>();
+            for (MediaSource s: sources.getMediaSources())
+            {
+                MediaType type = s.getType();
+                sourcesByType.computeIfAbsent(type, (v) -> new ArrayList<>()).addAll(s.getSources());
+                sourceGroupsByType.computeIfAbsent(type, (v) -> new ArrayList<>()).addAll(s.getSsrcGroups());
+            }
+
+            for (MediaType type: sourcesByType.keySet())
+            {
+                ChannelShim channelShim = ep.getChannel(type);
+                if (channelShim == null)
+                {
+                    logger.error("Endpoint " + id + " has source of type " + type + " without media");
+                    continue;
+                }
+                channelShim.setSources(sourcesByType.get(type));
+                channelShim.setSourceGroups(sourceGroupsByType.get(type));
+            }
+        }
+
         return respBuilder.build();
     }
 }
