@@ -74,6 +74,8 @@ public class Conference
      */
     private final boolean isRtcStatsEnabled;
 
+    private final boolean isCallStatsEnabled;
+
     /**
      * A read-only cache of the endpoints in this conference. Note that it
      * contains only the {@link Endpoint} instances (local endpoints, not Octo endpoints).
@@ -194,7 +196,8 @@ public class Conference
                       EntityBareJid conferenceName,
                       long gid,
                       @Nullable String meetingId,
-                      boolean isRtcStatsEnabled)
+                      boolean isRtcStatsEnabled,
+                      boolean isCallStatsEnabled)
     {
         if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
         {
@@ -203,6 +206,7 @@ public class Conference
         this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         this.isRtcStatsEnabled = isRtcStatsEnabled;
+        this.isCallStatsEnabled = isCallStatsEnabled;
         Map<String, String> context = JMap.ofEntries(
             entry("confId", id),
             entry("gid", String.valueOf(gid))
@@ -794,6 +798,11 @@ public class Conference
     public final String getID()
     {
         return id;
+    }
+
+    public final boolean isCallStatsEnabled()
+    {
+        return isCallStatsEnabled;
     }
 
     /**

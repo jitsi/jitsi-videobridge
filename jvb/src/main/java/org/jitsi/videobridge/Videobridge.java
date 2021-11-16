@@ -197,7 +197,8 @@ public class Videobridge
      * object using that ID
      */
     private @NotNull Conference doCreateConference(
-            EntityBareJid name, long gid, String meetingId, boolean isRtcStatsEnabled)
+            EntityBareJid name, long gid, String meetingId,
+            boolean isRtcStatsEnabled, boolean isCallStatsEnabled)
     {
         Conference conference = null;
         do
@@ -208,7 +209,7 @@ public class Videobridge
             {
                 if (!conferencesById.containsKey(id))
                 {
-                    conference = new Conference(this, id, name, gid, meetingId, isRtcStatsEnabled);
+                    conference = new Conference(this, id, name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
                     conferencesById.put(id, conference);
                 }
             }
@@ -229,8 +230,8 @@ public class Videobridge
      */
     public @NotNull Conference createConference(EntityBareJid name)
     {
-        // we default to rtcstatsEnabled=false because this is only used for testing
-        return createConference(name, Conference.GID_NOT_SET, null, false);
+        // we default to rtcstatsEnabled=false and callstatsEnabled=false because this is only used for testing
+        return createConference(name, Conference.GID_NOT_SET, null, false, false);
     }
 
     /**
@@ -246,9 +247,9 @@ public class Videobridge
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     public @NotNull Conference createConference(
-            EntityBareJid name, long gid, String meetingId, boolean isRtcStatsEnabled)
+            EntityBareJid name, long gid, String meetingId, boolean isRtcStatsEnabled, boolean isCallStatsEnabled)
     {
-        final Conference conference = doCreateConference(name, gid, meetingId, isRtcStatsEnabled);
+        final Conference conference = doCreateConference(name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
 
@@ -431,7 +432,8 @@ public class Videobridge
                     conferenceIq.getName(),
                     ColibriUtil.parseGid(conferenceIq.getGID()),
                     conferenceIq.getMeetingId(),
-                    conferenceIq.isRtcStatsEnabled());
+                    conferenceIq.isRtcStatsEnabled(),
+                    conferenceIq.isCallStatsEnabled());
         }
         else
         {

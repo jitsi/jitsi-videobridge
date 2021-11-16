@@ -101,7 +101,7 @@ class CallstatsConferenceManager
     @Override
     public void conferenceCreated(@NotNull Conference conference)
     {
-        if (conference.getName() != null)
+        if (conference.getName() != null && conference.isCallStatsEnabled())
         {
             // Create a new PeriodicRunnable and start it.
             ConferencePeriodicRunnable cpr = new ConferencePeriodicRunnable(
@@ -125,6 +125,11 @@ class CallstatsConferenceManager
     @Override
     public void conferenceExpired(@NotNull Conference conference)
     {
+        if (!conference.isCallStatsEnabled())
+        {
+            return;
+        }
+
         ConferencePeriodicRunnable cpr = statisticsProcessors.remove(conference);
 
         if (cpr == null)
