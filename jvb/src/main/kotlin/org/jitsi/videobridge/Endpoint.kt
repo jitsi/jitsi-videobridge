@@ -988,7 +988,9 @@ class Endpoint @JvmOverloads constructor(
                 incomingBitrateExpirations.addAndGet(it)
             }
             totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
-            totalLayeringChangesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges)
+            totalLayeringChangesReceived.addAndGet(
+                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
+            )
 
             val durationActiveVideoMs = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
                 it.mediaType == MediaType.VIDEO
