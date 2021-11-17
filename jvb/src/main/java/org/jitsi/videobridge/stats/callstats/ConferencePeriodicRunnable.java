@@ -76,7 +76,7 @@ class ConferencePeriodicRunnable
             int rttMs = (int) (transceiverStats.getEndpointConnectionStats().getRtt() + 0.5);
 
             Map<Long, IncomingSsrcStats.Snapshot> incomingStats
-                    = transceiverStats.getIncomingStats().getSsrcStats();
+                    = transceiverStats.getRtpReceiverStats().getIncomingStats().getSsrcStats();
             incomingStats.forEach((ssrc, stats) ->
             {
                 SsrcStats receiveStats = new SsrcStats();

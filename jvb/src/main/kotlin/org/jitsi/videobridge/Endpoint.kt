@@ -974,7 +974,7 @@ class Endpoint @JvmOverloads constructor(
         val transceiverStats = transceiver.getTransceiverStats()
 
         conferenceStats.apply {
-            val incomingStats = transceiverStats.incomingPacketStreamStats
+            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
             val outgoingStats = transceiverStats.outgoingPacketStreamStats
             totalBytesReceived.addAndGet(incomingStats.bytes)
             totalPacketsReceived.addAndGet(incomingStats.packets)
@@ -987,6 +987,15 @@ class Endpoint @JvmOverloads constructor(
             bweStats.getNumber("incomingEstimateExpirations")?.toInt()?.let {
                 incomingBitrateExpirations.addAndGet(it)
             }
+            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
+            totalLayeringChangesReceived.addAndGet(
+                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
+            )
+
+            val durationActiveVideoMs = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
+                it.mediaType == MediaType.VIDEO
+            }.sumOf { it.durationActiveMs }
+            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideoMs)
         }
 
         run {
