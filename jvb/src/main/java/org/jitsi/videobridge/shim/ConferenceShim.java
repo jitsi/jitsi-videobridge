@@ -674,6 +674,11 @@ public class ConferenceShim
                 }
                 channelShim.setSources(sourcesByType.get(type));
                 channelShim.setSourceGroups(sourceGroupsByType.get(type));
+
+                if (type == MediaType.VIDEO && !sourcesByType.get(type).isEmpty())
+                {
+                    ep.recreateMediaSources();
+                }
             }
         }
 
