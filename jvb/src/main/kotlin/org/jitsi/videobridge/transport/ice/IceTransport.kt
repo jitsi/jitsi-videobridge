@@ -120,7 +120,6 @@ class IceTransport @JvmOverloads constructor(
 
     private val iceComponent = iceAgent.createComponent(
         iceStream,
-        Transport.UDP,
         -1,
         -1,
         -1,
