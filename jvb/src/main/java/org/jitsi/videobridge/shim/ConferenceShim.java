@@ -628,7 +628,8 @@ public class ConferenceShim
             /* TODO: organize these data structures more sensibly for Colibri2 */
             ContentShim contentShim = getOrCreateContent(type);
             ChannelShim channelShim = ep.getChannel(type);
-            if (channelShim == null) {
+            if (channelShim == null)
+            {
                 channelShim = contentShim.createRtpChannel(id);
             }
             channelShim.addPayloadTypes(m.getPayloadTypes());
