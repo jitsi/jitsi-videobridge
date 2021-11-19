@@ -579,14 +579,23 @@ public class Videobridge
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(IceUdpTransportPacketExtension.class));
 
-        DefaultPacketExtensionProvider<CandidatePacketExtension> candidatePacketExtensionProvider
-                = new DefaultPacketExtensionProvider<>(CandidatePacketExtension.class);
-
-        // ICE-UDP <candidate>
+        // RAW-UDP <candidate xmlns=urn:xmpp:jingle:transports:raw-udp:1>
+        DefaultPacketExtensionProvider<UdpCandidatePacketExtension> udpCandidatePacketExtensionProvider
+                = new DefaultPacketExtensionProvider<>(UdpCandidatePacketExtension.class);
         ProviderManager.addExtensionProvider(
-                CandidatePacketExtension.ELEMENT,
+                UdpCandidatePacketExtension.ELEMENT,
+                UdpCandidatePacketExtension.NAMESPACE,
+                udpCandidatePacketExtensionProvider);
+
+        // ICE-UDP <candidate xmlns=urn:xmpp:jingle:transports:ice-udp:1">
+        DefaultPacketExtensionProvider<IceCandidatePacketExtension> iceCandidatePacketExtensionProvider
+                = new DefaultPacketExtensionProvider<>(IceCandidatePacketExtension.class);
+        ProviderManager.addExtensionProvider(
+                IceUdpTransportPacketExtension.ELEMENT,
                 IceUdpTransportPacketExtension.NAMESPACE,
-                candidatePacketExtensionProvider);
+                iceCandidatePacketExtensionProvider);
+
+        // ICE <rtcp-mux/>
         ProviderManager.addExtensionProvider(
                 IceRtcpmuxPacketExtension.ELEMENT,
                 IceRtcpmuxPacketExtension.NAMESPACE,
