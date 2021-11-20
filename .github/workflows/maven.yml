@@ -31,7 +31,7 @@ jobs:
         cache: maven
 
     - name: Build with Maven
-      run: ./resources/build.sh -Pcoverage
+      run: ./resources/build.sh -Pcoverage -B
 
     - name: Upload coverage report
       if: matrix.java == env.RELEASE_JAVA_VERSION
