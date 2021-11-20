@@ -198,7 +198,7 @@
     <dependency>
       <groupId>io.mockk</groupId>
       <artifactId>mockk</artifactId>
-      <version>1.10.2</version>
+      <version>1.12.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>

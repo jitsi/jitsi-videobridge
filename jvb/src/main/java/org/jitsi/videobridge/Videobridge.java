@@ -591,8 +591,8 @@ public class Videobridge
         DefaultPacketExtensionProvider<IceCandidatePacketExtension> iceCandidatePacketExtensionProvider
                 = new DefaultPacketExtensionProvider<>(IceCandidatePacketExtension.class);
         ProviderManager.addExtensionProvider(
-                IceUdpTransportPacketExtension.ELEMENT,
-                IceUdpTransportPacketExtension.NAMESPACE,
+                IceCandidatePacketExtension.ELEMENT,
+                IceCandidatePacketExtension.NAMESPACE,
                 iceCandidatePacketExtensionProvider);
 
         // ICE <rtcp-mux/>
