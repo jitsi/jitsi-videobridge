@@ -9,6 +9,10 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  # Java version to use for the release
+  RELEASE_JAVA_VERSION: 8
+
 jobs:
   build:
 
