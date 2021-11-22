@@ -568,6 +568,31 @@ public class ConferenceShim
                 /* TODO */
             }
 
+            /* Report any feedback sources we haven't previously. */
+            Sources.Builder feedbackSourcesBuilder = Sources.getBuilder();
+            boolean newFeedbackSources = false;
+            for (Map.Entry<MediaType, ContentShim> content: contents.entrySet())
+            {
+                if (!content.getValue().isLocalSsrcReported())
+                {
+                    MediaSource.Builder mediaSourceBuilder = MediaSource.getBuilder();
+                    mediaSourceBuilder.setType(content.getKey());
+
+                    SourcePacketExtension feedbackSource = new SourcePacketExtension();
+                    feedbackSource.setSSRC(content.getValue().getLocalSsrc());
+                    content.getValue().markLocalSsrcReported();
+
+                    mediaSourceBuilder.addSource(feedbackSource);
+                    feedbackSourcesBuilder.addMediaSource(mediaSourceBuilder.build());
+
+                    newFeedbackSources = true;
+                }
+            }
+            if (newFeedbackSources)
+            {
+                responseBuilder.setSources(feedbackSourcesBuilder.build());
+            }
+
             return responseBuilder.build();
         }
         catch (IqProcessingException e)
