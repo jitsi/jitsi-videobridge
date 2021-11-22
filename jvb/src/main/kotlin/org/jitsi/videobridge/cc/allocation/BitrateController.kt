@@ -59,6 +59,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      */
     private var forwardedEndpoints: Set<String> = emptySet()
 
+    private val config = BitrateControllerConfig()
+
     /**
      * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
      */
@@ -104,7 +106,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * TODO: Is this comment still accurate?
      */
     private val trustBwe: Boolean
-        get() = BitrateControllerConfig.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10000
+        get() = config.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10000
 
     // Proxy to the allocator
     fun endpointOrderingChanged() = bandwidthAllocator.update()

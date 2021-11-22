@@ -24,7 +24,6 @@ import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.util.bps
 import org.jitsi.test.time.FakeClock
-import java.io.File
 import java.time.Instant
 
 /**

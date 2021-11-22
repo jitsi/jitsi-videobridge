@@ -19,6 +19,7 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.VideoType
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 
 @Suppress("NAME_SHADOWING")
 class EffectiveConstraintsTest : ShouldSpec() {
@@ -32,6 +33,8 @@ class EffectiveConstraintsTest : ShouldSpec() {
         val e5 = TestEndpoint("e5", videoType = VideoType.NONE)
         val e6 = TestEndpoint("e6", videoType = VideoType.NONE)
 
+        val defaultConstraints = VideoConstraints(BitrateControllerConfig().thumbnailMaxHeightPx())
+
         val endpoints = listOf(e1, e2, e3, e4, e5, e6)
         val zeroEffectiveConstraints = mutableMapOf(
             "e1" to VideoConstraints.NOTHING,
@@ -43,12 +46,12 @@ class EffectiveConstraintsTest : ShouldSpec() {
         )
 
         context("With lastN=0") {
-            val allocationSettings = AllocationSettings(lastN = 0)
+            val allocationSettings = AllocationSettings(lastN = 0, defaultConstraints = defaultConstraints)
             getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints
         }
         context("With lastN=1") {
             context("And no other constraints") {
-                val allocationSettings = AllocationSettings(lastN = 1)
+                val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = defaultConstraints)
                 getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     // The default defaultConstraints are 180
                     put("e1", VideoConstraints(180))
@@ -93,7 +96,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
                 val endpoints = listOf(e4, e5, e6, e1, e2, e3)
 
                 context("With default settings") {
-                    val allocationSettings = AllocationSettings(lastN = 1)
+                    val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = defaultConstraints)
                     getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("e4", VideoConstraints(180))
                     }
@@ -132,7 +135,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
         }
         context("With lastN=3") {
             context("And default settings") {
-                val allocationSettings = AllocationSettings(lastN = 3)
+                val allocationSettings = AllocationSettings(lastN = 3, defaultConstraints = defaultConstraints)
                 getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     put("e1", VideoConstraints(180))
                     put("e2", VideoConstraints(180))
@@ -144,7 +147,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
                 val endpoints = listOf(e4, e5, e6, e1, e2, e3)
 
                 context("And default settings") {
-                    val allocationSettings = AllocationSettings(lastN = 3)
+                    val allocationSettings = AllocationSettings(lastN = 3, defaultConstraints = defaultConstraints)
                     getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("e4", VideoConstraints(180))
                         put("e5", VideoConstraints(180))

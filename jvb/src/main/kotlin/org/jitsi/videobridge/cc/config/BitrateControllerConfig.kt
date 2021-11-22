@@ -23,7 +23,6 @@ import org.jitsi.nlj.util.Bandwidth
 import java.time.Duration
 
 class BitrateControllerConfig {
-    companion object {
         /**
          * The bandwidth estimation threshold.
          *
@@ -38,8 +37,6 @@ class BitrateControllerConfig {
                 .transformedBy { it / 100.0 }
             "videobridge.cc.bwe-change-threshold".from(JitsiConfig.newConfig)
         }
-
-        @JvmStatic
         fun bweChangeThreshold() = bweChangeThreshold
 
         /**
@@ -49,8 +46,6 @@ class BitrateControllerConfig {
             "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT".from(JitsiConfig.legacyConfig)
             "videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig)
         }
-
-        @JvmStatic
         fun thumbnailMaxHeightPx() = thumbnailMaxHeightPx
 
         /**
@@ -61,8 +56,6 @@ class BitrateControllerConfig {
             "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT".from(JitsiConfig.legacyConfig)
             "videobridge.cc.onstage-preferred-height-px".from(JitsiConfig.newConfig)
         }
-
-        @JvmStatic
         fun onstagePreferredHeightPx() = onstagePreferredHeightPx
 
         /**
@@ -72,8 +65,6 @@ class BitrateControllerConfig {
             "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE".from(JitsiConfig.legacyConfig)
             "videobridge.cc.onstage-preferred-framerate".from(JitsiConfig.newConfig)
         }
-
-        @JvmStatic
         fun onstagePreferredFramerate() = onstagePreferredFramerate
 
         /**
@@ -85,8 +76,6 @@ class BitrateControllerConfig {
             "videobridge.cc.enable-onstage-video-suspend".from(JitsiConfig.newConfig).transformedBy { !it }
             "videobridge.cc.allow-oversend-onstage".from(JitsiConfig.newConfig)
         }
-
-        @JvmStatic
         fun allowOversendOnStage(): Boolean = allowOversendOnStage
 
         /**
@@ -96,8 +85,6 @@ class BitrateControllerConfig {
             "videobridge.cc.max-oversend-bitrate".from(JitsiConfig.newConfig)
                 .convertFrom<String> { Bandwidth.fromString(it) }
         }
-
-        @JvmStatic
         fun maxOversendBitrateBps(): Double = maxOversendBitrate.bps
 
         /**
@@ -109,8 +96,6 @@ class BitrateControllerConfig {
             "org.jitsi.videobridge.TRUST_BWE".from(JitsiConfig.legacyConfig)
             "videobridge.cc.trust-bwe".from(JitsiConfig.newConfig)
         }
-
-        @JvmStatic
         fun trustBwe(): Boolean = trustBwe
 
         /**
@@ -120,8 +105,6 @@ class BitrateControllerConfig {
         private val onstageIdealHeightPx: Int by config(
             "videobridge.cc.onstage-ideal-height-px".from(JitsiConfig.newConfig)
         )
-
-        @JvmStatic
         fun onstageIdealHeightPx() = onstageIdealHeightPx
 
         /**
@@ -131,8 +114,5 @@ class BitrateControllerConfig {
         private val maxTimeBetweenCalculations: Duration by config(
             "videobridge.cc.max-time-between-calculations".from(JitsiConfig.newConfig)
         )
-
-        @JvmStatic
         fun maxTimeBetweenCalculations() = maxTimeBetweenCalculations
-    }
 }
