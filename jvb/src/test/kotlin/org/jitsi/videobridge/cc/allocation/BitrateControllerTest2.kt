@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import io.kotest.assertions.fail
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeLessThan
@@ -46,12 +47,13 @@ class BitrateControllerTest2 : ShouldSpec() {
     private val D = Endpoint("D")
     private val E = Endpoint("E")
     private val F = Endpoint("F")
-    private val bc = BitrateControllerWrapper(listOf(A, B, C, D, E, F), clock = clock)
+    private val bc = BitrateControllerWrapper(listOf(A, B, C, D, E, F), clock = clock).apply {
+        bc.endpointOrderingChanged()
+    }
 
     init {
-        bc.bc.endpointOrderingChanged()
-        val parsedLines = File("${System.getProperty("user.dir")}/src/test/resources/bwe-events.csv")
-            .readLines().drop(1).map { ParsedLine(it) }.toList()
+        val bweEvents = javaClass.getResource("/bwe-events.csv") ?: fail("Can not read bwe-events.csv")
+        val parsedLines = bweEvents.readText().split("\n").drop(1).dropLast(1).map { ParsedLine(it) }.toList()
 
         context("Number of allocation changes") {
 
