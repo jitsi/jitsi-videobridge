@@ -39,6 +39,7 @@ fi
 if [ ! $JVB_HOST ]; then
     JVB_HOST=localhost
 fi
+# TODO: remove this when support for --apis is removed
 DAEMON_OPTS="$JVB_OPTS"
 
 if [ ! -x $DAEMON ] ;then

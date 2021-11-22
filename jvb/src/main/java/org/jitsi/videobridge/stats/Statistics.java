@@ -55,6 +55,27 @@ public abstract class Statistics
     }
 
     /**
+     * Formats statistics in <tt>ColibriStatsExtension</tt> object
+     * @param statistics the statistics instance
+     * @param whitelist which of the statistics to use
+     * @return the <tt>ColibriStatsExtension</tt> instance.
+     */
+    public static ColibriStatsExtension toXmppExtensionElementFiltered(
+            Statistics statistics, List<String> whitelist)
+    {
+        ColibriStatsExtension ext = new ColibriStatsExtension();
+        Map<String, Object> m = statistics.getStats();
+        whitelist.forEach(k -> {
+            Object v = m.get(k);
+            if (v != null)
+            {
+                ext.addStat(new ColibriStatsExtension.Stat(k, v));
+            }
+        });
+        return ext;
+    }
+
+    /**
      * The <tt>ReadWriteLock</tt> which synchronizes the access to and/or
      * modification of the state of this instance. Replaces
      * <tt>synchronized</tt> blocks in order to reduce the number of exclusive
@@ -294,8 +315,7 @@ public abstract class Statistics
     {
         if (value instanceof AtomicLong || value instanceof AtomicInteger)
         {
-            logger.warn(
-                "Using an Atomic number as a stat, probably not what we want.");
+            logger.warn(() -> "Using an Atomic number as a stat for " + stat + ", probably not what we want");
         }
         if (value == null)
             stats.remove(stat);

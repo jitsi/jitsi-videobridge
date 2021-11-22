@@ -319,8 +319,9 @@ public class VideobridgeStatistics
                     receiveOnlyEndpoints++;
                 }
                 TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
-                IncomingStatisticsSnapshot incomingStats = transceiverStats.getIncomingStats();
-                PacketStreamStats.Snapshot incomingPacketStreamStats = transceiverStats.getIncomingPacketStreamStats();
+                IncomingStatisticsSnapshot incomingStats = transceiverStats.getRtpReceiverStats().getIncomingStats();
+                PacketStreamStats.Snapshot incomingPacketStreamStats
+                        = transceiverStats.getRtpReceiverStats().getPacketStreamStats();
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
@@ -497,6 +498,11 @@ public class VideobridgeStatistics
                 EPS_NO_MSG_TRANSPORT_AFTER_DELAY,
                 jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
             );
+            unlockedSetStat("total_keyframes_received", jvbStats.totalKeyframesReceived.get());
+            unlockedSetStat("total_layering_changes_received", jvbStats.totalLayeringChangesReceived.get());
+            unlockedSetStat(
+                "total_video_stream_milliseconds_received",
+                jvbStats.totalVideoStreamMillisecondsReceived.get());
             unlockedSetStat(
                 "stress_level",
                 jvbStats.stressLevel

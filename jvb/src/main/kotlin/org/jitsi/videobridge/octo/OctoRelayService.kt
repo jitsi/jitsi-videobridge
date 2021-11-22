@@ -88,7 +88,7 @@ class OctoRelayService {
     }
 
     fun start() {
-        TaskPools.IO_POOL.submit { udpTransport.startReadingData() }
+        TaskPools.IO_POOL.execute { udpTransport.startReadingData() }
     }
 
     fun stop() {

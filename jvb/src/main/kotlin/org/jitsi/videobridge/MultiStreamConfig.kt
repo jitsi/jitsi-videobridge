@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2021-Present 8x8, Inc
+ * Copyright @ 2021 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.util
+package org.jitsi.videobridge
 
-enum class VideoType {
-    CAMERA,
-    DESKTOP,
-    DESKTOP_HIGH_FPS,
-    NONE
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
+
+class MultiStreamConfig {
+    val enabled: Boolean by config("videobridge.multi-stream.enabled".from(JitsiConfig.newConfig))
+    fun isEnabled() = enabled
+
+    companion object {
+        @JvmField
+        val config = MultiStreamConfig()
+    }
 }

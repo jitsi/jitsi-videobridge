@@ -989,8 +989,8 @@ public final class JSONSerializer
             if (rtcpMux)
             {
                 jsonObject.put(
-                        RtcpmuxPacketExtension.ELEMENT,
-                        Boolean.valueOf(rtcpMux));
+                        IceRtcpmuxPacketExtension.ELEMENT,
+                        Boolean.TRUE);
             }
         }
         return jsonObject;

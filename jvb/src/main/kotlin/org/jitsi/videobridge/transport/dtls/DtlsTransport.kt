@@ -115,7 +115,7 @@ class DtlsTransport(parentLogger: Logger) {
         if (setupAttr.isNullOrEmpty()) {
             return
         }
-        when (setupAttr.toLowerCase()) {
+        when (setupAttr.lowercase()) {
             "active" -> {
                 logger.info("The remote side is acting as DTLS client, we'll act as server")
                 dtlsStack.actAsServer()

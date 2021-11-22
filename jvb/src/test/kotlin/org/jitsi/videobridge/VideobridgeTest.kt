@@ -22,17 +22,20 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.shutdown.ShutdownServiceImpl
+import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.mins
 import org.jivesoftware.smack.packet.ErrorIQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
 
 class VideobridgeTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
 
     private val shutdownService: ShutdownServiceImpl = mockk(relaxed = true)
-    private val videobridge = Videobridge(null, shutdownService, mockk())
+    private val clock = FakeClock()
+    private val videobridge = Videobridge(null, shutdownService, mockk()).apply { setClock(clock) }
     init {
         context("Debug state should be JSON") {
             videobridge.getDebugState(null, null, true).shouldBeValidJson()
@@ -55,6 +58,7 @@ class VideobridgeTest : ShouldSpec() {
                         resp.error.condition shouldBe StanzaError.Condition.service_unavailable
                     }
                     context("and once the conference expires") {
+                        clock.elapse(2.mins)
                         videobridge.expireConference(conf)
                         should("start the shutdown") {
                             verify(exactly = 1) { shutdownService.beginShutdown() }

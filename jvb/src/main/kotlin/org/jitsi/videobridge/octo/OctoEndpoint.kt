@@ -93,6 +93,8 @@ class OctoEndpoint(
 
     override val mediaSource: MediaSourceDesc?
         get() = transceiver.mediaSources.firstOrNull()
+    override val mediaSources: Array<MediaSourceDesc>
+        get() = TODO("Not yet implemented")
 
     /**
      * This [OctoEndpoint] aggregates the constraints from the local endpoints on this bridge, and propagates the max

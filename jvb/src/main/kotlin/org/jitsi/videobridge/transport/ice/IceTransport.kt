@@ -36,8 +36,9 @@ import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.ice.IceConfig
 import org.jitsi.videobridge.ice.TransportUtils
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
+import org.jitsi.xmpp.extensions.jingle.IceCandidatePacketExtension
+import org.jitsi.xmpp.extensions.jingle.IceRtcpmuxPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
-import org.jitsi.xmpp.extensions.jingle.RtcpmuxPacketExtension
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.io.IOException
@@ -120,7 +121,6 @@ class IceTransport @JvmOverloads constructor(
 
     private val iceComponent = iceAgent.createComponent(
         iceStream,
-        Transport.UDP,
         -1,
         -1,
         -1,
@@ -269,7 +269,7 @@ class IceTransport @JvmOverloads constructor(
             iceComponent.localCandidates?.forEach { cand ->
                 cand.toCandidatePacketExtension()?.let { pe.addChildExtension(it) }
             }
-            addChildExtension(RtcpmuxPacketExtension())
+            addChildExtension(IceRtcpmuxPacketExtension())
         }
     }
 
@@ -459,7 +459,7 @@ private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtensio
     if (!IceConfig.config.advertisePrivateCandidates && transportAddress.isPrivateAddress()) {
         return null
     }
-    val cpe = CandidatePacketExtension()
+    val cpe = IceCandidatePacketExtension()
     cpe.component = parentComponent.componentID
     cpe.foundation = foundation
     cpe.generation = parentComponent.parentStream.parentAgent.generation
@@ -482,7 +482,10 @@ private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtensio
     cpe.port = transportAddress.port
 
     relatedAddress?.let {
-        if (IceConfig.config.advertisePrivateCandidates || !it.isPrivateAddress()) {
+        if (!IceConfig.config.advertisePrivateCandidates && it.isPrivateAddress()) {
+            cpe.relAddr = "0.0.0.0"
+            cpe.relPort = 9
+        } else {
             cpe.relAddr = it.hostAddress
             cpe.relPort = it.port
         }

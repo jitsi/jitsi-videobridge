@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;
@@ -158,7 +159,7 @@ public class ConferenceSpeechActivity
             endpointListChanged = updateLastNEndpoints();
         }
 
-        TaskPools.IO_POOL.submit(() -> {
+        TaskPools.IO_POOL.execute(() -> {
             listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), true);
             if (endpointListChanged)
             {
@@ -319,7 +320,7 @@ public class ConferenceSpeechActivity
             {
                 return;
             }
-            TaskPools.IO_POOL.submit(() -> {
+            TaskPools.IO_POOL.execute(() -> {
                 if (finalRecentSpeakersChanged)
                 {
                     listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), dominantSpeakerChanged);
@@ -341,7 +342,7 @@ public class ConferenceSpeechActivity
         }
         if (endpointsListChanged)
         {
-            TaskPools.IO_POOL.submit(() -> {
+            TaskPools.IO_POOL.execute(() -> {
                 try
                 {
                     listener.lastNEndpointsChanged();

@@ -28,7 +28,7 @@ import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.stats.PacketStreamStats
+import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -36,7 +36,6 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.RtpParser
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
-import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.VideoQualityLayerLookup
@@ -177,14 +176,6 @@ class OctoRtpReceiver(
         // noop
     }
 
-    override fun getPacketStreamStats(): PacketStreamStats.Snapshot {
-        TODO("Not yet implemented")
-    }
-
-    override fun getStreamStats(): IncomingStatisticsSnapshot {
-        TODO("Not yet implemented")
-    }
-
     override fun onRttUpdate(newRttMs: Double) {
         TODO("Not yet implemented")
     }
@@ -198,6 +189,9 @@ class OctoRtpReceiver(
     }
 
     override fun setSrtpTransformers(srtpTransformers: SrtpTransformers) {}
+    override fun getStats(): RtpReceiverStats {
+        TODO("Not yet implemented")
+    }
 
     override fun stop() {
         running.set(false)

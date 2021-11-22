@@ -23,14 +23,16 @@
     <packaging>pom</packaging>
 
     <properties>
-        <jetty.version>9.4.40.v20210413</jetty.version>
-        <kotlin.version>1.5.20</kotlin.version>
-        <kotest.version>4.6.1</kotest.version>
-        <jicoco.version>1.1-95-gd8fd866</jicoco.version>
-        <jitsi.utils.version>1.0-97-g67c980b</jitsi.utils.version>
+        <jetty.version>9.4.44.v20210927</jetty.version>
+        <kotlin.version>1.5.31</kotlin.version>
+        <kotest.version>4.6.3</kotest.version>
+        <junit.version>5.8.1</junit.version>
+        <jicoco.version>1.1-98-gbeeaa92</jicoco.version>
+        <jitsi.utils.version>1.0-108-g480acf0</jitsi.utils.version>
+        <ktlint-maven-plugin.version>1.11.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
-        <spotbugs.version>4.1.4</spotbugs.version>
-        <jersey.version>2.34</jersey.version>
+        <spotbugs.version>4.5.0</spotbugs.version>
+        <jersey.version>2.35</jersey.version>
         <jackson.version>2.12.4</jackson.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -90,12 +92,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-metaconfig</artifactId>
-                <version>315a3cec35</version>
+                <version>1.0-9-g5e1b624</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-35-gadca67b</version>
+                <version>3.0-46-g64a7ca8</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
@@ -105,7 +107,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-media-transform</artifactId>
-                <version>1.0-263-gf2800c3</version>
+                <version>1.0-271-g9a84b31</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
@@ -119,25 +121,16 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-    <repositories>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-    </repositories>
 
     <profiles>
         <profile>
             <id>coverage</id>
-            <properties>
-                <jacoco.version>0.8.7</jacoco.version>
-            </properties>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>${jacoco.version}</version>
+                        <version>0.8.7</version>
                         <executions>
                             <execution>
                                 <goals>

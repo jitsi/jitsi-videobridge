@@ -29,9 +29,9 @@ import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.logging.log4j.util.Strings.isEmpty
+import org.jitsi.nlj.VideoType
 import org.jitsi.utils.ResettableLazy
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
-import org.jitsi.videobridge.util.VideoType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -59,6 +59,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
+    JsonSubTypes.Type(value = SourceVideoTypeMessage::class, name = SourceVideoTypeMessage.TYPE),
     JsonSubTypes.Type(value = VideoTypeMessage::class, name = VideoTypeMessage.TYPE)
 )
 sealed class BridgeChannelMessage(
@@ -121,6 +122,7 @@ open class MessageHandler {
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
             is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
+            is SourceVideoTypeMessage -> sourceVideoType(message)
             is VideoTypeMessage -> videoType(message)
         }
     }
@@ -146,6 +148,7 @@ open class MessageHandler {
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
+    open fun sourceVideoType(message: SourceVideoTypeMessage) = unhandledMessageReturnNull(message)
     open fun videoType(message: VideoTypeMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
@@ -427,6 +430,37 @@ class ReceiverVideoConstraintsMessage(
 ) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "ReceiverVideoConstraints"
+    }
+}
+
+/**
+ * A message signaling the video type of the media source.
+ */
+class SourceVideoTypeMessage(
+    val videoType: VideoType,
+    sourceName: String,
+    /**
+     * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
+     * message was received on (non-null values are needed only for Octo).
+     */
+    endpointId: String? = null
+) : BridgeChannelMessage(TYPE) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    var endpointId: String? = endpointId
+        set(value) {
+            field = value
+            resetJsonCache()
+        }
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    var sourceName: String = sourceName
+        set(value) {
+            field = value
+            resetJsonCache()
+        }
+
+    companion object {
+        const val TYPE = "SourceVideoTypeMessage"
     }
 }
 

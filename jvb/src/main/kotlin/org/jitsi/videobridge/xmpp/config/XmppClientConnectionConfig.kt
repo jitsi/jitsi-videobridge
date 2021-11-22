@@ -49,7 +49,7 @@ class XmppClientConnectionConfig {
     }
 
     /**
-     * The interval at which presence updates (with updates stats/status) are published. Allow to be overriden by
+     * The interval at which presence updates (with updates stats/status) are published. Allow to be overridden by
      * legacy-style "stats-transports" config.
      */
     val presenceInterval: Duration = StatsCollector.config.transportConfigs.stream()
@@ -57,6 +57,20 @@ class XmppClientConnectionConfig {
         .map(StatsTransportConfig::interval)
         .findFirst()
         .orElse(presenceIntervalProperty)
+
+    /**
+     * Whether to filter the statistics.
+     */
+    val statsFilterEnabled: Boolean by config {
+        "videobridge.apis.xmpp-client.stats-filter.enabled".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * The set of statistics to send, when filtering is enabled.
+     */
+    val statsWhitelist: List<String> by config {
+        "videobridge.apis.xmpp-client.stats-filter.whitelist".from(JitsiConfig.newConfig)
+    }
 
     companion object {
         /**

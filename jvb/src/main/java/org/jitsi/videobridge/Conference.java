@@ -411,7 +411,7 @@ public class Conference
      */
     private void lastNEndpointsChangedAsync()
     {
-        TaskPools.IO_POOL.submit(() ->
+        TaskPools.IO_POOL.execute(() ->
         {
             try
             {
@@ -446,7 +446,10 @@ public class Conference
             logger.info("Recent speakers changed: " + recentSpeakersIds);
             getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
         }
-        broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds));
+        if (!recentSpeakersIds.isEmpty())
+        {
+            broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds));
+        }
 
         if (dominantSpeakerChanged && getEndpointCount() > 2)
         {
@@ -455,7 +458,7 @@ public class Conference
     }
 
     /**
-     * Schedules sending a pre-emptive keyframe request (if necessay) when a neww dominant speaker is elected.
+     * Schedules sending a pre-emptive keyframe request (if necessary) when a new dominant speaker is elected.
      * @param dominantSpeaker the new dominant speaker.
      */
     private void maybeSendKeyframeRequest(AbstractEndpoint dominantSpeaker)
@@ -948,7 +951,7 @@ public class Conference
             {
                 try
                 {
-                    endpoint.sendMessage(new DominantSpeakerMessage(speechActivity.getRecentSpeakers()));
+                    endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
                 }
                 catch (IOException e)
                 {

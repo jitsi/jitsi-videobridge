@@ -292,7 +292,7 @@ class Endpoint @JvmOverloads constructor(
         conference.videobridge.statistics.totalEndpoints.incrementAndGet()
     }
 
-    private var mediaSources: Array<MediaSourceDesc>
+    override var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
         private set(value) {
             val wasEmpty = transceiver.getMediaSources().isEmpty()
@@ -340,8 +340,8 @@ class Endpoint @JvmOverloads constructor(
                         outgoingSrtpPacketQueue.add(packetInfo)
                     }
                 })
-                TaskPools.IO_POOL.submit(iceTransport::startReadingData)
-                TaskPools.IO_POOL.submit(dtlsTransport::startDtlsHandshake)
+                TaskPools.IO_POOL.execute(iceTransport::startReadingData)
+                TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake)
             }
 
             override fun failed() {
@@ -613,7 +613,7 @@ class Endpoint @JvmOverloads constructor(
     }
 
     fun acceptSctpConnection(sctpServerSocket: SctpServerSocket) {
-        TaskPools.IO_POOL.submit {
+        TaskPools.IO_POOL.execute {
             // We don't want to block the thread calling
             // onDtlsHandshakeComplete so run the socket acceptance in an IO
             // pool thread
@@ -681,7 +681,7 @@ class Endpoint @JvmOverloads constructor(
      */
     fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
         val msg = ForwardedEndpointsMessage(forwardedEndpoints)
-        TaskPools.IO_POOL.submit {
+        TaskPools.IO_POOL.execute {
             try {
                 sendMessage(msg)
             } catch (t: Throwable) {
@@ -985,7 +985,7 @@ class Endpoint @JvmOverloads constructor(
         val transceiverStats = transceiver.getTransceiverStats()
 
         conferenceStats.apply {
-            val incomingStats = transceiverStats.incomingPacketStreamStats
+            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
             val outgoingStats = transceiverStats.outgoingPacketStreamStats
             totalBytesReceived.addAndGet(incomingStats.bytes)
             totalPacketsReceived.addAndGet(incomingStats.packets)
@@ -998,6 +998,15 @@ class Endpoint @JvmOverloads constructor(
             bweStats.getNumber("incomingEstimateExpirations")?.toInt()?.let {
                 incomingBitrateExpirations.addAndGet(it)
             }
+            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
+            totalLayeringChangesReceived.addAndGet(
+                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
+            )
+
+            val durationActiveVideoMs = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
+                it.mediaType == MediaType.VIDEO
+            }.sumOf { it.durationActiveMs }
+            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideoMs)
         }
 
         run {
@@ -1178,7 +1187,7 @@ class Endpoint @JvmOverloads constructor(
 
             // Submit this to the pool since we wait on the lock and process any
             // cached packets here as well
-            TaskPools.IO_POOL.submit {
+            TaskPools.IO_POOL.execute {
                 // We grab the lock here so that we can set the SCTP manager and
                 // process any previously-cached packets as an atomic operation.
                 // It also prevents another thread from coming in via
@@ -1227,7 +1236,7 @@ class Endpoint @JvmOverloads constructor(
         fun setSctpManager(sctpManager: SctpManager) {
             // Submit this to the pool since we wait on the lock and process any
             // cached packets here as well
-            TaskPools.IO_POOL.submit {
+            TaskPools.IO_POOL.execute {
                 // We grab the lock here so that we can set the SCTP manager and
                 // process any previously-cached packets as an atomic operation.
                 // It also prevents another thread from coming in via

@@ -27,6 +27,7 @@ import org.jitsi.utils.nanos
 import org.jitsi.utils.secs
 import java.util.function.Supplier
 import kotlin.random.Random
+import kotlin.time.ExperimentalTime
 
 /**
  * Keep track of the performance of the bandwidth allocation code.
@@ -52,6 +53,7 @@ import kotlin.random.Random
  *
  *
  */
+@ExperimentalTime
 class BitrateControllerPerfTest : StringSpec() {
     private val logger = createLogger()
     private val clock = FakeClock()

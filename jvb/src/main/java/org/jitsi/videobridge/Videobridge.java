@@ -45,6 +45,7 @@ import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -106,9 +107,17 @@ public class Videobridge
     private final Map<String, Conference> conferencesByMeetingId = new HashMap<>();
 
     /**
-     * Indicates if this bridge instance has entered graceful shutdown mode.
+     * The clock to use, pluggable for testing purposes.
+     *
+     * Note that currently most code uses the system clock directly.
      */
-    private boolean shutdownInProgress;
+    @NotNull
+    private Clock clock = Clock.systemUTC();
+
+    /**
+     * The {@link clock} time at which graceful shutdown was requested, or null if it has never been requested.
+     */
+    private Instant shutdownRequestedTime = null;
 
     /**
      * A class that holds some instance statistics.
@@ -195,9 +204,6 @@ public class Videobridge
     /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
-     * @param name
-     * @param gid
-     * @return
      */
     private @NotNull Conference doCreateConference(EntityBareJid name, long gid, String meetingId)
     {
@@ -274,16 +280,21 @@ public class Videobridge
     /**
      * Enables graceful shutdown mode on this bridge instance and eventually
      * starts the shutdown immediately if no conferences are currently being
-     * hosted. Otherwise bridge will shutdown once all conferences expire.
+     * hosted. Otherwise, the bridge will shutdown once all conferences expire.
      */
     private void enableGracefulShutdownMode()
     {
-        if (!shutdownInProgress)
+        if (shutdownRequestedTime == null)
         {
             logger.info("Entered graceful shutdown mode");
+            this.shutdownRequestedTime = clock.instant();
         }
-        this.shutdownInProgress = true;
         maybeDoShutdown();
+    }
+
+    protected void setClock(Clock clock)
+    {
+        this.clock = clock;
     }
 
     /**
@@ -581,7 +592,7 @@ public class Videobridge
      */
     public boolean isShutdownInProgress()
     {
-        return shutdownInProgress;
+        return shutdownRequestedTime != null;
     }
 
     /**
@@ -590,7 +601,7 @@ public class Videobridge
      */
     private void maybeDoShutdown()
     {
-        if (!shutdownInProgress)
+        if (shutdownRequestedTime == null)
         {
             return;
         }
@@ -599,10 +610,28 @@ public class Videobridge
         {
             if (conferencesById.isEmpty())
             {
-                logger.info("Videobridge is shutting down NOW");
-                shutdownService.beginShutdown();
+                Duration timeSinceShutdownRequested = Duration.between(shutdownRequestedTime, clock.instant());
+                // Make sure that enough time passes for the "graceful shutdown" mode to be announced in presence.
+                // Otherwise, other components may detect this as a bridge going down non-gracefully.
+                Duration delay
+                        = VideobridgeConfig.Companion.getGracefulShutdownDelay().minus(timeSinceShutdownRequested);
+                if (delay.isNegative() || delay.isZero())
+                {
+                    doShutdown();
+                }
+                else
+                {
+                    logger.info("Videobridge will shut down in " + delay);
+                    TaskPools.SCHEDULED_POOL.schedule(this::doShutdown, delay.toMillis(), TimeUnit.MILLISECONDS);
+                }
             }
         }
+    }
+
+    private void doShutdown()
+    {
+        logger.info("Videobridge is shutting down NOW");
+        shutdownService.beginShutdown();
     }
 
     /**
@@ -620,7 +649,16 @@ public class Videobridge
         ProviderManager.addIQProvider(
                 ColibriConferenceIQ.ELEMENT,
                 ColibriConferenceIQ.NAMESPACE,
-                new ColibriIQProvider());
+                new ColibriConferenceIqProvider());
+        
+        // <force-shutdown>
+        ForcefulShutdownIqProvider.registerIQProvider();
+
+        // <graceful-shutdown>
+        GracefulShutdownIqProvider.registerIQProvider();
+
+        // <stats>
+        new ColibriStatsIqProvider(); // registers itself with Smack
 
         // ICE-UDP <transport>
         ProviderManager.addExtensionProvider(
@@ -628,18 +666,27 @@ public class Videobridge
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(IceUdpTransportPacketExtension.class));
 
-        DefaultPacketExtensionProvider<CandidatePacketExtension> candidatePacketExtensionProvider
-                = new DefaultPacketExtensionProvider<>(CandidatePacketExtension.class);
+        // RAW-UDP <candidate xmlns=urn:xmpp:jingle:transports:raw-udp:1>
+        DefaultPacketExtensionProvider<UdpCandidatePacketExtension> udpCandidatePacketExtensionProvider
+                = new DefaultPacketExtensionProvider<>(UdpCandidatePacketExtension.class);
+        ProviderManager.addExtensionProvider(
+                UdpCandidatePacketExtension.ELEMENT,
+                UdpCandidatePacketExtension.NAMESPACE,
+                udpCandidatePacketExtensionProvider);
 
-        // ICE-UDP <candidate>
+        // ICE-UDP <candidate xmlns=urn:xmpp:jingle:transports:ice-udp:1">
+        DefaultPacketExtensionProvider<IceCandidatePacketExtension> iceCandidatePacketExtensionProvider
+                = new DefaultPacketExtensionProvider<>(IceCandidatePacketExtension.class);
         ProviderManager.addExtensionProvider(
-                CandidatePacketExtension.ELEMENT,
-                IceUdpTransportPacketExtension.NAMESPACE,
-                candidatePacketExtensionProvider);
+                IceCandidatePacketExtension.ELEMENT,
+                IceCandidatePacketExtension.NAMESPACE,
+                iceCandidatePacketExtensionProvider);
+
+        // ICE <rtcp-mux/>
         ProviderManager.addExtensionProvider(
-                RtcpmuxPacketExtension.ELEMENT,
-                IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(RtcpmuxPacketExtension.class));
+                IceRtcpmuxPacketExtension.ELEMENT,
+                IceRtcpmuxPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider<>(IceRtcpmuxPacketExtension.class));
 
         // DTLS-SRTP <fingerprint>
         ProviderManager.addExtensionProvider(
@@ -648,10 +695,7 @@ public class Videobridge
                 new DefaultPacketExtensionProvider<>(DtlsFingerprintPacketExtension.class));
 
         // Health-check
-        ProviderManager.addIQProvider(
-                HealthCheckIQ.ELEMENT,
-                HealthCheckIQ.NAMESPACE,
-                new HealthCheckIQProvider());
+        HealthCheckIQProvider.registerIQProvider();
     }
 
     /**
@@ -685,7 +729,7 @@ public class Videobridge
     public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
-        debugState.put("shutdownInProgress", shutdownInProgress);
+        debugState.put("shutdownInProgress", (shutdownRequestedTime != null));
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("load-management", jvbLoadManager.getStats());
@@ -761,7 +805,6 @@ public class Videobridge
         return queueStats;
     }
 
-    @SuppressWarnings("unchecked")
     private OrderedJsonObject getJsonFromQueueStatisticsAndErrorHandler(
             CountingErrorHandler countingErrorHandler,
             String queueName)
@@ -797,7 +840,6 @@ public class Videobridge
 
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
     {
-        @NotNull
         @Override
         public void colibriConferenceIqReceived(@NotNull XmppConnection.ColibriRequest request)
         {
@@ -1011,6 +1053,22 @@ public class Videobridge
         /** Number of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
         public AtomicInteger preemptiveKeyframeRequestsSuppressed = new AtomicInteger();
 
+        /** The total number of keyframes that were received (updated on endpoint expiration). */
+        public AtomicInteger totalKeyframesReceived = new AtomicInteger();
+
+        /**
+         * The total number of times the layering of an incoming video stream changed (updated on endpoint expiration).
+         */
+        public AtomicInteger totalLayeringChangesReceived = new AtomicInteger();
+
+        /**
+         * The total duration, in milliseconds, of video streams (SSRCs) that were received. For example, if an
+         * endpoint sends simulcast with 3 SSRCs for 1 minute it would contribute a total of 3 minutes. Suspended
+         * streams do not contribute to this duration.
+         *
+         * This is updated on endpoint expiration.
+         */
+        public AtomicLong totalVideoStreamMillisecondsReceived = new AtomicLong();
     }
 
     public interface EventHandler {

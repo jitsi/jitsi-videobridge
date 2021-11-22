@@ -23,7 +23,6 @@
         <version>2.1-SNAPSHOT</version>
     </parent>
 
-    <groupId>org.jitsi</groupId>
     <artifactId>jvb-api-parent</artifactId>
     <packaging>pom</packaging>
 
@@ -48,7 +47,7 @@
                 <plugin>
                     <groupId>com.github.gantsign.maven</groupId>
                     <artifactId>ktlint-maven-plugin</artifactId>
-                    <version>1.7.0</version>
+                    <version>${ktlint-maven-plugin.version}</version>
                     <executions>
                         <execution>
                             <id>format-and-check</id>
