@@ -19,7 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import org.json.simple.JSONObject
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class VideoConstraints(
+data class VideoConstraints @JvmOverloads constructor(
     val maxHeight: Int,
     val maxFrameRate: Double = -1.0
 ) {

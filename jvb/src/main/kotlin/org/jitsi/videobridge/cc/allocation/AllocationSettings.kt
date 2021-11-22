@@ -16,20 +16,20 @@
 package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.util.stream.Collectors
 import kotlin.math.min
-import org.jitsi.videobridge.cc.config.BitrateControllerConfig as config
 
 /**
  * This class encapsulates all of the client-controlled settings for bandwidth allocation.
  */
-data class AllocationSettings(
+data class AllocationSettings @JvmOverloads constructor(
     val onStageEndpoints: List<String> = emptyList(),
     val selectedEndpoints: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1,
-    val defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
+    val defaultConstraints: VideoConstraints
 ) {
 
     fun toJson() = OrderedJsonObject().apply {
@@ -63,6 +63,8 @@ internal class AllocationSettingsWrapper {
     internal var lastN: Int = -1
 
     private var videoConstraints: Map<String, VideoConstraints> = emptyMap()
+
+    private val config = BitrateControllerConfig()
 
     private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 
