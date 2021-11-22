@@ -169,9 +169,6 @@
                 </executions>
                 <configuration>
                     <jvmTarget>1.8</jvmTarget>
-                    <args>
-                        <arg>-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi,io.ktor.util.KtorExperimentalAPI</arg>
-                    </args>
                 </configuration>
             </plugin>
             <plugin>

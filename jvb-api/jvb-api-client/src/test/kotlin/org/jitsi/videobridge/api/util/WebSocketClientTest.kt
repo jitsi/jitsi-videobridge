@@ -31,12 +31,12 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
 import org.jitsi.utils.logging2.LoggerImpl
 import kotlin.random.Random
+import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
 
 @ExperimentalTime
 class WebSocketClientTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
 
     private val wsPort = Random.nextInt(49152, 65535).also {
         println("Server running on port $it")
@@ -76,7 +76,7 @@ class WebSocketClientTest : ShouldSpec() {
                 ws.run()
                 ws.sendString("hello")
                 should("send a message") {
-                    eventually(5.seconds) {
+                    eventually(Duration.seconds(5)) {
                         wsServer.receivedMessages shouldHaveSize 1
                     }
                     wsServer.receivedMessages.first().shouldBeInstanceOf<Frame.Text>()
@@ -88,7 +88,7 @@ class WebSocketClientTest : ShouldSpec() {
                 ws.run()
                 ws.sendString("hello")
                 should("invoke the incoming message handler") {
-                    eventually(5.seconds) {
+                    eventually(Duration.seconds(5)) {
                         receivedMessages shouldHaveSize 1
                     }
                     receivedMessages.first().shouldBeInstanceOf<Frame.Text>()

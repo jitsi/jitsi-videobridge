@@ -22,7 +22,8 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
-import org.jitsi.xmpp.extensions.colibri.ShutdownIQ
+import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
+import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
 import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jitsi.xmpp.mucclient.IQListener
 import org.jitsi.xmpp.mucclient.MucClient
@@ -61,8 +62,8 @@ class XmppConnection : IQListener {
                 // Colibri IQs are handled async.
                 registerIQ(ColibriConferenceIQ(), false)
                 registerIQ(Version())
-                registerIQ(ShutdownIQ.createForceShutdownIQ())
-                registerIQ(ShutdownIQ.createGracefulShutdownIQ())
+                registerIQ(ForcefulShutdownIQ())
+                registerIQ(GracefulShutdownIQ())
                 setIQListener(this@XmppConnection)
             }
 

@@ -315,8 +315,7 @@ public abstract class Statistics
     {
         if (value instanceof AtomicLong || value instanceof AtomicInteger)
         {
-            logger.warn(
-                "Using an Atomic number as a stat, probably not what we want.");
+            logger.warn(() -> "Using an Atomic number as a stat for " + stat + ", probably not what we want");
         }
         if (value == null)
             stats.remove(stat);
