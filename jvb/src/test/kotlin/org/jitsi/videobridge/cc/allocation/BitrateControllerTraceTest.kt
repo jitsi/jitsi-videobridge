@@ -37,7 +37,7 @@ import java.time.Instant
  * number and/or quality of the videos being shown. Specifically, we want to limit the "flickering" which happens as
  * a result of fluctuations in the bitrates of the layers and the changes in BWE.
  */
-class BitrateControllerTest2 : ShouldSpec() {
+class BitrateControllerTraceTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
 
     private val clock = FakeClock()
