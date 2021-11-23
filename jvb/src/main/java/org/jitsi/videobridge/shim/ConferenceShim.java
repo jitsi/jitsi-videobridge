@@ -556,16 +556,16 @@ public class ConferenceShim
 
             conference.describeShallow(responseBuilder);
 
-            /* TODO: rename colibri2.endpoint so as not to conflict here? */
+            /* TODO: rename colibri2.Endpoint and colibri2.Relay so as not to conflict here? */
             /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
             for (org.jitsi.xmpp.extensions.colibri2.Endpoint e : conferenceModifyIQ.getEndpoints())
             {
                 responseBuilder.addEndpoint(handleColibri2Endpoint(e));
             }
 
-            for (Relay r : conferenceModifyIQ.getRelays())
+            for (org.jitsi.xmpp.extensions.colibri2.Relay r : conferenceModifyIQ.getRelays())
             {
-                /* TODO */
+                responseBuilder.addRelay(handleColibri2Relay(r));
             }
 
             /* Report any feedback sources we haven't previously. */
@@ -708,5 +708,16 @@ public class ConferenceShim
         }
 
         return respBuilder.build();
+    }
+
+    /**
+     * Process a colibri2 Relay in a conference-modify, return the response to be put in
+     * the conference-modified.
+     */
+    private org.jitsi.xmpp.extensions.colibri2.Relay
+    handleColibri2Relay(org.jitsi.xmpp.extensions.colibri2.Relay eDesc)
+        throws IqProcessingException
+    {
+        throw new IqProcessingException(StanzaError.Condition.feature_not_implemented, "Relay not yet implemented");
     }
 }
