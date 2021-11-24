@@ -82,6 +82,11 @@ public class Conference
     private final Object endpointsCacheLock = new Object();
 
     /**
+     * The relays participating in this conference.
+     */
+    private final ConcurrentHashMap<String, Relay> relaysById = new ConcurrentHashMap<>();
+
+    /**
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Conference</tt>.
      */
@@ -648,6 +653,12 @@ public class Conference
         return endpointsById.get(Objects.requireNonNull(id, "id must be non null"));
     }
 
+    @Nullable
+    public Relay getRelay(@NotNull String id)
+    {
+        return relaysById.get(id);
+    }
+
     /**
      * Initializes a new <tt>Endpoint</tt> instance with the specified
      * <tt>id</tt> and adds it to the list of <tt>Endpoint</tt>s participating
@@ -685,6 +696,22 @@ public class Conference
         addEndpoints(Collections.singleton(endpoint));
 
         return endpoint;
+    }
+
+    @NotNull
+    public Relay createRelay(String id, boolean iceControlling)
+    {
+        final Relay existingRelay = getRelay(id);
+        if (existingRelay != null)
+        {
+            throw new IllegalArgumentException("Relay with ID = " + id + "already created");
+        }
+
+        final Relay relay = new Relay(id, this, logger, iceControlling);
+
+        relaysById.put(id, relay);
+
+        return relay;
     }
 
     private void subscribeToEndpointEvents(AbstractEndpoint endpoint)
@@ -879,7 +906,7 @@ public class Conference
     }
 
     /**
-     * Notifies this conference that one of it's endpoints has expired.
+     * Notifies this conference that one of its endpoints has expired.
      *
      * @param endpoint the <tt>Endpoint</tt> which expired.
      */
@@ -904,6 +931,21 @@ public class Conference
         {
             endpointsChanged();
         }
+    }
+
+    /**
+     * Notifies this conference that one of its relays has expired.
+     *
+     * @param relay the <tt>Relay</tt> which expired.
+     */
+    void relayExpired(Relay relay)
+    {
+        final AbstractEndpoint removedEndpoint;
+        String id = relay.getId();
+        relaysById.remove(id);
+
+        /* TODO: remove info about the octo endpoints behind this relay from other endpoints. */
+        // endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
     }
 
     /**

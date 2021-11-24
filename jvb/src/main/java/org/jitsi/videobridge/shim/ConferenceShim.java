@@ -373,6 +373,24 @@ public class ConferenceShim
     }
 
     /**
+     * Checks if relay with specified ID is initialized, if relay does not
+     * exist in a conference, it will be created and initialized.
+     * @param relayId identifier of endpoint to check and initialize
+     * @param iceControlling ICE control role of transport of newly created
+     * endpoint
+     */
+    private @NotNull org.jitsi.videobridge.Relay ensureRelayCreated(String relayId, boolean iceControlling)
+    {
+        org.jitsi.videobridge.Relay r = conference.getRelay(relayId);
+        if (r != null)
+        {
+            return r;
+        }
+
+        return conference.createRelay(relayId, iceControlling);
+    }
+
+    /**
      * Updates an <tt>Endpoint</tt> of this <tt>Conference</tt> with the
      * information contained in <tt>colibriEndpoint</tt>. The ID of
      * <tt>colibriEndpoint</tt> is used to select the <tt>Endpoint</tt> to
@@ -626,6 +644,17 @@ public class ConferenceShim
 
         respBuilder.setId(eDesc.getId());
 
+        if (eDesc.getExpire())
+        {
+            Endpoint ep = conference.getLocalEndpoint(id);
+            if (ep != null)
+            {
+                ep.expire();
+            }
+            respBuilder.setExpire(true);
+            return respBuilder.build();
+        }
+
         boolean iceControlling;
         if (t != null)
         {
@@ -638,13 +667,6 @@ public class ConferenceShim
 
         /* TODO: does iceControlling really need to be set here? */
         Endpoint ep = ensureEndpointCreated(id, iceControlling);
-
-        if (eDesc.getExpire())
-        {
-            ep.expire();
-            respBuilder.setExpire(true);
-            return respBuilder.build();
-        }
 
         for (Media m: eDesc.getMedia())
         {
@@ -715,9 +737,55 @@ public class ConferenceShim
      * the conference-modified.
      */
     private org.jitsi.xmpp.extensions.colibri2.Relay
-    handleColibri2Relay(org.jitsi.xmpp.extensions.colibri2.Relay eDesc)
+    handleColibri2Relay(org.jitsi.xmpp.extensions.colibri2.Relay rDesc)
         throws IqProcessingException
     {
-        throw new IqProcessingException(StanzaError.Condition.feature_not_implemented, "Relay not yet implemented");
+        String id = rDesc.getId();
+        Transport t = rDesc.getTransport();
+        org.jitsi.xmpp.extensions.colibri2.Relay.Builder respBuilder =
+            org.jitsi.xmpp.extensions.colibri2.Relay.getBuilder();
+
+        respBuilder.setId(rDesc.getId());
+
+        if (rDesc.getExpire())
+        {
+            org.jitsi.videobridge.Relay r = conference.getRelay(id);
+            if (r != null)
+            {
+                r.expire();
+            }
+            respBuilder.setExpire(true);
+            return respBuilder.build();
+        }
+
+        boolean iceControlling;
+        if (t != null)
+        {
+            iceControlling = Boolean.TRUE.equals(t.getInitiator());
+        }
+        else
+        {
+            iceControlling = false;
+        }
+
+        /* TODO: does iceControlling really need to be set here? */
+        org.jitsi.videobridge.Relay r = ensureRelayCreated(id, iceControlling);
+
+        if (t != null)
+        {
+            IceUdpTransportPacketExtension udpTransportPacketExtension = t.getIceUdpTransport();
+            if (udpTransportPacketExtension != null)
+            {
+                r.setTransportInfo(udpTransportPacketExtension);
+            }
+
+            Transport.Builder transBuilder = Transport.getBuilder();
+            transBuilder.setIceUdpExtension(r.describeTransport());
+            respBuilder.setTransport(transBuilder.build());
+        }
+
+        /* TODO: handle the rest of the relay's fields. */
+
+        return respBuilder.build();
     }
 }

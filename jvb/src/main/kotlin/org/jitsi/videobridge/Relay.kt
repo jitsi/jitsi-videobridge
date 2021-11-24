@@ -41,15 +41,15 @@ import java.time.Instant
  * Models a relay (remote videobridge) in a [Conference].
  */
 /* TODO: figure out how best to share code between this and [Endpoint], without multiple inheritance. */
-class Relay(
+class Relay @JvmOverloads constructor(
     /**
      * The unique identifier of this [Relay]
      */
-    private val id: String,
+    val id: String,
     /**
      * The [Conference] this [Relay] belongs to.
      */
-    private val conference: Conference,
+    val conference: Conference,
     parentLogger: Logger,
     /**
      * True if the ICE agent for this [Relay] will be initialized to serve
@@ -207,5 +207,40 @@ class Relay(
         type: SsrcAssociationType?
     ) {
         TODO("Not yet implemented")
+    }
+
+    fun expire() {
+        logger.info("Expiring.")
+        conference.relayExpired(this)
+
+        try {
+            /* TODO
+            updateStatsOnExpire()
+            transceiver.stop()
+            logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
+            logger.cdebug { bitrateController.debugState.toJSONString() }
+            */
+            logger.cdebug { iceTransport.getDebugState().toJSONString() }
+            logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
+
+            /* TODO logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
+
+            transceiver.teardown()
+            _messageTransport.close()
+            sctpHandler.stop()
+            sctpManager?.closeConnection() */
+        } catch (t: Throwable) {
+            logger.error("Exception while expiring: ", t)
+        }
+
+        // bandwidthProbing.enabled = false
+        // recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing)
+        conference.encodingsManager.unsubscribe(this)
+
+        dtlsTransport.stop()
+        iceTransport.stop()
+        // outgoingSrtpPacketQueue.close()
+
+        logger.info("Expired.")
     }
 }
