@@ -377,9 +377,11 @@ public class ConferenceShim
      * exist in a conference, it will be created and initialized.
      * @param relayId identifier of endpoint to check and initialize
      * @param iceControlling ICE control role of transport of newly created
-     * endpoint
+     * relay
+     * @param useUniquePort Whether the created relay should use a unique port
      */
-    private @NotNull org.jitsi.videobridge.Relay ensureRelayCreated(String relayId, boolean iceControlling)
+    private @NotNull org.jitsi.videobridge.Relay ensureRelayCreated(String relayId,
+        boolean iceControlling, boolean useUniquePort)
     {
         org.jitsi.videobridge.Relay r = conference.getRelay(relayId);
         if (r != null)
@@ -387,7 +389,7 @@ public class ConferenceShim
             return r;
         }
 
-        return conference.createRelay(relayId, iceControlling);
+        return conference.createRelay(relayId, iceControlling, useUniquePort);
     }
 
     /**
@@ -745,7 +747,13 @@ public class ConferenceShim
         org.jitsi.xmpp.extensions.colibri2.Relay.Builder respBuilder =
             org.jitsi.xmpp.extensions.colibri2.Relay.getBuilder();
 
-        respBuilder.setId(rDesc.getId());
+        if (id == null)
+        {
+            /* TODO: enforce this in xmpp-extensions? */
+            throw new IqProcessingException(StanzaError.Condition.bad_request, "Missing Relay ID");
+        }
+
+        respBuilder.setId(id);
 
         if (rDesc.getExpire())
         {
@@ -759,17 +767,20 @@ public class ConferenceShim
         }
 
         boolean iceControlling;
+        boolean useUniquePort;
         if (t != null)
         {
             iceControlling = Boolean.TRUE.equals(t.getInitiator());
+            useUniquePort = Boolean.TRUE.equals(t.getUseUniquePort());
         }
         else
         {
             iceControlling = false;
+            useUniquePort = false;
         }
 
         /* TODO: does iceControlling really need to be set here? */
-        org.jitsi.videobridge.Relay r = ensureRelayCreated(id, iceControlling);
+        org.jitsi.videobridge.Relay r = ensureRelayCreated(id, iceControlling, useUniquePort);
 
         if (t != null)
         {

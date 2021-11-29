@@ -116,7 +116,8 @@ class Endpoint @JvmOverloads constructor(
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
 
-    private val iceTransport = IceTransport(id, iceControlling, logger)
+    /* TODO: do we ever want to support useUniquePort for an Endpoint? */
+    private val iceTransport = IceTransport(id, iceControlling, false, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {

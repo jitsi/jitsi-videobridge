@@ -56,6 +56,7 @@ class Relay @JvmOverloads constructor(
      * as a controlling ICE agent, false otherwise
      */
     iceControlling: Boolean,
+    useUniquePort: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : EncodingsManager.EncodingsUpdateListener {
 
@@ -73,7 +74,7 @@ class Relay @JvmOverloads constructor(
         logger = parentLogger.createChildLogger(this.javaClass.name, context)
     }
 
-    private val iceTransport = IceTransport(id, iceControlling, logger)
+    private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
     init {

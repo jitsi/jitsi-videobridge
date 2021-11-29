@@ -18,7 +18,6 @@ package org.jitsi.videobridge.ice;
 
 import org.ice4j.ice.harvest.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.transport.ice.*;
 
 import java.io.*;
 import java.util.*;
@@ -63,6 +62,11 @@ public class Harvesters
      */
     public static List<SinglePortUdpHarvester> singlePortHarvesters = null;
 
+    /**
+     * The <tt>SinglePortUdpHarvesters</tt> which will be added to ICE
+     * <tt>Agent</tt>s which are configured to use unique ports.
+     */
+    public static List<SinglePortUdpHarvester> uniquePortHarvesters = null;
 
     /**
      * Initializes the static <tt>Harvester</tt> instances used by all
@@ -88,7 +92,15 @@ public class Harvesters
                 classLogger.info("No single-port harvesters created.");
             }
 
-            healthy = singlePortHarvesters != null;
+            uniquePortHarvesters
+                = SinglePortUdpHarvester.createHarvesters(0);
+            if (uniquePortHarvesters.isEmpty())
+            {
+                uniquePortHarvesters = null;
+                classLogger.info("No unique-port harvesters created.");
+            }
+
+            healthy = singlePortHarvesters != null && uniquePortHarvesters != null;
 
             if (IceConfig.config.getTcpEnabled())
             {

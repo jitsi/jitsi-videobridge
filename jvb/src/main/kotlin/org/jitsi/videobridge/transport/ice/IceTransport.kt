@@ -51,10 +51,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 class IceTransport @JvmOverloads constructor(
     id: String,
     /**
-     * Whether or not the ICE agent created by this transport should be the
+     * Whether the ICE agent created by this transport should be the
      * 'controlling' role.
      */
     controlling: Boolean,
+    /**
+     * Whether the ICE agent created by this transport should use
+     * unique local ports, rather than the configured port.
+     */
+    useUniquePort: Boolean,
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
@@ -105,7 +110,11 @@ class IceTransport @JvmOverloads constructor(
     private val iceStreamPairChangedListener = PropertyChangeListener { ev -> iceStreamPairChanged(ev) }
 
     private val iceAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
-        appendHarvesters(this)
+        if (useUniquePort) {
+            appendUniquePortHarvesters(this)
+        } else {
+            appendHarvesters(this)
+        }
         isControlling = controlling
         performConsentFreshness = true
         nominationStrategy = IceConfig.config.nominationStrategy
@@ -377,6 +386,15 @@ class IceTransport @JvmOverloads constructor(
                 iceAgent.addCandidateHarvester(it)
             }
             Harvesters.singlePortHarvesters?.forEach(iceAgent::addCandidateHarvester)
+        }
+
+        fun appendUniquePortHarvesters(iceAgent: Agent) {
+            Harvesters.initializeStaticConfiguration()
+            Harvesters.tcpHarvester?.let {
+                /* I *think* this still works for the unique-port case? */
+                iceAgent.addCandidateHarvester(it)
+            }
+            Harvesters.uniquePortHarvesters?.forEach(iceAgent::addCandidateHarvester)
         }
     }
 
