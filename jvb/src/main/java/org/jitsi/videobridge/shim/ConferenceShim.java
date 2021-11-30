@@ -658,6 +658,9 @@ public class ConferenceShim
         }
 
         boolean iceControlling;
+        /* TODO: if a message seems to be creating an endpoint but it doesn't have a <transport> section,
+         *  something has almost certainly gone wrong; return an error in this case.
+         */
         if (t != null)
         {
             iceControlling = Boolean.TRUE.equals(t.getInitiator());
@@ -667,7 +670,6 @@ public class ConferenceShim
             iceControlling = false;
         }
 
-        /* TODO: does iceControlling really need to be set here? */
         Endpoint ep = ensureEndpointCreated(id, iceControlling);
 
         for (Media m: eDesc.getMedia())
@@ -768,6 +770,9 @@ public class ConferenceShim
 
         boolean iceControlling;
         boolean useUniquePort;
+        /* TODO: if a message seems to be creating a relay but it doesn't have a <transport> section,
+         *  something has almost certainly gone wrong; return an error in this case.
+         */
         if (t != null)
         {
             iceControlling = Boolean.TRUE.equals(t.getInitiator());
