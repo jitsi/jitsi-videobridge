@@ -28,6 +28,7 @@ class ColibriWebSocketService(
     private val config = WebsocketServiceConfig()
 
     private val baseUrl: String?
+    private val relayUrl: String? /* TODO: only enable this if secure octo is enabled? */
 
     init {
         // We default to matching the protocol used by the local jetty
@@ -37,10 +38,12 @@ class ColibriWebSocketService(
             val useTls = config.useTls ?: webserverIsTls
             val protocol = if (useTls) "wss" else "ws"
             baseUrl = "$protocol://${config.domain}/$COLIBRI_WS_ENDPOINT/${config.serverId}"
-            logger.info("Base URL: $baseUrl")
+            relayUrl = "$protocol://${config.domain}/$COLIBRI_RELAY_WS_ENDPOINT/${config.serverId}"
+            logger.info("Base URL: $baseUrl Relay URL: $relayUrl")
         } else {
             logger.info("WebSockets are not enabled")
             baseUrl = null
+            relayUrl = null
         }
     }
 
@@ -57,6 +60,19 @@ class ColibriWebSocketService(
         return "$baseUrl/$conferenceId/$endpointId?pwd=$pwd"
     }
 
+    /**
+     * Return a String representing the URL for a relay with ID [relayId] in a conference with
+     * ID [conferenceId] to use to connect to the websocket with password [pwd] or null if the
+     * [ColibriWebSocketService] is not enabled.
+     */
+    fun getColibriRelayWebSocketUrl(conferenceId: String, relayId: String, pwd: String): String? {
+        if (!config.enabled) {
+            return null
+        }
+        // "wss://example.com/colibri-ws/server-id/conf-id/endpoint-id?pwd=123
+        return "$relayUrl/$conferenceId/$relayId?pwd=$pwd"
+    }
+
     fun registerServlet(
         servletContextHandler: ServletContextHandler,
         videobridge: Videobridge
@@ -67,6 +83,8 @@ class ColibriWebSocketService(
                 servlet = ColibriWebSocketServlet(config.serverId, videobridge)
             }
             servletContextHandler.addServlet(holder, "/$COLIBRI_WS_ENDPOINT/*")
+            logger.info("Registering servlet at /$COLIBRI_RELAY_WS_ENDPOINT/*, relayUrl = $relayUrl")
+            servletContextHandler.addServlet(holder, "/$COLIBRI_RELAY_WS_ENDPOINT/*")
         } else {
             logger.info("Disabled, not registering servlet")
         }
@@ -80,10 +98,20 @@ class ColibriWebSocketService(
         private const val COLIBRI_WS_ENDPOINT = "colibri-ws"
 
         /**
+         * The root path of the HTTP endpoint for COLIBRI Relay-to-Relay (Octo) WebSockets.
+         */
+        private const val COLIBRI_RELAY_WS_ENDPOINT = "colibri-relay-ws"
+
+        /**
          * Code elsewhere needs the value with the leading and trailing slashes, but when
          * building URLs above, it's more readable to have the slashes be part of the String
          * being built, so the separation is obvious.
          */
         const val COLIBRI_WS_PATH = "/$COLIBRI_WS_ENDPOINT/"
+
+        /**
+         * Similarly for relay
+         */
+        const val COLIBRI_RELAY_WS_PATH = "/$COLIBRI_RELAY_WS_ENDPOINT/"
     }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge
+package org.jitsi.videobridge.relay
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.SsrcAssociationType
@@ -25,6 +25,9 @@ import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.videobridge.AbstractEndpoint
+import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -36,6 +39,7 @@ import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import java.time.Clock
 import java.time.Instant
+import java.util.function.Supplier
 
 /**
  * Models a relay (remote videobridge) in a [Conference].
@@ -77,6 +81,18 @@ class Relay @JvmOverloads constructor(
     private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
+    /**
+     * The instance which manages the Colibri messaging (over a data channel
+     * or web sockets).
+     */
+    private val _messageTransport = RelayMessageTransport(
+        this,
+        Supplier { conference.videobridge.statistics },
+        conference,
+        logger
+    )
+
+    fun getMessageTransport(): RelayMessageTransport = _messageTransport
     init {
         conference.encodingsManager.subscribe(this)
         setupIceTransport()
@@ -208,6 +224,23 @@ class Relay @JvmOverloads constructor(
         type: SsrcAssociationType?
     ) {
         TODO("Not yet implemented")
+    }
+
+    /**
+     * Checks whether a WebSocket connection with a specific password string
+     * should be accepted for this relay.
+     * @param password the
+     * @return {@code true} iff the password matches.
+     */
+    fun acceptWebSocket(password: String): Boolean {
+        if (iceTransport.icePassword != password) {
+            logger.warn(
+                "Incoming web socket request with an invalid password. " +
+                    "Expected: ${iceTransport.icePassword} received $password"
+            )
+            return false
+        }
+        return true
     }
 
     fun expire() {

@@ -380,10 +380,10 @@ public class ConferenceShim
      * relay
      * @param useUniquePort Whether the created relay should use a unique port
      */
-    private @NotNull org.jitsi.videobridge.Relay ensureRelayCreated(String relayId,
+    private @NotNull org.jitsi.videobridge.relay.Relay ensureRelayCreated(String relayId,
         boolean iceControlling, boolean useUniquePort)
     {
-        org.jitsi.videobridge.Relay r = conference.getRelay(relayId);
+        org.jitsi.videobridge.relay.Relay r = conference.getRelay(relayId);
         if (r != null)
         {
             return r;
@@ -759,7 +759,7 @@ public class ConferenceShim
 
         if (rDesc.getExpire())
         {
-            org.jitsi.videobridge.Relay r = conference.getRelay(id);
+            org.jitsi.videobridge.relay.Relay r = conference.getRelay(id);
             if (r != null)
             {
                 r.expire();
@@ -785,7 +785,7 @@ public class ConferenceShim
         }
 
         /* TODO: does iceControlling really need to be set here? */
-        org.jitsi.videobridge.Relay r = ensureRelayCreated(id, iceControlling, useUniquePort);
+        org.jitsi.videobridge.relay.Relay r = ensureRelayCreated(id, iceControlling, useUniquePort);
 
         if (t != null)
         {

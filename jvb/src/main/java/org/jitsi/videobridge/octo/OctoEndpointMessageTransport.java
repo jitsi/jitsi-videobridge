@@ -29,7 +29,7 @@ import java.util.stream.*;
  * specific {@link OctoEndpoint}.
  */
 class OctoEndpointMessageTransport
-    extends AbstractEndpointMessageTransport<OctoEndpoint>
+    extends AbstractEndpointMessageTransport
 {
     /**
      * The associated {@link OctoEndpoints}.

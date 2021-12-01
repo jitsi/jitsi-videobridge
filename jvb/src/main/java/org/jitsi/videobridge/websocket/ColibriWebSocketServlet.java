@@ -20,6 +20,8 @@ import org.eclipse.jetty.websocket.servlet.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.Endpoint;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.websocket.config.*;
 
 import java.io.*;
@@ -87,7 +89,7 @@ class ColibriWebSocketServlet
     /**
      * Handles a request for a web-socket. Validates the request URI and either
      * accepts the request and creates a {@link ColibriWebSocket} instance, or
-     * rejects rejects the request and sends an error.
+     * rejects the request and sends an error.
      */
     private ColibriWebSocket createWebSocket(
             ServletUpgradeRequest request,
@@ -96,11 +98,27 @@ class ColibriWebSocketServlet
     {
         // A valid request URI looks like this:
         // /colibri-ws/server-id/conf-id/endpoint-id?pwd=password
+        // or /colibri-ws/relay/server-id/conf-id/relay-id?pwd=password
         // The "path" does not include "?pwd=password", which is in the "query"
         String path = request.getRequestURI().getPath();
         logger.debug(() -> "Got a create websocket request at path " + path);
-        if (path == null
-            || !path.startsWith(ColibriWebSocketService.COLIBRI_WS_PATH))
+        boolean isRelay;
+
+        if (path == null)
+        {
+            logger.debug(() -> "Received request for an invalid path: " + path);
+            response.sendError(404, "invalid path");
+            return null;
+        }
+        else if (path.startsWith(ColibriWebSocketService.COLIBRI_WS_PATH))
+        {
+            isRelay = false;
+        }
+        else if (path.startsWith(ColibriWebSocketService.COLIBRI_RELAY_WS_PATH))
+        {
+            isRelay = true;
+        }
+        else
         {
             logger.debug(() -> "Received request for an invalid path: " + path);
             response.sendError(404, "invalid path");
@@ -108,7 +126,9 @@ class ColibriWebSocketServlet
         }
 
         String wsPath
-            = path.substring(ColibriWebSocketService.COLIBRI_WS_PATH.length());
+            = path.substring((isRelay ?
+            ColibriWebSocketService.COLIBRI_RELAY_WS_PATH :
+            ColibriWebSocketService.COLIBRI_WS_PATH).length());
         String[] ids = wsPath.split("/");
         if (ids.length < 3)
         {
@@ -138,21 +158,48 @@ class ColibriWebSocketServlet
             return null;
         }
 
-        AbstractEndpoint abstractEndpoint = conference.getEndpoint(ids[2]);
-        if (!(abstractEndpoint instanceof Endpoint))
-        {
-            logger.warn("Received request for a nonexistent endpoint: "
-                            + ids[2] + "(conference " + conference.getID() + ")");
-            response.sendError(403, authFailed);
-            return null;
-        }
+        ColibriWebSocket.EventHandler eventHandler;
 
-        Endpoint endpoint = (Endpoint) abstractEndpoint;
-        String pwd = getPwd(request.getRequestURI().getQuery());
-        if (!endpoint.acceptWebSocket(pwd))
+        if (isRelay)
         {
-            response.sendError(403, authFailed);
-            return null;
+            Relay relay = conference.getRelay(ids[2]);
+            if (relay == null)
+            {
+                logger.warn("Received request for a nonexistent relay: "
+                    + ids[2] + " (conference " + conference.getID() + ")");
+                response.sendError(403, authFailed);
+                return null;
+            }
+
+            String pwd = getPwd(request.getRequestURI().getQuery());
+            if (!relay.acceptWebSocket(pwd))
+            {
+                response.sendError(403, authFailed);
+                return null;
+            }
+
+            eventHandler = relay.getMessageTransport();
+        }
+        else
+        {
+            AbstractEndpoint abstractEndpoint = conference.getEndpoint(ids[2]);
+            if (!(abstractEndpoint instanceof Endpoint))
+            {
+                logger.warn("Received request for a nonexistent endpoint: "
+                    + ids[2] + " (conference " + conference.getID() + ")");
+                response.sendError(403, authFailed);
+                return null;
+            }
+
+            Endpoint endpoint = (Endpoint) abstractEndpoint;
+            String pwd = getPwd(request.getRequestURI().getQuery());
+            if (!endpoint.acceptWebSocket(pwd))
+            {
+                response.sendError(403, authFailed);
+                return null;
+            }
+
+            eventHandler = endpoint.getMessageTransport();
         }
 
         if (!config.shouldEnableCompression())
@@ -163,7 +210,7 @@ class ColibriWebSocketServlet
             response.setExtensions(extensions);
         }
 
-        return new ColibriWebSocket(ids[2], this, endpoint.getMessageTransport());
+        return new ColibriWebSocket(ids[2], eventHandler);
     }
 
     /**

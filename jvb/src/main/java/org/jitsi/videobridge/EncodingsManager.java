@@ -109,7 +109,7 @@ public class EncodingsManager
     /**
      * An interface for listening to new associations.
      */
-    interface EncodingsUpdateListener
+    public interface EncodingsUpdateListener
     {
         /**
          * Notify this listener of a new association.

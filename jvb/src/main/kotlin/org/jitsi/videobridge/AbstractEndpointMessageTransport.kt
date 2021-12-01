@@ -25,7 +25,7 @@ import org.json.simple.JSONObject
 import java.io.IOException
 import java.time.Clock
 
-abstract class AbstractEndpointMessageTransport<T : AbstractEndpoint>(parentLogger: Logger) : MessageHandler() {
+abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageHandler() {
 
     protected val logger: Logger = parentLogger.createChildLogger(javaClass.name)
 

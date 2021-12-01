@@ -179,7 +179,7 @@ public abstract class AbstractEndpoint
      * @return the {@link AbstractEndpointMessageTransport} associated with
      * this endpoint.
      */
-    public AbstractEndpointMessageTransport<?> getMessageTransport()
+    public AbstractEndpointMessageTransport getMessageTransport()
     {
         return null;
     }
@@ -466,7 +466,7 @@ public abstract class AbstractEndpoint
         }
     }
 
-    interface EventHandler {
+    public interface EventHandler {
         void iceSucceeded();
         void iceFailed();
         void sourcesChanged();

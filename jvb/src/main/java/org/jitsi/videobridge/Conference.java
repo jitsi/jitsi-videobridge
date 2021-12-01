@@ -84,7 +84,7 @@ public class Conference
     /**
      * The relays participating in this conference.
      */
-    private final ConcurrentHashMap<String, Relay> relaysById = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, org.jitsi.videobridge.relay.Relay> relaysById = new ConcurrentHashMap<>();
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -654,7 +654,7 @@ public class Conference
     }
 
     @Nullable
-    public Relay getRelay(@NotNull String id)
+    public org.jitsi.videobridge.relay.Relay getRelay(@NotNull String id)
     {
         return relaysById.get(id);
     }
@@ -699,15 +699,16 @@ public class Conference
     }
 
     @NotNull
-    public Relay createRelay(String id, boolean iceControlling, boolean useUniquePort)
+    public org.jitsi.videobridge.relay.Relay createRelay(String id, boolean iceControlling, boolean useUniquePort)
     {
-        final Relay existingRelay = getRelay(id);
+        final org.jitsi.videobridge.relay.Relay existingRelay = getRelay(id);
         if (existingRelay != null)
         {
             throw new IllegalArgumentException("Relay with ID = " + id + "already created");
         }
 
-        final Relay relay = new Relay(id, this, logger, iceControlling, useUniquePort);
+        final org.jitsi.videobridge.relay.Relay relay =
+            new org.jitsi.videobridge.relay.Relay(id, this, logger, iceControlling, useUniquePort);
 
         relaysById.put(id, relay);
 
@@ -938,7 +939,7 @@ public class Conference
      *
      * @param relay the <tt>Relay</tt> which expired.
      */
-    void relayExpired(Relay relay)
+    public void relayExpired(org.jitsi.videobridge.relay.Relay relay)
     {
         final AbstractEndpoint removedEndpoint;
         String id = relay.getId();
