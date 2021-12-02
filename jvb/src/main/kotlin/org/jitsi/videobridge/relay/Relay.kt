@@ -82,8 +82,7 @@ class Relay @JvmOverloads constructor(
     private val dtlsTransport = DtlsTransport(logger)
 
     /**
-     * The instance which manages the Colibri messaging (over a data channel
-     * or web sockets).
+     * The instance which manages the Colibri messaging (over web sockets).
      */
     private val _messageTransport = RelayMessageTransport(
         this,
@@ -194,23 +193,36 @@ class Relay @JvmOverloads constructor(
             dtlsTransport.setSetupAttribute(setup)
         }
         iceTransport.startConnectivityEstablishment(transportInfo)
+
+        val websocketExtension = transportInfo.getFirstChildOfType(WebSocketPacketExtension::class.java)
+        if (websocketExtension?.url != null) {
+            _messageTransport.connectTo(websocketExtension.url)
+        }
     }
 
     fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
-        /* TODO this is wrong */
-        colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
-            colibriWebsocketService.getColibriWebSocketUrl(
-                conference.id,
-                id,
-                iceTransport.icePassword
-            )?.let { wsUrl ->
-                val wsPacketExtension = WebSocketPacketExtension(wsUrl)
-                iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
+        val wsPacketExtension = WebSocketPacketExtension()
+
+        /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
+         *  disabled for relay.
+         */
+        if (_messageTransport.isActive) {
+            wsPacketExtension.active = true
+        } else {
+            colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
+                colibriWebsocketService.getColibriRelayWebSocketUrl(
+                    conference.id,
+                    id,
+                    iceTransport.icePassword
+                )?.let { wsUrl ->
+                    wsPacketExtension.url = wsUrl
+                }
             }
         }
+        iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
 
         logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
 

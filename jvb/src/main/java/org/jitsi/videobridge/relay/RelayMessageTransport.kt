@@ -16,12 +16,13 @@
 package org.jitsi.videobridge.relay
 
 import org.apache.commons.lang3.StringUtils
+import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
+import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.EndpointMessageTransportConfig
 import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.Videobridge
-import org.jitsi.videobridge.datachannel.DataChannel
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ClientHelloMessage
 import org.jitsi.videobridge.message.EndpointMessage
@@ -36,6 +37,7 @@ import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.message.VideoTypeMessage
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.json.simple.JSONObject
+import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -57,7 +59,17 @@ class RelayMessageTransport(
     private var webSocket: ColibriWebSocket? = null
 
     /**
-     * User to synchronize access to [.webSocket]
+     * For active websockets, the URL that was connected to.
+     */
+    private var url: String? = null
+
+    /**
+     * An active websocket client.
+     */
+    private var outgoingWebsocket: WebSocketClient? = null
+
+    /**
+     * Use to synchronize access to [.webSocket]
      */
     private val webSocketSyncRoot = Any()
     private val numOutgoingMessagesDropped = AtomicInteger(0)
@@ -66,6 +78,27 @@ class RelayMessageTransport(
      * The number of sent message by type.
      */
     private val sentMessagesCounts: MutableMap<String, AtomicLong> = ConcurrentHashMap()
+
+    /**
+     * Connect the bridge channel message to the websocket URL specified
+     */
+    fun connectTo(url: String) {
+        if (this.url != null && this.url == url) {
+            return
+        }
+        this.url = url
+
+        doConnect()
+    }
+
+    private fun doConnect() {
+        val url = this.url ?: throw IllegalStateException("Cannot connect Relay transport when no URL set")
+
+        outgoingWebsocket = WebSocketClient().also {
+            it.start()
+            it.connect(this, URI(url), ClientUpgradeRequest())
+        }
+    }
 
     /**
      * {@inheritDoc}
@@ -82,8 +115,8 @@ class RelayMessageTransport(
     override fun clientHello(message: ClientHelloMessage): BridgeChannelMessage? {
         // ClientHello was introduced for functional testing purposes. It
         // triggers a ServerHello response from Videobridge. The exchange
-        // reveals (to the client) that the transport channel between the
-        // remote endpoint and the Videobridge is operational.
+        // reveals (to the peer) that the transport channel between the
+        // remote relay and the Videobridge is operational.
         // We take care to send the reply using the same transport channel on
         // which we received the request..
         return createServerHello()
@@ -151,21 +184,9 @@ class RelayMessageTransport(
         super.sendMessage(dst, message) // Log message
         if (dst is ColibriWebSocket) {
             sendMessage(dst, message)
-        } else if (dst is DataChannel) {
-            sendMessage(dst, message)
         } else {
             throw IllegalArgumentException("unknown transport:$dst")
         }
-    }
-
-    /**
-     * Sends a string via a particular [DataChannel].
-     * @param dst the data channel to send through.
-     * @param message the message to send.
-     */
-    private fun sendMessage(dst: DataChannel, message: BridgeChannelMessage) {
-        dst.sendString(message.toJson())
-        statisticsSupplier.get().totalDataChannelMessagesSent.incrementAndGet()
     }
 
     /**
@@ -198,6 +219,9 @@ class RelayMessageTransport(
 
     override val isConnected: Boolean
         get() = webSocket != null
+
+    val isActive: Boolean
+        get() = outgoingWebsocket != null
 
     /**
      * {@inheritDoc}
@@ -237,6 +261,10 @@ class RelayMessageTransport(
                 logger.debug { "Web socket closed, statusCode $statusCode ( $reason)." }
             }
         }
+        if (outgoingWebsocket != null) {
+            // Try to reconnect.  TODO: how to handle failures?
+            doConnect()
+        }
     }
 
     /**
@@ -252,6 +280,8 @@ class RelayMessageTransport(
                 logger.debug { "Endpoint expired, closed colibri web-socket." }
             }
         }
+        outgoingWebsocket?.stop()
+        outgoingWebsocket = null
     }
 
     /**
