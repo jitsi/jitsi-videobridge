@@ -32,7 +32,7 @@ import java.time.Clock
  *
  * @author George Politis
  */
-internal class SingleSourceAllocation(
+internal class SingleSourceAllocation2(
     val endpoint: MediaSourceContainer,
     /** The constraints to use while allocating bandwidth to this endpoint. */
     val constraints: VideoConstraints,
@@ -191,11 +191,11 @@ internal class SingleSourceAllocation(
 
     override fun toString(): String {
         return (
-            "[id=" + endpoint.id +
-                " constraints=" + constraints +
-                " ratedPreferredIdx=" + layers.preferredIndex +
-                " ratedTargetIdx=" + targetIdx
-            )
+                "[id=" + endpoint.id +
+                        " constraints=" + constraints +
+                        " ratedPreferredIdx=" + layers.preferredIndex +
+                        " ratedTargetIdx=" + targetIdx
+                )
     }
 
     /**
