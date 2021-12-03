@@ -15,9 +15,16 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.Transceiver
+import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.EndpointConnectionStats
+import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtp.RtpPacket
@@ -28,6 +35,8 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.EncodingsManager
+import org.jitsi.videobridge.Endpoint
+import org.jitsi.videobridge.TransportConfig
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -81,6 +90,10 @@ class Relay @JvmOverloads constructor(
     private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
+    private val diagnosticContext = conference.newDiagnosticContext().apply {
+        put("relay_id", id)
+    }
+
     /**
      * The instance which manages the Colibri messaging (over web sockets).
      */
@@ -98,6 +111,19 @@ class Relay @JvmOverloads constructor(
         setupDtlsTransport()
 
         conference.videobridge.statistics.totalRelays.incrementAndGet()
+    }
+
+    /**
+     * The queue we put outgoing SRTP packets onto so they can be sent
+     * out via the [IceTransport] on an IO thread.
+     */
+    private val outgoingSrtpPacketQueue = PacketInfoQueue(
+        "${javaClass.simpleName}-outgoing-packet-queue",
+        TaskPools.IO_POOL,
+        this::doSendSrtp,
+        TransportConfig.queueSize
+    ).apply {
+        setErrorHandler(Endpoint.queueErrorCounter)
     }
 
     private fun setupIceTransport() {
@@ -120,7 +146,7 @@ class Relay @JvmOverloads constructor(
                         PacketInfo(UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)).apply {
                             this.receivedTime = receivedTime.toEpochMilli()
                         }
-                    // TODO: transceiver.handleIncomingPacket(pktInfo)
+                    transceiver.handleIncomingPacket(pktInfo)
                 }
             }
         }
@@ -128,11 +154,11 @@ class Relay @JvmOverloads constructor(
             override fun connected() {
                 logger.info("ICE connected")
                 eventEmitter.fireEvent { iceSucceeded() }
-                /* TODO: transceiver.setOutgoingPacketHandler(object : PacketHandler {
+                transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         outgoingSrtpPacketQueue.add(packetInfo)
                     }
-                }) */
+                })
                 TaskPools.IO_POOL.execute(iceTransport::startReadingData)
                 TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake)
             }
@@ -142,7 +168,7 @@ class Relay @JvmOverloads constructor(
             }
 
             override fun consentUpdated(time: Instant) {
-                // TODO transceiver.packetIOActivity.lastIceActivityInstant = time
+                transceiver.packetIOActivity.lastIceActivityInstant = time
             }
         }
     }
@@ -165,7 +191,7 @@ class Relay @JvmOverloads constructor(
                 keyingMaterial: ByteArray
             ) {
                 logger.info("DTLS handshake complete")
-                // TODO transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
+                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
                 // TODO scheduleEndpointMessageTransportTimeout()
             }
         }
@@ -229,6 +255,53 @@ class Relay @JvmOverloads constructor(
         return iceUdpTransportPacketExtension
     }
 
+    /**
+     * Listen for RTT updates from [transceiver] and update the ICE stats the first time an RTT is available. Note that
+     * the RTT is measured via RTCP, since we don't expose response time for STUN requests.
+     */
+    private val rttListener: EndpointConnectionStats.EndpointConnectionStatsListener =
+        object : EndpointConnectionStats.EndpointConnectionStatsListener {
+            override fun onRttUpdate(newRttMs: Double) {
+                if (newRttMs > 0) {
+                    transceiver.removeEndpointConnectionStatsListener(this)
+                    iceTransport.updateStatsOnInitialRtt(newRttMs)
+                }
+            }
+        }
+
+    /* TODO: we eventually want a smarter Transceiver implementation, that splits processing by
+     *  source endpoint or something similar, but for the initial implementation this should work.
+     */
+    val transceiver = Transceiver(
+        id,
+        TaskPools.CPU_POOL,
+        TaskPools.CPU_POOL,
+        TaskPools.SCHEDULED_POOL,
+        diagnosticContext,
+        logger,
+        TransceiverEventHandlerImpl(),
+        clock
+    ).apply {
+        setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
+            override fun consume(packetInfo: PacketInfo) {
+                this@Relay.handleIncomingPacket(packetInfo)
+            }
+
+            override fun trace(f: () -> Unit) = f.invoke()
+        })
+        addEndpointConnectionStatsListener(rttListener)
+    }
+
+    /**
+     * Handle incoming RTP packets which have been fully processed by the
+     * transceiver's incoming pipeline.
+     */
+    fun handleIncomingPacket(packetInfo: PacketInfo) {
+        // TODO set endpoint ID
+        // packetInfo.endpointId = id
+        conference.handleIncomingPacket(packetInfo)
+    }
+
     override fun onNewSsrcAssociation(
         endpointId: String?,
         primarySsrc: Long,
@@ -236,6 +309,27 @@ class Relay @JvmOverloads constructor(
         type: SsrcAssociationType?
     ) {
         TODO("Not yet implemented")
+    }
+
+    private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+        /* TODO
+        if (packetInfo.packet.looksLikeRtp()) {
+            Endpoint.rtpPacketDelayStats.addPacket(packetInfo)
+            bridgeJitterStats.packetSent(packetInfo)
+        } else if (packetInfo.packet.looksLikeRtcp()) {
+            Endpoint.rtcpPacketDelayStats.addPacket(packetInfo)
+        }
+         */
+
+        packetInfo.sent()
+        /* TODO
+        if (timelineLogger.isTraceEnabled && Endpoint.logTimeline()) {
+            timelineLogger.trace { packetInfo.timeline.toString() }
+        }
+         */
+        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
+        return true
     }
 
     /**
@@ -260,21 +354,17 @@ class Relay @JvmOverloads constructor(
         conference.relayExpired(this)
 
         try {
-            /* TODO
-            updateStatsOnExpire()
+            // TODO updateStatsOnExpire()
             transceiver.stop()
             logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
-            logger.cdebug { bitrateController.debugState.toJSONString() }
-            */
+            // TODO logger.cdebug { bitrateController.debugState.toJSONString() }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
 
-            /* TODO logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
+            // TODO logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
 
             transceiver.teardown()
             _messageTransport.close()
-            sctpHandler.stop()
-            sctpManager?.closeConnection() */
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
@@ -285,8 +375,28 @@ class Relay @JvmOverloads constructor(
 
         dtlsTransport.stop()
         iceTransport.stop()
-        // outgoingSrtpPacketQueue.close()
+        outgoingSrtpPacketQueue.close()
 
         logger.info("Expired.")
+    }
+
+    private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
+        /**
+         * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
+         * for every packet and we want to avoid the switch. The conference audio level code must not block.
+         */
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long) =
+            Unit // TODO conference.speechActivity.levelChanged(this@Endpoint, level)
+
+        /**
+         * Forward bwe events from the Transceiver.
+         */
+        override fun bandwidthEstimationChanged(newValue: Bandwidth) {
+            logger.cdebug { "Estimated bandwidth is now $newValue" }
+            /* TODO
+            bitrateController.bandwidthChanged(newValue.bps.toLong())
+            bandwidthProbing.bandwidthEstimationChanged(newValue)
+             */
+        }
     }
 }

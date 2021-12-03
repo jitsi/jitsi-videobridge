@@ -79,7 +79,7 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
     protected open fun sendMessage(dst: Any?, message: BridgeChannelMessage) =
         logger.debug { "SENT: " + message.toJson() }
 
-    protected open fun close() {}
+    open fun close() {}
 
     open val debugState: JSONObject
         get() = JSONObject().apply {
