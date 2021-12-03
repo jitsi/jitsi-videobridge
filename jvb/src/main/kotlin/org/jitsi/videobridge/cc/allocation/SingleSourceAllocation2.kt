@@ -1,5 +1,6 @@
 /*
- * Copyright @ 2020 - present 8x8, Inc.
+ * Copyright @ 2021 - present 8x8, Inc.
+ * Copyright @ 2021 - Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +16,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.VideoType
@@ -31,9 +33,11 @@ import java.time.Clock
  * algorithm, as opposed to [SingleAllocation] which is the end result.
  *
  * @author George Politis
+ * @author Pawel Domas
  */
 internal class SingleSourceAllocation2(
-    val endpoint: MediaSourceContainer,
+    val endpointId: String,
+    val mediaSource: MediaSourceDesc,
     /** The constraints to use while allocating bandwidth to this endpoint. */
     val constraints: VideoConstraints,
     /** Whether the endpoint is on stage. */
@@ -46,7 +50,7 @@ internal class SingleSourceAllocation2(
     /**
      * The immutable list of layers to be considered when allocating bandwidth.
      */
-    val layers: Layers = selectLayers(endpoint, onStage, constraints, clock.instant().toEpochMilli())
+    val layers: Layers = selectLayers(mediaSource, onStage, constraints, clock.instant().toEpochMilli())
 
     /**
      * The index (into [layers] of the current target layer). It can be improved in the `improve()` step, if there is
@@ -57,7 +61,7 @@ internal class SingleSourceAllocation2(
     init {
         if (timeSeriesLogger.isTraceEnabled) {
             val ratesTimeSeriesPoint = diagnosticContext.makeTimeSeriesPoint("layers_considered")
-                .addField("remote_endpoint_id", endpoint.id)
+                .addField("remote_endpoint_id", endpointId)
             for ((l, bitrate) in layers.layers) {
                 ratesTimeSeriesPoint.addField(
                     "${indexString(l.index)}_${l.height}p_${l.frameRate}fps_bps",
@@ -183,19 +187,19 @@ internal class SingleSourceAllocation2(
      */
     val result: SingleAllocation
         get() = SingleAllocation(
-            endpoint.id,
-            endpoint.mediaSource,
+            endpointId,
+            mediaSource,
             targetLayer?.layer,
             layers.idealLayer?.layer
         )
 
     override fun toString(): String {
         return (
-                "[id=" + endpoint.id +
-                        " constraints=" + constraints +
-                        " ratedPreferredIdx=" + layers.preferredIndex +
-                        " ratedTargetIdx=" + targetIdx
-                )
+            "[id=" + endpointId +
+                " constraints=" + constraints +
+                " ratedPreferredIdx=" + layers.preferredIndex +
+                " ratedTargetIdx=" + targetIdx
+            )
     }
 
     /**
@@ -270,19 +274,18 @@ internal class SingleSourceAllocation2(
      */
     private fun selectLayers(
         /** The endpoint which is the source of the stream(s). */
-        endpoint: MediaSourceContainer,
+        source: MediaSourceDesc,
         onStage: Boolean,
         /** The constraints that the receiver specified for [endpoint]. */
         constraints: VideoConstraints,
         nowMs: Long
     ): Layers {
-        val source = endpoint.mediaSource
-        if (constraints.maxHeight <= 0 || source == null || !source.hasRtpLayers()) {
+        if (constraints.maxHeight <= 0 || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
         val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
 
-        return when (endpoint.videoType) {
+        return when (source.videoType) {
             VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
             VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(layers, constraints, onStage)
             else -> Layers.noLayers
