@@ -388,7 +388,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                                 allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
                                 diagnosticContext,
                                 clock,
-                                config));
+                                config,
+                                logger));
             }
         }
 

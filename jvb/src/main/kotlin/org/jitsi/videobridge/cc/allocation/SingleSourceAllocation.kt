@@ -20,6 +20,8 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.VideoType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import java.lang.Integer.max
 import java.time.Clock
@@ -38,7 +40,8 @@ internal class SingleSourceAllocation(
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
-    val config: BitrateControllerConfig = BitrateControllerConfig()
+    val config: BitrateControllerConfig = BitrateControllerConfig(),
+    val logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
 ) {
     /**
      * The immutable list of layers to be considered when allocating bandwidth.
@@ -122,6 +125,11 @@ internal class SingleSourceAllocation(
                     targetIdx = i
                 }
             }
+        }
+        // If the stream is non-scalable enable oversending regardless of maxOversendBitrate
+        if (allowOversending && layers.layers.size == 1 && layers.oversendIndex == 0 && targetIdx < 0) {
+            logger.warn("Oversending above maxOversendBitrate, layer bitrate ${layers.layers[0].bitrate} bps")
+            targetIdx = 0
         }
 
         val resultingTargetBitrate = targetBitrate
