@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
@@ -330,6 +331,16 @@ class Relay @JvmOverloads constructor(
         iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
         ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
+    }
+
+    fun addRemoteEndpoint(
+        id: String,
+        audioSources: Collection<AudioSourceDesc>,
+        videoSources: Collection<MediaSourceDesc>
+    ) {
+    }
+
+    fun removeRemoteEndpoint(id: String) {
     }
 
     /**

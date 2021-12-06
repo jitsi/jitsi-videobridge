@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.shim;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.*;
@@ -24,11 +25,13 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.Endpoint;
 import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
+import org.jitsi.xmpp.extensions.colibri2.Relay;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -784,7 +787,6 @@ public class ConferenceShim
             useUniquePort = false;
         }
 
-        /* TODO: does iceControlling really need to be set here? */
         org.jitsi.videobridge.relay.Relay r = ensureRelayCreated(id, iceControlling, useUniquePort);
 
         if (t != null)
@@ -800,7 +802,66 @@ public class ConferenceShim
             respBuilder.setTransport(transBuilder.build());
         }
 
-        /* TODO: handle the rest of the relay's fields. */
+        Endpoints endpoints = rDesc.getEndpoints();
+        if (endpoints != null)
+        {
+            for (org.jitsi.xmpp.extensions.colibri2.Endpoint e: endpoints.getEndpoints())
+            {
+                if (e.getId() != null) /* TODO: enforce this in XMPP-extensions? */
+                {
+                    if (e.getExpire())
+                    {
+                        r.removeRemoteEndpoint(e.getId());
+                    }
+                    else
+                    {
+                        List<AudioSourceDesc> audioSources = new ArrayList<>();
+                        List<MediaSourceDesc> videoSources = new ArrayList<>();
+                        if (e.getSources() != null)
+                        {
+                            for (MediaSource m: e.getSources().getMediaSources())
+                            {
+                                if (m.getType() == MediaType.AUDIO)
+                                {
+                                    if (m.getSources().isEmpty())
+                                    {
+                                        logger.warn("Ignoring audio source " + m.getId() + " in endpoint " +
+                                            e.getId() + " of relay " + r.getId() + ": no SSRCs");
+                                    }
+                                    else
+                                    {
+                                        if (m.getSources().size() > 1)
+                                        {
+                                            logger.warn("Audio source " + m.getId() + " in endpoint " +
+                                                e.getId() + " of relay " + r.getId() + " has " + m.getSources().size() +
+                                                " SSRCs: ignoring all but first");
+                                        }
+                                        AudioSourceDesc audioSource = new AudioSourceDesc(
+                                            m.getSources().get(0).getSSRC(), e.getId(), m.getId());
+                                        audioSources.add(audioSource);
+                                    }
+                                }
+                                else if (m.getType() == MediaType.VIDEO)
+                                {
+                                    MediaSourceDesc[] descs =
+                                        MediaSourceFactory.createMediaSources(
+                                            m.getSources(), m.getSsrcGroups(), e.getId(), m.getId());
+                                    videoSources.addAll(Arrays.asList(descs));
+                                }
+                                else
+                                {
+                                    logger.warn("Ignoring source " + m.getId() + " in endpoint " +
+                                        e.getId() + " of relay " + r.getId() + ": unsupported type " + m.getType());
+                                }
+                            }
+                        }
+                        r.addRemoteEndpoint(e.getId(), audioSources, videoSources);
+                    }
+                }
+            }
+        }
+
+        /* TODO: handle the rest of the relay's fields: feedback sources. */
 
         return respBuilder.build();
     }

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
@@ -335,7 +336,9 @@ public class MediaSourceFactory
      */
     private static List<SourceSsrcs> getSourceSsrcs(
             Collection<SourcePacketExtension> sources,
-            Collection<SourceGroupPacketExtension> sourceGroups)
+            Collection<SourceGroupPacketExtension> sourceGroups,
+            @Nullable String owner,
+            @Nullable String name)
     {
         //FIXME: determining the individual sources should be done via msid,
         // but somewhere along the line we seem to lose the msid information
@@ -425,7 +428,7 @@ public class MediaSourceFactory
             }
         });
 
-        setOwnersAndNames(sources, sourceSsrcsList);
+        setOwnersAndNames(sources, sourceSsrcsList, owner, name);
 
         return sourceSsrcsList;
     }
@@ -433,15 +436,19 @@ public class MediaSourceFactory
     /**
      * Updates the given list of {@link SourceSsrcs}, setting the {@code owner}
      * field according to the {@code owner} attribute in {@code ssrc-info}
-     * extensions contained in {@code sources}.
-     * @param sources the list of {@link SourcePacketExtension} which contain
+     * extensions contained in {@code sources}, if not specified externally
+     * @param sources the list of {@link SourcePacketExtension} which may contain
      * the {@code owner} as an attribute of a {@code ssrc-info} child. The
      * list or the objects in the list will not be modified.
      * @param sourceSsrcsList the list of {@link SourceSsrcs} to update.
+     * @param owner An externally specified owner, if available.
+     * @param name An externally specified name, if available.
      */
     private static void setOwnersAndNames(
         Collection<SourcePacketExtension> sources,
-        Collection<SourceSsrcs> sourceSsrcsList)
+        Collection<SourceSsrcs> sourceSsrcsList,
+        @Nullable String owner,
+        @Nullable String name)
     {
         for (SourceSsrcs sourceSsrcs : sourceSsrcsList)
         {
@@ -532,6 +539,29 @@ public class MediaSourceFactory
         Collection<SourcePacketExtension> sources,
         Collection<SourceGroupPacketExtension> sourceGroups)
     {
+        return createMediaSources(sources, sourceGroups, null, null);
+    }
+
+    /**
+     * Creates {@link MediaSourceDesc}s from signaling params
+     *
+     * will receive the created {@link MediaSourceDesc}s.
+     * @param sources The {@link List} of {@link SourcePacketExtension} that
+     * describes the list of jingle sources.
+     * @param sourceGroups The {@link List} of
+     * {@link SourceGroupPacketExtension} that describes the list of jingle
+     * source groups.
+     * @return an array of {@link MediaSourceDesc} that are described in the
+     * jingle sources and source groups.
+     * @param owner An externally specified owner, if available.
+     * @param name An externally specified name, if available.
+     */
+    public static MediaSourceDesc[] createMediaSources(
+        Collection<SourcePacketExtension> sources,
+        Collection<SourceGroupPacketExtension> sourceGroups,
+        @Nullable String owner,
+        @Nullable String name)
+    {
         final Collection<SourceGroupPacketExtension> finalSourceGroups
                 = sourceGroups == null ? new ArrayList<>() : sourceGroups;
         if (sources == null)
@@ -539,7 +569,7 @@ public class MediaSourceFactory
             sources = new ArrayList<>();
         }
 
-        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups);
+        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups, owner, name);
         List<MediaSourceDesc> mediaSources = new ArrayList<>();
 
         sourceSsrcsList.forEach(sourceSsrcs -> {
