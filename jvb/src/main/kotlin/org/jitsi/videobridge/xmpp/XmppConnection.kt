@@ -65,6 +65,9 @@ class XmppConnection : IQListener {
                 registerIQ(Version())
                 registerIQ(ForcefulShutdownIQ())
                 registerIQ(GracefulShutdownIQ())
+                registerIQ(
+                    ConferenceModifyIQ.builder("xxx").setMeetingId("abc").setConferenceName("name").build(), false
+                )
                 setIQListener(this@XmppConnection)
             }
 
