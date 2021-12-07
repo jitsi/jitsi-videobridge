@@ -127,9 +127,12 @@ internal class SingleSourceAllocation(
             }
         }
         // If the stream is non-scalable enable oversending regardless of maxOversendBitrate
-        if (allowOversending && layers.layers.size == 1 && layers.oversendIndex == 0 && targetIdx < 0) {
-            logger.warn("Oversending above maxOversendBitrate, layer bitrate ${layers.layers[0].bitrate} bps")
-            targetIdx = 0
+        if (allowOversending && targetIdx < 0 && layers.oversendIndex >= 0 && layers.hasOnlyOneLayer()) {
+            logger.warn(
+                "Oversending above maxOversendBitrate, layer bitrate " +
+                    "${layers.layers[layers.oversendIndex].bitrate} bps"
+            )
+            targetIdx = layers.oversendIndex
         }
 
         val resultingTargetBitrate = targetBitrate
@@ -377,3 +380,11 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
     forEachIndexed { i, e -> if (predicate(e)) lastIndex = i }
     return lastIndex
 }
+
+/**
+ * Checks if the [Layers] instance effectively describes a single layer. When the temporal layer fields are used but
+ * all frames belong to the base layer we see multiple entries in [this.layers], but they represent the same set of
+ * frames.
+ */
+private fun Layers.hasOnlyOneLayer(): Boolean = layers.isNotEmpty() &&
+    layers.all { it.layer.height == layers[0].layer.height && it.bitrate == layers[0].bitrate }
