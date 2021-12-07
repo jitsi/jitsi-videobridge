@@ -382,7 +382,7 @@ public class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
-    protected void close()
+    public void close()
     {
         synchronized (webSocketSyncRoot)
         {
