@@ -798,7 +798,10 @@ public class ConferenceShim
             {
                 r.setTransportInfo(udpTransportPacketExtension);
             }
+        }
 
+        if (!r.getTransportDescribed())
+        {
             Transport.Builder transBuilder = Transport.getBuilder();
             transBuilder.setIceUdpExtension(r.describeTransport());
             respBuilder.setTransport(transBuilder.build());
