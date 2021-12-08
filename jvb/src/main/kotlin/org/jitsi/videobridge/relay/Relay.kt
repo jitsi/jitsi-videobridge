@@ -95,6 +95,10 @@ class Relay @JvmOverloads constructor(
         put("relay_id", id)
     }
 
+    private val relayedEndpoints = HashMap<String, RelayedEndpoint>()
+    private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
+    private val endpointsLock = Any()
+
     /**
      * The instance which manages the Colibri messaging (over web sockets).
      */
@@ -338,9 +342,17 @@ class Relay @JvmOverloads constructor(
         audioSources: Collection<AudioSourceDesc>,
         videoSources: Collection<MediaSourceDesc>
     ) {
+        synchronized(endpointsLock) {
+            val ep = relayedEndpoints.computeIfAbsent(id) { RelayedEndpoint(conference, this, id, logger) }
+            ep.audioSources = audioSources.toTypedArray()
+            ep.mediaSources = videoSources.toTypedArray()
+        }
     }
 
     fun removeRemoteEndpoint(id: String) {
+        synchronized(endpointsLock) {
+            relayedEndpoints.remove(id)
+        }
     }
 
     /**
