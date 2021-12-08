@@ -700,11 +700,12 @@ public class ConferenceShim
                 ep.setTransportInfo(udpTransportPacketExtension);
             }
         }
-        // TODO: Ideally we should only include the transport when a new endpoint is created (or if it is otherwise
-        // needed).
-        Transport.Builder transBuilder = Transport.getBuilder();
-        transBuilder.setIceUdpExtension(ep.describeTransport());
-        respBuilder.setTransport(transBuilder.build());
+        if (!ep.getTransportDescribed())
+        {
+            Transport.Builder transBuilder = Transport.getBuilder();
+            transBuilder.setIceUdpExtension(ep.describeTransport());
+            respBuilder.setTransport(transBuilder.build());
+        }
 
         Sources sources = eDesc.getSources();
         if (sources != null)
