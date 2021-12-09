@@ -80,4 +80,10 @@ class RelayedEndpoint(
     override val mediaSource: MediaSourceDesc?
         get() = mediaSources.getOrNull(0)
     override var mediaSources: Array<MediaSourceDesc> = arrayOf()
+
+    val ssrcs: Set<Long>
+        get() = HashSet<Long>().also { set ->
+            audioSources.forEach { set.add(it.ssrc) }
+            mediaSources.forEach { it.rtpEncodings.forEach { set.addAll(it.ssrcs) } }
+        }
 }

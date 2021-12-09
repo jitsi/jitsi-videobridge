@@ -911,7 +911,7 @@ public class Conference
      *
      * @param endpoint the <tt>Endpoint</tt> which expired.
      */
-    void endpointExpired(AbstractEndpoint endpoint)
+    public void endpointExpired(AbstractEndpoint endpoint)
     {
         final AbstractEndpoint removedEndpoint;
         String id = endpoint.getId();

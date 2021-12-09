@@ -309,8 +309,14 @@ class Relay @JvmOverloads constructor(
      * transceiver's incoming pipeline.
      */
     fun handleIncomingPacket(packetInfo: PacketInfo) {
-        // TODO set endpoint ID
-        // packetInfo.endpointId = id
+        val packet = packetInfo.packet
+        if (packet is RtpPacket) {
+            val ep = synchronized(endpointsLock) { endpointsBySsrc[packet.ssrc] }
+            if (ep != null) {
+                packetInfo.endpointId = ep.id
+            }
+        }
+        // TODO do we need to set endpointId for RTCP packets?  Otherwise handle them?
         conference.handleIncomingPacket(packetInfo)
     }
 
@@ -349,16 +355,34 @@ class Relay @JvmOverloads constructor(
         audioSources: Collection<AudioSourceDesc>,
         videoSources: Collection<MediaSourceDesc>
     ) {
+        val ep: RelayedEndpoint
         synchronized(endpointsLock) {
-            val ep = relayedEndpoints.computeIfAbsent(id) { RelayedEndpoint(conference, this, id, logger) }
+            ep = relayedEndpoints.computeIfAbsent(id) { RelayedEndpoint(conference, this, id, logger) }
+            val oldSsrcs = ep.ssrcs
+
             ep.audioSources = audioSources.toTypedArray()
             ep.mediaSources = videoSources.toTypedArray()
+
+            val newSsrcs = ep.ssrcs
+            val removedSsrcs = oldSsrcs.minus(newSsrcs)
+            val addedSsrcs = newSsrcs.minus(oldSsrcs)
+
+            endpointsBySsrc.keys.removeAll(removedSsrcs)
+            addedSsrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
         }
+        conference.addEndpoints(setOf(ep))
     }
 
     fun removeRemoteEndpoint(id: String) {
+        val ep: RelayedEndpoint?
         synchronized(endpointsLock) {
-            relayedEndpoints.remove(id)
+            ep = relayedEndpoints.remove(id)
+            if (ep != null) {
+                endpointsBySsrc.keys.removeAll(ep.ssrcs)
+            }
+        }
+        if (ep != null) {
+            conference.endpointExpired(ep)
         }
     }
 
