@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.AudioLevelListener
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -34,6 +36,7 @@ class AudioLevelReader(
     private var audioLevelExtId: Int? = null
     var audioLevelListener: AudioLevelListener? = null
     private var numSilencePacketsDiscarded = 0
+    var forwardedSilencePackets: Int = 0
 
     /**
      * Whether or not we should forcibly mute this audio stream (by setting shouldDiscard to true)
@@ -52,10 +55,13 @@ class AudioLevelReader(
         audioLevelExtId?.let { audioLevelId ->
             audioRtpPacket.getHeaderExtension(audioLevelId)?.let { ext ->
                 val level = AudioLevelHeaderExtension.getAudioLevel(ext)
-                if (level == MUTED_LEVEL || this.forceMute) {
+                if ((level == MUTED_LEVEL && forwardedSilencePackets > forwardedSilencePacketsLimit) ||
+                    this.forceMute
+                ) {
                     packetInfo.shouldDiscard = true
                     numSilencePacketsDiscarded++
                 } else {
+                    forwardedSilencePackets = if (level == MUTED_LEVEL) forwardedSilencePackets + 1 else 0
                     audioLevelListener?.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())
                 }
             }
@@ -71,5 +77,8 @@ class AudioLevelReader(
 
     companion object {
         const val MUTED_LEVEL = 127
+        private val forwardedSilencePacketsLimit: Int by config {
+            "jmt.audio.level.forwarded-silence-packets-limit".from(JitsiConfig.newConfig)
+        }
     }
 }
