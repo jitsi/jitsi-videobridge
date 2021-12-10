@@ -43,14 +43,14 @@ import static org.jitsi.videobridge.cc.allocation.VideoConstraintsKt.prettyPrint
 public class BandwidthAllocator<T extends MediaSourceContainer>
 {
     /**
-     * Returns a boolean that indicates whether or not the current bandwidth estimation (in bps) has changed above the
+     * Returns a boolean that indicates whether the current bandwidth estimation (in bps) has changed above the
      * configured threshold with respect to the previous bandwidth estimation.
      *
      * @param previousBwe the previous bandwidth estimation (in bps).
      * @param currentBwe the current bandwidth estimation (in bps).
      * @return true if the bandwidth has changed above the configured threshold, * false otherwise.
      */
-    private static boolean bweChangeIsLargerThanThreshold(long previousBwe, long currentBwe)
+    private boolean bweChangeIsLargerThanThreshold(long previousBwe, long currentBwe)
     {
         if (previousBwe == -1 || currentBwe == -1)
         {
@@ -65,7 +65,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         // In any case, there are other triggers for re-allocation, so any suppression we do here will only last up to
         // a few seconds.
         long deltaBwe = Math.abs(currentBwe - previousBwe);
-        return deltaBwe > previousBwe * BitrateControllerConfig.bweChangeThreshold();
+        return deltaBwe > previousBwe * config.bweChangeThreshold();
 
         // If, on the other hand, the bwe has decreased, we require at least a 15% drop in order to update the bitrate
         // allocation. This is an ugly hack to prevent too many resolution/UI changes in case the bridge produces too
@@ -107,10 +107,13 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     private final Supplier<Boolean> trustBwe;
 
+    private final BitrateControllerConfig config = new BitrateControllerConfig();
+
     /**
      * The allocations settings signalled by the receiver.
      */
-    private AllocationSettings allocationSettings = new AllocationSettings();
+    private AllocationSettings allocationSettings
+            = new AllocationSettings(new VideoConstraints(config.thumbnailMaxHeightPx()));
 
     /**
      * The last time {@link BandwidthAllocator#update()} was called.
@@ -384,7 +387,9 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                                 effectiveConstraints.get(endpoint.getId()),
                                 allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
                                 diagnosticContext,
-                                clock));
+                                clock,
+                                config,
+                                logger));
             }
         }
 
@@ -396,8 +401,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     void maybeUpdate()
     {
-        if (Duration.between(lastUpdateTime, clock.instant())
-                .compareTo(BitrateControllerConfig.maxTimeBetweenCalculations()) > 0)
+        if (Duration.between(lastUpdateTime, clock.instant()).compareTo(config.maxTimeBetweenCalculations()) > 0)
         {
             logger.debug("Forcing an update");
             TaskPools.CPU_POOL.execute(this::update);

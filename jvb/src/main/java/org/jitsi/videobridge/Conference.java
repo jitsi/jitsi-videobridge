@@ -71,6 +71,16 @@ public class Conference
     private final ConcurrentHashMap<String, AbstractEndpoint> endpointsById = new ConcurrentHashMap<>();
 
     /**
+     * A boolean that indicates whether or not to include RTCStats for this call.
+     */
+    private final boolean isRtcStatsEnabled;
+
+    /**
+     * A boolean that indicates whether or not to report to CallStats for this call.
+     */
+    private final boolean isCallStatsEnabled;
+
+    /**
      * A read-only cache of the endpoints in this conference. Note that it
      * contains only the {@link Endpoint} instances (local endpoints, not Octo endpoints).
      * This is because the cache was introduced for performance reasons only
@@ -194,7 +204,9 @@ public class Conference
                       String id,
                       EntityBareJid conferenceName,
                       long gid,
-                      @Nullable String meetingId)
+                      @Nullable String meetingId,
+                      boolean isRtcStatsEnabled,
+                      boolean isCallStatsEnabled)
     {
         if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
         {
@@ -202,6 +214,8 @@ public class Conference
         }
         this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
+        this.isRtcStatsEnabled = isRtcStatsEnabled;
+        this.isCallStatsEnabled = isCallStatsEnabled;
         Map<String, String> context = JMap.ofEntries(
             entry("confId", id),
             entry("gid", String.valueOf(gid))
@@ -838,6 +852,11 @@ public class Conference
         return id;
     }
 
+    public final boolean isCallStatsEnabled()
+    {
+        return isCallStatsEnabled;
+    }
+
     /**
      * Gets the signaling-server-defined meetingId of this conference, if set.
      *
@@ -1248,6 +1267,8 @@ public class Conference
     {
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
+        debugState.put("rtcstatsEnabled", isRtcStatsEnabled);
+
         if (conferenceName != null)
         {
             debugState.put("name", conferenceName.toString());
