@@ -386,6 +386,8 @@ class Relay @JvmOverloads constructor(
         }
     }
 
+    fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }
+
     /**
      * Checks whether a WebSocket connection with a specific password string
      * should be accepted for this relay.

@@ -79,6 +79,8 @@ class RelayMessageTransport(
      */
     private val sentMessagesCounts: MutableMap<String, AtomicLong> = ConcurrentHashMap()
 
+    init { logger.addContext("relay-id", relay.id) }
+
     /**
      * Connect the bridge channel message to the websocket URL specified
      */
@@ -123,52 +125,45 @@ class RelayMessageTransport(
     }
 
     override fun videoType(videoTypeMessage: VideoTypeMessage): BridgeChannelMessage? {
-        /* TODO */
-//        endpoint.setVideoType(videoTypeMessage.getVideoType());
-//
-//        Conference conference = endpoint.getConference();
-//
-//        if (conference == null || conference.isExpired())
-//        {
-//            getLogger().warn("Unable to forward VideoTypeMessage, conference is null or expired");
-//            return null;
-//        }
-//
-//        videoTypeMessage.setEndpointId(endpoint.getId());
-//
-//        /* Forward videoType messages to Octo. */
-//        conference.sendMessage(videoTypeMessage, Collections.emptyList(), true);
+        val epId = videoTypeMessage.endpointId
+        if (epId == null) {
+            logger.warn("Received VideoTypeMessage over relay channel with no endpoint ID")
+            return null
+        }
+
+        val ep = relay.getEndpoint(epId)
+
+        if (ep == null) {
+            logger.warn("Received VideoTypeMessage for unknown epId $epId")
+            return null
+        }
+
+        ep.setVideoType(videoTypeMessage.videoType)
+
         return null
     }
 
     override fun sourceVideoType(sourceVideoTypeMessage: SourceVideoTypeMessage): BridgeChannelMessage? {
-        return if (!MultiStreamConfig.config.isEnabled()) {
-            null
-        } else null
+        if (!MultiStreamConfig.config.isEnabled()) {
+            return null
+        }
 
-        /* TODO */
-//        String sourceName = sourceVideoTypeMessage.getSourceName();
-//
-//        if (getLogger().isDebugEnabled())
-//        {
-//            getLogger().debug("Received video type of " + sourceName +": " + sourceVideoTypeMessage.getVideoType());
-//        }
-//
-//        endpoint.setVideoType(sourceName, sourceVideoTypeMessage.getVideoType());
-//
-//        Conference conference = endpoint.getConference();
-//
-//        if (conference == null || conference.isExpired())
-//        {
-//            getLogger().warn("Unable to forward SourceVideoTypeMessage, conference is null or expired");
-//            return null;
-//        }
-//
-//        sourceVideoTypeMessage.setEndpointId(endpoint.getId());
-//
-//        /* Forward videoType messages to Octo. */
-//        conference.sendMessage(sourceVideoTypeMessage, Collections.emptyList(), true);
-//
+        val epId = sourceVideoTypeMessage.endpointId
+        if (epId == null) {
+            logger.warn("Received SourceVideoTypeMessage over relay channel with no endpoint ID")
+            return null
+        }
+
+        val ep = relay.getEndpoint(epId)
+
+        if (ep == null) {
+            logger.warn("Received SourceVideoTypeMessage for unknown epId $epId")
+            return null
+        }
+
+        ep.setVideoType(sourceVideoTypeMessage.sourceName, sourceVideoTypeMessage.videoType)
+
+        return null
     }
 
     override fun unhandledMessage(message: BridgeChannelMessage) {
