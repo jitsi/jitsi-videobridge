@@ -33,9 +33,8 @@ class RelayedEndpoint(
 ) : AbstractEndpoint(conference, id, parentLogger) {
     var audioSources: Array<AudioSourceDesc> = arrayOf()
 
-    override fun receivesSsrc(ssrc: Long): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun receivesSsrc(ssrc: Long): Boolean = audioSources.any { ssrc == it.ssrc } ||
+        mediaSources.any { it.rtpEncodings.any { it.matches(ssrc) } }
 
     override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType?) {
         TODO("Not yet implemented")
@@ -49,13 +48,9 @@ class RelayedEndpoint(
         TODO("Not yet implemented")
     }
 
-    override fun requestKeyframe(mediaSsrc: Long) {
-        TODO("Not yet implemented")
-    }
+    override fun requestKeyframe(mediaSsrc: Long) = relay.transceiver.requestKeyFrame(mediaSsrc)
 
-    override fun requestKeyframe() {
-        TODO("Not yet implemented")
-    }
+    override fun requestKeyframe() = relay.transceiver.requestKeyFrame(mediaSource?.primarySSRC)
 
     override fun isSendingAudio(): Boolean {
         TODO("Not yet implemented")
