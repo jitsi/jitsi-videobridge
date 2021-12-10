@@ -439,8 +439,12 @@ class Relay @JvmOverloads constructor(
          * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
-        override fun audioLevelReceived(sourceSsrc: Long, level: Long) =
-            Unit // TODO conference.speechActivity.levelChanged(this@Endpoint, level)
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long) {
+            val ep = synchronized(endpointsLock) { endpointsBySsrc[sourceSsrc] }
+            if (ep != null) {
+                conference.speechActivity.levelChanged(ep, level)
+            }
+        }
 
         /**
          * Forward bwe events from the Transceiver.
