@@ -6,7 +6,7 @@
     <Appenders>
         <RollingFile name="RollingFile" fileName="${log-path}/cs.log"
                  filePattern="${log-path}/$${date:yyyy-MM}/cs-%d{MM-dd-yyyy}-%i.log.gz">
-			<PatternLayout pattern="%d %-5p (%F:%L) - %m%n"/>
+			<PatternLayout pattern="%d %-5p (%F:%L) - %m{nolookups}%n"/>
       		<Policies>
         		<TimeBasedTriggeringPolicy />
         		<SizeBasedTriggeringPolicy size="250 MB"/>
@@ -14,7 +14,7 @@
     	</RollingFile>
     	<!-- 
     	<Console name="STDOUT" target="SYSTEM_OUT">
-      		<PatternLayout pattern="%d %-5p (%F:%L) - %m%n"/>
+      		<PatternLayout pattern="%d %-5p (%F:%L) - %m{nolookups}%n"/>
     	</Console>
     	 -->
     </Appenders>
