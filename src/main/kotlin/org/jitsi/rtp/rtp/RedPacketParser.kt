@@ -9,7 +9,7 @@ import org.jitsi.rtp.rtp.RtpPacket.Companion.BYTES_TO_LEAVE_AT_START_OF_PACKET
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiffAsInt
 import org.jitsi.rtp.util.getBitsAsInt
-import java.lang.IllegalArgumentException
+import kotlin.IllegalArgumentException
 import kotlin.experimental.and
 import kotlin.experimental.or
 
@@ -185,6 +185,10 @@ class RedundancyBlockHeader(
      */
     val length: Int
 ) : BlockHeader(pt) {
+
+    init {
+        require(timestampOffset <= MAX_TIMESTAMP_OFFSET) { "Invalid timestampOffset: $timestampOffset" }
+    }
     override val headerLength = 4
 
     override fun write(buffer: ByteArray, offset: Int): Int {
@@ -193,6 +197,13 @@ class RedundancyBlockHeader(
         buffer[offset + 2] = ((timestampOffset and 0x3f) shl 2).toByte() or ((length shr 8).toByte() and 0x03.toByte())
         buffer[offset + 3] = (length and 0xff).toByte()
         return 4
+    }
+
+    companion object {
+        /**
+         * The maximum value of the [timestampOffset] field (a 14-bit uint).
+         */
+        const val MAX_TIMESTAMP_OFFSET = 0x3fff
     }
 }
 
@@ -214,8 +225,15 @@ internal class RtpRedPacket(buffer: ByteArray, offset: Int, length: Int) : RtpPa
 
 class RedPacketBuilder<PacketType : RtpPacket>(val createPacket: (ByteArray, Int, Int) -> PacketType) {
 
+    /**
+     * Builds and returns a RED packet that contains [primary] as the primary encodings, and [redundancy] as secondary
+     * encodings.
+     * Note that this assumes the primary and secondary packets can be encoded in RED and throws as
+     * [IllegalArgumentException] otherwise (notably when the timestamp difference between the primary and any of the
+     * redundancy packets is too large).
+     */
     fun build(redPayloadType: Int, primary: RtpPacket, redundancy: List<RtpPacket>): PacketType {
-        val bytesNeeded = primary.length + 1 + redundancy.map { it.payloadLength }.sum() + redundancy.size * 4
+        val bytesNeeded = primary.length + 1 + redundancy.sumOf { it.payloadLength } + redundancy.size * 4
 
         val buf = BufferPool.getArray(bytesNeeded + BYTES_TO_LEAVE_AT_START_OF_PACKET + BYTES_TO_LEAVE_AT_END_OF_PACKET)
 

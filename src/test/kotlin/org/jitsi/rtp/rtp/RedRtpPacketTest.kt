@@ -1,5 +1,6 @@
 package org.jitsi.rtp.rtp
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -13,7 +14,7 @@ import org.jitsi.test_helpers.matchers.haveSameFixedHeader
 import org.jitsi.test_helpers.matchers.haveSamePayload
 
 class RedRtpPacketTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
 
     init {
         context("Parsing block headers") {
@@ -50,6 +51,11 @@ class RedRtpPacketTest : ShouldSpec() {
                 parsed.pt shouldBe 111.toByte()
                 parsed.timestampOffset shouldBe 960
                 parsed.length shouldBe 55
+            }
+            context("Redundancy with large timestamp diff") {
+                shouldThrow<IllegalArgumentException> {
+                    RedundancyBlockHeader(111, RedundancyBlockHeader.MAX_TIMESTAMP_OFFSET + 1, 55)
+                }
             }
         }
         context("Parsing a RED packet with a single block") {
@@ -204,6 +210,18 @@ class RedRtpPacketTest : ShouldSpec() {
 
                 reconstructed should haveSamePayload(expected)
             }
+        }
+        context("Creating a RED packet with a large timestamp delta") {
+            val primary = RtpPacket(redPacketBytesSingleBlock.clone(), 0, redPacketBytesSingleBlock.size).apply {
+                payloadType = 111
+            }
+            val redundancy1 = RtpPacket(redPacketBytesSingleBlock.clone(), 0, redPacketBytesSingleBlock.size).apply {
+                payloadType = 111
+                timestamp = primary.timestamp - RedundancyBlockHeader.MAX_TIMESTAMP_OFFSET - 1
+                sequenceNumber = primary.sequenceNumber - 2
+            }
+
+            shouldThrow<IllegalArgumentException> { RtpRedPacket.builder.build(112, primary, listOf(redundancy1)) }
         }
     }
 }
