@@ -37,7 +37,9 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.Endpoint
+import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
+import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -72,7 +74,7 @@ class Relay @JvmOverloads constructor(
     iceControlling: Boolean,
     useUniquePort: Boolean,
     private val clock: Clock = Clock.systemUTC()
-) : EncodingsManager.EncodingsUpdateListener {
+) : EncodingsManager.EncodingsUpdateListener, PotentialPacketHandler {
 
     private val eventEmitter: EventEmitter<AbstractEndpoint.EventHandler> = SyncEventEmitter()
 
@@ -148,7 +150,9 @@ class Relay @JvmOverloads constructor(
                     )
                     System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
                     val pktInfo =
-                        PacketInfo(UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)).apply {
+                        OctoPacketInfo(
+                            UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
+                        ).apply {
                             this.receivedTime = receivedTime.toEpochMilli()
                         }
                     transceiver.handleIncomingPacket(pktInfo)
@@ -404,6 +408,17 @@ class Relay @JvmOverloads constructor(
         }
         return true
     }
+
+    /**
+     * Returns true if this endpoint's transport is 'fully' connected (both ICE and DTLS), false otherwise
+     */
+    private fun isTransportConnected(): Boolean = iceTransport.isConnected() && dtlsTransport.isConnected
+
+    /* If we're connected, forward everything that didn't come in over a relay.
+        TODO: worry about bandwidth limits on relay links? */
+    override fun wants(packet: PacketInfo): Boolean = isTransportConnected() && !(packet is OctoPacketInfo)
+
+    override fun send(packet: PacketInfo) = transceiver.sendPacket(packet)
 
     fun expire() {
         logger.info("Expiring.")

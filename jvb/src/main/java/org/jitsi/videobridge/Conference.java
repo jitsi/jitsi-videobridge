@@ -1135,6 +1135,17 @@ public class Conference
                     prevHandler = endpoint;
                 }
             }
+            for (org.jitsi.videobridge.relay.Relay relay: relaysById.values())
+            {
+                if (relay.wants(packetInfo))
+                {
+                    if (prevHandler != null)
+                    {
+                        prevHandler.send(packetInfo.clone());
+                    }
+                    prevHandler = relay;
+                }
+            }
             if (tentacle != null && tentacle.wants(packetInfo))
             {
                 if (prevHandler != null)
