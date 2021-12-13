@@ -229,7 +229,7 @@ class RelayMessageTransport(
     /**
      * {@inheritDoc}
      */
-    override fun sendMessage(msg: BridgeChannelMessage) {
+    public override fun sendMessage(msg: BridgeChannelMessage) {
         if (webSocket == null) {
             logger.debug("No available transport channel, can't send a message")
             numOutgoingMessagesDropped.incrementAndGet()

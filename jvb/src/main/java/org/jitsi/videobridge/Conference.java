@@ -310,9 +310,16 @@ public class Conference
             }
         }
 
-        if (sendToOcto && tentacle != null)
+        if (sendToOcto)
         {
-            tentacle.sendMessage(msg);
+            for (org.jitsi.videobridge.relay.Relay relay: relaysById.values())
+            {
+                relay.sendMessage(msg);
+            }
+            if (tentacle != null)
+            {
+                tentacle.sendMessage(msg);
+            }
         }
     }
 

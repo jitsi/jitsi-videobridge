@@ -39,6 +39,7 @@ import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
+import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -353,6 +354,11 @@ class Relay @JvmOverloads constructor(
         ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
     }
+
+    /**
+     * Sends a specific msg to this endpoint over its bridge channel
+     */
+    fun sendMessage(msg: BridgeChannelMessage) = _messageTransport.sendMessage(msg)
 
     fun addRemoteEndpoint(
         id: String,
