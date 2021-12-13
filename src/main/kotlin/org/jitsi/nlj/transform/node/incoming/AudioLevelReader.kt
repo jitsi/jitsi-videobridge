@@ -35,11 +35,11 @@ class AudioLevelReader(
 ) : ObserverNode("Audio level reader") {
     private var audioLevelExtId: Int? = null
     var audioLevelListener: AudioLevelListener? = null
-    private var numSilencePacketsDiscarded = 0
     var forwardedSilencePackets: Int = 0
+    private val stats = Stats()
 
     /**
-     * Whether or not we should forcibly mute this audio stream (by setting shouldDiscard to true)
+     * Whether we should forcibly mute this audio stream (by setting shouldDiscard to true).
      */
     var forceMute: Boolean = false
 
@@ -55,13 +55,14 @@ class AudioLevelReader(
         audioLevelExtId?.let { audioLevelId ->
             audioRtpPacket.getHeaderExtension(audioLevelId)?.let { ext ->
                 val level = AudioLevelHeaderExtension.getAudioLevel(ext)
-                if ((level == MUTED_LEVEL && forwardedSilencePackets > forwardedSilencePacketsLimit) ||
-                    this.forceMute
-                ) {
+                val silence = level == MUTED_LEVEL
+
+                if (!silence) stats.nonSilence(AudioLevelHeaderExtension.getVad(ext))
+                if ((silence && forwardedSilencePackets > forwardedSilencePacketsLimit) || this.forceMute) {
                     packetInfo.shouldDiscard = true
-                    numSilencePacketsDiscarded++
+                    stats.discarded(silence)
                 } else {
-                    forwardedSilencePackets = if (level == MUTED_LEVEL) forwardedSilencePackets + 1 else 0
+                    forwardedSilencePackets = if (silence) forwardedSilencePackets + 1 else 0
                     audioLevelListener?.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())
                 }
             }
@@ -70,7 +71,10 @@ class AudioLevelReader(
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
         addString("audio_level_ext_id", audioLevelExtId.toString())
-        addNumber("num_silence_packets_discarded", numSilencePacketsDiscarded)
+        addNumber("num_silence_packets_discarded", stats.numDiscardedSilence)
+        addNumber("num_force_mute_discarded", stats.numDiscardedForceMute)
+        addNumber("num_non_silence", stats.numNonSilence)
+        addNumber("num_non_silence_with_vad", stats.numNonSilenceWithVad)
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
@@ -80,5 +84,21 @@ class AudioLevelReader(
         private val forwardedSilencePacketsLimit: Int by config {
             "jmt.audio.level.forwarded-silence-packets-limit".from(JitsiConfig.newConfig)
         }
+    }
+}
+
+private class Stats(
+    var numDiscardedSilence: Long = 0,
+    var numDiscardedForceMute: Long = 0,
+    var numNonSilence: Long = 0,
+    var numNonSilenceWithVad: Long = 0
+) {
+    /** A packet was discarded. If [silence] is false we assume it was because of "force mute". */
+    fun discarded(silence: Boolean) = if (silence) numDiscardedSilence++ else numDiscardedForceMute++
+
+    /** A non-silence packet was received (with or without the Voice Activity Detection flag). */
+    fun nonSilence(hasVad: Boolean) {
+        numNonSilence++
+        if (hasVad) numNonSilenceWithVad++
     }
 }
