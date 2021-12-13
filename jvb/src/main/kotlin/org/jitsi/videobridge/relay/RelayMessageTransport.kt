@@ -23,6 +23,7 @@ import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.EndpointMessageTransportConfig
 import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ClientHelloMessage
 import org.jitsi.videobridge.message.EndpointMessage
@@ -30,6 +31,7 @@ import org.jitsi.videobridge.message.EndpointStats
 import org.jitsi.videobridge.message.LastNMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.message.RemoveReceiverMessage
 import org.jitsi.videobridge.message.SelectedEndpointMessage
 import org.jitsi.videobridge.message.SelectedEndpointsMessage
 import org.jitsi.videobridge.message.ServerHelloMessage
@@ -124,8 +126,35 @@ class RelayMessageTransport(
         return createServerHello()
     }
 
-    override fun videoType(videoTypeMessage: VideoTypeMessage): BridgeChannelMessage? {
-        val epId = videoTypeMessage.endpointId
+    /**
+     * This message indicates that a remote bridge wishes to receive video
+     * with certain constraints for a specific endpoint.
+     * @param message
+     * @return
+     */
+    override fun addReceiver(message: AddReceiverMessage): BridgeChannelMessage? {
+        val epId = message.endpointId
+        val ep = relay.getEndpoint(epId) ?: run {
+            logger.warn("Received AddReceiverMessage for unknown epId $epId")
+            return null
+        }
+
+        ep.addReceiver(message.bridgeId, message.videoConstraints)
+        return null
+    }
+
+    override fun removeReceiver(message: RemoveReceiverMessage): BridgeChannelMessage? {
+        val epId = message.endpointId
+        val ep = relay.getEndpoint(epId) ?: run {
+            logger.warn("Received RemoveReceiverMessage for unknown epId $epId")
+            return null
+        }
+        ep.removeReceiver(message.bridgeId)
+        return null
+    }
+
+    override fun videoType(message: VideoTypeMessage): BridgeChannelMessage? {
+        val epId = message.endpointId
         if (epId == null) {
             logger.warn("Received VideoTypeMessage over relay channel with no endpoint ID")
             return null
@@ -138,17 +167,17 @@ class RelayMessageTransport(
             return null
         }
 
-        ep.setVideoType(videoTypeMessage.videoType)
+        ep.setVideoType(message.videoType)
 
         return null
     }
 
-    override fun sourceVideoType(sourceVideoTypeMessage: SourceVideoTypeMessage): BridgeChannelMessage? {
+    override fun sourceVideoType(message: SourceVideoTypeMessage): BridgeChannelMessage? {
         if (!MultiStreamConfig.config.isEnabled()) {
             return null
         }
 
-        val epId = sourceVideoTypeMessage.endpointId
+        val epId = message.endpointId
         if (epId == null) {
             logger.warn("Received SourceVideoTypeMessage over relay channel with no endpoint ID")
             return null
@@ -161,7 +190,7 @@ class RelayMessageTransport(
             return null
         }
 
-        ep.setVideoType(sourceVideoTypeMessage.sourceName, sourceVideoTypeMessage.videoType)
+        ep.setVideoType(message.sourceName, message.videoType)
 
         return null
     }
