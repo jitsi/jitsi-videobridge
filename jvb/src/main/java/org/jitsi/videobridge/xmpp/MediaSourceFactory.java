@@ -18,6 +18,7 @@ package org.jitsi.videobridge.xmpp;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.MultiStreamConfig;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
@@ -737,6 +738,16 @@ public class MediaSourceFactory
                 ssrcSecondarySsrcs, encodingIdx, height);
 
             height *= 2;
+        }
+
+        // TODO once multi stream, becomes the default, make a change to MediaStreamDesc, so that owner and name are
+        // not optional (there's no good reason for that). Then the error will be thrown automatically by Kotlin.
+        if (new MultiStreamConfig().getEnabled()) // using new MultiStreamConfig, because the class is static
+        {
+            if (primarySsrcs.name == null)
+            {
+                throw new IllegalArgumentException("The 'name' is missing in the source description");
+            }
         }
 
         MediaSourceDesc source = new MediaSourceDesc(encodings, primarySsrcs.owner, primarySsrcs.name);

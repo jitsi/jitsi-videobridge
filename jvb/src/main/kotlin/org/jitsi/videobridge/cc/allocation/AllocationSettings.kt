@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2020 - present 8x8, Inc.
+ * Copyright @ 2021 - Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.util.stream.Collectors
@@ -25,16 +27,26 @@ import kotlin.math.min
  * This class encapsulates all of the client-controlled settings for bandwidth allocation.
  */
 data class AllocationSettings @JvmOverloads constructor(
+    @Deprecated("", ReplaceWith("onStageSources"), DeprecationLevel.WARNING)
     val onStageEndpoints: List<String> = emptyList(),
+    @Deprecated("", ReplaceWith("selectedSources"), DeprecationLevel.WARNING)
     val selectedEndpoints: List<String> = emptyList(),
+    val onStageSources: List<String> = emptyList(),
+    val selectedSources: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1,
     val defaultConstraints: VideoConstraints
 ) {
+    private val multiStreamConfig = MultiStreamConfig()
 
     fun toJson() = OrderedJsonObject().apply {
-        put("on_stage_endpoints", onStageEndpoints)
-        put("selected_endpoints", selectedEndpoints)
+        if (multiStreamConfig.enabled) {
+            put("on_stage_sources", onStageSources)
+            put("selected_sources", selectedSources)
+        } else {
+            put("on_stage_endpoints", onStageEndpoints)
+            put("selected_endpoints", selectedEndpoints)
+        }
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
         put("default_constraints", defaultConstraints)
@@ -53,7 +65,13 @@ internal class AllocationSettingsWrapper {
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
      */
+    @Deprecated("", ReplaceWith("selectedSources"), DeprecationLevel.WARNING)
     private var selectedEndpoints = emptyList<String>()
+
+    /**
+     * The last selected sources set signaled by the receiving endpoint.
+     */
+    private var selectedSources = emptyList<String>()
 
     /**
      * The last max resolution signaled by the receiving endpoint.
@@ -68,28 +86,53 @@ internal class AllocationSettingsWrapper {
 
     private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 
+    @Deprecated("", ReplaceWith("onStageSources"), DeprecationLevel.WARNING)
     private var onStageEndpoints: List<String> = emptyList()
+
+    private var onStageSources: List<String> = emptyList()
+
+    private val multiStreamConfig = MultiStreamConfig()
+
     private var allocationSettings = create()
 
     /**
      * The set of selected endpoints last signaled via the legacy API ([setSelectedEndpoints]). We save them separately,
      * because they need to be considered when handling `maxFrameHeight`.
      */
+    @Deprecated("Use the receiver constraints instead")
     private var signaledSelectedEndpoints = listOf<String>()
 
-    private fun create() = AllocationSettings(
-        onStageEndpoints = onStageEndpoints,
-        selectedEndpoints = selectedEndpoints,
-        videoConstraints = videoConstraints,
-        defaultConstraints = defaultConstraints,
-        lastN = lastN
-    )
+    private fun create(): AllocationSettings {
+        if (multiStreamConfig.enabled) {
+            return AllocationSettings(
+                onStageSources = onStageSources,
+                selectedSources = selectedSources,
+                videoConstraints = videoConstraints,
+                defaultConstraints = defaultConstraints,
+                lastN = lastN
+            )
+        } else {
+            return AllocationSettings(
+                onStageEndpoints = onStageEndpoints,
+                selectedEndpoints = selectedEndpoints,
+                videoConstraints = videoConstraints,
+                defaultConstraints = defaultConstraints,
+                lastN = lastN
+            )
+        }
+    }
+
     fun get() = allocationSettings
 
     /**
      * Return `true` iff the [AllocationSettings] state changed.
      */
+    @Deprecated("Use the ReceiverVideoConstraints msg - adjusting max frame height directly will not be supported")
     fun setMaxFrameHeight(maxFrameHeight: Int): Boolean {
+        if (multiStreamConfig.enabled) {
+            return false
+        }
+
         if (this.maxFrameHeight != maxFrameHeight) {
             this.maxFrameHeight = maxFrameHeight
             return updateVideoConstraints(maxFrameHeight, signaledSelectedEndpoints).also {
@@ -108,6 +151,20 @@ internal class AllocationSettingsWrapper {
             if (lastN != it) {
                 lastN = it
                 changed = true
+            }
+        }
+        if (multiStreamConfig.enabled) {
+            message.selectedSources?.let {
+                if (selectedSources != it) {
+                    selectedSources = it
+                    changed = true
+                }
+            }
+            message.onStageSources?.let {
+                if (onStageSources != it) {
+                    onStageSources = it
+                    changed = true
+                }
             }
         }
         message.selectedEndpoints?.let {
@@ -146,7 +203,12 @@ internal class AllocationSettingsWrapper {
      * Note: This is the legacy API, which updates the constraints and strategy based on the selected endpoints and
      * [maxFrameHeight]. To update just the selected endpoints, use [setBandwidthAllocationSettings].
      */
+    @Deprecated("Use the ReceiverVideoConstraints msg - no legacy constraints in the multi-stream mode")
     fun setSelectedEndpoints(selectedEndpoints: List<String>): Boolean {
+        if (multiStreamConfig.enabled) {
+            return false
+        }
+
         signaledSelectedEndpoints = selectedEndpoints
         if (this.selectedEndpoints != selectedEndpoints) {
             this.selectedEndpoints = selectedEndpoints
@@ -192,6 +254,7 @@ internal class AllocationSettingsWrapper {
      * By simply setting an ideal height X as a global constraint, without setting a preferred resolution/frame-rate, we
      * signal to the bandwidth allocator that it needs to (evenly) distribute bandwidth across all participants, up to X.
      */
+    @Deprecated("Use the ReceiverVideoConstraints msg - no legacy constraints in the multi-stream mode")
     private fun updateVideoConstraints(
         maxFrameHeight: Int,
         selectedEndpoints: List<String>

@@ -488,8 +488,10 @@ public class EndpointMessageTransport
      * has been received.
      *
      * @param message the message that was received.
+     * @deprecated use receiverVideoConstraints, selecting endpoints will not be supported in the multi-stream mode
      */
     @Override
+    @Deprecated
     public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
     {
         List<String> newSelectedEndpoints = new ArrayList<>(message.getSelectedEndpoints());
