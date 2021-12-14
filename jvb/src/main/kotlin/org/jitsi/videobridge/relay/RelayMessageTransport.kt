@@ -19,18 +19,19 @@ import org.apache.commons.lang3.StringUtils
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
+import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.EndpointMessageTransportConfig
 import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ClientHelloMessage
+import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
 import org.jitsi.videobridge.message.EndpointMessage
 import org.jitsi.videobridge.message.EndpointStats
-import org.jitsi.videobridge.message.LastNMessage
-import org.jitsi.videobridge.message.ReceiverVideoConstraintMessage
-import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.RemoveReceiverMessage
 import org.jitsi.videobridge.message.SelectedEndpointMessage
 import org.jitsi.videobridge.message.SelectedEndpointsMessage
@@ -40,10 +41,12 @@ import org.jitsi.videobridge.message.VideoTypeMessage
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.json.simple.JSONObject
 import java.net.URI
+import java.util.LinkedList
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
+import java.util.stream.Collectors
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -346,134 +349,76 @@ class RelayMessageTransport(
     }
 
     /**
-     * Notifies this `Endpoint` that a [SelectedEndpointsMessage]
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    override fun selectedEndpoints(message: SelectedEndpointsMessage): BridgeChannelMessage? {
-        val newSelectedEndpoints: List<String> = ArrayList(message.selectedEndpoints)
-        logger.debug { "Selected $newSelectedEndpoints" }
-        // TODO
-//        endpoint.setSelectedEndpoints(newSelectedEndpoints);
-        return null
-    }
-
-    override fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage): BridgeChannelMessage? {
-        /* TODO */
-//        endpoint.setBandwidthAllocationSettings(message);
-        return null
-    }
-
-    /**
-     * Notifies this `Endpoint` that a
-     * [ReceiverVideoConstraintMessage] has been received
-     *
-     * @param message the message that was received.
-     */
-    override fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage): BridgeChannelMessage? {
-        val maxFrameHeight = message.maxFrameHeight
-        logger.debug { "Received a maxFrameHeight video constraint from " + relay.id + ": " + maxFrameHeight }
-
-        /* TODO */
-//        endpoint.setMaxFrameHeight(maxFrameHeight);
-        return null
-    }
-
-    /**
-     * Notifies this `Endpoint` that a [LastNMessage] has been
-     * received.
-     *
-     * @param message the message that was received.
-     */
-    override fun lastN(message: LastNMessage): BridgeChannelMessage? {
-        /* TODO */
-//        endpoint.setLastN(message.getLastN());
-        return null
-    }
-
-    /**
-     * Handles an opaque message from this `Endpoint` that should be forwarded to either: a) another client in
-     * this conference (1:1 message) or b) all other clients in this conference (broadcast message).
+     * Handles an opaque message received on the Relay channel. The message originates from an endpoint with an ID of
+     * `message.getFrom`, as verified by the remote bridge sending the message.
      *
      * @param message the message that was received from the endpoint.
      */
     override fun endpointMessage(message: EndpointMessage): BridgeChannelMessage? {
-        /* TODO */
-//        // First insert/overwrite the "from" to prevent spoofing.
-//        String from = endpoint.getId();
-//        message.setFrom(from);
-//
-//        Conference conference = endpoint.getConference();
-//
-//        if (conference == null || conference.isExpired())
-//        {
-//            getLogger().warn("Unable to send EndpointMessage, conference is null or expired");
-//            return null;
-//        }
-//
-//        boolean sendToOcto;
-//
-//        List<AbstractEndpoint> targets;
-//        if (message.isBroadcast())
-//        {
-//            // Broadcast message to all local endpoints + octo.
-//            targets = new LinkedList<>(conference.getLocalEndpoints());
-//            targets.remove(endpoint);
-//            sendToOcto = true;
-//        }
-//        else
-//        {
-//            // 1:1 message
-//            String to = message.getTo();
-//
-//            AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
-//            if (targetEndpoint instanceof OctoEndpoint)
-//            {
-//                targets = Collections.emptyList();
-//                sendToOcto = true;
-//            }
-//            else if (targetEndpoint != null)
-//            {
-//                targets = Collections.singletonList(targetEndpoint);
-//                sendToOcto = false;
-//            }
-//            else
-//            {
-//                getLogger().warn("Unable to find endpoint to send EndpointMessage to: " + to);
-//                return null;
-//            }
-//        }
-//
-//        conference.sendMessage(message, targets, sendToOcto);
+        // We trust the "from" field, because it comes from another bridge, not an endpoint.
+        val conference = relay.conference
+        if (conference.isExpired) {
+            logger.warn("Unable to send EndpointMessage, conference is expired")
+            return null
+        }
+        val targets: List<AbstractEndpoint> = if (message.isBroadcast()) {
+            // Broadcast message
+            LinkedList<AbstractEndpoint>(conference.localEndpoints)
+        } else {
+            // 1:1 message
+            val to = message.to
+            val targetEndpoint: AbstractEndpoint? = conference.getLocalEndpoint(to)
+            if (targetEndpoint != null) {
+                listOf(targetEndpoint)
+            } else {
+                logger.warn("Unable to find endpoint to send EndpointMessage to: $to")
+                return null
+            }
+        }
+        conference.sendMessage(message, targets, false /* sendToOcto */)
         return null
     }
 
     /**
-     * Handles an endpoint statistics message from this `Endpoint` that should be forwarded to
-     * other endpoints as appropriate, and also to Octo.
+     * Handles an endpoint statistics message on the Octo channel that should be forwarded to
+     * local endpoints as appropriate.
      *
      * @param message the message that was received from the endpoint.
      */
     override fun endpointStats(message: EndpointStats): BridgeChannelMessage? {
-        /* TODO */
-//        // First insert/overwrite the "from" to prevent spoofing.
-//        String from = endpoint.getId();
-//        message.setFrom(from);
-//
-//        Conference conference = endpoint.getConference();
-//
-//        if (conference == null || conference.isExpired())
-//        {
-//            getLogger().warn("Unable to send EndpointStats, conference is null or expired");
-//            return null;
-//        }
-//
-//        List<AbstractEndpoint> targets = conference.getLocalEndpoints().stream()
-//            .filter((ep) -> ep != endpoint && ep.wantsStatsFrom(endpoint))
-//            .collect(Collectors.toList());
-//
-//        conference.sendMessage(message, targets, true);
+        // We trust the "from" field, because it comes from another bridge, not an endpoint.
+        val conference = relay.conference
+        if (conference.isExpired) {
+            logger.warn("Unable to send EndpointStats, conference is null or expired")
+            return null
+        }
+        if (message.from == null) {
+            logger.warn("Unable to send EndpointStats, missing from")
+            return null
+        }
+        val from = conference.getEndpoint(message.from!!)
+        if (from == null) {
+            logger.warn("Unable to send EndpointStats, unknown endpoint " + message.from)
+            return null
+        }
+        val targets = conference.localEndpoints.stream()
+            .filter { ep: Endpoint ->
+                ep.wantsStatsFrom(
+                    from
+                )
+            }
+            .collect(Collectors.toList())
+        conference.sendMessage(message, targets as List<AbstractEndpoint>, false)
+        return null
+    }
+
+    override fun endpointConnectionStatus(message: EndpointConnectionStatusMessage): BridgeChannelMessage? {
+        val conference: Conference = relay.conference
+        if (conference.isExpired) {
+            logger.warn("Unable to send EndpointConnectionStatusMessage, conference is null or expired")
+            return null
+        }
+        conference.broadcastMessage(message, false /* sendToOcto */)
         return null
     }
 }

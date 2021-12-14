@@ -44,7 +44,7 @@ class RelayedEndpoint(
         TODO("Not yet implemented")
     }
 
-    override fun sendMessage(msg: BridgeChannelMessage?) {
+    override fun sendMessage(msg: BridgeChannelMessage) {
         TODO("Not yet implemented")
     }
 
@@ -60,11 +60,11 @@ class RelayedEndpoint(
         TODO("Not yet implemented")
     }
 
-    override fun addPayloadType(payloadType: PayloadType?) {
+    override fun addPayloadType(payloadType: PayloadType) {
         TODO("Not yet implemented")
     }
 
-    override fun addRtpExtension(rtpExtension: RtpExtension?) {
+    override fun addRtpExtension(rtpExtension: RtpExtension) {
         TODO("Not yet implemented")
     }
 
