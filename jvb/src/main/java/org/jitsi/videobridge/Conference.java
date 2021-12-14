@@ -465,21 +465,22 @@ public class Conference
      */
     private void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged)
     {
-        List<String> recentSpeakersIds
-                = recentSpeakers.stream().map(AbstractEndpoint::getId).collect(Collectors.toList());
-        if (logger.isInfoEnabled())
+        if (!recentSpeakers.isEmpty())
         {
-            logger.info("Recent speakers changed: " + recentSpeakersIds);
-            getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
-        }
-        if (!recentSpeakersIds.isEmpty())
-        {
+            List<String> recentSpeakersIds
+                    = recentSpeakers.stream().map(AbstractEndpoint::getId).collect(Collectors.toList());
+            logger.info("Recent speakers changed: " + recentSpeakersIds + ", dominant speaker changed: "
+                    + dominantSpeakerChanged);
             broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds));
-        }
 
-        if (dominantSpeakerChanged && getEndpointCount() > 2)
-        {
-            maybeSendKeyframeRequest(recentSpeakers.get(0));
+            if (dominantSpeakerChanged)
+            {
+                getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
+                if (getEndpointCount() > 2)
+                {
+                    maybeSendKeyframeRequest(recentSpeakers.get(0));
+                }
+            }
         }
     }
 
