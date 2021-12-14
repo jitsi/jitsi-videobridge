@@ -55,6 +55,15 @@ constructor(
         secondarySsrcs[ssrc] = type
     }
 
+    /**
+     * All SSRCs (primary and secondary) associated with this encoding.
+     */
+    val ssrcs: Collection<Long>
+        get() = HashSet<Long>().also { set ->
+            set.add(primarySSRC)
+            set.addAll(secondarySsrcs.keys)
+        }
+
     private fun validateLayerEids(layers: Array<RtpLayerDesc>) {
         for (layer in layers) {
             require(layer.eid == eid) { "Cannot add layer with EID ${layer.eid} to encoding with EID $eid" }
