@@ -444,7 +444,7 @@ public class Videobridge
             {
                 ConferenceModifyIQ conferenceModifyIq = (ConferenceModifyIQ)request.getRequest();
                 id = conferenceModifyIq.getMeetingId();
-                conference = getOrCreateConference((ConferenceModifyIQ)request.getRequest());
+                conference = getOrCreateConference(conferenceModifyIq);
             }
             else
             {
@@ -459,6 +459,16 @@ public class Videobridge
                             iq,
                             StanzaError.Condition.bad_request,
                             "Conference not found for ID: " + id));
+            return;
+        }
+        // TODO: perhaps we should use better error conditions for colibri2.
+        catch (ConferenceAlreadyExistsException e)
+        {
+            request.getCallback().invoke(
+                    IQUtils.createError(
+                            iq,
+                            StanzaError.Condition.bad_request,
+                            "Conference already exists for ID: " + id));
             return;
         }
         catch (InGracefulShutdownException e)
@@ -510,29 +520,40 @@ public class Videobridge
     }
 
     private @NotNull Conference getOrCreateConference(ConferenceModifyIQ conferenceModifyIQ)
-        throws InGracefulShutdownException, XmppStringprepException
+        throws InGracefulShutdownException, XmppStringprepException,
+            ConferenceAlreadyExistsException, ConferenceNotFoundException
     {
         String meetingId = conferenceModifyIQ.getMeetingId();
 
         Conference conference = getConferenceByMeetingId(meetingId);
 
-        if (conference != null)
+        if (conferenceModifyIQ.getCreate())
         {
+            if (conference != null)
+            {
+                throw new ConferenceAlreadyExistsException();
+            }
+            if (isShutdownInProgress())
+            {
+                throw new InGracefulShutdownException();
+            }
+
+            /* TODO: race condition if something else created a meeting with this meetingId since the lookup above? */
+            return createConference(
+                    JidCreate.entityBareFrom(conferenceModifyIQ.getConferenceName()),
+                    Conference.GID_NOT_SET,
+                    meetingId,
+                    conferenceModifyIQ.isRtcstatsEnabled(),
+                    conferenceModifyIQ.isCallstatsEnabled());
+        }
+        else
+        {
+            if (conference == null)
+            {
+                throw new ConferenceNotFoundException();
+            }
             return conference;
         }
-
-        if (isShutdownInProgress())
-        {
-            throw new InGracefulShutdownException();
-        }
-
-        /* TODO: race condition if something else created a meeting with this meetingId since the lookup above? */
-        return createConference(
-            JidCreate.entityBareFrom(conferenceModifyIQ.getConferenceName()),
-            Conference.GID_NOT_SET,
-            meetingId,
-            conferenceModifyIQ.isRtcstatsEnabled(),
-            conferenceModifyIQ.isCallstatsEnabled());
     }
 
     /**
@@ -1091,5 +1112,6 @@ public class Videobridge
         void conferenceExpired(@NotNull Conference conference);
     }
     private static class ConferenceNotFoundException extends Exception {}
+    private static class ConferenceAlreadyExistsException extends Exception {}
     private static class InGracefulShutdownException extends Exception {}
 }
