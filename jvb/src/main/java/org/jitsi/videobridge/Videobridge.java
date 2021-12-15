@@ -531,8 +531,8 @@ public class Videobridge
             JidCreate.entityBareFrom(conferenceModifyIQ.getConferenceName()),
             Conference.GID_NOT_SET,
             meetingId,
-            /* TODO: rtcstats and callstats for colibri2 */
-            true, true);
+            conferenceModifyIQ.isRtcstatsEnabled(),
+            conferenceModifyIQ.isCallstatsEnabled());
     }
 
     /**
