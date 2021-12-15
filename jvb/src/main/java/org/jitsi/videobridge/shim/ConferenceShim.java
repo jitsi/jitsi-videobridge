@@ -577,8 +577,6 @@ public class ConferenceShim
             ConferenceModifiedIQ.Builder responseBuilder =
                 ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ));
 
-            conference.describeShallow(responseBuilder);
-
             /* TODO: rename colibri2.Endpoint and colibri2.Relay so as not to conflict here? */
             /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
             for (org.jitsi.xmpp.extensions.colibri2.Endpoint e : conferenceModifyIQ.getEndpoints())

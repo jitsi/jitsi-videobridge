@@ -413,26 +413,6 @@ public class Conference
     }
 
     /**
-     * Sets the values of the properties of a specific
-     * <tt>ConferenceModifyIQ.Builder</tt> to the values of the respective
-     * properties of this instance. Thus, the specified <tt>iq</tt> may be
-     * thought of as a description of this instance.
-     * <p>
-     * <b>Note</b>: The copying of the values is shallow i.e. the
-     * <tt>Content</tt>s of this instance are not described in the specified
-     * <tt>iq</tt>.
-     * </p>
-     *
-     * @param b the <tt>ConferenceModifyIQ.Builder</tt> to set the values of the
-     * properties of this instance on
-    */
-    public void describeShallow(ConferenceModifiedIQ.Builder b)
-    {
-        b.setMeetingId(meetingId);
-        b.setConferenceName(conferenceName.toString());
-    }
-
-    /**
      * Runs {@link #lastNEndpointsChanged()} in an IO pool thread.
      */
     private void lastNEndpointsChangedAsync()

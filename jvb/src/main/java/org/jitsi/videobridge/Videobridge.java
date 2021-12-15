@@ -705,7 +705,7 @@ public class Videobridge
         // Health-check
         HealthCheckIQProvider.registerIQProvider();
 
-        AbstractConferenceModificationIQProvider.registerProviders();
+        IqProviderUtils.registerProviders();
     }
 
     /**
