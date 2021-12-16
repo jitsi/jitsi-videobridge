@@ -531,10 +531,12 @@ public class Videobridge
         {
             if (conference != null)
             {
+                logger.warn("Will not create conference, conference already exists for meetingId=" + meetingId);
                 throw new ConferenceAlreadyExistsException();
             }
             if (isShutdownInProgress())
             {
+                logger.warn("Will not create conference in shutdown mode.");
                 throw new InGracefulShutdownException();
             }
 
@@ -550,6 +552,7 @@ public class Videobridge
         {
             if (conference == null)
             {
+                logger.warn("Conference with meetingId=" + meetingId + " not found.");
                 throw new ConferenceNotFoundException();
             }
             return conference;
