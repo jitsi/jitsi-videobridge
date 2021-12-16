@@ -67,6 +67,11 @@ public abstract class AbstractEndpoint
     private final ReceiverConstraintsMap receiverVideoConstraintsMap = new ReceiverConstraintsMap();
 
     /**
+     * The map of source name -> receiver endpoint id -> video constraints.
+     */
+    private final Map<String, ReceiverConstraintsMap> receiverVideoConstraintsMapV2 = new HashMap<>();
+
+    /**
      * The statistic Id of this <tt>Endpoint</tt>.
      */
     private String statsId;
@@ -81,8 +86,14 @@ public abstract class AbstractEndpoint
      * The maximum set of constraints applied by all receivers of this endpoint
      * in the conference. The client needs to send _at least_ this to satisfy
      * all receivers.
+     *
+     * @deprecated Use maxReceiverVideoConstraintsMap.
      */
+    @Deprecated
     protected VideoConstraints maxReceiverVideoConstraints = new VideoConstraints(0, 0.0);
+
+    // TODO docs
+    protected Map<String, VideoConstraints> maxReceiverVideoConstraintsMap = new HashMap<>();
 
     protected final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
@@ -342,7 +353,21 @@ public abstract class AbstractEndpoint
     public JSONObject getDebugState()
     {
         JSONObject debugState = new JSONObject();
-        debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
+
+        if (MultiStreamConfig.config.getEnabled())
+        {
+            JSONObject receiverVideoConstraints = new JSONObject();
+
+            receiverVideoConstraintsMapV2.forEach(
+                    (sourceName, receiverConstraints) ->
+                            receiverVideoConstraints.put(sourceName, receiverConstraints.getDebugState()));
+
+            debugState.put("receiverVideoConstraints", receiverVideoConstraints);
+        }
+        else
+        {
+            debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
+        }
         debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
@@ -368,6 +393,27 @@ public abstract class AbstractEndpoint
         {
             maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
             sendVideoConstraints(newReceiverMaxVideoConstraints);
+        }
+    }
+
+    /**
+     * Computes and sets the {@link #maxReceiverVideoConstraints} from the specified video constraints of the media
+     * source identified by the given source name.
+     *
+     * @param sourceName the name of the media source for which the constraints have changed.
+     * @param newMaxHeight the maximum height resulting from the current set of constraints.
+     *                     (Currently we only support constraining the height, and not frame rate.)
+     */
+    private void receiverVideoConstraintsChangedV2(String sourceName, int newMaxHeight)
+    {
+        VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraintsMap.get(sourceName);
+
+        VideoConstraints newReceiverMaxVideoConstraints = new VideoConstraints(newMaxHeight, -1.0);
+
+        if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
+        {
+            this.maxReceiverVideoConstraintsMap.put(sourceName, newReceiverMaxVideoConstraints);
+            sendVideoConstraintsV2(sourceName, newReceiverMaxVideoConstraints);
         }
     }
 
@@ -398,9 +444,21 @@ public abstract class AbstractEndpoint
      *
      * @param maxVideoConstraints the max video constraints that the bridge
      * needs to receive from this endpoint
+     * @deprecated use sendVideoConstraintsV2
      */
+    @Deprecated
     protected abstract void
     sendVideoConstraints(@NotNull VideoConstraints maxVideoConstraints);
+
+    /**
+     * Notifies this instance that the max video constraints that the bridge needs to receive from a source of this
+     * endpoint has changed. Each implementation handles this notification differently.
+     *
+     * @param sourceName the name of the media source
+     * @param maxVideoConstraints the max video constraints that the bridge needs to receive from the source
+     */
+    protected abstract void
+    sendVideoConstraintsV2(@NotNull String sourceName, @NotNull VideoConstraints maxVideoConstraints);
 
     /**
      * Notifies this instance that a specified received wants to receive
@@ -425,6 +483,37 @@ public abstract class AbstractEndpoint
     }
 
     /**
+     * Notifies this instance that a specified received wants to receive the specified video constraints from the media
+     * source attached to this instance (the sender).
+     *
+     * The receiver can be either another endpoint, or a remote bridge.
+     *
+     * @param receiverId the id that specifies the receiver endpoint.
+     * @param sourceName the name of the media source for which the constraints are to be applied.
+     * @param newVideoConstraints the video constraints that the receiver wishes to receive.
+     */
+    public void addReceiverV2(String receiverId, String sourceName, VideoConstraints newVideoConstraints)
+    {
+        ReceiverConstraintsMap sourceConstraints = receiverVideoConstraintsMapV2.get(sourceName);
+
+        if (sourceConstraints == null)
+        {
+            sourceConstraints = new ReceiverConstraintsMap();
+            receiverVideoConstraintsMapV2.put(sourceName, sourceConstraints);
+        }
+
+        VideoConstraints oldVideoConstraints = sourceConstraints.put(receiverId, newVideoConstraints);
+
+        if (oldVideoConstraints == null || !oldVideoConstraints.equals(newVideoConstraints))
+        {
+            logger.debug(
+                () -> "Changed receiver constraints: " + receiverId + "->" + sourceName + ": " +
+                        newVideoConstraints.getMaxHeight());
+            receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
+        }
+    }
+
+    /**
      * Notifies this instance that the specified receiver no longer wants or
      * needs to receive anything from the endpoint attached to this
      * instance (the sender).
@@ -440,7 +529,28 @@ public abstract class AbstractEndpoint
         }
     }
 
-    public interface EventHandler {
+    /**
+     * Notifies this instance that the specified receiver no longer wants or needs to receive anything from the media
+     * source attached to this instance (the sender).
+     *
+     * @param receiverId the id that specifies the receiver endpoint
+     * @param sourceName the media source name
+     */
+    public void removeReceiverV2(String receiverId, String sourceName)
+    {
+        ReceiverConstraintsMap sourceConstraints = receiverVideoConstraintsMapV2.get(sourceName);
+
+        if (sourceConstraints != null)
+        {
+            if (sourceConstraints.remove(receiverId) != null)
+            {
+                logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
+                receiverVideoConstraintsChanged(sourceConstraints.getMaxHeight());
+            }
+        }
+    }
+
+   public interface EventHandler {
         void iceSucceeded();
         void iceFailed();
         void sourcesChanged();

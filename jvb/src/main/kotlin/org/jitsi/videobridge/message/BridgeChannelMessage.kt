@@ -56,6 +56,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedSourcesMessage::class, name = ForwardedSourcesMessage.TYPE),
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
+    JsonSubTypes.Type(value = SenderVideoConstraintsMessageV2::class, name = SenderVideoConstraintsMessageV2.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
@@ -120,6 +121,7 @@ open class MessageHandler {
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
             is ForwardedSourcesMessage -> forwardedSources(message)
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
+            is SenderVideoConstraintsMessageV2 -> senderVideoConstraintsV2(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
             is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
@@ -147,6 +149,7 @@ open class MessageHandler {
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun forwardedSources(message: ForwardedSourcesMessage) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
+    open fun senderVideoConstraintsV2(message: SenderVideoConstraintsMessageV2) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
@@ -379,6 +382,7 @@ class ForwardedSourcesMessage(
  *
  * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
  */
+@Deprecated("", ReplaceWith("SenderVideoConstraintsMessageV2"), DeprecationLevel.WARNING)
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
     constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
 
@@ -395,6 +399,27 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
 
     companion object {
         const val TYPE = "SenderVideoConstraints"
+    }
+}
+
+/**
+ * A message sent from the bridge to a client (sender), indicating constraints for the sender's video streams.
+ */
+class SenderVideoConstraintsMessageV2(
+    val sourceName: String,
+    val idealHeight: Int
+) : BridgeChannelMessage(TYPE) {
+
+    /**
+     * Serialize manually because it's faster than Jackson.
+     *
+     * We use the "idealHeight" format that the jitsi-meet client expects.
+     */
+    override fun createJson(): String =
+        """{"colibriClass":"$TYPE", "sourceName":"$sourceName", "idealHeight":$idealHeight}"""
+
+    companion object {
+        const val TYPE = "SenderVideoConstraintsV2"
     }
 }
 

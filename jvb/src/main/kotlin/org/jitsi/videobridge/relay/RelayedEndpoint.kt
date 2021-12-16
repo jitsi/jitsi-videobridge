@@ -131,6 +131,10 @@ class RelayedEndpoint(
         )
     }
 
+    override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
+        TODO("Not yet implemented")
+    }
+
     fun relayMessageTransportConnected() =
         sendVideoConstraints(maxReceiverVideoConstraints)
 

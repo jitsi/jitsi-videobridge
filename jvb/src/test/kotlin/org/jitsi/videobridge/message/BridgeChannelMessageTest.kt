@@ -211,6 +211,16 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.videoConstraints.idealHeight shouldBe 1080
         }
 
+        context("serializing and parsing SenderVideoConstraintsMessageV2") {
+            val senderVideoConstraintsMessage = SenderVideoConstraintsMessageV2("s1", 1080)
+            val parsed = parse(senderVideoConstraintsMessage.toJson())
+
+            parsed.shouldBeInstanceOf<SenderVideoConstraintsMessageV2>()
+
+            parsed.sourceName shouldBe "s1"
+            parsed.idealHeight shouldBe 1080
+        }
+
         context("serializing and parsing AddReceiver") {
             val message = AddReceiverMessage("bridge1", "abcdabcd", VideoConstraints(360))
             val parsed = parse(message.toJson())

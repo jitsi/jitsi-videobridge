@@ -763,6 +763,21 @@ public class Conference
         return relaysById.get(id);
     }
 
+    @Nullable
+    public AbstractEndpoint findSourceOwner(@NotNull String sourceName)
+    {
+        // TODO does it need to also handle OctoEndpoints?
+        for (Endpoint e : endpointsCache)
+        {
+            if (e.findMediaSourceDesc(sourceName) != null)
+            {
+                return e;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Initializes a new <tt>Endpoint</tt> instance with the specified
      * <tt>id</tt> and adds it to the list of <tt>Endpoint</tt>s participating

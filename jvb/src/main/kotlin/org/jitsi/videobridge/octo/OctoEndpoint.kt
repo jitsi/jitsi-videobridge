@@ -102,6 +102,10 @@ class OctoEndpoint(
         )
     }
 
+    override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
+        throw NotImplementedError("sendVideoConstraintsV2 is not implemented for Octo yet")
+    }
+
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
     override fun addPayloadType(payloadType: PayloadType?) {
