@@ -62,6 +62,7 @@ import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedEndpointsMessage
+import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
@@ -202,6 +203,9 @@ class Endpoint @JvmOverloads constructor(
 
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) =
                 sendForwardedEndpointsMessage(forwardedEndpoints)
+
+            override fun forwardedSourcesChanged(forwardedSources: Set<String>) =
+                sendForwardedSourcesMessage(forwardedSources)
 
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
@@ -640,8 +644,26 @@ class Endpoint @JvmOverloads constructor(
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
      */
+    @Deprecated("", ReplaceWith("sendForwardedSourcesMessage"), DeprecationLevel.WARNING)
     fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
         val msg = ForwardedEndpointsMessage(forwardedEndpoints)
+        TaskPools.IO_POOL.execute {
+            try {
+                sendMessage(msg)
+            } catch (t: Throwable) {
+                logger.warn("Failed to send message:", t)
+            }
+        }
+    }
+
+    /**
+     * Sends a message to this endpoint in order to notify it that the set of media sources for which the bridge
+     * is sending video has changed.
+     *
+     * @param forwardedSources the collection of forwarded media sources (by name).
+     */
+    fun sendForwardedSourcesMessage(forwardedSources: Collection<String>) {
+        val msg = ForwardedSourcesMessage(forwardedSources)
         TaskPools.IO_POOL.execute {
             try {
                 sendMessage(msg)

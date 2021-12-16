@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.videobridge.MultiStreamConfig
 import org.json.simple.JSONObject
 
 /**
@@ -30,6 +31,12 @@ class BandwidthAllocation @JvmOverloads constructor(
 ) {
     val forwardedEndpoints: Set<String> =
         allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
+
+    val forwardedSources: Set<String> =
+        if (MultiStreamConfig().enabled) // TODO is this okay perf wise? maybe create BandwidthAllocationV2?
+            allocations.filter { it.isForwarded() }.map { it.mediaSource?.sourceName!! }.toSet()
+        else
+            emptySet()
 
     /**
      * Whether the two allocations have the same endpoints and same layers.
@@ -78,7 +85,12 @@ data class SingleAllocation(
     val idealLayer: RtpLayerDesc? = null
 ) {
     constructor(endpoint: MediaSourceContainer, targetLayer: RtpLayerDesc? = null, idealLayer: RtpLayerDesc? = null) :
-        this(endpoint.id, endpoint.mediaSource, targetLayer, idealLayer)
+        this(
+            endpoint.id,
+            if (endpoint.mediaSource != null) endpoint.mediaSource else endpoint.mediaSources[0],
+            targetLayer,
+            idealLayer
+        )
     private val targetIndex: Int
         get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1

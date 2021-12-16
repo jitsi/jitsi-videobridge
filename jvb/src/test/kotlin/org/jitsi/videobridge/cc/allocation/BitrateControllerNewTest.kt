@@ -255,12 +255,12 @@ class BitrateControllerNewTest : ShouldSpec() {
 
                 clock.elapse(20.secs)
                 bc.bwe = 10.mbps
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 // B becomes dominant speaker.
                 bc.setEndpointOrdering(B, A, C, D)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 bc.bc.setBandwidthAllocationSettings(
@@ -280,7 +280,7 @@ class BitrateControllerNewTest : ShouldSpec() {
                 bc.bc.setBandwidthAllocationSettings(
                     ReceiverVideoConstraintsMessage(selectedSources = listOf("A-v0", "B-v0"))
                 )
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = -1))
@@ -290,7 +290,7 @@ class BitrateControllerNewTest : ShouldSpec() {
                     "C-v0" to VideoConstraints(180),
                     "D-v0" to VideoConstraints(180)
                 )
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0", "C-v0", "D-v0"))
 
                 bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = 2))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
@@ -300,26 +300,26 @@ class BitrateControllerNewTest : ShouldSpec() {
                     "D-v0" to VideoConstraints(0)
                 )
                 clock.elapse(2.secs)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 // D is now dominant speaker, but it should not override the selected endpoints.
                 bc.setEndpointOrdering(D, B, A, C)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 bc.bwe = 10.mbps
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 bc.bwe = 0.mbps
                 clock.elapse(2.secs)
                 bc.bwe = 10.mbps
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 // C is now dominant speaker, but it should not override the selected endpoints.
                 bc.setEndpointOrdering(C, D, A, B)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
             }
         }
     }
@@ -329,7 +329,7 @@ class BitrateControllerNewTest : ShouldSpec() {
             bc.bwe = bwe.bps
             clock.elapse(100.ms)
         }
-        logger.info("Forwarded endpoint history: ${bc.forwardedEndpointsHistory}")
+        logger.info("Forwarded sources history: ${bc.forwardedSourcesHistory}")
         logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
         logger.info("Allocation history: ${bc.allocationHistory}")
     }
@@ -337,14 +337,12 @@ class BitrateControllerNewTest : ShouldSpec() {
     private fun verifyStageViewScreensharing() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
-        // TODO add checks for forwarded sources here once implemented
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
             "A-v0" to VideoConstraints(720),
@@ -529,12 +527,12 @@ class BitrateControllerNewTest : ShouldSpec() {
     private fun verifyStageViewCamera() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
         // TODO add forwarded sources history here
 
@@ -776,7 +774,7 @@ class BitrateControllerNewTest : ShouldSpec() {
 
     private fun verifyLastN0() {
         // No video forwarded even with high BWE.
-        bc.forwardedEndpointsHistory.size shouldBe 0
+        bc.forwardedSourcesHistory.size shouldBe 0
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
             "A-v0" to VideoConstraints(0),
@@ -801,10 +799,10 @@ class BitrateControllerNewTest : ShouldSpec() {
     private fun verifyStageViewLastN1() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
 
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A")
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0")
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
@@ -880,12 +878,12 @@ class BitrateControllerNewTest : ShouldSpec() {
     private fun verifyTileView() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
 
         bc.allocationHistory.shouldMatchInOrder(
@@ -1038,12 +1036,12 @@ class BitrateControllerNewTest : ShouldSpec() {
     private fun verifyTileView360p() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
 
         bc.allocationHistory.shouldMatchInOrder(
@@ -1241,9 +1239,9 @@ class BitrateControllerNewTest : ShouldSpec() {
     private fun verifyTileViewLastN1(maxFrameHeight: Int = 180) {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0")
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
@@ -1335,16 +1333,17 @@ class BitrateControllerWrapper2(initialEndpoints: List<MediaSourceContainer>, va
 
     // Save the output.
     val effectiveConstraintsHistory: History<Map<String, VideoConstraints>> = mutableListOf()
-    // TODO make this a forwarded sources history in the "forwarded sources PR"
-    val forwardedEndpointsHistory: History<Set<String>> = mutableListOf()
+    val forwardedSourcesHistory: History<Set<String>> = mutableListOf()
     val allocationHistory: History<BandwidthAllocation> = mutableListOf()
 
     val bc = BitrateController(
         object : BitrateController.EventHandler {
-            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) {
-                Event(bwe, forwardedEndpoints, clock.instant()).apply {
-                    logger.info("Forwarded endpoints changed: $this")
-                    forwardedEndpointsHistory.add(this)
+            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
+
+            override fun forwardedSourcesChanged(forwardedSources: Set<String>) {
+                Event(bwe, forwardedSources, clock.instant()).apply {
+                    logger.info("Forwarded sources changed: $this")
+                    forwardedSourcesHistory.add(this)
                 }
             }
 
