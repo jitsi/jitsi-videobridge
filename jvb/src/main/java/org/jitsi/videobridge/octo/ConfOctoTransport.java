@@ -61,6 +61,8 @@ public class ConfOctoTransport
      */
     private final Logger logger;
 
+    private final MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
+
     /**
      * The conference for this {@link ConfOctoTransport}.
      */
@@ -257,7 +259,7 @@ public class ConfOctoTransport
         TaskPools.SCHEDULED_POOL.schedule(() ->
             /* Inform new bridges of existing local endpoints' video types. */
             conference.getLocalEndpoints().forEach((e) -> {
-                    if (MultiStreamConfig.config.isEnabled())
+                    if (multiStreamConfig.getEnabled())
                     {
                         Arrays.stream(e.getMediaSources()).forEach((msd) -> {
                             String sourceName = msd.getSourceName();

@@ -76,6 +76,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
     private final Logger logger;
 
+    private final MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
+
     /**
      * The estimated available bandwidth in bits per second.
      */
@@ -235,7 +237,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         // Compute the bandwidth allocation.
         BandwidthAllocation newAllocation
-            = MultiStreamConfig.config.isEnabled()
+            = multiStreamConfig.getEnabled()
                 ? allocate2(sortedEndpoints)
                 : allocate(sortedEndpoints);
 
