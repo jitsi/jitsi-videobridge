@@ -181,19 +181,6 @@
       <artifactId>reflections</artifactId>
       <version>0.9.11</version>
     </dependency>
-    <!-- runtime -->
-    <dependency>
-      <groupId>rusv</groupId>
-      <artifactId>agafua-syslog</artifactId>
-      <version>0.4</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.sentry</groupId>
-      <artifactId>sentry</artifactId>
-      <version>5.3.0</version>
-      <scope>runtime</scope>
-    </dependency>
     <!-- test -->
     <dependency>
       <groupId>io.mockk</groupId>
