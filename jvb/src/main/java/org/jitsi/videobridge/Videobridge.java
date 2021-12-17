@@ -424,6 +424,47 @@ public class Videobridge
     }
 
     /**
+     * Handles a COLIBRI2 request synchronously. Exposed only for testing (jicofo).
+     * @param conferenceModifyIQ The COLIBRI request.
+     * @return The response in the form of an {@link IQ}. It is either an error or a {@link ColibriConferenceIQ}.
+     */
+    public IQ handleConferenceModifyIq(ConferenceModifyIQ conferenceModifyIQ)
+    {
+        Conference conference;
+        try
+        {
+            conference = getOrCreateConference(conferenceModifyIQ);
+        }
+        catch (ConferenceNotFoundException e)
+        {
+            return IQUtils.createError(
+                    conferenceModifyIQ,
+                    StanzaError.Condition.bad_request,
+                    "Conference not found for ID: " + conferenceModifyIQ.getMeetingId());
+        }
+        catch (ConferenceAlreadyExistsException e)
+        {
+            return IQUtils.createError(
+                    conferenceModifyIQ,
+                    StanzaError.Condition.bad_request,
+                    "Conference already exists for ID: " + conferenceModifyIQ.getMeetingId());
+        }
+        catch (InGracefulShutdownException e)
+        {
+            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceModifyIQ);
+        }
+        catch (XmppStringprepException e)
+        {
+            return IQUtils.createError(
+                    conferenceModifyIQ,
+                    StanzaError.Condition.bad_request,
+                    "Invalid conference name (not a JID)");
+        }
+
+        return conference.getShim().handleConferenceModifyIQ(conferenceModifyIQ);
+    }
+
+    /**
      * Handles a COLIBRI request asynchronously.
      */
     private void handleColibriRequest(XmppConnection.ColibriRequest request)
