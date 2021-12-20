@@ -29,10 +29,10 @@ import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.colibri2.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -94,7 +94,7 @@ public class Conference
     /**
      * The relays participating in this conference.
      */
-    private final ConcurrentHashMap<String, org.jitsi.videobridge.relay.Relay> relaysById = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Relay> relaysById = new ConcurrentHashMap<>();
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -312,7 +312,7 @@ public class Conference
 
         if (sendToOcto)
         {
-            for (org.jitsi.videobridge.relay.Relay relay: relaysById.values())
+            for (Relay relay: relaysById.values())
             {
                 relay.sendMessage(msg);
             }
@@ -656,7 +656,7 @@ public class Conference
     }
 
     @Nullable
-    public org.jitsi.videobridge.relay.Relay getRelay(@NotNull String id)
+    public Relay getRelay(@NotNull String id)
     {
         return relaysById.get(id);
     }
@@ -701,16 +701,15 @@ public class Conference
     }
 
     @NotNull
-    public org.jitsi.videobridge.relay.Relay createRelay(String id, boolean iceControlling, boolean useUniquePort)
+    public Relay createRelay(String id, boolean iceControlling, boolean useUniquePort)
     {
-        final org.jitsi.videobridge.relay.Relay existingRelay = getRelay(id);
+        final Relay existingRelay = getRelay(id);
         if (existingRelay != null)
         {
             throw new IllegalArgumentException("Relay with ID = " + id + "already created");
         }
 
-        final org.jitsi.videobridge.relay.Relay relay =
-            new org.jitsi.videobridge.relay.Relay(id, this, logger, iceControlling, useUniquePort);
+        final Relay relay = new Relay(id, this, logger, iceControlling, useUniquePort);
 
         relaysById.put(id, relay);
 
@@ -946,7 +945,7 @@ public class Conference
      *
      * @param relay the <tt>Relay</tt> which expired.
      */
-    public void relayExpired(org.jitsi.videobridge.relay.Relay relay)
+    public void relayExpired(Relay relay)
     {
         final AbstractEndpoint removedEndpoint;
         String id = relay.getId();
@@ -1123,7 +1122,7 @@ public class Conference
                     prevHandler = endpoint;
                 }
             }
-            for (org.jitsi.videobridge.relay.Relay relay: relaysById.values())
+            for (Relay relay: relaysById.values())
             {
                 if (relay.wants(packetInfo))
                 {

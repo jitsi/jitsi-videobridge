@@ -304,7 +304,7 @@ class RelayMessageTransport(
                 // available and will not be available again.
                 webSocket!!.session.close(410, "replaced")
                 webSocket = null
-                logger.debug { "Endpoint expired, closed colibri web-socket." }
+                logger.debug { "Relay expired, closed colibri web-socket." }
             }
         }
         outgoingWebsocket?.stop()

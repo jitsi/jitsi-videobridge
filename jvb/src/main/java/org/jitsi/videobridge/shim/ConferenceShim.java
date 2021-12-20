@@ -28,10 +28,9 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
-import org.jitsi.xmpp.extensions.colibri2.Relay;
+import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -383,10 +382,10 @@ public class ConferenceShim
      * relay
      * @param useUniquePort Whether the created relay should use a unique port
      */
-    private @NotNull org.jitsi.videobridge.relay.Relay ensureRelayCreated(String relayId,
+    private @NotNull Relay ensureRelayCreated(String relayId,
         boolean iceControlling, boolean useUniquePort)
     {
-        org.jitsi.videobridge.relay.Relay r = conference.getRelay(relayId);
+        Relay r = conference.getRelay(relayId);
         if (r != null)
         {
             return r;
@@ -577,14 +576,14 @@ public class ConferenceShim
             ConferenceModifiedIQ.Builder responseBuilder =
                 ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ));
 
-            /* TODO: rename colibri2.Endpoint and colibri2.Relay so as not to conflict here? */
-            /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
-            for (org.jitsi.xmpp.extensions.colibri2.Endpoint e : conferenceModifyIQ.getEndpoints())
+            /* TODO: is there any reason we might need to handle Colibri2Endpoints and Colibri2Relays in
+                in-message order? */
+            for (Colibri2Endpoint e : conferenceModifyIQ.getEndpoints())
             {
                 responseBuilder.addEndpoint(handleColibri2Endpoint(e));
             }
 
-            for (org.jitsi.xmpp.extensions.colibri2.Relay r : conferenceModifyIQ.getRelays())
+            for (Colibri2Relay r : conferenceModifyIQ.getRelays())
             {
                 responseBuilder.addRelay(handleColibri2Relay(r));
             }
@@ -633,17 +632,15 @@ public class ConferenceShim
     }
 
     /**
-     * Process a colibri2 Endpoint in a conference-modify, return the response to be put in
+     * Process a Colibri2Endpoint in a conference-modify, return the response to be put in
      * the conference-modified.
      */
-    private org.jitsi.xmpp.extensions.colibri2.Endpoint
-    handleColibri2Endpoint(org.jitsi.xmpp.extensions.colibri2.Endpoint eDesc)
+    private Colibri2Endpoint handleColibri2Endpoint(Colibri2Endpoint eDesc)
     throws IqProcessingException
     {
         String id = eDesc.getId();
         Transport t = eDesc.getTransport();
-        org.jitsi.xmpp.extensions.colibri2.Endpoint.Builder respBuilder =
-            org.jitsi.xmpp.extensions.colibri2.Endpoint.getBuilder();
+        Colibri2Endpoint.Builder respBuilder = Colibri2Endpoint.getBuilder();
 
         respBuilder.setId(eDesc.getId());
 
@@ -740,17 +737,15 @@ public class ConferenceShim
     }
 
     /**
-     * Process a colibri2 Relay in a conference-modify, return the response to be put in
+     * Process a Colibri2Relay in a conference-modify, return the response to be put in
      * the conference-modified.
      */
-    private org.jitsi.xmpp.extensions.colibri2.Relay
-    handleColibri2Relay(org.jitsi.xmpp.extensions.colibri2.Relay rDesc)
+    private Colibri2Relay handleColibri2Relay(Colibri2Relay rDesc)
         throws IqProcessingException
     {
         String id = rDesc.getId();
         Transport t = rDesc.getTransport();
-        org.jitsi.xmpp.extensions.colibri2.Relay.Builder respBuilder =
-            org.jitsi.xmpp.extensions.colibri2.Relay.getBuilder();
+        Colibri2Relay.Builder respBuilder = Colibri2Relay.getBuilder();
 
         if (id == null)
         {
@@ -762,7 +757,7 @@ public class ConferenceShim
 
         if (rDesc.getExpire())
         {
-            org.jitsi.videobridge.relay.Relay r = conference.getRelay(id);
+            Relay r = conference.getRelay(id);
             if (r != null)
             {
                 r.expire();
@@ -787,7 +782,7 @@ public class ConferenceShim
             useUniquePort = false;
         }
 
-        org.jitsi.videobridge.relay.Relay r = ensureRelayCreated(id, iceControlling, useUniquePort);
+        Relay r = ensureRelayCreated(id, iceControlling, useUniquePort);
 
         if (t != null)
         {
@@ -808,7 +803,7 @@ public class ConferenceShim
         Endpoints endpoints = rDesc.getEndpoints();
         if (endpoints != null)
         {
-            for (org.jitsi.xmpp.extensions.colibri2.Endpoint e: endpoints.getEndpoints())
+            for (Colibri2Endpoint e: endpoints.getEndpoints())
             {
                 if (e.getId() != null) /* TODO: enforce this in XMPP-extensions? */
                 {
