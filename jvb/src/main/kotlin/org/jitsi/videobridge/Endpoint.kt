@@ -270,6 +270,8 @@ class Endpoint @JvmOverloads constructor(
             override fun trace(f: () -> Unit) = f.invoke()
         })
         addEndpointConnectionStatsListener(rttListener)
+        setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
+        setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
     }
 
     private val bandwidthProbing = BandwidthProbing(
@@ -894,11 +896,6 @@ class Endpoint @JvmOverloads constructor(
     }
 
     fun getLastN(): Int = bitrateController.lastN
-
-    /**
-     * Set the local SSRC for [mediaType] to [ssrc] for this endpoint.
-     */
-    fun setLocalSsrc(mediaType: MediaType, ssrc: Long) = transceiver.setLocalSsrc(mediaType, ssrc)
 
     /**
      * Returns true if this endpoint's transport is 'fully' connected (both ICE and DTLS), false otherwise

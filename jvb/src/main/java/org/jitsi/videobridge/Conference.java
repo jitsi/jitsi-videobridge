@@ -100,6 +100,19 @@ public class Conference
      */
     private final AtomicBoolean expired = new AtomicBoolean(false);
 
+    public long getLocalAudioSsrc()
+    {
+        return localAudioSsrc;
+    }
+
+    public long getLocalVideoSsrc()
+    {
+        return localVideoSsrc;
+    }
+
+    private final long localAudioSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+    private final long localVideoSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+
     /**
      * The locally unique identifier of this conference (i.e. unique across the
      * conferences on this bridge). It is locally generated and exposed via
