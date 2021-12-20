@@ -655,20 +655,33 @@ public class ConferenceShim
             return respBuilder.build();
         }
 
-        boolean iceControlling;
-        /* TODO: if a message seems to be creating an endpoint but it doesn't have a <transport> section,
-         *  something has almost certainly gone wrong; return an error in this case.
-         */
-        if (t != null)
+        Endpoint ep;
+
+        if (eDesc.getCreate())
         {
-            iceControlling = Boolean.TRUE.equals(t.getInitiator());
+            if (conference.getLocalEndpoint(id) != null)
+            {
+                throw new IqProcessingException(StanzaError.Condition.conflict, "Endpoint with ID " + id +
+                    " already exists");
+            }
+
+            if (t == null)
+            {
+                throw new IqProcessingException(StanzaError.Condition.bad_request, "Attempt to create endpoint " + id +
+                    " with no <transport>");
+            }
+            boolean iceControlling = Boolean.TRUE.equals(t.getInitiator());
+
+            ep = conference.createLocalEndpoint(id, iceControlling);
         }
         else
         {
-            iceControlling = false;
+            ep = conference.getLocalEndpoint(id);
+            if (ep == null)
+            {
+                throw new IqProcessingException(StanzaError.Condition.item_not_found, "Unknown endpoint " + id);
+            }
         }
-
-        Endpoint ep = ensureEndpointCreated(id, iceControlling);
 
         for (Media m: eDesc.getMedia())
         {
@@ -766,23 +779,34 @@ public class ConferenceShim
             return respBuilder.build();
         }
 
-        boolean iceControlling;
-        boolean useUniquePort;
-        /* TODO: if a message seems to be creating a relay but it doesn't have a <transport> section,
-         *  something has almost certainly gone wrong; return an error in this case.
-         */
-        if (t != null)
+        Relay r;
+
+        if (rDesc.getCreate())
         {
-            iceControlling = Boolean.TRUE.equals(t.getInitiator());
-            useUniquePort = Boolean.TRUE.equals(t.getUseUniquePort());
+            if (conference.getRelay(id) != null)
+            {
+                throw new IqProcessingException(StanzaError.Condition.conflict, "Relay with ID " + id +
+                    " already exists");
+            }
+
+            if (t == null)
+            {
+                throw new IqProcessingException(StanzaError.Condition.bad_request, "Attempt to create relay " + id +
+                    " with no <transport>");
+            }
+            boolean iceControlling = Boolean.TRUE.equals(t.getInitiator());
+            boolean useUniquePort = Boolean.TRUE.equals(t.getUseUniquePort());
+
+            r = conference.createRelay(id, iceControlling, useUniquePort);
         }
         else
         {
-            iceControlling = false;
-            useUniquePort = false;
+            r = conference.getRelay(id);
+            if (r == null)
+            {
+                throw new IqProcessingException(StanzaError.Condition.item_not_found, "Unknown relay " + id);
+            }
         }
-
-        Relay r = ensureRelayCreated(id, iceControlling, useUniquePort);
 
         if (t != null)
         {
