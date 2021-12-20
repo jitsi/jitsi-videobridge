@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import org.apache.logging.log4j.util.Strings.isEmpty
 import org.jitsi.nlj.VideoType
 import org.jitsi.utils.ResettableLazy
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
@@ -227,7 +226,7 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
      * Whether this message is to be broadcast or targeted to a specific endpoint.
      */
     @JsonIgnore
-    fun isBroadcast(): Boolean = isEmpty(to)
+    fun isBroadcast(): Boolean = to.isBlank()
 
     @JsonAnySetter
     fun put(key: String, value: Any) {
