@@ -23,8 +23,6 @@ override_dh_auto_build:
 override_dh_install:
 	mkdir debian/tmp
 	cp config/logrotate debian/tmp/jitsi-videobridge
-	cp config/log4j2.xml debian/tmp/
-	sed -i "s/logs/\/var\/log\/jitsi/g" debian/tmp/log4j2.xml
 	cp jvb/target/jitsi-videobridge*.jar debian/tmp/jitsi-videobridge.jar
 	dh_install
 
