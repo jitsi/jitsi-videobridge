@@ -159,14 +159,16 @@ class Endpoint @JvmOverloads constructor(
      * to whether the endpoint has an audio Colibri channel whose direction
      * allows sending.
      */
-    private var acceptAudio = false
+    var acceptAudio = false
+        private set
 
     /**
      * Whether this endpoint should accept video packets. We set this according
      * to whether the endpoint has a video Colibri channel whose direction
      * allows sending.
      */
-    private var acceptVideo = false
+    var acceptVideo = false
+        private set
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
