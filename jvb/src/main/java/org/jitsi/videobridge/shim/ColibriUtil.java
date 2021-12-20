@@ -19,10 +19,13 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.sctp.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.jingle.*;
 import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 import static org.jitsi.videobridge.Conference.GID_NOT_SET;
 
@@ -146,7 +149,33 @@ public class ColibriUtil
             // video channel is signaled.
             if (MediaType.VIDEO.equals(contentShim.getMediaType()) && !channelSources.isEmpty())
             {
-                channelShim.getEndpoint().recreateMediaSources();
+                List<ChannelShim> videoChannels = contentShim.getChannelShims().stream()
+                        .filter(c -> c.getMediaType() == MediaType.VIDEO)
+                        .filter(c -> c.getEndpoint() == channelShim.getEndpoint())
+                        .collect(Collectors.toList());
+
+                List<SourcePacketExtension> sources = new ArrayList<>();
+                List<SourceGroupPacketExtension> sourceGroups = new ArrayList<>();
+                videoChannels.forEach(channel ->
+                {
+                    Collection<SourcePacketExtension> s = channel.getSources();
+                    if (s != null)
+                    {
+                        sources.addAll(s);
+                    }
+
+                    Collection<SourceGroupPacketExtension> sg = channel.getSourceGroups();
+                    if (sg != null)
+                    {
+                        sourceGroups.addAll(sg);
+                    }
+                });
+
+                if (!sources.isEmpty() || !sourceGroups.isEmpty())
+                {
+                    channelShim.getEndpoint().setMediaSources(
+                            MediaSourceFactory.createMediaSources(sources, sourceGroups));
+                }
             }
 
             Integer channelLastN = channelIq.getLastN();

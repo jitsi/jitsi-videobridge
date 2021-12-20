@@ -296,7 +296,7 @@ class Endpoint @JvmOverloads constructor(
 
     override var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
-        private set(value) {
+        set(value) {
             val wasEmpty = transceiver.getMediaSources().isEmpty()
             if (transceiver.setMediaSources(value)) {
                 eventEmitter.fireEvent { sourcesChanged() }
@@ -759,28 +759,6 @@ class Endpoint @JvmOverloads constructor(
             else -> {
                 throw IllegalArgumentException("Media direction unknown: $direction")
             }
-        }
-    }
-
-    /**
-     * Re-creates this endpoint's media sources based on the sources
-     * and source groups that have been signaled.
-     */
-    override fun recreateMediaSources() {
-        val videoChannels = channelShims.filter { c -> c.mediaType == MediaType.VIDEO }
-
-        val sources = videoChannels
-            .mapNotNull(ChannelShim::getSources)
-            .flatten()
-            .toList()
-
-        val sourceGroups = videoChannels
-            .mapNotNull(ChannelShim::getSourceGroups)
-            .flatten()
-            .toList()
-
-        if (sources.isNotEmpty() || sourceGroups.isNotEmpty()) {
-            mediaSources = MediaSourceFactory.createMediaSources(sources, sourceGroups)
         }
     }
 
