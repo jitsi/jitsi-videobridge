@@ -28,6 +28,7 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
+import org.jitsi.videobridge.colibri2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.relay.*;
@@ -182,6 +183,7 @@ public class Conference
      * The shim which handles Colibri-related logic for this conference.
      */
     private final ConferenceShim shim;
+    private final Colibri2ConferenceShim colibri2Shim;
 
     private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
 
@@ -249,6 +251,7 @@ public class Conference
         this.gid = gid;
         this.conferenceName = conferenceName;
         this.shim = new ConferenceShim(this, logger);
+        this.colibri2Shim = new Colibri2ConferenceShim(this, logger);
         colibriQueue = new PacketQueue<>(
                 Integer.MAX_VALUE,
                 true,
@@ -266,7 +269,7 @@ public class Conference
                         }
                         else if (requestIQ instanceof ConferenceModifyIQ)
                         {
-                            response = shim.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
+                            response = handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
                         }
                         else
                         {
@@ -450,6 +453,12 @@ public class Conference
             logger.debug("Cannot request keyframe because the endpoint was not found.");
         }
     }
+
+    IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
+    {
+        return colibri2Shim.handleConferenceModifyIQ(conferenceModifyIQ);
+    }
+
     /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ</tt> to the values of the respective

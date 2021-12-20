@@ -461,7 +461,7 @@ public class Videobridge
                     "Invalid conference name (not a JID)");
         }
 
-        return conference.getShim().handleConferenceModifyIQ(conferenceModifyIQ);
+        return conference.handleConferenceModifyIQ(conferenceModifyIQ);
     }
 
     /**

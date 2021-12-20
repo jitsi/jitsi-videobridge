@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.shim;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.*;
@@ -24,12 +23,8 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.Endpoint;
 import org.jitsi.videobridge.octo.*;
-import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.colibri2.*;
-import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -304,37 +299,16 @@ public class ConferenceShim
      * exist in a conference, it will be created and initialized.
      * @param endpointId identifier of endpoint to check and initialize
      * @param iceControlling ICE control role of transport of newly created
-     * endpoint
      */
-    private @NotNull Endpoint ensureEndpointCreated(String endpointId, boolean iceControlling)
+    private void ensureEndpointCreated(String endpointId, boolean iceControlling)
     {
         Endpoint ep = conference.getLocalEndpoint(endpointId);
         if (ep != null)
         {
-            return ep;
+            return;
         }
 
-        return conference.createLocalEndpoint(endpointId, iceControlling);
-    }
-
-    /**
-     * Checks if relay with specified ID is initialized, if relay does not
-     * exist in a conference, it will be created and initialized.
-     * @param relayId identifier of endpoint to check and initialize
-     * @param iceControlling ICE control role of transport of newly created
-     * relay
-     * @param useUniquePort Whether the created relay should use a unique port
-     */
-    private @NotNull Relay ensureRelayCreated(String relayId,
-        boolean iceControlling, boolean useUniquePort)
-    {
-        Relay r = conference.getRelay(relayId);
-        if (r != null)
-        {
-            return r;
-        }
-
-        return conference.createRelay(relayId, iceControlling, useUniquePort);
+        conference.createLocalEndpoint(endpointId, iceControlling);
     }
 
     /**
@@ -505,327 +479,5 @@ public class ConferenceShim
         responseConferenceIQ.setType(IQ.Type.result);
 
         return responseConferenceIQ;
-    }
-
-    public IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
-    {
-        try
-        {
-            ConferenceModifiedIQ.Builder responseBuilder =
-                ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ));
-
-            /* TODO: is there any reason we might need to handle Colibri2Endpoints and Colibri2Relays in
-                in-message order? */
-            for (Colibri2Endpoint e : conferenceModifyIQ.getEndpoints())
-            {
-                responseBuilder.addEndpoint(handleColibri2Endpoint(e));
-            }
-
-            for (Colibri2Relay r : conferenceModifyIQ.getRelays())
-            {
-                responseBuilder.addRelay(handleColibri2Relay(r));
-            }
-
-            /* Report any feedback sources we haven't previously. */
-            Sources.Builder feedbackSourcesBuilder = Sources.getBuilder();
-            boolean newFeedbackSources = false;
-            for (Map.Entry<MediaType, ContentShim> content: contents.entrySet())
-            {
-                if (!content.getValue().isLocalSsrcReported())
-                {
-                    MediaSource.Builder mediaSourceBuilder = MediaSource.getBuilder();
-                    mediaSourceBuilder.setType(content.getKey());
-
-                    SourcePacketExtension feedbackSource = new SourcePacketExtension();
-                    feedbackSource.setSSRC(content.getValue().getLocalSsrc());
-                    content.getValue().markLocalSsrcReported();
-
-                    mediaSourceBuilder.addSource(feedbackSource);
-                    feedbackSourcesBuilder.addMediaSource(mediaSourceBuilder.build());
-
-                    newFeedbackSources = true;
-                }
-            }
-            if (newFeedbackSources)
-            {
-                responseBuilder.setSources(feedbackSourcesBuilder.build());
-            }
-
-            return responseBuilder.build();
-        }
-        catch (IqProcessingException e)
-        {
-            // Item not found conditions are assumed to be less critical, as they often happen in case a request
-            // arrives late for an expired endpoint.
-            if (StanzaError.Condition.item_not_found.equals(e.getCondition()))
-            {
-                logger.warn("Error processing conference-modify IQ: " + e);
-            }
-            else
-            {
-                logger.error("Error processing conference-modify IQ: " + e);
-            }
-            return IQUtils.createError(conferenceModifyIQ, e.getCondition(), e.getMessage());
-        }
-    }
-
-    /**
-     * Process a Colibri2Endpoint in a conference-modify, return the response to be put in
-     * the conference-modified.
-     */
-    private Colibri2Endpoint handleColibri2Endpoint(Colibri2Endpoint eDesc)
-    throws IqProcessingException
-    {
-        String id = eDesc.getId();
-        Transport t = eDesc.getTransport();
-        Colibri2Endpoint.Builder respBuilder = Colibri2Endpoint.getBuilder();
-
-        respBuilder.setId(eDesc.getId());
-
-        if (eDesc.getExpire())
-        {
-            Endpoint ep = conference.getLocalEndpoint(id);
-            if (ep != null)
-            {
-                ep.expire();
-            }
-            respBuilder.setExpire(true);
-            return respBuilder.build();
-        }
-
-        Endpoint ep;
-
-        if (eDesc.getCreate())
-        {
-            if (conference.getLocalEndpoint(id) != null)
-            {
-                throw new IqProcessingException(StanzaError.Condition.conflict, "Endpoint with ID " + id +
-                    " already exists");
-            }
-
-            if (t == null)
-            {
-                throw new IqProcessingException(StanzaError.Condition.bad_request, "Attempt to create endpoint " + id +
-                    " with no <transport>");
-            }
-            boolean iceControlling = Boolean.TRUE.equals(t.getInitiator());
-
-            ep = conference.createLocalEndpoint(id, iceControlling);
-        }
-        else
-        {
-            ep = conference.getLocalEndpoint(id);
-            if (ep == null)
-            {
-                throw new IqProcessingException(StanzaError.Condition.item_not_found, "Unknown endpoint " + id);
-            }
-        }
-
-        for (Media m: eDesc.getMedia())
-        {
-            MediaType type = m.getType();
-
-            /* TODO: organize these data structures more sensibly for Colibri2 */
-            ContentShim contentShim = getOrCreateContent(type);
-//            // Will be fixed in a later commit
-//            // ChannelShim channelShim = ep.getChannel(type);
-//            if (channelShim == null)
-//            {
-//                channelShim = contentShim.createRtpChannel(id);
-//            }
-//            channelShim.addPayloadTypes(m.getPayloadTypes());
-//            channelShim.addRtpHeaderExtensions(m.getRtpHdrExts());
-
-            /* No need to put media in conference-modified. */
-        }
-
-        if (t != null)
-        {
-            IceUdpTransportPacketExtension udpTransportPacketExtension = t.getIceUdpTransport();
-            if (udpTransportPacketExtension != null)
-            {
-                ep.setTransportInfo(udpTransportPacketExtension);
-            }
-        }
-        if (!ep.getTransportDescribed())
-        {
-            Transport.Builder transBuilder = Transport.getBuilder();
-            transBuilder.setIceUdpExtension(ep.describeTransport());
-            respBuilder.setTransport(transBuilder.build());
-        }
-
-        Sources sources = eDesc.getSources();
-        if (sources != null)
-        {
-            /* A bit clunky, to load the new signaling into the old shims. */
-            Map<MediaType, List<SourcePacketExtension>> sourcesByType = new HashMap<>();
-            Map<MediaType, List<SourceGroupPacketExtension>> sourceGroupsByType = new HashMap<>();
-            for (MediaSource s: sources.getMediaSources())
-            {
-                MediaType type = s.getType();
-                sourcesByType.computeIfAbsent(type, (v) -> new ArrayList<>()).addAll(s.getSources());
-                sourceGroupsByType.computeIfAbsent(type, (v) -> new ArrayList<>()).addAll(s.getSsrcGroups());
-            }
-
-            for (MediaType type: sourcesByType.keySet())
-            {
-                // Will be fixed in a later commit
-                ChannelShim channelShim = null; //ep.getChannel(type);
-                if (channelShim == null)
-                {
-                    logger.error("Endpoint " + id + " has source of type " + type + " without media");
-                    continue;
-                }
-                channelShim.setSources(sourcesByType.get(type));
-                channelShim.setSourceGroups(sourceGroupsByType.get(type));
-
-                if (type == MediaType.VIDEO && !sourcesByType.get(type).isEmpty())
-                {
-                    // Will be fixed in a later commit
-                    //ep.recreateMediaSources();
-                }
-            }
-        }
-
-        return respBuilder.build();
-    }
-
-    /**
-     * Process a Colibri2Relay in a conference-modify, return the response to be put in
-     * the conference-modified.
-     */
-    private Colibri2Relay handleColibri2Relay(Colibri2Relay rDesc)
-        throws IqProcessingException
-    {
-        String id = rDesc.getId();
-        Transport t = rDesc.getTransport();
-        Colibri2Relay.Builder respBuilder = Colibri2Relay.getBuilder();
-
-        if (id == null)
-        {
-            /* TODO: enforce this in xmpp-extensions? */
-            throw new IqProcessingException(StanzaError.Condition.bad_request, "Missing Relay ID");
-        }
-
-        respBuilder.setId(id);
-
-        if (rDesc.getExpire())
-        {
-            Relay r = conference.getRelay(id);
-            if (r != null)
-            {
-                r.expire();
-            }
-            respBuilder.setExpire(true);
-            return respBuilder.build();
-        }
-
-        Relay r;
-
-        if (rDesc.getCreate())
-        {
-            if (conference.getRelay(id) != null)
-            {
-                throw new IqProcessingException(StanzaError.Condition.conflict, "Relay with ID " + id +
-                    " already exists");
-            }
-
-            if (t == null)
-            {
-                throw new IqProcessingException(StanzaError.Condition.bad_request, "Attempt to create relay " + id +
-                    " with no <transport>");
-            }
-            boolean iceControlling = Boolean.TRUE.equals(t.getInitiator());
-            boolean useUniquePort = Boolean.TRUE.equals(t.getUseUniquePort());
-
-            r = conference.createRelay(id, iceControlling, useUniquePort);
-        }
-        else
-        {
-            r = conference.getRelay(id);
-            if (r == null)
-            {
-                throw new IqProcessingException(StanzaError.Condition.item_not_found, "Unknown relay " + id);
-            }
-        }
-
-        if (t != null)
-        {
-            IceUdpTransportPacketExtension udpTransportPacketExtension = t.getIceUdpTransport();
-            if (udpTransportPacketExtension != null)
-            {
-                r.setTransportInfo(udpTransportPacketExtension);
-            }
-        }
-
-        if (!r.getTransportDescribed())
-        {
-            Transport.Builder transBuilder = Transport.getBuilder();
-            transBuilder.setIceUdpExtension(r.describeTransport());
-            respBuilder.setTransport(transBuilder.build());
-        }
-
-        Endpoints endpoints = rDesc.getEndpoints();
-        if (endpoints != null)
-        {
-            for (Colibri2Endpoint e: endpoints.getEndpoints())
-            {
-                if (e.getId() != null) /* TODO: enforce this in XMPP-extensions? */
-                {
-                    if (e.getExpire())
-                    {
-                        r.removeRemoteEndpoint(e.getId());
-                    }
-                    else
-                    {
-                        List<AudioSourceDesc> audioSources = new ArrayList<>();
-                        List<MediaSourceDesc> videoSources = new ArrayList<>();
-                        if (e.getSources() != null)
-                        {
-                            for (MediaSource m: e.getSources().getMediaSources())
-                            {
-                                if (m.getType() == MediaType.AUDIO)
-                                {
-                                    if (m.getSources().isEmpty())
-                                    {
-                                        logger.warn("Ignoring audio source " + m.getId() + " in endpoint " +
-                                            e.getId() + " of relay " + r.getId() + ": no SSRCs");
-                                    }
-                                    else
-                                    {
-                                        if (m.getSources().size() > 1)
-                                        {
-                                            logger.warn("Audio source " + m.getId() + " in endpoint " +
-                                                e.getId() + " of relay " + r.getId() + " has " + m.getSources().size() +
-                                                " SSRCs: ignoring all but first");
-                                        }
-                                        AudioSourceDesc audioSource = new AudioSourceDesc(
-                                            m.getSources().get(0).getSSRC(), e.getId(), m.getId());
-                                        audioSources.add(audioSource);
-                                    }
-                                }
-                                else if (m.getType() == MediaType.VIDEO)
-                                {
-                                    MediaSourceDesc[] descs =
-                                        MediaSourceFactory.createMediaSources(
-                                            m.getSources(), m.getSsrcGroups(), e.getId(), m.getId());
-                                    videoSources.addAll(Arrays.asList(descs));
-                                }
-                                else
-                                {
-                                    logger.warn("Ignoring source " + m.getId() + " in endpoint " +
-                                        e.getId() + " of relay " + r.getId() + ": unsupported type " + m.getType());
-                                }
-                            }
-                        }
-                        r.addRemoteEndpoint(e.getId(), audioSources, videoSources);
-                    }
-                }
-            }
-        }
-
-        /* TODO: handle the rest of the relay's fields: feedback sources. */
-
-        return respBuilder.build();
     }
 }

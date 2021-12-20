@@ -75,7 +75,7 @@ public class ChannelShim
      * @param ext the XML extension to parse.
      * @return the created {@link RtpExtension} or {@code null}.
      */
-    static RtpExtension createRtpExtension(RTPHdrExtPacketExtension ext)
+    public static RtpExtension createRtpExtension(RTPHdrExtPacketExtension ext)
     {
         String uri = ext.getURI().toString();
         RtpExtensionType type = RtpExtensionType.Companion.createFromUri(uri);
