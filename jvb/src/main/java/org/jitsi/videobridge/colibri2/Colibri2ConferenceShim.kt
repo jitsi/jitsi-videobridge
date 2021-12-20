@@ -147,32 +147,41 @@ class Colibri2ConferenceShim(
             respBuilder.setTransport(transBuilder.build())
         }
 
-        eDesc.sources?.mediaSources?.forEach { mediaSource ->
-            mediaSource.sources.forEach {
-                ep.addReceiveSsrc(it.ssrc, mediaSource.type)
-            }
-            mediaSource.ssrcGroups.forEach { sourceGroup ->
-                if (sourceGroup.sources.size < 2) {
-                    logger.warn("Ignoring source group with <2 sources: ${sourceGroup.toXML()}")
-                } else {
+        eDesc.sources?.let { sources ->
+            sources.mediaSources.forEach { mediaSource ->
+                mediaSource.sources.forEach {
+                    ep.addReceiveSsrc(it.ssrc, mediaSource.type)
+                }
+                mediaSource.ssrcGroups.forEach { sourceGroup ->
+                    if (sourceGroup.sources.size < 2) {
+                        logger.warn("Ignoring source group with <2 sources: ${sourceGroup.toXML()}")
+                    } else {
 
-                    val primarySsrc: Long = sourceGroup.sources[0].ssrc
-                    val secondarySsrc: Long = sourceGroup.sources[1].ssrc
+                        val primarySsrc: Long = sourceGroup.sources[0].ssrc
+                        val secondarySsrc: Long = sourceGroup.sources[1].ssrc
 
-                    val ssrcAssociationType = sourceGroup.semantics.parseAssociationType()
-                    if (ssrcAssociationType != null &&
-                        ssrcAssociationType != SsrcAssociationType.SIM
-                    ) {
-                        ep.conference.encodingsManager
-                            .addSsrcAssociation(
-                                ep.id,
-                                primarySsrc,
-                                secondarySsrc,
-                                ssrcAssociationType
-                            )
+                        val ssrcAssociationType = sourceGroup.semantics.parseAssociationType()
+                        if (ssrcAssociationType != null &&
+                            ssrcAssociationType != SsrcAssociationType.SIM
+                        ) {
+                            ep.conference.encodingsManager
+                                .addSsrcAssociation(
+                                    ep.id,
+                                    primarySsrc,
+                                    secondarySsrc,
+                                    ssrcAssociationType
+                                )
+                        }
                     }
                 }
             }
+
+            // Assume a message can only contain on source per media type.
+            // If "sources" was signaled, but it didn't contain any video sources, clear the endpoint's video sources
+            val newMediaSources = sources.mediaSources.find { it.type == MediaType.VIDEO }?.let {
+                MediaSourceFactory.createMediaSources(it.sources, it.ssrcGroups)
+            } ?: emptyArray()
+            ep.mediaSources = newMediaSources
         }
 
         return respBuilder.build()
