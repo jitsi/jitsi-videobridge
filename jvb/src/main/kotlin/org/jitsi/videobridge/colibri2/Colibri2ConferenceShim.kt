@@ -139,6 +139,11 @@ class Colibri2ConferenceShim(
             /* No need to put media in conference-modified. */
         }
 
+        ep.updateAcceptedMediaTypes(
+            eDesc.media.any { it.type == MediaType.AUDIO },
+            eDesc.media.any { it.type == MediaType.VIDEO }
+        )
+
         if (t != null) {
             val udpTransportPacketExtension = t.iceUdpTransport
             if (udpTransportPacketExtension != null) {
