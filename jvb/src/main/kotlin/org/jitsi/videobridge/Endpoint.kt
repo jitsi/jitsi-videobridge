@@ -928,7 +928,7 @@ class Endpoint @JvmOverloads constructor(
         super.expire()
 
         try {
-            endpointShim?.let { it.expire() }
+            endpointShim?.expire()
             endpointShim = null
             updateStatsOnExpire()
             transceiver.stop()
