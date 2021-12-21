@@ -160,7 +160,13 @@ public class ChannelShim
         this.contentShim = contentShim;
         this.creationTimestampMs = System.currentTimeMillis();
         this.logger = parentLogger.createChildLogger(ChannelShim.class.getName());
-        endpoint.addChannel(this);
+        EndpointShim endpointShim = endpoint.getEndpointShim();
+        if (endpointShim == null)
+        {
+            endpointShim = new EndpointShim(endpoint);
+            endpoint.setEndpointShim(endpointShim);
+        }
+        endpointShim.addChannel(this);
     }
 
     /**
@@ -192,7 +198,11 @@ public class ChannelShim
         if (expire == 0)
         {
             expired = true;
-            endpoint.removeChannel(this);
+            EndpointShim endpointShim = endpoint.getEndpointShim();
+            if (endpointShim != null)
+            {
+                endpointShim.removeChannel(this);
+            }
             contentShim.removeChannel(this);
         }
     }
@@ -404,8 +414,16 @@ public class ChannelShim
         if (!Objects.equals(this.direction, direction))
         {
             this.direction = direction;
-            this.endpoint.updateAcceptedMediaTypes();
-            this.endpoint.updateForceMute();
+            EndpointShim endpointShim = endpoint.getEndpointShim();
+            if (endpointShim != null)
+            {
+                endpointShim.updateAcceptedMediaTypes();
+                endpointShim.updateForceMute();
+            }
+            else
+            {
+                logger.error("Can not set direction, no endpoint shim.");
+            }
         }
     }
 
