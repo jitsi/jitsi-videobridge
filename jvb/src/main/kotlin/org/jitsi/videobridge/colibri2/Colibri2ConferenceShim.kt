@@ -23,6 +23,7 @@ import org.jitsi.xmpp.extensions.colibri2.Media
 import org.jitsi.xmpp.extensions.colibri2.MediaSource
 import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
+import org.jitsi.xmpp.extensions.jingle.ParameterPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
 import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
 import org.jitsi.xmpp.util.IQUtils
@@ -59,13 +60,35 @@ class Colibri2ConferenceShim(
             feedbackSourcesBuilder.addMediaSource(
                 MediaSource.getBuilder()
                     .setType(MediaType.AUDIO)
-                    .addSource(SourcePacketExtension().apply { ssrc = conference.localAudioSsrc })
+                    .addSource(
+                        SourcePacketExtension().apply {
+                            ssrc = conference.localAudioSsrc
+                            name = "jvb-a0"
+                            addParameter(
+                                ParameterPacketExtension().apply {
+                                    name = "msid"
+                                    value = "mixedmslabel mixedlabelaudio0"
+                                }
+                            )
+                        }
+                    )
                     .build()
             )
             feedbackSourcesBuilder.addMediaSource(
                 MediaSource.getBuilder()
                     .setType(MediaType.VIDEO)
-                    .addSource(SourcePacketExtension().apply { ssrc = conference.localVideoSsrc })
+                    .addSource(
+                        SourcePacketExtension().apply {
+                            ssrc = conference.localVideoSsrc
+                            name = "jvb-v0"
+                            addParameter(
+                                ParameterPacketExtension().apply {
+                                    name = "msid"
+                                    value = "mixedmslabel mixedlabelvideo0"
+                                }
+                            )
+                        }
+                    )
                     .build()
             )
 
