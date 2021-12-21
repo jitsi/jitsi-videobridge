@@ -56,43 +56,7 @@ class Colibri2ConferenceShim(
 
         /* Report feedback sources if we haven't reported them yet. */
         if (!localSsrcsReported) {
-            val feedbackSourcesBuilder = Sources.getBuilder()
-            feedbackSourcesBuilder.addMediaSource(
-                MediaSource.getBuilder()
-                    .setType(MediaType.AUDIO)
-                    .addSource(
-                        SourcePacketExtension().apply {
-                            ssrc = conference.localAudioSsrc
-                            name = "jvb-a0"
-                            addParameter(
-                                ParameterPacketExtension().apply {
-                                    name = "msid"
-                                    value = "mixedmslabel mixedlabelaudio0"
-                                }
-                            )
-                        }
-                    )
-                    .build()
-            )
-            feedbackSourcesBuilder.addMediaSource(
-                MediaSource.getBuilder()
-                    .setType(MediaType.VIDEO)
-                    .addSource(
-                        SourcePacketExtension().apply {
-                            ssrc = conference.localVideoSsrc
-                            name = "jvb-v0"
-                            addParameter(
-                                ParameterPacketExtension().apply {
-                                    name = "msid"
-                                    value = "mixedmslabel mixedlabelvideo0"
-                                }
-                            )
-                        }
-                    )
-                    .build()
-            )
-
-            responseBuilder.setSources(feedbackSourcesBuilder.build())
+            responseBuilder.setSources(buildFeedbackSources())
             localSsrcsReported = true
         }
 
@@ -107,6 +71,43 @@ class Colibri2ConferenceShim(
         }
         IQUtils.createError(conferenceModifyIQ, e.condition, e.message)
     }
+
+    private fun buildFeedbackSources(): Sources = Sources.getBuilder().apply {
+        addMediaSource(
+            MediaSource.getBuilder()
+                .setType(MediaType.AUDIO)
+                .addSource(
+                    SourcePacketExtension().apply {
+                        ssrc = conference.localAudioSsrc
+                        name = "jvb-a0"
+                        addParameter(
+                            ParameterPacketExtension().apply {
+                                name = "msid"
+                                value = "mixedmslabel mixedlabelaudio0"
+                            }
+                        )
+                    }
+                )
+                .build()
+        )
+        addMediaSource(
+            MediaSource.getBuilder()
+                .setType(MediaType.VIDEO)
+                .addSource(
+                    SourcePacketExtension().apply {
+                        ssrc = conference.localVideoSsrc
+                        name = "jvb-v0"
+                        addParameter(
+                            ParameterPacketExtension().apply {
+                                name = "msid"
+                                value = "mixedmslabel mixedlabelvideo0"
+                            }
+                        )
+                    }
+                )
+                .build()
+        )
+    }.build()
 
     /**
      * Process a colibri2 Endpoint in a conference-modify, return the response to be put in
