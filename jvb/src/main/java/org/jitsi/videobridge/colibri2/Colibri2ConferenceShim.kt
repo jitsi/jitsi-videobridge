@@ -188,6 +188,10 @@ class Colibri2ConferenceShim(
             ep.mediaSources = newMediaSources
         }
 
+        eDesc.forceMute?.let {
+            ep.updateForceMute(it.audio, it.video)
+        }
+
         return respBuilder.build()
     }
 
