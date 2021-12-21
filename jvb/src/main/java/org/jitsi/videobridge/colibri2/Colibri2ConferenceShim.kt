@@ -15,6 +15,8 @@ import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
+import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
+import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.Media
@@ -26,8 +28,6 @@ import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
 import org.jitsi.xmpp.util.IQUtils
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
-import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
-import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 
 class Colibri2ConferenceShim(
     private val conference: Conference,
@@ -101,17 +101,21 @@ class Colibri2ConferenceShim(
             return respBuilder.build()
         }
 
-        val iceControlling: Boolean = if (t != null) {
-            /* TODO: if a message seems to be creating an endpoint but it doesn't have a <transport> section,
-             *  something has almost certainly gone wrong; return an error in this case.
-             */
-            t.initiator == true
+        val ep: Endpoint
+        if (eDesc.create) {
+            if (conference.getLocalEndpoint(id) != null) {
+                throw IqProcessingException(Condition.conflict, "Endpoint with ID $id already exists")
+            }
+            if (t == null) {
+                throw IqProcessingException(Condition.bad_request, "Attempt to create endpoint $id with no <transport>")
+            }
+            val iceControlling = t.initiator == true
+            ep = conference.createLocalEndpoint(id, iceControlling)
         } else {
-            false
+            ep = conference.getLocalEndpoint(id)
+                ?: throw IqProcessingException(Condition.item_not_found, "Unknown endpoint $id")
         }
 
-        // TODO handle the create/update case separately.
-        val ep: Endpoint = getOrCreateEndpoint(id, iceControlling)
         for (m: Media in eDesc.media) {
             /* TODO: organize these data structures more sensibly for Colibri2 */
             m.payloadTypes.forEach {
@@ -200,14 +204,6 @@ class Colibri2ConferenceShim(
     }
 
     /**
-     * @return the endpoint with [endpointId], creating it if it doesn't exist.
-     */
-    private fun getOrCreateEndpoint(endpointId: String, iceControlling: Boolean): Endpoint =
-        conference.getLocalEndpoint(endpointId) ?: conference.createLocalEndpoint(endpointId, iceControlling)
-    private fun getOrCreateRelay(relayId: String, iceControlling: Boolean, useUniquePort: Boolean): Relay =
-        conference.getRelay(relayId) ?: conference.createRelay(relayId, iceControlling, useUniquePort)
-
-    /**
      * Process a colibri2 Relay in a conference-modify, return the response to be put in
      * the conference-modified.
      */
@@ -223,18 +219,23 @@ class Colibri2ConferenceShim(
             respBuilder.setExpire(true)
             return respBuilder.build()
         }
-        val iceControlling: Boolean
-        val useUniquePort: Boolean
-        /* TODO: if a message seems to be creating a relay but it doesn't have a <transport> section,
-         *  something has almost certainly gone wrong; return an error in this case.
-         */if (t != null) {
-            iceControlling = java.lang.Boolean.TRUE == t.initiator
-            useUniquePort = java.lang.Boolean.TRUE == t.useUniquePort
+
+        val r: Relay
+        if (rDesc.create) {
+            if (conference.getRelay(id) != null) {
+                throw IqProcessingException(Condition.conflict, "Relay with ID $id already exists")
+            }
+            if (t == null) {
+                throw IqProcessingException(Condition.bad_request, "Attempt to create relay $id with no <transport>")
+            }
+
+            val iceControlling = t.initiator == true
+            r = conference.createRelay(id, iceControlling, t.useUniquePort)
         } else {
-            iceControlling = false
-            useUniquePort = false
+            r = conference.getRelay(id)
+                ?: throw IqProcessingException(Condition.item_not_found, "Unknown relay $id")
         }
-        val r: Relay = getOrCreateRelay(id, iceControlling, useUniquePort)
+
         if (t != null) {
             val udpTransportPacketExtension = t.iceUdpTransport
             if (udpTransportPacketExtension != null) {
