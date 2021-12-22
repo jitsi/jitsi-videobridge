@@ -343,14 +343,6 @@ public abstract class AbstractEndpoint
     public abstract void requestKeyframe();
 
     /**
-     * Recreates this {@link AbstractEndpoint}'s media sources based
-     * on the sources (and source groups) described in its video channel.
-     */
-    public void recreateMediaSources()
-    {
-    }
-
-    /**
      * Describes this endpoint's transport in the given channel bundle XML
      * element.
      *

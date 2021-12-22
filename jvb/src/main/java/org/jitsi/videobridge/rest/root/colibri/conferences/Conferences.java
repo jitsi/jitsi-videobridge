@@ -168,8 +168,7 @@ public class Conferences
 
     private String getVideobridgeIqResponseAsJson(ColibriConferenceIQ request)
     {
-        IQ responseIq = videobridge
-                .handleColibriConferenceIQ(request);
+        IQ responseIq = videobridge.handleColibriConferenceIQ(request);
 
         if (responseIq.getError() != null)
         {

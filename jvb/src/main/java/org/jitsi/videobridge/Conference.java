@@ -27,12 +27,17 @@ import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.colibri2.*;
+import org.jitsi.xmpp.util.*;
+import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -102,6 +107,19 @@ public class Conference
      */
     private final AtomicBoolean expired = new AtomicBoolean(false);
 
+    public long getLocalAudioSsrc()
+    {
+        return localAudioSsrc;
+    }
+
+    public long getLocalVideoSsrc()
+    {
+        return localVideoSsrc;
+    }
+
+    private final long localAudioSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+    private final long localVideoSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+
     /**
      * The locally unique identifier of this conference (i.e. unique across the
      * conferences on this bridge). It is locally generated and exposed via
@@ -164,6 +182,8 @@ public class Conference
      * The shim which handles Colibri-related logic for this conference.
      */
     private final ConferenceShim shim;
+
+    private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
 
     //TODO not public
     final public EncodingsManager encodingsManager = new EncodingsManager();
@@ -229,6 +249,54 @@ public class Conference
         this.gid = gid;
         this.conferenceName = conferenceName;
         this.shim = new ConferenceShim(this, logger);
+        colibriQueue = new PacketQueue<>(
+                Integer.MAX_VALUE,
+                true,
+                "colibri-queue",
+                request ->
+                {
+                    try
+                    {
+                        long start = System.currentTimeMillis();
+                        IQ requestIQ = request.getRequest();
+                        IQ response;
+                        if (requestIQ instanceof ColibriConferenceIQ)
+                        {
+                            response = shim.handleColibriConferenceIQ((ColibriConferenceIQ)requestIQ);
+                        }
+                        else if (requestIQ instanceof ConferenceModifyIQ)
+                        {
+                            response = shim.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
+                        }
+                        else
+                        {
+                            throw new IllegalStateException("Bad IQ " + request.getClass() + " passed to colibriIQ");
+                        }
+                        long end = System.currentTimeMillis();
+                        long processingDelay = end - start;
+                        long totalDelay = end - request.getReceiveTime();
+                        request.getProcessingDelayStats().addDelay(processingDelay);
+                        request.getTotalDelayStats().addDelay(totalDelay);
+                        if (processingDelay > 100)
+                        {
+                            logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
+                                    + totalDelay + " ms): " + request.getRequest().toXML());
+                        }
+                        request.getCallback().invoke(response);
+                    }
+                    catch (Throwable e)
+                    {
+                        logger.warn("Failed to handle colibri request: ", e);
+                        request.getCallback().invoke(
+                                IQUtils.createError(
+                                        request.getRequest(),
+                                        StanzaError.Condition.internal_server_error,
+                                        e.getMessage()));
+                    }
+                    return true;
+                },
+                TaskPools.IO_POOL
+        );
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {
@@ -250,6 +318,11 @@ public class Conference
         videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
+    }
+
+    public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
+    {
+        colibriQueue.add(request);
     }
 
     /**
@@ -558,7 +631,7 @@ public class Conference
 
         logger.info("Expiring.");
 
-        shim.close();
+        colibriQueue.close();
 
         epConnectionStatusMonitor.stop();
 

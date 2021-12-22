@@ -21,7 +21,6 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.Endpoint;
 import org.jitsi.videobridge.octo.*;
@@ -65,8 +64,6 @@ public class ConferenceShim
      */
     private final Map<MediaType, ContentShim> contents = new HashMap<>();
 
-    private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
-
     /**
      * Initializes a new {@link ConferenceShim} instance.
      *
@@ -76,61 +73,7 @@ public class ConferenceShim
     {
         this.logger = parentLogger.createChildLogger(ConferenceShim.class.getName());
         this.conference = conference;
-        colibriQueue = new PacketQueue<>(
-                Integer.MAX_VALUE,
-                true,
-                "colibri-queue",
-                request ->
-                {
-                    try
-                    {
-                        long start = System.currentTimeMillis();
-                        IQ requestIQ = request.getRequest();
-                        IQ response;
-                        if (requestIQ instanceof ColibriConferenceIQ)
-                        {
-                            response = handleColibriConferenceIQ((ColibriConferenceIQ)requestIQ);
-                        }
-                        else if (requestIQ instanceof ConferenceModifyIQ)
-                        {
-                            response = handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
-                        }
-                        else
-                        {
-                            throw new IllegalStateException("Bad IQ " + request.getClass() + " passed to colibriIQ");
-                        }
-                        long end = System.currentTimeMillis();
-                        long processingDelay = end - start;
-                        long totalDelay = end - request.getReceiveTime();
-                        request.getProcessingDelayStats().addDelay(processingDelay);
-                        request.getTotalDelayStats().addDelay(totalDelay);
-                        if (processingDelay > 100)
-                        {
-                            logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                                    + totalDelay + " ms): " + request.getRequest().toXML());
-                        }
-                        request.getCallback().invoke(response);
-                    }
-                    catch (Throwable e)
-                    {
-                        logger.warn("Failed to handle colibri request: ", e);
-                        request.getCallback().invoke(
-                                IQUtils.createError(
-                                        request.getRequest(),
-                                        StanzaError.Condition.internal_server_error,
-                                        e.getMessage()));
-                    }
-                    return true;
-                },
-                TaskPools.IO_POOL
-        );
     }
-
-    public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
-    {
-        colibriQueue.add(request);
-    }
-
 
     /**
      * Gets the content of type {@code type}, creating it if necessary.
@@ -419,11 +362,6 @@ public class ConferenceShim
         }
     }
 
-    public void close()
-    {
-        colibriQueue.close();
-    }
-
     /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
@@ -689,13 +627,14 @@ public class ConferenceShim
 
             /* TODO: organize these data structures more sensibly for Colibri2 */
             ContentShim contentShim = getOrCreateContent(type);
-            ChannelShim channelShim = ep.getChannel(type);
-            if (channelShim == null)
-            {
-                channelShim = contentShim.createRtpChannel(id);
-            }
-            channelShim.addPayloadTypes(m.getPayloadTypes());
-            channelShim.addRtpHeaderExtensions(m.getRtpHdrExts());
+//            // Will be fixed in a later commit
+//            // ChannelShim channelShim = ep.getChannel(type);
+//            if (channelShim == null)
+//            {
+//                channelShim = contentShim.createRtpChannel(id);
+//            }
+//            channelShim.addPayloadTypes(m.getPayloadTypes());
+//            channelShim.addRtpHeaderExtensions(m.getRtpHdrExts());
 
             /* No need to put media in conference-modified. */
         }
@@ -730,7 +669,8 @@ public class ConferenceShim
 
             for (MediaType type: sourcesByType.keySet())
             {
-                ChannelShim channelShim = ep.getChannel(type);
+                // Will be fixed in a later commit
+                ChannelShim channelShim = null; //ep.getChannel(type);
                 if (channelShim == null)
                 {
                     logger.error("Endpoint " + id + " has source of type " + type + " without media");
@@ -741,7 +681,8 @@ public class ConferenceShim
 
                 if (type == MediaType.VIDEO && !sourcesByType.get(type).isEmpty())
                 {
-                    ep.recreateMediaSources();
+                    // Will be fixed in a later commit
+                    //ep.recreateMediaSources();
                 }
             }
         }

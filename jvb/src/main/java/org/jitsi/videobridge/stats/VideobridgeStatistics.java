@@ -253,8 +253,6 @@ public class VideobridgeStatistics
 
         for (Conference conference : videobridge.getConferences())
         {
-            ConferenceShim conferenceShim = conference.getShim();
-            //TODO: can/should we do everything here via the shim only?
             conferences++;
             if (conference.isP2p())
             {
@@ -291,15 +289,13 @@ public class VideobridgeStatistics
             int conferenceAudioSenders = 0;
             int conferenceVideoSenders = 0;
 
-            for (ContentShim contentShim : conferenceShim.getContents())
-            {
-                if (MediaType.VIDEO.equals(contentShim.getMediaType()))
-                {
-                    videoChannels += contentShim.getChannelCount();
-                }
-            }
             for (Endpoint endpoint : conference.getLocalEndpoints())
             {
+                if (endpoint.getAcceptVideo())
+                {
+                    videoChannels++;
+                }
+
                 if (endpoint.isOversending())
                 {
                     numOversending++;

@@ -68,13 +68,9 @@ public class ContentShim
     private final Map<String, ChannelShim> channels = new ConcurrentHashMap<>();
 
     /**
-     * TODO(brian): this used to be called 'initialLocalSSRC' in the content.
-     * 'Initial' presumably because it could be changed in the event of a
-     * collision (I think by the other lib?). Since we send it out in the
-     * initial offer, assuming it's up to the other side not to conflict with us
-     * and therefore it won't need to be changed.
+     * The local SSRC for this content's media type.
      */
-    private final long localSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+    private final long localSsrc;
 
     /**
      * Whether the local ssrc has been reported in a colibri response.  (Only tracked for
@@ -91,6 +87,18 @@ public class ContentShim
     {
         this.mediaType = mediaType;
         this.conference = conference;
+        if (mediaType == MediaType.AUDIO)
+        {
+            localSsrc = conference.getLocalAudioSsrc();
+        }
+        else if (mediaType == MediaType.VIDEO)
+        {
+            localSsrc = conference.getLocalVideoSsrc();
+        }
+        else
+        {
+            localSsrc = -1L;
+        }
         this.logger = parentLogger.createChildLogger(
                 ContentShim.class.getName(),
                 JMap.of("type", mediaType.toString())
@@ -142,7 +150,6 @@ public class ContentShim
                 this,
                 logger
             );
-            channelShim.getEndpoint().setLocalSsrc(mediaType, localSsrc);
             channels.put(channelId, channelShim);
             return channelShim;
         }

@@ -7,7 +7,6 @@ resources/graceful_shutdown.sh	usr/share/jitsi-videobridge
 resources/collect-dump-logs.sh	usr/share/jitsi-videobridge
 
 # callstats-java-sdk
-log4j2.xml			etc/jitsi/videobridge
 config/callstats-java-sdk.properties	etc/jitsi/videobridge
 
 jitsi-videobridge			etc/logrotate.d
