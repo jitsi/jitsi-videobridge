@@ -150,7 +150,7 @@ public class Conference
     /**
      * The world readable name of this instance if any.
      */
-    private final EntityBareJid conferenceName;
+    private final @Nullable EntityBareJid conferenceName;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -224,7 +224,7 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      EntityBareJid conferenceName,
+                      @Nullable EntityBareJid conferenceName,
                       long gid,
                       @Nullable String meetingId,
                       boolean isRtcStatsEnabled,
@@ -476,21 +476,13 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
-        try
+        if (conferenceName == null)
         {
-            if (conferenceName == null)
-            {
-                iq.setName(null);
-            }
-            else
-            {
-                iq.setName(JidCreate.entityBareFrom(conferenceName));
-            }
-        }
-        catch (XmppStringprepException e)
-        {
-            logger.error("Error converting conference name to a BareJid ", e);
             iq.setName(null);
+        }
+        else
+        {
+            iq.setName(conferenceName);
         }
     }
 
@@ -1097,7 +1089,7 @@ public class Conference
      *
      * @return the conference name
      */
-    public EntityBareJid getName()
+    public @Nullable EntityBareJid getName()
     {
         return conferenceName;
     }

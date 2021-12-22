@@ -206,8 +206,11 @@ public class Videobridge
      * object using that ID
      */
     private @NotNull Conference doCreateConference(
-            EntityBareJid name, long gid, String meetingId,
-            boolean isRtcStatsEnabled, boolean isCallStatsEnabled)
+            @Nullable EntityBareJid name,
+            long gid,
+            String meetingId,
+            boolean isRtcStatsEnabled,
+            boolean isCallStatsEnabled)
     {
         Conference conference = null;
         do
@@ -265,7 +268,11 @@ public class Videobridge
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     public @NotNull Conference createConference(
-            EntityBareJid name, long gid, String meetingId, boolean isRtcStatsEnabled, boolean isCallStatsEnabled)
+            @Nullable EntityBareJid name,
+            long gid,
+            String meetingId,
+            boolean isRtcStatsEnabled,
+            boolean isCallStatsEnabled)
     {
         final Conference conference = doCreateConference(name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
 
@@ -582,8 +589,9 @@ public class Videobridge
             }
 
             /* TODO: race condition if something else created a meeting with this meetingId since the lookup above? */
+            String conferenceName = conferenceModifyIQ.getConferenceName();
             return createConference(
-                    JidCreate.entityBareFrom(conferenceModifyIQ.getConferenceName()),
+                    conferenceName == null ? null : JidCreate.entityBareFrom(conferenceName),
                     Conference.GID_NOT_SET,
                     meetingId,
                     conferenceModifyIQ.isRtcstatsEnabled(),

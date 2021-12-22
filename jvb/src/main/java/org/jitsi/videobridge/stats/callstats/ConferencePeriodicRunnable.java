@@ -15,11 +15,13 @@
  */
 package org.jitsi.videobridge.stats.callstats;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.stats.media.*;
 import org.jitsi.videobridge.*;
+import org.jxmpp.jid.*;
 
 import java.util.*;
 
@@ -42,6 +44,7 @@ class ConferencePeriodicRunnable
      */
     ConferencePeriodicRunnable(
         Conference conference,
+        @NotNull EntityBareJid conferenceName,
         long period,
         StatsService statsService,
         String conferenceIDPrefix,
@@ -50,7 +53,7 @@ class ConferencePeriodicRunnable
         super(conference,
             period,
             statsService,
-            conference.getName(),
+            conferenceName,
             conferenceIDPrefix,
             initiatorID);
     }
