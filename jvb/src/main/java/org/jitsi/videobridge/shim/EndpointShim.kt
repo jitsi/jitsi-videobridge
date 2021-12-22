@@ -36,6 +36,9 @@ class EndpointShim(
      */
     private val channelShims = mutableSetOf<ChannelShim>()
 
+    val videoChannels: List<ChannelShim>
+        get() = channelShims.filter { it.mediaType == MediaType.VIDEO }
+
     val maxExpireTimeFromChannelShims: Duration
         get() = channelShims
             .map(ChannelShim::getExpire)

@@ -149,14 +149,15 @@ public class ColibriUtil
             // video channel is signaled.
             if (MediaType.VIDEO.equals(contentShim.getMediaType()) && !channelSources.isEmpty())
             {
-                List<ChannelShim> videoChannels = contentShim.getChannelShims().stream()
-                        .filter(c -> c.getMediaType() == MediaType.VIDEO)
-                        .filter(c -> c.getEndpoint() == channelShim.getEndpoint())
-                        .collect(Collectors.toList());
+                EndpointShim endpointShim = channelShim.getEndpoint().getEndpointShim();
+                if (endpointShim == null)
+                {
+                    throw new IqProcessingException(StanzaError.Condition.internal_server_error, "No endpointShim");
+                }
 
                 List<SourcePacketExtension> sources = new ArrayList<>();
                 List<SourceGroupPacketExtension> sourceGroups = new ArrayList<>();
-                videoChannels.forEach(channel ->
+                endpointShim.getVideoChannels().forEach(channel ->
                 {
                     Collection<SourcePacketExtension> s = channel.getSources();
                     if (s != null)
