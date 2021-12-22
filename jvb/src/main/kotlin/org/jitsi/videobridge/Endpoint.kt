@@ -68,6 +68,7 @@ import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.ChannelShim
+import org.jitsi.videobridge.shim.EndpointShim
 import org.jitsi.videobridge.stats.DoubleAverage
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -75,7 +76,6 @@ import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
 import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
-import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
@@ -147,26 +147,25 @@ class Endpoint @JvmOverloads constructor(
     private var sctpSocket: Optional<SctpServerSocket> = Optional.empty()
 
     /**
-     * The set of [ChannelShim]s associated with this endpoint. This
-     * allows us to expire the endpoint once all of its 'channels' have been
-     * removed. The set of channels shims allows to determine if endpoint
-     * can accept audio or video.
+     * The colibri1 shim for this endpoint, if used. It needs to be notified when this endpoint expires.
      */
-    private val channelShims = mutableSetOf<ChannelShim>()
+    var endpointShim: EndpointShim? = null
 
     /**
      * Whether this endpoint should accept audio packets. We set this according
      * to whether the endpoint has an audio Colibri channel whose direction
      * allows sending.
      */
-    private var acceptAudio = false
+    var acceptAudio = false
+        private set
 
     /**
      * Whether this endpoint should accept video packets. We set this according
      * to whether the endpoint has a video Colibri channel whose direction
      * allows sending.
      */
-    private var acceptVideo = false
+    var acceptVideo = false
+        private set
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
@@ -268,6 +267,8 @@ class Endpoint @JvmOverloads constructor(
             override fun trace(f: () -> Unit) = f.invoke()
         })
         addEndpointConnectionStatsListener(rttListener)
+        setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
+        setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
     }
 
     private val bandwidthProbing = BandwidthProbing(
@@ -294,7 +295,7 @@ class Endpoint @JvmOverloads constructor(
 
     override var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
-        private set(value) {
+        set(value) {
             val wasEmpty = transceiver.getMediaSources().isEmpty()
             if (transceiver.setMediaSources(value)) {
                 eventEmitter.fireEvent { sourcesChanged() }
@@ -387,19 +388,7 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    fun updateForceMute() {
-        var audioForceMuted = false
-        var videoForceMuted = false
-        channelShims.forEach { channelShim ->
-            if (!channelShim.allowIncomingMedia()) {
-                when (channelShim.mediaType) {
-                    MediaType.AUDIO -> audioForceMuted = true
-                    MediaType.VIDEO -> videoForceMuted = true
-                    else -> Unit
-                }
-            }
-        }
-
+    fun updateForceMute(audioForceMuted: Boolean, videoForceMuted: Boolean) {
         transceiver.forceMuteAudio(audioForceMuted)
         transceiver.forceMuteVideo(videoForceMuted)
     }
@@ -476,28 +465,6 @@ class Endpoint @JvmOverloads constructor(
      * Sends a specific msg to this endpoint over its bridge channel
      */
     override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
-
-    /**
-     * Adds [channelShim] channel to this endpoint.
-     */
-    fun addChannel(channelShim: ChannelShim) {
-        if (channelShims.add(channelShim)) {
-            updateAcceptedMediaTypes()
-        }
-    }
-
-    /**
-     * Removes a specific [ChannelShim] from this endpoint.
-     */
-    fun removeChannel(channelShim: ChannelShim) {
-        if (channelShims.remove(channelShim)) {
-            if (channelShims.isEmpty()) {
-                expire()
-            } else {
-                updateAcceptedMediaTypes()
-            }
-        }
-    }
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() =
@@ -728,78 +695,9 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Update media direction of the [ChannelShim]s associated
-     * with this Endpoint.
-     *
-     * When media direction is set to 'sendrecv' JVB will
-     * accept incoming media from endpoint and forward it to
-     * other endpoints in a conference. Other endpoint's media
-     * will also be forwarded to current endpoint.
-     * When media direction is set to 'sendonly' JVB will
-     * NOT accept incoming media from this endpoint (not yet implemented), but
-     * media from other endpoints will be forwarded to this endpoint.
-     * When media direction is set to 'recvonly' JVB will
-     * accept incoming media from this endpoint, but will not forward
-     * other endpoint's media to this endpoint.
-     * When media direction is set to 'inactive' JVB will
-     * neither accept incoming media nor forward media from other endpoints.
-     *
-     * @param type media type.
-     * @param direction desired media direction:
-     *                       'sendrecv', 'sendonly', 'recvonly', 'inactive'
-     */
-    @Suppress("unused") // Used by plugins (Yuri)
-    fun updateMediaDirection(type: MediaType, direction: String) {
-        when (direction) {
-            "sendrecv", "sendonly", "recvonly", "inactive" -> {
-                channelShims.firstOrNull { it.mediaType == type }?.setDirection(direction)
-            }
-            else -> {
-                throw IllegalArgumentException("Media direction unknown: $direction")
-            }
-        }
-    }
-
-    /**
-     * Re-creates this endpoint's media sources based on the sources
-     * and source groups that have been signaled.
-     */
-    override fun recreateMediaSources() {
-        val videoChannels = channelShims.filter { c -> c.mediaType == MediaType.VIDEO }
-
-        val sources = videoChannels
-            .mapNotNull(ChannelShim::getSources)
-            .flatten()
-            .toList()
-
-        val sourceGroups = videoChannels
-            .mapNotNull(ChannelShim::getSourceGroups)
-            .flatten()
-            .toList()
-
-        if (sources.isNotEmpty() || sourceGroups.isNotEmpty()) {
-            mediaSources = MediaSourceFactory.createMediaSources(sources, sourceGroups)
-        }
-    }
-
-    /**
      * Update accepted media types based on [ChannelShim] permission to receive media
      */
-    fun updateAcceptedMediaTypes() {
-        var acceptAudio = false
-        var acceptVideo = false
-        channelShims.forEach { channelShim ->
-            // The endpoint accepts audio packets (in the sense of accepting
-            // packets from other endpoints being forwarded to it) if it has
-            // an audio channel whose direction allows sending packets.
-            if (channelShim.allowsSendingMedia()) {
-                when (channelShim.mediaType) {
-                    MediaType.AUDIO -> acceptAudio = true
-                    MediaType.VIDEO -> acceptVideo = true
-                    else -> Unit
-                }
-            }
-        }
+    fun updateAcceptedMediaTypes(acceptAudio: Boolean, acceptVideo: Boolean) {
         this.acceptAudio = acceptAudio
         this.acceptVideo = acceptVideo
     }
@@ -817,9 +715,7 @@ class Endpoint @JvmOverloads constructor(
      * Return the timestamp of the most recently created [ChannelShim] on this endpoint
      */
     fun getMostRecentChannelCreatedTime(): Instant {
-        return channelShims
-            .map(ChannelShim::getCreationTimestamp)
-            .maxOrNull() ?: NEVER
+        return endpointShim?.getMostRecentChannelCreatedTime() ?: creationTime
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
@@ -881,10 +777,9 @@ class Endpoint @JvmOverloads constructor(
             return true
         }
 
-        val maxExpireTimeFromChannelShims = channelShims
-            .map(ChannelShim::getExpire)
-            .map { Duration.ofSeconds(it.toLong()) }
-            .maxOrNull() ?: Duration.ZERO
+        // Use a default expire timeout of 60 seconds when colibri1 is not used
+        val maxExpireTimeFromChannelShims = endpointShim?.maxExpireTimeFromChannelShims
+            ?: Duration.ofSeconds(60)
 
         val lastActivity = lastIncomingActivity
         val now = clock.instant()
@@ -914,11 +809,6 @@ class Endpoint @JvmOverloads constructor(
     }
 
     fun getLastN(): Int = bitrateController.lastN
-
-    /**
-     * Set the local SSRC for [mediaType] to [ssrc] for this endpoint.
-     */
-    fun setLocalSsrc(mediaType: MediaType, ssrc: Long) = transceiver.setLocalSsrc(mediaType, ssrc)
 
     /**
      * Returns true if this endpoint's transport is 'fully' connected (both ICE and DTLS), false otherwise
@@ -1038,13 +928,8 @@ class Endpoint @JvmOverloads constructor(
         super.expire()
 
         try {
-            val channelShimsCopy = channelShims.toSet()
-            channelShims.clear()
-            channelShimsCopy.forEach { channelShim ->
-                if (!channelShim.isExpired) {
-                    channelShim.expire = 0
-                }
-            }
+            endpointShim?.expire()
+            endpointShim = null
             updateStatsOnExpire()
             transceiver.stop()
             logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
