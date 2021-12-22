@@ -45,7 +45,6 @@ class Colibri2ConferenceShim(
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
 
-        /* TODO: rename colibri2.Endpoint and colibri2.Relay so as not to conflict here? */
         /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
         for (e in conferenceModifyIQ.endpoints) {
             responseBuilder.addEndpoint(handleColibri2Endpoint(e))
@@ -115,7 +114,7 @@ class Colibri2ConferenceShim(
      */
     @Throws(IqProcessingException::class)
     private fun handleColibri2Endpoint(eDesc: Colibri2Endpoint): Colibri2Endpoint {
-        val id = eDesc.id ?: throw IqProcessingException(Condition.bad_request, "endpoint id is null")
+        val id = eDesc.id
         val t = eDesc.transport
         val respBuilder = Colibri2Endpoint.getBuilder()
         respBuilder.setId(eDesc.id)
@@ -209,7 +208,7 @@ class Colibri2ConferenceShim(
                 }
             }
 
-            // Assume a message can only contain on source per media type.
+            // Assume a message can only contain one source per media type.
             // If "sources" was signaled, but it didn't contain any video sources, clear the endpoint's video sources
             val newMediaSources = sources.mediaSources.find { it.type == MediaType.VIDEO }?.let {
                 MediaSourceFactory.createMediaSources(it.sources, it.ssrcGroups)
@@ -243,7 +242,7 @@ class Colibri2ConferenceShim(
     @Throws(IqProcessingException::class)
     private fun handleColibri2Relay(rDesc: Colibri2Relay): Colibri2Relay {
         /* TODO: enforce this in xmpp-extensions? */
-        val id = rDesc.id ?: throw IqProcessingException(Condition.bad_request, "Missing Relay ID")
+        val id = rDesc.id
         val t = rDesc.transport
         val respBuilder = Colibri2Relay.getBuilder()
         respBuilder.setId(id)
@@ -281,7 +280,7 @@ class Colibri2ConferenceShim(
             respBuilder.setTransport(transBuilder.build())
         }
         rDesc.endpoints?.endpoints?.forEach { e ->
-            val eId = e.id ?: throw IqProcessingException(Condition.bad_request, "relay endpoint with id=null")
+            val eId = e.id
 
             if (e.expire) {
                 r.removeRemoteEndpoint(eId)
