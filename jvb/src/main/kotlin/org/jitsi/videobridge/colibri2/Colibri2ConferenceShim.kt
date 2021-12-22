@@ -132,8 +132,7 @@ class Colibri2ConferenceShim(
             if (t == null) {
                 throw IqProcessingException(Condition.bad_request, "Attempt to create endpoint $id with no <transport>")
             }
-            val iceControlling = t.initiator == true
-            ep = conference.createLocalEndpoint(id, iceControlling)
+            ep = conference.createLocalEndpoint(id, t.iceControlling)
         } else {
             ep = conference.getLocalEndpoint(id)
                 ?: throw IqProcessingException(Condition.item_not_found, "Unknown endpoint $id")
@@ -261,8 +260,7 @@ class Colibri2ConferenceShim(
                 throw IqProcessingException(Condition.bad_request, "Attempt to create relay $id with no <transport>")
             }
 
-            val iceControlling = t.initiator == true
-            r = conference.createRelay(id, iceControlling, t.useUniquePort)
+            r = conference.createRelay(id, t.iceControlling, t.useUniquePort)
         } else {
             r = conference.getRelay(id)
                 ?: throw IqProcessingException(Condition.item_not_found, "Unknown relay $id")
