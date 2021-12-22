@@ -41,6 +41,7 @@ import org.jitsi.utils.logging2.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.Collections
 
 /**
  * Estimates the available bandwidth for the incoming stream using the abs-send-time extension.
@@ -65,7 +66,8 @@ class RemoteBandwidthEstimator(
      * delay-based part.
      */
     private val bwe: BandwidthEstimator by lazy { GoogleCcEstimator(diagnosticContext, logger) }
-    private val ssrcs: MutableSet<Long> = LRUCache.lruSet(MAX_SSRCS, true /* accessOrder */)
+    private val ssrcs: MutableSet<Long> =
+        Collections.synchronizedSet(LRUCache.lruSet(MAX_SSRCS, true /* accessOrder */))
     private var numRembsCreated = 0
     private var numPacketsWithoutAbsSendTime = 0
     private var localSsrc = 0L
