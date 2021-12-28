@@ -23,6 +23,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
+import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
 
 class RelayedEndpoint(
@@ -69,7 +70,13 @@ class RelayedEndpoint(
     }
 
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
-        TODO("Not yet implemented")
+        relay.sendMessage(
+            AddReceiverMessage(
+                conference.tentacle.bridgeId, /* TODO: store local bridge ID somewhere better */
+                id,
+                maxVideoConstraints
+            )
+        )
     }
 
     override val mediaSource: MediaSourceDesc?
