@@ -161,9 +161,14 @@ class Colibri2ConferenceShim(
             /* No need to put media in conference-modified. */
         }
 
-        // TODO set this according to the payload types that the endpoint has.
-        // Set to true/true temporarily to allow testing.
-        ep.updateAcceptedMediaTypes(true, true)
+        ep.updateAcceptedMediaTypes(
+            acceptAudio = ep.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+                it.mediaType == MediaType.AUDIO
+            },
+            acceptVideo = ep.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+                it.mediaType == MediaType.VIDEO
+            }
+        )
 
         if (t != null) {
             val udpTransportPacketExtension = t.iceUdpTransport
