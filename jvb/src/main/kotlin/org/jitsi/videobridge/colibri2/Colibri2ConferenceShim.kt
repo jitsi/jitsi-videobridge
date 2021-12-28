@@ -139,7 +139,7 @@ class Colibri2ConferenceShim(
         }
 
         for (m: Media in eDesc.media) {
-            /* TODO: organize these data structures more sensibly for Colibri2 */
+            // TODO: support removing payload types/header extensions
             m.payloadTypes.forEach {
                 val pt = create(it, m.type)
                 if (pt != null) {
@@ -161,10 +161,9 @@ class Colibri2ConferenceShim(
             /* No need to put media in conference-modified. */
         }
 
-        ep.updateAcceptedMediaTypes(
-            eDesc.media.any { it.type == MediaType.AUDIO },
-            eDesc.media.any { it.type == MediaType.VIDEO }
-        )
+        // TODO set this according to the payload types that the endpoint has.
+        // Set to true/true temporarily to allow testing.
+        ep.updateAcceptedMediaTypes(true, true)
 
         if (t != null) {
             val udpTransportPacketExtension = t.iceUdpTransport
