@@ -29,6 +29,7 @@ import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.MediaType
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
@@ -50,6 +51,7 @@ import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
+import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
 import java.util.function.Supplier
@@ -133,6 +135,13 @@ class Relay @JvmOverloads constructor(
     ).apply {
         setErrorHandler(Endpoint.queueErrorCounter)
     }
+
+    val debugState: JSONObject
+        get() = JSONObject().apply {
+            put("iceTransport", iceTransport.getDebugState())
+            put("dtlsTransport", dtlsTransport.getDebugState())
+            put("transceiver", transceiver.getNodeStats().toJson())
+        }
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {

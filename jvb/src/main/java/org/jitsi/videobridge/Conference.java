@@ -1374,6 +1374,14 @@ public class Conference
                 endpoints.put(e.getId(), full ? e.getDebugState() : e.getStatsId());
             }
         }
+
+        JSONObject relays = new JSONObject();
+        debugState.put("relays", relays);
+        for (Relay r : relaysById.values())
+        {
+            relays.put(r.getId(), full ? r.getDebugState() : r.getId());
+        }
+
         return debugState;
     }
 
