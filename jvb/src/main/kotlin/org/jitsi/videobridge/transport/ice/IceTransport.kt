@@ -111,7 +111,7 @@ class IceTransport @JvmOverloads constructor(
 
     private val iceAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
         if (useUniquePort) {
-            appendUniquePortHarvesters(this)
+            setUseDynamicPorts(true)
         } else {
             appendHarvesters(this)
         }
@@ -386,15 +386,6 @@ class IceTransport @JvmOverloads constructor(
                 iceAgent.addCandidateHarvester(it)
             }
             Harvesters.singlePortHarvesters?.forEach(iceAgent::addCandidateHarvester)
-        }
-
-        fun appendUniquePortHarvesters(iceAgent: Agent) {
-            Harvesters.initializeStaticConfiguration()
-            Harvesters.tcpHarvester?.let {
-                /* I *think* this still works for the unique-port case? */
-                iceAgent.addCandidateHarvester(it)
-            }
-            Harvesters.uniquePortHarvesters?.forEach(iceAgent::addCandidateHarvester)
         }
     }
 
