@@ -281,6 +281,30 @@ class Colibri2ConferenceShim(
             transBuilder.setIceUdpExtension(r.describeTransport())
             respBuilder.setTransport(transBuilder.build())
         }
+
+        for (m: Media in rDesc.media) {
+            // TODO: support removing payload types/header extensions
+            m.payloadTypes.forEach {
+                val pt = create(it, m.type)
+                if (pt != null) {
+                    r.transceiver.addPayloadType(pt)
+                } else {
+                    logger.warn("Ignoring unrecognized payload type extension: ${it.toXML()}")
+                }
+            }
+
+            m.rtpHdrExts.forEach {
+                val rtpExtension = it.toRtpExtension()
+                if (rtpExtension != null) {
+                    r.transceiver.addRtpExtension(rtpExtension)
+                } else {
+                    logger.warn("Ignoring unrecognized RTP header extension: ${it.toXML()}")
+                }
+            }
+
+            /* No need to put media in conference-modified. */
+        }
+
         rDesc.endpoints?.endpoints?.forEach { e ->
             val eId = e.id
 
