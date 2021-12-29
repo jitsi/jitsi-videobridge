@@ -41,9 +41,8 @@ class RelayedEndpoint(
         TODO("Not yet implemented")
     }
 
-    override fun shouldExpire(): Boolean {
-        TODO("Not yet implemented")
-    }
+    /** Relayed endpoints are not automatically expired. **/
+    override fun shouldExpire(): Boolean = false
 
     override fun sendMessage(msg: BridgeChannelMessage) {
         // TODO("Not yet implemented")
