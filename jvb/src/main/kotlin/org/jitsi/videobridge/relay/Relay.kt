@@ -316,6 +316,8 @@ class Relay @JvmOverloads constructor(
             override fun trace(f: () -> Unit) = f.invoke()
         })
         addEndpointConnectionStatsListener(rttListener)
+        setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
+        setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
     }
 
     /**

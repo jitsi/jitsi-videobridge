@@ -57,13 +57,12 @@ class RelayedEndpoint(
     override fun isSendingAudio(): Boolean = true
     override fun isSendingVideo(): Boolean = true
 
-    override fun addPayloadType(payloadType: PayloadType) {
-        TODO("Not yet implemented")
-    }
-
-    override fun addRtpExtension(rtpExtension: RtpExtension) {
-        TODO("Not yet implemented")
-    }
+    /**
+     * Relayed endpoints don't have their own payload types and RTP header extensions, these are properties of the
+     * relay.
+     */
+    override fun addPayloadType(payloadType: PayloadType) {}
+    override fun addRtpExtension(rtpExtension: RtpExtension) {}
 
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         relay.sendMessage(
