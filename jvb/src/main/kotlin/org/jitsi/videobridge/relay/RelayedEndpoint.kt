@@ -46,20 +46,17 @@ class RelayedEndpoint(
     }
 
     override fun sendMessage(msg: BridgeChannelMessage) {
-        TODO("Not yet implemented")
+        // TODO("Not yet implemented")
+        logger.warn("Not sending message, not yet implemented.")
     }
 
     override fun requestKeyframe(mediaSsrc: Long) = relay.transceiver.requestKeyFrame(mediaSsrc)
 
     override fun requestKeyframe() = relay.transceiver.requestKeyFrame(mediaSource?.primarySSRC)
 
-    override fun isSendingAudio(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun isSendingVideo(): Boolean {
-        TODO("Not yet implemented")
-    }
+    // TODO
+    override fun isSendingAudio(): Boolean = true
+    override fun isSendingVideo(): Boolean = true
 
     override fun addPayloadType(payloadType: PayloadType) {
         TODO("Not yet implemented")
