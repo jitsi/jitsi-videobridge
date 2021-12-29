@@ -592,7 +592,7 @@ public class Videobridge
             String conferenceName = conferenceModifyIQ.getConferenceName();
             return createConference(
                     conferenceName == null ? null : JidCreate.entityBareFrom(conferenceName),
-                    Conference.GID_NOT_SET,
+                    Conference.GID_COLIBRI2,
                     meetingId,
                     conferenceModifyIQ.isRtcstatsEnabled(),
                     conferenceModifyIQ.isCallstatsEnabled());

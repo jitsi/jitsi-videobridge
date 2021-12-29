@@ -67,6 +67,7 @@ public class Conference
      * The constant denoting that {@link #gid} is not specified.
      */
     public static final long GID_NOT_SET = -1;
+    public static final long GID_COLIBRI2 = -2;
 
     /**
      * The endpoints participating in this {@link Conference}. Although it's a
@@ -230,7 +231,7 @@ public class Conference
                       boolean isRtcStatsEnabled,
                       boolean isCallStatsEnabled)
     {
-        if (gid != GID_NOT_SET && (gid < 0 || gid > 0xffff_ffffL))
+        if (gid != GID_NOT_SET && gid != GID_COLIBRI2 &&  (gid < 0 || gid > 0xffff_ffffL))
         {
             throw new IllegalArgumentException("Invalid GID:" + gid);
         }
