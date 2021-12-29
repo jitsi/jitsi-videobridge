@@ -288,7 +288,11 @@ class Colibri2ConferenceShim(
                 r.removeRemoteEndpoint(eId)
             } else {
                 val sources = e.parseSourceDescs()
-                r.addRemoteEndpoint(eId, sources.first, sources.second)
+                if (e.create) {
+                    r.addRemoteEndpoint(eId, sources.first, sources.second)
+                } else {
+                    r.updateRemoteEndpoint(eId, sources.first, sources.second)
+                }
             }
         }
 

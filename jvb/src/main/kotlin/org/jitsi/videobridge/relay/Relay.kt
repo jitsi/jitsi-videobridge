@@ -367,7 +367,31 @@ class Relay @JvmOverloads constructor(
     ) {
         val ep: RelayedEndpoint
         synchronized(endpointsLock) {
-            ep = relayedEndpoints.computeIfAbsent(id) { RelayedEndpoint(conference, this, id, logger) }
+            if (relayedEndpoints.containsKey(id)) {
+                logger.warn("Relay already contains remote endpoint with ID $id")
+                updateRemoteEndpoint(id, audioSources, videoSources)
+                return
+            }
+            ep = RelayedEndpoint(conference, this, id, logger)
+            relayedEndpoints[id] = ep
+
+            ep.ssrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
+        }
+
+        conference.addEndpoints(setOf(ep))
+    }
+
+    fun updateRemoteEndpoint(
+        id: String,
+        audioSources: Collection<AudioSourceDesc>,
+        videoSources: Collection<MediaSourceDesc>
+    ) {
+        val ep: RelayedEndpoint
+        synchronized(endpointsLock) {
+            ep = relayedEndpoints[id] ?: run {
+                logger.warn("Endpoint with ID $id not found in relay")
+                return
+            }
             val oldSsrcs = ep.ssrcs
 
             ep.audioSources = audioSources.toTypedArray()
@@ -380,7 +404,6 @@ class Relay @JvmOverloads constructor(
             endpointsBySsrc.keys.removeAll(removedSsrcs)
             addedSsrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
         }
-        conference.addEndpoints(setOf(ep))
     }
 
     fun removeRemoteEndpoint(id: String) {
