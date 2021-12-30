@@ -349,6 +349,6 @@ class Colibri2ConferenceShim(
                 }
             }
         }
-        return Pair(listOf(), listOf())
+        return Pair(audioSources, videoSources)
     }
 }
