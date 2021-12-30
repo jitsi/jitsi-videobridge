@@ -390,6 +390,7 @@ class Relay @JvmOverloads constructor(
         }
 
         conference.addEndpoints(setOf(ep))
+        updateTransceiverSources()
     }
 
     fun updateRemoteEndpoint(
@@ -415,6 +416,7 @@ class Relay @JvmOverloads constructor(
             endpointsBySsrc.keys.removeAll(removedSsrcs)
             addedSsrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
         }
+        updateTransceiverSources()
     }
 
     fun removeRemoteEndpoint(id: String) {
@@ -428,6 +430,14 @@ class Relay @JvmOverloads constructor(
         if (ep != null) {
             conference.endpointExpired(ep)
         }
+        updateTransceiverSources()
+    }
+
+    /** TODO this is inefficient, will be better when we have per-endpoint transceivers. */
+    private fun updateTransceiverSources() {
+        val mediaSources = ArrayList<MediaSourceDesc>()
+        relayedEndpoints.values.forEach { r -> mediaSources.addAll(r.mediaSources) }
+        transceiver.setMediaSources(mediaSources.toTypedArray())
     }
 
     fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }

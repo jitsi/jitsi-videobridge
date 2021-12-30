@@ -244,7 +244,6 @@ class Colibri2ConferenceShim(
      */
     @Throws(IqProcessingException::class)
     private fun handleColibri2Relay(rDesc: Colibri2Relay): Colibri2Relay {
-        /* TODO: enforce this in xmpp-extensions? */
         val id = rDesc.id
         val t = rDesc.transport
         val respBuilder = Colibri2Relay.getBuilder()
