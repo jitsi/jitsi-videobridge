@@ -373,6 +373,7 @@ class Relay @JvmOverloads constructor(
 
     fun addRemoteEndpoint(
         id: String,
+        statsId: String?,
         audioSources: Collection<AudioSourceDesc>,
         videoSources: Collection<MediaSourceDesc>
     ) {
@@ -384,6 +385,7 @@ class Relay @JvmOverloads constructor(
                 return
             }
             ep = RelayedEndpoint(conference, this, id, logger)
+            ep.statsId = statsId
             relayedEndpoints[id] = ep
 
             ep.ssrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
