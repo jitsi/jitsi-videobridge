@@ -371,6 +371,10 @@ class Relay @JvmOverloads constructor(
      */
     fun sendMessage(msg: BridgeChannelMessage) = _messageTransport.sendMessage(msg)
 
+    fun relayMessageTransportConnected() {
+        relayedEndpoints.values.forEach { e -> e.relayMessageTransportConnected() }
+    }
+
     fun addRemoteEndpoint(
         id: String,
         statsId: String?,

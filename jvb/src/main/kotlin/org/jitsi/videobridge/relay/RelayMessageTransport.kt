@@ -111,9 +111,7 @@ class RelayMessageTransport(
      * {@inheritDoc}
      */
     override fun notifyTransportChannelConnected() {
-        /* TODO */
-        // relay.endpointMessageTransportConnected();
-        // eventHandler.endpointMessageTransportConnected(endpoint);
+        relay.relayMessageTransportConnected()
     }
 
     /**

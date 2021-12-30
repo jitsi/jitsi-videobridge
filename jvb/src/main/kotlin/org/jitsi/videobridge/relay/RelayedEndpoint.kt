@@ -74,6 +74,9 @@ class RelayedEndpoint(
         )
     }
 
+    fun relayMessageTransportConnected() =
+        sendVideoConstraints(maxReceiverVideoConstraints)
+
     override val mediaSource: MediaSourceDesc?
         get() = mediaSources.getOrNull(0)
     override var mediaSources: Array<MediaSourceDesc> = arrayOf()
