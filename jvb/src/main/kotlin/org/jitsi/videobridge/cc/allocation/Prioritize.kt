@@ -48,8 +48,6 @@ fun prioritize2(
     // Bump selected sources to the top of the list.
     selectedSourceNames.asReversed().forEach { selectedSourceName ->
         // Note the usage of sourceName!! which is expected to be always defined in the multi-stream mode
-        // If you get an NPE here, that means Jicofo is not polyfilling the source names correctly for the clients
-        // which do not support it yet.
         conferenceSources.find { it.sourceName!! == selectedSourceName }?.let { selectedSource ->
             conferenceSources.remove(selectedSource)
             conferenceSources.add(0, selectedSource)
@@ -97,9 +95,6 @@ fun getEffectiveConstraints2(sources: List<MediaSourceDesc>, allocationSettings:
     // algorithm.
     var sourcesWithNonZeroConstraints = 0
 
-    // Note that source.sourceName!! is used, because Jicofo is supposed to inject source names for every source
-    // when running in the multi-stream mode (or reject such sources in the future). A non-null value can not be
-    // enforced on the Kotlin level, because of the legacy Endpoint ID signaling where the source names are not defined.
     return sources.associate { source ->
         (source.sourceName)!! to if (sourcesWithNonZeroConstraints >= effectiveLastN) {
             VideoConstraints.NOTHING
