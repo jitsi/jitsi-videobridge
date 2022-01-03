@@ -40,7 +40,7 @@ public class ColibriWebSocket extends WebSocketAdapter
     /**
      * Initializes a new {@link ColibriWebSocket} instance.
      */
-    ColibriWebSocket(
+    public ColibriWebSocket(
         String id,
         EventHandler eventHandler
     )

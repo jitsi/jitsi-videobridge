@@ -101,9 +101,10 @@ class RelayMessageTransport(
     private fun doConnect() {
         val url = this.url ?: throw IllegalStateException("Cannot connect Relay transport when no URL set")
 
+        webSocket = ColibriWebSocket(relay.id, this)
         outgoingWebsocket = WebSocketClient().also {
             it.start()
-            it.connect(this, URI(url), ClientUpgradeRequest())
+            it.connect(webSocket, URI(url), ClientUpgradeRequest())
         }
     }
 
