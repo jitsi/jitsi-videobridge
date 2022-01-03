@@ -141,7 +141,7 @@ class RelayMessageTransport(
      */
     override fun addReceiver(message: AddReceiverMessage): BridgeChannelMessage? {
         val epId = message.endpointId
-        val ep = relay.getEndpoint(epId) ?: run {
+        val ep = relay.conference.getEndpoint(epId) ?: run {
             logger.warn("Received AddReceiverMessage for unknown epId $epId")
             return null
         }
@@ -152,7 +152,7 @@ class RelayMessageTransport(
 
     override fun removeReceiver(message: RemoveReceiverMessage): BridgeChannelMessage? {
         val epId = message.endpointId
-        val ep = relay.getEndpoint(epId) ?: run {
+        val ep = relay.conference.getEndpoint(epId) ?: run {
             logger.warn("Received RemoveReceiverMessage for unknown epId $epId")
             return null
         }
