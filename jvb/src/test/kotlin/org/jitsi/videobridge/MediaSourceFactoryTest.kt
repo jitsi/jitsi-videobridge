@@ -25,15 +25,9 @@ import org.jitsi.config.setNewConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
 
-fun createSource(ssrc: Long): SourcePacketExtension {
-    val spe = SourcePacketExtension()
+fun createSource(ssrc: Long) = SourcePacketExtension().apply { this.ssrc = ssrc }
 
-    spe.ssrc = ssrc
-
-    return spe
-}
-
-// TODO port MediaSourceFactoryTest to kotlin and unify with this class
+// TODO port MediaSourceFactoryTest.java to kotlin and unify with this class
 class MediaSourceFactoryTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
 
@@ -56,9 +50,7 @@ class MediaSourceFactoryTest : ShouldSpec() {
                 }
             }
 
-            // TODO fix the test before merge
             context("when multi-stream support is disabled") {
-                // TODO for some reason setting multi stream to disable is not working
                 setNewConfig(configWithMultiStreamDisabled, true)
 
                 context("should NOT throw an exception if there's no source name in the packet extension") {
