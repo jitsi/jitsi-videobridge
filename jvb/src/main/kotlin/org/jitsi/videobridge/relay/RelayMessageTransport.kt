@@ -128,6 +128,11 @@ class RelayMessageTransport(
         return createServerHello()
     }
 
+    override fun serverHello(message: ServerHelloMessage): BridgeChannelMessage? {
+        logger.info { "Received ServerHelloMessage, version ${message.version}" }
+        return null
+    }
+
     /**
      * This message indicates that a remote bridge wishes to receive video
      * with certain constraints for a specific endpoint.
