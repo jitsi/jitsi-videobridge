@@ -422,7 +422,8 @@ public class Conference
      */
     public void broadcastMessage(BridgeChannelMessage msg, boolean sendToOcto)
     {
-        sendMessage(msg, getEndpoints(), sendToOcto);
+        List<? extends AbstractEndpoint> targets = sendToOcto ? getEndpoints() : getLocalEndpoints();
+        sendMessage(msg, Collections.unmodifiableList(targets), sendToOcto);
     }
 
     /**
