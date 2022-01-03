@@ -275,10 +275,13 @@ public class ChannelShim
     public void setSources(@NotNull List<SourcePacketExtension> sources)
         throws IqProcessingException
     {
-        if (multiStreamConfig.getEnabled()) {
-            for (SourcePacketExtension s: sources) {
+        if (multiStreamConfig.getEnabled())
+        {
+            for (SourcePacketExtension s: sources)
+            {
                 // TODO use Kotlin "isNullOrEmpty" once ported to Kotlin
-                if (s.getName() == null || s.getName().trim().isEmpty()) {
+                if (s.getName() == null || s.getName().trim().isEmpty())
+                {
                     throw new IqProcessingException(
                         StanzaError.Condition.bad_request,
                         "The name attribute is required for " + s);
