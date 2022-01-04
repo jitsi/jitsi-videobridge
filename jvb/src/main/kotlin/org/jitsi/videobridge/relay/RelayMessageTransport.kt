@@ -262,7 +262,7 @@ class RelayMessageTransport(
 
             // If we already have a web-socket, discard it and use the new one.
             if (webSocket != null) {
-                webSocket!!.session.close(200, "replaced")
+                webSocket?.session?.close(200, "replaced")
             }
             webSocket = ws
             sendMessage(ws, createServerHello())
