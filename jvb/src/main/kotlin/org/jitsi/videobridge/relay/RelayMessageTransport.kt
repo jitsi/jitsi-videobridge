@@ -306,7 +306,7 @@ class RelayMessageTransport(
             if (webSocket != null) {
                 // 410 Gone indicates that the resource requested is no longer
                 // available and will not be available again.
-                webSocket!!.session.close(410, "replaced")
+                webSocket?.session?.close(410, "replaced")
                 webSocket = null
                 logger.debug { "Relay expired, closed colibri web-socket." }
             }

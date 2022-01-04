@@ -335,7 +335,11 @@ public class EndpointMessageTransport
             // If we already have a web-socket, discard it and use the new one.
             if (webSocket != null)
             {
-                webSocket.getSession().close(200, "replaced");
+                Session session = webSocket.getSession();
+                if (session != null)
+                {
+                    session.close(200, "replaced");
+                }
             }
 
             webSocket = ws;
