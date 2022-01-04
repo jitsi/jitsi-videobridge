@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.eclipse.jetty.websocket.api.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -225,10 +226,14 @@ public class EndpointMessageTransport
      */
     private void sendMessage(ColibriWebSocket dst, BridgeChannelMessage message)
     {
-        // We'll use the async version of sendString since this may be called
-        // from multiple threads.  It's just fire-and-forget though, so we
-        // don't wait on the result
-        dst.getRemote().sendStringByFuture(message.toJson());
+        RemoteEndpoint remote = dst.getRemote();
+        if (remote != null)
+        {
+            // We'll use the async version of sendString since this may be called
+            // from multiple threads.  It's just fire-and-forget though, so we
+            // don't wait on the result
+            dst.getRemote().sendStringByFuture(message.toJson());
+        }
         statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
     }
 
