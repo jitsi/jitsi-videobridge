@@ -870,7 +870,7 @@ public class Conference
     }
 
     /**
-     * @return the number of relays.'
+     * @return the number of relays.
      */
     public int getRelayCount()
     {
