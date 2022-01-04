@@ -141,6 +141,7 @@ class Relay @JvmOverloads constructor(
             put("iceTransport", iceTransport.getDebugState())
             put("dtlsTransport", dtlsTransport.getDebugState())
             put("transceiver", transceiver.getNodeStats().toJson())
+            put("messageTransport", _messageTransport.debugState)
         }
 
     private fun setupIceTransport() {
