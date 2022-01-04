@@ -481,6 +481,9 @@ class Relay @JvmOverloads constructor(
 
     fun expire() {
         logger.info("Expiring.")
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { conference.endpointExpired(it) }
+        }
         conference.relayExpired(this)
 
         try {

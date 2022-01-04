@@ -1023,12 +1023,8 @@ public class Conference
      */
     public void relayExpired(Relay relay)
     {
-        final AbstractEndpoint removedEndpoint;
         String id = relay.getId();
         relaysById.remove(id);
-
-        /* TODO: remove info about the octo endpoints behind this relay from other endpoints. */
-        // endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
     }
 
     /**
