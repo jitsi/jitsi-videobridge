@@ -390,6 +390,9 @@ class Relay @JvmOverloads constructor(
             }
             ep = RelayedEndpoint(conference, this, id, logger)
             ep.statsId = statsId
+            ep.audioSources = audioSources.toTypedArray()
+            ep.mediaSources = videoSources.toTypedArray()
+
             relayedEndpoints[id] = ep
 
             ep.ssrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
