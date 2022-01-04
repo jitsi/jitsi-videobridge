@@ -870,6 +870,14 @@ public class Conference
     }
 
     /**
+     * @return the number of relays.'
+     */
+    public int getRelayCount()
+    {
+        return relaysById.size();
+    }
+
+    /**
      * Returns the number of local endpoints in this {@link Conference}.
      *
      * @return the number of local endpoints in this {@link Conference}.

@@ -13,6 +13,7 @@ import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
+import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
@@ -57,6 +58,11 @@ class Colibri2ConferenceShim(
         if (!localSsrcsReported) {
             responseBuilder.setSources(buildFeedbackSources())
             localSsrcsReported = true
+        }
+
+        if (conference.endpointCount == 0 && conference.relayCount == 0) {
+            logger.info("All endpoints and relays removed, expiring.")
+            TaskPools.IO_POOL.submit { conference.videobridge.expireConference(conference) }
         }
 
         responseBuilder.build()
