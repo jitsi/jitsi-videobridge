@@ -522,11 +522,8 @@ class Relay @JvmOverloads constructor(
             // TODO updateStatsOnExpire()
             transceiver.stop()
             logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
-            // TODO logger.cdebug { bitrateController.debugState.toJSONString() }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
-
-            // TODO logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
 
             transceiver.teardown()
             _messageTransport.close()
@@ -534,8 +531,6 @@ class Relay @JvmOverloads constructor(
             logger.error("Exception while expiring: ", t)
         }
 
-        // bandwidthProbing.enabled = false
-        // recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing)
         conference.encodingsManager.unsubscribe(this)
 
         dtlsTransport.stop()
@@ -562,10 +557,7 @@ class Relay @JvmOverloads constructor(
          */
         override fun bandwidthEstimationChanged(newValue: Bandwidth) {
             logger.cdebug { "Estimated bandwidth is now $newValue" }
-            /* TODO
-            bitrateController.bandwidthChanged(newValue.bps.toLong())
-            bandwidthProbing.bandwidthEstimationChanged(newValue)
-             */
+            /* We don't use BWE for relay connections. */
         }
     }
 }
