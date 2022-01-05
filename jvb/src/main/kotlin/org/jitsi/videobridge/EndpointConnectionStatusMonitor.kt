@@ -132,9 +132,6 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
             val ep = conference.getLocalEndpoint(receiverEpId)
             if (ep != null) {
                 conference.sendMessage(msg, listOf(ep), false)
-            } else {
-                /* TODO: send only to the relevant relays */
-                conference.broadcastMessage(msg, true)
             }
         }
     }
