@@ -572,38 +572,40 @@ public class Videobridge
     {
         String meetingId = conferenceModifyIQ.getMeetingId();
 
-        Conference conference = getConferenceByMeetingId(meetingId);
-
-        if (conferenceModifyIQ.getCreate())
+        synchronized(conferencesById)
         {
-            if (conference != null)
-            {
-                logger.warn("Will not create conference, conference already exists for meetingId=" + meetingId);
-                throw new ConferenceAlreadyExistsException();
-            }
-            if (isShutdownInProgress())
-            {
-                logger.warn("Will not create conference in shutdown mode.");
-                throw new InGracefulShutdownException();
-            }
+            Conference conference = getConferenceByMeetingId(meetingId);
 
-            /* TODO: race condition if something else created a meeting with this meetingId since the lookup above? */
-            String conferenceName = conferenceModifyIQ.getConferenceName();
-            return createConference(
+            if (conferenceModifyIQ.getCreate())
+            {
+                if (conference != null)
+                {
+                    logger.warn("Will not create conference, conference already exists for meetingId=" + meetingId);
+                    throw new ConferenceAlreadyExistsException();
+                }
+                if (isShutdownInProgress())
+                {
+                    logger.warn("Will not create conference in shutdown mode.");
+                    throw new InGracefulShutdownException();
+                }
+
+                String conferenceName = conferenceModifyIQ.getConferenceName();
+                return createConference(
                     conferenceName == null ? null : JidCreate.entityBareFrom(conferenceName),
                     Conference.GID_COLIBRI2,
                     meetingId,
                     conferenceModifyIQ.isRtcstatsEnabled(),
                     conferenceModifyIQ.isCallstatsEnabled());
-        }
-        else
-        {
-            if (conference == null)
-            {
-                logger.warn("Conference with meetingId=" + meetingId + " not found.");
-                throw new ConferenceNotFoundException();
             }
-            return conference;
+            else
+            {
+                if (conference == null)
+                {
+                    logger.warn("Conference with meetingId=" + meetingId + " not found.");
+                    throw new ConferenceNotFoundException();
+                }
+                return conference;
+            }
         }
     }
 
