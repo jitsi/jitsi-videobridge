@@ -53,9 +53,9 @@ class RelayedEndpoint(
 
     override fun requestKeyframe() = relay.transceiver.requestKeyFrame(mediaSource?.primarySSRC)
 
-    // TODO
-    override fun isSendingAudio(): Boolean = true
-    override fun isSendingVideo(): Boolean = true
+    // These should be queried on the relay
+    override fun isSendingAudio(): Boolean = false
+    override fun isSendingVideo(): Boolean = false
 
     /**
      * Relayed endpoints don't have their own payload types and RTP header extensions, these are properties of the

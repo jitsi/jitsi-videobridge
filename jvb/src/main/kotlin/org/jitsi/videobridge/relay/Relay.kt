@@ -321,6 +321,10 @@ class Relay @JvmOverloads constructor(
         setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
     }
 
+    fun isSendingAudio(): Boolean = transceiver.isReceivingAudio()
+
+    fun isSendingVideo(): Boolean = transceiver.isReceivingVideo()
+
     /**
      * Handle incoming RTP packets which have been fully processed by the
      * transceiver's incoming pipeline.

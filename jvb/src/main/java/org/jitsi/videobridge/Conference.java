@@ -931,6 +931,11 @@ public class Conference
     }
 
     /**
+     * Gets the list of the relays this conference is using.
+     */
+    public List<Relay> getRelays() { return new ArrayList<>(this.relaysById.values()); }
+
+    /**
      * Gets the (unique) identifier/ID of this instance.
      *
      * @return the (unique) identifier/ID of this instance
@@ -1421,11 +1426,16 @@ public class Conference
 
     /**
      * Whether the conference is inactive, in the sense that none of its
-     * endpoints are sending audio or video.
+     * local endpoints or relays are sending audio or video.
      */
     public boolean isInactive()
     {
-        return getEndpoints().stream().noneMatch(e -> e.isSendingAudio() || e.isSendingVideo());
+        /* N.B.: this could be changed to iterate over getLocalEndpoints() once old Octo is removed,
+         * and these methods removed from AbstractEndpoint, assuming we don't go to transceiver-per-endpoint
+         * for Secure Octo.
+         */
+        return getEndpoints().stream().noneMatch(e -> e.isSendingAudio() || e.isSendingVideo()) &&
+            getRelays().stream().noneMatch(r -> r.isSendingAudio() || r.isSendingVideo());
     }
 
     @NotNull public EncodingsManager getEncodingsManager()
