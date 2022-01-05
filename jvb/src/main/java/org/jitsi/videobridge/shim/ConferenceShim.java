@@ -21,7 +21,6 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.Endpoint;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -298,12 +297,11 @@ public class ConferenceShim
      * Checks if endpoint with specified ID is initialized, if endpoint does not
      * exist in a conference, it will be created and initialized.
      * @param endpointId identifier of endpoint to check and initialize
-     * @param iceControlling ICE control role of transport of newly created
+     * @param iceControlling ICE control role of transport of newly created endpoint.
      */
     private void ensureEndpointCreated(String endpointId, boolean iceControlling)
     {
-        Endpoint ep = conference.getLocalEndpoint(endpointId);
-        if (ep != null)
+        if (conference.getLocalEndpoint(endpointId) != null)
         {
             return;
         }
@@ -420,7 +418,7 @@ public class ConferenceShim
             }
             catch (IqProcessingException e)
             {
-                logger.error("Error processing sctp connections in IQ: " + e.toString());
+                logger.error("Error processing sctp connections in IQ: ", e);
                 return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
             }
         }

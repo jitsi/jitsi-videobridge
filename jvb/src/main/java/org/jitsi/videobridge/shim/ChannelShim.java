@@ -75,7 +75,7 @@ public class ChannelShim
      * @param ext the XML extension to parse.
      * @return the created {@link RtpExtension} or {@code null}.
      */
-    public static RtpExtension createRtpExtension(RTPHdrExtPacketExtension ext)
+    static RtpExtension createRtpExtension(RTPHdrExtPacketExtension ext)
     {
         String uri = ext.getURI().toString();
         RtpExtensionType type = RtpExtensionType.Companion.createFromUri(uri);
@@ -309,7 +309,7 @@ public class ChannelShim
                 if (ssrcAssociationType != null &&
                         ssrcAssociationType != SsrcAssociationType.SIM)
                 {
-                    endpoint.getConference().encodingsManager
+                    endpoint.getConference().getEncodingsManager()
                         .addSsrcAssociation(
                                 endpoint.getId(),
                                 primarySsrc,

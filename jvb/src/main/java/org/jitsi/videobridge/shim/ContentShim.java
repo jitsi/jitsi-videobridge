@@ -73,12 +73,6 @@ public class ContentShim
     private final long localSsrc;
 
     /**
-     * Whether the local ssrc has been reported in a colibri response.  (Only tracked for
-     * colibri2 responses at this point.)
-     */
-    private boolean localSsrcReported = false;
-
-    /**
      * Initializes a new {@link ContentShim} instance.
      * @param conference the parent conference.
      * @param mediaType the media type (audio/video).
@@ -137,7 +131,7 @@ public class ContentShim
      * @param endpointId the ID of the endpoint the channel belongs to.
      * @return the created channel.
      */
-    public ChannelShim createRtpChannel(String endpointId)
+    private ChannelShim createRtpChannel(String endpointId)
     {
         synchronized (channels)
         {
@@ -447,29 +441,5 @@ public class ContentShim
     void removeChannel(ChannelShim channelShim)
     {
         channels.remove(channelShim.getId());
-    }
-
-    /**
-     * Get the local SSRC
-     */
-    public long getLocalSsrc()
-    {
-        return localSsrc;
-    }
-
-    /**
-     * Query whether the local SSRC is reported.
-     */
-    public boolean isLocalSsrcReported()
-    {
-        return localSsrcReported;
-    }
-
-    /**
-     * Mark the local SSRC as reported.
-     */
-    public void markLocalSsrcReported()
-    {
-        localSsrcReported = true;
     }
 }

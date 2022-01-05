@@ -476,7 +476,6 @@ public class Videobridge
      */
     private void handleColibriRequest(XmppConnection.ColibriRequest request)
     {
-        /* TODO handle Colibri2 */
         IQ iq = request.getRequest();
         String id = null;
         Conference conference;
@@ -778,6 +777,7 @@ public class Videobridge
         // Health-check
         HealthCheckIQProvider.registerIQProvider();
 
+        // Colibri2
         IqProviderUtils.registerProviders();
     }
 

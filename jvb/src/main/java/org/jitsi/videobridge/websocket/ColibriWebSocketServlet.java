@@ -20,7 +20,6 @@ import org.eclipse.jetty.websocket.servlet.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.Endpoint;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.websocket.config.*;
 
@@ -48,7 +47,7 @@ class ColibriWebSocketServlet
     @NotNull
     private final Videobridge videobridge;
 
-    private WebsocketServiceConfig config = new WebsocketServiceConfig();
+    @NotNull private final WebsocketServiceConfig config = new WebsocketServiceConfig();
 
     /**
      * Initializes a new {@link ColibriWebSocketServlet} instance.
@@ -182,8 +181,8 @@ class ColibriWebSocketServlet
         }
         else
         {
-            AbstractEndpoint abstractEndpoint = conference.getEndpoint(ids[2]);
-            if (!(abstractEndpoint instanceof Endpoint))
+            Endpoint endpoint = conference.getLocalEndpoint(ids[2]);
+            if (endpoint == null)
             {
                 logger.warn("Received request for a nonexistent endpoint: "
                     + ids[2] + " (conference " + conference.getID() + ")");
@@ -191,7 +190,6 @@ class ColibriWebSocketServlet
                 return null;
             }
 
-            Endpoint endpoint = (Endpoint) abstractEndpoint;
             String pwd = getPwd(request.getRequestURI().getQuery());
             if (!endpoint.acceptWebSocket(pwd))
             {

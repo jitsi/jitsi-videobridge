@@ -67,6 +67,10 @@ public class Conference
      * The constant denoting that {@link #gid} is not specified.
      */
     public static final long GID_NOT_SET = -1;
+
+    /**
+     * The special GID value used when signaling uses colibri2. With colibri2 the GID field is not required.
+     */
     public static final long GID_COLIBRI2 = -2;
 
     /**
@@ -181,15 +185,23 @@ public class Conference
     private final long creationTime = System.currentTimeMillis();
 
     /**
-     * The shim which handles Colibri-related logic for this conference.
+     * The shim which handles Colibri-related logic for this conference (translates colibri v1 signaling into the
+     * native videobridge APIs).
      */
-    private final ConferenceShim shim;
-    private final Colibri2ConferenceShim colibri2Shim;
+    @NotNull private final ConferenceShim shim;
 
-    private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
+    /**
+     * The shim which handles Colibri v2 related logic for this conference (translates colibri v2 signaling into the
+     * native videobridge APIs).
+     */
+    @NotNull private final Colibri2ConferenceShim colibri2Shim;
 
-    //TODO not public
-    final public EncodingsManager encodingsManager = new EncodingsManager();
+    /**
+     * The queue handling colibri (both v1 and v2) messages for this conference.
+     */
+    @NotNull private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
+
+    @NotNull private final EncodingsManager encodingsManager = new EncodingsManager();
 
     /**
      * This {@link Conference}'s link to Octo.
@@ -456,6 +468,11 @@ public class Conference
         }
     }
 
+    /**
+     * Handles a colibri2 {@link ConferenceModifyIQ} for this conference. Exposed for the cases when it needs to be
+     * done synchronously (as opposed as by {@link #colibriQueue}).
+     * @return the response as an IQ, either an {@link ErrorIQ} or a {@link ConferenceModifiedIQ}.
+     */
     IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
     {
         return colibri2Shim.handleConferenceModifyIQ(conferenceModifyIQ);
@@ -1409,6 +1426,11 @@ public class Conference
     public boolean isInactive()
     {
         return getEndpoints().stream().noneMatch(e -> e.isSendingAudio() || e.isSendingVideo());
+    }
+
+    @NotNull public EncodingsManager getEncodingsManager()
+    {
+        return encodingsManager;
     }
 
     /**
