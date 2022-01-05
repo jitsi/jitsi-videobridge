@@ -54,7 +54,7 @@ class Colibri2ConferenceShim(
             responseBuilder.setSources(buildFeedbackSources())
         }
 
-        if (conference.endpointCount == 0 && conference.relayCount == 0) {
+        if (!conferenceModifyIQ.create && conference.endpointCount == 0 && conference.relayCount == 0) {
             logger.info("All endpoints and relays removed, expiring.")
             TaskPools.IO_POOL.submit { conference.videobridge.expireConference(conference) }
         }
