@@ -182,7 +182,7 @@ class Colibri2ConferenceShim(
                 ep.setTransportInfo(udpTransportPacketExtension)
             }
         }
-        if (!ep.transportDescribed) {
+        if (eDesc.create) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(ep.describeTransport())
             respBuilder.setTransport(transBuilder.build())

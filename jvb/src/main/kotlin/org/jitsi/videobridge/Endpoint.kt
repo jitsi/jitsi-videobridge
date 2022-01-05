@@ -676,11 +676,6 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.startConnectivityEstablishment(transportInfo)
     }
 
-    /** Whether [describeTransport] has been called for this endpoint.
-     */
-    var transportDescribed: Boolean = false
-        private set
-
     fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
@@ -695,7 +690,6 @@ class Endpoint @JvmOverloads constructor(
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
             }
         }
-        transportDescribed = true
 
         logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
 
