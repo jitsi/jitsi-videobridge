@@ -168,13 +168,6 @@ public abstract class AbstractEndpoint
     public abstract boolean receivesSsrc(long ssrc);
 
     /**
-     * Adds an SSRC to this endpoint.
-     * @param ssrc the receive SSRC being added
-     * @param mediaType the {@link MediaType} of the added SSRC
-     */
-    public abstract void addReceiveSsrc(long ssrc, MediaType mediaType);
-
-    /**
      * @return the {@link AbstractEndpointMessageTransport} associated with
      * this endpoint.
      */

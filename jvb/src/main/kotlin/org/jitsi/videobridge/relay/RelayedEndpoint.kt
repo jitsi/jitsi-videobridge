@@ -18,7 +18,6 @@ package org.jitsi.videobridge.relay
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
-import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
@@ -35,10 +34,6 @@ class RelayedEndpoint(
 
     override fun receivesSsrc(ssrc: Long): Boolean = audioSources.any { ssrc == it.ssrc } ||
         mediaSources.any { it.rtpEncodings.any { it.matches(ssrc) } }
-
-    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType?) {
-        TODO("Not yet implemented")
-    }
 
     /** Relayed endpoints are not automatically expired. **/
     override fun shouldExpire(): Boolean = false

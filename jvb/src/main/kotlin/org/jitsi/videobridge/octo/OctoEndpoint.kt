@@ -104,10 +104,6 @@ class OctoEndpoint(
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
-    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType?) {
-        // This is controlled through setReceiveSsrcs.
-    }
-
     override fun addPayloadType(payloadType: PayloadType?) {
         transceiver.addPayloadType(payloadType)
     }

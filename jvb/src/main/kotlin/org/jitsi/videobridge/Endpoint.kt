@@ -401,7 +401,7 @@ class Endpoint @JvmOverloads constructor(
 
     override fun addRtpExtension(rtpExtension: RtpExtension) = transceiver.addRtpExtension(rtpExtension)
 
-    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
+    fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
         logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
         transceiver.addReceiveSsrc(ssrc, mediaType)
     }
