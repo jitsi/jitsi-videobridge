@@ -41,10 +41,7 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
-import org.jxmpp.jid.impl.*;
-import org.jxmpp.stringprep.*;
 
-import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -384,19 +381,12 @@ public class Conference
      */
     public void sendMessage(
         BridgeChannelMessage msg,
-        List<AbstractEndpoint> endpoints,
+        List<Endpoint> endpoints,
         boolean sendToOcto)
     {
-        for (AbstractEndpoint endpoint : endpoints)
+        for (Endpoint endpoint : endpoints)
         {
-            try
-            {
-                endpoint.sendMessage(msg);
-            }
-            catch (IOException e)
-            {
-                logger.error("Failed to send message on data channel to: " + endpoint.getId() + ", msg: " + msg, e);
-            }
+            endpoint.sendMessage(msg);
         }
 
         if (sendToOcto)
@@ -422,7 +412,7 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessage(BridgeChannelMessage msg, List<AbstractEndpoint> endpoints)
+    public void sendMessage(BridgeChannelMessage msg, List<Endpoint> endpoints)
     {
         sendMessage(msg, endpoints, false);
     }
@@ -434,8 +424,7 @@ public class Conference
      */
     public void broadcastMessage(BridgeChannelMessage msg, boolean sendToOcto)
     {
-        List<? extends AbstractEndpoint> targets = sendToOcto ? getEndpoints() : getLocalEndpoints();
-        sendMessage(msg, Collections.unmodifiableList(targets), sendToOcto);
+        sendMessage(msg, getLocalEndpoints(), sendToOcto);
     }
 
     /**
@@ -1086,12 +1075,15 @@ public class Conference
      * Notifies this {@link Conference} that one of its endpoints'
      * transport channel has become available.
      *
-     * @param endpoint the endpoint whose transport channel has become
+     * @param abstractEndpoint the endpoint whose transport channel has become
      * available.
      */
     @Override
-    public void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
+    public void endpointMessageTransportConnected(@NotNull AbstractEndpoint abstractEndpoint)
     {
+        /* TODO: this is only called for actual Endpoints, but the API needs cleaning up. */
+        Endpoint endpoint = (Endpoint)abstractEndpoint;
+
         epConnectionStatusMonitor.endpointConnected(endpoint.getId());
 
         if (!isExpired())
@@ -1100,14 +1092,7 @@ public class Conference
 
             if (!recentSpeakers.isEmpty())
             {
-                try
-                {
-                    endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
-                }
-                catch (IOException e)
-                {
-                    logger.error("Failed to send dominant speaker update on data channel to " + endpoint.getId(), e);
-                }
+                endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
             }
         }
     }

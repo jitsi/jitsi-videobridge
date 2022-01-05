@@ -465,7 +465,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Sends a specific msg to this endpoint over its bridge channel
      */
-    override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
+    fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() =

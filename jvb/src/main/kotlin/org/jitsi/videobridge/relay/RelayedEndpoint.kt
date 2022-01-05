@@ -24,7 +24,6 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
-import org.jitsi.videobridge.message.BridgeChannelMessage
 
 class RelayedEndpoint(
     conference: Conference,
@@ -43,11 +42,6 @@ class RelayedEndpoint(
 
     /** Relayed endpoints are not automatically expired. **/
     override fun shouldExpire(): Boolean = false
-
-    override fun sendMessage(msg: BridgeChannelMessage) {
-        // TODO("Not yet implemented")
-        logger.warn("Not sending message, not yet implemented.")
-    }
 
     override fun requestKeyframe(mediaSsrc: Long) = relay.transceiver.requestKeyFrame(mediaSsrc)
 

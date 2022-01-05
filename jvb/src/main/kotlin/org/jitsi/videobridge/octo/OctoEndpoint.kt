@@ -28,7 +28,6 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
-import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.RemoveReceiverMessage
 
 /**
@@ -72,13 +71,6 @@ class OctoEndpoint(
 
     override fun handleIncomingPacket(packetInfo: OctoPacketInfo) {
         transceiver.handleIncomingPacket(packetInfo)
-    }
-
-    override fun sendMessage(msg: BridgeChannelMessage) {
-        // This is intentionally a no-op. Since a conference can have
-        // multiple OctoEndpoint instances, but we want a single message
-        // to be sent through Octo, the message should be sent through the
-        // single OctoEndpoints instance.
     }
 
     override fun requestKeyframe(mediaSsrc: Long) {

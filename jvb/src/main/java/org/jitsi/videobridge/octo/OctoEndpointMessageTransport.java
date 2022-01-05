@@ -121,7 +121,7 @@ class OctoEndpointMessageTransport
             return null;
         }
 
-        List<AbstractEndpoint> targets;
+        List<Endpoint> targets;
         if (message.isBroadcast())
         {
             // Broadcast message
@@ -132,7 +132,7 @@ class OctoEndpointMessageTransport
             // 1:1 message
             String to = message.getTo();
 
-            AbstractEndpoint targetEndpoint = conference.getLocalEndpoint(to);
+            Endpoint targetEndpoint = conference.getLocalEndpoint(to);
             if (targetEndpoint != null)
             {
                 targets = Collections.singletonList(targetEndpoint);
@@ -179,7 +179,7 @@ class OctoEndpointMessageTransport
             return null;
         }
 
-        List<AbstractEndpoint> targets = conference.getLocalEndpoints().stream()
+        List<Endpoint> targets = conference.getLocalEndpoints().stream()
             .filter((ep) -> ep.wantsStatsFrom(from))
             .collect(Collectors.toList());
 

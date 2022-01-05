@@ -19,7 +19,6 @@ import org.apache.commons.lang3.StringUtils
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.utils.logging2.Logger
-import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.Endpoint
@@ -41,7 +40,6 @@ import org.jitsi.videobridge.message.VideoTypeMessage
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.json.simple.JSONObject
 import java.net.URI
-import java.util.LinkedList
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -365,13 +363,13 @@ class RelayMessageTransport(
             logger.warn("Unable to send EndpointMessage, conference is expired")
             return null
         }
-        val targets: List<AbstractEndpoint> = if (message.isBroadcast()) {
+        val targets = if (message.isBroadcast()) {
             // Broadcast message
-            LinkedList<AbstractEndpoint>(conference.localEndpoints)
+            conference.localEndpoints
         } else {
             // 1:1 message
             val to = message.to
-            val targetEndpoint: AbstractEndpoint? = conference.getLocalEndpoint(to)
+            val targetEndpoint = conference.getLocalEndpoint(to)
             if (targetEndpoint != null) {
                 listOf(targetEndpoint)
             } else {
@@ -412,7 +410,7 @@ class RelayMessageTransport(
                 )
             }
             .collect(Collectors.toList())
-        conference.sendMessage(message, targets as List<AbstractEndpoint>, false)
+        conference.sendMessage(message, targets, false)
         return null
     }
 

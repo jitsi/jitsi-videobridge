@@ -21,7 +21,6 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
-import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
@@ -568,7 +567,7 @@ public class EndpointMessageTransport
 
         boolean sendToOcto;
 
-        List<AbstractEndpoint> targets;
+        List<Endpoint> targets;
         if (message.isBroadcast())
         {
             // Broadcast message to all local endpoints + octo.
@@ -582,15 +581,16 @@ public class EndpointMessageTransport
             String to = message.getTo();
 
             AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
-            if (targetEndpoint instanceof OctoEndpoint)
+            if (targetEndpoint instanceof Endpoint)
             {
-                targets = Collections.emptyList();
-                sendToOcto = true;
+                targets = Collections.singletonList((Endpoint)targetEndpoint);
+                sendToOcto = false;
             }
             else if (targetEndpoint != null)
             {
-                targets = Collections.singletonList(targetEndpoint);
-                sendToOcto = false;
+                /* TODO: for relayed endpoints, send only to the relevant relay. */
+                targets = Collections.emptyList();
+                sendToOcto = true;
             }
             else
             {
@@ -624,7 +624,7 @@ public class EndpointMessageTransport
             return null;
         }
 
-        List<AbstractEndpoint> targets = conference.getLocalEndpoints().stream()
+        List<Endpoint> targets = conference.getLocalEndpoints().stream()
             .filter((ep) -> ep != endpoint && ep.wantsStatsFrom(endpoint))
             .collect(Collectors.toList());
 

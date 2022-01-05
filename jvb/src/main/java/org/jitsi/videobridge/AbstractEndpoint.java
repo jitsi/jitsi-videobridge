@@ -24,7 +24,6 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
-import org.jitsi.videobridge.message.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
@@ -315,16 +314,6 @@ public abstract class AbstractEndpoint
     {
         return ClockUtils.NEVER;
     }
-
-    /**
-     * Sends a specific {@link String} {@code msg} to the remote end of this
-     * endpoint.
-     *
-     * @param msg message text to send.
-     */
-    public abstract void sendMessage(BridgeChannelMessage msg)
-        throws IOException;
-
 
     /**
      * Requests a keyframe from this endpoint for the specified media SSRC.
