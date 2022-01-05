@@ -116,8 +116,7 @@ class Colibri2ConferenceShim(
     private fun handleColibri2Endpoint(eDesc: Colibri2Endpoint): Colibri2Endpoint {
         val id = eDesc.id
         val t = eDesc.transport
-        val respBuilder = Colibri2Endpoint.getBuilder()
-        respBuilder.setId(eDesc.id)
+        val respBuilder = Colibri2Endpoint.getBuilder().apply { setId(id) }
         if (eDesc.expire) {
             conference.getLocalEndpoint(id)?.expire()
             respBuilder.setExpire(true)
@@ -138,24 +137,16 @@ class Colibri2ConferenceShim(
                 ?: throw IqProcessingException(Condition.item_not_found, "Unknown endpoint $id")
         }
 
-        for (m: Media in eDesc.media) {
+        for (m in eDesc.media) {
             // TODO: support removing payload types/header extensions
-            m.payloadTypes.forEach {
-                val pt = create(it, m.type)
-                if (pt != null) {
-                    ep.addPayloadType(pt)
-                } else {
-                    logger.warn("Ignoring unrecognized payload type extension: ${it.toXML()}")
-                }
+            m.payloadTypes.forEach { ptExt ->
+                create(ptExt, m.type)?.let { ep.addPayloadType(it) }
+                    ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toXML()}")
             }
 
-            m.rtpHdrExts.forEach {
-                val rtpExtension = it.toRtpExtension()
-                if (rtpExtension != null) {
-                    ep.addRtpExtension(rtpExtension)
-                } else {
-                    logger.warn("Ignoring unrecognized RTP header extension: ${it.toXML()}")
-                }
+            m.rtpHdrExts.forEach { rtpHdrExt ->
+                rtpHdrExt.toRtpExtension()?.let { ep.addRtpExtension(it) }
+                    ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
             }
 
             /* No need to put media in conference-modified. */
@@ -170,12 +161,7 @@ class Colibri2ConferenceShim(
             }
         )
 
-        if (t != null) {
-            val udpTransportPacketExtension = t.iceUdpTransport
-            if (udpTransportPacketExtension != null) {
-                ep.setTransportInfo(udpTransportPacketExtension)
-            }
-        }
+        t?.iceUdpTransport?.let { ep.setTransportInfo(it) }
         if (eDesc.create) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(ep.describeTransport())
@@ -191,21 +177,17 @@ class Colibri2ConferenceShim(
                     if (sourceGroup.sources.size < 2) {
                         logger.warn("Ignoring source group with <2 sources: ${sourceGroup.toXML()}")
                     } else {
-
                         val primarySsrc: Long = sourceGroup.sources[0].ssrc
                         val secondarySsrc: Long = sourceGroup.sources[1].ssrc
 
                         val ssrcAssociationType = sourceGroup.semantics.parseAssociationType()
-                        if (ssrcAssociationType != null &&
-                            ssrcAssociationType != SsrcAssociationType.SIM
-                        ) {
-                            ep.conference.encodingsManager
-                                .addSsrcAssociation(
-                                    ep.id,
-                                    primarySsrc,
-                                    secondarySsrc,
-                                    ssrcAssociationType
-                                )
+                        if (ssrcAssociationType != null && ssrcAssociationType != SsrcAssociationType.SIM) {
+                            ep.conference.encodingsManager.addSsrcAssociation(
+                                ep.id,
+                                primarySsrc,
+                                secondarySsrc,
+                                ssrcAssociationType
+                            )
                         }
                     }
                 }
@@ -278,22 +260,14 @@ class Colibri2ConferenceShim(
 
         for (m: Media in rDesc.media) {
             // TODO: support removing payload types/header extensions
-            m.payloadTypes.forEach {
-                val pt = create(it, m.type)
-                if (pt != null) {
-                    r.transceiver.addPayloadType(pt)
-                } else {
-                    logger.warn("Ignoring unrecognized payload type extension: ${it.toXML()}")
-                }
+            m.payloadTypes.forEach { ptExt ->
+                create(ptExt, m.type)?.let { r.transceiver.addPayloadType(it) }
+                    ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toXML()}")
             }
 
-            m.rtpHdrExts.forEach {
-                val rtpExtension = it.toRtpExtension()
-                if (rtpExtension != null) {
-                    r.transceiver.addRtpExtension(rtpExtension)
-                } else {
-                    logger.warn("Ignoring unrecognized RTP header extension: ${it.toXML()}")
-                }
+            m.rtpHdrExts.forEach { rtpHdrExt ->
+                rtpHdrExt.toRtpExtension()?.let { r.transceiver.addRtpExtension(it) }
+                    ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
             }
 
             /* No need to put media in conference-modified. */

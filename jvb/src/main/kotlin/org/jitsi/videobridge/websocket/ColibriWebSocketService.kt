@@ -69,7 +69,7 @@ class ColibriWebSocketService(
         if (!config.enabled) {
             return null
         }
-        // "wss://example.com/colibri-ws/server-id/conf-id/endpoint-id?pwd=123
+        // "wss://example.com/colibri-relay-ws/server-id/conf-id/endpoint-id?pwd=123
         return "$relayUrl/$conferenceId/$relayId?pwd=$pwd"
     }
 
@@ -78,12 +78,11 @@ class ColibriWebSocketService(
         videobridge: Videobridge
     ) {
         if (config.enabled) {
-            logger.info("Registering servlet at /$COLIBRI_WS_ENDPOINT/*, baseUrl = $baseUrl")
+            logger.info("Registering servlet with baseUrl = $baseUrl, relayUrl = $relayUrl")
             val holder = ServletHolder().apply {
                 servlet = ColibriWebSocketServlet(config.serverId, videobridge)
             }
             servletContextHandler.addServlet(holder, "/$COLIBRI_WS_ENDPOINT/*")
-            logger.info("Registering servlet at /$COLIBRI_RELAY_WS_ENDPOINT/*, relayUrl = $relayUrl")
             servletContextHandler.addServlet(holder, "/$COLIBRI_RELAY_WS_ENDPOINT/*")
         } else {
             logger.info("Disabled, not registering servlet")
