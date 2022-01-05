@@ -37,11 +37,6 @@ class Colibri2ConferenceShim(
 ) {
     private val logger = createChildLogger(parentLogger)
 
-    /**
-     * Whether the local SSRCs have been reported in a colibri2 response.
-     */
-    private var localSsrcsReported = false
-
     fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): IQ = try {
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
@@ -55,9 +50,8 @@ class Colibri2ConferenceShim(
         }
 
         /* Report feedback sources if we haven't reported them yet. */
-        if (!localSsrcsReported) {
+        if (conferenceModifyIQ.create) {
             responseBuilder.setSources(buildFeedbackSources())
-            localSsrcsReported = true
         }
 
         if (conference.endpointCount == 0 && conference.relayCount == 0) {
@@ -275,13 +269,8 @@ class Colibri2ConferenceShim(
                 ?: throw IqProcessingException(Condition.item_not_found, "Unknown relay $id")
         }
 
-        if (t != null) {
-            val udpTransportPacketExtension = t.iceUdpTransport
-            if (udpTransportPacketExtension != null) {
-                r.setTransportInfo(udpTransportPacketExtension)
-            }
-        }
-        if (!r.transportDescribed) {
+        t?.iceUdpTransport?.let { r.setTransportInfo(it) }
+        if (rDesc.create) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(r.describeTransport())
             respBuilder.setTransport(transBuilder.build())

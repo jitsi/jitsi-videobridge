@@ -250,11 +250,6 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    /** Whether [describeTransport] has been called for this relay.
-     */
-    var transportDescribed: Boolean = false
-        private set
-
     fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
@@ -278,8 +273,6 @@ class Relay @JvmOverloads constructor(
             }
         }
         iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
-
-        transportDescribed = true
 
         logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
 
