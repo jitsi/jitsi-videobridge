@@ -130,9 +130,6 @@ class IceTransport @JvmOverloads constructor(
 
     private val iceComponent = iceAgent.createComponent(
         iceStream,
-        11111,
-        1024,
-        65535,
         IceConfig.config.keepAliveStrategy,
         IceConfig.config.useComponentSocket
     )
