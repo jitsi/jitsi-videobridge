@@ -54,6 +54,7 @@ import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 
 /**
@@ -92,6 +93,12 @@ class Relay @JvmOverloads constructor(
         context["relayId"] = id
         logger = parentLogger.createChildLogger(this.javaClass.name, context)
     }
+
+    /**
+     * The indicator which determines whether [.expire] has been called
+     * on this [Relay].
+     */
+    private var expired = false
 
     private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger)
     private val dtlsTransport = DtlsTransport(logger)
@@ -212,7 +219,7 @@ class Relay @JvmOverloads constructor(
             ) {
                 logger.info("DTLS handshake complete")
                 transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
-                // TODO scheduleEndpointMessageTransportTimeout()
+                scheduleRelayMessageTransportTimeout()
             }
         }
     }
@@ -457,6 +464,25 @@ class Relay @JvmOverloads constructor(
     fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }
 
     /**
+     * Schedule a timeout to fire log a message and track a stat if we don't
+     * have a relay message transport connected within the timeout.
+     */
+    fun scheduleRelayMessageTransportTimeout() {
+        TaskPools.SCHEDULED_POOL.schedule(
+            {
+                if (!expired) {
+                    if (!_messageTransport.isConnected) {
+                        logger.error("RelayMessageTransport still not connected.")
+                        conference.videobridge.statistics.numRelaysNoMessageTransportAfterDelay.incrementAndGet()
+                    }
+                }
+            },
+            30,
+            TimeUnit.SECONDS
+        )
+    }
+
+    /**
      * Checks whether a WebSocket connection with a specific password string
      * should be accepted for this relay.
      * @param password the
@@ -485,6 +511,7 @@ class Relay @JvmOverloads constructor(
     override fun send(packet: PacketInfo) = transceiver.sendPacket(packet)
 
     fun expire() {
+        expired = true
         logger.info("Expiring.")
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { conference.endpointExpired(it) }

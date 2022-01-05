@@ -1117,6 +1117,12 @@ public class Videobridge
         public AtomicInteger totalRelays = new AtomicInteger();
 
         /**
+         * The number of relays which had not established a relay
+         * message transport even after some delay.
+         */
+        public AtomicInteger numRelaysNoMessageTransportAfterDelay = new AtomicInteger();
+
+        /**
          * The total number of times the dominant speaker in any conference
          * changed.
          */
