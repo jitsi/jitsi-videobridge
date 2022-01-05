@@ -20,7 +20,6 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
-import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -36,7 +35,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
@@ -78,7 +76,7 @@ class Relay @JvmOverloads constructor(
     iceControlling: Boolean,
     useUniquePort: Boolean,
     private val clock: Clock = Clock.systemUTC()
-) : EncodingsManager.EncodingsUpdateListener, PotentialPacketHandler {
+) : PotentialPacketHandler {
 
     private val eventEmitter: EventEmitter<AbstractEndpoint.EventHandler> = SyncEventEmitter()
 
@@ -123,7 +121,6 @@ class Relay @JvmOverloads constructor(
 
     fun getMessageTransport(): RelayMessageTransport = _messageTransport
     init {
-        conference.encodingsManager.subscribe(this)
         setupIceTransport()
         setupDtlsTransport()
 
@@ -348,15 +345,6 @@ class Relay @JvmOverloads constructor(
         conference.handleIncomingPacket(packetInfo)
     }
 
-    override fun onNewSsrcAssociation(
-        endpointId: String?,
-        primarySsrc: Long,
-        secondarySsrc: Long,
-        type: SsrcAssociationType?
-    ) {
-        // TODO("Not yet implemented")
-    }
-
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         /* TODO
         if (packetInfo.packet.looksLikeRtp()) {
@@ -530,8 +518,6 @@ class Relay @JvmOverloads constructor(
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
-
-        conference.encodingsManager.unsubscribe(this)
 
         dtlsTransport.stop()
         iceTransport.stop()
