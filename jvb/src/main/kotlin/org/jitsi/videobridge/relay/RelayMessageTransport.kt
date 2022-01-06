@@ -140,7 +140,7 @@ class RelayMessageTransport(
             return null
         }
 
-        ep.addReceiver(message.bridgeId, message.videoConstraints)
+        ep.addReceiver(relay.id, message.videoConstraints)
         return null
     }
 
@@ -150,7 +150,7 @@ class RelayMessageTransport(
             logger.warn("Received RemoveReceiverMessage for unknown epId $epId")
             return null
         }
-        ep.removeReceiver(message.bridgeId)
+        ep.removeReceiver(relay.id)
         return null
     }
 
