@@ -1044,6 +1044,8 @@ public class Conference
     {
         String id = relay.getId();
         relaysById.remove(id);
+
+        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
     }
 
     /**
