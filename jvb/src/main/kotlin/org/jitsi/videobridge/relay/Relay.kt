@@ -104,7 +104,7 @@ class Relay @JvmOverloads constructor(
     /**
      * The instance which manages the Colibri messaging (over web sockets).
      */
-    private val _messageTransport = RelayMessageTransport(
+    private val messageTransport = RelayMessageTransport(
         this,
         Supplier { conference.videobridge.statistics },
         conference,
@@ -118,7 +118,7 @@ class Relay @JvmOverloads constructor(
         conference.videobridge.statistics.totalRelays.incrementAndGet()
     }
 
-    fun getMessageTransport(): RelayMessageTransport = _messageTransport
+    fun getMessageTransport(): RelayMessageTransport = messageTransport
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
@@ -138,7 +138,7 @@ class Relay @JvmOverloads constructor(
             put("iceTransport", iceTransport.getDebugState())
             put("dtlsTransport", dtlsTransport.getDebugState())
             put("transceiver", transceiver.getNodeStats().toJson())
-            put("messageTransport", _messageTransport.debugState)
+            put("messageTransport", messageTransport.debugState)
         }
 
     private fun setupIceTransport() {
@@ -238,7 +238,7 @@ class Relay @JvmOverloads constructor(
         iceTransport.startConnectivityEstablishment(transportInfo)
 
         val websocketExtension = transportInfo.getFirstChildOfType(WebSocketPacketExtension::class.java)
-        websocketExtension?.url?.let { _messageTransport.connectTo(it) }
+        websocketExtension?.url?.let { messageTransport.connectTo(it) }
     }
 
     fun describeTransport(): IceUdpTransportPacketExtension {
@@ -250,7 +250,7 @@ class Relay @JvmOverloads constructor(
         /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
          *  disabled for relay.
          */
-        if (_messageTransport.isActive) {
+        if (messageTransport.isActive) {
             wsPacketExtension.active = true
         } else {
             colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
@@ -353,7 +353,7 @@ class Relay @JvmOverloads constructor(
     /**
      * Sends a specific message to the remote side.
      */
-    fun sendMessage(msg: BridgeChannelMessage) = _messageTransport.sendMessage(msg)
+    fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     fun relayMessageTransportConnected() {
         relayedEndpoints.values.forEach { e -> e.relayMessageTransportConnected() }
@@ -445,7 +445,7 @@ class Relay @JvmOverloads constructor(
         TaskPools.SCHEDULED_POOL.schedule(
             {
                 if (!expired) {
-                    if (!_messageTransport.isConnected) {
+                    if (!messageTransport.isConnected) {
                         logger.error("RelayMessageTransport still not connected.")
                         conference.videobridge.statistics.numRelaysNoMessageTransportAfterDelay.incrementAndGet()
                     }
@@ -500,7 +500,7 @@ class Relay @JvmOverloads constructor(
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
 
             transceiver.teardown()
-            _messageTransport.close()
+            messageTransport.close()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
