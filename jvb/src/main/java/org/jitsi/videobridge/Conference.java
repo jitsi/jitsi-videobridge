@@ -1291,6 +1291,10 @@ public class Conference
             {
                 pph = (Endpoint) targetEndpoint;
             }
+            else if (targetEndpoint instanceof RelayedEndpoint)
+            {
+                pph = ((RelayedEndpoint)targetEndpoint).getRelay();
+            }
             else if (targetEndpoint instanceof OctoEndpoint)
             {
                 pph = tentacle;
