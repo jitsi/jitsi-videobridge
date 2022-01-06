@@ -15,13 +15,10 @@
  */
 package org.jitsi.videobridge.relay
 
-import org.apache.commons.lang3.StringUtils
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
-import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.EndpointMessageTransportConfig
 import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.Videobridge
@@ -44,7 +41,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
-import java.util.stream.Collectors
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -72,7 +68,7 @@ class RelayMessageTransport(
     private var outgoingWebsocket: WebSocketClient? = null
 
     /**
-     * Use to synchronize access to [.webSocket]
+     * Use to synchronize access to [webSocket]
      */
     private val webSocketSyncRoot = Any()
     private val numOutgoingMessagesDropped = AtomicInteger(0)
@@ -239,9 +235,7 @@ class RelayMessageTransport(
             logger.debug("No available transport channel, can't send a message")
             numOutgoingMessagesDropped.incrementAndGet()
         } else {
-            sentMessagesCounts.computeIfAbsent(
-                msg.javaClass.simpleName
-            ) { k: String? -> AtomicLong() }.incrementAndGet()
+            sentMessagesCounts.computeIfAbsent(msg.javaClass.simpleName) { AtomicLong() }.incrementAndGet()
             sendMessage(webSocket, msg)
         }
     }
@@ -257,11 +251,8 @@ class RelayMessageTransport(
      */
     override fun webSocketConnected(ws: ColibriWebSocket) {
         synchronized(webSocketSyncRoot) {
-
             // If we already have a web-socket, discard it and use the new one.
-            if (webSocket != null) {
-                webSocket?.session?.close(200, "replaced")
-            }
+            webSocket?.session?.close(200, "replaced")
             webSocket = ws
             sendMessage(ws, createServerHello())
         }
@@ -344,7 +335,7 @@ class RelayMessageTransport(
     override fun selectedEndpoint(message: SelectedEndpointMessage): BridgeChannelMessage? {
         val newSelectedEndpointID = message.selectedEndpoint
         val newSelectedIDs: List<String> =
-            if (newSelectedEndpointID == null || StringUtils.isBlank(newSelectedEndpointID)) emptyList()
+            if (newSelectedEndpointID == null || newSelectedEndpointID.isBlank()) emptyList()
             else listOf(newSelectedEndpointID)
         selectedEndpoints(SelectedEndpointsMessage(newSelectedIDs))
         return null
@@ -403,21 +394,15 @@ class RelayMessageTransport(
             logger.warn("Unable to send EndpointStats, unknown endpoint " + message.from)
             return null
         }
-        val targets = conference.localEndpoints.stream()
-            .filter { ep: Endpoint ->
-                ep.wantsStatsFrom(
-                    from
-                )
-            }
-            .collect(Collectors.toList())
+        val targets = conference.localEndpoints.filter { it.wantsStatsFrom(from) }.toList()
         conference.sendMessage(message, targets, false)
         return null
     }
 
     override fun endpointConnectionStatus(message: EndpointConnectionStatusMessage): BridgeChannelMessage? {
-        val conference: Conference = relay.conference
+        val conference = relay.conference
         if (conference.isExpired) {
-            logger.warn("Unable to send EndpointConnectionStatusMessage, conference is null or expired")
+            logger.warn("Unable to send EndpointConnectionStatusMessage, conference is expired")
             return null
         }
         conference.broadcastMessage(message, false /* sendToOcto */)

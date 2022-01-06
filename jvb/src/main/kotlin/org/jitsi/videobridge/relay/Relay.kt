@@ -33,6 +33,7 @@ import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.Endpoint
@@ -70,35 +71,26 @@ class Relay @JvmOverloads constructor(
     val conference: Conference,
     parentLogger: Logger,
     /**
-     * True if the ICE agent for this [Relay] will be initialized to serve
-     * as a controlling ICE agent, false otherwise
+     * True if the ICE agent for this [Relay] will be initialized to serve as a controlling ICE agent, false otherwise.
      */
     iceControlling: Boolean,
     useUniquePort: Boolean,
-    private val clock: Clock = Clock.systemUTC()
+    clock: Clock = Clock.systemUTC()
 ) : PotentialPacketHandler {
 
     private val eventEmitter: EventEmitter<AbstractEndpoint.EventHandler> = SyncEventEmitter()
 
     /**
-     * The [Logger] used by the [Relay] class to print debug
-     * information.
+     * The [Logger] used by the [Relay] class to print debug information.
      */
-    private val logger: Logger
-
-    init {
-        val context = HashMap<String, String>()
-        context["relayId"] = id
-        logger = parentLogger.createChildLogger(this.javaClass.name, context)
-    }
+    private val logger = createChildLogger(parentLogger).apply { addContext("relayId", id) }
 
     /**
-     * The indicator which determines whether [.expire] has been called
-     * on this [Relay].
+     * The indicator which determines whether [expire] has been called on this [Relay].
      */
     private var expired = false
 
-    private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger)
+    private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger, clock)
     private val dtlsTransport = DtlsTransport(logger)
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {
@@ -119,13 +111,14 @@ class Relay @JvmOverloads constructor(
         logger
     )
 
-    fun getMessageTransport(): RelayMessageTransport = _messageTransport
     init {
         setupIceTransport()
         setupDtlsTransport()
 
         conference.videobridge.statistics.totalRelays.incrementAndGet()
     }
+
+    fun getMessageTransport(): RelayMessageTransport = _messageTransport
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
@@ -245,9 +238,7 @@ class Relay @JvmOverloads constructor(
         iceTransport.startConnectivityEstablishment(transportInfo)
 
         val websocketExtension = transportInfo.getFirstChildOfType(WebSocketPacketExtension::class.java)
-        if (websocketExtension?.url != null) {
-            _messageTransport.connectTo(websocketExtension.url)
-        }
+        websocketExtension?.url?.let { _messageTransport.connectTo(it) }
     }
 
     fun describeTransport(): IceUdpTransportPacketExtension {
@@ -360,7 +351,7 @@ class Relay @JvmOverloads constructor(
     }
 
     /**
-     * Sends a specific msg to this endpoint over its bridge channel
+     * Sends a specific message to the remote side.
      */
     fun sendMessage(msg: BridgeChannelMessage) = _messageTransport.sendMessage(msg)
 
@@ -487,7 +478,7 @@ class Relay @JvmOverloads constructor(
 
     /* If we're connected, forward everything that didn't come in over a relay.
         TODO: worry about bandwidth limits on relay links? */
-    override fun wants(packet: PacketInfo): Boolean = isTransportConnected() && !(packet is OctoPacketInfo)
+    override fun wants(packet: PacketInfo): Boolean = isTransportConnected() && packet !is OctoPacketInfo
 
     override fun send(packet: PacketInfo) = transceiver.sendPacket(packet)
 
