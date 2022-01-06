@@ -1022,7 +1022,7 @@ public class Conference
             updateEndpointsCache();
         }
 
-        getLocalEndpoints().forEach(senderEndpoint -> senderEndpoint.removeReceiver(id));
+        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
 
         if (tentacle != null)
         {
