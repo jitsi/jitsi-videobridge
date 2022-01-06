@@ -21,6 +21,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
@@ -565,15 +566,12 @@ public class EndpointMessageTransport
             return null;
         }
 
-        boolean sendToOcto;
-
-        List<Endpoint> targets;
         if (message.isBroadcast())
         {
             // Broadcast message to all local endpoints + octo.
-            targets = new LinkedList<>(conference.getLocalEndpoints());
+            List<Endpoint> targets = new LinkedList<>(conference.getLocalEndpoints());
             targets.remove(endpoint);
-            sendToOcto = true;
+            conference.sendMessage(message, targets, /* sendToOcto */ true);
         }
         else
         {
@@ -583,23 +581,22 @@ public class EndpointMessageTransport
             AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
             if (targetEndpoint instanceof Endpoint)
             {
-                targets = Collections.singletonList((Endpoint)targetEndpoint);
-                sendToOcto = false;
+                ((Endpoint)targetEndpoint).sendMessage(message);
+            }
+            else if (targetEndpoint instanceof RelayedEndpoint)
+            {
+                ((RelayedEndpoint)targetEndpoint).getRelay().sendMessage(message);
             }
             else if (targetEndpoint != null)
             {
-                /* TODO: for relayed endpoints, send only to the relevant relay. */
-                targets = Collections.emptyList();
-                sendToOcto = true;
+                conference.sendMessage(message, Collections.emptyList(), /* sendToOcto */ true);
             }
             else
             {
                 getLogger().warn("Unable to find endpoint to send EndpointMessage to: " + to);
-                return null;
             }
         }
 
-        conference.sendMessage(message, targets, sendToOcto);
         return null;
     }
 

@@ -394,8 +394,7 @@ class RelayMessageTransport(
             logger.warn("Unable to send EndpointStats, unknown endpoint " + message.from)
             return null
         }
-        val targets = conference.localEndpoints.filter { it.wantsStatsFrom(from) }.toList()
-        conference.sendMessage(message, targets, false)
+        conference.localEndpoints.filter { it.wantsStatsFrom(from) }.forEach { it.sendMessage(message) }
         return null
     }
 
