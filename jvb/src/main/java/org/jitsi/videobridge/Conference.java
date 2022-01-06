@@ -1022,7 +1022,7 @@ public class Conference
             updateEndpointsCache();
         }
 
-        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
+        getLocalEndpoints().forEach(senderEndpoint -> senderEndpoint.removeReceiver(id));
 
         if (tentacle != null)
         {
@@ -1045,7 +1045,7 @@ public class Conference
         String id = relay.getId();
         relaysById.remove(id);
 
-        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
+        getLocalEndpoints().forEach(senderEndpoint -> senderEndpoint.removeReceiver(id));
     }
 
     /**
