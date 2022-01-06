@@ -123,7 +123,14 @@ class RelayMessageTransport(
     }
 
     override fun serverHello(message: ServerHelloMessage): BridgeChannelMessage? {
-        logger.info { "Received ServerHelloMessage, version ${message.version}" }
+        if (message.version?.equals(relay.conference.videobridge.version.toString()) != true) {
+            logger.warn {
+                "Received ServerHelloMessage with version ${message.version}, but " +
+                    "this server is version ${relay.conference.videobridge.version}"
+            }
+        } else {
+            logger.info { "Received ServerHelloMessage, version ${message.version}" }
+        }
         return null
     }
 
