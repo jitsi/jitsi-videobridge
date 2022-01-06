@@ -32,8 +32,7 @@ class RelayedEndpoint(
 ) : AbstractEndpoint(conference, id, parentLogger) {
     var audioSources: Array<AudioSourceDesc> = arrayOf()
 
-    override fun receivesSsrc(ssrc: Long): Boolean = audioSources.any { ssrc == it.ssrc } ||
-        mediaSources.any { it.rtpEncodings.any { it.matches(ssrc) } }
+    override fun receivesSsrc(ssrc: Long): Boolean = relay.getEndpointBySsrc(ssrc) == this
 
     /** Relayed endpoints are not automatically expired. **/
     override fun shouldExpire(): Boolean = false

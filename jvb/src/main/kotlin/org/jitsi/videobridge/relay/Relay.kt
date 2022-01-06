@@ -435,6 +435,8 @@ class Relay @JvmOverloads constructor(
 
     fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }
 
+    fun getEndpointBySsrc(ssrc: Long): RelayedEndpoint? = synchronized(endpointsLock) { endpointsBySsrc[ssrc] }
+
     /**
      * Schedule a timeout to fire log a message and track a stat if we don't
      * have a relay message transport connected within the timeout.
