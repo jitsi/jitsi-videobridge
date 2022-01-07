@@ -107,6 +107,20 @@ class Relay @JvmOverloads constructor(
     private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
     private val endpointsLock = Any()
 
+    /**
+     * Listen for RTT updates from [transceiver] and update the ICE stats the first time an RTT is available. Note that
+     * the RTT is measured via RTCP, since we don't expose response time for STUN requests.
+     */
+    private val rttListener: EndpointConnectionStats.EndpointConnectionStatsListener =
+        object : EndpointConnectionStats.EndpointConnectionStatsListener {
+            override fun onRttUpdate(newRttMs: Double) {
+                if (newRttMs > 0) {
+                    transceiver.removeEndpointConnectionStatsListener(this)
+                    iceTransport.updateStatsOnInitialRtt(newRttMs)
+                }
+            }
+        }
+
     /* TODO: we eventually want a smarter Transceiver implementation, that splits processing by
      *  source endpoint or something similar, but for the initial implementation this should work.
      */
@@ -301,20 +315,6 @@ class Relay @JvmOverloads constructor(
 
         return iceUdpTransportPacketExtension
     }
-
-    /**
-     * Listen for RTT updates from [transceiver] and update the ICE stats the first time an RTT is available. Note that
-     * the RTT is measured via RTCP, since we don't expose response time for STUN requests.
-     */
-    private val rttListener: EndpointConnectionStats.EndpointConnectionStatsListener =
-        object : EndpointConnectionStats.EndpointConnectionStatsListener {
-            override fun onRttUpdate(newRttMs: Double) {
-                if (newRttMs > 0) {
-                    transceiver.removeEndpointConnectionStatsListener(this)
-                    iceTransport.updateStatsOnInitialRtt(newRttMs)
-                }
-            }
-        }
 
     fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
         when (feature) {
