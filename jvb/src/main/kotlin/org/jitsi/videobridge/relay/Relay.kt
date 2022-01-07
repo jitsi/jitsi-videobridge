@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
@@ -41,6 +42,7 @@ import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
+import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -307,6 +309,18 @@ class Relay @JvmOverloads constructor(
         addEndpointConnectionStatsListener(rttListener)
         setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
         setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
+    }
+
+    fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
+        when (feature) {
+            EndpointDebugFeatures.PCAP_DUMP -> transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
+        }
+    }
+
+    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
+        return when (feature) {
+            EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
+        }
     }
 
     fun isSendingAudio(): Boolean = transceiver.isReceivingAudio()

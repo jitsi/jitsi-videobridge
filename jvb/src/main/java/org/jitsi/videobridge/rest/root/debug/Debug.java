@@ -24,6 +24,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.stats.*;
@@ -190,6 +191,68 @@ public class Debug
         try
         {
             return endpoint.isFeatureEnabled(feature);
+        }
+        catch (Exception e)
+        {
+            throw new ServerErrorException(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @POST
+    @Path("/features/relay/{confId}/{rId}/{feature}/{enabled}")
+    public Response setRelayFeatureState(
+        @PathParam("confId") String confId,
+        @PathParam("rId") String rId,
+        @PathParam("feature") EndpointDebugFeatures feature,
+        @PathParam("enabled") Boolean enabled)
+    {
+        Conference conference = videobridge.getConference(confId);
+        if (conference == null)
+        {
+            throw new NotFoundException("No conference was found with the specified id.");
+        }
+
+        Relay relay = conference.getRelay(rId);
+        if (relay == null)
+        {
+            throw new NotFoundException("No relay was found with the specified id.");
+        }
+
+        logger.info("Setting feature state: feature=" + feature.getValue() + ", enabled? " + enabled);
+        try
+        {
+            relay.setFeature(feature, enabled);
+        }
+        catch (IllegalStateException e)
+        {
+            return Response.status(403, e.getMessage()).build();
+        }
+
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/features/relay/{confId}/{rId}/{feature}/")
+    public Boolean getRelayFeatureState(
+        @PathParam("confId") String confId,
+        @PathParam("rId") String rId,
+        @PathParam("feature") EndpointDebugFeatures feature)
+    {
+        Conference conference = videobridge.getConference(confId);
+        if (conference == null)
+        {
+            throw new NotFoundException("No conference was found with the specified id.");
+        }
+
+        Relay relay = conference.getRelay(rId);
+        if (relay == null)
+        {
+            throw new NotFoundException("No relay was found with the specified id.");
+        }
+
+        try
+        {
+            return relay.isFeatureEnabled(feature);
         }
         catch (Exception e)
         {

@@ -31,6 +31,7 @@ import org.jitsi.health.HealthCheckService
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.rest.RestApis
 import org.jitsi.videobridge.rest.annotations.EnabledByConfig
 import org.junit.Test
@@ -48,9 +49,11 @@ import javax.ws.rs.core.Application
 
 class DebugTest : JerseyTest() {
     private val endpoint: Endpoint = mockk(relaxed = true)
+    private val relay: Relay = mockk(relaxed = true)
     private val conference: Conference = mockk {
         every { getEndpoint("bar") } returns endpoint
         every { getLocalEndpoint("bar") } returns endpoint
+        every { getRelay("baz") } returns relay
     }
     private val videobridge: Videobridge = mockk {
         every { getConference("foo") } returns conference
@@ -185,6 +188,61 @@ class DebugTest : JerseyTest() {
     @Test
     fun testDisableInvalidEndpointFeature() {
         val resp = target("$BASE_URL/features/endpoint/foo/bar/nonexistent/false")
+            .request()
+            .post(Entity.json(null))
+
+        resp.status shouldBe HttpStatus.NOT_FOUND_404
+    }
+
+    @Test
+    fun testEnableRelayFeature() {
+        val resp = target("$BASE_URL/features/relay/foo/baz/${EndpointDebugFeatures.PCAP_DUMP.value}/true")
+            .request()
+            .post(Entity.json(null))
+
+        resp.status shouldBe HttpStatus.OK_200
+    }
+
+    @Test
+    fun testGetRelayFeatureState() {
+        every { relay.isFeatureEnabled(EndpointDebugFeatures.PCAP_DUMP) } returns true
+        val resp = target("$BASE_URL/features/relay/foo/baz/${EndpointDebugFeatures.PCAP_DUMP.value}")
+            .request()
+            .get()
+
+        resp.status shouldBe HttpStatus.OK_200
+        resp.readEntity(String::class.java)!!.toBoolean() shouldBe true
+
+        every { relay.isFeatureEnabled(EndpointDebugFeatures.PCAP_DUMP) } returns false
+        val resp2 = target("$BASE_URL/features/relay/foo/baz/${EndpointDebugFeatures.PCAP_DUMP.value}")
+            .request()
+            .get()
+
+        resp2.status shouldBe HttpStatus.OK_200
+        resp2.readEntity(String::class.java)!!.toBoolean() shouldBe false
+    }
+
+    @Test
+    fun testGetNonexistentRelayFeatureState() {
+        val resp = target("$BASE_URL/features/relay/foo/baz/nonexistent")
+            .request()
+            .get()
+
+        resp.status shouldBe HttpStatus.NOT_FOUND_404
+    }
+
+    @Test
+    fun testDisableRelayFeature() {
+        val resp = target("$BASE_URL/features/relay/foo/baz/${EndpointDebugFeatures.PCAP_DUMP.value}/false")
+            .request()
+            .post(Entity.json(null))
+
+        resp.status shouldBe HttpStatus.OK_200
+    }
+
+    @Test
+    fun testDisableInvalidRelayFeature() {
+        val resp = target("$BASE_URL/features/relay/foo/baz/nonexistent/false")
             .request()
             .post(Entity.json(null))
 
