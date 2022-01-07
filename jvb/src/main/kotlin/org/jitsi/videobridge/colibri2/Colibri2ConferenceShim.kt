@@ -4,6 +4,8 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType.Companion.createFromUri
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.util.LocalSsrcAssociation
+import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -173,23 +175,9 @@ class Colibri2ConferenceShim(
                 mediaSource.sources.forEach {
                     ep.addReceiveSsrc(it.ssrc, mediaSource.type)
                 }
-                mediaSource.ssrcGroups.forEach { sourceGroup ->
-                    if (sourceGroup.sources.size < 2) {
-                        logger.warn("Ignoring source group with <2 sources: ${sourceGroup.toXML()}")
-                    } else {
-                        val primarySsrc: Long = sourceGroup.sources[0].ssrc
-                        val secondarySsrc: Long = sourceGroup.sources[1].ssrc
-
-                        val ssrcAssociationType = sourceGroup.semantics.parseAssociationType()
-                        if (ssrcAssociationType != null && ssrcAssociationType != SsrcAssociationType.SIM) {
-                            ep.conference.encodingsManager.addSsrcAssociation(
-                                ep.id,
-                                primarySsrc,
-                                secondarySsrc,
-                                ssrcAssociationType
-                            )
-                        }
-                    }
+                // TODO: remove any old associations for this endpoint
+                mediaSource.ssrcGroups.mapNotNull { it.toSsrcAssociation() }.forEach {
+                    addSsrcAssociation(ep.id, it)
                 }
             }
 
@@ -206,6 +194,26 @@ class Colibri2ConferenceShim(
         }
 
         return respBuilder.build()
+    }
+
+    private fun addSsrcAssociation(endpointId: String, ssrcAssociation: SsrcAssociation) {
+        conference.encodingsManager.addSsrcAssociation(
+            endpointId,
+            ssrcAssociation.primarySsrc,
+            ssrcAssociation.secondarySsrc,
+            ssrcAssociation.type)
+    }
+
+    private fun SourceGroupPacketExtension.toSsrcAssociation(): SsrcAssociation? {
+        if (sources.size < 2) {
+            logger.warn("Ignoring source group with <2 sources: ${toXML()}")
+            return null
+        }
+
+        val type = semantics.parseAssociationType() ?: return null
+        if (type == SsrcAssociationType.SIM) return null
+
+        return LocalSsrcAssociation(sources[0].ssrc, sources[1].ssrc, type)
     }
 
     private fun String.parseAssociationType(): SsrcAssociationType? = when {
@@ -284,6 +292,13 @@ class Colibri2ConferenceShim(
                     r.addRemoteEndpoint(eId, e.statsId, sources.first, sources.second)
                 } else {
                     r.updateRemoteEndpoint(eId, sources.first, sources.second)
+                }
+
+                // TODO: remove any old associations for this endpoint
+                e.sources?.mediaSources?.forEach { mediaSource ->
+                    mediaSource.ssrcGroups.mapNotNull { it.toSsrcAssociation() }.forEach {
+                        addSsrcAssociation(e.id, it)
+                    }
                 }
             }
         }

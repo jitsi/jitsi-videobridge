@@ -35,6 +35,8 @@ import java.util.concurrent.*;
  * single location to handle dispersing this information to all interested
  * parties.
  *
+ * TODO: Provide a way to remove associations that are no longer used.
+ *
  * @author Brian Baldino
  */
 public class EncodingsManager
