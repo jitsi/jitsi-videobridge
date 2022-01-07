@@ -107,6 +107,31 @@ class Relay @JvmOverloads constructor(
     private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
     private val endpointsLock = Any()
 
+    /* TODO: we eventually want a smarter Transceiver implementation, that splits processing by
+     *  source endpoint or something similar, but for the initial implementation this should work.
+     */
+    val transceiver = Transceiver(
+        id,
+        TaskPools.CPU_POOL,
+        TaskPools.CPU_POOL,
+        TaskPools.SCHEDULED_POOL,
+        diagnosticContext,
+        logger,
+        TransceiverEventHandlerImpl(),
+        clock
+    ).apply {
+        setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
+            override fun consume(packetInfo: PacketInfo) {
+                this@Relay.handleIncomingPacket(packetInfo)
+            }
+
+            override fun trace(f: () -> Unit) = f.invoke()
+        })
+        addEndpointConnectionStatsListener(rttListener)
+        setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
+        setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
+    }
+
     /**
      * The instance which manages the Colibri messaging (over web sockets).
      */
@@ -290,31 +315,6 @@ class Relay @JvmOverloads constructor(
                 }
             }
         }
-
-    /* TODO: we eventually want a smarter Transceiver implementation, that splits processing by
-     *  source endpoint or something similar, but for the initial implementation this should work.
-     */
-    val transceiver = Transceiver(
-        id,
-        TaskPools.CPU_POOL,
-        TaskPools.CPU_POOL,
-        TaskPools.SCHEDULED_POOL,
-        diagnosticContext,
-        logger,
-        TransceiverEventHandlerImpl(),
-        clock
-    ).apply {
-        setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
-            override fun consume(packetInfo: PacketInfo) {
-                this@Relay.handleIncomingPacket(packetInfo)
-            }
-
-            override fun trace(f: () -> Unit) = f.invoke()
-        })
-        addEndpointConnectionStatsListener(rttListener)
-        setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
-        setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
-    }
 
     fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
         when (feature) {
