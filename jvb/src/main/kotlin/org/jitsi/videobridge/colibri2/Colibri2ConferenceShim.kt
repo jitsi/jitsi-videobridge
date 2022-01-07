@@ -201,7 +201,8 @@ class Colibri2ConferenceShim(
             endpointId,
             ssrcAssociation.primarySsrc,
             ssrcAssociation.secondarySsrc,
-            ssrcAssociation.type)
+            ssrcAssociation.type
+        )
     }
 
     private fun SourceGroupPacketExtension.toSsrcAssociation(): SsrcAssociation? {
