@@ -354,7 +354,7 @@ class Relay @JvmOverloads constructor(
         secondarySsrc: Long,
         type: SsrcAssociationType
     ) {
-        if (getEndpoint(id) != null) {
+        if (synchronized(endpointsLock) { relayedEndpoints.containsKey(endpointId) }) {
             transceiver.addSsrcAssociation(LocalSsrcAssociation(primarySsrc, secondarySsrc, type))
         } else {
             transceiver.addSsrcAssociation(RemoteSsrcAssociation(primarySsrc, secondarySsrc, type))
