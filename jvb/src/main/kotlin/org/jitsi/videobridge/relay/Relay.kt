@@ -103,6 +103,8 @@ class Relay @JvmOverloads constructor(
         put("relay_id", id)
     }
 
+    private val timelineLogger = logger.createChildLogger("timeline.${this.javaClass.name}")
+
     private val relayedEndpoints = HashMap<String, RelayedEndpoint>()
     private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
     private val endpointsLock = Any()
@@ -372,11 +374,11 @@ class Relay @JvmOverloads constructor(
          */
 
         packetInfo.sent()
-        /* TODO
+
         if (timelineLogger.isTraceEnabled && Endpoint.logTimeline()) {
             timelineLogger.trace { packetInfo.timeline.toString() }
         }
-         */
+
         iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
         ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
