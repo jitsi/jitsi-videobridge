@@ -77,6 +77,7 @@ class Colibri2ConferenceShim(
         addMediaSource(
             MediaSource.getBuilder()
                 .setType(MediaType.AUDIO)
+                .setId("jvb-a0")
                 .addSource(
                     SourcePacketExtension().apply {
                         ssrc = conference.localAudioSsrc
@@ -94,6 +95,7 @@ class Colibri2ConferenceShim(
         addMediaSource(
             MediaSource.getBuilder()
                 .setType(MediaType.VIDEO)
+                .setId("jvb-v0")
                 .addSource(
                     SourcePacketExtension().apply {
                         ssrc = conference.localVideoSsrc
