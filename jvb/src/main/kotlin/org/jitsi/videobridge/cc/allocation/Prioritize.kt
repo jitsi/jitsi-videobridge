@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.videobridge.calculateLastN
 import org.jitsi.videobridge.jvbLastNSingleton
 import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion.singleton as conferenceSizeLimits
@@ -25,6 +26,7 @@ import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion
  *
  * @return the endpoints from `conferenceEndpoints` ordered by selection first, and then speech activity.
  */
+@Deprecated("", ReplaceWith("prioritize2"), DeprecationLevel.WARNING)
 fun <T : MediaSourceContainer> prioritize(
     conferenceEndpoints: MutableList<T>,
     selectedEndpointIds: List<String> = emptyList()
@@ -37,6 +39,21 @@ fun <T : MediaSourceContainer> prioritize(
         }
     }
     return conferenceEndpoints
+}
+
+fun prioritize2(
+    conferenceSources: MutableList<MediaSourceDesc>,
+    selectedSourceNames: List<String> = emptyList()
+): List<MediaSourceDesc> {
+    // Bump selected sources to the top of the list.
+    selectedSourceNames.asReversed().forEach { selectedSourceName ->
+        // Note the usage of sourceName!! which is expected to be always defined in the multi-stream mode
+        conferenceSources.find { it.sourceName!! == selectedSourceName }?.let { selectedSource ->
+            conferenceSources.remove(selectedSource)
+            conferenceSources.add(0, selectedSource)
+        }
+    }
+    return conferenceSources
 }
 
 /**
@@ -58,6 +75,32 @@ fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, alloc
         } else {
             allocationSettings.getConstraints(endpoint.id).also {
                 if (it.maxHeight > 0) endpointsWithNonZeroConstraints++
+            }
+        }
+    }
+}
+
+/**
+ * Return the "effective" constraints for the given media sources, i.e. the constraints adjusted for LastN.
+ */
+fun getEffectiveConstraints2(sources: List<MediaSourceDesc>, allocationSettings: AllocationSettings):
+    Map<String, VideoConstraints> {
+
+    // FIXME figure out before merge - is using source count instead of endpoints
+    // Add 1 for the receiver endpoint, which is not in the list.
+    val effectiveLastN = effectiveLastN(allocationSettings.lastN, sources.size + 1)
+
+    // Keep track of the number of sources with non-zero constraints. Once [effectiveLastN] of them have been
+    // added, all other sources have effectiveConstraints 0, because they would never be forwarded by the
+    // algorithm.
+    var sourcesWithNonZeroConstraints = 0
+
+    return sources.associate { source ->
+        (source.sourceName)!! to if (sourcesWithNonZeroConstraints >= effectiveLastN) {
+            VideoConstraints.NOTHING
+        } else {
+            allocationSettings.getConstraints(source.sourceName!!).also {
+                if (it.maxHeight > 0) sourcesWithNonZeroConstraints++
             }
         }
     }

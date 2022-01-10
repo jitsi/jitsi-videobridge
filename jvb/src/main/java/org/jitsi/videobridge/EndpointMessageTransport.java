@@ -79,6 +79,8 @@ public class EndpointMessageTransport
     @NotNull
     private final Endpoint endpoint;
 
+    private final MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
+
     /**
      * Initializes a new {@link EndpointMessageTransport} instance.
      * @param endpoint the associated {@link Endpoint}.
@@ -148,7 +150,7 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage sourceVideoType(SourceVideoTypeMessage sourceVideoTypeMessage)
     {
-        if (!MultiStreamConfig.config.isEnabled())
+        if (!multiStreamConfig.getEnabled())
         {
             return null;
         }
@@ -486,8 +488,10 @@ public class EndpointMessageTransport
      * has been received.
      *
      * @param message the message that was received.
+     * @deprecated use receiverVideoConstraints, selecting endpoints will not be supported in the multi-stream mode
      */
     @Override
+    @Deprecated
     public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
     {
         List<String> newSelectedEndpoints = new ArrayList<>(message.getSelectedEndpoints());

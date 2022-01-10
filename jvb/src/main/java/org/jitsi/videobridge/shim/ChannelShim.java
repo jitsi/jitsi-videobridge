@@ -24,6 +24,7 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
+import org.jivesoftware.smack.packet.*;
 
 import java.time.*;
 import java.util.*;
@@ -40,6 +41,11 @@ public class ChannelShim
      * The {@link Logger}
      */
     private final Logger logger;
+
+    /**
+     * Multi stream config - a static instance to avoid creating on each channel allocation.
+     */
+    private final static MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
 
     /**
      * Gets the {@link SsrcAssociationType} corresponding to a given
@@ -277,7 +283,22 @@ public class ChannelShim
      * Sets the list of sources signaled for this channel.
      */
     public void setSources(@NotNull List<SourcePacketExtension> sources)
+        throws IqProcessingException
     {
+        if (multiStreamConfig.getEnabled())
+        {
+            for (SourcePacketExtension s: sources)
+            {
+                // TODO use Kotlin "isNullOrEmpty" once ported to Kotlin
+                if (s.getName() == null || s.getName().trim().isEmpty())
+                {
+                    throw new IqProcessingException(
+                        StanzaError.Condition.bad_request,
+                        "The name attribute is required for " + s);
+                }
+            }
+        }
+
         this.sources = sources;
         sources.forEach(s -> {
             endpoint.addReceiveSsrc(s.getSSRC(), getMediaType());

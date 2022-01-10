@@ -38,9 +38,9 @@ import java.time.Clock
 internal class SingleSourceAllocation2(
     val endpointId: String,
     val mediaSource: MediaSourceDesc,
-    /** The constraints to use while allocating bandwidth to this endpoint. */
+    /** The constraints to use while allocating bandwidth to this media source. */
     val constraints: VideoConstraints,
-    /** Whether the endpoint is on stage. */
+    /** Whether the source is on stage. */
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
@@ -276,7 +276,7 @@ internal class SingleSourceAllocation2(
         /** The endpoint which is the source of the stream(s). */
         source: MediaSourceDesc,
         onStage: Boolean,
-        /** The constraints that the receiver specified for [endpoint]. */
+        /** The constraints that the receiver specified for [source]. */
         constraints: VideoConstraints,
         nowMs: Long
     ): Layers {

@@ -156,6 +156,7 @@ open class MessageHandler {
 /**
  * A message sent from a client to a bridge, indicating that the list of endpoints selected by the client has changed.
  */
+@Deprecated("Use ReceiverVideoConstraints")
 class SelectedEndpointsMessage(val selectedEndpoints: List<String>) : BridgeChannelMessage(TYPE) {
 
     companion object {
@@ -422,8 +423,12 @@ class RemoveReceiverMessage(
 
 class ReceiverVideoConstraintsMessage(
     val lastN: Int? = null,
+    @Deprecated("", ReplaceWith("selectedSources"), DeprecationLevel.WARNING)
     val selectedEndpoints: List<String>? = null,
+    val selectedSources: List<String>? = null,
+    @Deprecated("", ReplaceWith("onStageSources"), DeprecationLevel.WARNING)
     val onStageEndpoints: List<String>? = null,
+    val onStageSources: List<String>? = null,
     val defaultConstraints: VideoConstraints? = null,
     val constraints: Map<String, VideoConstraints>? = null
 ) : BridgeChannelMessage(TYPE) {
