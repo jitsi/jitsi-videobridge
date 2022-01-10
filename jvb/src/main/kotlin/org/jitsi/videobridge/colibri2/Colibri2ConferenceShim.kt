@@ -136,7 +136,8 @@ class Colibri2ConferenceShim(
             ep = conference.createLocalEndpoint(id, t.iceControlling)
         } else {
             ep = conference.getLocalEndpoint(id)
-                ?: throw IqProcessingException(Condition.item_not_found, "Unknown endpoint $id")
+                // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
+                ?: throw IqProcessingException(Condition.bad_request, "Unknown endpoint $id")
         }
 
         for (m in eDesc.media) {
@@ -257,7 +258,8 @@ class Colibri2ConferenceShim(
             r = conference.createRelay(id, t.iceControlling, t.useUniquePort)
         } else {
             r = conference.getRelay(id)
-                ?: throw IqProcessingException(Condition.item_not_found, "Unknown relay $id")
+                // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
+                ?: throw IqProcessingException(Condition.bad_request, "Unknown relay $id")
         }
 
         t?.iceUdpTransport?.let { r.setTransportInfo(it) }
