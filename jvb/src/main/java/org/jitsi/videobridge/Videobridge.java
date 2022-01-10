@@ -504,6 +504,29 @@ public class Videobridge
     }
 
     /**
+     * Whether the bridge is in "drain" mode. The bridge will not be assigned to new
+     * conferences when in this mode.
+     */
+    private boolean drainMode = false;
+
+    /**
+     * Handles a drain request.
+     */
+    public void setDrainMode(boolean enable)
+    {
+        logger.info("Received drain request. enable=" + enable);
+        drainMode = enable;
+    }
+
+    /**
+     * Query the drain state.
+     */
+    public boolean getDrainMode()
+    {
+        return drainMode;
+    }
+
+    /**
      * Returns {@code true} if this instance has entered graceful shutdown mode.
      *
      * @return {@code true} if this instance has entered graceful shutdown mode;

@@ -39,6 +39,9 @@ class RestConfigTest : ConfigTest() {
             context("Shutdown") {
                 config.isEnabled(RestApis.SHUTDOWN) shouldBe false
             }
+            context("Drain") {
+                config.isEnabled(RestApis.DRAIN) shouldBe true
+            }
             context("Version") {
                 config.isEnabled(RestApis.VERSION) shouldBe true
             }

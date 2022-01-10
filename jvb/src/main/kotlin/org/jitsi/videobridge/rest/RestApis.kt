@@ -20,5 +20,6 @@ enum class RestApis {
     DEBUG,
     HEALTH,
     SHUTDOWN,
+    DRAIN,
     VERSION
 }
