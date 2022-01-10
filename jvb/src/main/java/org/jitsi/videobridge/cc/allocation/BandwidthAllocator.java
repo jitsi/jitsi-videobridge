@@ -28,6 +28,7 @@ import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
 import java.lang.*;
+import java.lang.Deprecated;
 import java.lang.SuppressWarnings;
 import java.time.*;
 import java.util.*;
@@ -35,6 +36,7 @@ import java.util.function.*;
 import java.util.stream.*;
 
 import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize;
+import static org.jitsi.videobridge.cc.allocation.PrioritizeKt.prioritize2;
 import static org.jitsi.videobridge.cc.allocation.VideoConstraintsKt.prettyPrint;
 
 /**
@@ -76,6 +78,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
     private final Logger logger;
 
+    private final MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
+
     /**
      * The estimated available bandwidth in bits per second.
      */
@@ -95,6 +99,12 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      *
      * Effective constraints are used to signal to video senders to reduce their resolution to the minimum that
      * satisfies all receivers.
+     *
+     * With the multi-stream support added, the mapping is stored on a per source name basis instead of an endpoint id.
+     *
+     * When an endpoint falls out of the last N, the constraints of all the sources of this endpoint are reduced to 0.
+     *
+     * TODO Update this description when the endpoint ID signaling is removed from the JVB.
      */
     private Map<String, VideoConstraints> effectiveConstraints = Collections.emptyMap();
 
@@ -222,22 +232,47 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     {
         lastUpdateTime = clock.instant();
 
-        // Order the endpoints by selection, followed by speech activity.
-        List<T> sortedEndpoints = prioritize(endpointsSupplier.get(), getSelectedEndpoints());
+        // Declare variables for flow branching below
+        BandwidthAllocation newAllocation;
+        Map<String, VideoConstraints> oldEffectiveConstraints;
 
-        // Extract and update the effective constraints.
-        Map<String, VideoConstraints> oldEffectiveConstraints = effectiveConstraints;
-        effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
-        logger.trace(() ->
-                "Allocating: sortedEndpoints="
-                        + sortedEndpoints.stream().map(T::getId).collect(Collectors.joining(","))
-                        + " effectiveConstraints=" + prettyPrint(effectiveConstraints));
+        if (multiStreamConfig.getEnabled())
+        {
+            // Order the sources by selection, followed by Endpoint's speech activity.
+            List<MediaSourceDesc> sources
+                = endpointsSupplier.get()
+                    .stream()
+                    .flatMap(endpoint -> Arrays.stream(endpoint.getMediaSources()))
+                    .collect(Collectors.toList());
+            List<MediaSourceDesc> sortedSources = prioritize2(sources, getSelectedSources());
 
-        // Compute the bandwidth allocation.
-        BandwidthAllocation newAllocation
-            = MultiStreamConfig.config.isEnabled()
-                ? allocate2(sortedEndpoints)
-                : allocate(sortedEndpoints);
+            // Extract and update the effective constraints.
+            oldEffectiveConstraints = effectiveConstraints;
+            effectiveConstraints = PrioritizeKt.getEffectiveConstraints2(sortedSources, allocationSettings);
+            logger.trace(() ->
+                "Allocating: sortedSources="
+                    + sortedSources.stream().map(MediaSourceDesc::getSourceName).collect(Collectors.joining(","))
+                    + " effectiveConstraints=" + prettyPrint(effectiveConstraints));
+
+            // Compute the bandwidth allocation.
+            newAllocation = allocate2(sortedSources);
+        }
+        else
+        {
+            // Order the endpoints by selection, followed by speech activity.
+            List<T> sortedEndpoints = prioritize(endpointsSupplier.get(), getSelectedEndpoints());
+
+            // Extract and update the effective constraints.
+            oldEffectiveConstraints = effectiveConstraints;
+            effectiveConstraints = PrioritizeKt.getEffectiveConstraints(sortedEndpoints, allocationSettings);
+            logger.trace(() ->
+                    "Allocating: sortedEndpoints="
+                            + sortedEndpoints.stream().map(T::getId).collect(Collectors.joining(","))
+                            + " effectiveConstraints=" + prettyPrint(effectiveConstraints));
+
+            // Compute the bandwidth allocation.
+            newAllocation = allocate(sortedEndpoints);
+        }
 
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
         if (allocationChanged)
@@ -262,6 +297,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         }
     }
 
+    @Deprecated
     private List<String> getSelectedEndpoints()
     {
         // On-stage participants are considered selected (with higher prio).
@@ -274,6 +310,20 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             }
         });
         return selectedEndpoints;
+    }
+
+    private List<String> getSelectedSources()
+    {
+        // On-stage sources are considered selected (with higher priority).
+        List<String> selectedSources = new ArrayList<>(allocationSettings.getOnStageSources());
+        allocationSettings.getSelectedSources().forEach(selectedSource ->
+        {
+            if (!selectedSources.contains(selectedSource))
+            {
+                selectedSources.add(selectedSource);
+            }
+        });
+        return selectedSources;
     }
 
     /**
@@ -346,16 +396,16 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Implements the bandwidth allocation algorithm for the given ordered list of endpoints.
+     * Implements the bandwidth allocation algorithm for the given ordered list of media sources.
      *
      * The new version which works with multiple streams per endpoint.
      *
-     * @param conferenceEndpoints the list of endpoints in order of priority to allocate for.
+     * @param conferenceMediaSources the list of endpoint media sources in order of priority to allocate for.
      * @return the new {@link BandwidthAllocation}.
      */
-    private synchronized @NotNull BandwidthAllocation allocate2(List<T> conferenceEndpoints)
+    private synchronized @NotNull BandwidthAllocation allocate2(List<MediaSourceDesc> conferenceMediaSources)
     {
-        List<SingleSourceAllocation2> sourceBitrateAllocations = createAllocations2(conferenceEndpoints);
+        List<SingleSourceAllocation2> sourceBitrateAllocations = createAllocations2(conferenceMediaSources);
 
         if (sourceBitrateAllocations.isEmpty())
         {
@@ -395,13 +445,15 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             }
         }
 
-        // The endpoints which are in lastN, and are sending video, but were suspended due to bwe.
+        // The sources which are in lastN, and are sending video, but were suspended due to bwe.
         List<String> suspendedIds = sourceBitrateAllocations.stream()
                 .filter(SingleSourceAllocation2::isSuspended)
-                .map(SingleSourceAllocation2::getEndpointId).collect(Collectors.toList());
+                .map(SingleSourceAllocation2::getMediaSource)
+                .map(MediaSourceDesc::getSourceName)
+                .collect(Collectors.toList());
         if (!suspendedIds.isEmpty())
         {
-            logger.info("Endpoints were suspended due to insufficient bandwidth (bwe="
+            logger.info("Sources were suspended due to insufficient bandwidth (bwe="
                     + getAvailableBandwidth() + " bps): " + String.join(",", suspendedIds));
         }
 
@@ -472,35 +524,31 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     // The new version which works with multiple streams per endpoint.
-    private synchronized @NotNull List<SingleSourceAllocation2> createAllocations2(List<T> conferenceEndpoints)
+    private synchronized @NotNull List<SingleSourceAllocation2> createAllocations2(
+            List<MediaSourceDesc> conferenceMediaSources)
     {
         // Init.
-        List<SingleSourceAllocation2> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
+        List<SingleSourceAllocation2> sourceBitrateAllocations = new ArrayList<>(conferenceMediaSources.size());
 
-        for (MediaSourceContainer endpoint : conferenceEndpoints)
+        for (MediaSourceDesc source : conferenceMediaSources)
         {
-            MediaSourceDesc[] sources = endpoint.getMediaSources();
-
-            for (MediaSourceDesc source : sources)
-            {
-                sourceBitrateAllocations.add(
-                        new SingleSourceAllocation2(
-                                endpoint.getId(),
-                                source,
-                                // Note that we use the effective constraints and not the receiver's constraints
-                                // directly. This means we never even try to allocate bitrate to endpoints "outside
-                                // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
-                                // stream with bitrate higher that the available bandwidth, we will forward no
-                                // video at all instead of going to the second endpoint in the list.
-                                // I think this is not desired behavior. However, it is required for the "effective
-                                // constraints" to work as designed.
-                                effectiveConstraints.get(endpoint.getId()),
-                                allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
-                                diagnosticContext,
-                                clock,
-                                config,
-                                logger));
-            }
+            sourceBitrateAllocations.add(
+                new SingleSourceAllocation2(
+                        source.getOwner(),
+                        source,
+                        // Note that we use the effective constraints and not the receiver's constraints
+                        // directly. This means we never even try to allocate bitrate to sources "outside
+                        // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
+                        // stream with bitrate higher that the available bandwidth, we will forward no
+                        // video at all instead of going to the second endpoint in the list.
+                        // I think this is not desired behavior. However, it is required for the "effective
+                        // constraints" to work as designed.
+                        effectiveConstraints.get(source.getSourceName()),
+                        allocationSettings.getOnStageSources().contains(source.getSourceName()),
+                        diagnosticContext,
+                        clock,
+                        config,
+                        logger));
         }
 
         return sourceBitrateAllocations;

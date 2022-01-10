@@ -735,6 +735,7 @@ class Endpoint @JvmOverloads constructor(
     /** Whether we are currently oversending to this endpoint. */
     fun isOversending(): Boolean = bitrateController.isOversending()
 
+    @Deprecated("Use the receiver constraints message instead")
     fun setSelectedEndpoints(selectedEndpoints: List<String>) =
         bitrateController.setSelectedEndpoints(selectedEndpoints)
 
