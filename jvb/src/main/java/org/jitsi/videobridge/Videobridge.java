@@ -29,6 +29,7 @@ import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -860,6 +861,10 @@ public class Videobridge
             "srtp_send_queue",
             getJsonFromQueueStatisticsAndErrorHandler(Endpoint.queueErrorCounter,
                 "Endpoint-outgoing-packet-queue"));
+        queueStats.put(
+            "relay_srtp_send_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(Relay.queueErrorCounter,
+                "Relay-outgoing-packet-queue"));
         queueStats.put(
             "octo_receive_queue",
             getJsonFromQueueStatisticsAndErrorHandler(ConfOctoTransport.queueErrorCounter,
