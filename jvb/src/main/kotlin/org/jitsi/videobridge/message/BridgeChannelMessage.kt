@@ -370,7 +370,7 @@ class ForwardedSourcesMessage(
     val forwardedSources: Collection<String>
 ) : BridgeChannelMessage(TYPE) {
     companion object {
-        const val TYPE = "ForwardedSourcesChangeEvent"
+        const val TYPE = "ForwardedSources"
     }
 }
 
