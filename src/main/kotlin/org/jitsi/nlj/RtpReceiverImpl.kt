@@ -102,7 +102,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val logger = createChildLogger(parentLogger)
     private var running: Boolean = true
     private val inputTreeRoot: Node
-    private val queueSize: Int by config("jmt.transceiver.recv.queue-size".from(JitsiConfig.newConfig))
     private val incomingPacketQueue = PacketInfoQueue(
         "rtp-receiver-incoming-packet-queue",
         executor,
@@ -155,6 +154,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP receiver incoming queue"
+
+        private val queueSize: Int by config("jmt.transceiver.recv.queue-size".from(JitsiConfig.newConfig))
 
         /**
          * Configuration for the packet loss to introduce in the receive pipeline (for debugging/testing purposes).

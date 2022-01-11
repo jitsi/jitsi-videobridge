@@ -38,7 +38,6 @@ class AudioRedHandler(
 ) : MultipleOutputTransformerNode("RedHandler") {
 
     private val stats = Stats()
-    val config = Config()
 
     var audioLevelExtId: Int? = null
     var redPayloadType: Int? = null
@@ -255,6 +254,10 @@ class AudioRedHandler(
                 listOf(packetInfo)
             }
         }
+    }
+
+    companion object {
+        val config = Config()
     }
 }
 

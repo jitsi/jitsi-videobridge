@@ -86,7 +86,6 @@ class RtpSenderImpl(
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
-    private val queueSize: Int by config("jmt.transceiver.send.queue-size".from(JitsiConfig.newConfig))
     private val incomingPacketQueue = PacketInfoQueue(
         "rtp-sender-incoming-packet-queue",
         executor,
@@ -323,6 +322,8 @@ class RtpSenderImpl(
 
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"
+
+        private val queueSize: Int by config("jmt.transceiver.send.queue-size".from(JitsiConfig.newConfig))
 
         /**
          * Configuration for the packet loss to introduce in the send pipeline (for debugging/testing purposes).

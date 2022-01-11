@@ -65,8 +65,6 @@ class TlsClientImpl(
 
     private val logger = createChildLogger(parentLogger)
 
-    private val config = DtlsConfig()
-
     private var session: TlsSession? = null
 
     private var clientCredentials: TlsCredentials? = null
@@ -134,7 +132,7 @@ class TlsClientImpl(
         )
     }
 
-    override fun getHandshakeTimeoutMillis(): Int = config.handshakeTimeout.toMillis().toInt()
+    override fun getHandshakeTimeoutMillis(): Int = DtlsUtils.config.handshakeTimeout.toMillis().toInt()
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()

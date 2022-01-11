@@ -59,6 +59,8 @@ class DtlsUtils {
             Security.addProvider(BouncyCastleProvider())
         }
 
+        val config = DtlsConfig()
+
         fun generateCertificateInfo(): CertificateInfo {
             val cn = generateCN("TODO-APP-NAME", "TODO-APP-VERSION")
             val keyPair = generateEcKeyPair()
