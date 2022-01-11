@@ -482,15 +482,15 @@ public class Videobridge
         Conference conference;
         try
         {
-            if (request.getRequest() instanceof ColibriConferenceIQ)
+            if (iq instanceof ColibriConferenceIQ)
             {
-                ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ)request.getRequest();
+                ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ) iq;
                 id = conferenceIq.getID();
                 conference = getOrCreateConference(conferenceIq);
             }
-            else if (request.getRequest() instanceof ConferenceModifyIQ)
+            else if (iq instanceof ConferenceModifyIQ)
             {
-                ConferenceModifyIQ conferenceModifyIq = (ConferenceModifyIQ)request.getRequest();
+                ConferenceModifyIQ conferenceModifyIq = (ConferenceModifyIQ) iq;
                 id = conferenceModifyIq.getMeetingId();
                 conference = getOrCreateConference(conferenceModifyIq);
             }
