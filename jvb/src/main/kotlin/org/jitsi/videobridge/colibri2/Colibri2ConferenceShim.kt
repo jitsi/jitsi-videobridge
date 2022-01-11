@@ -321,14 +321,7 @@ class Colibri2ConferenceShim(
                     if (m.sources.isEmpty()) {
                         logger.warn("Ignoring audio source ${m.id} in endpoint $id of a relay (no SSRCs): ${toXML()}")
                     } else {
-                        if (m.sources.size > 1) {
-                            logger.warn(
-                                "Audio source ${m.id} in endpoint $id of a relay has ${m.sources.size} " +
-                                    "SSRCs, ignoring all but first"
-                            )
-                        }
-                        val audioSource = AudioSourceDesc(m.sources[0].ssrc, id, m.id)
-                        audioSources.add(audioSource)
+                        m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id)) }
                     }
                 } else if (m.type == MediaType.VIDEO) {
                     val descs = MediaSourceFactory.createMediaSources(m.sources, m.ssrcGroups, id, m.id)
