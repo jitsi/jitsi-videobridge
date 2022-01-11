@@ -33,7 +33,7 @@ class BandwidthAllocation @JvmOverloads constructor(
         allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     val forwardedSources: Set<String> =
-        if (MultiStreamConfig().enabled) // TODO is this okay perf wise? maybe create BandwidthAllocationV2?
+        if (MultiStreamConfig.config.enabled)
             allocations.filter { it.isForwarded() }.map { it.mediaSource?.sourceName!! }.toSet()
         else
             emptySet()

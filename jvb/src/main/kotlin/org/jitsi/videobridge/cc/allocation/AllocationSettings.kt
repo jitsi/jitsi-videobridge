@@ -37,10 +37,8 @@ data class AllocationSettings @JvmOverloads constructor(
     val lastN: Int = -1,
     val defaultConstraints: VideoConstraints
 ) {
-    private val multiStreamConfig = MultiStreamConfig()
-
     fun toJson() = OrderedJsonObject().apply {
-        if (multiStreamConfig.enabled) {
+        if (MultiStreamConfig.config.enabled) {
             put("on_stage_sources", onStageSources)
             put("selected_sources", selectedSources)
         } else {
@@ -91,8 +89,6 @@ internal class AllocationSettingsWrapper {
 
     private var onStageSources: List<String> = emptyList()
 
-    private val multiStreamConfig = MultiStreamConfig()
-
     private var allocationSettings = create()
 
     /**
@@ -103,7 +99,7 @@ internal class AllocationSettingsWrapper {
     private var signaledSelectedEndpoints = listOf<String>()
 
     private fun create(): AllocationSettings {
-        if (multiStreamConfig.enabled) {
+        if (MultiStreamConfig.config.enabled) {
             return AllocationSettings(
                 onStageSources = onStageSources,
                 selectedSources = selectedSources,
@@ -129,7 +125,7 @@ internal class AllocationSettingsWrapper {
      */
     @Deprecated("Use the ReceiverVideoConstraints msg - adjusting max frame height directly will not be supported")
     fun setMaxFrameHeight(maxFrameHeight: Int): Boolean {
-        if (multiStreamConfig.enabled) {
+        if (MultiStreamConfig.config.enabled) {
             return false
         }
 
@@ -153,7 +149,7 @@ internal class AllocationSettingsWrapper {
                 changed = true
             }
         }
-        if (multiStreamConfig.enabled) {
+        if (MultiStreamConfig.config.enabled) {
             message.selectedSources?.let {
                 if (selectedSources != it) {
                     selectedSources = it
@@ -205,7 +201,7 @@ internal class AllocationSettingsWrapper {
      */
     @Deprecated("Use the ReceiverVideoConstraints msg - no legacy constraints in the multi-stream mode")
     fun setSelectedEndpoints(selectedEndpoints: List<String>): Boolean {
-        if (multiStreamConfig.enabled) {
+        if (MultiStreamConfig.config.enabled) {
             return false
         }
 

@@ -66,7 +66,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     private var forwardedSources: Set<String> = emptySet()
 
     private val config = BitrateControllerConfig()
-    private val multiStreamConfig = MultiStreamConfig()
 
     /**
      * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
@@ -306,7 +305,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
                 eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
             }
 
-            if (multiStreamConfig.enabled) {
+            if (MultiStreamConfig.config.enabled) {
                 // TODO as per George's comment above: should this message be sent on message transport connect?
                 val newForwardedSources = allocation.forwardedSources
                 if (forwardedSources != newForwardedSources) {
