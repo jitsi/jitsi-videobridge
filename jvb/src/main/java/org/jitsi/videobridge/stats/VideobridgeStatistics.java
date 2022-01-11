@@ -554,6 +554,8 @@ public class VideobridgeStatistics
             OctoRelayService.Stats octoRelayServiceStats
                 = octoRelayService == null ? null : octoRelayService.getStats();
 
+            unlockedSetStat("colibri2", true);
+
             unlockedSetStat(
                     TOTAL_BYTES_RECEIVED_OCTO,
                     octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getBytesReceived());
