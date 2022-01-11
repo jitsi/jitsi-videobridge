@@ -289,13 +289,16 @@ public class ChannelShim
         {
             for (SourcePacketExtension s: sources)
             {
-                // TODO use Kotlin "isNullOrEmpty" once ported to Kotlin
-                if (s.getName() == null || s.getName().trim().isEmpty())
+                if ((s.hasSSRC() || s.hasRid()) // Enforce sourceName only if it's not an empty source [1]
+                    // TODO use Kotlin "isNullOrEmpty" once ported to Kotlin
+                    && (s.getName() == null || s.getName().trim().isEmpty()))
                 {
                     throw new IqProcessingException(
                         StanzaError.Condition.bad_request,
                         "The name attribute is required for " + s);
                 }
+                // [1]: An empty source can be used to signal "remove all sources":
+                // https://github.com/jitsi/jitsi-xmpp-extensions/blob/b208e4bc96de30adae14f86515934293cd203138/src/main/java/org/jitsi/xmpp/extensions/colibri/ColibriBuilder.java#L157
             }
         }
 
