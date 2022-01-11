@@ -443,6 +443,7 @@ class Endpoint @JvmOverloads constructor(
         if (packetInfo.packet.looksLikeRtp()) {
             rtpPacketDelayStats.addPacket(packetInfo)
             bridgeJitterStats.packetSent(packetInfo)
+            overallAverageBridgeJitter.addValue(bridgeJitterStats.jitter)
         } else if (packetInfo.packet.looksLikeRtcp()) {
             rtcpPacketDelayStats.addPacket(packetInfo)
         }
@@ -919,6 +920,7 @@ class Endpoint @JvmOverloads constructor(
             put("acceptAudio", acceptAudio)
             put("acceptVideo", acceptVideo)
             put("messageTransport", messageTransport.debugState)
+            put("bridge_jitter", bridgeJitterStats.jitter)
         }
     }
 
