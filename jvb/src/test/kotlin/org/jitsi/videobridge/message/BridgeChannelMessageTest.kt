@@ -185,6 +185,17 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsedForwardedEndpoints.toList() shouldContainExactly forwardedEndpoints
         }
 
+        context("serializing and parsing ForwardedSourcesMessage") {
+            val forwardedSources = setOf("s1", "s2", "s3")
+
+            val message = ForwardedSourcesMessage(forwardedSources)
+            val parsed = parse(message.toJson())
+
+            parsed.shouldBeInstanceOf<ForwardedSourcesMessage>()
+
+            parsed.forwardedSources shouldContainExactly forwardedSources
+        }
+
         context("serializing and parsing VideoConstraints") {
             val videoConstraints: VideoConstraints = jacksonObjectMapper().readValue(VIDEO_CONSTRAINTS)
             videoConstraints.maxHeight shouldBe 1080

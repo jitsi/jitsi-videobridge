@@ -21,4 +21,9 @@ import org.jitsi.metaconfig.from
 
 class MultiStreamConfig {
     val enabled: Boolean by config("videobridge.multi-stream.enabled".from(JitsiConfig.newConfig))
+
+    companion object {
+        @JvmField
+        val config = MultiStreamConfig()
+    }
 }

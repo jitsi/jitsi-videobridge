@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
     JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
+    JsonSubTypes.Type(value = ForwardedSourcesMessage::class, name = ForwardedSourcesMessage.TYPE),
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
@@ -117,6 +118,7 @@ open class MessageHandler {
             is DominantSpeakerMessage -> dominantSpeaker(message)
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
+            is ForwardedSourcesMessage -> forwardedSources(message)
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
@@ -143,6 +145,7 @@ open class MessageHandler {
     open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
+    open fun forwardedSources(message: ForwardedSourcesMessage) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
@@ -354,6 +357,20 @@ class ForwardedEndpointsMessage(
 ) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "LastNEndpointsChangeEvent"
+    }
+}
+
+/**
+ * A message sent from the bridge to a client, indicating the set of media sources that are currently being forwarded.
+ */
+class ForwardedSourcesMessage(
+    /**
+     * The set of media sources for which the bridge is currently sending video.
+     */
+    val forwardedSources: Collection<String>
+) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "ForwardedSources"
     }
 }
 

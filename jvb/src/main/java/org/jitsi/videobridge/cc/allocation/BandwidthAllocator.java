@@ -78,8 +78,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
     private final Logger logger;
 
-    private final MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
-
     /**
      * The estimated available bandwidth in bits per second.
      */
@@ -236,7 +234,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         BandwidthAllocation newAllocation;
         Map<String, VideoConstraints> oldEffectiveConstraints;
 
-        if (multiStreamConfig.getEnabled())
+        if (MultiStreamConfig.config.getEnabled())
         {
             // Order the sources by selection, followed by Endpoint's speech activity.
             List<MediaSourceDesc> sources

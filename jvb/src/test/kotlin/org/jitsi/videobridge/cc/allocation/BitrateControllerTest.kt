@@ -1400,6 +1400,8 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
                 }
             }
 
+            override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
+
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
                 newEffectiveConstraints: Map<String, VideoConstraints>

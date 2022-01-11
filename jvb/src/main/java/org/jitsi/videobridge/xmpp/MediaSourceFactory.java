@@ -742,7 +742,7 @@ public class MediaSourceFactory
 
         // TODO once multi stream, becomes the default, make a change to MediaStreamDesc, so that owner and name are
         // not optional (there's no good reason for that). Then the error will be thrown automatically by Kotlin.
-        if (new MultiStreamConfig().getEnabled()) // using new MultiStreamConfig, because the class is static
+        if (MultiStreamConfig.config.getEnabled())
         {
             if (primarySsrcs.name == null)
             {

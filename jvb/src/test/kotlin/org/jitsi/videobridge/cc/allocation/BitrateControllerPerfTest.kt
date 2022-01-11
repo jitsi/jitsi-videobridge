@@ -64,6 +64,7 @@ class BitrateControllerPerfTest : StringSpec() {
     private val bc = BitrateController(
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
+            override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
                 newEffectiveConstraints: Map<String, VideoConstraints>

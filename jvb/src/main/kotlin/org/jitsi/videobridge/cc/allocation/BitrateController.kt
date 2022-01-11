@@ -26,6 +26,7 @@ import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
@@ -57,7 +58,12 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     /**
      * Keep track of the "forwarded" endpoints, i.e. the endpoints for which we are forwarding *some* layer.
      */
+    @Deprecated("", ReplaceWith("forwardedSources"), DeprecationLevel.WARNING)
     private var forwardedEndpoints: Set<String> = emptySet()
+    /**
+     * Keep track of the "forwarded" sources, i.e. the media sources for which we are forwarding *some* layer.
+     */
+    private var forwardedSources: Set<String> = emptySet()
 
     private val config = BitrateControllerConfig()
 
@@ -274,6 +280,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
     interface EventHandler {
         fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>)
+        fun forwardedSourcesChanged(forwardedSources: Set<String>)
         fun effectiveVideoConstraintsChanged(
             oldEffectiveConstraints: Map<String, VideoConstraints>,
             newEffectiveConstraints: Map<String, VideoConstraints>
@@ -296,6 +303,15 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             if (forwardedEndpoints != newForwardedEndpoints) {
                 forwardedEndpoints = newForwardedEndpoints
                 eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
+            }
+
+            if (MultiStreamConfig.config.enabled) {
+                // TODO as per George's comment above: should this message be sent on message transport connect?
+                val newForwardedSources = allocation.forwardedSources
+                if (forwardedSources != newForwardedSources) {
+                    forwardedSources = newForwardedSources
+                    eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
+                }
             }
 
             oversendingTimeTracker.setState(allocation.oversending)
