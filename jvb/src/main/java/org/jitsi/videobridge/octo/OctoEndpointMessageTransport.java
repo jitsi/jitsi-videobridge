@@ -31,8 +31,6 @@ import java.util.stream.*;
 class OctoEndpointMessageTransport
     extends AbstractEndpointMessageTransport<OctoEndpoint>
 {
-    private final MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
-
     /**
      * The associated {@link OctoEndpoints}.
      */
@@ -231,7 +229,7 @@ class OctoEndpointMessageTransport
     @Override
     public BridgeChannelMessage sourceVideoType(SourceVideoTypeMessage sourceVideoTypeMessage)
     {
-        if (!multiStreamConfig.getEnabled())
+        if (!MultiStreamConfig.config.getEnabled())
         {
             return null;
         }

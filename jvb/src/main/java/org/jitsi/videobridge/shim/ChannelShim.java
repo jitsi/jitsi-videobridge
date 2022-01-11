@@ -43,11 +43,6 @@ public class ChannelShim
     private final Logger logger;
 
     /**
-     * Multi stream config - a static instance to avoid creating on each channel allocation.
-     */
-    private final static MultiStreamConfig multiStreamConfig = new MultiStreamConfig();
-
-    /**
      * Gets the {@link SsrcAssociationType} corresponding to a given
      * {@code semantics} string (from SDP).
      *
@@ -285,7 +280,7 @@ public class ChannelShim
     public void setSources(@NotNull List<SourcePacketExtension> sources)
         throws IqProcessingException
     {
-        if (multiStreamConfig.getEnabled())
+        if (MultiStreamConfig.config.getEnabled())
         {
             for (SourcePacketExtension s: sources)
             {

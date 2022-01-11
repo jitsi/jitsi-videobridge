@@ -22,6 +22,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import org.jitsi.config.setNewConfig
+import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingDesc
@@ -45,34 +46,32 @@ class BitrateControllerNewTest : ShouldSpec() {
 
     private val logger = createLogger()
     private val clock = FakeClock()
+    private val bc = BitrateControllerWrapper2(createEndpoints2("A", "B", "C", "D"), clock = clock)
+    private val A = bc.endpoints.find { it.id == "A" }!! as TestEndpoint2
+    private val B = bc.endpoints.find { it.id == "B" }!! as TestEndpoint2
+    private val C = bc.endpoints.find { it.id == "C" }!! as TestEndpoint2
+    private val D = bc.endpoints.find { it.id == "D" }!! as TestEndpoint2
 
-    private val bc: BitrateControllerWrapper2
-    private val A: TestEndpoint2
-    private val B: TestEndpoint2
-    private val C: TestEndpoint2
-    private val D: TestEndpoint2
+    override fun beforeSpec(spec: Spec) {
+        super.beforeSpec(spec)
 
-    // using init instead of beforeSpec, because setNewConfig must happen before BitrateControllerWrapper2 is created
-    init {
-        /**
-         * We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
-         * because these tests are designed to test the decisions themselves and not necessarily when they are made.
-         */
+        // Config caching must be disabled or otherwise the setNewConfig below will not be effective if the other tests
+        // have instantiated MultiStreamConfig instance.
+        MetaconfigSettings.cacheEnabled = false
+
+        // We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
+        // because these tests are designed to test the decisions themselves and not necessarily when they are made.
         setNewConfig(
             "videobridge.cc.bwe-change-threshold=0" +
-                "\n" + configWithMultiStreamEnabled, // Also enable multi stream support
+                    "\n" + configWithMultiStreamEnabled, // Also enable multi stream support
             true
         )
-
-        bc = BitrateControllerWrapper2(createEndpoints2("A", "B", "C", "D"), clock = clock)
-        A = bc.endpoints.find { it.id == "A" }!! as TestEndpoint2
-        B = bc.endpoints.find { it.id == "B" }!! as TestEndpoint2
-        C = bc.endpoints.find { it.id == "C" }!! as TestEndpoint2
-        D = bc.endpoints.find { it.id == "D" }!! as TestEndpoint2
     }
 
-    override fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
+    override fun afterSpec(spec: Spec) {
+        super.afterSpec(spec)
         setNewConfig("", true)
+        MetaconfigSettings.cacheEnabled = true
     }
 
     init {
