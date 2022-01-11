@@ -63,7 +63,7 @@ class BitrateControllerNewTest : ShouldSpec() {
         // because these tests are designed to test the decisions themselves and not necessarily when they are made.
         setNewConfig(
             "videobridge.cc.bwe-change-threshold=0" +
-                    "\n" + configWithMultiStreamEnabled, // Also enable multi stream support
+                "\n" + configWithMultiStreamEnabled, // Also enable multi stream support
             true
         )
     }
