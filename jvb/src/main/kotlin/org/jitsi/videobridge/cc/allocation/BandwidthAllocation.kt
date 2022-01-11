@@ -87,7 +87,7 @@ data class SingleAllocation(
     constructor(endpoint: MediaSourceContainer, targetLayer: RtpLayerDesc? = null, idealLayer: RtpLayerDesc? = null) :
         this(
             endpoint.id,
-            if (endpoint.mediaSource != null) endpoint.mediaSource else endpoint.mediaSources[0],
+            if (endpoint.mediaSource != null) endpoint.mediaSource else endpoint.mediaSources.firstOrNull(),
             targetLayer,
             idealLayer
         )
