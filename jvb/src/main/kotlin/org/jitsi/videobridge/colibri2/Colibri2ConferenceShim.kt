@@ -15,7 +15,6 @@ import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
-import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
@@ -39,9 +38,14 @@ class Colibri2ConferenceShim(
 ) {
     private val logger = createChildLogger(parentLogger)
 
-    fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): IQ = try {
+    /**
+     * @return A pair with an IQ to be sent as a response, and a boolean incicating if the conference needs to be
+     * expired.
+     */
+    fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
+        var expire = false
 
         /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
         for (e in conferenceModifyIQ.endpoints) {
@@ -58,10 +62,10 @@ class Colibri2ConferenceShim(
 
         if (!conferenceModifyIQ.create && conference.endpointCount == 0 && conference.relayCount == 0) {
             logger.info("All endpoints and relays removed, expiring.")
-            TaskPools.IO_POOL.submit { conference.videobridge.expireConference(conference) }
+            expire = true
         }
 
-        responseBuilder.build()
+        Pair(responseBuilder.build(), expire)
     } catch (e: IqProcessingException) {
         // Item not found conditions are assumed to be less critical, as they often happen in case a request
         // arrives late for an expired endpoint.
@@ -70,7 +74,7 @@ class Colibri2ConferenceShim(
         } else {
             logger.error("Error processing conference-modify IQ: $e")
         }
-        IQUtils.createError(conferenceModifyIQ, e.condition, e.message)
+        Pair(IQUtils.createError(conferenceModifyIQ, e.condition, e.message), false)
     }
 
     private fun buildFeedbackSources(): Sources = Sources.getBuilder().apply {

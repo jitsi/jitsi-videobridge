@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
@@ -42,6 +43,7 @@ import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -273,13 +275,16 @@ public class Conference
                         long start = System.currentTimeMillis();
                         IQ requestIQ = request.getRequest();
                         IQ response;
+                        boolean expire = false;
                         if (requestIQ instanceof ColibriConferenceIQ)
                         {
                             response = shim.handleColibriConferenceIQ((ColibriConferenceIQ)requestIQ);
                         }
                         else if (requestIQ instanceof ConferenceModifyIQ)
                         {
-                            response = handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
+                            Pair<IQ, Boolean> p = colibri2Shim.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
+                            response = p.getFirst();
+                            expire = p.getSecond();
                         }
                         else
                         {
@@ -296,6 +301,7 @@ public class Conference
                                     + totalDelay + " ms): " + request.getRequest().toXML());
                         }
                         request.getCallback().invoke(response);
+                        if (expire) videobridge.expireConference(this);
                     }
                     catch (Throwable e)
                     {
@@ -308,7 +314,10 @@ public class Conference
                     }
                     return true;
                 },
-                TaskPools.IO_POOL
+                TaskPools.IO_POOL,
+                Clock.systemUTC(), // TODO: using the Videobridge clock breaks tests somehow
+                /* Allow running tasks to complete (so we can close the queue from within the task. */
+                false
         );
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
@@ -464,7 +473,12 @@ public class Conference
      */
     IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
     {
-        return colibri2Shim.handleConferenceModifyIQ(conferenceModifyIQ);
+        Pair<IQ, Boolean> p = colibri2Shim.handleConferenceModifyIQ(conferenceModifyIQ);
+        if (p.getSecond())
+        {
+            videobridge.expireConference(this);
+        }
+        return p.getFirst();
     }
 
     /**
