@@ -129,6 +129,9 @@ public class Debug
                 // Always enabled (worth modeling as a 'feature' then?)
                 return true;
             }
+            case TOSSED_PACKET_STATS: {
+                return true;
+            }
             default: {
                 throw new NotFoundException();
             }
@@ -312,6 +315,9 @@ public class Debug
             }
             case ICE_STATS: {
                 return IceStatistics.Companion.getStats().toJson().toJSONString();
+            }
+            case TOSSED_PACKET_STATS: {
+                return videobridge.getStatistics().tossedPacketsEnergy.toJson().toJSONString();
             }
             default: {
                 throw new NotFoundException();
