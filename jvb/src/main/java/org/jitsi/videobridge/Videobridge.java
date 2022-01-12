@@ -1106,6 +1106,34 @@ public class Videobridge
         public AtomicLong totalPacketsSent = new AtomicLong();
 
         /**
+         * The total number of bytes received by relays in RTP packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayBytesReceived = new AtomicLong();
+
+        /**
+         * The total number of bytes sent by relays in RTP packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayBytesSent = new AtomicLong();
+
+        /**
+         * The total number of RTP packets received by relays in conferences on this
+         * videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayPacketsReceived = new AtomicLong();
+
+        /**
+         * The total number of RTP packets sent by relays in conferences on this
+         * videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayPacketsSent = new AtomicLong();
+
+        /**
          * The total number of endpoints created.
          */
         public AtomicInteger totalEndpoints = new AtomicInteger();

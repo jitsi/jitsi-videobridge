@@ -1457,42 +1457,66 @@ public class Conference
          * The total number of bytes received in RTP packets in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalBytesReceived = new AtomicLong();
+        public AtomicLong totalBytesReceived = new AtomicLong();
 
         /**
          * The total number of bytes sent in RTP packets in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalBytesSent = new AtomicLong();
+        public AtomicLong totalBytesSent = new AtomicLong();
 
         /**
          * The total number of RTP packets received in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalPacketsReceived = new AtomicLong();
+        public AtomicLong totalPacketsReceived = new AtomicLong();
 
         /**
          * The total number of RTP packets received in channels in this
          * conference. Note that this is only updated when channels expire.
          */
-        AtomicLong totalPacketsSent = new AtomicLong();
+        public AtomicLong totalPacketsSent = new AtomicLong();
+
+        /**
+         * The total number of bytes received in RTP packets in relays in this
+         * conference. Note that this is only updated when relays expire.
+         */
+        public AtomicLong totalRelayBytesReceived = new AtomicLong();
+
+        /**
+         * The total number of bytes sent in RTP packets in relays in this
+         * conference. Note that this is only updated when relays expire.
+         */
+        public AtomicLong totalRelayBytesSent = new AtomicLong();
+
+        /**
+         * The total number of RTP packets received in relays in this
+         * conference. Note that this is only updated when relays expire.
+         */
+        public AtomicLong totalRelayPacketsReceived = new AtomicLong();
+
+        /**
+         * The total number of RTP packets received in relays in this
+         * conference. Note that this is only updated when relays expire.
+         */
+        public AtomicLong totalRelayPacketsSent = new AtomicLong();
 
         /**
          * Whether at least one endpoint in this conference failed ICE.
          */
-        boolean hasIceFailedEndpoint = false;
+        public boolean hasIceFailedEndpoint = false;
 
         /**
          * Whether at least one endpoint in this conference completed ICE
          * successfully.
          */
-        boolean hasIceSucceededEndpoint = false;
+        public boolean hasIceSucceededEndpoint = false;
 
         /**
          * Number of endpoints whose ICE connection was established, but DTLS
          * wasn't (at the time of expiration).
          */
-        AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
+        public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
 
         /**
          * Gets a snapshot of this object's state as JSON.
@@ -1505,6 +1529,10 @@ public class Conference
             jsonObject.put("total_bytes_sent", totalBytesSent.get());
             jsonObject.put("total_packets_received", totalPacketsReceived.get());
             jsonObject.put("total_packets_sent", totalPacketsSent.get());
+            jsonObject.put("total_relay_bytes_received", totalRelayBytesReceived.get());
+            jsonObject.put("total_relay_bytes_sent", totalRelayBytesSent.get());
+            jsonObject.put("total_relay_packets_received", totalRelayPacketsReceived.get());
+            jsonObject.put("total_relay_packets_sent", totalRelayPacketsSent.get());
             jsonObject.put("has_failed_endpoint", hasIceFailedEndpoint);
             jsonObject.put("has_succeeded_endpoint", hasIceSucceededEndpoint);
             jsonObject.put("dtls_failed_endpoints", dtlsFailedEndpoints.get());

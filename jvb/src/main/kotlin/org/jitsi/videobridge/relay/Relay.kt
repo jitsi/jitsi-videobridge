@@ -521,6 +521,38 @@ class Relay @JvmOverloads constructor(
 
     override fun send(packet: PacketInfo) = transceiver.sendPacket(packet)
 
+    /**
+     * Updates the conference statistics with value from this endpoint. Since
+     * the values are cumulative this should execute only once when the endpoint
+     * expires.
+     */
+    private fun updateStatsOnExpire() {
+        val conferenceStats = conference.statistics
+        val transceiverStats = transceiver.getTransceiverStats()
+
+        conferenceStats.apply {
+            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
+            val outgoingStats = transceiverStats.outgoingPacketStreamStats
+            totalRelayBytesReceived.addAndGet(incomingStats.bytes)
+            totalRelayPacketsReceived.addAndGet(incomingStats.packets)
+            totalRelayBytesSent.addAndGet(outgoingStats.bytes)
+            totalRelayPacketsSent.addAndGet(outgoingStats.packets)
+        }
+
+        conference.videobridge.statistics.apply {
+            /* TODO: should these be separate stats from the endpoint stats? */
+            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
+            totalLayeringChangesReceived.addAndGet(
+                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
+            )
+
+            val durationActiveVideoMs = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
+                it.mediaType == MediaType.VIDEO
+            }.sumOf { it.durationActiveMs }
+            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideoMs)
+        }
+    }
+
     fun expire() {
         expired = true
         logger.info("Expiring.")
@@ -530,7 +562,7 @@ class Relay @JvmOverloads constructor(
         conference.relayExpired(this)
 
         try {
-            // TODO updateStatsOnExpire()
+            updateStatsOnExpire()
             transceiver.stop()
             logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
