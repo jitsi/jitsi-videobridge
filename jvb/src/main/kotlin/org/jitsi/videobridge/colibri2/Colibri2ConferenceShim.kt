@@ -10,7 +10,6 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.shim.IqProcessingException
@@ -121,70 +120,70 @@ class Colibri2ConferenceShim(
      * the conference-modified.
      */
     @Throws(IqProcessingException::class)
-    private fun handleColibri2Endpoint(eDesc: Colibri2Endpoint): Colibri2Endpoint {
-        val id = eDesc.id
-        val t = eDesc.transport
-        val respBuilder = Colibri2Endpoint.getBuilder().apply { setId(id) }
-        if (eDesc.expire) {
-            conference.getLocalEndpoint(id)?.expire()
+    private fun handleColibri2Endpoint(c2endpoint: Colibri2Endpoint): Colibri2Endpoint {
+        val respBuilder = Colibri2Endpoint.getBuilder().apply { setId(c2endpoint.id) }
+        if (c2endpoint.expire) {
+            conference.getLocalEndpoint(c2endpoint.id)?.expire()
             respBuilder.setExpire(true)
             return respBuilder.build()
         }
 
-        val ep: Endpoint
-        if (eDesc.create) {
-            if (conference.getLocalEndpoint(id) != null) {
-                throw IqProcessingException(Condition.conflict, "Endpoint with ID $id already exists")
+        val endpoint = if (c2endpoint.create) {
+            if (conference.getLocalEndpoint(c2endpoint.id) != null) {
+                throw IqProcessingException(Condition.conflict, "Endpoint with ID ${c2endpoint.id} already exists")
             }
-            if (t == null) {
-                throw IqProcessingException(Condition.bad_request, "Attempt to create endpoint $id with no <transport>")
-            }
-            ep = conference.createLocalEndpoint(id, t.iceControlling)
+            val transport = c2endpoint.transport ?: throw IqProcessingException(
+                Condition.bad_request,
+                "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
+            )
+            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling)
         } else {
-            ep = conference.getLocalEndpoint(id)
+            conference.getLocalEndpoint(c2endpoint.id) ?: throw IqProcessingException(
                 // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
-                ?: throw IqProcessingException(Condition.bad_request, "Unknown endpoint $id")
+                Condition.bad_request,
+                "Unknown endpoint ${c2endpoint.id}"
+            )
         }
 
-        for (m in eDesc.media) {
+        for (media in c2endpoint.media) {
             // TODO: support removing payload types/header extensions
-            m.payloadTypes.forEach { ptExt ->
-                create(ptExt, m.type)?.let { ep.addPayloadType(it) }
+            media.payloadTypes.forEach { ptExt ->
+                create(ptExt, media.type)?.let { endpoint.addPayloadType(it) }
                     ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toXML()}")
             }
 
-            m.rtpHdrExts.forEach { rtpHdrExt ->
-                rtpHdrExt.toRtpExtension()?.let { ep.addRtpExtension(it) }
+            media.rtpHdrExts.forEach { rtpHdrExt ->
+                rtpHdrExt.toRtpExtension()?.let { endpoint.addRtpExtension(it) }
                     ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
             }
 
             /* No need to put media in conference-modified. */
         }
 
-        ep.updateAcceptedMediaTypes(
-            acceptAudio = ep.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+        endpoint.updateAcceptedMediaTypes(
+            acceptAudio = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
                 it.mediaType == MediaType.AUDIO
             },
-            acceptVideo = ep.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+            acceptVideo = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
                 it.mediaType == MediaType.VIDEO
             }
         )
 
-        t?.iceUdpTransport?.let { ep.setTransportInfo(it) }
-        if (eDesc.create) {
+        c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
+        if (c2endpoint.create) {
             val transBuilder = Transport.getBuilder()
-            transBuilder.setIceUdpExtension(ep.describeTransport())
+            transBuilder.setIceUdpExtension(endpoint.describeTransport())
             respBuilder.setTransport(transBuilder.build())
         }
 
-        eDesc.sources?.let { sources ->
+        c2endpoint.sources?.let { sources ->
             sources.mediaSources.forEach { mediaSource ->
                 mediaSource.sources.forEach {
-                    ep.addReceiveSsrc(it.ssrc, mediaSource.type)
+                    endpoint.addReceiveSsrc(it.ssrc, mediaSource.type)
                 }
                 // TODO: remove any old associations for this endpoint
                 mediaSource.ssrcGroups.mapNotNull { it.toSsrcAssociation() }.forEach {
-                    addSsrcAssociation(ep.id, it)
+                    addSsrcAssociation(endpoint.id, it)
                 }
             }
 
@@ -193,11 +192,11 @@ class Colibri2ConferenceShim(
             val newMediaSources = sources.mediaSources.find { it.type == MediaType.VIDEO }?.let {
                 MediaSourceFactory.createMediaSources(it.sources, it.ssrcGroups)
             } ?: emptyArray()
-            ep.mediaSources = newMediaSources
+            endpoint.mediaSources = newMediaSources
         }
 
-        eDesc.forceMute?.let {
-            ep.updateForceMute(it.audio, it.video)
+        c2endpoint.forceMute?.let {
+            endpoint.updateForceMute(it.audio, it.video)
         }
 
         return respBuilder.build()
@@ -241,72 +240,71 @@ class Colibri2ConferenceShim(
      * the conference-modified.
      */
     @Throws(IqProcessingException::class)
-    private fun handleColibri2Relay(rDesc: Colibri2Relay): Colibri2Relay {
-        val id = rDesc.id
-        val t = rDesc.transport
+    private fun handleColibri2Relay(c2relay: Colibri2Relay): Colibri2Relay {
         val respBuilder = Colibri2Relay.getBuilder()
-        respBuilder.setId(id)
-        if (rDesc.expire) {
-            conference.getRelay(id)?.expire()
+        respBuilder.setId(c2relay.id)
+        if (c2relay.expire) {
+            conference.getRelay(c2relay.id)?.expire()
             respBuilder.setExpire(true)
             return respBuilder.build()
         }
 
-        val r: Relay
-        if (rDesc.create) {
-            if (conference.getRelay(id) != null) {
-                throw IqProcessingException(Condition.conflict, "Relay with ID $id already exists")
+        val relay: Relay
+        if (c2relay.create) {
+            if (conference.getRelay(c2relay.id) != null) {
+                throw IqProcessingException(Condition.conflict, "Relay with ID ${c2relay.id} already exists")
             }
-            if (t == null) {
-                throw IqProcessingException(Condition.bad_request, "Attempt to create relay $id with no <transport>")
-            }
+            val transport = c2relay.transport ?: throw IqProcessingException(
+                Condition.bad_request,
+                "Attempt to create relay ${c2relay.id} with no <transport>"
+            )
 
-            r = conference.createRelay(id, t.iceControlling, t.useUniquePort)
+            relay = conference.createRelay(c2relay.id, transport.iceControlling, transport.useUniquePort)
         } else {
-            r = conference.getRelay(id)
+            relay = conference.getRelay(c2relay.id) ?: throw IqProcessingException(
                 // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
-                ?: throw IqProcessingException(Condition.bad_request, "Unknown relay $id")
+                Condition.bad_request,
+                "Unknown relay ${c2relay.id}"
+            )
         }
 
-        t?.iceUdpTransport?.let { r.setTransportInfo(it) }
-        if (rDesc.create) {
+        c2relay.transport?.iceUdpTransport?.let { relay.setTransportInfo(it) }
+        if (c2relay.create) {
             val transBuilder = Transport.getBuilder()
-            transBuilder.setIceUdpExtension(r.describeTransport())
+            transBuilder.setIceUdpExtension(relay.describeTransport())
             respBuilder.setTransport(transBuilder.build())
         }
 
-        for (m: Media in rDesc.media) {
+        for (media: Media in c2relay.media) {
             // TODO: support removing payload types/header extensions
-            m.payloadTypes.forEach { ptExt ->
-                create(ptExt, m.type)?.let { r.transceiver.addPayloadType(it) }
+            media.payloadTypes.forEach { ptExt ->
+                create(ptExt, media.type)?.let { relay.transceiver.addPayloadType(it) }
                     ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toXML()}")
             }
 
-            m.rtpHdrExts.forEach { rtpHdrExt ->
-                rtpHdrExt.toRtpExtension()?.let { r.transceiver.addRtpExtension(it) }
+            media.rtpHdrExts.forEach { rtpHdrExt ->
+                rtpHdrExt.toRtpExtension()?.let { relay.transceiver.addRtpExtension(it) }
                     ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
             }
 
             /* No need to put media in conference-modified. */
         }
 
-        rDesc.endpoints?.endpoints?.forEach { e ->
-            val eId = e.id
-
-            if (e.expire) {
-                r.removeRemoteEndpoint(eId)
+        c2relay.endpoints?.endpoints?.forEach { endpoint ->
+            if (endpoint.expire) {
+                relay.removeRemoteEndpoint(endpoint.id)
             } else {
-                val sources = e.parseSourceDescs()
-                if (e.create) {
-                    r.addRemoteEndpoint(eId, e.statsId, sources.first, sources.second)
+                val sources = endpoint.parseSourceDescs()
+                if (endpoint.create) {
+                    relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second)
                 } else {
-                    r.updateRemoteEndpoint(eId, sources.first, sources.second)
+                    relay.updateRemoteEndpoint(endpoint.id, sources.first, sources.second)
                 }
 
                 // TODO: remove any old associations for this endpoint
-                e.sources?.mediaSources?.forEach { mediaSource ->
+                endpoint.sources?.mediaSources?.forEach { mediaSource ->
                     mediaSource.ssrcGroups.mapNotNull { it.toSsrcAssociation() }.forEach {
-                        addSsrcAssociation(e.id, it)
+                        addSsrcAssociation(endpoint.id, it)
                     }
                 }
             }

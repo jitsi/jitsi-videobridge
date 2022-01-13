@@ -129,9 +129,8 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
             // debugging purposes, and we also broadcast it through Octo.
             conference.broadcastMessage(msg, true)
         } else {
-            val ep = conference.getLocalEndpoint(receiverEpId)
-            if (ep != null) {
-                conference.sendMessage(msg, listOf(ep), false)
+            conference.getLocalEndpoint(receiverEpId)?.let {
+                conference.sendMessage(msg, listOf(it), false)
             }
         }
     }
