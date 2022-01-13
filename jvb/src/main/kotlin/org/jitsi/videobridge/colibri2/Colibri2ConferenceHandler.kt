@@ -31,7 +31,7 @@ import org.jitsi.xmpp.util.IQUtils
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
 
-class Colibri2ConferenceShim(
+class Colibri2ConferenceHandler(
     private val conference: Conference,
     parentLogger: Logger
 ) {

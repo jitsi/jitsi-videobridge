@@ -193,7 +193,7 @@ public class Conference
      * The shim which handles Colibri v2 related logic for this conference (translates colibri v2 signaling into the
      * native videobridge APIs).
      */
-    @NotNull private final Colibri2ConferenceShim colibri2Shim;
+    @NotNull private final Colibri2ConferenceHandler colibri2Handler;
 
     /**
      * The queue handling colibri (both v1 and v2) messages for this conference.
@@ -263,7 +263,7 @@ public class Conference
         this.gid = gid;
         this.conferenceName = conferenceName;
         this.shim = new ConferenceShim(this, logger);
-        this.colibri2Shim = new Colibri2ConferenceShim(this, logger);
+        this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
         colibriQueue = new PacketQueue<>(
                 Integer.MAX_VALUE,
                 true,
@@ -282,7 +282,7 @@ public class Conference
                         }
                         else if (requestIQ instanceof ConferenceModifyIQ)
                         {
-                            Pair<IQ, Boolean> p = colibri2Shim.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
+                            Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
                             response = p.getFirst();
                             expire = p.getSecond();
                         }
@@ -473,7 +473,7 @@ public class Conference
      */
     IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
     {
-        Pair<IQ, Boolean> p = colibri2Shim.handleConferenceModifyIQ(conferenceModifyIQ);
+        Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(conferenceModifyIQ);
         if (p.getSecond())
         {
             videobridge.expireConference(this);
