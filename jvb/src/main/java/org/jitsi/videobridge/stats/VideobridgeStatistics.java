@@ -544,7 +544,6 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
-            unlockedSetStat("tossedPacketsEnergy", jvbStats.tossedPacketsEnergy.toJson());
 
             OctoRelayService.Stats octoRelayServiceStats
                 = octoRelayService == null ? null : octoRelayService.getStats();
