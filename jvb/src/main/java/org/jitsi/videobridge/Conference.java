@@ -282,7 +282,8 @@ public class Conference
                         }
                         else if (requestIQ instanceof ConferenceModifyIQ)
                         {
-                            Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
+                            Pair<IQ, Boolean> p =
+                                colibri2Handler.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
                             response = p.getFirst();
                             expire = p.getSecond();
                         }
