@@ -146,6 +146,7 @@ public class VideobridgeStatistics
         unlockedSetStat(RTT_AGGREGATE, 0d);
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
+        unlockedSetStat("drain", videobridge.getDrainMode());
 
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
     }

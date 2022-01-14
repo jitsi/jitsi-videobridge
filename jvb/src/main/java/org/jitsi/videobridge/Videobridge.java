@@ -507,7 +507,7 @@ public class Videobridge
      * Whether the bridge is in "drain" mode. The bridge will not be assigned to new
      * conferences when in this mode.
      */
-    private boolean drainMode = false;
+    private boolean drainMode = VideobridgeConfig.Companion.getInitialDrainMode();
 
     /**
      * Handles a drain request.
