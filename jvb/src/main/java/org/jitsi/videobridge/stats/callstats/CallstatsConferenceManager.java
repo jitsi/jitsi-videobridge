@@ -106,6 +106,7 @@ class CallstatsConferenceManager
             // Create a new PeriodicRunnable and start it.
             ConferencePeriodicRunnable cpr = new ConferencePeriodicRunnable(
                 conference,
+                conference.getName(),
                 interval,
                 statsService,
                 conferenceIDPrefix,

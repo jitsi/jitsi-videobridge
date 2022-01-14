@@ -328,7 +328,7 @@ public class ChannelShim
                 if (ssrcAssociationType != null &&
                         ssrcAssociationType != SsrcAssociationType.SIM)
                 {
-                    endpoint.getConference().encodingsManager
+                    endpoint.getConference().getEncodingsManager()
                         .addSsrcAssociation(
                                 endpoint.getId(),
                                 primarySsrc,

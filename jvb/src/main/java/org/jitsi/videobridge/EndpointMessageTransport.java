@@ -15,12 +15,13 @@
  */
 package org.jitsi.videobridge;
 
+import org.eclipse.jetty.websocket.api.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
-import org.jitsi.videobridge.octo.*;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
 
@@ -42,7 +43,7 @@ import static org.jitsi.videobridge.EndpointMessageTransportConfig.config;
  * @author Boris Grozev
  */
 public class EndpointMessageTransport
-    extends AbstractEndpointMessageTransport<Endpoint>
+    extends AbstractEndpointMessageTransport
     implements DataChannelStack.DataChannelMessageListener,
         ColibriWebSocket.EventHandler
 {
@@ -225,10 +226,14 @@ public class EndpointMessageTransport
      */
     private void sendMessage(ColibriWebSocket dst, BridgeChannelMessage message)
     {
-        // We'll use the async version of sendString since this may be called
-        // from multiple threads.  It's just fire-and-forget though, so we
-        // don't wait on the result
-        dst.getRemote().sendStringByFuture(message.toJson());
+        RemoteEndpoint remote = dst.getRemote();
+        if (remote != null)
+        {
+            // We'll use the async version of sendString since this may be called
+            // from multiple threads.  It's just fire-and-forget though, so we
+            // don't wait on the result
+            remote.sendStringByFuture(message.toJson());
+        }
         statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
     }
 
@@ -330,7 +335,11 @@ public class EndpointMessageTransport
             // If we already have a web-socket, discard it and use the new one.
             if (webSocket != null)
             {
-                webSocket.getSession().close(200, "replaced");
+                Session session = webSocket.getSession();
+                if (session != null)
+                {
+                    session.close(200, "replaced");
+                }
             }
 
             webSocket = ws;
@@ -382,7 +391,7 @@ public class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
-    protected void close()
+    public void close()
     {
         synchronized (webSocketSyncRoot)
         {
@@ -559,15 +568,12 @@ public class EndpointMessageTransport
             return null;
         }
 
-        boolean sendToOcto;
-
-        List<AbstractEndpoint> targets;
         if (message.isBroadcast())
         {
             // Broadcast message to all local endpoints + octo.
-            targets = new LinkedList<>(conference.getLocalEndpoints());
+            List<Endpoint> targets = new LinkedList<>(conference.getLocalEndpoints());
             targets.remove(endpoint);
-            sendToOcto = true;
+            conference.sendMessage(message, targets, /* sendToOcto */ true);
         }
         else
         {
@@ -575,24 +581,24 @@ public class EndpointMessageTransport
             String to = message.getTo();
 
             AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
-            if (targetEndpoint instanceof OctoEndpoint)
+            if (targetEndpoint instanceof Endpoint)
             {
-                targets = Collections.emptyList();
-                sendToOcto = true;
+                ((Endpoint)targetEndpoint).sendMessage(message);
+            }
+            else if (targetEndpoint instanceof RelayedEndpoint)
+            {
+                ((RelayedEndpoint)targetEndpoint).getRelay().sendMessage(message);
             }
             else if (targetEndpoint != null)
             {
-                targets = Collections.singletonList(targetEndpoint);
-                sendToOcto = false;
+                conference.sendMessage(message, Collections.emptyList(), /* sendToOcto */ true);
             }
             else
             {
                 getLogger().warn("Unable to find endpoint to send EndpointMessage to: " + to);
-                return null;
             }
         }
 
-        conference.sendMessage(message, targets, sendToOcto);
         return null;
     }
 
@@ -617,7 +623,7 @@ public class EndpointMessageTransport
             return null;
         }
 
-        List<AbstractEndpoint> targets = conference.getLocalEndpoints().stream()
+        List<Endpoint> targets = conference.getLocalEndpoints().stream()
             .filter((ep) -> ep != endpoint && ep.wantsStatsFrom(endpoint))
             .collect(Collectors.toList());
 

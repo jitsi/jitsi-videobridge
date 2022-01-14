@@ -51,9 +51,9 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val broadcastCalls = mutableListOf<Pair<EndpointConnectionStatusMessage, Boolean>>()
 
     val sendMessageMessage = slot<EndpointConnectionStatusMessage>()
-    val sendMessageDestinationEps = slot<List<AbstractEndpoint>>()
+    val sendMessageDestinationEps = slot<List<Endpoint>>()
     val sendMessageSendToOcto = slot<Boolean>()
-    val sendMessageCalls = mutableListOf<Triple<EndpointConnectionStatusMessage, List<AbstractEndpoint>, Boolean>>()
+    val sendMessageCalls = mutableListOf<Triple<EndpointConnectionStatusMessage, List<Endpoint>, Boolean>>()
 
     val conference: Conference = mockk {
         every { localEndpoints } returns eps
@@ -183,7 +183,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     }
                 }
                 context("and then a new ep joins") {
-                    every { conference.getEndpoint("4") } returns mockk() { every { id } returns "4" }
+                    every { conference.getLocalEndpoint("4") } returns mockk() { every { id } returns "4" }
                     monitor.endpointConnected("4")
                     should("update the new endpoint of the other endpoints' statuses") {
                         sendMessageCalls shouldHaveSize 2

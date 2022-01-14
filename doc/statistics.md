@@ -86,8 +86,6 @@ milliseconds.
 * `stress_level` - current stress level on the bridge, with 0 indicating no load and 1 indicating the load is at full
 capacity (though values >1 are permitted).
 * `threads` - current number of JVM threads.
-* `tossedPacketsEnergy` - statistics about the energy level of packets which were discarded due to not coming from one
-of the loudest speakers in a conference.
 * `total_bytes_received` - total number of bytes received in RTP.
 * `total_bytes_received_octo` - total number of bytes received on the `octo` channel.
 * `total_bytes_sent` - total number of bytes sent in RTP.

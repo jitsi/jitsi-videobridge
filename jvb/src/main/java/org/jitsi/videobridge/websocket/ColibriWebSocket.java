@@ -33,28 +33,19 @@ public class ColibriWebSocket extends WebSocketAdapter
     private final Logger logger;
 
     /**
-     * The {@link ColibriWebSocketServlet} which created this web socket.
-     */
-    private ColibriWebSocketServlet servlet;
-
-    /**
      * The {@link EventHandler}, if any, associated with this web socket.
      */
     private final EventHandler eventHandler;
 
     /**
      * Initializes a new {@link ColibriWebSocket} instance.
-     * @param servlet the {@link ColibriWebSocketServlet} which created the
-     * instance.
      */
-    ColibriWebSocket(
+    public ColibriWebSocket(
         String id,
-        ColibriWebSocketServlet servlet,
         EventHandler eventHandler
     )
     {
         this.logger = new LoggerImpl(getClass().getName(), new LogContext(JMap.of("id", id)));
-        this.servlet = servlet;
         this.eventHandler = Objects.requireNonNull(eventHandler, "eventHandler");
     }
 
