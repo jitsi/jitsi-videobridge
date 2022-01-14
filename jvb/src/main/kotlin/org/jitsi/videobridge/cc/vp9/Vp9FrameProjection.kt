@@ -20,6 +20,7 @@ import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
+import java.time.Instant
 
 /**
  * Represents a VP9 frame projection. It puts together all the necessary bits
@@ -81,7 +82,7 @@ internal constructor(
      * A timestamp of when this instance was created. It's used to calculate
      * RTP timestamps when we switch encodings.
      */
-    val createdMs: Long
+    val created: Instant?
 ) {
 
     /**
@@ -113,7 +114,7 @@ internal constructor(
         pictureId = 0,
         tl0PICIDX = 0,
         mark = false,
-        createdMs = 0
+        created = null
     )
 
     fun rewriteSeqNo(seq: Int): Int {

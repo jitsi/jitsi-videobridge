@@ -20,6 +20,8 @@ import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
 
+import java.time.*;
+
 /**
  * Represents a VP8 frame projection. It puts together all the necessary bits
  * and pieces that are useful when projecting an accepted VP8 frame. A
@@ -45,7 +47,7 @@ public class VP8FrameProjection
      * A timestamp of when this instance was created. It's used to calculate
      * RTP timestamps when we switch encodings.
      */
-    private final long createdMs;
+    private final Instant created;
 
     /**
      * The projected {@link VP8Frame}.
@@ -98,7 +100,7 @@ public class VP8FrameProjection
     {
         this(diagnosticContext, null /* vp8Frame */, ssrc, timestamp,
             sequenceNumberDelta, 0 /* extendedPictureId */,
-            0 /* tl0PICIDX */, 0 /* createdMs */);
+            0 /* tl0PICIDX */, null /* created */);
     }
 
     /**
@@ -120,7 +122,7 @@ public class VP8FrameProjection
         @NotNull DiagnosticContext diagnosticContext,
         VP8Frame vp8Frame,
         long ssrc, long timestamp, int sequenceNumberDelta,
-        int extendedPictureId, int tl0PICIDX, long createdMs)
+        int extendedPictureId, int tl0PICIDX, @Nullable Instant created)
     {
         this.diagnosticContext = diagnosticContext;
         this.ssrc = ssrc;
@@ -129,7 +131,7 @@ public class VP8FrameProjection
         this.extendedPictureId = extendedPictureId;
         this.tl0PICIDX = tl0PICIDX;
         this.vp8Frame = vp8Frame;
-        this.createdMs = createdMs;
+        this.created = created;
     }
 
     public int rewriteSeqNo(int seq)
@@ -250,9 +252,9 @@ public class VP8FrameProjection
     /**
      * @return The system time (in ms) this projection was created.
      */
-    public long getCreatedMs()
+    public Instant getCreated()
     {
-        return createdMs;
+        return created;
     }
 
     public int getEarliestProjectedSequence()

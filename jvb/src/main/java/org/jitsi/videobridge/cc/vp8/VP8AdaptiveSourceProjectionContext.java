@@ -22,11 +22,13 @@ import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
+import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
 import org.json.simple.*;
 
+import java.time.*;
 import java.util.*;
 
 /**
@@ -305,9 +307,9 @@ public class VP8AdaptiveSourceProjectionContext
                 }
             }
 
-            long receivedMs = packetInfo.getReceivedTime();
+            Instant receivedTime = packetInfo.getReceivedTime();
             boolean accepted = vp8QualityFilter
-                .acceptFrame(frame, incomingIndex, targetIndex, receivedMs);
+                .acceptFrame(frame, incomingIndex, targetIndex, receivedTime);
 
             if (accepted)
             {
@@ -322,7 +324,7 @@ public class VP8AdaptiveSourceProjectionContext
                 try
                 {
                     projection = createProjection(frame, vp8Packet, result.isReset(),
-                        receivedMs);
+                        receivedTime);
                 }
                 catch (Exception e)
                 {
@@ -394,19 +396,19 @@ public class VP8AdaptiveSourceProjectionContext
         @NotNull VP8Frame frame,
         @NotNull Vp8Packet initialPacket,
         boolean isReset,
-        long receivedMs)
+        @Nullable Instant receivedTime)
     {
         if (frameIsNewSsrc(frame))
         {
-            return createLayerSwitchProjection(frame, initialPacket, receivedMs);
+            return createLayerSwitchProjection(frame, initialPacket, receivedTime);
         }
 
         else if (isReset)
         {
-            return createResetProjection(frame, initialPacket, receivedMs);
+            return createResetProjection(frame, initialPacket, receivedTime);
         }
 
-        return createInLayerProjection(frame, initialPacket, receivedMs);
+        return createInLayerProjection(frame, initialPacket, receivedTime);
     }
 
     /**
@@ -416,7 +418,7 @@ public class VP8AdaptiveSourceProjectionContext
     private VP8FrameProjection createLayerSwitchProjection(
         @NotNull VP8Frame frame,
         @NotNull Vp8Packet initialPacket,
-        long receivedMs)
+        @Nullable Instant receivedTime)
     {
         assert(frame.isKeyframe());
         assert(initialPacket.isStartOfFrame());
@@ -443,9 +445,10 @@ public class VP8AdaptiveSourceProjectionContext
         // this is a simulcast switch. The typical incremental value =
         // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
         long tsDelta;
-        if (lastVP8FrameProjection.getCreatedMs() != 0)
+        if (receivedTime != null && lastVP8FrameProjection.getCreated() != null)
         {
-            tsDelta = 3000 * Math.max(1, (receivedMs - lastVP8FrameProjection.getCreatedMs()) / 33);
+            tsDelta = 3000 * Math.max(1,
+                Duration.between(lastVP8FrameProjection.getCreated(), receivedTime).dividedBy(33).toMillis());
         }
         else
         {
@@ -472,7 +475,7 @@ public class VP8AdaptiveSourceProjectionContext
             new VP8FrameProjection(diagnosticContext,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
-                picId, tl0PicIdx, receivedMs
+                picId, tl0PicIdx, receivedTime
             );
 
         return projection;
@@ -483,7 +486,7 @@ public class VP8AdaptiveSourceProjectionContext
      */
     @NotNull
     private VP8FrameProjection createResetProjection(@NotNull VP8Frame frame,
-        @NotNull Vp8Packet initialPacket, long receivedMs)
+        @NotNull Vp8Packet initialPacket, @Nullable Instant receivedTime)
     {
         VP8Frame lastFrame = lastVP8FrameProjection.getVP8Frame();
 
@@ -505,7 +508,7 @@ public class VP8AdaptiveSourceProjectionContext
             new VP8FrameProjection(diagnosticContext,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 seqDelta,
-                projectedPicId, projectedTl0PicIdx, receivedMs
+                projectedPicId, projectedTl0PicIdx, receivedTime
             );
 
         return projection;
@@ -518,7 +521,7 @@ public class VP8AdaptiveSourceProjectionContext
     @NotNull
     private VP8FrameProjection createInLayerProjection(@NotNull VP8Frame frame,
         @NotNull VP8Frame refFrame, @NotNull Vp8Packet initialPacket,
-        long receivedMs)
+        @Nullable Instant receivedTime)
     {
         long tsGap = RtpUtils.getTimestampDiff(frame.getTimestamp(), refFrame.getTimestamp());
         int tl0Gap = VpxUtils.getTl0PicIdxDelta(frame.getTl0PICIDX(), refFrame.getTl0PICIDX());
@@ -574,7 +577,7 @@ public class VP8AdaptiveSourceProjectionContext
             new VP8FrameProjection(diagnosticContext,
                 frame, lastVP8FrameProjection.getSSRC(), projectedTs,
                 RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.getSequenceNumber()),
-                projectedPicId, projectedTl0PicIdx, receivedMs
+                projectedPicId, projectedTl0PicIdx, receivedTime
             );
 
         return projection;
@@ -588,18 +591,18 @@ public class VP8AdaptiveSourceProjectionContext
     private VP8FrameProjection createInLayerProjection(
         @NotNull VP8Frame frame,
         @NotNull Vp8Packet initialPacket,
-        long receivedMs)
+        @Nullable Instant receivedTime)
     {
         VP8Frame prevFrame = findPrevAcceptedFrame(frame);
         if (prevFrame != null)
         {
-            return createInLayerProjection(frame, prevFrame, initialPacket, receivedMs);
+            return createInLayerProjection(frame, prevFrame, initialPacket, receivedTime);
         }
         /* prev frame has rolled off beginning of frame map, try next frame */
         VP8Frame nextFrame = findNextAcceptedFrame(frame);
         if (nextFrame != null)
         {
-            return createInLayerProjection(frame, nextFrame, initialPacket, receivedMs);
+            return createInLayerProjection(frame, nextFrame, initialPacket, receivedTime);
         }
 
         /* Neither previous or next is found. Very big frame? Use previous projected.
@@ -607,7 +610,7 @@ public class VP8AdaptiveSourceProjectionContext
            frameIsNewSsrc has returned false.)
          */
         return createInLayerProjection(frame, lastVP8FrameProjection.getVP8Frame(),
-            initialPacket, receivedMs);
+            initialPacket, receivedTime);
     }
 
     @Override

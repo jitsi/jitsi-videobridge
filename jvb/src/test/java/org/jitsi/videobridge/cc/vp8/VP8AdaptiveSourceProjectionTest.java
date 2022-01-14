@@ -15,6 +15,7 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp8.*;
 import org.junit.*;
 
 import javax.xml.bind.*;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -1026,8 +1027,8 @@ public class VP8AdaptiveSourceProjectionTest
         private int octetCount;
         private int frameCount;
 
-        private static final long baseReceivedTime = 1577836800000L; /* 2020-01-01 00:00:00 UTC */
-        private long receivedTime;
+        private static final Instant baseReceivedTime = Instant.ofEpochMilli(1577836800000L); /* 2020-01-01 00:00:00 UTC */
+        private Instant receivedTime;
 
         void reset()
         {
@@ -1144,7 +1145,7 @@ public class VP8AdaptiveSourceProjectionTest
                     tidCycle = 0;
                 }
                 frameCount++;
-                receivedTime = baseReceivedTime + frameCount * 100 / 3;
+                receivedTime = baseReceivedTime.plus(Duration.ofMillis(frameCount * 100L / 3));
             }
             else
             {
@@ -1187,7 +1188,7 @@ public class VP8AdaptiveSourceProjectionTest
             srPacketBuilder.getRtcpHeader().setSenderSsrc(ssrc);
 
             SenderInfoBuilder siBuilder = srPacketBuilder.getSenderInfo();
-            setSIBuilderNtp(srPacketBuilder.getSenderInfo(), receivedTime);
+            setSIBuilderNtp(srPacketBuilder.getSenderInfo(), receivedTime.toEpochMilli());
             siBuilder.setRtpTimestamp(ts);
             siBuilder.setSendersOctetCount(packetCount);
             siBuilder.setSendersOctetCount(octetCount);

@@ -21,6 +21,7 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
+import java.time.Instant
 
 internal class Vp9QualityFilterTest : ShouldSpec() {
     init {
@@ -417,7 +418,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 frame = f,
                 externalTargetIndex = targetIndex,
                 incomingIndex = packetIndex,
-                receivedMs = ms
+                receivedTime = Instant.ofEpochMilli(ms)
             )
             evaluator(f, result)
             frames++

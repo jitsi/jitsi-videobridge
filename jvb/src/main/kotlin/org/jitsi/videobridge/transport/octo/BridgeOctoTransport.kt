@@ -257,7 +257,7 @@ class BridgeOctoTransport(
         }
         return OctoPacketInfo(UnparsedPacket(bufCopy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, rtpLen)).apply {
             this.endpointId = sourceEpId
-            this.receivedTime = receivedTime.toEpochMilli()
+            this.receivedTime = receivedTime
         }
     }
 

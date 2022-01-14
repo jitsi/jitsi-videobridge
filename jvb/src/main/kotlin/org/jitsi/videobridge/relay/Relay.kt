@@ -30,6 +30,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
+import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
@@ -214,7 +215,7 @@ class Relay @JvmOverloads constructor(
                         OctoPacketInfo(
                             UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
                         ).apply {
-                            this.receivedTime = receivedTime.toEpochMilli()
+                            this.receivedTime = receivedTime
                         }
                     transceiver.handleIncomingPacket(pktInfo)
                 }
@@ -546,10 +547,10 @@ class Relay @JvmOverloads constructor(
                 transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
             )
 
-            val durationActiveVideoMs = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
+            val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
                 it.mediaType == MediaType.VIDEO
-            }.sumOf { it.durationActiveMs }
-            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideoMs)
+            }.sumOf { it.durationActive }
+            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideo.toMillis())
         }
     }
 
