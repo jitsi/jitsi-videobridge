@@ -123,7 +123,7 @@ constructor(
     fun copy(
         primarySSRC: Long = this.primarySSRC,
         layers: Array<RtpLayerDesc> = Array(this.layers.size) { i -> this.layers[i].copy() }
-    ) = RtpEncodingDesc(primarySSRC, layers).also {
+    ) = RtpEncodingDesc(primarySSRC, layers, eid).also {
         this.secondarySsrcs.forEach { (ssrc, type) -> it.addSecondarySsrc(ssrc, type) }
     }
 
