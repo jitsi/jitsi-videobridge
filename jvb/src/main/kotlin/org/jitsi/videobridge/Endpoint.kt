@@ -117,7 +117,8 @@ class Endpoint @JvmOverloads constructor(
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
 
-    private val iceTransport = IceTransport(id, iceControlling, logger)
+    /* TODO: do we ever want to support useUniquePort for an Endpoint? */
+    private val iceTransport = IceTransport(id, iceControlling, false, logger)
     private val dtlsTransport = DtlsTransport(logger)
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {
@@ -404,7 +405,7 @@ class Endpoint @JvmOverloads constructor(
 
     override fun addRtpExtension(rtpExtension: RtpExtension) = transceiver.addRtpExtension(rtpExtension)
 
-    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
+    fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
         logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
         transceiver.addReceiveSsrc(ssrc, mediaType)
     }
@@ -469,7 +470,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Sends a specific msg to this endpoint over its bridge channel
      */
-    override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
+    fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() =
@@ -698,7 +699,7 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.startConnectivityEstablishment(transportInfo)
     }
 
-    override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {
+    fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
@@ -714,7 +715,12 @@ class Endpoint @JvmOverloads constructor(
         }
 
         logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
-        channelBundle.transport = iceUdpTransportPacketExtension
+
+        return iceUdpTransportPacketExtension
+    }
+
+    override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {
+        channelBundle.transport = describeTransport()
     }
 
     /**

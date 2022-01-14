@@ -297,8 +297,7 @@ public class ConferenceShim
      * Checks if endpoint with specified ID is initialized, if endpoint does not
      * exist in a conference, it will be created and initialized.
      * @param endpointId identifier of endpoint to check and initialize
-     * @param iceControlling ICE control role of transport of newly created
-     * endpoint
+     * @param iceControlling ICE control role of transport of newly created endpoint.
      */
     private void ensureEndpointCreated(String endpointId, boolean iceControlling)
     {
@@ -419,7 +418,7 @@ public class ConferenceShim
             }
             catch (IqProcessingException e)
             {
-                logger.error("Error processing sctp connections in IQ: " + e.toString());
+                logger.error("Error processing sctp connections in IQ: ", e);
                 return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
             }
         }

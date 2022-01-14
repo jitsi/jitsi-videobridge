@@ -18,7 +18,6 @@ package org.jitsi.videobridge.ice;
 
 import org.ice4j.ice.harvest.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.transport.ice.*;
 
 import java.io.*;
 import java.util.*;
@@ -62,7 +61,6 @@ public class Harvesters
      * <tt>Agent</tt>s managed by <tt>IceTransport</tt> instances.
      */
     public static List<SinglePortUdpHarvester> singlePortHarvesters = null;
-
 
     /**
      * Initializes the static <tt>Harvester</tt> instances used by all

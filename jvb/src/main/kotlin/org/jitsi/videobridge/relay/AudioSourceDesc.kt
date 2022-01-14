@@ -13,23 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.videobridge.relay
 
-package org.jitsi.videobridge.stats;
-
-import org.jitsi.utils.*;
-import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.relay.*;
-
-public class PacketTransitStats
-{
-    public static OrderedJsonObject getStatsJson()
-    {
-        OrderedJsonObject stats = new OrderedJsonObject();
-
-        stats.put("e2e_packet_delay", Endpoint.getPacketDelayStats());
-        stats.put("relay_e2e_packet_delay", Relay.getPacketDelayStats());
-        stats.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
-
-        return stats;
-    }
-}
+/**
+ * Description of an audio source, parallel to [MediaSourceDesc] which is just for video.
+ * TODO: these should be made more parallel and share a common base class, probably.
+ */
+data class AudioSourceDesc(
+    val ssrc: Long,
+    val owner: String? = null,
+    val sourceName: String? = null,
+)

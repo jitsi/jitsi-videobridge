@@ -29,11 +29,13 @@ import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
 import org.jitsi.xmpp.extensions.colibri.*;
+import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.util.*;
@@ -41,6 +43,8 @@ import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
+import org.jxmpp.stringprep.*;
 
 import java.time.*;
 import java.util.*;
@@ -93,9 +97,15 @@ public class Videobridge
 
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
-     * IDs.
+     * local IDs.
      */
     private final Map<String, Conference> conferencesById = new HashMap<>();
+
+    /**
+     * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
+     * meeting IDs.
+     */
+    private final Map<String, Conference> conferencesByMeetingId = new HashMap<>();
 
     /**
      * The clock to use, pluggable for testing purposes.
@@ -197,8 +207,11 @@ public class Videobridge
      * object using that ID
      */
     private @NotNull Conference doCreateConference(
-            EntityBareJid name, long gid, String meetingId,
-            boolean isRtcStatsEnabled, boolean isCallStatsEnabled)
+            @Nullable EntityBareJid name,
+            long gid,
+            String meetingId,
+            boolean isRtcStatsEnabled,
+            boolean isCallStatsEnabled)
     {
         Conference conference = null;
         do
@@ -207,10 +220,19 @@ public class Videobridge
 
             synchronized (conferencesById)
             {
+                if (meetingId != null && conferencesByMeetingId.containsKey(meetingId))
+                {
+                    throw new IllegalStateException("Already have a meeting with meetingId " + meetingId);
+                }
+
                 if (!conferencesById.containsKey(id))
                 {
                     conference = new Conference(this, id, name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
                     conferencesById.put(id, conference);
+                    if (meetingId != null)
+                    {
+                        conferencesByMeetingId.put(meetingId, conference);
+                    }
                 }
             }
         }
@@ -247,11 +269,16 @@ public class Videobridge
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     public @NotNull Conference createConference(
-            EntityBareJid name, long gid, String meetingId, boolean isRtcStatsEnabled, boolean isCallStatsEnabled)
+            @Nullable EntityBareJid name,
+            long gid,
+            String meetingId,
+            boolean isRtcStatsEnabled,
+            boolean isCallStatsEnabled)
     {
         final Conference conference = doCreateConference(name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
 
-        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid());
+        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid() +
+            " meetingId=" + meetingId);
 
         eventEmitter.fireEvent(handler ->
         {
@@ -293,12 +320,17 @@ public class Videobridge
     public void expireConference(Conference conference)
     {
         String id = conference.getID();
+        String meetingId = conference.getMeetingId();
 
         synchronized (conferencesById)
         {
             if (conference.equals(conferencesById.get(id)))
             {
                 conferencesById.remove(id);
+                if (meetingId != null)
+                {
+                    conferencesByMeetingId.remove(meetingId);
+                }
                 conference.expire();
                 eventEmitter.fireEvent(handler ->
                 {
@@ -348,6 +380,18 @@ public class Videobridge
     }
 
     /**
+     * Gets an existing {@link Conference} with a specific meeting ID.
+     */
+    public Conference getConferenceByMeetingId(String meetingId)
+    {
+        /* Note that conferenceByMeetingId is synchronzied on conferencesById. */
+        synchronized (conferencesById)
+        {
+            return conferencesByMeetingId.get(meetingId);
+        }
+    }
+
+    /**
      * Gets the <tt>Conference</tt>s of this <tt>Videobridge</tt>.
      *
      * @return the <tt>Conference</tt>s of this <tt>Videobridge</tt>
@@ -388,28 +432,105 @@ public class Videobridge
     }
 
     /**
+     * Handles a COLIBRI2 request synchronously. Exposed only for testing (jicofo).
+     * @param conferenceModifyIQ The COLIBRI request.
+     * @return The response in the form of an {@link IQ}. It is either an error or a {@link ColibriConferenceIQ}.
+     */
+    public IQ handleConferenceModifyIq(ConferenceModifyIQ conferenceModifyIQ)
+    {
+        Conference conference;
+        try
+        {
+            conference = getOrCreateConference(conferenceModifyIQ);
+        }
+        catch (ConferenceNotFoundException e)
+        {
+            return IQUtils.createError(
+                    conferenceModifyIQ,
+                    StanzaError.Condition.bad_request,
+                    "Conference not found for ID: " + conferenceModifyIQ.getMeetingId());
+        }
+        catch (ConferenceAlreadyExistsException e)
+        {
+            return IQUtils.createError(
+                    conferenceModifyIQ,
+                    StanzaError.Condition.bad_request,
+                    "Conference already exists for ID: " + conferenceModifyIQ.getMeetingId());
+        }
+        catch (InGracefulShutdownException e)
+        {
+            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceModifyIQ);
+        }
+        catch (XmppStringprepException e)
+        {
+            return IQUtils.createError(
+                    conferenceModifyIQ,
+                    StanzaError.Condition.bad_request,
+                    "Invalid conference name (not a JID)");
+        }
+
+        return conference.handleConferenceModifyIQ(conferenceModifyIQ);
+    }
+
+    /**
      * Handles a COLIBRI request asynchronously.
      */
     private void handleColibriRequest(XmppConnection.ColibriRequest request)
     {
-        ColibriConferenceIQ conferenceIq = request.getRequest();
+        IQ iq = request.getRequest();
+        String id = null;
         Conference conference;
         try
         {
-            conference = getOrCreateConference(conferenceIq);
+            if (iq instanceof ColibriConferenceIQ)
+            {
+                ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ) iq;
+                id = conferenceIq.getID();
+                conference = getOrCreateConference(conferenceIq);
+            }
+            else if (iq instanceof ConferenceModifyIQ)
+            {
+                ConferenceModifyIQ conferenceModifyIq = (ConferenceModifyIQ) iq;
+                id = conferenceModifyIq.getMeetingId();
+                conference = getOrCreateConference(conferenceModifyIq);
+            }
+            else
+            {
+                throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() +
+                    " in handleColibriRequest");
+            }
         }
         catch (ConferenceNotFoundException e)
         {
             request.getCallback().invoke(
                     IQUtils.createError(
-                            conferenceIq,
+                            iq,
                             StanzaError.Condition.bad_request,
-                            "Conference not found for ID: " + conferenceIq.getID()));
+                            "Conference not found for ID: " + id));
+            return;
+        }
+        // TODO: perhaps we should use better error conditions for colibri2.
+        catch (ConferenceAlreadyExistsException e)
+        {
+            request.getCallback().invoke(
+                    IQUtils.createError(
+                            iq,
+                            StanzaError.Condition.bad_request,
+                            "Conference already exists for ID: " + id));
             return;
         }
         catch (InGracefulShutdownException e)
         {
-            request.getCallback().invoke(ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq));
+            request.getCallback().invoke(ColibriConferenceIQ.createGracefulShutdownErrorResponse(iq));
+            return;
+        }
+        catch (XmppStringprepException e)
+        {
+            request.getCallback().invoke(
+                IQUtils.createError(
+                    iq,
+                    StanzaError.Condition.bad_request,
+                    "Invalid conference name (not a JID)"));
             return;
         }
 
@@ -443,6 +564,49 @@ public class Videobridge
                 throw new ConferenceNotFoundException();
             }
             return conference;
+        }
+    }
+
+    private @NotNull Conference getOrCreateConference(ConferenceModifyIQ conferenceModifyIQ)
+        throws InGracefulShutdownException, XmppStringprepException,
+            ConferenceAlreadyExistsException, ConferenceNotFoundException
+    {
+        String meetingId = conferenceModifyIQ.getMeetingId();
+
+        synchronized(conferencesById)
+        {
+            Conference conference = getConferenceByMeetingId(meetingId);
+
+            if (conferenceModifyIQ.getCreate())
+            {
+                if (conference != null)
+                {
+                    logger.warn("Will not create conference, conference already exists for meetingId=" + meetingId);
+                    throw new ConferenceAlreadyExistsException();
+                }
+                if (isShutdownInProgress())
+                {
+                    logger.warn("Will not create conference in shutdown mode.");
+                    throw new InGracefulShutdownException();
+                }
+
+                String conferenceName = conferenceModifyIQ.getConferenceName();
+                return createConference(
+                    conferenceName == null ? null : JidCreate.entityBareFrom(conferenceName),
+                    Conference.GID_COLIBRI2,
+                    meetingId,
+                    conferenceModifyIQ.isRtcstatsEnabled(),
+                    conferenceModifyIQ.isCallstatsEnabled());
+            }
+            else
+            {
+                if (conference == null)
+                {
+                    logger.warn("Conference with meetingId=" + meetingId + " not found.");
+                    throw new ConferenceNotFoundException();
+                }
+                return conference;
+            }
         }
     }
 
@@ -615,6 +779,9 @@ public class Videobridge
 
         // Health-check
         HealthCheckIQProvider.registerIQProvider();
+
+        // Colibri2
+        IqProviderUtils.registerProviders();
     }
 
     /**
@@ -694,6 +861,10 @@ public class Videobridge
             "srtp_send_queue",
             getJsonFromQueueStatisticsAndErrorHandler(Endpoint.queueErrorCounter,
                 "Endpoint-outgoing-packet-queue"));
+        queueStats.put(
+            "relay_srtp_send_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(Relay.queueErrorCounter,
+                "Relay-outgoing-packet-queue"));
         queueStats.put(
             "octo_receive_queue",
             getJsonFromQueueStatisticsAndErrorHandler(ConfOctoTransport.queueErrorCounter,
@@ -935,6 +1106,34 @@ public class Videobridge
         public AtomicLong totalPacketsSent = new AtomicLong();
 
         /**
+         * The total number of bytes received by relays in RTP packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayBytesReceived = new AtomicLong();
+
+        /**
+         * The total number of bytes sent by relays in RTP packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayBytesSent = new AtomicLong();
+
+        /**
+         * The total number of RTP packets received by relays in conferences on this
+         * videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayPacketsReceived = new AtomicLong();
+
+        /**
+         * The total number of RTP packets sent by relays in conferences on this
+         * videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalRelayPacketsSent = new AtomicLong();
+
+        /**
          * The total number of endpoints created.
          */
         public AtomicInteger totalEndpoints = new AtomicInteger();
@@ -944,6 +1143,17 @@ public class Videobridge
          * message transport even after some delay.
          */
         public AtomicInteger numEndpointsNoMessageTransportAfterDelay = new AtomicInteger();
+
+        /**
+         * The total number of relays created.
+         */
+        public AtomicInteger totalRelays = new AtomicInteger();
+
+        /**
+         * The number of relays which had not established a relay
+         * message transport even after some delay.
+         */
+        public AtomicInteger numRelaysNoMessageTransportAfterDelay = new AtomicInteger();
 
         /**
          * The total number of times the dominant speaker in any conference
@@ -995,5 +1205,6 @@ public class Videobridge
         void conferenceExpired(@NotNull Conference conference);
     }
     private static class ConferenceNotFoundException extends Exception {}
+    private static class ConferenceAlreadyExistsException extends Exception {}
     private static class InGracefulShutdownException extends Exception {}
 }

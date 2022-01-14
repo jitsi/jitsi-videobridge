@@ -24,7 +24,6 @@ import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
-import org.jitsi.videobridge.message.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
@@ -169,17 +168,10 @@ public abstract class AbstractEndpoint
     public abstract boolean receivesSsrc(long ssrc);
 
     /**
-     * Adds an SSRC to this endpoint.
-     * @param ssrc the receive SSRC being added
-     * @param mediaType the {@link MediaType} of the added SSRC
-     */
-    public abstract void addReceiveSsrc(long ssrc, MediaType mediaType);
-
-    /**
      * @return the {@link AbstractEndpointMessageTransport} associated with
      * this endpoint.
      */
-    public AbstractEndpointMessageTransport<?> getMessageTransport()
+    public AbstractEndpointMessageTransport getMessageTransport()
     {
         return null;
     }
@@ -317,16 +309,6 @@ public abstract class AbstractEndpoint
     }
 
     /**
-     * Sends a specific {@link String} {@code msg} to the remote end of this
-     * endpoint.
-     *
-     * @param msg message text to send.
-     */
-    public abstract void sendMessage(BridgeChannelMessage msg)
-        throws IOException;
-
-
-    /**
      * Requests a keyframe from this endpoint for the specified media SSRC.
      *
      * @param mediaSsrc the media SSRC to request a keyframe from.
@@ -458,7 +440,7 @@ public abstract class AbstractEndpoint
         }
     }
 
-    interface EventHandler {
+    public interface EventHandler {
         void iceSucceeded();
         void iceFailed();
         void sourcesChanged();

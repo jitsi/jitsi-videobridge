@@ -24,6 +24,7 @@ import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
+import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.health.HealthCheckIQ
 import org.jitsi.xmpp.mucclient.IQListener
 import org.jitsi.xmpp.mucclient.MucClient
@@ -64,6 +65,7 @@ class XmppConnection : IQListener {
                 registerIQ(Version())
                 registerIQ(ForcefulShutdownIQ())
                 registerIQ(GracefulShutdownIQ())
+                registerIQ(ConferenceModifyIQ.ELEMENT, ConferenceModifyIQ.NAMESPACE, false)
                 setIQListener(this@XmppConnection)
             }
 
@@ -189,7 +191,7 @@ class XmppConnection : IQListener {
             is Version -> measureDelay(versionDelayStats, { iq.toXML() }) {
                 handler.versionIqReceived(iq)
             }
-            is ColibriConferenceIQ -> {
+            is ColibriConferenceIQ, is ConferenceModifyIQ -> {
                 // Colibri IQs are handled async.
                 handler.colibriConferenceIqReceived(
                     ColibriRequest(iq, colibriDelayStats, colibriProcessingDelayStats) { response ->
@@ -240,7 +242,7 @@ class XmppConnection : IQListener {
         /**
          * The IQ which was received.
          */
-        val request: ColibriConferenceIQ,
+        val request: IQ,
         /**
          * The [DelayStats] instance which is to be updated with the total time it took to handle the request
          * (including queueing delay).
