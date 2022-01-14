@@ -432,7 +432,10 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         pt.addField("qf.currentIndex", indexString(currentIndex))
             .addField("qf.internalTargetEncoding", internalTargetEncoding)
             .addField("qf.needsKeyframe", needsKeyframe)
-            .addField("qf.mostRecentKeyframeGroupArrivalTimeMs", mostRecentKeyframeGroupArrivalTime)
+            .addField(
+                "qf.mostRecentKeyframeGroupArrivalTimeMs",
+                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
+            )
         for (i in layers.indices) {
             pt.addField("qf.layer.$i", layers[i])
         }
