@@ -73,6 +73,13 @@ class RestConfig {
     private val shutdownEnabled
         get() = colibriEnabled && shutdownEnabledProperty
 
+    /**
+     * The drain API.
+     */
+    private val drainEnabled: Boolean by config {
+        "videobridge.rest.drain.enabled".from(JitsiConfig.newConfig)
+    }
+
     private val versionEnabled: Boolean by config {
         "videobridge.rest.version.enabled".from(JitsiConfig.newConfig)
     }
@@ -81,13 +88,15 @@ class RestConfig {
      * Whether any of the REST APIs are enabled by the configuration. If there aren't, the HTTP server doesn't need to
      * be started at all.
      */
-    fun isEnabled() = colibriEnabled || debugEnabled || healthEnabled || shutdownEnabled || versionEnabled
+    fun isEnabled() = colibriEnabled || debugEnabled || healthEnabled ||
+        shutdownEnabled || drainEnabled || versionEnabled
 
     fun isEnabled(api: RestApis) = when (api) {
         RestApis.COLIBRI -> colibriEnabled
         RestApis.DEBUG -> debugEnabled
         RestApis.HEALTH -> healthEnabled
         RestApis.SHUTDOWN -> shutdownEnabled
+        RestApis.DRAIN -> drainEnabled
         RestApis.VERSION -> versionEnabled
     }
 

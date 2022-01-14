@@ -147,6 +147,7 @@ public class VideobridgeStatistics
         unlockedSetStat(RTT_AGGREGATE, 0d);
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
+        unlockedSetStat(DRAIN, videobridge.getDrainMode());
 
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
     }
@@ -554,6 +555,7 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     SHUTDOWN_IN_PROGRESS,
                     videobridge.isShutdownInProgress());
+            unlockedSetStat(DRAIN, videobridge.getDrainMode());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
                             jvbStats.totalDataChannelMessagesReceived.get());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_SENT,

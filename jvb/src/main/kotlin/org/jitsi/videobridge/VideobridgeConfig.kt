@@ -25,5 +25,8 @@ class VideobridgeConfig {
         val gracefulShutdownDelay: Duration by config {
             "videobridge.graceful-shutdown-delay".from(JitsiConfig.newConfig)
         }
+        val initialDrainMode: Boolean by config {
+            "videobridge.initial-drain-mode".from(JitsiConfig.newConfig)
+        }
     }
 }
