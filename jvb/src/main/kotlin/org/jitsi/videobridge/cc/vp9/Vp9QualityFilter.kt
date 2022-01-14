@@ -449,7 +449,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     val debugState: JSONObject
         get() {
             val debugState = JSONObject()
-            debugState["mostRecentKeyframeGroupArrivalTimeMs"] = mostRecentKeyframeGroupArrivalTime
+            debugState["mostRecentKeyframeGroupArrivalTimeMs"] =
+                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
             debugState["needsKeyframe"] = needsKeyframe
             debugState["internalTargetIndex"] = internalTargetEncoding
             debugState["currentIndex"] = indexString(currentIndex)

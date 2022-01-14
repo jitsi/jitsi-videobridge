@@ -47,7 +47,7 @@ public class VP8FrameProjection
      * A timestamp of when this instance was created. It's used to calculate
      * RTP timestamps when we switch encodings.
      */
-    private final Instant created;
+    private final @Nullable Instant created;
 
     /**
      * The projected {@link VP8Frame}.
@@ -252,7 +252,7 @@ public class VP8FrameProjection
     /**
      * @return The system time (in ms) this projection was created.
      */
-    public Instant getCreated()
+    public @Nullable Instant getCreated()
     {
         return created;
     }

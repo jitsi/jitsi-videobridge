@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.vp8;
 
 import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
+import org.jetbrains.annotations.Nullable;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
@@ -54,7 +55,7 @@ class VP8QualityFilter
      * Holds the arrival time of the most recent keyframe group.
      * Reading/writing of this field is synchronized on this instance.
      */
-    private Instant mostRecentKeyframeGroupArrivalTime = null;
+    private @Nullable Instant mostRecentKeyframeGroupArrivalTime = null;
 
     /**
      * A boolean flag that indicates whether a simulcast switch is pending. This
@@ -223,7 +224,7 @@ class VP8QualityFilter
      * @param receivedTime the time the latest frame was received
      * @return true if we're in layer switching phase, false otherwise.
      */
-    private synchronized boolean isOutOfSwitchingPhase(Instant receivedTime)
+    private synchronized boolean isOutOfSwitchingPhase(@Nullable Instant receivedTime)
     {
         if (receivedTime == null)
         {
@@ -280,7 +281,7 @@ class VP8QualityFilter
      * @return true to accept the VP8 keyframe, otherwise false.
      */
     private synchronized boolean acceptKeyframe(
-        int encodingIdOfKeyframe, Instant receivedTime)
+        int encodingIdOfKeyframe, @Nullable Instant receivedTime)
     {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
@@ -375,7 +376,7 @@ class VP8QualityFilter
         JSONObject debugState = new JSONObject();
         debugState.put(
                 "mostRecentKeyframeGroupArrivalTimeMs",
-            mostRecentKeyframeGroupArrivalTime);
+            mostRecentKeyframeGroupArrivalTime != null ? mostRecentKeyframeGroupArrivalTime.toEpochMilli() : -1L);
         debugState.put("needsKeyframe", needsKeyframe);
         debugState.put(
                 "internalEncodingIdTarget",
