@@ -205,13 +205,18 @@ public class Videobridge
     /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
+     *
+     * @param checkForMeetingIdCollision whether to throw an exception if a conference with the given meetingId exists.
+     * With colibri1 we allow more than one conference with the same meetingId because there's no mechanism to
+     * immediately expire a conference.
      */
     private @NotNull Conference doCreateConference(
             @Nullable EntityBareJid name,
             long gid,
             String meetingId,
             boolean isRtcStatsEnabled,
-            boolean isCallStatsEnabled)
+            boolean isCallStatsEnabled,
+            boolean checkForMeetingIdCollision)
     {
         Conference conference = null;
         do
@@ -220,7 +225,7 @@ public class Videobridge
 
             synchronized (conferencesById)
             {
-                if (meetingId != null && conferencesByMeetingId.containsKey(meetingId))
+                if (checkForMeetingIdCollision && meetingId != null && conferencesByMeetingId.containsKey(meetingId))
                 {
                     throw new IllegalStateException("Already have a meeting with meetingId " + meetingId);
                 }
@@ -247,13 +252,15 @@ public class Videobridge
      * adds the new instance to the list of existing <tt>Conference</tt>
      * instances.
      *
+     * This is only used for testing.
+     *
      * @param name world readable name of the conference to create.
      * the {@link Conference}.
      */
     public @NotNull Conference createConference(EntityBareJid name)
     {
         // we default to rtcstatsEnabled=false and callstatsEnabled=false because this is only used for testing
-        return createConference(name, Conference.GID_NOT_SET, null, false, false);
+        return createConference(name, Conference.GID_NOT_SET, null, false, false, false);
     }
 
     /**
@@ -268,14 +275,17 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public @NotNull Conference createConference(
+    private @NotNull Conference createConference(
             @Nullable EntityBareJid name,
             long gid,
             String meetingId,
             boolean isRtcStatsEnabled,
-            boolean isCallStatsEnabled)
+            boolean isCallStatsEnabled,
+            boolean checkForMeetingIdCollision)
     {
-        final Conference conference = doCreateConference(name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
+        final Conference conference
+                = doCreateConference(
+                        name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled, checkForMeetingIdCollision);
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid() +
             " meetingId=" + meetingId);
@@ -329,7 +339,10 @@ public class Videobridge
                 conferencesById.remove(id);
                 if (meetingId != null)
                 {
-                    conferencesByMeetingId.remove(meetingId);
+                    if (conference.equals(conferencesByMeetingId.get(meetingId)))
+                    {
+                        conferencesByMeetingId.remove(meetingId);
+                    }
                 }
                 conference.expire();
                 eventEmitter.fireEvent(handler ->
@@ -554,7 +567,8 @@ public class Videobridge
                     ColibriUtil.parseGid(conferenceIq.getGID()),
                     conferenceIq.getMeetingId(),
                     conferenceIq.isRtcStatsEnabled(),
-                    conferenceIq.isCallStatsEnabled());
+                    conferenceIq.isCallStatsEnabled(),
+                    false);
         }
         else
         {
@@ -596,7 +610,8 @@ public class Videobridge
                     Conference.GID_COLIBRI2,
                     meetingId,
                     conferenceModifyIQ.isRtcstatsEnabled(),
-                    conferenceModifyIQ.isCallstatsEnabled());
+                    conferenceModifyIQ.isCallstatsEnabled(),
+                    true);
             }
             else
             {
