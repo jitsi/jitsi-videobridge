@@ -17,11 +17,13 @@ package org.jitsi.videobridge.cc.vp8;
 
 import edu.umd.cs.findbugs.annotations.*;
 import org.jetbrains.annotations.*;
+import org.jetbrains.annotations.Nullable;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
 import java.lang.SuppressWarnings;
+import java.time.*;
 
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
@@ -39,10 +41,10 @@ class VP8QualityFilter
     private final Logger logger;
 
     /**
-     * The default maximum frequency (in millis) at which the media engine
+     * The default maximum frequency at which the media engine
      * generates key frame.
      */
-    private static final int MIN_KEY_FRAME_WAIT_MS = 300;
+    private static final Duration MIN_KEY_FRAME_WAIT = Duration.ofMillis(300);
 
     /**
      * The HD, SD, LD and suspended spatial/quality layer IDs.
@@ -50,10 +52,10 @@ class VP8QualityFilter
     private static final int SUSPENDED_ENCODING_ID = -1;
 
     /**
-     * Holds the arrival time (in millis) of the most recent keyframe group.
+     * Holds the arrival time of the most recent keyframe group.
      * Reading/writing of this field is synchronized on this instance.
      */
-    private long mostRecentKeyframeGroupArrivalTimeMs = -1L;
+    private @Nullable Instant mostRecentKeyframeGroupArrivalTime = null;
 
     /**
      * A boolean flag that indicates whether a simulcast switch is pending. This
@@ -69,7 +71,7 @@ class VP8QualityFilter
      * The encoding id that this instance tries to achieve. Upon
      * receipt of a packet, we check whether externalSpatialLayerIdTarget
      * (that's specified as an argument to the
-     * {@link #acceptFrame(VP8Frame, int, int, long)} method) is set to something
+     * {@link #acceptFrame(VP8Frame, int, int, Instant)} method) is set to something
      * different, in which case we set {@link #needsKeyframe} equal to true and
      * update.
      */
@@ -107,13 +109,13 @@ class VP8QualityFilter
      * @param incomingIndex the quality index of the incoming RTP packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
-     * @param receivedMs the current time (in millis)
+     * @param receivedTime the current time
      * @return true to accept the VP8 frame, otherwise false.
      */
     synchronized boolean acceptFrame(
         @NotNull VP8Frame frame,
         int incomingIndex,
-        int externalTargetIndex, long receivedMs)
+        int externalTargetIndex, Instant receivedTime)
     {
         // We make local copies of the externalTemporalLayerIdTarget and the
         // externalEncodingTarget (as they may be updated by some other
@@ -157,11 +159,11 @@ class VP8QualityFilter
         {
             logger.debug(() -> "Quality filter got keyframe for stream "
                     + frame.getSsrc());
-            return acceptKeyframe(encodingId, receivedMs);
+            return acceptKeyframe(encodingId, receivedTime);
         }
         else if (currentEncodingId > SUSPENDED_ENCODING_ID)
         {
-            if (isOutOfSwitchingPhase(receivedMs) && isPossibleToSwitch(encodingId))
+            if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(encodingId))
             {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
                 // that trigger this. what happens is the client sends a base
@@ -219,13 +221,22 @@ class VP8QualityFilter
      * Returns a boolean that indicates whether we are in layer switching phase
      * or not.
      *
-     * @param receivedMs the time the latest frame was received (in millis)
+     * @param receivedTime the time the latest frame was received
      * @return true if we're in layer switching phase, false otherwise.
      */
-    private synchronized boolean isOutOfSwitchingPhase(long receivedMs)
+    private synchronized boolean isOutOfSwitchingPhase(@Nullable Instant receivedTime)
     {
-        long deltaMs = receivedMs - mostRecentKeyframeGroupArrivalTimeMs;
-        return deltaMs > MIN_KEY_FRAME_WAIT_MS;
+        if (receivedTime == null)
+        {
+            return false;
+        }
+        if (mostRecentKeyframeGroupArrivalTime == null)
+        {
+            return true;
+        }
+
+        Duration delta = Duration.between(mostRecentKeyframeGroupArrivalTime, receivedTime);
+        return delta.compareTo(MIN_KEY_FRAME_WAIT) > 0;
     }
 
     /**
@@ -266,11 +277,11 @@ class VP8QualityFilter
      * synchronized keyword because there's only one thread accessing this
      * method at a time.
      *
-     * @param receivedMs the time the frame was received (in millis)
+     * @param receivedTime the time the frame was received
      * @return true to accept the VP8 keyframe, otherwise false.
      */
     private synchronized boolean acceptKeyframe(
-        int encodingIdOfKeyframe, long receivedMs)
+        int encodingIdOfKeyframe, @Nullable Instant receivedTime)
     {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
@@ -291,14 +302,14 @@ class VP8QualityFilter
         // whether we'll be able to achieve the internalEncodingIdTarget.
         needsKeyframe = false;
 
-        if (isOutOfSwitchingPhase(receivedMs))
+        if (isOutOfSwitchingPhase(receivedTime))
         {
             // During the switching phase we always project the first
             // keyframe because it may very well be the only one that we
             // receive (i.e. the endpoint is sending low quality only). Then
             // we try to approach the target.
 
-            mostRecentKeyframeGroupArrivalTimeMs = receivedMs;
+            mostRecentKeyframeGroupArrivalTime = receivedTime;
 
             logger.debug(() -> "First keyframe in this kf group " +
                 "currentEncodingId: " + encodingIdOfKeyframe +
@@ -365,7 +376,7 @@ class VP8QualityFilter
         JSONObject debugState = new JSONObject();
         debugState.put(
                 "mostRecentKeyframeGroupArrivalTimeMs",
-                mostRecentKeyframeGroupArrivalTimeMs);
+            mostRecentKeyframeGroupArrivalTime != null ? mostRecentKeyframeGroupArrivalTime.toEpochMilli() : -1L);
         debugState.put("needsKeyframe", needsKeyframe);
         debugState.put(
                 "internalEncodingIdTarget",

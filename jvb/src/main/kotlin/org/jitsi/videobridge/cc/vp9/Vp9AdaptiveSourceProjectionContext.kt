@@ -33,11 +33,14 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.times
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
+import java.time.Duration
+import java.time.Instant
 
 /**
  * This class represents a projection of a VP9 RTP stream
@@ -105,16 +108,16 @@ class Vp9AdaptiveSourceProjectionContext(
                     frame.isKeyframe = false
                 }
             }
-            val receivedMs = packetInfo.receivedTime
+            val receivedTime = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
-                .acceptFrame(frame, incomingIndex, targetIndex, receivedMs)
+                .acceptFrame(frame, incomingIndex, targetIndex, receivedTime)
             frame.isAccepted = acceptResult.accept && frame.index >= lastPicIdIndexResumption
             if (frame.isAccepted) {
                 val projection: Vp9FrameProjection
                 try {
                     projection = createProjection(
                         frame = frame, initialPacket = packet, isResumption = acceptResult.isResumption,
-                        isReset = result.isReset, mark = acceptResult.mark, receivedMs = receivedMs
+                        isReset = result.isReset, mark = acceptResult.mark, receivedTime = receivedTime
                     )
                 } catch (e: Exception) {
                     logger.warn("Failed to create frame projection", e)
@@ -240,17 +243,17 @@ class Vp9AdaptiveSourceProjectionContext(
         mark: Boolean,
         isResumption: Boolean,
         isReset: Boolean,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Vp9FrameProjection {
         if (frameIsNewSsrc(frame)) {
-            return createEncodingSwitchProjection(frame, initialPacket, mark, receivedMs)
+            return createEncodingSwitchProjection(frame, initialPacket, mark, receivedTime)
         } else if (isResumption) {
-            return createResumptionProjection(frame, initialPacket, mark, receivedMs)
+            return createResumptionProjection(frame, initialPacket, mark, receivedTime)
         } else if (isReset) {
-            return createResetProjection(frame, initialPacket, mark, receivedMs)
+            return createResetProjection(frame, initialPacket, mark, receivedTime)
         }
 
-        return createInEncodingProjection(frame, initialPacket, mark, receivedMs)
+        return createInEncodingProjection(frame, initialPacket, mark, receivedTime)
     }
 
     /**
@@ -260,7 +263,7 @@ class Vp9AdaptiveSourceProjectionContext(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Vp9FrameProjection {
         assert(frame.isKeyframe)
         lastPicIdIndexResumption = frame.index
@@ -298,10 +301,11 @@ class Vp9AdaptiveSourceProjectionContext(
 
         // this is a simulcast switch. The typical incremental value =
         // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
-        val tsDelta: Long
-        tsDelta = if (lastVp9FrameProjection.createdMs != 0L) {
-            (3000 * Math.max(1, (receivedMs - lastVp9FrameProjection.createdMs) / 33)).toLong()
-        } else {
+        val tsDelta: Long = lastVp9FrameProjection.created?.let { created ->
+            receivedTime?.let {
+                3000 * Math.max(1, Duration.between(created, receivedTime).dividedBy(33).seconds)
+            }
+        } ?: run {
             3000
         }
         val projectedTs = applyTimestampDelta(lastVp9FrameProjection.timestamp, tsDelta)
@@ -331,7 +335,7 @@ class Vp9AdaptiveSourceProjectionContext(
             pictureId = picId,
             tl0PICIDX = tl0PicIdx,
             mark = mark,
-            createdMs = receivedMs
+            created = receivedTime
         )
     }
 
@@ -342,7 +346,7 @@ class Vp9AdaptiveSourceProjectionContext(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Vp9FrameProjection {
         lastPicIdIndexResumption = frame.index
 
@@ -374,7 +378,7 @@ class Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
             frame, lastVp9FrameProjection.ssrc, projectedTs,
             seqDelta,
-            projectedPicId, projectedTl0PicIdx, mark, receivedMs
+            projectedPicId, projectedTl0PicIdx, mark, receivedTime
         )
     }
 
@@ -385,7 +389,7 @@ class Vp9AdaptiveSourceProjectionContext(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Vp9FrameProjection {
         /* This must be non-null because we don't execute this function unless
             frameIsNewSsrc has returned false.
@@ -418,7 +422,7 @@ class Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
             frame, lastVp9FrameProjection.ssrc, projectedTs,
             seqDelta,
-            projectedPicId, projectedTl0PicIdx, mark, receivedMs
+            projectedPicId, projectedTl0PicIdx, mark, receivedTime
         )
     }
 
@@ -430,17 +434,17 @@ class Vp9AdaptiveSourceProjectionContext(
         frame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Vp9FrameProjection {
         val prevFrame = findPrevAcceptedFrame(frame)
         if (prevFrame != null) {
-            return createInEncodingProjection(frame, prevFrame, initialPacket, mark, receivedMs)
+            return createInEncodingProjection(frame, prevFrame, initialPacket, mark, receivedTime)
         }
 
         /* prev frame has rolled off beginning of frame map, try next frame */
         val nextFrame = findNextAcceptedFrame(frame)
         if (nextFrame != null) {
-            return createInEncodingProjection(frame, nextFrame, initialPacket, mark, receivedMs)
+            return createInEncodingProjection(frame, nextFrame, initialPacket, mark, receivedTime)
         }
 
         /* Neither previous or next is found. Very big frame? Use previous projected.
@@ -449,7 +453,7 @@ class Vp9AdaptiveSourceProjectionContext(
          */
         return createInEncodingProjection(
             frame, lastVp9FrameProjection.vp9Frame!!,
-            initialPacket, mark, receivedMs
+            initialPacket, mark, receivedTime
         )
     }
 
@@ -462,7 +466,7 @@ class Vp9AdaptiveSourceProjectionContext(
         refFrame: Vp9Frame,
         initialPacket: Vp9Packet,
         mark: Boolean,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Vp9FrameProjection {
         val tsGap = getTimestampDiff(frame.timestamp, refFrame.timestamp)
         val tl0Gap = getTl0PicIdxDelta(frame.tl0PICIDX, refFrame.tl0PICIDX)
@@ -516,7 +520,7 @@ class Vp9AdaptiveSourceProjectionContext(
             pictureId = projectedPicId,
             tl0PICIDX = projectedTl0PicIdx,
             mark = mark,
-            createdMs = receivedMs
+            created = receivedTime
         )
     }
 

@@ -27,6 +27,8 @@ import org.jitsi.videobridge.cc.RtpState
 import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
 import org.junit.Assert
 import org.junit.Test
+import java.time.Duration
+import java.time.Instant
 import java.util.Random
 import java.util.TreeMap
 import java.util.concurrent.ConcurrentHashMap
@@ -1208,7 +1210,7 @@ class Vp9AdaptiveSourceProjectionTest {
         }
 
         companion object {
-            const val baseReceivedTime = 1577836800000L /* 2020-01-01 00:00:00 UTC */
+            val baseReceivedTime = Instant.ofEpochMilli(1577836800000L) /* 2020-01-01 00:00:00 UTC */
         }
     }
 
@@ -1221,7 +1223,7 @@ class Vp9AdaptiveSourceProjectionTest {
         private var keyframePicture = false
         private var keyframeRequested = false
         private var frameCount = 0
-        private var receivedTime: Long = 0
+        private var receivedTime = baseReceivedTime
 
         override fun reset() {
             val useRandom = true // switch off to ease debugging
@@ -1285,7 +1287,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 keyframePicture = keyframeRequested
                 keyframeRequested = false
                 frameCount++
-                receivedTime = baseReceivedTime + frameCount * 100 / 3
+                receivedTime = baseReceivedTime + Duration.ofMillis(frameCount * 100L / 3)
             } else {
                 packetOfFrame++
             }
@@ -1337,7 +1339,7 @@ class Vp9AdaptiveSourceProjectionTest {
         private var packetCount = 0
         private var octetCount = 0
         private var frameCount = 0
-        private var receivedTime: Long = 0
+        private var receivedTime = baseReceivedTime
         override fun reset() {
             val useRandom = true // switch off to ease debugging
             val seed = System.currentTimeMillis()
@@ -1450,7 +1452,7 @@ class Vp9AdaptiveSourceProjectionTest {
                     tidCycle = 0
                 }
                 frameCount++
-                receivedTime = baseReceivedTime + frameCount * 100 / 3
+                receivedTime = baseReceivedTime + Duration.ofMillis(frameCount * 100L / 3)
             }
             return info
         }
@@ -1470,7 +1472,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 val srPacketBuilder = RtcpSrPacketBuilder()
                 srPacketBuilder.rtcpHeader.senderSsrc = ssrc
                 val siBuilder = srPacketBuilder.senderInfo
-                setSIBuilderNtp(srPacketBuilder.senderInfo, receivedTime)
+                setSIBuilderNtp(srPacketBuilder.senderInfo, receivedTime.toEpochMilli())
                 siBuilder.rtpTimestamp = ts
                 siBuilder.sendersOctetCount = packetCount.toLong()
                 siBuilder.sendersOctetCount = octetCount.toLong()

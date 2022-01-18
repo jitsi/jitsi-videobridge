@@ -27,6 +27,8 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.json.simple.JSONObject
+import java.time.Duration
+import java.time.Instant
 
 /**
  * This class is responsible for dropping VP9 simulcast/svc packets based on
@@ -41,10 +43,10 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     private val logger: Logger = createChildLogger(parentLogger)
 
     /**
-     * Holds the arrival time (in millis) of the most recent keyframe group.
+     * Holds the arrival time of the most recent keyframe group.
      * Reading/writing of this field is synchronized on this instance.
      */
-    private var mostRecentKeyframeGroupArrivalTimeMs = -1L
+    private var mostRecentKeyframeGroupArrivalTime: Instant? = null
 
     /**
      * A boolean flag that indicates whether a keyframe is needed, due to an
@@ -91,7 +93,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * @param incomingIndex the quality index of the incoming RTP packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
-     * @param receivedMs the current time (in millis)
+     * @param receivedTime the current time (as an Instant)
      * @return true to accept the VP9 frame, otherwise false.
      */
     @Synchronized
@@ -99,10 +101,10 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         frame: Vp9Frame,
         incomingIndex: Int,
         externalTargetIndex: Int,
-        receivedMs: Long
+        receivedTime: Instant?
     ): AcceptResult {
         val prevIndex = currentIndex
-        val accept = doAcceptFrame(frame, incomingIndex, externalTargetIndex, receivedMs)
+        val accept = doAcceptFrame(frame, incomingIndex, externalTargetIndex, receivedTime)
         val mark = if (frame.isInterPicturePredicted) {
             getSidFromIndex(incomingIndex) == getSidFromIndex(currentIndex)
         } else {
@@ -120,7 +122,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         frame: Vp9Frame,
         incomingIndex: Int,
         externalTargetIndex: Int,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Boolean {
         val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
         val currentEncoding = getEidFromIndex(currentIndex)
@@ -148,7 +150,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            val accept = acceptKeyframe(incomingIndex, receivedMs)
+            val accept = acceptKeyframe(incomingIndex, receivedTime)
             if (accept) {
                 // Keyframes reset layer forwarding, whether or not they're an encoding switch
                 for (i in layers.indices) {
@@ -157,7 +159,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             }
             accept
         } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
-            if (isOutOfSwitchingPhase(receivedMs) && isPossibleToSwitch(incomingEncoding)) {
+            if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
                 // that trigger this. what happens is the client sends a base
                 // layer key frame, the bridge switches to that layer because
@@ -284,13 +286,19 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * Returns a boolean that indicates whether we are in layer switching phase
      * or not.
      *
-     * @param receivedMs the time the latest frame was received (in millis)
+     * @param receivedTime the time the latest frame was received
      * @return true if we're in layer switching phase, false otherwise.
      */
     @Synchronized
-    private fun isOutOfSwitchingPhase(receivedMs: Long): Boolean {
-        val deltaMs = receivedMs - mostRecentKeyframeGroupArrivalTimeMs
-        return deltaMs > MIN_KEY_FRAME_WAIT_MS
+    private fun isOutOfSwitchingPhase(receivedTime: Instant?): Boolean {
+        if (receivedTime == null) {
+            return false
+        }
+        if (mostRecentKeyframeGroupArrivalTime == null) {
+            return true
+        }
+        val delta = Duration.between(mostRecentKeyframeGroupArrivalTime, receivedTime)
+        return delta > MIN_KEY_FRAME_WAIT
     }
 
     /**
@@ -325,13 +333,13 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * synchronized keyword because there's only one thread accessing this
      * method at a time.
      *
-     * @param receivedMs the time the frame was received (in millis)
+     * @param receivedTime the time the frame was received
      * @return true to accept the VP9 keyframe, otherwise false.
      */
     @Synchronized
     private fun acceptKeyframe(
         incomingIndex: Int,
-        receivedMs: Long
+        receivedTime: Instant?
     ): Boolean {
         val encodingIdOfKeyframe = getEidFromIndex(incomingIndex)
         // This branch writes the {@link #currentSpatialLayerId} and it
@@ -354,12 +362,12 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         // The keyframe request has been fulfilled at this point, regardless of
         // whether we'll be able to achieve the internalEncodingIdTarget.
         needsKeyframe = false
-        return if (isOutOfSwitchingPhase(receivedMs)) {
+        return if (isOutOfSwitchingPhase(receivedTime)) {
             // During the switching phase we always project the first
             // keyframe because it may very well be the only one that we
             // receive (i.e. the endpoint is sending low quality only). Then
             // we try to approach the target.
-            mostRecentKeyframeGroupArrivalTimeMs = receivedMs
+            mostRecentKeyframeGroupArrivalTime = receivedTime
             logger.debug {
                 "First keyframe in this kf group " +
                     "currentEncodingId: $encodingIdOfKeyframe. " +
@@ -424,7 +432,10 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         pt.addField("qf.currentIndex", indexString(currentIndex))
             .addField("qf.internalTargetEncoding", internalTargetEncoding)
             .addField("qf.needsKeyframe", needsKeyframe)
-            .addField("qf.mostRecentKeyframeGroupArrivalTimeMs", mostRecentKeyframeGroupArrivalTimeMs)
+            .addField(
+                "qf.mostRecentKeyframeGroupArrivalTimeMs",
+                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
+            )
         for (i in layers.indices) {
             pt.addField("qf.layer.$i", layers[i])
         }
@@ -441,7 +452,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     val debugState: JSONObject
         get() {
             val debugState = JSONObject()
-            debugState["mostRecentKeyframeGroupArrivalTimeMs"] = mostRecentKeyframeGroupArrivalTimeMs
+            debugState["mostRecentKeyframeGroupArrivalTimeMs"] =
+                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
             debugState["needsKeyframe"] = needsKeyframe
             debugState["internalTargetIndex"] = internalTargetEncoding
             debugState["currentIndex"] = indexString(currentIndex)
@@ -456,10 +468,10 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
     companion object {
         /**
-         * The default maximum frequency (in millis) at which the media engine
+         * The default maximum frequency at which the media engine
          * generates key frame.
          */
-        private const val MIN_KEY_FRAME_WAIT_MS = 300
+        private val MIN_KEY_FRAME_WAIT = Duration.ofMillis(300)
 
         /**
          * The maximum possible number of VP9 spatial layers.
