@@ -16,6 +16,8 @@
 package org.jitsi.rtp.util
 
 import org.jitsi.utils.TimeUtils
+import java.time.Duration
+import java.time.Instant
 
 class RtpUtils {
     companion object {
@@ -145,6 +147,11 @@ class RtpUtils {
         @JvmStatic
         fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Int): Long {
             return ((rtpTimestamp / (ticksPerSecond.toDouble())) * 1000).toLong()
+        }
+
+        @JvmStatic
+        fun convertRtpTimestampToInstant(rtpTimestamp: Int, ticksPerSecond: Int): Instant {
+            return Instant.EPOCH.plus(Duration.ofSeconds(rtpTimestamp.toLong()).dividedBy(ticksPerSecond.toLong()))
         }
     }
 }
