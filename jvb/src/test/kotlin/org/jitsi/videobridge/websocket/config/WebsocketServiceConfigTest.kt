@@ -20,6 +20,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.test.TestCase
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withNewConfig
 import org.jitsi.metaconfig.ConfigException
 
 class WebsocketServiceConfigTest : ConfigTest() {

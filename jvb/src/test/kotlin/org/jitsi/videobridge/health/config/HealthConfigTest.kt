@@ -18,6 +18,8 @@ package org.jitsi.videobridge.health.config
 
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withLegacyConfig
+import org.jitsi.config.withNewConfig
 import java.time.Duration
 
 class HealthConfigTest : ConfigTest() {

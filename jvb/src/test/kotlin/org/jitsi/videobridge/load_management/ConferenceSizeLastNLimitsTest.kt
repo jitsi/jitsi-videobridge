@@ -17,6 +17,7 @@ package org.jitsi.videobridge.load_management
 
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withNewConfig
 
 class ConferenceSizeLastNLimitsTest : ConfigTest() {
     init {

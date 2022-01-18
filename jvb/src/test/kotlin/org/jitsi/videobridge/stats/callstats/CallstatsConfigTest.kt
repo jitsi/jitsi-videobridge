@@ -18,6 +18,8 @@ package org.jitsi.videobridge.stats.callstats
 
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withLegacyConfig
+import org.jitsi.config.withNewConfig
 import org.jitsi.utils.secs
 
 internal class CallstatsConfigTest : ConfigTest() {
