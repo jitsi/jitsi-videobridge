@@ -40,7 +40,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import java.time.Clock
 import java.time.Duration
-import java.time.Instant
 import java.util.Collections
 
 /**
@@ -105,7 +104,7 @@ class RemoteBandwidthEstimator(
                 bwe.processPacketArrival(
                     now,
                     AbsSendTimeHeaderExtension.getTime(ext),
-                    Instant.ofEpochMilli(packetInfo.receivedTime),
+                    packetInfo.receivedTime,
                     rtpPacket.sequenceNumber,
                     rtpPacket.length.bytes
                 )

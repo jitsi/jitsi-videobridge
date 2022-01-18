@@ -22,6 +22,7 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
 import org.jitsi.utils.secs
+import java.time.Clock
 import java.util.concurrent.Executors
 
 /**
@@ -70,7 +71,7 @@ fun main() {
 
     producer.subscribe { pkt ->
         val packetInfo = PacketInfo(pkt)
-        packetInfo.receivedTime = System.currentTimeMillis()
+        packetInfo.receivedTime = Clock.systemUTC().instant()
         receiver.enqueuePacket(packetInfo)
     }
 

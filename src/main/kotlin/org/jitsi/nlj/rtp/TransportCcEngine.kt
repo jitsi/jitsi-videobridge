@@ -97,7 +97,7 @@ class TransportCcEngine(
         lastRtt = rtt
     }
 
-    override fun rtcpPacketReceived(rtcpPacket: RtcpPacket, receivedTime: Long) {
+    override fun rtcpPacketReceived(rtcpPacket: RtcpPacket, receivedTime: Instant?) {
         if (rtcpPacket is RtcpFbTccPacket) {
             tccReceived(rtcpPacket)
         }

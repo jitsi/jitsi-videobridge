@@ -29,6 +29,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging2.Logger
+import java.time.Instant
 
 /**
  * When a nack packet is received, the [NackHandler] will try to retrieve the
@@ -51,7 +52,7 @@ class NackHandler(
     private val logger = createChildLogger(parentLogger)
     private var currRtt: Double = -1.0
 
-    override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
+    override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
         if (packet is RtcpFbNackPacket) {
             onNackPacket(packet)
         }

@@ -28,3 +28,11 @@ val NEVER: Instant = Instant.MIN
 fun Instant.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.epochSecond, this.nano)
 
 fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.seconds, this.nano)
+
+fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
+    var sum: Duration = Duration.ZERO
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}

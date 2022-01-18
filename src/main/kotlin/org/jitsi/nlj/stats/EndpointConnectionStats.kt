@@ -116,17 +116,15 @@ class EndpointConnectionStats(
         }
     }
 
-    // TODO: change this flow to pass Instant instead of Long
-    override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Long) {
-        val receivedInstant = Instant.ofEpochMilli(receivedTime)
+    override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
         when (packet) {
             is RtcpSrPacket -> {
                 logger.cdebug { "Received SR packet with ${packet.reportBlocks.size} report blocks" }
-                packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedInstant, reportBlock) }
+                packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedTime, reportBlock) }
             }
             is RtcpRrPacket -> {
                 logger.cdebug { "Received RR packet with ${packet.reportBlocks.size} report blocks" }
-                packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedInstant, reportBlock) }
+                packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedTime, reportBlock) }
             }
             // Received TCC feedback reports loss on packets we *sent*
             is RtcpFbTccPacket -> processTcc(packet, outgoingLossTracker)
@@ -148,12 +146,18 @@ class EndpointConnectionStats(
         }
     }
 
-    private fun processReportBlock(receivedTime: Instant, reportBlock: RtcpReportBlock) = synchronized(lock) {
+    private fun processReportBlock(receivedTime: Instant?, reportBlock: RtcpReportBlock) = synchronized(lock) {
         if (reportBlock.lastSrTimestamp == 0L && reportBlock.delaySinceLastSr == 0L) {
             logger.cdebug {
                 "Report block for ssrc ${reportBlock.ssrc} didn't have SR data: " +
                     "lastSrTimestamp was ${reportBlock.lastSrTimestamp}, " +
                     "delaySinceLastSr was ${reportBlock.delaySinceLastSr}"
+            }
+            return
+        }
+        if (receivedTime == null) {
+            logger.cdebug {
+                "Arrival time of report block is null, cannot calculate RTT"
             }
             return
         }
@@ -169,9 +173,7 @@ class EndpointConnectionStats(
                         "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
                         "received time was $receivedTime"
                 )
-            } else if (rtt < -1.0) {
-                // Allow some small slop here, since receivedTime and srSentTime are only accurate to the nearest
-                // millisecond.
+            } else if (rtt < 0) {
                 logger.warn(
                     "Negative rtt value: $rtt ms, remote processing delay was " +
                         "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +

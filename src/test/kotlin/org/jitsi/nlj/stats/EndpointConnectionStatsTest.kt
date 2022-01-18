@@ -58,7 +58,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
 
                     val rrPacket = createRrPacket(lastSrTimestamp = 100, delaySinceLastSr = 50.ms)
 
-                    stats.rtcpPacketReceived(rrPacket, clock.instant().toEpochMilli())
+                    stats.rtcpPacketReceived(rrPacket, clock.instant())
                     context("the rtt") {
                         should("be updated correctly") {
                             mostRecentPublishedRtt shouldBe(10.0 plusOrMinus .1)
@@ -75,7 +75,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
                         val rrPacket = createRrPacket(lastSrTimestamp = 0, delaySinceLastSr = 50.ms)
                         clock.elapse(60.ms)
 
-                        stats.rtcpPacketReceived(rrPacket, clock.instant().toEpochMilli())
+                        stats.rtcpPacketReceived(rrPacket, clock.instant())
                         context("the rtt") {
                             should("be updated correctly") {
                                 mostRecentPublishedRtt shouldBe(10.0.plusOrMinus(.1))
@@ -87,7 +87,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
 
                         clock.elapse(60.ms)
 
-                        stats.rtcpPacketReceived(rrPacket, clock.instant().toEpochMilli())
+                        stats.rtcpPacketReceived(rrPacket, clock.instant())
 
                         // This case is indistinguishable from no SR being received
                         context("the rtt") {
@@ -102,7 +102,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
         context("when a report block is received for which we can't find an SR") {
             val rrPacket = createRrPacket(lastSrTimestamp = 100, delaySinceLastSr = 50.ms)
 
-            stats.rtcpPacketReceived(rrPacket, clock.instant().toEpochMilli())
+            stats.rtcpPacketReceived(rrPacket, clock.instant())
 
             context("the rtt") {
                 should("not have been updated") {
@@ -117,7 +117,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
                 run {
                     stats.rtcpPacketReceived(
                         createRrPacket(lastSrTimestamp = 0, delaySinceLastSr = 50.ms),
-                        clock.instant().toEpochMilli()
+                        clock.instant()
                     )
                 }
             }.run()

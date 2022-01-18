@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtcp
 
 import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.rtp.rtcp.RtcpPacket
+import java.time.Instant
 
 /**
  * A central place to allow the publishing of when RTCP packets are received or sent.  We're
@@ -31,7 +32,7 @@ class RtcpEventNotifier {
         rtcpListeners.add(listener)
     }
 
-    fun notifyRtcpReceived(packet: RtcpPacket, receivedTime: Long) {
+    fun notifyRtcpReceived(packet: RtcpPacket, receivedTime: Instant?) {
         rtcpListeners.forEach { it.rtcpPacketReceived(packet, receivedTime) }
     }
 

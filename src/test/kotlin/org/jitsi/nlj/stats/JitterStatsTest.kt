@@ -23,10 +23,11 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
+import java.time.Instant
 
 private data class StatPacketInfo(
     val packetInfo: PacketInfo,
-    val sentTimeMs: Long
+    val sentTime: Instant
 )
 
 private data class JitterPacketInfo(
@@ -37,8 +38,8 @@ private data class JitterPacketInfo(
 private fun createStatPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long): StatPacketInfo {
     val packetInfo = PacketInfo(RtpPacket(ByteArray(50), 0, 50))
     packetInfo.packetAs<RtpPacket>().sequenceNumber = seqNum
-    packetInfo.receivedTime = receivedTime
-    return StatPacketInfo(packetInfo, sentTime)
+    packetInfo.receivedTime = Instant.ofEpochMilli(receivedTime)
+    return StatPacketInfo(packetInfo, Instant.ofEpochMilli(sentTime))
 }
 
 private fun createJitterPacketInfo(
@@ -80,8 +81,8 @@ class JitterStatsTest : ShouldSpec() {
                 // step along the way
                 JitterPacketInfos.forEachIndexed { index, jitterPacketInfo ->
                     jitterStats.addPacket(
-                        jitterPacketInfo.statPacketInfo.sentTimeMs,
-                        jitterPacketInfo.statPacketInfo.packetInfo.receivedTime
+                        jitterPacketInfo.statPacketInfo.sentTime,
+                        jitterPacketInfo.statPacketInfo.packetInfo.receivedTime!!
                     )
                     withClue("After adding packet $index") {
                         jitterStats.jitter shouldBe (jitterPacketInfo.expectedJitter plusOrMinus .001)

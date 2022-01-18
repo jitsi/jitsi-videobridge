@@ -23,10 +23,11 @@ import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
+import java.time.Instant
 
 private data class StatPacketInfo(
     val packetInfo: PacketInfo,
-    val sentTimeMs: Long
+    val sentTime: Instant
 )
 
 private data class JitterPacketInfo(
@@ -37,8 +38,8 @@ private data class JitterPacketInfo(
 private fun createStatPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long): StatPacketInfo {
     val packetInfo = PacketInfo(RtpPacket(ByteArray(50), 0, 50))
     packetInfo.packetAs<RtpPacket>().sequenceNumber = seqNum
-    packetInfo.receivedTime = receivedTime
-    return StatPacketInfo(packetInfo, sentTime)
+    packetInfo.receivedTime = Instant.ofEpochMilli(receivedTime)
+    return StatPacketInfo(packetInfo, Instant.ofEpochMilli(sentTime))
 }
 
 private fun createJitterPacketInfo(
@@ -123,8 +124,8 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
             packetSequence.forEach {
                 streamStatistics.packetReceived(
                     it.packetInfo.packetAs(),
-                    it.sentTimeMs,
-                    it.packetInfo.receivedTime
+                    it.sentTime,
+                    it.packetInfo.receivedTime!!
                 )
             }
             val statSnapshot = streamStatistics.getSnapshotIfActive()
@@ -150,8 +151,8 @@ internal class IncomingSsrcStatsTest : ShouldSpec() {
             packetSequence2.forEach {
                 streamStatistics.packetReceived(
                     it.packetInfo.packetAs<RtpPacket>(),
-                    it.sentTimeMs,
-                    it.packetInfo.receivedTime
+                    it.sentTime,
+                    it.packetInfo.receivedTime!!
                 )
             }
 

@@ -56,7 +56,7 @@ class TccGeneratorNode(
     private var lastTccSentTime: Instant = NEVER
     private val lock = Any()
     // Tcc seq num -> arrival time in ms
-    private val packetArrivalTimes = TreeMap<Int, Long>()
+    private val packetArrivalTimes = TreeMap<Int, Instant>()
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
     private val tccFeedbackBitrate = BitrateTracker(1.secs, 10.ms)
@@ -92,7 +92,7 @@ class TccGeneratorNode(
     /**
      * @param tccSeqNum the extended sequence number.
      */
-    private fun addPacket(tccSeqNum: Int, timestamp: Long, isMarked: Boolean, ssrc: Long) {
+    private fun addPacket(tccSeqNum: Int, timestamp: Instant?, isMarked: Boolean, ssrc: Long) {
         synchronized(lock) {
             if (packetArrivalTimes.ceilingKey(windowStartSeq) == null) {
                 // Packets in map are all older than the start of the next tcc feedback packet,
@@ -104,7 +104,7 @@ class TccGeneratorNode(
                 windowStartSeq = tccSeqNum
             }
 
-            packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp)
+            timestamp?.run { packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp) }
             if (isTccReadyToSend(isMarked)) {
                 buildFeedback(ssrc).forEach { sendTcc(it) }
             }
@@ -123,12 +123,12 @@ class TccGeneratorNode(
                 mediaSourceSsrc = mediaSsrc,
                 feedbackPacketSeqNum = currTccSeqNum++
             )
-            currentTccPacket.SetBase(windowStartSeq, firstEntry.value * 1000)
+            currentTccPacket.SetBase(windowStartSeq, firstEntry.value.nano / 1000L)
 
             var nextSequenceNumber = windowStartSeq
             val feedbackBlockPackets = packetArrivalTimes.tailMap(windowStartSeq)
-            feedbackBlockPackets.forEach { (seq, timestampMs) ->
-                val timestampUs = timestampMs * 1000
+            feedbackBlockPackets.forEach { (seq, timestamp) ->
+                val timestampUs = timestamp.nano / 1000L
                 if (!currentTccPacket.AddReceivedPacket(seq, timestampUs)) {
                     tccPackets.add(currentTccPacket.build())
                     currentTccPacket = RtcpFbTccPacketBuilder(

@@ -97,7 +97,7 @@ class RemoteBandwidthEstimatorTest : ShouldSpec() {
         rtpPacketGenerator.generatePackets(ssrc = ssrc) {
             val ext =
                 it.packetAs<RtpPacket>().addHeaderExtension(astExtensionId, AbsSendTimeHeaderExtension.DATA_SIZE_BYTES)
-            AbsSendTimeHeaderExtension.setTime(ext, it.receivedTime * 1_000_000)
+            AbsSendTimeHeaderExtension.setTime(ext, it.receivedTime!!.toEpochMilli() * 1_000_000)
             remoteBandwidthEstimator.processPacket(it)
         }
     }

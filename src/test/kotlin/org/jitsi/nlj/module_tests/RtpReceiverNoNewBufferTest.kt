@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.test_utils.Pcaps
 import org.jitsi.utils.secs
+import java.time.Clock
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -69,7 +70,7 @@ fun main() {
     producer.subscribe { pkt ->
         sentArrays.offer(System.identityHashCode(pkt.buffer))
         val packetInfo = PacketInfo(pkt)
-        packetInfo.receivedTime = System.currentTimeMillis()
+        packetInfo.receivedTime = Clock.systemUTC().instant()
         receiver.enqueuePacket(packetInfo)
     }
 

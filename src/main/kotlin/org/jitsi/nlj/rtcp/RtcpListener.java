@@ -16,7 +16,10 @@
 
 package org.jitsi.nlj.rtcp;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.rtp.rtcp.*;
+
+import java.time.*;
 
 /**
  * NOTE(brian): Java doesn't see default implementation interface methods when
@@ -25,7 +28,7 @@ import org.jitsi.rtp.rtcp.*;
  * these methods as most listeners care about one but not the other
  */
 public interface RtcpListener {
-    default void rtcpPacketReceived(RtcpPacket packet, long receivedTime) {}
+    default void rtcpPacketReceived(RtcpPacket packet, @Nullable Instant receivedTime) {}
     default void rtcpPacketSent(RtcpPacket packet) {}
 }
 

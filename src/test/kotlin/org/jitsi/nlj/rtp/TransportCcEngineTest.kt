@@ -48,7 +48,7 @@ class TransportCcEngineTest : FunSpec() {
                 build()
             }
 
-            transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant().toEpochMilli())
+            transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant())
 
             with(transportCcEngine.getStatistics()) {
                 numMissingPacketReports shouldBe 3
@@ -65,14 +65,14 @@ class TransportCcEngineTest : FunSpec() {
                 AddReceivedPacket(4, 130)
                 build()
             }
-            transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant().toEpochMilli())
+            transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant())
 
             val tccPacket2 = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 2)) {
                 SetBase(4, 130)
                 AddReceivedPacket(4, 130)
                 build()
             }
-            transportCcEngine.rtcpPacketReceived(tccPacket2, clock.instant().toEpochMilli())
+            transportCcEngine.rtcpPacketReceived(tccPacket2, clock.instant())
 
             with(transportCcEngine.getStatistics()) {
                 numMissingPacketReports shouldBe 0
@@ -90,7 +90,7 @@ class TransportCcEngineTest : FunSpec() {
                 AddReceivedPacket(5, 130)
                 build()
             }
-            transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant().toEpochMilli())
+            transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant())
 
             val tccPacket2 = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 2)) {
                 SetBase(4, 130)
@@ -98,7 +98,7 @@ class TransportCcEngineTest : FunSpec() {
                 build()
             }
 
-            transportCcEngine.rtcpPacketReceived(tccPacket2, clock.instant().toEpochMilli())
+            transportCcEngine.rtcpPacketReceived(tccPacket2, clock.instant())
 
             with(transportCcEngine.getStatistics()) {
                 numMissingPacketReports shouldBe 0
