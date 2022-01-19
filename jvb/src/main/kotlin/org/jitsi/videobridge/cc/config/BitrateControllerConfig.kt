@@ -115,4 +115,9 @@ class BitrateControllerConfig {
         "videobridge.cc.max-time-between-calculations".from(JitsiConfig.newConfig)
     )
     fun maxTimeBetweenCalculations() = maxTimeBetweenCalculations
+
+    companion object {
+        @JvmField
+        val config = BitrateControllerConfig()
+    }
 }

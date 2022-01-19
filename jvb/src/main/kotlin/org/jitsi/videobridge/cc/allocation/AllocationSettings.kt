@@ -18,7 +18,7 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.videobridge.MultiStreamConfig
-import org.jitsi.videobridge.cc.config.BitrateControllerConfig
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.util.stream.Collectors
 import kotlin.math.min
@@ -79,8 +79,6 @@ internal class AllocationSettingsWrapper {
     internal var lastN: Int = -1
 
     private var videoConstraints: Map<String, VideoConstraints> = emptyMap()
-
-    private val config = BitrateControllerConfig()
 
     private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 

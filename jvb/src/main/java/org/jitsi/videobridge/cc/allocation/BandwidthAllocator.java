@@ -68,7 +68,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         // In any case, there are other triggers for re-allocation, so any suppression we do here will only last up to
         // a few seconds.
         long deltaBwe = Math.abs(currentBwe - previousBwe);
-        return deltaBwe > previousBwe * config.bweChangeThreshold();
+        return deltaBwe > previousBwe * BitrateControllerConfig.config.bweChangeThreshold();
 
         // If, on the other hand, the bwe has decreased, we require at least a 15% drop in order to update the bitrate
         // allocation. This is an ugly hack to prevent too many resolution/UI changes in case the bridge produces too
@@ -116,13 +116,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     private final Supplier<Boolean> trustBwe;
 
-    private final BitrateControllerConfig config = new BitrateControllerConfig();
-
     /**
      * The allocations settings signalled by the receiver.
      */
     private AllocationSettings allocationSettings
-            = new AllocationSettings(new VideoConstraints(config.thumbnailMaxHeightPx()));
+            = new AllocationSettings(new VideoConstraints(BitrateControllerConfig.config.thumbnailMaxHeightPx()));
 
     /**
      * The last time {@link BandwidthAllocator#update()} was called.
@@ -513,7 +511,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                                 allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
                                 diagnosticContext,
                                 clock,
-                                config,
                                 logger));
             }
         }
@@ -545,7 +542,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                         allocationSettings.getOnStageSources().contains(source.getSourceName()),
                         diagnosticContext,
                         clock,
-                        config,
                         logger));
         }
 
@@ -557,7 +553,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     void maybeUpdate()
     {
-        if (Duration.between(lastUpdateTime, clock.instant()).compareTo(config.maxTimeBetweenCalculations()) > 0)
+        if (Duration.between(lastUpdateTime, clock.instant())
+                .compareTo(BitrateControllerConfig.config.maxTimeBetweenCalculations()) > 0)
         {
             logger.debug("Forcing an update");
             TaskPools.CPU_POOL.execute(this::update);
