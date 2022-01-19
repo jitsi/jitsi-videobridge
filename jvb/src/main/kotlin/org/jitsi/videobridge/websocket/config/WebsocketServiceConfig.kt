@@ -72,4 +72,9 @@ class WebsocketServiceConfig {
             "videobridge.websockets.server-id".from(JitsiConfig.newConfig)
         }
     }
+
+    companion object {
+        @JvmField
+        val config = WebsocketServiceConfig()
+    }
 }
