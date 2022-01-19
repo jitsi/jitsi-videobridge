@@ -20,7 +20,7 @@ import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
-import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.Companion.config
+import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
@@ -53,6 +53,8 @@ class XmppConnection : IQListener {
     private val running = AtomicBoolean(false)
 
     var eventHandler: EventHandler? = null
+
+    val config = XmppClientConnectionConfig.config
 
     fun start() {
         if (running.compareAndSet(false, true)) {

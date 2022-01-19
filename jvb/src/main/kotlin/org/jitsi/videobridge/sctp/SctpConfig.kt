@@ -19,7 +19,7 @@ package org.jitsi.videobridge.sctp
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 
-class SctpConfig {
+class SctpConfig private constructor() {
     val enabled: Boolean by config { "videobridge.sctp.enabled".from(JitsiConfig.newConfig) }
 
     fun enabled() = enabled

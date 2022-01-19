@@ -20,7 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import java.time.Duration
 
-class EndpointConnectionStatusConfig {
+class EndpointConnectionStatusConfig private constructor() {
     val firstTransferTimeout: Duration by config {
         "org.jitsi.videobridge.EndpointConnectionStatus.FIRST_TRANSFER_TIMEOUT"
             .from(JitsiConfig.legacyConfig)

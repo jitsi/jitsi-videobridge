@@ -23,7 +23,7 @@ import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.metaconfig.optionalconfig
 
-class IceConfig {
+class IceConfig private constructor() {
     /**
      * Is ICE/TCP enabled.
      */

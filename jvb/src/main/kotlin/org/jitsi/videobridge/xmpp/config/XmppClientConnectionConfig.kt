@@ -27,7 +27,7 @@ import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 import java.time.Duration
 
-class XmppClientConnectionConfig {
+class XmppClientConnectionConfig private constructor() {
     val clientConfigs: List<MucClientConfiguration> by config {
         "org.jitsi.videobridge.xmpp.user."
             .from(JitsiConfig.legacyConfig)

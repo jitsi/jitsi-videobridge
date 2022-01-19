@@ -20,7 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import java.time.Duration
 
-class BandwidthProbingConfig {
+class BandwidthProbingConfig private constructor() {
     /**
      * How often we check to send probing data
      */

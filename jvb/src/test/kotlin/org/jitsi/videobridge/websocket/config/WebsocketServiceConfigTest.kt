@@ -17,20 +17,13 @@
 package org.jitsi.videobridge.websocket.config
 
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.test.TestCase
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
 import org.jitsi.config.withNewConfig
 import org.jitsi.metaconfig.ConfigException
+import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Companion.config
 
 class WebsocketServiceConfigTest : ConfigTest() {
-    private lateinit var config: WebsocketServiceConfig
-
-    override fun beforeTest(testCase: TestCase) {
-        super.beforeTest(testCase)
-        config = WebsocketServiceConfig()
-    }
-
     init {
         context("when websockets are disabled") {
             withNewConfig("videobridge.websockets.enabled = false") {

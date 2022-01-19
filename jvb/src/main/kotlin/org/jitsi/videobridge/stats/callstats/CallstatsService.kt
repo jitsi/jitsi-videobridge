@@ -124,7 +124,7 @@ class CallstatsService(
         get() = conferenceManager
 }
 
-class CallstatsConfig {
+class CallstatsConfig private constructor() {
     /**
      * The callstats AppID.
      */

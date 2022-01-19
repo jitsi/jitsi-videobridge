@@ -21,7 +21,7 @@ import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import java.time.Duration
 
-class HealthConfig {
+class HealthConfig private constructor() {
     val interval: Duration by config {
         "org.jitsi.videobridge.health.INTERVAL"
             .from(JitsiConfig.legacyConfig).convertFrom<Long>(Duration::ofMillis)

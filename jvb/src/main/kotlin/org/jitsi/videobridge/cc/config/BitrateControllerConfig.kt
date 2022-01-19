@@ -22,7 +22,7 @@ import org.jitsi.metaconfig.from
 import org.jitsi.nlj.util.Bandwidth
 import java.time.Duration
 
-class BitrateControllerConfig {
+class BitrateControllerConfig private constructor() {
     /**
      * The bandwidth estimation threshold.
      *

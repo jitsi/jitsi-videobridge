@@ -19,7 +19,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 
-class TransportConfig {
+class TransportConfig private constructor() {
     companion object {
         @JvmStatic
         val queueSize: Int by config("videobridge.transport.send.queue-size".from(JitsiConfig.newConfig))
