@@ -91,7 +91,7 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
-    XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.jidCacheSize)
+    XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.config.jidCacheSize)
     PacketQueue.setEnableStatisticsDefault(true)
 
     val xmppConnection = XmppConnection().apply { start() }

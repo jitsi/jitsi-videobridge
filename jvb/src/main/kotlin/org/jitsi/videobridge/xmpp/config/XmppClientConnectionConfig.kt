@@ -72,13 +72,16 @@ class XmppClientConnectionConfig {
         "videobridge.apis.xmpp-client.stats-filter.whitelist".from(JitsiConfig.newConfig)
     }
 
+    /**
+     * The size to set for Smack's JID cache
+     */
+    val jidCacheSize: Int by config {
+        "videobridge.apis.xmpp-client.jid-cache-size".from(JitsiConfig.newConfig)
+    }
+
     companion object {
-        /**
-         * The size to set for Smack's JID cache
-         */
-        val jidCacheSize: Int by config {
-            "videobridge.apis.xmpp-client.jid-cache-size".from(JitsiConfig.newConfig)
-        }
+        @JvmField
+        val config = XmppClientConnectionConfig()
     }
 }
 
