@@ -50,10 +50,12 @@ class LastNReducerTest : ShouldSpec() {
             val conf1 = createMockConference(4, 8, 12)
             val conf2 = createMockConference(2, 4, 10)
 
-            withNewConfig("""
+            withNewConfig(
+                """
                 videobridge.load-management.load-reducers.last-n.reduction-scale = .5
                 videobridge.load-management.load-reducers.last-n.recover-scale = 2
-                """.trimIndent()) {
+                """.trimIndent()
+            ) {
 
                 val reducer = LastNReducer(Supplier { listOf(conf1, conf2) }, jvbLastN)
                 context("running the reducer") {

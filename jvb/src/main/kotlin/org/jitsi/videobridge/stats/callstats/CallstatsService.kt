@@ -181,10 +181,10 @@ class CallstatsConfig private constructor() {
      */
     val interval: Duration
         get() = StatsManagerConfig.config.transportConfigs.stream()
-        .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
-        .map(StatsTransportConfig::interval)
-        .findFirst()
-        .orElse(intervalProperty)
+            .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
+            .map(StatsTransportConfig::interval)
+            .findFirst()
+            .orElse(intervalProperty)
 
     val enabled: Boolean
         get() = appId > 0

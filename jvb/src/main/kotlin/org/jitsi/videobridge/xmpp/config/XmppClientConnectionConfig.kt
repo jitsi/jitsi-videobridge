@@ -21,7 +21,6 @@ import com.typesafe.config.ConfigValue
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
-import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.config.StatsManagerConfig
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
