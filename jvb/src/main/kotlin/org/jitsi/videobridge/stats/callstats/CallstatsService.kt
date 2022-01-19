@@ -26,6 +26,7 @@ import org.jitsi.utils.version.Version
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.StatsTransport
+import org.jitsi.videobridge.stats.config.StatsManagerConfig
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import java.time.Duration
 
@@ -181,7 +182,7 @@ class CallstatsConfig {
      *
      * For backwards compatibility, we read it from the stats manager "callstatsio" transport, if present.
      */
-    val interval: Duration = StatsCollector.config.transportConfigs.stream()
+    val interval: Duration = StatsManagerConfig.config.transportConfigs.stream()
         .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
         .map(StatsTransportConfig::interval)
         .findFirst()

@@ -97,6 +97,11 @@ class StatsManagerConfig {
             else -> null
         }
     }
+
+    companion object {
+        @JvmField
+        val config = StatsManagerConfig()
+    }
 }
 
 /**
