@@ -23,7 +23,7 @@ import org.jitsi.utils.concurrent.PeriodicRunnable
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.videobridge.cc.allocation.BitrateControllerStatusSnapshot
-import org.jitsi.videobridge.cc.config.BandwidthProbingConfig
+import org.jitsi.videobridge.cc.config.BandwidthProbingConfig.Companion.config
 import org.json.simple.JSONObject
 import java.util.function.Supplier
 import kotlin.random.Random
@@ -133,7 +133,6 @@ class BandwidthProbing(
 
     companion object {
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(BandwidthProbing::class.java)
-        private val config = BandwidthProbingConfig()
     }
 
     interface ProbingDataSender {

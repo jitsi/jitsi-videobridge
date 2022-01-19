@@ -29,4 +29,9 @@ class BandwidthProbingConfig {
         "videobridge.cc.padding-period"
             .from(JitsiConfig.newConfig).convertFrom<Duration> { it.toMillis() }
     }
+
+    companion object {
+        @JvmField
+        val config = BandwidthProbingConfig()
+    }
 }
