@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2022 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package org.jitsi
+package org.jitsi.videobridge
 
-import io.kotest.core.spec.IsolationMode
-import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.core.config.AbstractProjectConfig
+import org.jitsi.metaconfig.MetaconfigSettings
 
-/**
- * A helper class for testing configuration properties
- */
-abstract class ConfigTest : ShouldSpec() {
-    override fun isolationMode() = IsolationMode.InstancePerLeaf
+class KotestProjectConfig : AbstractProjectConfig() {
+    override fun beforeAll() = super.beforeAll().also {
+        // The only purpose of config caching is performance. We always want caching disabled in tests (so we can
+        // freely modify the config without affecting other tests executing afterwards).
+        MetaconfigSettings.cacheEnabled = false
+    }
 }
