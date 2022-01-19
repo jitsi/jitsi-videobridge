@@ -25,6 +25,7 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.version.Version
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.stats.StatsTransport
+import org.jitsi.videobridge.stats.callstats.CallstatsConfig.Companion.config
 import org.jitsi.videobridge.stats.config.StatsManagerConfig
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import java.time.Duration
@@ -56,8 +57,6 @@ class CallstatsService(
 
     val statsTransport: StatsTransport?
         get() = callstatsTransport
-
-    val config = CallstatsConfig.config
 
     fun start(
         /**

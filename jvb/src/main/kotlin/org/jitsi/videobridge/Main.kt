@@ -102,7 +102,7 @@ fun main(args: Array<String>) {
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
         start()
-        addTransport(MucStatsTransport(xmppConnection), xmppConnection.config.presenceInterval.toMillis())
+        addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
     }
 
     val callstats = if (CallstatsConfig.config.enabled) {
