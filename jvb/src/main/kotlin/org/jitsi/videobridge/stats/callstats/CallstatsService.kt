@@ -24,7 +24,6 @@ import org.jitsi.stats.media.StatsServiceFactory
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.version.Version
 import org.jitsi.videobridge.Videobridge
-import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.StatsTransport
 import org.jitsi.videobridge.stats.config.StatsManagerConfig
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
@@ -57,6 +56,8 @@ class CallstatsService(
 
     val statsTransport: StatsTransport?
         get() = callstatsTransport
+
+    val config = CallstatsConfig.config
 
     fun start(
         /**
@@ -121,10 +122,6 @@ class CallstatsService(
 
     val videobridgeEventHandler: Videobridge.EventHandler?
         get() = conferenceManager
-
-    companion object {
-        val config = CallstatsConfig()
-    }
 }
 
 class CallstatsConfig {
@@ -192,4 +189,9 @@ class CallstatsConfig {
 
     override fun toString() = "appId=$appId, appSecret is ${if (appSecret == null) "unset" else "set"}, keyId=$keyId," +
         " keyPath=$keyPath, bridgeId=$bridgeId, conferenceIdPrefix=$conferenceIdPrefix, interval=$interval"
+
+    companion object {
+        @JvmField
+        val config = CallstatsConfig()
+    }
 }

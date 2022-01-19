@@ -26,8 +26,7 @@ internal class CallstatsConfigTest : ConfigTest() {
     init {
         context("Setting the API configuration") {
             context("Without config") {
-                val config = CallstatsConfig()
-                config.enabled shouldBe false
+                CallstatsConfig.config.enabled shouldBe false
             }
             context("With legacy config") {
                 withLegacyConfig(
@@ -39,13 +38,14 @@ internal class CallstatsConfigTest : ConfigTest() {
                     io.callstats.sdk.CallStats.conferenceIDPrefix=baz
                     """.trimIndent()
                 ) {
-                    val config = CallstatsConfig()
-                    config.appId shouldBe 1234
-                    config.enabled shouldBe true
-                    config.keyId shouldBe "foo"
-                    config.keyPath shouldBe "/tmp/ecpriv.jwk"
-                    config.bridgeId shouldBe "bar"
-                    config.conferenceIdPrefix shouldBe "baz"
+                    CallstatsConfig.config.apply {
+                        appId shouldBe 1234
+                        enabled shouldBe true
+                        keyId shouldBe "foo"
+                        keyPath shouldBe "/tmp/ecpriv.jwk"
+                        bridgeId shouldBe "bar"
+                        conferenceIdPrefix shouldBe "baz"
+                    }
                 }
             }
             context("With new config") {
@@ -61,19 +61,20 @@ internal class CallstatsConfigTest : ConfigTest() {
                     """.trimIndent(),
                     loadDefaults = true
                 ) {
-                    val config = CallstatsConfig()
-                    config.appId shouldBe 1234
-                    config.enabled shouldBe true
-                    config.keyId shouldBe "foo"
-                    config.keyPath shouldBe "/tmp/ecpriv.jwk"
-                    config.bridgeId shouldBe "bar"
-                    config.conferenceIdPrefix shouldBe "baz"
+                    CallstatsConfig.config.apply {
+                        appId shouldBe 1234
+                        enabled shouldBe true
+                        keyId shouldBe "foo"
+                        keyPath shouldBe "/tmp/ecpriv.jwk"
+                        bridgeId shouldBe "bar"
+                        conferenceIdPrefix shouldBe "baz"
+                    }
                 }
             }
         }
         context("Setting the interval") {
             context("Default value") {
-                CallstatsConfig().interval shouldBe 5.secs
+                CallstatsConfig.config.interval shouldBe 5.secs
             }
             context("With legacy config") {
                 withLegacyConfig(
@@ -82,7 +83,7 @@ internal class CallstatsConfigTest : ConfigTest() {
                     org.jitsi.videobridge.STATISTICS_TRANSPORT=callstats.io
                     """.trimIndent()
                 ) {
-                    CallstatsConfig().interval shouldBe 6.secs
+                    CallstatsConfig.config.interval shouldBe 6.secs
                 }
             }
             context("With new config (deprecated syntax)") {
@@ -98,12 +99,12 @@ internal class CallstatsConfigTest : ConfigTest() {
                     """.trimIndent(),
                     loadDefaults = true
                 ) {
-                    CallstatsConfig().interval shouldBe 7.secs
+                    CallstatsConfig.config.interval shouldBe 7.secs
                 }
             }
             context("With new config") {
                 withNewConfig("videobridge.stats.callstats.interval = 8 seconds", loadDefaults = true) {
-                    CallstatsConfig().interval shouldBe 8.secs
+                    CallstatsConfig.config.interval shouldBe 8.secs
                 }
             }
         }
