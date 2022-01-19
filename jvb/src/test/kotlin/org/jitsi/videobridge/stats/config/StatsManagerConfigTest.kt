@@ -20,6 +20,8 @@ import io.kotest.inspectors.forOne
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withLegacyConfig
+import org.jitsi.config.withNewConfig
 import java.time.Duration
 
 internal class StatsManagerConfigTest : ConfigTest() {

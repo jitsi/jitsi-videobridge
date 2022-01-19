@@ -20,6 +20,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.jitsi.ConfigTest
+import org.jitsi.config.withNewConfig
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate

@@ -20,6 +20,8 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withLegacyConfig
+import org.jitsi.config.withNewConfig
 import org.jivesoftware.smack.ConnectionConfiguration
 
 internal class XmppClientConnectionConfigTest : ConfigTest() {
@@ -66,7 +68,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                 }
             }
             context("when defined in new config") {
-                withNewConfig(newConfigSingleXmppConnection, true) {
+                withNewConfig(newConfigSingleXmppConnection) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
                         configs shouldHaveSize 1
@@ -86,7 +88,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
                 }
             }
             context("when defined in new config with some incomplete") {
-                withNewConfig(newConfigOneCompleteConnectionOneIncompleteOneBroken, true) {
+                withNewConfig(newConfigOneCompleteConnectionOneIncompleteOneBroken) {
                     should("parse things correctly") {
                         val configs = XmppClientConnectionConfig().clientConfigs
                         configs shouldHaveSize 1

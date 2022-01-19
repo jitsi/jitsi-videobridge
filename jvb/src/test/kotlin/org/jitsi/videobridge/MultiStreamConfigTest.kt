@@ -18,6 +18,7 @@ package org.jitsi.videobridge
 
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withNewConfig
 
 class MultiStreamConfigTest : ConfigTest() {
     init {

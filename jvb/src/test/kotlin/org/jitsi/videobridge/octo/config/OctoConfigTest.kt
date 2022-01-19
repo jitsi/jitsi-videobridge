@@ -2,6 +2,8 @@ package org.jitsi.videobridge.octo.config
 
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
+import org.jitsi.config.withLegacyConfig
+import org.jitsi.config.withNewConfig
 
 internal class OctoConfigTest : ConfigTest() {
     init {
