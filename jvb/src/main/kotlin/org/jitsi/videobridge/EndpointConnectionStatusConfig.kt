@@ -39,4 +39,9 @@ class EndpointConnectionStatusConfig {
         "videobridge.ep-connection-status.check-interval".from(JitsiConfig.newConfig)
             .convertFrom<Duration>(Duration::toMillis)
     }
+
+    companion object {
+        @JvmField
+        val config = EndpointConnectionStatusConfig()
+    }
 }
