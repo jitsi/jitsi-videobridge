@@ -179,13 +179,15 @@ class CallstatsConfig {
      *
      * For backwards compatibility, we read it from the stats manager "callstatsio" transport, if present.
      */
-    val interval: Duration = StatsManagerConfig.config.transportConfigs.stream()
+    val interval: Duration
+        get() = StatsManagerConfig.config.transportConfigs.stream()
         .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
         .map(StatsTransportConfig::interval)
         .findFirst()
         .orElse(intervalProperty)
 
-    val enabled: Boolean = appId > 0
+    val enabled: Boolean
+        get() = appId > 0
 
     override fun toString() = "appId=$appId, appSecret is ${if (appSecret == null) "unset" else "set"}, keyId=$keyId," +
         " keyPath=$keyPath, bridgeId=$bridgeId, conferenceIdPrefix=$conferenceIdPrefix, interval=$interval"
