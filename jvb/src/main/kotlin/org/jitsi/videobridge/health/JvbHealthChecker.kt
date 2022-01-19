@@ -19,11 +19,10 @@ package org.jitsi.videobridge.health
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
 import org.jitsi.health.HealthCheckService
 import org.jitsi.health.HealthChecker
-import org.jitsi.videobridge.health.config.HealthConfig
+import org.jitsi.videobridge.health.config.HealthConfig.Companion.config
 import org.jitsi.videobridge.ice.Harvesters
 
 class JvbHealthChecker : HealthCheckService {
-    private val config = HealthConfig()
     private val healthChecker = HealthChecker(
         config.interval,
         config.timeout,

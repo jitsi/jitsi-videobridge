@@ -40,4 +40,9 @@ class HealthConfig {
         "org.jitsi.videobridge.health.STICKY_FAILURES".from(JitsiConfig.legacyConfig)
         "videobridge.health.sticky-failures".from(JitsiConfig.newConfig)
     }
+
+    companion object {
+        @JvmField
+        val config = HealthConfig()
+    }
 }
