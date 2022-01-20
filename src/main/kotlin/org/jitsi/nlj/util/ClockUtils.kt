@@ -18,9 +18,9 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.utils.TimeUtils
 import java.time.Duration
 import java.time.Instant
-import org.jitsi.utils.TimeUtils
 
 @JvmField
 val NEVER: Instant = Instant.MIN
@@ -28,6 +28,47 @@ val NEVER: Instant = Instant.MIN
 fun Instant.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.epochSecond, this.nano)
 
 fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.seconds, this.nano)
+
+/**
+ * Converts this instant to the number of microseconds from the epoch
+ * of 1970-01-01T00:00:00Z.
+ *
+ * If this instant represents a point on the time-line too far in the future
+ * or past to fit in a [Long] microseconds, then an exception is thrown.
+ *
+ * If this instant has greater than microsecond precision, then the conversion
+ * will drop any excess precision information as though the amount in nanoseconds
+ * was subject to integer division by one thousand.
+ *
+ * @return the number of microseconds since the epoch of 1970-01-01T00:00:00Z
+ * @throws ArithmeticException if numeric overflow occurs
+ */
+fun Instant.toEpochMicro(): Long {
+    return if (this.epochSecond < 0 && this.nano > 0) {
+        val micros = Math.multiplyExact(this.epochSecond + 1, 1000_000)
+        val adjustment: Long = (this.nano / 1000 - 1000_000).toLong()
+        Math.addExact(micros, adjustment)
+    } else {
+        val micros = Math.multiplyExact(this.epochSecond, 1000_000)
+        Math.addExact(micros, (this.nano / 1000).toLong())
+    }
+}
+
+/**
+ * Obtains an instance of [Instant] using microseconds from the
+ * epoch of 1970-01-01T00:00:00Z.
+ * <p>
+ * The seconds and nanoseconds are extracted from the specified milliseconds.
+ *
+ * @param epochMicro the number of microseconds from 1970-01-01T00:00:00Z
+ * @return an instant, not null
+ * @throws DateTimeException if the instant exceeds the maximum or minimum instant
+ */
+fun instantOfEpochMicro(epochMicro: Long): Instant {
+    val secs = Math.floorDiv(epochMicro, 1000_000)
+    val micros = Math.floorMod(epochMicro, 1000_000)
+    return Instant.ofEpochSecond(secs, micros * 1000L)
+}
 
 fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
     var sum: Duration = Duration.ZERO

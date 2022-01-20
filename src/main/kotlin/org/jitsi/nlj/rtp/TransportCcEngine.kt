@@ -22,6 +22,7 @@ import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.instantOfEpochMicro
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.nlj.util.formatMilli
@@ -105,7 +106,7 @@ class TransportCcEngine(
 
     private fun tccReceived(tccPacket: RtcpFbTccPacket) {
         val now = clock.instant()
-        var currArrivalTimestamp = Instant.ofEpochMilli((tccPacket.GetBaseTimeUs() + 500) / 1000)
+        var currArrivalTimestamp = instantOfEpochMicro(tccPacket.GetBaseTimeUs())
         if (remoteReferenceTime == NEVER) {
             remoteReferenceTime = currArrivalTimestamp
             localReferenceTime = now
