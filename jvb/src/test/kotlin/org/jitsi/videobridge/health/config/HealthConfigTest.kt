@@ -29,7 +29,7 @@ class HealthConfigTest : ConfigTest() {
                 withLegacyConfig(legacyConfigWithHealthInterval) {
                     withNewConfig(newConfigWithHealthInterval) {
                         should("use the value from legacy config") {
-                            HealthConfig().interval shouldBe Duration.ofSeconds(1)
+                            HealthConfig.config.interval shouldBe Duration.ofSeconds(1)
                         }
                     }
                 }
@@ -37,7 +37,7 @@ class HealthConfigTest : ConfigTest() {
             context("when only new config defines a value") {
                 withNewConfig(newConfigWithHealthInterval) {
                     should("use the value from the new config") {
-                        HealthConfig().interval shouldBe Duration.ofSeconds(5)
+                        HealthConfig.config.interval shouldBe Duration.ofSeconds(5)
                     }
                 }
             }

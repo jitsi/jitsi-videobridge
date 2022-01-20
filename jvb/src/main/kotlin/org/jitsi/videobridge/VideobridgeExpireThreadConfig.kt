@@ -21,12 +21,17 @@ import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import java.time.Duration
 
-class VideobridgeExpireThreadConfig {
+class VideobridgeExpireThreadConfig private constructor() {
     val inactivityTimeout: Duration by config("videobridge.entity-expiration.timeout".from(JitsiConfig.newConfig))
 
     val interval: Duration by config {
         "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC".from(JitsiConfig.legacyConfig)
             .convertFrom<Long>(Duration::ofSeconds)
         "videobridge.entity-expiration.check-interval".from(JitsiConfig.newConfig)
+    }
+
+    companion object {
+        @JvmField
+        val config = VideobridgeExpireThreadConfig()
     }
 }

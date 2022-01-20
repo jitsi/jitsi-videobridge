@@ -38,6 +38,7 @@ import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.VideobridgeStatistics
+import org.jitsi.videobridge.stats.callstats.CallstatsConfig
 import org.jitsi.videobridge.stats.callstats.CallstatsService
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
@@ -91,7 +92,7 @@ fun main(args: Array<String>) {
 
     startIce4j()
 
-    XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.jidCacheSize)
+    XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.config.jidCacheSize)
     PacketQueue.setEnableStatisticsDefault(true)
 
     val xmppConnection = XmppConnection().apply { start() }
@@ -101,14 +102,14 @@ fun main(args: Array<String>) {
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
         start()
-        addTransport(MucStatsTransport(xmppConnection), xmppConnection.config.presenceInterval.toMillis())
+        addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
     }
 
-    val callstats = if (CallstatsService.config.enabled) {
+    val callstats = if (CallstatsConfig.config.enabled) {
         CallstatsService(videobridge.version).apply {
             start {
                 statsTransport?.let { statsTransport ->
-                    statsCollector.addTransport(statsTransport, CallstatsService.config.interval.toMillis())
+                    statsCollector.addTransport(statsTransport, CallstatsConfig.config.interval.toMillis())
                 } ?: throw IllegalStateException("Stats transport is null after the service is started")
 
                 videobridge.addEventHandler(videobridgeEventHandler)

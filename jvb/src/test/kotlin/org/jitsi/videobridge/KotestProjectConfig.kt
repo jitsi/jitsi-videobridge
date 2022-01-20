@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2020 - present 8x8, Inc.
+ * Copyright @ 2022 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,13 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.config.JitsiConfig.Companion.newConfig
-import org.jitsi.metaconfig.config
-import org.jitsi.metaconfig.from
+import io.kotest.core.config.AbstractProjectConfig
+import org.jitsi.metaconfig.MetaconfigSettings
 
-class EndpointMessageTransportConfig private constructor() {
-    val announceVersion: Boolean by config("videobridge.version.announce".from(newConfig))
-    fun announceVersion() = announceVersion
-
-    companion object {
-        @JvmField
-        val config = EndpointMessageTransportConfig()
+class KotestProjectConfig : AbstractProjectConfig() {
+    override fun beforeAll() = super.beforeAll().also {
+        // The only purpose of config caching is performance. We always want caching disabled in tests (so we can
+        // freely modify the config without affecting other tests executing afterwards).
+        MetaconfigSettings.cacheEnabled = false
     }
 }

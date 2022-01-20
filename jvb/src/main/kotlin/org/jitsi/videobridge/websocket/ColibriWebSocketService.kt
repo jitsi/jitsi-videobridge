@@ -20,13 +20,11 @@ import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
-import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
+import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Companion.config
 
 class ColibriWebSocketService(
     webserverIsTls: Boolean
 ) {
-    private val config = WebsocketServiceConfig()
-
     private val baseUrl: String?
     private val relayUrl: String? /* TODO: only enable this if secure octo is enabled? */
 

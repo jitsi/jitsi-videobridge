@@ -25,12 +25,12 @@ class MultiStreamConfigTest : ConfigTest() {
         context("multi-stream-config") {
             context("when enabled") {
                 withNewConfig(configWithMultiStreamEnabled) {
-                    MultiStreamConfig().enabled shouldBe true
+                    MultiStreamConfig.config.enabled shouldBe true
                 }
             }
             context("when disabled") {
                 withNewConfig(configWithMultiStreamDisabled) {
-                    MultiStreamConfig().enabled shouldBe false
+                    MultiStreamConfig.config.enabled shouldBe false
                 }
             }
         }

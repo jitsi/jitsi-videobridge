@@ -21,7 +21,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.relay.*;
-import org.jitsi.videobridge.websocket.config.*;
+import static org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.config;
 
 import java.io.*;
 import java.util.*;
@@ -46,8 +46,6 @@ class ColibriWebSocketServlet
 
     @NotNull
     private final Videobridge videobridge;
-
-    @NotNull private final WebsocketServiceConfig config = new WebsocketServiceConfig();
 
     /**
      * Initializes a new {@link ColibriWebSocketServlet} instance.

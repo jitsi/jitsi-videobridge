@@ -22,7 +22,7 @@ import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.metaconfig.optionalconfig
 
-class OctoConfig {
+class OctoConfig private constructor() {
     val recvQueueSize: Int by config("videobridge.octo.recv-queue-size".from(JitsiConfig.newConfig))
 
     val sendQueueSize: Int by config("videobridge.octo.send-queue-size".from(JitsiConfig.newConfig))

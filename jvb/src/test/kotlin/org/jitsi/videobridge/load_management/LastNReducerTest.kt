@@ -24,6 +24,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import org.jitsi.config.setNewConfig
+import org.jitsi.config.withNewConfig
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.Endpoint
@@ -31,7 +32,7 @@ import org.jitsi.videobridge.JvbLastN
 import java.util.function.Supplier
 
 class LastNReducerTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    override fun isolationMode() = IsolationMode.InstancePerLeaf
 
     private val jvbLastN = spyk<JvbLastN>()
 
@@ -49,36 +50,37 @@ class LastNReducerTest : ShouldSpec() {
             val conf1 = createMockConference(4, 8, 12)
             val conf2 = createMockConference(2, 4, 10)
 
-            val reducer = withLastNConfig(
+            withNewConfig(
                 """
-                reduction-scale = .5
-                recover-scale = 2
-                """
+                videobridge.load-management.load-reducers.last-n.reduction-scale = .5
+                videobridge.load-management.load-reducers.last-n.recover-scale = 2
+                """.trimIndent()
             ) {
-                LastNReducer(Supplier { listOf(conf1, conf2) }, jvbLastN)
-            }
-            context("running the reducer") {
-                reducer.reduceLoad()
-                should("set the right last-n value") {
-                    // The highest forwarded count was 12, and the reduction factor was .5, so
-                    // it should be set to 6
-                    verify(exactly = 1) { jvbLastN setProperty "jvbLastN" value 6 }
-                }
-            }
-            context("and no jvb last-n has been set") {
-                context("running recovery") {
-                    reducer.recover() shouldBe false
-                    should("not alter the last-n value") {
-                        verify(exactly = 0) { jvbLastN setProperty "jvbLastN" value any<Int>() }
+
+                val reducer = LastNReducer(Supplier { listOf(conf1, conf2) }, jvbLastN)
+                context("running the reducer") {
+                    reducer.reduceLoad()
+                    should("set the right last-n value") {
+                        // The highest forwarded count was 12, and the reduction factor was .5, so
+                        // it should be set to 6
+                        verify(exactly = 1) { jvbLastN setProperty "jvbLastN" value 6 }
                     }
                 }
-            }
-            context("and a jvb last-n has been set") {
-                jvbLastN.jvbLastN = 4
-                context("running recovery") {
-                    reducer.recover() shouldBe true
-                    should("increase the jvb last-n value") {
-                        verify(exactly = 1) { jvbLastN setProperty "jvbLastN" value 8 }
+                context("and no jvb last-n has been set") {
+                    context("running recovery") {
+                        reducer.recover() shouldBe false
+                        should("not alter the last-n value") {
+                            verify(exactly = 0) { jvbLastN setProperty "jvbLastN" value any<Int>() }
+                        }
+                    }
+                }
+                context("and a jvb last-n has been set") {
+                    jvbLastN.jvbLastN = 4
+                    context("running recovery") {
+                        reducer.recover() shouldBe true
+                        should("increase the jvb last-n value") {
+                            verify(exactly = 1) { jvbLastN setProperty "jvbLastN" value 8 }
+                        }
                     }
                 }
             }

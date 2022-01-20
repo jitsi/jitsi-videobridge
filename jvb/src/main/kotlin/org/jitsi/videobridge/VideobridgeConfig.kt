@@ -20,7 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import java.time.Duration
 
-class VideobridgeConfig {
+class VideobridgeConfig private constructor() {
     companion object {
         val gracefulShutdownDelay: Duration by config {
             "videobridge.graceful-shutdown-delay".from(JitsiConfig.newConfig)

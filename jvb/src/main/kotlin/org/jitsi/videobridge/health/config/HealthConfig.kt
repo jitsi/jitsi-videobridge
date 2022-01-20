@@ -21,7 +21,7 @@ import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import java.time.Duration
 
-class HealthConfig {
+class HealthConfig private constructor() {
     val interval: Duration by config {
         "org.jitsi.videobridge.health.INTERVAL"
             .from(JitsiConfig.legacyConfig).convertFrom<Long>(Duration::ofMillis)
@@ -39,5 +39,10 @@ class HealthConfig {
     val stickyFailures: Boolean by config {
         "org.jitsi.videobridge.health.STICKY_FAILURES".from(JitsiConfig.legacyConfig)
         "videobridge.health.sticky-failures".from(JitsiConfig.newConfig)
+    }
+
+    companion object {
+        @JvmField
+        val config = HealthConfig()
     }
 }

@@ -20,7 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import java.time.Duration
 
-class BandwidthProbingConfig {
+class BandwidthProbingConfig private constructor() {
     /**
      * How often we check to send probing data
      */
@@ -28,5 +28,10 @@ class BandwidthProbingConfig {
         "org.jitsi.videobridge.PADDING_PERIOD_MS".from(JitsiConfig.legacyConfig)
         "videobridge.cc.padding-period"
             .from(JitsiConfig.newConfig).convertFrom<Duration> { it.toMillis() }
+    }
+
+    companion object {
+        @JvmField
+        val config = BandwidthProbingConfig()
     }
 }

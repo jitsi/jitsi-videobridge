@@ -20,6 +20,7 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.EndpointConnectionStatusConfig.Companion.config
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
 import java.time.Clock
 import java.time.Duration
@@ -35,8 +36,6 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
     private val clock: Clock = Clock.systemUTC()
 ) {
     private val logger = createChildLogger(parentLogger)
-
-    private val config = EndpointConnectionStatusConfig()
 
     /**
      * Note that we intentionally do not prune this set when an endpoint expires, because if an endpoint expires and

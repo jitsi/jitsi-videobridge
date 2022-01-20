@@ -27,7 +27,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.MultiStreamConfig
-import org.jitsi.videobridge.cc.config.BitrateControllerConfig
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
 import org.json.simple.JSONObject
@@ -64,8 +64,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * Keep track of the "forwarded" sources, i.e. the media sources for which we are forwarding *some* layer.
      */
     private var forwardedSources: Set<String> = emptySet()
-
-    private val config = BitrateControllerConfig()
 
     /**
      * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)

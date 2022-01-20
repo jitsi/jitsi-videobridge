@@ -31,14 +31,12 @@ internal class StatsManagerConfigTest : ConfigTest() {
             context("a stats transport config") {
                 context("with multiple, valid stats transports configured") {
                     withNewConfig(newConfigAllStatsTransports()) {
-                        val cfg = StatsManagerConfig()
-
-                        cfg.transportConfigs shouldHaveSize 2
-                        cfg.transportConfigs.forOne {
+                        StatsManagerConfig.config.transportConfigs shouldHaveSize 2
+                        StatsManagerConfig.config.transportConfigs.forOne {
                             it as StatsTransportConfig.MucStatsTransportConfig
                             it.interval shouldBe Duration.ofSeconds(5)
                         }
-                        cfg.transportConfigs.forOne {
+                        StatsManagerConfig.config.transportConfigs.forOne {
                             it as StatsTransportConfig.CallStatsIoStatsTransportConfig
                             it.interval shouldBe Duration.ofSeconds(5)
                         }
@@ -47,18 +45,17 @@ internal class StatsManagerConfigTest : ConfigTest() {
                 context("with an invalid stats transport configured") {
                     withNewConfig(newConfigInvalidStatsTransports()) {
                         should("ignore the invalid config and parse the valid transport correctly") {
-                            val cfg = StatsManagerConfig()
-
-                            cfg.transportConfigs shouldHaveSize 1
-                            cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
+                            StatsManagerConfig.config.transportConfigs shouldHaveSize 1
+                            StatsManagerConfig.config.transportConfigs.forOne {
+                                it as StatsTransportConfig.MucStatsTransportConfig
+                            }
                         }
                     }
                 }
                 context("which has a custom interval") {
                     withNewConfig(newConfigOneStatsTransportCustomInterval()) {
                         should("reflect the custom interval") {
-                            val cfg = StatsManagerConfig()
-                            cfg.transportConfigs.forOne {
+                            StatsManagerConfig.config.transportConfigs.forOne {
                                 it as StatsTransportConfig.MucStatsTransportConfig
                                 it.interval shouldBe Duration.ofSeconds(10)
                             }
@@ -71,11 +68,13 @@ internal class StatsManagerConfigTest : ConfigTest() {
             withLegacyConfig(legacyConfigAllStatsTransports()) {
                 withNewConfig(newConfigOneStatsTransport()) {
                     should("use the values from the old config") {
-                        val cfg = StatsManagerConfig()
-
-                        cfg.transportConfigs shouldHaveSize 2
-                        cfg.transportConfigs.forOne { it as StatsTransportConfig.MucStatsTransportConfig }
-                        cfg.transportConfigs.forOne { it as StatsTransportConfig.CallStatsIoStatsTransportConfig }
+                        StatsManagerConfig.config.transportConfigs shouldHaveSize 2
+                        StatsManagerConfig.config.transportConfigs.forOne {
+                            it as StatsTransportConfig.MucStatsTransportConfig
+                        }
+                        StatsManagerConfig.config.transportConfigs.forOne {
+                            it as StatsTransportConfig.CallStatsIoStatsTransportConfig
+                        }
                     }
                 }
             }

@@ -20,7 +20,7 @@ import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
-import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
+import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.Companion.config
 import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
@@ -49,8 +49,6 @@ class XmppConnection : IQListener {
      * The [MucClientManager] which manages the XMPP user connections and the MUCs.
      */
     val mucClientManager = MucClientManager(FEATURES)
-
-    val config = XmppClientConnectionConfig()
 
     private val running = AtomicBoolean(false)
 

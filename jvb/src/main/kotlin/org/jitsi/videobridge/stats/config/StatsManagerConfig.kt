@@ -25,7 +25,7 @@ import org.jitsi.metaconfig.config
 import org.jitsi.videobridge.xmpp.XmppConnection
 import java.time.Duration
 
-class StatsManagerConfig {
+class StatsManagerConfig private constructor() {
     /**
      * The interval at which the stats are pushed
      */
@@ -96,6 +96,11 @@ class StatsManagerConfig {
             "callstatsio" -> StatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
             else -> null
         }
+    }
+
+    companion object {
+        @JvmField
+        val config = StatsManagerConfig()
     }
 }
 

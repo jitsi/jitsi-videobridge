@@ -24,7 +24,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.videobridge.cc.config.BitrateControllerConfig
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import java.lang.Integer.max
 import java.time.Clock
 
@@ -44,7 +44,6 @@ internal class SingleSourceAllocation2(
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
-    val config: BitrateControllerConfig = BitrateControllerConfig(),
     val logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
 ) {
     /**

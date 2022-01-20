@@ -17,7 +17,7 @@ package org.jitsi.videobridge.stats
 
 import org.jitsi.utils.concurrent.PeriodicRunnableWithObject
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
-import org.jitsi.videobridge.stats.config.StatsManagerConfig
+import org.jitsi.videobridge.stats.config.StatsManagerConfig.Companion.config
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -147,10 +147,5 @@ class StatsCollector(
             val measurementInterval = period
             o.publishStatistics(statisticsRunnable.o, measurementInterval)
         }
-    }
-
-    companion object {
-        @JvmField
-        val config = StatsManagerConfig()
     }
 }

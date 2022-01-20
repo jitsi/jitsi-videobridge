@@ -20,7 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 
-class WebsocketServiceConfig {
+class WebsocketServiceConfig private constructor() {
     /**
      * Whether [org.jitsi.videobridge.websocket.ColibriWebSocketService] is enabled
      */
@@ -71,5 +71,10 @@ class WebsocketServiceConfig {
             "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(JitsiConfig.legacyConfig)
             "videobridge.websockets.server-id".from(JitsiConfig.newConfig)
         }
+    }
+
+    companion object {
+        @JvmField
+        val config = WebsocketServiceConfig()
     }
 }

@@ -30,7 +30,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
             context("when defined in the legacy config") {
                 withLegacyConfig(legacyConfigSingleXmppConnection) {
                     should("parse things correctly") {
-                        val configs = XmppClientConnectionConfig().clientConfigs
+                        val configs = XmppClientConnectionConfig.Companion.config.clientConfigs
                         configs shouldHaveSize 1
                         with(configs[0]) {
                             this.id shouldBe "shard"
@@ -50,7 +50,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
             context("when multiple are defined in legacy and one is incomplete") {
                 withLegacyConfig(legacyConfigOneCompleteConnectionOneIncomplete) {
                     should("only parse the complete one") {
-                        val configs = XmppClientConnectionConfig().clientConfigs
+                        val configs = XmppClientConnectionConfig.Companion.config.clientConfigs
                         configs shouldHaveSize 1
                         with(configs[0]) {
                             this.id shouldBe "shard"
@@ -70,7 +70,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
             context("when defined in new config") {
                 withNewConfig(newConfigSingleXmppConnection) {
                     should("parse things correctly") {
-                        val configs = XmppClientConnectionConfig().clientConfigs
+                        val configs = XmppClientConnectionConfig.Companion.config.clientConfigs
                         configs shouldHaveSize 1
                         with(configs[0]) {
                             this.id shouldBe "shard"
@@ -90,7 +90,7 @@ internal class XmppClientConnectionConfigTest : ConfigTest() {
             context("when defined in new config with some incomplete") {
                 withNewConfig(newConfigOneCompleteConnectionOneIncompleteOneBroken) {
                     should("parse things correctly") {
-                        val configs = XmppClientConnectionConfig().clientConfigs
+                        val configs = XmppClientConnectionConfig.Companion.config.clientConfigs
                         configs shouldHaveSize 1
                         with(configs[0]) {
                             this.id shouldBe "shard"

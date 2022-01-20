@@ -22,6 +22,8 @@ import java.util.concurrent.*;
 import org.jitsi.utils.concurrent.*;
 import org.jitsi.utils.logging2.*;
 
+import static org.jitsi.videobridge.VideobridgeExpireThreadConfig.config;
+
 /**
  * Implements a <tt>Thread</tt> which expires the {@link AbstractEndpoint}s and
  * {@link Conference}s of a specific <tt>Videobridge</tt>.
@@ -64,8 +66,6 @@ public class VideobridgeExpireThread
      * instance.
      */
     private Videobridge videobridge;
-
-    public static final VideobridgeExpireThreadConfig config = new VideobridgeExpireThreadConfig();
 
     /**
      * Initializes a new {@link VideobridgeExpireThread} instance which is to

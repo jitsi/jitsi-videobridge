@@ -33,7 +33,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
         val e5 = TestEndpoint("e5", videoType = VideoType.NONE)
         val e6 = TestEndpoint("e6", videoType = VideoType.NONE)
 
-        val defaultConstraints = VideoConstraints(BitrateControllerConfig().thumbnailMaxHeightPx())
+        val defaultConstraints = VideoConstraints(BitrateControllerConfig.config.thumbnailMaxHeightPx())
 
         val endpoints = listOf(e1, e2, e3, e4, e5, e6)
         val zeroEffectiveConstraints = mutableMapOf(

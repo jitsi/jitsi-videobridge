@@ -17,23 +17,11 @@
 package org.jitsi
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
-import org.jitsi.metaconfig.MetaconfigSettings
 
 /**
  * A helper class for testing configuration properties
  */
 abstract class ConfigTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
-
-    override fun beforeSpec(spec: Spec) {
-        super.beforeSpec(spec)
-        MetaconfigSettings.cacheEnabled = false
-    }
-
-    override fun afterSpec(spec: Spec) {
-        super.afterSpec(spec)
-        MetaconfigSettings.cacheEnabled = true
-    }
 }

@@ -18,6 +18,7 @@ package org.jitsi.videobridge.stats;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.signaling.api.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.videobridge.xmpp.config.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import java.util.List;
 
@@ -52,9 +53,9 @@ public class MucStatsTransport
 
         ColibriStatsExtension statsExt;
 
-        if (xmppConnection.getConfig().getStatsFilterEnabled())
+        if (XmppClientConnectionConfig.config.getStatsFilterEnabled())
         {
-            List<String> whitelist = xmppConnection.getConfig().getStatsWhitelist();
+            List<String> whitelist = XmppClientConnectionConfig.config.getStatsWhitelist();
             logger.debug(() -> "Statistics filter applied: " + whitelist);
             statsExt = Statistics.toXmppExtensionElementFiltered(stats, whitelist);
         }

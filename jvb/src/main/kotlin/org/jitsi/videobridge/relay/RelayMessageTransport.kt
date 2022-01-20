@@ -78,8 +78,6 @@ class RelayMessageTransport(
      */
     private val sentMessagesCounts: MutableMap<String, AtomicLong> = ConcurrentHashMap()
 
-    private val multiStreamConfig = MultiStreamConfig()
-
     init { logger.addContext("relay-id", relay.id) }
 
     /**
@@ -183,7 +181,7 @@ class RelayMessageTransport(
     }
 
     override fun sourceVideoType(message: SourceVideoTypeMessage): BridgeChannelMessage? {
-        if (!multiStreamConfig.enabled) {
+        if (!MultiStreamConfig.config.enabled) {
             return null
         }
 

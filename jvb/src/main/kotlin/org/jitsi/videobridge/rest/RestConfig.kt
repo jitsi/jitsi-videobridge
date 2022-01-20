@@ -20,7 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.videobridge.Videobridge
 
-class RestConfig {
+class RestConfig private constructor() {
     private val colibriRestEnabled: Boolean by config {
         // If the value was passed via a command line arg, we set it as a system
         // variable at this path, which the new config will pick up

@@ -24,8 +24,9 @@ import org.jitsi.stats.media.StatsServiceFactory
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.version.Version
 import org.jitsi.videobridge.Videobridge
-import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.StatsTransport
+import org.jitsi.videobridge.stats.callstats.CallstatsConfig.Companion.config
+import org.jitsi.videobridge.stats.config.StatsManagerConfig
 import org.jitsi.videobridge.stats.config.StatsTransportConfig
 import java.time.Duration
 
@@ -120,13 +121,9 @@ class CallstatsService(
 
     val videobridgeEventHandler: Videobridge.EventHandler?
         get() = conferenceManager
-
-    companion object {
-        val config = CallstatsConfig()
-    }
 }
 
-class CallstatsConfig {
+class CallstatsConfig private constructor() {
     /**
      * The callstats AppID.
      */
@@ -181,14 +178,21 @@ class CallstatsConfig {
      *
      * For backwards compatibility, we read it from the stats manager "callstatsio" transport, if present.
      */
-    val interval: Duration = StatsCollector.config.transportConfigs.stream()
-        .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
-        .map(StatsTransportConfig::interval)
-        .findFirst()
-        .orElse(intervalProperty)
+    val interval: Duration
+        get() = StatsManagerConfig.config.transportConfigs.stream()
+            .filter { tc -> tc is StatsTransportConfig.CallStatsIoStatsTransportConfig }
+            .map(StatsTransportConfig::interval)
+            .findFirst()
+            .orElse(intervalProperty)
 
-    val enabled: Boolean = appId > 0
+    val enabled: Boolean
+        get() = appId > 0
 
     override fun toString() = "appId=$appId, appSecret is ${if (appSecret == null) "unset" else "set"}, keyId=$keyId," +
         " keyPath=$keyPath, bridgeId=$bridgeId, conferenceIdPrefix=$conferenceIdPrefix, interval=$interval"
+
+    companion object {
+        @JvmField
+        val config = CallstatsConfig()
+    }
 }

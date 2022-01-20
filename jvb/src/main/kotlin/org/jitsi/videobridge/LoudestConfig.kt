@@ -20,7 +20,7 @@ import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import java.time.Duration
 
-class LoudestConfig {
+class LoudestConfig private constructor() {
     companion object {
         @JvmStatic
         val routeLoudestOnly: Boolean by config(

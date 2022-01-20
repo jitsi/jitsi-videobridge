@@ -20,7 +20,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 
-class JvbApiConfig {
+class JvbApiConfig private constructor() {
     companion object {
         private val enabled: Boolean by config("videobridge.apis.jvb-api.enabled".from(JitsiConfig.newConfig))
 

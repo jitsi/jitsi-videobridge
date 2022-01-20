@@ -18,11 +18,9 @@ package org.jitsi.videobridge
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
-import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.jitsi.config.setNewConfig
-import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
 
@@ -31,17 +29,6 @@ fun createSource(ssrc: Long) = SourcePacketExtension().apply { this.ssrc = ssrc 
 // TODO port MediaSourceFactoryTest.java to kotlin and unify with this class
 class MediaSourceFactoryTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
-
-    override fun beforeSpec(spec: Spec) {
-        super.beforeSpec(spec)
-        MetaconfigSettings.cacheEnabled = false // required for setNewConfig to be effective
-    }
-
-    override fun afterSpec(spec: Spec) {
-        super.afterSpec(spec)
-        MetaconfigSettings.cacheEnabled = true
-        setNewConfig("", true)
-    }
 
     init {
         context("MediaSourceFactory") {
