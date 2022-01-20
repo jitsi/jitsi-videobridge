@@ -45,11 +45,11 @@ fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.secon
  */
 fun Instant.toEpochMicro(): Long {
     return if (this.epochSecond < 0 && this.nano > 0) {
-        val micros = Math.multiplyExact(this.epochSecond + 1, 1000_000)
+        val micros = Math.multiplyExact(this.epochSecond + 1, 1000_000L)
         val adjustment: Long = (this.nano / 1000 - 1000_000).toLong()
         Math.addExact(micros, adjustment)
     } else {
-        val micros = Math.multiplyExact(this.epochSecond, 1000_000)
+        val micros = Math.multiplyExact(this.epochSecond, 1000_000L)
         Math.addExact(micros, (this.nano / 1000).toLong())
     }
 }
@@ -65,8 +65,8 @@ fun Instant.toEpochMicro(): Long {
  * @throws DateTimeException if the instant exceeds the maximum or minimum instant
  */
 fun instantOfEpochMicro(epochMicro: Long): Instant {
-    val secs = Math.floorDiv(epochMicro, 1000_000)
-    val micros = Math.floorMod(epochMicro, 1000_000)
+    val secs = Math.floorDiv(epochMicro, 1000_000L)
+    val micros = Math.floorMod(epochMicro, 1000_000L)
     return Instant.ofEpochSecond(secs, micros * 1000L)
 }
 
