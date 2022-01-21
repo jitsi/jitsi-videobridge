@@ -92,7 +92,12 @@ public abstract class AbstractEndpoint
     @Deprecated
     protected VideoConstraints maxReceiverVideoConstraints = new VideoConstraints(0, 0.0);
 
-    // TODO docs
+    /**
+     * A map of source name -> VideoConstraints.
+     *
+     * Stores the maximum set of constraints applied by all receivers for each media source sent by this endpoint.
+     * The client needs to send _at least_ this for a media source to satisfy all it's receivers.
+     */
     protected Map<String, VideoConstraints> maxReceiverVideoConstraintsMap = new HashMap<>();
 
     protected final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
