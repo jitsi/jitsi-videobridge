@@ -60,8 +60,8 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
-import org.jitsi.videobridge.message.SenderVideoConstraintsMessageV2
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
@@ -547,10 +547,10 @@ class Endpoint @JvmOverloads constructor(
         if (findMediaSourceDesc(sourceName) == null) {
             logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no such source." }
         } else {
-            val senderVideoConstraintsMessage =
-                SenderVideoConstraintsMessageV2(sourceName, maxVideoConstraints.maxHeight)
-            logger.cdebug { "Sender constraints changed: ${senderVideoConstraintsMessage.toJson()}" }
-            sendMessage(senderVideoConstraintsMessage)
+            val senderSourceConstraintsMessage =
+                SenderSourceConstraintsMessage(sourceName, maxVideoConstraints.maxHeight)
+            logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
+            sendMessage(senderSourceConstraintsMessage)
         }
     }
 
