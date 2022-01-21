@@ -766,8 +766,7 @@ public class Conference
     @Nullable
     public AbstractEndpoint findSourceOwner(@NotNull String sourceName)
     {
-        // TODO does it need to also handle OctoEndpoints?
-        for (Endpoint e : endpointsCache)
+        for (AbstractEndpoint e : endpointsById.values())
         {
             if (e.findMediaSourceDesc(sourceName) != null)
             {
