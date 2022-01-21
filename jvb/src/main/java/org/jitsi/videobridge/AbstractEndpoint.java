@@ -545,7 +545,7 @@ public abstract class AbstractEndpoint
             if (sourceConstraints.remove(receiverId) != null)
             {
                 logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
-                receiverVideoConstraintsChanged(sourceConstraints.getMaxHeight());
+                receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
             }
         }
     }
