@@ -28,7 +28,7 @@
         <kotest.version>4.6.3</kotest.version>
         <junit.version>5.8.1</junit.version>
         <jicoco.version>1.1-101-g2170967</jicoco.version>
-        <jitsi.utils.version>1.0-109-g31bfa99</jitsi.utils.version>
+        <jitsi.utils.version>1.0-110-g9d958b7</jitsi.utils.version>
         <ktlint-maven-plugin.version>1.11.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
         <spotbugs.version>4.5.0</spotbugs.version>

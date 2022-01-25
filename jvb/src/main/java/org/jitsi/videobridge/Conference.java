@@ -1191,8 +1191,7 @@ public class Conference
         {
             return false;
         }
-        DominantSpeakerIdentification<String>.SpeakerRanking ranking = speechActivity.getRanking(ep.getId());
-        return ranking.energyRanking < LoudestConfig.Companion.getNumLoudest();
+        return speechActivity.isAmongLoudest(ep.getId());
     }
 
     /**

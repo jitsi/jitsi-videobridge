@@ -879,6 +879,13 @@ class Endpoint @JvmOverloads constructor(
      * Determine whether to forward endpoint stats from another endpoint to this one.
      */
     fun wantsStatsFrom(ep: AbstractEndpoint): Boolean {
+        logger.debug {
+            "wantsStatsFrom(${ep.id}): isRecentSpeaker=${conference.speechActivity.isRecentSpeaker(ep)} " +
+                "isRankedSpeaker=${conference.isRankedSpeaker(ep)} " +
+                "isOnStageOrSelected=${bitrateController.isOnStageOrSelected(ep)} " +
+                "hasNonZeroEffectiveConstraints=${bitrateController.hasNonZeroEffectiveConstraints(ep)}"
+        }
+
         return conference.speechActivity.isRecentSpeaker(ep) ||
             conference.isRankedSpeaker(ep) ||
             bitrateController.isOnStageOrSelected(ep) ||
