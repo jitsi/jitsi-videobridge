@@ -28,7 +28,6 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.stats.BridgeJitterStats
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -40,7 +39,6 @@ import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
-import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
@@ -68,7 +66,6 @@ import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.shim.EndpointShim
-import org.jitsi.videobridge.stats.DoubleAverage
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -125,14 +122,6 @@ class Endpoint @JvmOverloads constructor(
     }
 
     private val timelineLogger = logger.createChildLogger("timeline.${this.javaClass.name}")
-
-    /**
-     * Measures the jitter introduced by the bridge itself (i.e. jitter calculated between
-     * packets based on the time they were received by the bridge and the time they
-     * are sent).  This jitter value is calculated independently, per packet, by every
-     * individual [Endpoint] and their jitter values are averaged together.
-     */
-    private val bridgeJitterStats = BridgeJitterStats()
 
     /**
      * The [SctpManager] instance we'll use to manage the SCTP connection
@@ -445,10 +434,6 @@ class Endpoint @JvmOverloads constructor(
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         PacketTransitStats.packetSent(packetInfo)
-        if (packetInfo.packet.looksLikeRtp()) {
-            bridgeJitterStats.packetSent(packetInfo)
-            overallAverageBridgeJitter.addValue(bridgeJitterStats.jitter)
-        }
 
         packetInfo.sent()
         if (timelineLogger.isTraceEnabled && logTimeline()) {
@@ -952,7 +937,6 @@ class Endpoint @JvmOverloads constructor(
             put("acceptAudio", acceptAudio)
             put("acceptVideo", acceptVideo)
             put("messageTransport", messageTransport.debugState)
-            put("bridge_jitter", bridgeJitterStats.jitter)
         }
     }
 
@@ -1005,13 +989,6 @@ class Endpoint @JvmOverloads constructor(
          */
         @JvmField
         val queueErrorCounter = CountingErrorHandler()
-
-        /**
-         * An average of all of the individual bridge jitter values calculated by the
-         * [bridgeJitterStats] instance variables
-         */
-        @JvmField
-        val overallAverageBridgeJitter = DoubleAverage("overall_bridge_jitter")
 
         /**
          * The executor which runs bandwidth probing.

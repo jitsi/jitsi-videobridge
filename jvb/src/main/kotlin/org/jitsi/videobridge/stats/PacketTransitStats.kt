@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.stats
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.BridgeJitterStats
 import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
@@ -32,10 +33,13 @@ object PacketTransitStats {
     private val rtpPacketDelayStats = PacketDelayStats()
     private val rtcpPacketDelayStats = PacketDelayStats()
 
+    private val bridgeJitterStats = BridgeJitterStats()
+
     @JvmStatic
     fun packetSent(packetInfo: PacketInfo) {
         if (packetInfo.packet.looksLikeRtp()) {
             rtpPacketDelayStats.addPacket(packetInfo)
+            bridgeJitterStats.packetSent(packetInfo)
         } else if (packetInfo.packet.looksLikeRtcp()) {
             rtcpPacketDelayStats.addPacket(packetInfo)
         }
@@ -46,7 +50,7 @@ object PacketTransitStats {
         get() {
             val stats = OrderedJsonObject()
             stats["e2e_packet_delay"] = getPacketDelayStats()
-            stats[Endpoint.overallAverageBridgeJitter.name] = Endpoint.overallAverageBridgeJitter.get()
+            stats["overall_bridge_jitter"] = bridgeJitterStats.jitter
             return stats
         }
 
