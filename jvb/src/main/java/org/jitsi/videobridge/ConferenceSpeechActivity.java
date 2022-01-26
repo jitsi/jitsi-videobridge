@@ -260,6 +260,11 @@ public class ConferenceSpeechActivity
         return dominantSpeakerIdentification.getRanking(endpointId);
     }
 
+    public boolean isAmongLoudest(String endpointId)
+    {
+        return dominantSpeakerIdentification.isAmongLoudest(endpointId);
+    }
+
     /**
      * Notifies this instance that a new audio level was received or measured by an <tt>Endpoint</tt>.
      *
