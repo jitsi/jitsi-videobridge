@@ -31,6 +31,7 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.*;
@@ -857,7 +858,7 @@ public class Videobridge
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("load-management", jvbLoadManager.getStats());
-        debugState.put(Endpoint.overallAverageBridgeJitter.name, Endpoint.overallAverageBridgeJitter.get());
+        debugState.put("overall_bridge_jitter", PacketTransitStats.getBridgeJitter());
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);

@@ -24,7 +24,6 @@ import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
-import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
@@ -33,11 +32,8 @@ import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
-import org.jitsi.rtp.extensions.looksLikeRtcp
-import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
@@ -53,6 +49,7 @@ import org.jitsi.videobridge.TransportConfig
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
+import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -370,12 +367,7 @@ class Relay @JvmOverloads constructor(
     }
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
-        if (packetInfo.packet.looksLikeRtp()) {
-            rtpPacketDelayStats.addPacket(packetInfo)
-            // TODO bridgeJitterStats.packetSent(packetInfo)
-        } else if (packetInfo.packet.looksLikeRtcp()) {
-            rtcpPacketDelayStats.addPacket(packetInfo)
-        }
+        PacketTransitStats.packetSent(packetInfo)
 
         packetInfo.sent()
 
@@ -586,25 +578,10 @@ class Relay @JvmOverloads constructor(
 
     companion object {
         /**
-         * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
-         * Since [Endpoint] is the 'last place' that is aware of [PacketInfo] in the outgoing
-         * chain, we track this stats here.  Since they're static, these members will track the delay
-         * for packets going out to all endpoints.
-         */
-        private val rtpPacketDelayStats = PacketDelayStats()
-        private val rtcpPacketDelayStats = PacketDelayStats()
-
-        /**
          * Count the number of dropped packets and exceptions.
          */
         @JvmField
         val queueErrorCounter = CountingErrorHandler()
-
-        @JvmStatic
-        fun getPacketDelayStats() = OrderedJsonObject().apply {
-            put("rtp", rtpPacketDelayStats.toJson())
-            put("rtcp", rtcpPacketDelayStats.toJson())
-        }
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {

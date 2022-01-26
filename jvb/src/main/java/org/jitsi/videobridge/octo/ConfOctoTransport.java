@@ -27,6 +27,7 @@ import org.jitsi.utils.stats.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.octo.config.*;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.transport.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -350,6 +351,7 @@ public class ConfOctoTransport
     private boolean doSend(PacketInfo packetInfo)
     {
         stats.packetSent(packetInfo.getPacket().getLength(), clock.instant());
+        PacketTransitStats.packetSent(packetInfo);
         packetInfo.sent();
         bridgeOctoTransport.sendMediaData(
             packetInfo.getPacket().getBuffer(),
