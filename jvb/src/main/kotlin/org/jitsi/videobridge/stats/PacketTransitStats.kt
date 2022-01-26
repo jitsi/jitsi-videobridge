@@ -54,6 +54,10 @@ object PacketTransitStats {
             return stats
         }
 
+    @JvmStatic
+    val bridgeJitter
+        get() = bridgeJitterStats.jitter
+
     private fun getPacketDelayStats() = OrderedJsonObject().apply {
         put("rtp", rtpPacketDelayStats.toJson())
         put("rtcp", rtcpPacketDelayStats.toJson())
