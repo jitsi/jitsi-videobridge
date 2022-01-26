@@ -31,7 +31,6 @@ import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.BridgeJitterStats
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
@@ -41,14 +40,12 @@ import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
-import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -72,6 +69,7 @@ import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.ChannelShim
 import org.jitsi.videobridge.shim.EndpointShim
 import org.jitsi.videobridge.stats.DoubleAverage
+import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -446,12 +444,10 @@ class Endpoint @JvmOverloads constructor(
     }
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+        PacketTransitStats.packetSent(packetInfo)
         if (packetInfo.packet.looksLikeRtp()) {
-            rtpPacketDelayStats.addPacket(packetInfo)
             bridgeJitterStats.packetSent(packetInfo)
             overallAverageBridgeJitter.addValue(bridgeJitterStats.jitter)
-        } else if (packetInfo.packet.looksLikeRtcp()) {
-            rtcpPacketDelayStats.addPacket(packetInfo)
         }
 
         packetInfo.sent()
@@ -1003,14 +999,6 @@ class Endpoint @JvmOverloads constructor(
          * (as opposed to letting the far peer/client open it).
          */
         private const val openDataChannelLocally = false
-        /**
-         * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
-         * Since [Endpoint] is the 'last place' that is aware of [PacketInfo] in the outgoing
-         * chain, we track this stats here.  Since they're static, these members will track the delay
-         * for packets going out to all endpoints.
-         */
-        private val rtpPacketDelayStats = PacketDelayStats()
-        private val rtcpPacketDelayStats = PacketDelayStats()
 
         /**
          * Count the number of dropped packets and exceptions.
@@ -1039,12 +1027,6 @@ class Endpoint @JvmOverloads constructor(
          */
         // TODO: make this configurable
         private val epTimeout = 2.mins
-
-        @JvmStatic
-        fun getPacketDelayStats() = OrderedJsonObject().apply {
-            put("rtp", rtpPacketDelayStats.toJson())
-            put("rtcp", rtcpPacketDelayStats.toJson())
-        }
 
         private val timelineCounter = AtomicLong()
         private val TIMELINE_FRACTION = 10000L

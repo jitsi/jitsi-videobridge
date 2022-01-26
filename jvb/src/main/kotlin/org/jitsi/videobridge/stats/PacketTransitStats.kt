@@ -15,20 +15,43 @@
  */
 package org.jitsi.videobridge.stats
 
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.PacketDelayStats
+import org.jitsi.rtp.extensions.looksLikeRtcp
+import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.videobridge.Endpoint
-import org.jitsi.videobridge.Endpoint.Companion.getPacketDelayStats
-import org.jitsi.videobridge.relay.Relay
-import org.jitsi.videobridge.relay.Relay.Companion.getPacketDelayStats
 
+/**
+ * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
+ * [Endpoint], [Relay], and [ConfOctoTransport] are the 'last place' that is aware of [PacketInfo] in the outgoing
+ * chains; they track these stats here.  Since they're static, these members will track the delay
+ * for packets going out to all endpoints.
+ */
 object PacketTransitStats {
+    private val rtpPacketDelayStats = PacketDelayStats()
+    private val rtcpPacketDelayStats = PacketDelayStats()
+
+    @JvmStatic
+    fun packetSent(packetInfo: PacketInfo) {
+        if (packetInfo.packet.looksLikeRtp()) {
+            rtpPacketDelayStats.addPacket(packetInfo)
+        } else if (packetInfo.packet.looksLikeRtcp()) {
+            rtcpPacketDelayStats.addPacket(packetInfo)
+        }
+    }
+
     @JvmStatic
     val statsJson: OrderedJsonObject
         get() {
             val stats = OrderedJsonObject()
-            stats["e2e_packet_delay"] = Endpoint.getPacketDelayStats()
-            stats["relay_e2e_packet_delay"] = Relay.getPacketDelayStats()
+            stats["e2e_packet_delay"] = getPacketDelayStats()
             stats[Endpoint.overallAverageBridgeJitter.name] = Endpoint.overallAverageBridgeJitter.get()
             return stats
         }
+
+    private fun getPacketDelayStats() = OrderedJsonObject().apply {
+        put("rtp", rtpPacketDelayStats.toJson())
+        put("rtcp", rtcpPacketDelayStats.toJson())
+    }
 }
