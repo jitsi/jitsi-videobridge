@@ -428,13 +428,14 @@ class SenderSourceConstraintsMessage(
 class AddReceiverMessage(
     val bridgeId: String,
     val endpointId: String,
+    val sourceName: String?,
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Serialize manually because it's faster than Jackson.
      */
     override fun createJson(): String =
-        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId",""" +
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId","sourceName":"$sourceName",""" +
             "\"videoConstraints\":$videoConstraints}"
 
     companion object {
@@ -448,13 +449,14 @@ class AddReceiverMessage(
  */
 class RemoveReceiverMessage(
     val bridgeId: String,
-    val endpointId: String
+    val endpointId: String,
+    val sourceName: String?,
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Serialize manually because it's faster than Jackson.
      */
     override fun createJson(): String =
-        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId","sourceName":"$sourceName"}"""
 
     companion object {
         const val TYPE = "RemoveReceiver"

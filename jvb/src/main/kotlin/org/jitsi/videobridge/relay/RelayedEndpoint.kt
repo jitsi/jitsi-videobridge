@@ -126,13 +126,21 @@ class RelayedEndpoint(
             AddReceiverMessage(
                 conference.tentacle.bridgeId, /* TODO: store local bridge ID somewhere better */
                 id,
+                null, /* source name */
                 maxVideoConstraints
             )
         )
     }
 
     override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
-        TODO("Not yet implemented")
+        relay.sendMessage(
+            AddReceiverMessage(
+                conference.tentacle.bridgeId, /* TODO: store local bridge ID somewhere better */
+                id,
+                sourceName,
+                maxVideoConstraints
+            )
+        )
     }
 
     fun relayMessageTransportConnected() =

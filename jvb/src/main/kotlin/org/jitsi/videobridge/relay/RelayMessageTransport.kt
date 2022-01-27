@@ -146,7 +146,16 @@ class RelayMessageTransport(
             return null
         }
 
-        ep.addReceiver(relay.id, message.videoConstraints)
+        if (MultiStreamConfig.config.enabled) {
+            val sourceName = message.sourceName
+            if (ep.hasMediaSource(sourceName)) {
+                ep.addReceiverV2(relay.id, sourceName, message.videoConstraints)
+            } else {
+                logger.warn("Received AddReceiverMessage for unknown source epId $epId sn $sourceName")
+            }
+        } else {
+            ep.addReceiver(relay.id, message.videoConstraints)
+        }
         return null
     }
 

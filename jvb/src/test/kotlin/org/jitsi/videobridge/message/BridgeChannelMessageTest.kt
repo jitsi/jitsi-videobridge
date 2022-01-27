@@ -222,22 +222,24 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing AddReceiver") {
-            val message = AddReceiverMessage("bridge1", "abcdabcd", VideoConstraints(360))
+            val message = AddReceiverMessage("bridge1", "abcdabcd", "s1", VideoConstraints(360))
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<AddReceiverMessage>()
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
+            parsed.sourceName shouldBe "s1"
             parsed.videoConstraints shouldBe VideoConstraints(360)
         }
 
         context("serializing and parsing RemoveReceiver") {
-            val message = RemoveReceiverMessage("bridge1", "abcdabcd")
+            val message = RemoveReceiverMessage("bridge1", "abcdabcd", "s1")
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<RemoveReceiverMessage>()
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
+            parsed.sourceName shouldBe "s1"
         }
 
         context("serializing and parsing VideoType") {

@@ -73,13 +73,27 @@ class OctoEndpointMessageTransport
     public BridgeChannelMessage addReceiver(@NotNull AddReceiverMessage message)
     {
         Conference conference = octoEndpoints.getConference();
-        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
-        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
-        // only those that reference an endpoint local to this bridge.
-        if (endpoint instanceof Endpoint)
+
+        if (MultiStreamConfig.config.getEnabled())
         {
-            // TODO Implement source name based receiver constraints for Octo
-            endpoint.addReceiver(message.getBridgeId(), message.getVideoConstraints());
+            String sourceName = message.getSourceName();
+            AbstractEndpoint endpoint = conference.findSourceOwner(sourceName);
+            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
+            // Handle only those that reference an endpoint local to this bridge.
+            if (endpoint instanceof Endpoint)
+            {
+                endpoint.addReceiverV2(message.getBridgeId(), sourceName, message.getVideoConstraints());
+            }
+        }
+        else
+        {
+            AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
+            // Handle only those that reference an endpoint local to this bridge.
+            if (endpoint instanceof Endpoint)
+            {
+                endpoint.addReceiver(message.getBridgeId(), message.getVideoConstraints());
+            }
         }
 
         return null;
@@ -90,13 +104,26 @@ class OctoEndpointMessageTransport
     public BridgeChannelMessage removeReceiver(@NotNull RemoveReceiverMessage message)
     {
         Conference conference = octoEndpoints.getConference();
-        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
-        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
-        // only those that reference an endpoint local to this bridge.
-        if (endpoint instanceof Endpoint)
+        if (MultiStreamConfig.config.getEnabled())
         {
-            // TODO Implement source name based receiver constraints for Octo
-            endpoint.removeReceiver(message.getBridgeId());
+            String sourceName = message.getSourceName();
+            AbstractEndpoint endpoint = conference.findSourceOwner(sourceName);
+            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
+            // Handle only those that reference an endpoint local to this bridge.
+            if (endpoint instanceof Endpoint)
+            {
+                endpoint.removeReceiverV2(message.getBridgeId(), sourceName);
+            }
+        }
+        else
+        {
+            AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
+            // Handle only those that reference an endpoint local to this bridge.
+            if (endpoint instanceof Endpoint)
+            {
+                endpoint.removeReceiver(message.getBridgeId());
+            }
         }
 
         return null;
