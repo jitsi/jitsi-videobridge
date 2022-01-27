@@ -295,11 +295,7 @@ class Endpoint @JvmOverloads constructor(
                 eventEmitter.fireEvent { sourcesChanged() }
             }
             if (wasEmpty) {
-                if (MultiStreamConfig.config.enabled) {
-                    broadcastSenderConstraints()
-                } else {
-                    sendVideoConstraints(maxReceiverVideoConstraints)
-                }
+                sendAllVideoConstraints()
             }
         }
 
@@ -461,17 +457,16 @@ class Endpoint @JvmOverloads constructor(
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() {
-        if (MultiStreamConfig.config.enabled) {
-            broadcastSenderConstraints()
-        } else {
-            sendVideoConstraints(maxReceiverVideoConstraints)
-        }
+        sendAllVideoConstraints()
     }
 
-    private fun broadcastSenderConstraints() {
-        maxReceiverVideoConstraintsMap.forEach {
-            (sourceName, constraints) ->
-            sendVideoConstraintsV2(sourceName, constraints)
+    private fun sendAllVideoConstraints() {
+        if (MultiStreamConfig.config.enabled) {
+            maxReceiverVideoConstraintsMap.forEach { (sourceName, constraints) ->
+                sendVideoConstraintsV2(sourceName, constraints)
+            }
+        } else {
+            sendVideoConstraints(maxReceiverVideoConstraints)
         }
     }
 
