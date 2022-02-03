@@ -16,23 +16,86 @@
 package org.jitsi.videobridge.relay
 
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpReceiverEventHandler
+import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.StreamInformationStoreImpl
+import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
+import org.jitsi.videobridge.octo.OctoPacketInfo
+import org.jitsi.videobridge.util.TaskPools
 
 class RelayedEndpoint(
     conference: Conference,
     val relay: Relay,
     id: String,
     parentLogger: Logger
-) : AbstractEndpoint(conference, id, parentLogger) {
+) : AbstractEndpoint(conference, id, parentLogger), Relay.IncomingRelayPacketHandler {
     var audioSources: Array<AudioSourceDesc> = arrayOf()
 
-    override fun receivesSsrc(ssrc: Long): Boolean = relay.getEndpointBySsrc(ssrc) == this
+    private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
+
+    // TODO Figure this out
+    private val rtcpEventNotifier = RtcpEventNotifier()
+
+    val rtpReceiver = RelayRtpReceiver(
+        id,
+        { rtcpPacket ->
+            if (rtcpPacket.length >= 1500) {
+                logger.warn(
+                    "Sending large locally-generated RTCP packet of size ${rtcpPacket.length}, " +
+                        "first packet of type ${rtcpPacket.packetType}."
+                )
+            }
+            /* TODO */
+            relay.transceiver.sendPacket(PacketInfo(rtcpPacket))
+        },
+        rtcpEventNotifier,
+        TaskPools.CPU_POOL,
+        TaskPools.SCHEDULED_POOL,
+        streamInformationStore,
+        RtpReceiverEventHandlerImpl(),
+        logger
+    ).apply {
+        packetHandler = object : ConsumerNode("receiver chain handler") {
+            override fun consume(packetInfo: PacketInfo) {
+                packetInfo.endpointId = id
+                conference.handleIncomingPacket(packetInfo)
+            }
+
+            override fun trace(f: () -> Unit) = f.invoke()
+        }
+        handleEvent(SetLocalSsrcEvent(MediaType.AUDIO, conference.localAudioSsrc))
+        handleEvent(SetLocalSsrcEvent(MediaType.VIDEO, conference.localVideoSsrc))
+    }
+
+    override fun receivesSsrc(ssrc: Long): Boolean {
+        return streamInformationStore.receiveSsrcs.contains(ssrc)
+    }
+
+    fun setReceiveSsrcs(ssrcsByMediaType: Map<MediaType, Set<Long>>) {
+        streamInformationStore.receiveSsrcs.forEach { ssrc ->
+            streamInformationStore.removeReceiveSsrc(ssrc)
+        }
+        ssrcsByMediaType.forEach { (mediaType: MediaType, ssrcs: Set<Long>) ->
+            ssrcs.forEach { ssrc ->
+                streamInformationStore.addReceiveSsrc(ssrc, mediaType)
+            }
+        }
+    }
+
+    fun hasReceiveSsrcs(): Boolean = streamInformationStore.receiveSsrcs.isNotEmpty()
 
     /** Relayed endpoints are not automatically expired. **/
     override fun shouldExpire(): Boolean = false
@@ -41,16 +104,16 @@ class RelayedEndpoint(
 
     override fun requestKeyframe() = relay.transceiver.requestKeyFrame(mediaSource?.primarySSRC)
 
-    // These should be queried on the relay
-    override fun isSendingAudio(): Boolean = false
-    override fun isSendingVideo(): Boolean = false
+    override fun isSendingAudio(): Boolean = rtpReceiver.isReceivingAudio()
+    override fun isSendingVideo(): Boolean = rtpReceiver.isReceivingVideo()
 
     /**
      * Relayed endpoints don't have their own payload types and RTP header extensions, these are properties of the
      * relay.
      */
-    override fun addPayloadType(payloadType: PayloadType) {}
-    override fun addRtpExtension(rtpExtension: RtpExtension) {}
+    override fun addPayloadType(payloadType: PayloadType) = streamInformationStore.addRtpPayloadType(payloadType)
+    override fun addRtpExtension(rtpExtension: RtpExtension) =
+        streamInformationStore.addRtpExtensionMapping(rtpExtension)
 
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         relay.sendMessage(
@@ -74,4 +137,24 @@ class RelayedEndpoint(
             audioSources.forEach { set.add(it.ssrc) }
             mediaSources.forEach { it.rtpEncodings.forEach { set.addAll(it.ssrcs) } }
         }
+
+    override fun handleIncomingPacket(packetInfo: OctoPacketInfo) = rtpReceiver.processPacket(packetInfo)
+
+    private inner class RtpReceiverEventHandlerImpl : RtpReceiverEventHandler {
+        /**
+         * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
+         * for every packet and we want to avoid the switch. The conference audio level code must not block.
+         */
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long) {
+            conference.speechActivity.levelChanged(this@RelayedEndpoint, level)
+        }
+
+        /**
+         * Forward bwe events from the Transceiver.
+         */
+        override fun bandwidthEstimationChanged(newValue: Bandwidth) {
+            logger.cdebug { "Estimated bandwidth is now $newValue" }
+            /* We don't use BWE for relay connections. */
+        }
+    }
 }

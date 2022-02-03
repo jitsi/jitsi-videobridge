@@ -604,4 +604,8 @@ class Relay @JvmOverloads constructor(
             /* We don't use BWE for relay connections. */
         }
     }
+
+    interface IncomingRelayPacketHandler {
+        fun handleIncomingPacket(packetInfo: OctoPacketInfo)
+    }
 }
