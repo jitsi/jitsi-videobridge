@@ -32,6 +32,10 @@ import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.looksLikeRtcp
+import org.jitsi.rtp.extensions.looksLikeRtp
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.event.EventEmitter
@@ -214,7 +218,7 @@ class Relay @JvmOverloads constructor(
                         ).apply {
                             this.receivedTime = receivedTime
                         }
-                    transceiver.handleIncomingPacket(pktInfo)
+                    handleMediaPacket(pktInfo)
                 }
             }
         }
@@ -336,6 +340,34 @@ class Relay @JvmOverloads constructor(
     fun isSendingAudio(): Boolean = transceiver.isReceivingAudio()
 
     fun isSendingVideo(): Boolean = transceiver.isReceivingVideo()
+
+    /**
+     * Handle media packets that have arrived, using the appropriate endpoint's transceiver.
+     */
+    private fun handleMediaPacket(packetInfo: OctoPacketInfo) {
+        if (packetInfo.packet.looksLikeRtp()) {
+            val ssrc = RtpHeader.getSsrc(packetInfo.packet.buffer, packetInfo.packet.offset)
+            val ep = getEndpointBySsrc(ssrc)
+            if (ep != null) {
+                ep.handleIncomingPacket(packetInfo)
+                return
+            } else {
+                logger.warn { "RTP Packet received for unknown endpoint SSRC $ssrc" }
+            }
+        } else if (packetInfo.packet.looksLikeRtcp()) {
+            val ssrc = RtcpHeader.getSenderSsrc(packetInfo.packet.buffer, packetInfo.packet.offset)
+            val ep = getEndpointBySsrc(ssrc)
+            if (ep != null) {
+                ep.handleIncomingPacket(packetInfo)
+                return
+            } else {
+                /* Handle RTCP from non-endpoint senders on the generic transceiver - it's probably
+                 * from a feedback source.
+                 */
+                transceiver.handleIncomingPacket(packetInfo)
+            }
+        }
+    }
 
     /**
      * Handle incoming RTP packets which have been fully processed by the
@@ -461,6 +493,14 @@ class Relay @JvmOverloads constructor(
         val mediaSources = ArrayList<MediaSourceDesc>()
         relayedEndpoints.values.forEach { r -> mediaSources.addAll(r.mediaSources) }
         transceiver.setMediaSources(mediaSources.toTypedArray())
+    }
+
+    private fun setEndpointMediaSources(
+        ep: RelayedEndpoint,
+        audioSources: Collection<AudioSourceDesc>,
+        videoSources: Collection<MediaSourceDesc>
+    ) {
+        ep.mediaSources = videoSources.toTypedArray()
     }
 
     fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }

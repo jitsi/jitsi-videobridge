@@ -16,9 +16,11 @@
 package org.jitsi.videobridge.relay
 
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.nlj.MediaSources
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpReceiverEventHandler
 import org.jitsi.nlj.SetLocalSsrcEvent
+import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
@@ -43,6 +45,10 @@ class RelayedEndpoint(
     parentLogger: Logger
 ) : AbstractEndpoint(conference, id, parentLogger), Relay.IncomingRelayPacketHandler {
     var audioSources: Array<AudioSourceDesc> = arrayOf()
+        set(value) {
+            field = value
+            value.forEach { streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO) }
+        }
 
     private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
 
@@ -128,9 +134,27 @@ class RelayedEndpoint(
     fun relayMessageTransportConnected() =
         sendVideoConstraints(maxReceiverVideoConstraints)
 
+    private val _mediaSources = MediaSources()
+
     override val mediaSource: MediaSourceDesc?
         get() = mediaSources.getOrNull(0)
-    override var mediaSources: Array<MediaSourceDesc> = arrayOf()
+    override var mediaSources: Array<MediaSourceDesc>
+        get() = _mediaSources.getMediaSources()
+        set(value) {
+            val changed = _mediaSources.setMediaSources(value)
+            if (changed) {
+                val setMediaSourcesEvent = SetMediaSourcesEvent(mediaSources)
+
+                rtpReceiver.handleEvent(setMediaSourcesEvent)
+                mediaSources.forEach {
+                    it.rtpEncodings.forEach {
+                        it.ssrcs.forEach {
+                            streamInformationStore.addReceiveSsrc(it, MediaType.VIDEO)
+                        }
+                    }
+                }
+            }
+        }
 
     val ssrcs: Set<Long>
         get() = HashSet<Long>().also { set ->
