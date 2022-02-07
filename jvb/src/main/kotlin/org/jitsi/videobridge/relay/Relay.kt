@@ -26,6 +26,7 @@ import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
@@ -353,6 +354,7 @@ class Relay @JvmOverloads constructor(
                 return
             } else {
                 logger.warn { "RTP Packet received for unknown endpoint SSRC $ssrc" }
+                BufferPool.returnBuffer(packetInfo.packet.buffer)
             }
         } else if (packetInfo.packet.looksLikeRtcp()) {
             val ssrc = RtcpHeader.getSenderSsrc(packetInfo.packet.buffer, packetInfo.packet.offset)
