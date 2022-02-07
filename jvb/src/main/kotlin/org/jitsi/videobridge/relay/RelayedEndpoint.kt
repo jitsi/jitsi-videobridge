@@ -19,6 +19,7 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.MediaSources
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpReceiverEventHandler
+import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.format.PayloadType
@@ -56,7 +57,7 @@ class RelayedEndpoint(
     // TODO Figure this out
     private val rtcpEventNotifier = RtcpEventNotifier()
 
-    val rtpReceiver = RelayRtpReceiver(
+    val rtpReceiver = RtpReceiverImpl(
         id,
         { rtcpPacket ->
             if (rtcpPacket.length >= 1500) {
