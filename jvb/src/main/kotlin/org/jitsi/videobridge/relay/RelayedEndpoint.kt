@@ -26,6 +26,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.srtp.SrtpTransformers
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.StreamInformationStore
@@ -39,6 +40,7 @@ import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.util.TaskPools
+import org.json.simple.JSONObject
 
 class RelayedEndpoint(
     conference: Conference,
@@ -115,10 +117,6 @@ class RelayedEndpoint(
     override fun isSendingAudio(): Boolean = rtpReceiver.isReceivingAudio()
     override fun isSendingVideo(): Boolean = rtpReceiver.isReceivingVideo()
 
-    /**
-     * Relayed endpoints don't have their own payload types and RTP header extensions, these are properties of the
-     * relay.
-     */
     override fun addPayloadType(payloadType: PayloadType) = streamInformationStore.addRtpPayloadType(payloadType)
     override fun addRtpExtension(rtpExtension: RtpExtension) =
         streamInformationStore.addRtpExtensionMapping(rtpExtension)
@@ -169,6 +167,17 @@ class RelayedEndpoint(
     }
 
     override fun handleIncomingPacket(packetInfo: OctoPacketInfo) = rtpReceiver.processPacket(packetInfo)
+
+    override fun getDebugState(): JSONObject {
+        return super.getDebugState().apply {
+            val block = NodeStatsBlock("Remote Endpoint $id").apply {
+                addBlock(streamInformationStore.getNodeStats())
+                addBlock(_mediaSources.getNodeStats())
+                addBlock(rtpReceiver.getNodeStats())
+            }
+            put(block.name, block.toJson())
+        }
+    }
 
     private inner class RtpReceiverEventHandlerImpl : RtpReceiverEventHandler {
         /**

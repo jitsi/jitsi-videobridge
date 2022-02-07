@@ -21,6 +21,8 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
+import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
@@ -100,6 +102,18 @@ class Relay @JvmOverloads constructor(
      * The [Logger] used by the [Relay] class to print debug information.
      */
     private val logger = createChildLogger(parentLogger).apply { addContext("relayId", id) }
+
+    /**
+     * A cache of the signaled payload types, since these are only signaled
+     * at the top level but apply to all relayed endpoints
+     */
+    private val payloadTypes: MutableList<PayloadType> = ArrayList()
+
+    /**
+     * A cache of the signaled rtp extensions, since these are only signaled
+     * at the top level but apply to all relayed endpoints
+     */
+    private val rtpExtensions: MutableList<RtpExtension> = ArrayList()
 
     /**
      * The indicator which determines whether [expire] has been called on this [Relay].
@@ -197,6 +211,11 @@ class Relay @JvmOverloads constructor(
             put("dtlsTransport", dtlsTransport.getDebugState())
             put("transceiver", transceiver.getNodeStats().toJson())
             put("messageTransport", messageTransport.debugState)
+            val remoteEndpoints = JSONObject()
+            for (r in relayedEndpoints.values) {
+                remoteEndpoints[r.id] = r.debugState
+            }
+            put("remoteEndpoints", remoteEndpoints)
         }
 
     private fun setupIceTransport() {
@@ -473,7 +492,11 @@ class Relay @JvmOverloads constructor(
         }
 
         conference.addEndpoints(setOf(ep))
+
         srtpTransformers?.let { ep.setSrtpInformation(it) }
+        payloadTypes.forEach { payloadType -> ep.addPayloadType(payloadType) }
+        rtpExtensions.forEach { rtpExtension -> ep.addRtpExtension(rtpExtension) }
+
         updateTransceiverSources()
         setEndpointMediaSources(ep, audioSources, videoSources)
     }
@@ -524,6 +547,18 @@ class Relay @JvmOverloads constructor(
         val mediaSources = ArrayList<MediaSourceDesc>()
         relayedEndpoints.values.forEach { r -> mediaSources.addAll(r.mediaSources) }
         transceiver.setMediaSources(mediaSources.toTypedArray())
+    }
+
+    fun addPayloadType(payloadType: PayloadType) {
+        transceiver.addPayloadType(payloadType)
+        payloadTypes.add(payloadType)
+        relayedEndpoints.values.forEach { ep -> ep.addPayloadType(payloadType) }
+    }
+
+    fun addRtpExtension(rtpExtension: RtpExtension) {
+        transceiver.addRtpExtension(rtpExtension)
+        rtpExtensions.add(rtpExtension)
+        relayedEndpoints.values.forEach { ep -> ep.addRtpExtension(rtpExtension) }
     }
 
     private fun setEndpointMediaSources(
