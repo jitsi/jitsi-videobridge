@@ -448,6 +448,7 @@ class Relay @JvmOverloads constructor(
 
         conference.addEndpoints(setOf(ep))
         updateTransceiverSources()
+        setEndpointMediaSources(ep, audioSources, videoSources)
     }
 
     fun updateRemoteEndpoint(
@@ -474,6 +475,7 @@ class Relay @JvmOverloads constructor(
             addedSsrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
         }
         updateTransceiverSources()
+        setEndpointMediaSources(ep, audioSources, videoSources)
     }
 
     fun removeRemoteEndpoint(id: String) {
@@ -502,6 +504,7 @@ class Relay @JvmOverloads constructor(
         audioSources: Collection<AudioSourceDesc>,
         videoSources: Collection<MediaSourceDesc>
     ) {
+        ep.audioSources = audioSources.toTypedArray()
         ep.mediaSources = videoSources.toTypedArray()
     }
 
