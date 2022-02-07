@@ -24,6 +24,7 @@ import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.StreamInformationStore
@@ -161,6 +162,10 @@ class RelayedEndpoint(
             audioSources.forEach { set.add(it.ssrc) }
             mediaSources.forEach { it.rtpEncodings.forEach { set.addAll(it.ssrcs) } }
         }
+
+    fun setSrtpInformation(srtpTransformers: SrtpTransformers) {
+        rtpReceiver.setSrtpTransformers(srtpTransformers)
+    }
 
     override fun handleIncomingPacket(packetInfo: OctoPacketInfo) = rtpReceiver.processPacket(packetInfo)
 

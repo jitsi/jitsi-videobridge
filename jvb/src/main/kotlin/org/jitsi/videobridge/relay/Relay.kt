@@ -22,6 +22,8 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.srtp.SrtpTransformers
+import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -270,6 +272,30 @@ class Relay @JvmOverloads constructor(
         }
     }
 
+    var srtpTransformers: SrtpTransformers? = null
+
+    private fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
+        val srtpProfileInfo =
+            SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
+        logger.cdebug {
+            "Transceiver $id creating transformers with:\n" +
+                "profile info:\n$srtpProfileInfo\n" +
+                "tls role: $tlsRole"
+        }
+        val srtpTransformers = SrtpUtil.initializeTransformer(
+            srtpProfileInfo,
+            keyingMaterial,
+            tlsRole,
+            logger
+        )
+        this.srtpTransformers = srtpTransformers
+
+        transceiver.setSrtpInformation(srtpTransformers)
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { it.setSrtpInformation(srtpTransformers) }
+        }
+    }
+
     /**
      * Sets the remote transport information (ICE candidates, DTLS fingerprints).
      *
@@ -447,6 +473,7 @@ class Relay @JvmOverloads constructor(
         }
 
         conference.addEndpoints(setOf(ep))
+        srtpTransformers?.let { ep.setSrtpInformation(it) }
         updateTransceiverSources()
         setEndpointMediaSources(ep, audioSources, videoSources)
     }
