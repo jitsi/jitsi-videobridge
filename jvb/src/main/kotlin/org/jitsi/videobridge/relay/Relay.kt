@@ -285,7 +285,7 @@ class Relay @JvmOverloads constructor(
                 keyingMaterial: ByteArray
             ) {
                 logger.info("DTLS handshake complete")
-                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
+                setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
                 scheduleRelayMessageTransportTimeout()
             }
         }
