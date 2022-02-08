@@ -500,7 +500,6 @@ class Relay @JvmOverloads constructor(
         payloadTypes.forEach { payloadType -> ep.addPayloadType(payloadType) }
         rtpExtensions.forEach { rtpExtension -> ep.addRtpExtension(rtpExtension) }
 
-        updateTransceiverSources()
         setEndpointMediaSources(ep, audioSources, videoSources)
     }
 
@@ -527,7 +526,6 @@ class Relay @JvmOverloads constructor(
             endpointsBySsrc.keys.removeAll(removedSsrcs)
             addedSsrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
         }
-        updateTransceiverSources()
         setEndpointMediaSources(ep, audioSources, videoSources)
     }
 
@@ -542,14 +540,6 @@ class Relay @JvmOverloads constructor(
         if (ep != null) {
             conference.endpointExpired(ep)
         }
-        updateTransceiverSources()
-    }
-
-    /** TODO this is inefficient, will be better when we have per-endpoint transceivers. */
-    private fun updateTransceiverSources() {
-        val mediaSources = ArrayList<MediaSourceDesc>()
-        relayedEndpoints.values.forEach { r -> mediaSources.addAll(r.mediaSources) }
-        transceiver.setMediaSources(mediaSources.toTypedArray())
     }
 
     fun addPayloadType(payloadType: PayloadType) {
