@@ -19,6 +19,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -264,6 +265,10 @@ class Transceiver(
             logger
         )
 
+        setSrtpInformation(srtpTransformers)
+    }
+
+    fun setSrtpInformation(srtpTransformers: SrtpTransformers) {
         rtpReceiver.setSrtpTransformers(srtpTransformers)
         rtpSender.setSrtpTransformers(srtpTransformers)
     }
