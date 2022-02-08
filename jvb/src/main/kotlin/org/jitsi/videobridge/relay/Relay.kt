@@ -541,13 +541,17 @@ class Relay @JvmOverloads constructor(
     fun addPayloadType(payloadType: PayloadType) {
         transceiver.addPayloadType(payloadType)
         payloadTypes.add(payloadType)
-        relayedEndpoints.values.forEach { ep -> ep.addPayloadType(payloadType) }
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { ep -> ep.addPayloadType(payloadType) }
+        }
     }
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
         transceiver.addRtpExtension(rtpExtension)
         rtpExtensions.add(rtpExtension)
-        relayedEndpoints.values.forEach { ep -> ep.addRtpExtension(rtpExtension) }
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { ep -> ep.addRtpExtension(rtpExtension) }
+        }
     }
 
     private fun setEndpointMediaSources(
