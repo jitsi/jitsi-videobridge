@@ -386,10 +386,6 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    fun isSendingAudio(): Boolean = transceiver.isReceivingAudio()
-
-    fun isSendingVideo(): Boolean = transceiver.isReceivingVideo()
-
     /**
      * Handle media packets that have arrived, using the appropriate endpoint's transceiver.
      */

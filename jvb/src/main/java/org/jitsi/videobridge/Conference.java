@@ -1436,16 +1436,11 @@ public class Conference
 
     /**
      * Whether the conference is inactive, in the sense that none of its
-     * local endpoints or relays are sending audio or video.
+     * endpoints are sending audio or video.
      */
     public boolean isInactive()
     {
-        /* N.B.: this could be changed to iterate over getLocalEndpoints() once old Octo is removed,
-         * and these methods removed from AbstractEndpoint, assuming we don't go to transceiver-per-endpoint
-         * for Secure Octo.
-         */
-        return getEndpoints().stream().noneMatch(e -> e.isSendingAudio() || e.isSendingVideo()) &&
-            getRelays().stream().noneMatch(r -> r.isSendingAudio() || r.isSendingVideo());
+        return getEndpoints().stream().noneMatch(e -> e.isSendingAudio() || e.isSendingVideo());
     }
 
     @NotNull public EncodingsManager getEncodingsManager()
