@@ -72,6 +72,7 @@ import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
 
 /**
@@ -132,6 +133,8 @@ class Relay @JvmOverloads constructor(
     private val relayedEndpoints = HashMap<String, RelayedEndpoint>()
     private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
     private val endpointsLock = Any()
+
+    val statistics = Statistics()
 
     /**
      * Listen for RTT updates from [transceiver] and update the ICE stats the first time an RTT is available. Note that
@@ -630,13 +633,20 @@ class Relay @JvmOverloads constructor(
         val conferenceStats = conference.statistics
         val transceiverStats = transceiver.getTransceiverStats()
 
+        // Add stats from the local transceiver
+        val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
+        val outgoingStats = transceiverStats.outgoingPacketStreamStats
+
+        statistics.bytesReceived.getAndAdd(incomingStats.bytes)
+        statistics.packetsReceived.getAndAdd(incomingStats.packets)
+        statistics.bytesSent.getAndAdd(outgoingStats.bytes)
+        statistics.packetsSent.getAndAdd(outgoingStats.packets)
+
         conferenceStats.apply {
-            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
-            val outgoingStats = transceiverStats.outgoingPacketStreamStats
-            totalRelayBytesReceived.addAndGet(incomingStats.bytes)
-            totalRelayPacketsReceived.addAndGet(incomingStats.packets)
-            totalRelayBytesSent.addAndGet(outgoingStats.bytes)
-            totalRelayPacketsSent.addAndGet(outgoingStats.packets)
+            totalRelayBytesReceived.addAndGet(statistics.bytesReceived.get())
+            totalRelayPacketsReceived.addAndGet(statistics.packetsReceived.get())
+            totalRelayBytesSent.addAndGet(statistics.bytesSent.get())
+            totalRelayPacketsSent.addAndGet(statistics.packetsSent.get())
         }
 
         conference.videobridge.statistics.apply {
@@ -689,6 +699,22 @@ class Relay @JvmOverloads constructor(
          */
         @JvmField
         val queueErrorCounter = CountingErrorHandler()
+    }
+
+    class Statistics {
+        val bytesReceived = AtomicLong(0)
+        val packetsReceived = AtomicLong(0)
+        val bytesSent = AtomicLong(0)
+        val packetsSent = AtomicLong(0)
+
+        private fun getJson(): JSONObject {
+            val jsonObject = JSONObject()
+            jsonObject["bytes_received"] = bytesReceived.get()
+            jsonObject["bytes_sent"] = bytesSent.get()
+            jsonObject["packets_received"] = packetsReceived.get()
+            jsonObject["packets_sent"] = packetsSent.get()
+            return jsonObject
+        }
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {

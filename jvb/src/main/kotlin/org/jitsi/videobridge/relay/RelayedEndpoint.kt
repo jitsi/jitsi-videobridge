@@ -179,6 +179,35 @@ class RelayedEndpoint(
         }
     }
 
+    private fun updateStatsOnExpire() {
+        val relayStats = relay.statistics
+        val rtpReceiverStats = rtpReceiver.getStats()
+
+        // Add stats from the local transceiver
+        val incomingStats = rtpReceiverStats.packetStreamStats
+
+        relayStats.apply {
+            bytesReceived.getAndAdd(incomingStats.bytes)
+            packetsReceived.getAndAdd(incomingStats.packets)
+        }
+    }
+
+    override fun expire() {
+        if (super.isExpired()) {
+            return
+        }
+        super.expire()
+
+        try {
+            updateStatsOnExpire()
+            rtpReceiver.stop()
+        } catch (t: Throwable) {
+            logger.error("Exception while expiring: ", t)
+        }
+
+        logger.info("Expired.")
+    }
+
     private inner class RtpReceiverEventHandlerImpl : RtpReceiverEventHandler {
         /**
          * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
