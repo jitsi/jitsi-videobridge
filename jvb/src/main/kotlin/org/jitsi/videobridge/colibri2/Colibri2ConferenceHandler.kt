@@ -278,12 +278,12 @@ class Colibri2ConferenceHandler(
         for (media: Media in c2relay.media) {
             // TODO: support removing payload types/header extensions
             media.payloadTypes.forEach { ptExt ->
-                create(ptExt, media.type)?.let { relay.transceiver.addPayloadType(it) }
+                create(ptExt, media.type)?.let { relay.addPayloadType(it) }
                     ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toXML()}")
             }
 
             media.rtpHdrExts.forEach { rtpHdrExt ->
-                rtpHdrExt.toRtpExtension()?.let { relay.transceiver.addRtpExtension(it) }
+                rtpHdrExt.toRtpExtension()?.let { relay.addRtpExtension(it) }
                     ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
             }
 

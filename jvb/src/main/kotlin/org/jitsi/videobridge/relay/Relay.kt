@@ -21,17 +21,26 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
+import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.srtp.SrtpTransformers
+import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.looksLikeRtcp
+import org.jitsi.rtp.extensions.looksLikeRtp
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.event.EventEmitter
@@ -63,6 +72,7 @@ import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
 
 /**
@@ -95,6 +105,18 @@ class Relay @JvmOverloads constructor(
     private val logger = createChildLogger(parentLogger).apply { addContext("relayId", id) }
 
     /**
+     * A cache of the signaled payload types, since these are only signaled
+     * at the top level but apply to all relayed endpoints
+     */
+    private val payloadTypes: MutableList<PayloadType> = ArrayList()
+
+    /**
+     * A cache of the signaled rtp extensions, since these are only signaled
+     * at the top level but apply to all relayed endpoints
+     */
+    private val rtpExtensions: MutableList<RtpExtension> = ArrayList()
+
+    /**
      * The indicator which determines whether [expire] has been called on this [Relay].
      */
     private var expired = false
@@ -111,6 +133,8 @@ class Relay @JvmOverloads constructor(
     private val relayedEndpoints = HashMap<String, RelayedEndpoint>()
     private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
     private val endpointsLock = Any()
+
+    val statistics = Statistics()
 
     /**
      * Listen for RTT updates from [transceiver] and update the ICE stats the first time an RTT is available. Note that
@@ -190,6 +214,11 @@ class Relay @JvmOverloads constructor(
             put("dtlsTransport", dtlsTransport.getDebugState())
             put("transceiver", transceiver.getNodeStats().toJson())
             put("messageTransport", messageTransport.debugState)
+            val remoteEndpoints = JSONObject()
+            for (r in relayedEndpoints.values) {
+                remoteEndpoints[r.id] = r.debugState
+            }
+            put("remoteEndpoints", remoteEndpoints)
         }
 
     private fun setupIceTransport() {
@@ -214,7 +243,7 @@ class Relay @JvmOverloads constructor(
                         ).apply {
                             this.receivedTime = receivedTime
                         }
-                    transceiver.handleIncomingPacket(pktInfo)
+                    handleMediaPacket(pktInfo)
                 }
             }
         }
@@ -259,9 +288,33 @@ class Relay @JvmOverloads constructor(
                 keyingMaterial: ByteArray
             ) {
                 logger.info("DTLS handshake complete")
-                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
+                setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
                 scheduleRelayMessageTransportTimeout()
             }
+        }
+    }
+
+    var srtpTransformers: SrtpTransformers? = null
+
+    private fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
+        val srtpProfileInfo =
+            SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
+        logger.cdebug {
+            "Transceiver $id creating transformers with:\n" +
+                "profile info:\n$srtpProfileInfo\n" +
+                "tls role: $tlsRole"
+        }
+        val srtpTransformers = SrtpUtil.initializeTransformer(
+            srtpProfileInfo,
+            keyingMaterial,
+            tlsRole,
+            logger
+        )
+        this.srtpTransformers = srtpTransformers
+
+        transceiver.setSrtpInformation(srtpTransformers)
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { it.setSrtpInformation(srtpTransformers) }
         }
     }
 
@@ -333,9 +386,34 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    fun isSendingAudio(): Boolean = transceiver.isReceivingAudio()
-
-    fun isSendingVideo(): Boolean = transceiver.isReceivingVideo()
+    /**
+     * Handle media packets that have arrived, using the appropriate endpoint's transceiver.
+     */
+    private fun handleMediaPacket(packetInfo: OctoPacketInfo) {
+        if (packetInfo.packet.looksLikeRtp()) {
+            val ssrc = RtpHeader.getSsrc(packetInfo.packet.buffer, packetInfo.packet.offset)
+            val ep = getEndpointBySsrc(ssrc)
+            if (ep != null) {
+                ep.handleIncomingPacket(packetInfo)
+                return
+            } else {
+                logger.warn { "RTP Packet received for unknown endpoint SSRC $ssrc" }
+                BufferPool.returnBuffer(packetInfo.packet.buffer)
+            }
+        } else if (packetInfo.packet.looksLikeRtcp()) {
+            val ssrc = RtcpHeader.getSenderSsrc(packetInfo.packet.buffer, packetInfo.packet.offset)
+            val ep = getEndpointBySsrc(ssrc)
+            if (ep != null) {
+                ep.handleIncomingPacket(packetInfo)
+                return
+            } else {
+                /* Handle RTCP from non-endpoint senders on the generic transceiver - it's probably
+                 * from a feedback source.
+                 */
+                transceiver.handleIncomingPacket(packetInfo)
+            }
+        }
+    }
 
     /**
      * Handle incoming RTP packets which have been fully processed by the
@@ -413,7 +491,12 @@ class Relay @JvmOverloads constructor(
         }
 
         conference.addEndpoints(setOf(ep))
-        updateTransceiverSources()
+
+        srtpTransformers?.let { ep.setSrtpInformation(it) }
+        payloadTypes.forEach { payloadType -> ep.addPayloadType(payloadType) }
+        rtpExtensions.forEach { rtpExtension -> ep.addRtpExtension(rtpExtension) }
+
+        setEndpointMediaSources(ep, audioSources, videoSources)
     }
 
     fun updateRemoteEndpoint(
@@ -439,7 +522,7 @@ class Relay @JvmOverloads constructor(
             endpointsBySsrc.keys.removeAll(removedSsrcs)
             addedSsrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
         }
-        updateTransceiverSources()
+        setEndpointMediaSources(ep, audioSources, videoSources)
     }
 
     fun removeRemoteEndpoint(id: String) {
@@ -453,14 +536,31 @@ class Relay @JvmOverloads constructor(
         if (ep != null) {
             conference.endpointExpired(ep)
         }
-        updateTransceiverSources()
     }
 
-    /** TODO this is inefficient, will be better when we have per-endpoint transceivers. */
-    private fun updateTransceiverSources() {
-        val mediaSources = ArrayList<MediaSourceDesc>()
-        relayedEndpoints.values.forEach { r -> mediaSources.addAll(r.mediaSources) }
-        transceiver.setMediaSources(mediaSources.toTypedArray())
+    fun addPayloadType(payloadType: PayloadType) {
+        transceiver.addPayloadType(payloadType)
+        payloadTypes.add(payloadType)
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { ep -> ep.addPayloadType(payloadType) }
+        }
+    }
+
+    fun addRtpExtension(rtpExtension: RtpExtension) {
+        transceiver.addRtpExtension(rtpExtension)
+        rtpExtensions.add(rtpExtension)
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { ep -> ep.addRtpExtension(rtpExtension) }
+        }
+    }
+
+    private fun setEndpointMediaSources(
+        ep: RelayedEndpoint,
+        audioSources: Collection<AudioSourceDesc>,
+        videoSources: Collection<MediaSourceDesc>
+    ) {
+        ep.audioSources = audioSources.toTypedArray()
+        ep.mediaSources = videoSources.toTypedArray()
     }
 
     fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }
@@ -523,13 +623,20 @@ class Relay @JvmOverloads constructor(
         val conferenceStats = conference.statistics
         val transceiverStats = transceiver.getTransceiverStats()
 
+        // Add stats from the local transceiver
+        val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
+        val outgoingStats = transceiverStats.outgoingPacketStreamStats
+
+        statistics.bytesReceived.getAndAdd(incomingStats.bytes)
+        statistics.packetsReceived.getAndAdd(incomingStats.packets)
+        statistics.bytesSent.getAndAdd(outgoingStats.bytes)
+        statistics.packetsSent.getAndAdd(outgoingStats.packets)
+
         conferenceStats.apply {
-            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
-            val outgoingStats = transceiverStats.outgoingPacketStreamStats
-            totalRelayBytesReceived.addAndGet(incomingStats.bytes)
-            totalRelayPacketsReceived.addAndGet(incomingStats.packets)
-            totalRelayBytesSent.addAndGet(outgoingStats.bytes)
-            totalRelayPacketsSent.addAndGet(outgoingStats.packets)
+            totalRelayBytesReceived.addAndGet(statistics.bytesReceived.get())
+            totalRelayPacketsReceived.addAndGet(statistics.packetsReceived.get())
+            totalRelayBytesSent.addAndGet(statistics.bytesSent.get())
+            totalRelayPacketsSent.addAndGet(statistics.packetsSent.get())
         }
 
         conference.videobridge.statistics.apply {
@@ -584,6 +691,22 @@ class Relay @JvmOverloads constructor(
         val queueErrorCounter = CountingErrorHandler()
     }
 
+    class Statistics {
+        val bytesReceived = AtomicLong(0)
+        val packetsReceived = AtomicLong(0)
+        val bytesSent = AtomicLong(0)
+        val packetsSent = AtomicLong(0)
+
+        private fun getJson(): JSONObject {
+            val jsonObject = JSONObject()
+            jsonObject["bytes_received"] = bytesReceived.get()
+            jsonObject["bytes_sent"] = bytesSent.get()
+            jsonObject["packets_received"] = packetsReceived.get()
+            jsonObject["packets_sent"] = packetsSent.get()
+            return jsonObject
+        }
+    }
+
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
         /**
          * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
@@ -603,5 +726,9 @@ class Relay @JvmOverloads constructor(
             logger.cdebug { "Estimated bandwidth is now $newValue" }
             /* We don't use BWE for relay connections. */
         }
+    }
+
+    interface IncomingRelayPacketHandler {
+        fun handleIncomingPacket(packetInfo: OctoPacketInfo)
     }
 }
