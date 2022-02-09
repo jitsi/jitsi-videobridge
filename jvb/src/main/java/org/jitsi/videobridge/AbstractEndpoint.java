@@ -67,7 +67,7 @@ public abstract class AbstractEndpoint
     private final ReceiverConstraintsMap receiverVideoConstraintsMap = new ReceiverConstraintsMap();
 
     /**
-     * The map of source name -> receiver endpoint id -> video constraints.
+     * The map of source name -> ReceiverConstraintsMap.
      */
     private final Map<String, ReceiverConstraintsMap> receiverVideoConstraintsMapV2 = new HashMap<>();
 
