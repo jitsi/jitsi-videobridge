@@ -427,8 +427,8 @@ class SenderSourceConstraintsMessage(
  */
 class AddReceiverMessage(
     val bridgeId: String,
-    val endpointId: String,
-    val sourceName: String?,
+    val endpointId: String?, // Used in single stream per endpoint mode and wil be removed
+    val sourceName: String?, // Used in the multi-stream mode
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage(TYPE) {
     /**

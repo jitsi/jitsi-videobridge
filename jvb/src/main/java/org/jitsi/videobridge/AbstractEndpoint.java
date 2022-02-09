@@ -212,11 +212,6 @@ public abstract class AbstractEndpoint
         return null;
     }
 
-    public boolean hasMediaSource(String sourceName)
-    {
-        return findMediaSourceDesc(sourceName) != null;
-    }
-
     /**
      * Returns the stats Id of this <tt>Endpoint</tt>.
      *

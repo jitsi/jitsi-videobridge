@@ -140,20 +140,21 @@ class RelayMessageTransport(
      * @return
      */
     override fun addReceiver(message: AddReceiverMessage): BridgeChannelMessage? {
-        val epId = message.endpointId
-        val ep = relay.conference.getLocalEndpoint(epId) ?: run {
-            logger.warn("Received AddReceiverMessage for unknown or non-local epId $epId")
-            return null
-        }
-
         if (MultiStreamConfig.config.enabled) {
             val sourceName = message.sourceName
-            if (ep.hasMediaSource(sourceName)) {
-                ep.addReceiverV2(relay.id, sourceName, message.videoConstraints)
-            } else {
-                logger.warn("Received AddReceiverMessage for unknown source epId $epId sn $sourceName")
+            val ep = relay.conference.findSourceOwner(sourceName!!) ?: run {
+                logger.warn("Received AddReceiverMessage for unknown or non-local: $sourceName")
+                return null
             }
+
+            ep.addReceiverV2(relay.id, sourceName, message.videoConstraints)
         } else {
+            val epId = message.endpointId
+            val ep = relay.conference.getLocalEndpoint(epId) ?: run {
+                logger.warn("Received AddReceiverMessage for unknown or non-local epId $epId")
+                return null
+            }
+
             ep.addReceiver(relay.id, message.videoConstraints)
         }
         return null

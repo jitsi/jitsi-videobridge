@@ -126,7 +126,7 @@ class RelayedEndpoint(
             AddReceiverMessage(
                 conference.tentacle.bridgeId, /* TODO: store local bridge ID somewhere better */
                 id,
-                null, /* source name */
+                null, /* source name  - used in multi-stream */
                 maxVideoConstraints
             )
         )
@@ -136,7 +136,7 @@ class RelayedEndpoint(
         relay.sendMessage(
             AddReceiverMessage(
                 conference.tentacle.bridgeId, /* TODO: store local bridge ID somewhere better */
-                id,
+                null, // Endpoint ID - will be removed
                 sourceName,
                 maxVideoConstraints
             )
