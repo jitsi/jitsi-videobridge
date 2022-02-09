@@ -494,7 +494,7 @@ public abstract class AbstractEndpoint
 
     /**
      * Notifies this instance that a specified received wants to receive the specified video constraints from the media
-     * source attached to this instance (the sender).
+     * source with the given source name.
      *
      * The receiver can be either another endpoint, or a remote bridge.
      *
