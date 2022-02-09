@@ -26,7 +26,6 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.RemoveReceiverMessage
@@ -105,14 +104,7 @@ class OctoEndpoint(
     }
 
     override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
-        conference.tentacle.sendMessage(
-            AddReceiverMessage(
-                conference.tentacle.bridgeId,
-                id,
-                sourceName,
-                maxVideoConstraints
-            )
-        )
+        throw NotImplementedError("sendVideoConstraintsV2 is not implemented for Octo V1")
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
@@ -134,13 +126,7 @@ class OctoEndpoint(
             return
         }
         super.expire()
-        if (MultiStreamConfig.config.enabled) {
-            // TODO figure out what is the list of source names here
-            // conference.tentacle.sendMessage(RemoveReceiverMessage(conference.tentacle.bridgeId, id, null))
-            throw NotImplementedError("Implement RemoveReceiverMessage in Expire")
-        } else {
-            conference.tentacle.sendMessage(RemoveReceiverMessage(conference.tentacle.bridgeId, id, null))
-        }
+        conference.tentacle.sendMessage(RemoveReceiverMessage(conference.tentacle.bridgeId, id, null))
         transceiver.stop()
         logger.debug { transceiver.getNodeStats().prettyPrint() }
         conference.tentacle.removeHandler(id, this)

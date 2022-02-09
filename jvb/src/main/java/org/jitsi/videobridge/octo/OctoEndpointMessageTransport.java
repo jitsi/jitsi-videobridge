@@ -72,28 +72,19 @@ class OctoEndpointMessageTransport
     @Override
     public BridgeChannelMessage addReceiver(@NotNull AddReceiverMessage message)
     {
-        Conference conference = octoEndpoints.getConference();
-
-        if (MultiStreamConfig.config.getEnabled())
+        if (MultiStreamConfig.config.getEnabled() && message.getSourceName() != null)
         {
-            String sourceName = message.getSourceName();
-            AbstractEndpoint endpoint = conference.findSourceOwner(sourceName);
-            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
-            // Handle only those that reference an endpoint local to this bridge.
-            if (endpoint instanceof Endpoint)
-            {
-                endpoint.addReceiverV2(message.getBridgeId(), sourceName, message.getVideoConstraints());
-            }
+            // The sourceName is supplied only in OctoV2 impl on the sender side, so can be used to detect V1.
+            throw new RuntimeException("Octo V1 does not support the multi stream mode");
         }
-        else
+
+        Conference conference = octoEndpoints.getConference();
+        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
+        // only those that reference an endpoint local to this bridge.
+        if (endpoint instanceof Endpoint)
         {
-            AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
-            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
-            // Handle only those that reference an endpoint local to this bridge.
-            if (endpoint instanceof Endpoint)
-            {
-                endpoint.addReceiver(message.getBridgeId(), message.getVideoConstraints());
-            }
+            endpoint.addReceiver(message.getBridgeId(), message.getVideoConstraints());
         }
 
         return null;
@@ -103,27 +94,19 @@ class OctoEndpointMessageTransport
     @Override
     public BridgeChannelMessage removeReceiver(@NotNull RemoveReceiverMessage message)
     {
-        Conference conference = octoEndpoints.getConference();
-        if (MultiStreamConfig.config.getEnabled())
+        if (MultiStreamConfig.config.getEnabled() && message.getSourceName() != null)
         {
-            String sourceName = message.getSourceName();
-            AbstractEndpoint endpoint = conference.findSourceOwner(sourceName);
-            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
-            // Handle only those that reference an endpoint local to this bridge.
-            if (endpoint instanceof Endpoint)
-            {
-                endpoint.removeReceiverV2(message.getBridgeId(), sourceName);
-            }
+            // The sourceName is supplied only in OctoV2 impl on the sender side, so can be used to detect V1.
+            throw new RuntimeException("Octo V1 does not support the multi stream mode");
         }
-        else
+
+        Conference conference = octoEndpoints.getConference();
+        AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
+        // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle
+        // only those that reference an endpoint local to this bridge.
+        if (endpoint instanceof Endpoint)
         {
-            AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
-            // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge.
-            // Handle only those that reference an endpoint local to this bridge.
-            if (endpoint instanceof Endpoint)
-            {
-                endpoint.removeReceiver(message.getBridgeId());
-            }
+            endpoint.removeReceiver(message.getBridgeId());
         }
 
         return null;
