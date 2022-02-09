@@ -494,15 +494,25 @@ public class Videobridge
         IQ iq = request.getRequest();
         String id = null;
         Conference conference;
+
+        boolean colibri2;
+        if (iq instanceof ConferenceModifyIQ)
+        {
+            colibri2 = true;
+        }
+        else if (iq instanceof ColibriConferenceIQ)
+        {
+            colibri2 = false;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() +
+                    " in handleColibriRequest");
+        }
+
         try
         {
-            if (iq instanceof ColibriConferenceIQ)
-            {
-                ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ) iq;
-                id = conferenceIq.getID();
-                conference = getOrCreateConference(conferenceIq);
-            }
-            else if (iq instanceof ConferenceModifyIQ)
+            if (colibri2)
             {
                 ConferenceModifyIQ conferenceModifyIq = (ConferenceModifyIQ) iq;
                 id = conferenceModifyIq.getMeetingId();
@@ -510,27 +520,19 @@ public class Videobridge
             }
             else
             {
-                throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() +
-                    " in handleColibriRequest");
+                ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ) iq;
+                id = conferenceIq.getID();
+                conference = getOrCreateConference(conferenceIq);
             }
         }
         catch (ConferenceNotFoundException e)
         {
-            request.getCallback().invoke(
-                    IQUtils.createError(
-                            iq,
-                            StanzaError.Condition.bad_request,
-                            "Conference not found for ID: " + id));
+            request.getCallback().invoke(createConferenceNotFoundResponse(iq, id, colibri2));
             return;
         }
-        // TODO: perhaps we should use better error conditions for colibri2.
         catch (ConferenceAlreadyExistsException e)
         {
-            request.getCallback().invoke(
-                    IQUtils.createError(
-                            iq,
-                            StanzaError.Condition.bad_request,
-                            "Conference already exists for ID: " + id));
+            request.getCallback().invoke(createConferenceAlreadyExistsResponse(iq, id, colibri2));
             return;
         }
         catch (InGracefulShutdownException e)
@@ -550,6 +552,36 @@ public class Videobridge
 
         // It is now the responsibility of Conference to send a response.
         conference.enqueueColibriRequest(request);
+    }
+
+    private IQ createConferenceAlreadyExistsResponse(IQ iq, String conferenceId, boolean colibri2)
+    {
+        IQ error = IQUtils.createError(
+                iq,
+                // Jicofo's colibri1 impl requires a bad_request
+                colibri2 ? StanzaError.Condition.conflict : StanzaError.Condition.bad_request,
+                "Conference already exists for ID: " + conferenceId);
+        if (colibri2)
+        {
+            error.addExtension(new Colibri2Error(Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS));
+        }
+
+        return error;
+    }
+
+    private IQ createConferenceNotFoundResponse(IQ iq, String conferenceId, boolean colibri2)
+    {
+        IQ error = IQUtils.createError(
+                iq,
+                // Jicofo's colibri1 impl requires a bad_request
+                colibri2 ? StanzaError.Condition.item_not_found : StanzaError.Condition.bad_request,
+                "Conference not found for ID: " + conferenceId);
+        if (colibri2)
+        {
+            error.addExtension(new Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND));
+        }
+
+        return error;
     }
 
     private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)
