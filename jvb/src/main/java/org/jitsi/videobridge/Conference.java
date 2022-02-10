@@ -1166,22 +1166,6 @@ public class Conference
     }
 
     /**
-     * Determine whether to forward an audio packet.
-     * @param sourceEndpointId the source endpoint.
-     * @return whether to forward the packet.
-     */
-    private boolean shouldSendAudio(String sourceEndpointId)
-    {
-        DominantSpeakerIdentification<String>.SpeakerRanking ranking = speechActivity.getRanking(sourceEndpointId);
-        if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
-            return true;
-        if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
-            return true;
-        videobridge.getStatistics().tossedPacketsEnergy.addValue(ranking.energyScore);
-        return false;
-    }
-
-    /**
      * Determine whether a given endpointId is currently a ranked speaker, if
      * speaker ranking is currently enabled.
      */
@@ -1209,46 +1193,40 @@ public class Conference
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
 
-        boolean discard = LoudestConfig.Companion.getRouteLoudestOnly()
-            && packetInfo.getPacket() instanceof AudioRtpPacket
-            && !shouldSendAudio(sourceEndpointId);
-        if (!discard)
+        for (Endpoint endpoint : endpointsCache)
         {
-            for (Endpoint endpoint : endpointsCache)
+            if (endpoint.getId().equals(sourceEndpointId))
             {
-                if (endpoint.getId().equals(sourceEndpointId))
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                if (endpoint.wants(packetInfo))
-                {
-                    if (prevHandler != null)
-                    {
-                        prevHandler.send(packetInfo.clone());
-                    }
-                    prevHandler = endpoint;
-                }
-            }
-            for (Relay relay: relaysById.values())
-            {
-                if (relay.wants(packetInfo))
-                {
-                    if (prevHandler != null)
-                    {
-                        prevHandler.send(packetInfo.clone());
-                    }
-                    prevHandler = relay;
-                }
-            }
-            if (tentacle != null && tentacle.wants(packetInfo))
+            if (endpoint.wants(packetInfo))
             {
                 if (prevHandler != null)
                 {
                     prevHandler.send(packetInfo.clone());
                 }
-                prevHandler = tentacle;
+                prevHandler = endpoint;
             }
+        }
+        for (Relay relay: relaysById.values())
+        {
+            if (relay.wants(packetInfo))
+            {
+                if (prevHandler != null)
+                {
+                    prevHandler.send(packetInfo.clone());
+                }
+                prevHandler = relay;
+            }
+        }
+        if (tentacle != null && tentacle.wants(packetInfo))
+        {
+            if (prevHandler != null)
+            {
+                prevHandler.send(packetInfo.clone());
+            }
+            prevHandler = tentacle;
         }
 
         if (prevHandler != null)
@@ -1338,6 +1316,27 @@ public class Conference
         {
             sendOut(packetInfo);
         }
+    }
+
+    /**
+     * Process a new audio level received from an endpoint.
+     *
+     * @param endpoint the endpoint for which a new audio level was received
+     * @param level the new audio level which was received
+     * @return Whether the packet providing this audio level should be dropped, according
+     * to the current audio filtering configuration.
+     */
+    public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long level)
+    {
+        SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
+        if (ranking == null)
+            return false;
+        if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
+            return false;
+        if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
+            return false;
+        videobridge.getStatistics().tossedPacketsEnergy.addValue(ranking.energyScore);
+        return true;
     }
 
     /**

@@ -712,11 +712,9 @@ class Relay @JvmOverloads constructor(
          * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
-        override fun audioLevelReceived(sourceSsrc: Long, level: Long) {
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean {
             val ep = synchronized(endpointsLock) { endpointsBySsrc[sourceSsrc] }
-            if (ep != null) {
-                conference.speechActivity.levelChanged(ep, level)
-            }
+            return ep != null && conference.levelChanged(ep, level)
         }
 
         /**

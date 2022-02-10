@@ -255,11 +255,6 @@ public class ConferenceSpeechActivity
         return recentSpeakers.isRecentSpeaker(endpoint);
     }
 
-    public DominantSpeakerIdentification<String>.SpeakerRanking getRanking(String endpointId)
-    {
-        return dominantSpeakerIdentification.getRanking(endpointId);
-    }
-
     public boolean isAmongLoudest(String endpointId)
     {
         return dominantSpeakerIdentification.isAmongLoudest(endpointId);
@@ -270,14 +265,12 @@ public class ConferenceSpeechActivity
      *
      * @param endpoint the endpoint for which a new audio level was received or measured
      * @param level the new audio level which was received or measured
+     * @return The current energy rank and related data.
      */
-    public void levelChanged(@NotNull AbstractEndpoint endpoint, long level)
+    public SpeakerRanking levelChanged(@NotNull AbstractEndpoint endpoint, long level)
     {
         DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
-        if (dsi != null)
-        {
-            dominantSpeakerIdentification.levelChanged(endpoint.getId(), (int) level);
-        }
+        return dsi != null ? dsi.levelChanged(endpoint.getId(), (int) level) : null;
     }
 
     /**
