@@ -150,9 +150,7 @@ class Relay @JvmOverloads constructor(
             }
         }
 
-    /* TODO: we eventually want a smarter Transceiver implementation, that splits processing by
-     *  source endpoint or something similar, but for the initial implementation this should work.
-     */
+    /* This transceiver is only for packets that are not handled by RelayedEndpoints */
     val transceiver = Transceiver(
         id,
         TaskPools.CPU_POOL,
@@ -713,10 +711,10 @@ class Relay @JvmOverloads constructor(
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
         override fun audioLevelReceived(sourceSsrc: Long, level: Long) {
-            val ep = synchronized(endpointsLock) { endpointsBySsrc[sourceSsrc] }
-            if (ep != null) {
-                conference.speechActivity.levelChanged(ep, level)
-            }
+            /* We shouldn't receive audio levels from the local transceiver, since all media should be
+             * processed by the media endpoints.
+             */
+            logger.warn { "Audio level reported by relay transceiver for source $sourceSsrc" }
         }
 
         /**
