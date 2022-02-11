@@ -540,7 +540,7 @@ class Endpoint @JvmOverloads constructor(
     override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (findMediaSourceDesc(sourceName) == null) {
-            logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no such source." }
+            logger.warn { "Suppressing sending a SenderVideoConstraints message, endpoint has no such source." }
         } else {
             val senderSourceConstraintsMessage =
                 SenderSourceConstraintsMessage(sourceName, maxVideoConstraints.maxHeight)
