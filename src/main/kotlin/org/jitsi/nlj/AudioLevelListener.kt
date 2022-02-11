@@ -17,5 +17,13 @@
 package org.jitsi.nlj
 
 interface AudioLevelListener {
-    fun onLevelReceived(sourceSsrc: Long, level: Long)
+    /**
+     * Process the audio level from a received audio RTP packet.
+     *
+     * @param sourceSsrc The SSRC identifying the source of the audio stream.
+     * @param level The audio level.
+     * @return A boolean set to {@code true} if this packet should be
+     * discarded without being forwarded to other endpoints.
+     */
+    fun onLevelReceived(sourceSsrc: Long, level: Long): Boolean
 }

@@ -58,12 +58,20 @@ class AudioLevelReader(
                 val silence = level == MUTED_LEVEL
 
                 if (!silence) stats.nonSilence(AudioLevelHeaderExtension.getVad(ext))
-                if ((silence && forwardedSilencePackets > forwardedSilencePacketsLimit) || this.forceMute) {
+                if (silence && forwardedSilencePackets > forwardedSilencePacketsLimit) {
                     packetInfo.shouldDiscard = true
-                    stats.discarded(silence)
+                    stats.discardedSilence()
+                } else if (this.forceMute) {
+                    packetInfo.shouldDiscard = true
+                    stats.discardedForceMute()
                 } else {
                     forwardedSilencePackets = if (silence) forwardedSilencePackets + 1 else 0
-                    audioLevelListener?.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())
+                    audioLevelListener?.let { listener ->
+                        if (listener.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())) {
+                            packetInfo.shouldDiscard = true
+                            stats.discardedRanking()
+                        }
+                    }
                 }
             }
         }
@@ -73,6 +81,7 @@ class AudioLevelReader(
         addString("audio_level_ext_id", audioLevelExtId.toString())
         addNumber("num_silence_packets_discarded", stats.numDiscardedSilence)
         addNumber("num_force_mute_discarded", stats.numDiscardedForceMute)
+        addNumber("num_ranking_discarded", stats.numDiscardedRanking)
         addNumber("num_non_silence", stats.numNonSilence)
         addNumber("num_non_silence_with_vad", stats.numNonSilenceWithVad)
     }
@@ -90,11 +99,18 @@ class AudioLevelReader(
 private class Stats(
     var numDiscardedSilence: Long = 0,
     var numDiscardedForceMute: Long = 0,
+    var numDiscardedRanking: Long = 0,
     var numNonSilence: Long = 0,
     var numNonSilenceWithVad: Long = 0
 ) {
-    /** A packet was discarded. If [silence] is false we assume it was because of "force mute". */
-    fun discarded(silence: Boolean) = if (silence) numDiscardedSilence++ else numDiscardedForceMute++
+    /** A packet was discarded because it was silence. */
+    fun discardedSilence() = numDiscardedSilence++
+
+    /** A packet was discarded because it was force-muted. */
+    fun discardedForceMute() = numDiscardedForceMute++
+
+    /** A packet was discarded due to insufficient energy ranking or active speaker status. */
+    fun discardedRanking() = numDiscardedRanking++
 
     /** A non-silence packet was received (with or without the Voice Activity Detection flag). */
     fun nonSilence(hasVad: Boolean) {

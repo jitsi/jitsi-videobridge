@@ -114,9 +114,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val remoteBandwidthEstimator = RemoteBandwidthEstimator(streamInformationStore, logger, diagnosticContext)
     private val audioLevelReader = AudioLevelReader(streamInformationStore).apply {
         audioLevelListener = object : AudioLevelListener {
-            override fun onLevelReceived(sourceSsrc: Long, level: Long) {
+            override fun onLevelReceived(sourceSsrc: Long, level: Long): Boolean =
                 eventHandler.audioLevelReceived(sourceSsrc, level)
-            }
         }
     }
 

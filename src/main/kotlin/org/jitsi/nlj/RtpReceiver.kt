@@ -65,7 +65,7 @@ interface RtpReceiverEventHandler {
     /**
      * We received an audio level indication from the remote endpoint.
      */
-    fun audioLevelReceived(sourceSsrc: Long, level: Long) {}
+    fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean = false
     /**
      * The estimation of the available send bandwidth changed.
      */
