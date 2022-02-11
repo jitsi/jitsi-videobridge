@@ -302,6 +302,11 @@ class Colibri2ConferenceHandler(
             )
         }
 
+        if (c2relay.transport?.sctp != null) throw IqProcessingException(
+            Condition.feature_not_implemented,
+            "SCTP is not supported for relays."
+        )
+
         c2relay.transport?.iceUdpTransport?.let { relay.setTransportInfo(it) }
         if (c2relay.create) {
             val transBuilder = Transport.getBuilder()
