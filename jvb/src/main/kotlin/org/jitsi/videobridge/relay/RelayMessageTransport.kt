@@ -28,7 +28,6 @@ import org.jitsi.videobridge.message.ClientHelloMessage
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
 import org.jitsi.videobridge.message.EndpointMessage
 import org.jitsi.videobridge.message.EndpointStats
-import org.jitsi.videobridge.message.RemoveReceiverMessage
 import org.jitsi.videobridge.message.SelectedEndpointMessage
 import org.jitsi.videobridge.message.SelectedEndpointsMessage
 import org.jitsi.videobridge.message.ServerHelloMessage
