@@ -803,11 +803,11 @@ public class MediaSourceFactory
         {
             if (owner == null)
             {
-                throw new IllegalArgumentException("The 'name' is missing in the source description");
+                throw new IllegalArgumentException("The 'owner' is missing in the source description");
             }
             if (name == null)
             {
-                throw new IllegalArgumentException("The 'owner' is missing in the source description");
+                throw new IllegalArgumentException("The 'name' is missing in the source description");
             }
         }
 
