@@ -222,24 +222,35 @@ class BridgeChannelMessageTest : ShouldSpec() {
         }
 
         context("serializing and parsing AddReceiver") {
-            val message = AddReceiverMessage("bridge1", "abcdabcd", "s1", VideoConstraints(360))
-            val parsed = parse(message.toJson())
+            context ("with source names") {
+                val message = AddReceiverMessage("bridge1", null, "s1", VideoConstraints(360))
+                val parsed = parse(message.toJson())
 
-            parsed.shouldBeInstanceOf<AddReceiverMessage>()
-            parsed.bridgeId shouldBe "bridge1"
-            parsed.endpointId shouldBe "abcdabcd"
-            parsed.sourceName shouldBe "s1"
-            parsed.videoConstraints shouldBe VideoConstraints(360)
+                parsed.shouldBeInstanceOf<AddReceiverMessage>()
+                parsed.bridgeId shouldBe "bridge1"
+                parsed.endpointId shouldBe null
+                parsed.sourceName shouldBe "s1"
+                parsed.videoConstraints shouldBe VideoConstraints(360)
+            }
+            context("without source names") {
+                val message = AddReceiverMessage("bridge1", "abcdabcd", null, VideoConstraints(360))
+                val parsed = parse(message.toJson())
+
+                parsed.shouldBeInstanceOf<AddReceiverMessage>()
+                parsed.bridgeId shouldBe "bridge1"
+                parsed.endpointId shouldBe "abcdabcd"
+                parsed.sourceName shouldBe null
+                parsed.videoConstraints shouldBe VideoConstraints(360)
+            }
         }
 
         context("serializing and parsing RemoveReceiver") {
-            val message = RemoveReceiverMessage("bridge1", "abcdabcd", "s1")
+            val message = RemoveReceiverMessage("bridge1", "abcdabcd")
             val parsed = parse(message.toJson())
 
             parsed.shouldBeInstanceOf<RemoveReceiverMessage>()
             parsed.bridgeId shouldBe "bridge1"
             parsed.endpointId shouldBe "abcdabcd"
-            parsed.sourceName shouldBe "s1"
         }
 
         context("serializing and parsing VideoType") {

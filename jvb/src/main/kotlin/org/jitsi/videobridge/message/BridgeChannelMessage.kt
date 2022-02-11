@@ -435,7 +435,10 @@ class AddReceiverMessage(
      * Serialize manually because it's faster than Jackson.
      */
     override fun createJson(): String =
-        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId","sourceName":"$sourceName",""" +
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId",
+            |${if (endpointId != null) "\"endpointId\":\"$endpointId\"," else "" }
+            |${if (sourceName != null) "\"sourceName\":\"$sourceName\"," else "" }
+            |""".trimMargin() +
             "\"videoConstraints\":$videoConstraints}"
 
     companion object {
@@ -449,14 +452,13 @@ class AddReceiverMessage(
  */
 class RemoveReceiverMessage(
     val bridgeId: String,
-    val endpointId: String,
-    val sourceName: String?,
+    val endpointId: String
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Serialize manually because it's faster than Jackson.
      */
     override fun createJson(): String =
-        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId","sourceName":"$sourceName"}"""
+        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
 
     companion object {
         const val TYPE = "RemoveReceiver"

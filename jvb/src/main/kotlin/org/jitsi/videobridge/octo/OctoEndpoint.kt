@@ -126,7 +126,7 @@ class OctoEndpoint(
             return
         }
         super.expire()
-        conference.tentacle.sendMessage(RemoveReceiverMessage(conference.tentacle.bridgeId, id, null))
+        conference.tentacle.sendMessage(RemoveReceiverMessage(conference.tentacle.bridgeId, id))
         transceiver.stop()
         logger.debug { transceiver.getNodeStats().prettyPrint() }
         conference.tentacle.removeHandler(id, this)
