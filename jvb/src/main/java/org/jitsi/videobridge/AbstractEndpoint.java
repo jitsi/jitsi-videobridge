@@ -527,10 +527,23 @@ public abstract class AbstractEndpoint
      */
     public void removeReceiver(String receiverId)
     {
-        if (receiverVideoConstraintsMap.remove(receiverId) != null)
-        {
-            logger.debug(() -> "Removed receiver " + receiverId);
-            receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
+        if (MultiStreamConfig.config.getEnabled()) {
+            for (Map.Entry<String, ReceiverConstraintsMap> sourceConstraintsEntry
+                    : receiverVideoConstraintsMapV2.entrySet()) {
+                String sourceName = sourceConstraintsEntry.getKey();
+                ReceiverConstraintsMap sourceConstraints = sourceConstraintsEntry.getValue();
+
+                if (sourceConstraints.remove(receiverId) != null) {
+                    logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
+                    receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
+                }
+            }
+        } else {
+            if (receiverVideoConstraintsMap.remove(receiverId) != null)
+            {
+                logger.debug(() -> "Removed receiver " + receiverId);
+                receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
+            }
         }
     }
 
@@ -541,7 +554,7 @@ public abstract class AbstractEndpoint
      * @param receiverId the id that specifies the receiver endpoint
      * @param sourceName the media source name
      */
-    public void removeReceiverV2(String receiverId, String sourceName)
+    public void removeSourceReceiver(String receiverId, String sourceName)
     {
         ReceiverConstraintsMap sourceConstraints = receiverVideoConstraintsMapV2.get(sourceName);
 

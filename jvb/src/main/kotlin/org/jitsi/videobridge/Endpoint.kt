@@ -517,7 +517,7 @@ class Endpoint @JvmOverloads constructor(
         // Sources that "this" endpoint no longer receives.
         for (removedSourceName in removedSources) {
             // Remove ourself as a receiver from that endpoint
-            conference.findSourceOwner(removedSourceName)?.removeReceiverV2(removedSourceName, id)
+            conference.findSourceOwner(removedSourceName)?.removeSourceReceiver(removedSourceName, id)
         }
 
         // Added or updated
