@@ -12,6 +12,8 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
+import org.jitsi.videobridge.sctp.SctpConfig
+import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
@@ -22,6 +24,7 @@ import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.Media
 import org.jitsi.xmpp.extensions.colibri2.MediaSource
+import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
 import org.jitsi.xmpp.extensions.jingle.ParameterPacketExtension
@@ -136,7 +139,30 @@ class Colibri2ConferenceHandler(
                 Condition.bad_request,
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
-            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling)
+            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling).apply {
+                transport.sctp?.let { sctp ->
+                    if (!SctpConfig.config.enabled) {
+                        throw IqProcessingException(
+                            Condition.feature_not_implemented,
+                            "SCTP support is not configured"
+                        )
+                    }
+                    if (sctp.role != null && sctp.role != Sctp.Role.SERVER) {
+                        throw IqProcessingException(
+                            Condition.feature_not_implemented,
+                            "Unsupported SCTP role: ${sctp.role}"
+                        )
+                    }
+                    if (sctp.port != null && sctp.port != SctpManager.DEFAULT_SCTP_PORT) {
+                        throw IqProcessingException(
+                            Condition.bad_request,
+                            "Specific SCTP port requested, not supported."
+                        )
+                    }
+
+                    createSctpConnection()
+                }
+            }
         } else {
             conference.getLocalEndpoint(c2endpoint.id) ?: throw IqProcessingException(
                 // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
@@ -173,6 +199,14 @@ class Colibri2ConferenceHandler(
         if (c2endpoint.create) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(endpoint.describeTransport())
+            if (c2endpoint.transport?.sctp != null) {
+                transBuilder.setSctp(
+                    Sctp.Builder()
+                        .setPort(SctpManager.DEFAULT_SCTP_PORT)
+                        .setRole(Sctp.Role.SERVER)
+                        .build()
+                )
+            }
             respBuilder.setTransport(transBuilder.build())
         }
 
@@ -267,6 +301,11 @@ class Colibri2ConferenceHandler(
                 "Unknown relay ${c2relay.id}"
             )
         }
+
+        if (c2relay.transport?.sctp != null) throw IqProcessingException(
+            Condition.feature_not_implemented,
+            "SCTP is not supported for relays."
+        )
 
         c2relay.transport?.iceUdpTransport?.let { relay.setTransportInfo(it) }
         if (c2relay.create) {
