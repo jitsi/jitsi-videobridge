@@ -151,16 +151,6 @@ class RelayMessageTransport(
         return null
     }
 
-    override fun removeReceiver(message: RemoveReceiverMessage): BridgeChannelMessage? {
-        val epId = message.endpointId
-        val ep = relay.conference.getLocalEndpoint(epId) ?: run {
-            logger.warn("Received RemoveReceiverMessage for unknown or non-local epId $epId")
-            return null
-        }
-        ep.removeReceiver(relay.id)
-        return null
-    }
-
     override fun videoType(message: VideoTypeMessage): BridgeChannelMessage? {
         val epId = message.endpointId
         if (epId == null) {
