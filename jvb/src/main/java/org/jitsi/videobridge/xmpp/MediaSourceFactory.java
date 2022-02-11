@@ -801,13 +801,13 @@ public class MediaSourceFactory
         // not optional (there's no good reason for that). Then the error will be thrown automatically by Kotlin.
         if (MultiStreamConfig.config.getEnabled())
         {
-            if (owner == null)
-            {
-                throw new IllegalArgumentException("The 'owner' is missing in the source description");
-            }
             if (name == null)
             {
                 throw new IllegalArgumentException("The 'name' is missing in the source description");
+            }
+            if (owner == null)
+            {
+                throw new IllegalArgumentException("The 'owner' is missing in the source description");
             }
         }
 
