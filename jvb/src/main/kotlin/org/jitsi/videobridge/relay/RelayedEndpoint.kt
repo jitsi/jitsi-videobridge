@@ -206,6 +206,7 @@ class RelayedEndpoint(
             updateStatsOnExpire()
             rtpReceiver.stop()
             logger.cdebug { getNodeStats().prettyPrint(0) }
+            rtpReceiver.tearDown()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
