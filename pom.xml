@@ -28,7 +28,7 @@
         <kotest.version>4.6.3</kotest.version>
         <junit.version>5.8.1</junit.version>
         <jicoco.version>1.1-101-g2170967</jicoco.version>
-        <jitsi.utils.version>1.0-110-g9d958b7</jitsi.utils.version>
+        <jitsi.utils.version>1.0-111-g8ea4491</jitsi.utils.version>
         <ktlint-maven-plugin.version>1.11.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
         <spotbugs.version>4.5.0</spotbugs.version>
@@ -107,7 +107,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-media-transform</artifactId>
-                <version>1.0-283-g7926280</version>
+                <version>1.0-284-gc0f7495</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
