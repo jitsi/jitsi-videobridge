@@ -50,14 +50,17 @@ public class SctpManager {
      */
     private SctpSocket socket = null;
 
-
-    // We hard-code 5000 in the offer, so just mark it as the default here.
-    private static int DEFAULT_SCTP_PORT = 5000;
+    /**
+     * We always use symmetric ports with SCTP (local port = remote port).
+     */
+    public static int DEFAULT_SCTP_PORT = 5000;
     static
     {
         if (config.enabled())
         {
             classLogger.info("Initializing Sctp4j");
+            // TODO: We pass DEFAULT_SCTP_PORT as the udp_port parameter to usrsctp_init, which probably doesn't make
+            // sense.
             Sctp4j.init(DEFAULT_SCTP_PORT);
         }
         else
