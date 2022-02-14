@@ -94,6 +94,8 @@ class RelayedEndpoint(
         return streamInformationStore.receiveSsrcs.contains(ssrc)
     }
 
+    override fun getSsrcs() = streamInformationStore.receiveSsrcs
+
     fun setReceiveSsrcs(ssrcsByMediaType: Map<MediaType, Set<Long>>) {
         streamInformationStore.receiveSsrcs.forEach { ssrc ->
             streamInformationStore.removeReceiveSsrc(ssrc)
@@ -154,12 +156,6 @@ class RelayedEndpoint(
                     }
                 }
             }
-        }
-
-    val ssrcs: Set<Long>
-        get() = HashSet<Long>().also { set ->
-            audioSources.forEach { set.add(it.ssrc) }
-            mediaSources.forEach { it.rtpEncodings.forEach { set.addAll(it.ssrcs) } }
         }
 
     fun setSrtpInformation(srtpTransformers: SrtpTransformers) {

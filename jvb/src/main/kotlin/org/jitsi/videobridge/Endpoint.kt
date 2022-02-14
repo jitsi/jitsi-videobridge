@@ -731,6 +731,8 @@ class Endpoint @JvmOverloads constructor(
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
+    override fun getSsrcs() = transceiver.receiveSsrcs
+
     override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
 
     override fun requestKeyframe() = transceiver.requestKeyFrame()
