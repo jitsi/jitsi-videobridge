@@ -134,6 +134,14 @@ class OctoEndpoint(
      * Sets the set SSRCs we expect to receive from this endpoint.
      */
     fun setReceiveSsrcs(ssrcsByMediaType: Map<MediaType, Set<Long>>) {
+        /* TODO: is this needed here?  The conference ssrc map is only used by new octo. */
+        val oldSsrcs = getSsrcs()
+        val newSsrcs = ssrcsByMediaType.flatMap { it.value }
+        val removedSsrcs = oldSsrcs.subtract(newSsrcs)
+        val addedSsrcs = newSsrcs.subtract(oldSsrcs)
+        removedSsrcs.forEach { conference.removeEndpointSsrc(this, it) }
+        addedSsrcs.forEach { conference.addEndpointSsrc(this, it) }
+
         transceiver.setReceiveSsrcs(ssrcsByMediaType)
     }
 

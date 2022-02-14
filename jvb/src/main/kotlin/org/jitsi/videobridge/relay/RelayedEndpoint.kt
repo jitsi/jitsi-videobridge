@@ -51,7 +51,10 @@ class RelayedEndpoint(
     var audioSources: Array<AudioSourceDesc> = arrayOf()
         set(value) {
             field = value
-            value.forEach { streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO) }
+            value.forEach {
+                streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO)
+                conference.addEndpointSsrc(this, it.ssrc)
+            }
         }
 
     private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
@@ -95,17 +98,6 @@ class RelayedEndpoint(
     }
 
     override fun getSsrcs() = streamInformationStore.receiveSsrcs
-
-    fun setReceiveSsrcs(ssrcsByMediaType: Map<MediaType, Set<Long>>) {
-        streamInformationStore.receiveSsrcs.forEach { ssrc ->
-            streamInformationStore.removeReceiveSsrc(ssrc)
-        }
-        ssrcsByMediaType.forEach { (mediaType: MediaType, ssrcs: Set<Long>) ->
-            ssrcs.forEach { ssrc ->
-                streamInformationStore.addReceiveSsrc(ssrc, mediaType)
-            }
-        }
-    }
 
     fun hasReceiveSsrcs(): Boolean = streamInformationStore.receiveSsrcs.isNotEmpty()
 
@@ -152,6 +144,7 @@ class RelayedEndpoint(
                     it.rtpEncodings.forEach {
                         it.ssrcs.forEach {
                             streamInformationStore.addReceiveSsrc(it, MediaType.VIDEO)
+                            conference.addEndpointSsrc(this, it)
                         }
                     }
                 }
