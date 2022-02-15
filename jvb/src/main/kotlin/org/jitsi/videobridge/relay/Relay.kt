@@ -71,6 +71,7 @@ import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
@@ -133,6 +134,8 @@ class Relay @JvmOverloads constructor(
     private val relayedEndpoints = HashMap<String, RelayedEndpoint>()
     private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
     private val endpointsLock = Any()
+
+    private val senders = ConcurrentHashMap<String, RelayEndpointSender>()
 
     val statistics = Statistics()
 
@@ -251,7 +254,7 @@ class Relay @JvmOverloads constructor(
                 eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
-                        outgoingSrtpPacketQueue.add(packetInfo)
+                        handleOutgoingPacket(packetInfo)
                     }
                 })
                 TaskPools.IO_POOL.execute(iceTransport::startReadingData)
@@ -292,7 +295,7 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    var srtpTransformers: SrtpTransformers? = null
+    private var srtpTransformers: SrtpTransformers? = null
 
     private fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
         val srtpProfileInfo =
@@ -314,6 +317,8 @@ class Relay @JvmOverloads constructor(
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { it.setSrtpInformation(srtpTransformers) }
         }
+
+        senders.values.forEach { it.setSrtpInformation(srtpTransformers) }
     }
 
     /**
@@ -429,6 +434,8 @@ class Relay @JvmOverloads constructor(
         conference.handleIncomingPacket(packetInfo)
     }
 
+    fun handleOutgoingPacket(packetInfo: PacketInfo) = outgoingSrtpPacketQueue.add(packetInfo)
+
     override fun onNewSsrcAssociation(
         endpointId: String,
         primarySsrc: Long,
@@ -536,12 +543,29 @@ class Relay @JvmOverloads constructor(
         }
     }
 
+    private fun getOrCreateRelaySender(endpointId: String): RelayEndpointSender {
+        synchronized(senders) {
+            senders[endpointId]?.let { return it }
+
+            val s = RelayEndpointSender(this, endpointId, diagnosticContext, logger)
+
+            srtpTransformers?.let { s.setSrtpInformation(it) }
+            payloadTypes.forEach { payloadType -> s.addPayloadType(payloadType) }
+            rtpExtensions.forEach { rtpExtension -> s.addRtpExtension(rtpExtension) }
+
+            senders[endpointId] = s
+
+            return s
+        }
+    }
+
     fun addPayloadType(payloadType: PayloadType) {
         transceiver.addPayloadType(payloadType)
         payloadTypes.add(payloadType)
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { ep -> ep.addPayloadType(payloadType) }
         }
+        senders.values.forEach { s -> s.addPayloadType(payloadType) }
     }
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
@@ -550,6 +574,7 @@ class Relay @JvmOverloads constructor(
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { ep -> ep.addRtpExtension(rtpExtension) }
         }
+        senders.values.forEach { s -> s.addRtpExtension(rtpExtension) }
     }
 
     private fun setEndpointMediaSources(
@@ -610,7 +635,13 @@ class Relay @JvmOverloads constructor(
         TODO: worry about bandwidth limits on relay links? */
     override fun wants(packet: PacketInfo): Boolean = isTransportConnected() && packet !is OctoPacketInfo
 
-    override fun send(packet: PacketInfo) = transceiver.sendPacket(packet)
+    override fun send(packet: PacketInfo) {
+        packet.endpointId?.let {
+            getOrCreateRelaySender(it).sendPacket(packet)
+        } ?: run {
+            transceiver.sendPacket(packet)
+        }
+    }
 
     /**
      * Updates the conference statistics with value from this endpoint. Since
