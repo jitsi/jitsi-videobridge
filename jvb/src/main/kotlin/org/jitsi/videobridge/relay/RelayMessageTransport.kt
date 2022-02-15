@@ -28,7 +28,6 @@ import org.jitsi.videobridge.message.ClientHelloMessage
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
 import org.jitsi.videobridge.message.EndpointMessage
 import org.jitsi.videobridge.message.EndpointStats
-import org.jitsi.videobridge.message.RemoveReceiverMessage
 import org.jitsi.videobridge.message.SelectedEndpointMessage
 import org.jitsi.videobridge.message.SelectedEndpointsMessage
 import org.jitsi.videobridge.message.ServerHelloMessage
@@ -148,16 +147,6 @@ class RelayMessageTransport(
         }
 
         ep.addReceiver(relay.id, message.videoConstraints)
-        return null
-    }
-
-    override fun removeReceiver(message: RemoveReceiverMessage): BridgeChannelMessage? {
-        val epId = message.endpointId
-        val ep = relay.conference.getLocalEndpoint(epId) ?: run {
-            logger.warn("Received RemoveReceiverMessage for unknown or non-local epId $epId")
-            return null
-        }
-        ep.removeReceiver(relay.id)
         return null
     }
 
