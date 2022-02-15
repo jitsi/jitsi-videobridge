@@ -78,9 +78,8 @@ class OctoRtpReceiver(
 
     private val audioLevelReader = AudioLevelReader(streamInformationStore).apply {
         audioLevelListener = object : AudioLevelListener {
-            override fun onLevelReceived(sourceSsrc: Long, level: Long) {
-                eventHandler?.audioLevelReceived(sourceSsrc, level)
-            }
+            override fun onLevelReceived(sourceSsrc: Long, level: Long): Boolean =
+                eventHandler?.audioLevelReceived(sourceSsrc, level) ?: false
         }
     }
 

@@ -1019,8 +1019,8 @@ class Endpoint @JvmOverloads constructor(
          * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
-        override fun audioLevelReceived(sourceSsrc: Long, level: Long) =
-            conference.speechActivity.levelChanged(this@Endpoint, level)
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean =
+            conference.levelChanged(this@Endpoint, level)
 
         /**
          * Forward bwe events from the Transceiver.

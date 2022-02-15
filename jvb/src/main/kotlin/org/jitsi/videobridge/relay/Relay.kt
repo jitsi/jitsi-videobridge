@@ -710,11 +710,12 @@ class Relay @JvmOverloads constructor(
          * Forward audio level events from the Transceiver to the conference. We use the same thread, because this fires
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
-        override fun audioLevelReceived(sourceSsrc: Long, level: Long) {
+        override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean {
             /* We shouldn't receive audio levels from the local transceiver, since all media should be
              * processed by the media endpoints.
              */
             logger.warn { "Audio level reported by relay transceiver for source $sourceSsrc" }
+            return false
         }
 
         /**
