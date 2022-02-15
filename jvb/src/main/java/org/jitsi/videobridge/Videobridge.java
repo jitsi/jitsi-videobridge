@@ -144,6 +144,7 @@ public class Videobridge
     private final ScheduledFuture<?> loadSamplerTask;
 
     private final Version version;
+    private final String releaseId;
 
     @NotNull private final ShutdownServiceImpl shutdownService;
 
@@ -200,6 +201,7 @@ public class Videobridge
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
         this.version = version;
+        this.releaseId = "346"; /* $ Get real value from somewhere. */
         this.shutdownService = shutdownService;
     }
 
@@ -987,6 +989,15 @@ public class Videobridge
     public Version getVersion()
     {
         return version;
+    }
+
+    /**
+     * Get the release ID of this videobridge.
+     * @return The release ID.
+     */
+    public String getReleaseId()
+    {
+        return releaseId;
     }
 
     public void addEventHandler(EventHandler eventHandler)
