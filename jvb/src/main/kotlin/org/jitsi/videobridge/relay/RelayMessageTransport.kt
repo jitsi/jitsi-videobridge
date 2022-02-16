@@ -19,8 +19,8 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
-import org.jitsi.videobridge.EndpointMessageTransportConfig
 import org.jitsi.videobridge.MultiStreamConfig
+import org.jitsi.videobridge.VersionConfig
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
@@ -273,7 +273,7 @@ class RelayMessageTransport(
     }
 
     private fun createServerHello(): ServerHelloMessage {
-        return if (EndpointMessageTransportConfig.config.announceVersion()) {
+        return if (VersionConfig.config.announceVersion()) {
             ServerHelloMessage(relay.conference.videobridge.version.toString())
         } else {
             ServerHelloMessage()
