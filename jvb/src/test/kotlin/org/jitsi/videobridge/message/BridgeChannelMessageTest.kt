@@ -211,14 +211,37 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.videoConstraints.idealHeight shouldBe 1080
         }
 
-        context("serializing and parsing AddReceiver") {
-            val message = AddReceiverMessage("bridge1", "abcdabcd", VideoConstraints(360))
-            val parsed = parse(message.toJson())
+        context("serializing and parsing SenderSourceConstraintsMessage") {
+            val senderVideoConstraintsMessage = SenderSourceConstraintsMessage("s1", 1080)
+            val parsed = parse(senderVideoConstraintsMessage.toJson())
 
-            parsed.shouldBeInstanceOf<AddReceiverMessage>()
-            parsed.bridgeId shouldBe "bridge1"
-            parsed.endpointId shouldBe "abcdabcd"
-            parsed.videoConstraints shouldBe VideoConstraints(360)
+            parsed.shouldBeInstanceOf<SenderSourceConstraintsMessage>()
+
+            parsed.sourceName shouldBe "s1"
+            parsed.maxHeight shouldBe 1080
+        }
+
+        context("serializing and parsing AddReceiver") {
+            context("with source names") {
+                val message = AddReceiverMessage("bridge1", null, "s1", VideoConstraints(360))
+                val parsed = parse(message.toJson())
+
+                parsed.shouldBeInstanceOf<AddReceiverMessage>()
+                parsed.bridgeId shouldBe "bridge1"
+                parsed.endpointId shouldBe null
+                parsed.sourceName shouldBe "s1"
+                parsed.videoConstraints shouldBe VideoConstraints(360)
+            }
+            context("without source names") {
+                val message = AddReceiverMessage("bridge1", "abcdabcd", null, VideoConstraints(360))
+                val parsed = parse(message.toJson())
+
+                parsed.shouldBeInstanceOf<AddReceiverMessage>()
+                parsed.bridgeId shouldBe "bridge1"
+                parsed.endpointId shouldBe "abcdabcd"
+                parsed.sourceName shouldBe null
+                parsed.videoConstraints shouldBe VideoConstraints(360)
+            }
         }
 
         context("serializing and parsing RemoveReceiver") {

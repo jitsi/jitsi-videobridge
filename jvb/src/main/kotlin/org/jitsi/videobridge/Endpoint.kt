@@ -60,6 +60,7 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
@@ -294,7 +295,7 @@ class Endpoint @JvmOverloads constructor(
                 eventEmitter.fireEvent { sourcesChanged() }
             }
             if (wasEmpty) {
-                sendVideoConstraints(maxReceiverVideoConstraints)
+                sendAllVideoConstraints()
             }
         }
 
@@ -455,8 +456,19 @@ class Endpoint @JvmOverloads constructor(
     fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
-    fun endpointMessageTransportConnected() =
-        sendVideoConstraints(maxReceiverVideoConstraints)
+    fun endpointMessageTransportConnected() {
+        sendAllVideoConstraints()
+    }
+
+    private fun sendAllVideoConstraints() {
+        if (MultiStreamConfig.config.enabled) {
+            maxReceiverVideoConstraintsMap.forEach { (sourceName, constraints) ->
+                sendVideoConstraintsV2(sourceName, constraints)
+            }
+        } else {
+            sendVideoConstraints(maxReceiverVideoConstraints)
+        }
+    }
 
     /**
      * Handle a DTLS app packet (that is, a packet of some other protocol sent
@@ -467,6 +479,18 @@ class Endpoint @JvmOverloads constructor(
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
     fun effectiveVideoConstraintsChanged(
+        oldEffectiveConstraints: Map<String, VideoConstraints>,
+        newEffectiveConstraints: Map<String, VideoConstraints>
+    ) {
+        if (MultiStreamConfig.config.enabled) {
+            effectiveVideoConstraintsChangedV2(oldEffectiveConstraints, newEffectiveConstraints)
+        } else {
+            effectiveVideoConstraintsChangedV1(oldEffectiveConstraints, newEffectiveConstraints)
+        }
+    }
+
+    @Deprecated("", ReplaceWith("effectiveVideoConstraintsChangedV2"), DeprecationLevel.WARNING)
+    private fun effectiveVideoConstraintsChangedV1(
         oldEffectiveConstraints: Map<String, VideoConstraints>,
         newEffectiveConstraints: Map<String, VideoConstraints>
     ) {
@@ -484,6 +508,24 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    private fun effectiveVideoConstraintsChangedV2(
+        oldEffectiveConstraints: Map<String, VideoConstraints>,
+        newEffectiveConstraints: Map<String, VideoConstraints>
+    ) {
+        val removedSources = oldEffectiveConstraints.keys.filterNot { it in newEffectiveConstraints.keys }
+
+        // Sources that "this" endpoint no longer receives.
+        for (removedSourceName in removedSources) {
+            // Remove ourself as a receiver from that endpoint
+            conference.findSourceOwner(removedSourceName)?.removeSourceReceiver(removedSourceName, id)
+        }
+
+        // Added or updated
+        newEffectiveConstraints.forEach { (sourceName, effectiveConstraints) ->
+            conference.findSourceOwner(sourceName)?.addReceiverV2(id, sourceName, effectiveConstraints)
+        }
+    }
+
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (mediaSource == null) {
@@ -492,6 +534,18 @@ class Endpoint @JvmOverloads constructor(
             val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(maxVideoConstraints.maxHeight)
             logger.cdebug { "Sender constraints changed: ${senderVideoConstraintsMessage.toJson()}" }
             sendMessage(senderVideoConstraintsMessage)
+        }
+    }
+
+    override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
+        // Note that it's up to the client to respect these constraints.
+        if (findMediaSourceDesc(sourceName) == null) {
+            logger.warn { "Suppressing sending a SenderVideoConstraints message, endpoint has no such source." }
+        } else {
+            val senderSourceConstraintsMessage =
+                SenderSourceConstraintsMessage(sourceName, maxVideoConstraints.maxHeight)
+            logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
+            sendMessage(senderSourceConstraintsMessage)
         }
     }
 
