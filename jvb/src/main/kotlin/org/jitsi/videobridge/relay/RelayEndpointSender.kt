@@ -50,15 +50,18 @@ class RelayEndpointSender(
 
     private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
 
-    private val rtcpEventNotifier = RtcpEventNotifier().apply {
-        addRtcpEventListener(object : RtcpListener {
-            override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
-                relay.rtcpPacketReceived(packet, receivedTime, id)
-            }
-            override fun rtcpPacketSent(packet: RtcpPacket) {
-                relay.rtcpPacketSent(packet, id)
-            }
-        })
+    val rtcpEventNotifier = RtcpEventNotifier().apply {
+        addRtcpEventListener(
+            object : RtcpListener {
+                override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
+                    relay.rtcpPacketReceived(packet, receivedTime, id)
+                }
+                override fun rtcpPacketSent(packet: RtcpPacket) {
+                    relay.rtcpPacketSent(packet, id)
+                }
+            },
+            external = true
+        )
     }
 
     private val rtpSender: RtpSender = RtpSenderImpl(

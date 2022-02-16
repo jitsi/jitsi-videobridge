@@ -22,6 +22,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpTransformers
@@ -39,7 +40,14 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
+import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.RtcpRrPacket
+import org.jitsi.rtp.rtcp.RtcpSdesPacket
+import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
@@ -174,6 +182,17 @@ class Relay @JvmOverloads constructor(
         addEndpointConnectionStatsListener(rttListener)
         setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
         setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
+        rtcpEventNotifier.addRtcpEventListener(
+            object : RtcpListener {
+                override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
+                    this@Relay.rtcpPacketReceived(packet, receivedTime, null)
+                }
+                override fun rtcpPacketSent(packet: RtcpPacket) {
+                    this@Relay.rtcpPacketSent(packet, null)
+                }
+            },
+            external = true
+        )
     }
 
     /**
@@ -624,6 +643,58 @@ class Relay @JvmOverloads constructor(
             return false
         }
         return true
+    }
+
+    private fun getRtcpSsrcs(packet: RtcpPacket): Collection<Long> {
+        val ssrcs = HashSet<Long>()
+        ssrcs.add(packet.senderSsrc)
+        when (packet) {
+            is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc) // TODO: support multiple FIRs in a packet
+            is RtcpFbPacket -> ssrcs.add(packet.mediaSourceSsrc)
+            is RtcpSrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
+            is RtcpRrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
+            is RtcpSdesPacket -> packet.sdesChunks.forEach { ssrcs.add(it.ssrc) }
+            is RtcpByePacket -> ssrcs.addAll(packet.ssrcs)
+        }
+        return ssrcs
+    }
+
+    fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?, endpointId: String?) {
+        getRtcpSsrcs(packet).forEach { ssrc ->
+            val ep = synchronized(endpointsLock) { endpointsBySsrc[ssrc] }
+            if (ep != null && ep.id != endpointId) {
+                ep.rtcpEventNotifier.notifyRtcpReceived(packet, receivedTime, external = true)
+            }
+
+            conference.getEndpointBySsrc(ssrc)?.id?.let { id ->
+                val s = senders[id]
+                if (s != null && s.id != endpointId) {
+                    s.rtcpEventNotifier.notifyRtcpReceived(packet, receivedTime, external = true)
+                }
+            }
+        }
+        if (endpointId != null) {
+            transceiver.rtcpEventNotifier.notifyRtcpReceived(packet, receivedTime, external = true)
+        }
+    }
+
+    fun rtcpPacketSent(packet: RtcpPacket, endpointId: String?) {
+        getRtcpSsrcs(packet).forEach { ssrc ->
+            val ep = synchronized(endpointsLock) { endpointsBySsrc[ssrc] }
+            if (ep != null && ep.id != endpointId) {
+                ep.rtcpEventNotifier.notifyRtcpSent(packet, external = true)
+            }
+
+            conference.getEndpointBySsrc(ssrc)?.id?.let { id ->
+                val s = senders[id]
+                if (s != null && s.id != endpointId) {
+                    s.rtcpEventNotifier.notifyRtcpSent(packet, external = true)
+                }
+            }
+        }
+        if (endpointId != null) {
+            transceiver.rtcpEventNotifier.notifyRtcpSent(packet, external = true)
+        }
     }
 
     /**

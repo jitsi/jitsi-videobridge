@@ -24,6 +24,7 @@ import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -31,6 +32,7 @@ import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -41,6 +43,7 @@ import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
+import java.time.Instant
 
 class RelayedEndpoint(
     conference: Conference,
@@ -59,10 +62,21 @@ class RelayedEndpoint(
 
     private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
 
-    // TODO Figure this out
-    private val rtcpEventNotifier = RtcpEventNotifier()
+    val rtcpEventNotifier = RtcpEventNotifier().apply {
+        addRtcpEventListener(
+            object : RtcpListener {
+                override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
+                    relay.rtcpPacketReceived(packet, receivedTime, id)
+                }
+                override fun rtcpPacketSent(packet: RtcpPacket) {
+                    relay.rtcpPacketSent(packet, id)
+                }
+            },
+            external = true
+        )
+    }
 
-    val rtpReceiver = RtpReceiverImpl(
+    private val rtpReceiver = RtpReceiverImpl(
         id,
         { rtcpPacket ->
             if (rtcpPacket.length >= 1500) {
