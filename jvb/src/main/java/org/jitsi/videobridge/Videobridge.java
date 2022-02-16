@@ -143,8 +143,8 @@ public class Videobridge
      */
     private final ScheduledFuture<?> loadSamplerTask;
 
-    private final Version version;
-    private final String releaseId;
+    @NotNull private final Version version;
+    @Nullable private final String releaseId;
 
     @NotNull private final ShutdownServiceImpl shutdownService;
 
@@ -170,7 +170,8 @@ public class Videobridge
     public Videobridge(
         @Nullable XmppConnection xmppConnection,
         @NotNull ShutdownServiceImpl shutdownService,
-        @NotNull Version version)
+        @NotNull Version version,
+        @Nullable String releaseId)
     {
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
@@ -201,7 +202,7 @@ public class Videobridge
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
         this.version = version;
-        this.releaseId = "346"; /* $ Get real value from somewhere. */
+        this.releaseId = releaseId;
         this.shutdownService = shutdownService;
     }
 
@@ -993,9 +994,9 @@ public class Videobridge
 
     /**
      * Get the release ID of this videobridge.
-     * @return The release ID.
+     * @return The release ID. Returns null if not in use.
      */
-    public String getReleaseId()
+    public @Nullable String getReleaseId()
     {
         return releaseId;
     }

@@ -19,10 +19,13 @@ package org.jitsi.videobridge
 import org.jitsi.config.JitsiConfig.Companion.newConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
+import org.jitsi.metaconfig.optionalconfig
 
 class EndpointMessageTransportConfig private constructor() {
     val announceVersion: Boolean by config("videobridge.version.announce".from(newConfig))
     fun announceVersion() = announceVersion
+
+    val release: String? by optionalconfig("videobridge.version.release".from(newConfig))
 
     companion object {
         @JvmField
