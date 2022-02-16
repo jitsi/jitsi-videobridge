@@ -1134,7 +1134,8 @@ public class Conference
     public void addEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
     {
         AbstractEndpoint oldEndpoint = endpointsBySsrc.put(ssrc, endpoint);
-        if (oldEndpoint != null && oldEndpoint != endpoint) {
+        if (oldEndpoint != null && oldEndpoint != endpoint)
+        {
             logger.warn("SSRC " + ssrc + " moved from ep " + oldEndpoint.getId() + " to ep " + endpoint.getId());
         }
     }
