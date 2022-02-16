@@ -98,7 +98,7 @@ fun main(args: Array<String>) {
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(
-        xmppConnection, shutdownService, versionService.currentVersion, EndpointMessageTransportConfig.config.release
+        xmppConnection, shutdownService, versionService.currentVersion, VersionConfig.config.release
     ).apply { start() }
     val healthChecker = JvbHealthChecker().apply { start() }
     val octoRelayService = octoRelayService().get()?.apply { start() }
