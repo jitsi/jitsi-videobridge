@@ -714,6 +714,11 @@ class Relay @JvmOverloads constructor(
         }
     }
 
+    fun localEndpointExpired(id: String) {
+        val s = senders.remove(id)
+        s?.expire()
+    }
+
     /**
      * Updates the conference statistics with value from this endpoint. Since
      * the values are cumulative this should execute only once when the endpoint
@@ -759,6 +764,7 @@ class Relay @JvmOverloads constructor(
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { conference.endpointExpired(it) }
         }
+        senders.values.forEach { it.expire() }
         conference.relayExpired(this)
 
         try {

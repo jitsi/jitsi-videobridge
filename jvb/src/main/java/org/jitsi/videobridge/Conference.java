@@ -1070,6 +1070,8 @@ public class Conference
             tentacle.endpointExpired(id);
         }
 
+        relaysById.forEach((i, relay) -> relay.localEndpointExpired(id));
+
         if (removedEndpoint != null)
         {
             endpointsChanged();
