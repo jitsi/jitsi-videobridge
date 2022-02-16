@@ -72,6 +72,12 @@ class OctoEndpointMessageTransport
     @Override
     public BridgeChannelMessage addReceiver(@NotNull AddReceiverMessage message)
     {
+        if (MultiStreamConfig.config.getEnabled() && message.getSourceName() != null)
+        {
+            // The sourceName is supplied only in OctoV2 impl on the sender side, so can be used to detect V1.
+            throw new RuntimeException("Octo V1 does not support the multi stream mode");
+        }
+
         Conference conference = octoEndpoints.getConference();
         AbstractEndpoint endpoint = conference.getEndpoint(message.getEndpointId());
         // Since we currently broadcast everything in Octo, we may receive messages intended for another bridge. Handle

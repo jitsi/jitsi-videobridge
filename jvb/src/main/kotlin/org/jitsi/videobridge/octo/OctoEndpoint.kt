@@ -97,9 +97,14 @@ class OctoEndpoint(
             AddReceiverMessage(
                 conference.tentacle.bridgeId,
                 id,
+                null,
                 maxVideoConstraints
             )
         )
+    }
+
+    override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
+        throw NotImplementedError("sendVideoConstraintsV2 is not implemented for Octo V1")
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)

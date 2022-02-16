@@ -28,6 +28,7 @@ import org.jxmpp.jid.parts.*;
 import org.jxmpp.util.*;
 
 import java.util.*;
+import java.util.Objects;
 import java.util.stream.*;
 
 /**
@@ -560,6 +561,8 @@ public class MediaSourceFactory
     public static MediaSourceDesc[] createMediaSources(
         Collection<SourcePacketExtension> sources,
         Collection<SourceGroupPacketExtension> sourceGroups,
+
+        // TODO make owner and name mandatory when Colibri v1 is removed.
         @Nullable String owner,
         @Nullable String name)
     {
@@ -594,12 +597,31 @@ public class MediaSourceFactory
                         sourceSsrcs,
                         numSpatialLayersPerStream,
                         numTemporalLayersPerStream,
-                        secondarySsrcs);
+                        secondarySsrcs,
+                        // Colibri 2 doesn't carry the owner as part of the <source/> element,
+                        // so it's passed as an argument to this function. Now Colibri v1 carries it in
+                        // the primary <source/> and the 'owner' argument is null.
+                        owner != null ? owner : sourceSsrcs.owner,
+                        name != null ? name : sourceSsrcs.name
+            );
             mediaSources.add(mediaSource);
         });
 
         return mediaSources.toArray(new MediaSourceDesc[0]);
     }
+
+    // This method is to replace createMediaSources when Colibri V1 is removed
+    public static MediaSourceDesc[] createMediaSources2(
+            Collection<SourcePacketExtension> sources,
+            Collection<SourceGroupPacketExtension> sourceGroups,
+            String owner,
+            String name) {
+        Objects.requireNonNull(owner, "owner is required");
+        Objects.requireNonNull(name, "name is required");
+
+        return createMediaSources(sources, sourceGroups, owner, name);
+    }
+
 
     /**
      * Calculates the array position of an RTP layer description specified by its
@@ -736,13 +758,18 @@ public class MediaSourceFactory
      * @param allSecondarySsrcs a map of primary ssrc -> SecondarySsrcs, which lists
      * the ssrc and type of all the secondary ssrcs for a given primary (e.g.
      * its corresponding rtx and fec ssrcs)
+     * @param owner An externally specified owner, if available.
+     * @param name An externally specified name, if available.
      * @return the created MediaSourceDesc
      */
     private static MediaSourceDesc createSource(
             SourceSsrcs primarySsrcs,
             int numSpatialLayersPerStream,
             int numTemporalLayersPerStream,
-            Map<Long, SecondarySsrcs> allSecondarySsrcs)
+            Map<Long, SecondarySsrcs> allSecondarySsrcs,
+            String owner,
+            String name
+    )
     {
         RtpEncodingDesc[] encodings =
             new RtpEncodingDesc[primarySsrcs.size()];
@@ -774,13 +801,17 @@ public class MediaSourceFactory
         // not optional (there's no good reason for that). Then the error will be thrown automatically by Kotlin.
         if (MultiStreamConfig.config.getEnabled())
         {
-            if (primarySsrcs.name == null)
+            if (name == null)
             {
                 throw new IllegalArgumentException("The 'name' is missing in the source description");
             }
+            if (owner == null)
+            {
+                throw new IllegalArgumentException("The 'owner' is missing in the source description");
+            }
         }
 
-        MediaSourceDesc source = new MediaSourceDesc(encodings, primarySsrcs.owner, primarySsrcs.name);
+        MediaSourceDesc source = new MediaSourceDesc(encodings, owner, name);
 
         return source;
     }

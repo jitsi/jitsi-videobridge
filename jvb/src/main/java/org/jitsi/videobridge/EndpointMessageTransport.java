@@ -33,7 +33,7 @@ import java.util.function.*;
 import java.util.stream.*;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.jitsi.videobridge.EndpointMessageTransportConfig.config;
+import static org.jitsi.videobridge.VersionConfig.config;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages

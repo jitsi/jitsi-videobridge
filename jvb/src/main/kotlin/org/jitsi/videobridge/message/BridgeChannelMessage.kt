@@ -56,6 +56,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedSourcesMessage::class, name = ForwardedSourcesMessage.TYPE),
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
+    JsonSubTypes.Type(value = SenderSourceConstraintsMessage::class, name = SenderSourceConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
@@ -120,6 +121,7 @@ open class MessageHandler {
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
             is ForwardedSourcesMessage -> forwardedSources(message)
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
+            is SenderSourceConstraintsMessage -> senderSourceConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
             is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
@@ -147,6 +149,7 @@ open class MessageHandler {
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun forwardedSources(message: ForwardedSourcesMessage) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
+    open fun senderSourceConstraints(message: SenderSourceConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
@@ -379,6 +382,7 @@ class ForwardedSourcesMessage(
  *
  * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
  */
+@Deprecated("", ReplaceWith("SenderSourceConstraints"), DeprecationLevel.WARNING)
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
     constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
 
@@ -399,19 +403,41 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
 }
 
 /**
+ * A message sent from the bridge to a client (sender), indicating constraints for the sender's video stream.
+ */
+class SenderSourceConstraintsMessage(
+    val sourceName: String,
+    val maxHeight: Int
+) : BridgeChannelMessage(TYPE) {
+
+    /**
+     * Serialize manually because it's faster than Jackson.
+     */
+    override fun createJson(): String =
+        """{"colibriClass":"$TYPE", "sourceName":"$sourceName", "maxHeight":$maxHeight}"""
+
+    companion object {
+        const val TYPE = "SenderSourceConstraints"
+    }
+}
+
+/**
  * A message sent from one bridge to another (via Octo) indicating that the first bridge wishes to receive video streams
  * from the specified endpoint with the specified constraints.
  */
 class AddReceiverMessage(
     val bridgeId: String,
-    val endpointId: String,
+    val endpointId: String?, // Used in single stream per endpoint mode and wil be removed
+    val sourceName: String?, // Used in the multi-stream mode
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Serialize manually because it's faster than Jackson.
      */
     override fun createJson(): String =
-        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId",""" +
+        "{\"colibriClass\":\"$TYPE\",\"bridgeId\":\"$bridgeId\"," +
+            (if (endpointId != null) "\"endpointId\":\"$endpointId\"," else "") +
+            (if (sourceName != null) "\"sourceName\":\"$sourceName\"," else "") +
             "\"videoConstraints\":$videoConstraints}"
 
     companion object {

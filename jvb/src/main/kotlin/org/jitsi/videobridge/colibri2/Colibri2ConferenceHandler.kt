@@ -224,7 +224,7 @@ class Colibri2ConferenceHandler(
             // Assume a message can only contain one source per media type.
             // If "sources" was signaled, but it didn't contain any video sources, clear the endpoint's video sources
             val newMediaSources = sources.mediaSources.find { it.type == MediaType.VIDEO }?.let {
-                MediaSourceFactory.createMediaSources(it.sources, it.ssrcGroups)
+                MediaSourceFactory.createMediaSources2(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
             } ?: emptyArray()
             endpoint.mediaSources = newMediaSources
         }
@@ -365,7 +365,7 @@ class Colibri2ConferenceHandler(
                         m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id)) }
                     }
                 } else if (m.type == MediaType.VIDEO) {
-                    val descs = MediaSourceFactory.createMediaSources(m.sources, m.ssrcGroups, id, m.id)
+                    val descs = MediaSourceFactory.createMediaSources2(m.sources, m.ssrcGroups, id, m.id)
                     videoSources.addAll(listOf(*descs))
                 } else {
                     logger.warn("Ignoring source ${m.id} in endpoint $id of a relay: unsupported type ${m.type}")

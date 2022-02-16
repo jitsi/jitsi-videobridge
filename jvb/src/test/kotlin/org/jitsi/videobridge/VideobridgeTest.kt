@@ -35,7 +35,7 @@ class VideobridgeTest : ShouldSpec() {
 
     private val shutdownService: ShutdownServiceImpl = mockk(relaxed = true)
     private val clock = FakeClock()
-    private val videobridge = Videobridge(null, shutdownService, mockk()).apply { setClock(clock) }
+    private val videobridge = Videobridge(null, shutdownService, mockk(), null).apply { setClock(clock) }
     init {
         context("Debug state should be JSON") {
             videobridge.getDebugState(null, null, true).shouldBeValidJson()
