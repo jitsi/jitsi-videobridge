@@ -435,10 +435,9 @@ class AddReceiverMessage(
      * Serialize manually because it's faster than Jackson.
      */
     override fun createJson(): String =
-        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId",
-            |${if (endpointId != null) "\"endpointId\":\"$endpointId\"," else "" }
-            |${if (sourceName != null) "\"sourceName\":\"$sourceName\"," else "" }
-            |""".trimMargin() +
+        "{\"colibriClass\":\"$TYPE\",\"bridgeId\":\"$bridgeId\"," +
+            (if (endpointId != null) "\"endpointId\":\"$endpointId\"," else "") +
+            (if (sourceName != null) "\"sourceName\":\"$sourceName\"," else "") +
             "\"videoConstraints\":$videoConstraints}"
 
     companion object {
