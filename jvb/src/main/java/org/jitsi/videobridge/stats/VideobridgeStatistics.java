@@ -147,9 +147,21 @@ public class VideobridgeStatistics
         unlockedSetStat(RTT_AGGREGATE, 0d);
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
-        unlockedSetStat(DRAIN, videobridge.getDrainMode());
-
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
+
+        /* Set these once, they won't change */
+        unlockedSetStat(VERSION, videobridge.getVersion().toString());
+
+        String releaseId = videobridge.getReleaseId();
+        if (releaseId != null)
+        {
+            unlockedSetStat(RELEASE, releaseId);
+        }
+
+        /* Must initialize this one. If in drain mode and stats are sent
+        without this value, it would be interpreted as active and this
+        bridge could be selected unintentionally. */
+        unlockedSetStat(DRAIN, videobridge.getDrainMode());
     }
 
     /**
@@ -624,13 +636,6 @@ public class VideobridgeStatistics
             if (region != null)
             {
                 unlockedSetStat(REGION, region);
-            }
-            unlockedSetStat(VERSION, videobridge.getVersion().toString());
-
-            String releaseId = videobridge.getReleaseId();
-            if (releaseId != null)
-            {
-                unlockedSetStat(RELEASE, releaseId);
             }
 
             // TODO(brian): expose these stats in a `getStats` call in XmppConnection
