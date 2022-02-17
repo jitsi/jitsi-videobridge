@@ -86,7 +86,7 @@ class Transceiver(
      * SRs and RRs and calculating RTT.  Since it is used for both send and receive, it is held here and passed to
      * the sender and receive so each can push or subscribe to updates.
      */
-    private val rtcpEventNotifier = RtcpEventNotifier()
+    val rtcpEventNotifier = RtcpEventNotifier()
 
     private var mediaSources = MediaSources()
 
@@ -201,6 +201,9 @@ class Transceiver(
     }
 
     fun receivesSsrc(ssrc: Long): Boolean = streamInformationStore.receiveSsrcs.contains(ssrc)
+
+    val receiveSsrcs: Set<Long>
+        get() = streamInformationStore.receiveSsrcs
 
     fun setMediaSources(mediaSources: Array<MediaSourceDesc>): Boolean {
         logger.cdebug { "$id setting media sources: ${mediaSources.joinToString()}" }
