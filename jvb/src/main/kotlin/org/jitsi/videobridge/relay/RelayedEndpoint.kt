@@ -69,7 +69,7 @@ class RelayedEndpoint(
                     relay.rtcpPacketReceived(packet, receivedTime, id)
                 }
                 override fun rtcpPacketSent(packet: RtcpPacket) {
-                    relay.rtcpPacketSent(packet, id)
+                    throw IllegalStateException("got rtcpPacketSent callback from a receiver")
                 }
             },
             external = true
