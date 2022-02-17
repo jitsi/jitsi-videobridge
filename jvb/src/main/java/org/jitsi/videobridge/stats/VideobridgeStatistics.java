@@ -149,7 +149,7 @@ public class VideobridgeStatistics
         unlockedSetStat(CONFERENCE_SIZES, "[]");
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
 
-        /* Set these once, they won't change */
+        // Set these once, they won't change.
         unlockedSetStat(VERSION, videobridge.getVersion().toString());
 
         String releaseId = videobridge.getReleaseId();
@@ -157,11 +157,6 @@ public class VideobridgeStatistics
         {
             unlockedSetStat(RELEASE, releaseId);
         }
-
-        /* Must initialize this one. If in drain mode and stats are sent
-        without this value, it would be interpreted as active and this
-        bridge could be selected unintentionally. */
-        unlockedSetStat(DRAIN, videobridge.getDrainMode());
     }
 
     /**
