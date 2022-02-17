@@ -45,6 +45,9 @@ import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
 import java.time.Instant
 
+/**
+ * An object that handles media received from a single remote endpoint to a relay.
+ */
 class RelayedEndpoint(
     conference: Conference,
     val relay: Relay,
