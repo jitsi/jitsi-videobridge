@@ -22,6 +22,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
@@ -40,6 +41,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
+import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -645,10 +647,14 @@ class Relay @JvmOverloads constructor(
         return true
     }
 
+    /**
+     * Get a collection of all of the SSRCs mentioned in an RTCP packet.
+     */
     private fun getRtcpSsrcs(packet: RtcpPacket): Collection<Long> {
         val ssrcs = HashSet<Long>()
         ssrcs.add(packet.senderSsrc)
         when (packet) {
+            is CompoundRtcpPacket -> packet.packets.forEach { ssrcs.addAll(getRtcpSsrcs(it)) }
             is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc) // TODO: support multiple FIRs in a packet
             is RtcpFbPacket -> ssrcs.add(packet.mediaSourceSsrc)
             is RtcpSrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
@@ -659,42 +665,35 @@ class Relay @JvmOverloads constructor(
         return ssrcs
     }
 
-    fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?, endpointId: String?) {
-        getRtcpSsrcs(packet).forEach { ssrc ->
-            val ep = synchronized(endpointsLock) { endpointsBySsrc[ssrc] }
-            if (ep != null && ep.id != endpointId) {
-                ep.rtcpEventNotifier.notifyRtcpReceived(packet, receivedTime, external = true)
-            }
+    /**
+     * Call a callback on an [RtcpEventNotifier] once per [RelayedEndpoint] or [RelayEndpointSender] whose
+     * SSRC is mentioned in an RTCP packet, plus on the Relay's local [Transceiver].
+     * Do not call the event notifier which was the source of this packet, based on the [endpointId].
+     */
+    private fun doRtcpCallbacks(packet: RtcpPacket, endpointId: String?, callback: (RtcpEventNotifier) -> Unit) {
+        val ssrcs = getRtcpSsrcs(packet)
 
-            conference.getEndpointBySsrc(ssrc)?.id?.let { id ->
-                val s = senders[id]
-                if (s != null && s.id != endpointId) {
-                    s.rtcpEventNotifier.notifyRtcpReceived(packet, receivedTime, external = true)
-                }
-            }
+        val eps = HashSet<String>()
+        ssrcs.forEach { conference.getEndpointBySsrc(it)?.let { eps.add(it.id) } }
+        endpointId?.let { eps.remove(it) }
+
+        eps.forEach { epId ->
+            /* Any given ID should only be in one or the other of these sets. */
+            getEndpoint(epId)?.let { callback(it.rtcpEventNotifier) }
+            senders[epId]?.let { callback(it.rtcpEventNotifier) }
         }
+
         if (endpointId != null) {
-            transceiver.rtcpEventNotifier.notifyRtcpReceived(packet, receivedTime, external = true)
+            callback(transceiver.rtcpEventNotifier)
         }
     }
 
-    fun rtcpPacketSent(packet: RtcpPacket, endpointId: String?) {
-        getRtcpSsrcs(packet).forEach { ssrc ->
-            val ep = synchronized(endpointsLock) { endpointsBySsrc[ssrc] }
-            if (ep != null && ep.id != endpointId) {
-                ep.rtcpEventNotifier.notifyRtcpSent(packet, external = true)
-            }
+    fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?, endpointId: String?) {
+        doRtcpCallbacks(packet, endpointId) { it.notifyRtcpReceived(packet, receivedTime, external = true) }
+    }
 
-            conference.getEndpointBySsrc(ssrc)?.id?.let { id ->
-                val s = senders[id]
-                if (s != null && s.id != endpointId) {
-                    s.rtcpEventNotifier.notifyRtcpSent(packet, external = true)
-                }
-            }
-        }
-        if (endpointId != null) {
-            transceiver.rtcpEventNotifier.notifyRtcpSent(packet, external = true)
-        }
+    fun rtcpPacketSent(packet: RtcpPacket, endpointId: String?) {
+        doRtcpCallbacks(packet, endpointId) { it.notifyRtcpSent(packet, external = true) }
     }
 
     /**
