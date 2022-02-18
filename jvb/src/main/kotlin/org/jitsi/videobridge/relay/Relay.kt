@@ -22,6 +22,8 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpTransformers
@@ -39,7 +41,15 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
+import org.jitsi.rtp.rtcp.CompoundRtcpPacket
+import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.RtcpRrPacket
+import org.jitsi.rtp.rtcp.RtcpSdesPacket
+import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
@@ -71,6 +81,7 @@ import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
@@ -134,6 +145,8 @@ class Relay @JvmOverloads constructor(
     private val endpointsBySsrc = HashMap<Long, RelayedEndpoint>()
     private val endpointsLock = Any()
 
+    private val senders = ConcurrentHashMap<String, RelayEndpointSender>()
+
     val statistics = Statistics()
 
     /**
@@ -150,9 +163,7 @@ class Relay @JvmOverloads constructor(
             }
         }
 
-    /* TODO: we eventually want a smarter Transceiver implementation, that splits processing by
-     *  source endpoint or something similar, but for the initial implementation this should work.
-     */
+    /* This transceiver is only for packets that are not handled by RelayedEndpoints */
     val transceiver = Transceiver(
         id,
         TaskPools.CPU_POOL,
@@ -173,6 +184,17 @@ class Relay @JvmOverloads constructor(
         addEndpointConnectionStatsListener(rttListener)
         setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
         setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
+        rtcpEventNotifier.addRtcpEventListener(
+            object : RtcpListener {
+                override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
+                    this@Relay.rtcpPacketReceived(packet, receivedTime, null)
+                }
+                override fun rtcpPacketSent(packet: RtcpPacket) {
+                    this@Relay.rtcpPacketSent(packet, null)
+                }
+            },
+            external = true
+        )
     }
 
     /**
@@ -253,7 +275,7 @@ class Relay @JvmOverloads constructor(
                 eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
-                        outgoingSrtpPacketQueue.add(packetInfo)
+                        handleOutgoingPacket(packetInfo)
                     }
                 })
                 TaskPools.IO_POOL.execute(iceTransport::startReadingData)
@@ -294,7 +316,7 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    var srtpTransformers: SrtpTransformers? = null
+    private var srtpTransformers: SrtpTransformers? = null
 
     private fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
         val srtpProfileInfo =
@@ -316,6 +338,8 @@ class Relay @JvmOverloads constructor(
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { it.setSrtpInformation(srtpTransformers) }
         }
+
+        senders.values.forEach { it.setSrtpInformation(srtpTransformers) }
     }
 
     /**
@@ -431,6 +455,8 @@ class Relay @JvmOverloads constructor(
         conference.handleIncomingPacket(packetInfo)
     }
 
+    fun handleOutgoingPacket(packetInfo: PacketInfo) = outgoingSrtpPacketQueue.add(packetInfo)
+
     override fun onNewSsrcAssociation(
         endpointId: String,
         primarySsrc: Long,
@@ -538,12 +564,29 @@ class Relay @JvmOverloads constructor(
         }
     }
 
+    private fun getOrCreateRelaySender(endpointId: String): RelayEndpointSender {
+        synchronized(senders) {
+            senders[endpointId]?.let { return it }
+
+            val s = RelayEndpointSender(this, endpointId, diagnosticContext, logger)
+
+            srtpTransformers?.let { s.setSrtpInformation(it) }
+            payloadTypes.forEach { payloadType -> s.addPayloadType(payloadType) }
+            rtpExtensions.forEach { rtpExtension -> s.addRtpExtension(rtpExtension) }
+
+            senders[endpointId] = s
+
+            return s
+        }
+    }
+
     fun addPayloadType(payloadType: PayloadType) {
         transceiver.addPayloadType(payloadType)
         payloadTypes.add(payloadType)
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { ep -> ep.addPayloadType(payloadType) }
         }
+        senders.values.forEach { s -> s.addPayloadType(payloadType) }
     }
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
@@ -552,6 +595,7 @@ class Relay @JvmOverloads constructor(
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { ep -> ep.addRtpExtension(rtpExtension) }
         }
+        senders.values.forEach { s -> s.addRtpExtension(rtpExtension) }
     }
 
     private fun setEndpointMediaSources(
@@ -604,6 +648,55 @@ class Relay @JvmOverloads constructor(
     }
 
     /**
+     * Get a collection of all of the SSRCs mentioned in an RTCP packet.
+     */
+    private fun getRtcpSsrcs(packet: RtcpPacket): Collection<Long> {
+        val ssrcs = HashSet<Long>()
+        ssrcs.add(packet.senderSsrc)
+        when (packet) {
+            is CompoundRtcpPacket -> packet.packets.forEach { ssrcs.addAll(getRtcpSsrcs(it)) }
+            is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc) // TODO: support multiple FIRs in a packet
+            is RtcpFbPacket -> ssrcs.add(packet.mediaSourceSsrc)
+            is RtcpSrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
+            is RtcpRrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
+            is RtcpSdesPacket -> packet.sdesChunks.forEach { ssrcs.add(it.ssrc) }
+            is RtcpByePacket -> ssrcs.addAll(packet.ssrcs)
+        }
+        return ssrcs
+    }
+
+    /**
+     * Call a callback on an [RtcpEventNotifier] once per [RelayedEndpoint] or [RelayEndpointSender] whose
+     * SSRC is mentioned in an RTCP packet, plus on the Relay's local [Transceiver].
+     * Do not call the event notifier which was the source of this packet, based on the [endpointId].
+     */
+    private fun doRtcpCallbacks(packet: RtcpPacket, endpointId: String?, callback: (RtcpEventNotifier) -> Unit) {
+        val ssrcs = getRtcpSsrcs(packet)
+
+        val eps = HashSet<String>()
+        ssrcs.forEach { conference.getEndpointBySsrc(it)?.let { eps.add(it.id) } }
+        endpointId?.let { eps.remove(it) }
+
+        eps.forEach { epId ->
+            /* Any given ID should only be in one or the other of these sets. */
+            getEndpoint(epId)?.let { callback(it.rtcpEventNotifier) }
+            senders[epId]?.let { callback(it.rtcpEventNotifier) }
+        }
+
+        if (endpointId != null) {
+            callback(transceiver.rtcpEventNotifier)
+        }
+    }
+
+    fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?, endpointId: String?) {
+        doRtcpCallbacks(packet, endpointId) { it.notifyRtcpReceived(packet, receivedTime, external = true) }
+    }
+
+    fun rtcpPacketSent(packet: RtcpPacket, endpointId: String?) {
+        doRtcpCallbacks(packet, endpointId) { it.notifyRtcpSent(packet, external = true) }
+    }
+
+    /**
      * Returns true if this endpoint's transport is 'fully' connected (both ICE and DTLS), false otherwise
      */
     private fun isTransportConnected(): Boolean = iceTransport.isConnected() && dtlsTransport.isConnected
@@ -612,7 +705,18 @@ class Relay @JvmOverloads constructor(
         TODO: worry about bandwidth limits on relay links? */
     override fun wants(packet: PacketInfo): Boolean = isTransportConnected() && packet !is OctoPacketInfo
 
-    override fun send(packet: PacketInfo) = transceiver.sendPacket(packet)
+    override fun send(packet: PacketInfo) {
+        packet.endpointId?.let {
+            getOrCreateRelaySender(it).sendPacket(packet)
+        } ?: run {
+            transceiver.sendPacket(packet)
+        }
+    }
+
+    fun localEndpointExpired(id: String) {
+        val s = senders.remove(id)
+        s?.expire()
+    }
 
     /**
      * Updates the conference statistics with value from this endpoint. Since
@@ -659,6 +763,7 @@ class Relay @JvmOverloads constructor(
         synchronized(endpointsLock) {
             relayedEndpoints.values.forEach { conference.endpointExpired(it) }
         }
+        senders.values.forEach { it.expire() }
         conference.relayExpired(this)
 
         try {
@@ -713,8 +818,11 @@ class Relay @JvmOverloads constructor(
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
         override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean {
-            val ep = synchronized(endpointsLock) { endpointsBySsrc[sourceSsrc] }
-            return ep != null && conference.levelChanged(ep, level)
+            /* We shouldn't receive audio levels from the local transceiver, since all media should be
+             * processed by the media endpoints.
+             */
+            logger.warn { "Audio level reported by relay transceiver for source $sourceSsrc" }
+            return false
         }
 
         /**

@@ -184,6 +184,12 @@ public abstract class AbstractEndpoint
     public abstract boolean receivesSsrc(long ssrc);
 
     /**
+     * Get the set of SSRCs received from this endpoint.
+     * @return
+     */
+    public abstract Set<Long> getSsrcs();
+
+    /**
      * @return the {@link AbstractEndpointMessageTransport} associated with
      * this endpoint.
      */

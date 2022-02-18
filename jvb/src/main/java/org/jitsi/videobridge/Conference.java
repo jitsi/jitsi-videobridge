@@ -102,6 +102,11 @@ public class Conference
     private final Object endpointsCacheLock = new Object();
 
     /**
+     * A map of the endpoints in this conference, by their ssrcs.
+     */
+    private ConcurrentHashMap<Long, AbstractEndpoint> endpointsBySsrc = new ConcurrentHashMap<>();
+
+    /**
      * The relays participating in this conference.
      */
     private final ConcurrentHashMap<String, Relay> relaysById = new ConcurrentHashMap<>();
@@ -1058,10 +1063,14 @@ public class Conference
 
         endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
 
+        endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));
+
         if (tentacle != null)
         {
             tentacle.endpointExpired(id);
         }
+
+        relaysById.forEach((i, relay) -> relay.localEndpointExpired(id));
 
         if (removedEndpoint != null)
         {
@@ -1131,6 +1140,25 @@ public class Conference
                 endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
             }
         }
+    }
+
+    public AbstractEndpoint getEndpointBySsrc(long ssrc)
+    {
+        return endpointsBySsrc.get(ssrc);
+    }
+
+    public void addEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
+    {
+        AbstractEndpoint oldEndpoint = endpointsBySsrc.put(ssrc, endpoint);
+        if (oldEndpoint != null && oldEndpoint != endpoint)
+        {
+            logger.warn("SSRC " + ssrc + " moved from ep " + oldEndpoint.getId() + " to ep " + endpoint.getId());
+        }
+    }
+
+    public void removeEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
+    {
+        endpointsBySsrc.remove(ssrc, endpoint);
     }
 
     /**

@@ -99,6 +99,11 @@ public class OctoTransceiver implements Stoppable, NodeStatsProducer
         return streamInformationStore.getReceiveSsrcs().contains(ssrc);
     }
 
+    Set<Long> getReceiveSsrcs()
+    {
+        return streamInformationStore.getReceiveSsrcs();
+    }
+
     void setReceiveSsrcs(Map<MediaType, Set<Long>> ssrcsByMediaType)
     {
         streamInformationStore.getReceiveSsrcs().forEach(streamInformationStore::removeReceiveSsrc);

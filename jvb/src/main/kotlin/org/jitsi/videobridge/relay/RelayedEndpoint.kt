@@ -24,6 +24,7 @@ import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -31,6 +32,7 @@ import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -41,7 +43,11 @@ import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
+import java.time.Instant
 
+/**
+ * An object that handles media received from a single remote endpoint to a relay.
+ */
 class RelayedEndpoint(
     conference: Conference,
     val relay: Relay,
@@ -51,15 +57,29 @@ class RelayedEndpoint(
     var audioSources: Array<AudioSourceDesc> = arrayOf()
         set(value) {
             field = value
-            value.forEach { streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO) }
+            value.forEach {
+                streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO)
+                conference.addEndpointSsrc(this, it.ssrc)
+            }
         }
 
     private val streamInformationStore: StreamInformationStore = StreamInformationStoreImpl()
 
-    // TODO Figure this out
-    private val rtcpEventNotifier = RtcpEventNotifier()
+    val rtcpEventNotifier = RtcpEventNotifier().apply {
+        addRtcpEventListener(
+            object : RtcpListener {
+                override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
+                    relay.rtcpPacketReceived(packet, receivedTime, id)
+                }
+                override fun rtcpPacketSent(packet: RtcpPacket) {
+                    throw IllegalStateException("got rtcpPacketSent callback from a receiver")
+                }
+            },
+            external = true
+        )
+    }
 
-    val rtpReceiver = RtpReceiverImpl(
+    private val rtpReceiver = RtpReceiverImpl(
         id,
         { rtcpPacket ->
             if (rtcpPacket.length >= 1500) {
@@ -94,16 +114,7 @@ class RelayedEndpoint(
         return streamInformationStore.receiveSsrcs.contains(ssrc)
     }
 
-    fun setReceiveSsrcs(ssrcsByMediaType: Map<MediaType, Set<Long>>) {
-        streamInformationStore.receiveSsrcs.forEach { ssrc ->
-            streamInformationStore.removeReceiveSsrc(ssrc)
-        }
-        ssrcsByMediaType.forEach { (mediaType: MediaType, ssrcs: Set<Long>) ->
-            ssrcs.forEach { ssrc ->
-                streamInformationStore.addReceiveSsrc(ssrc, mediaType)
-            }
-        }
-    }
+    override fun getSsrcs() = streamInformationStore.receiveSsrcs
 
     fun hasReceiveSsrcs(): Boolean = streamInformationStore.receiveSsrcs.isNotEmpty()
 
@@ -162,16 +173,11 @@ class RelayedEndpoint(
                     it.rtpEncodings.forEach {
                         it.ssrcs.forEach {
                             streamInformationStore.addReceiveSsrc(it, MediaType.VIDEO)
+                            conference.addEndpointSsrc(this, it)
                         }
                     }
                 }
             }
-        }
-
-    val ssrcs: Set<Long>
-        get() = HashSet<Long>().also { set ->
-            audioSources.forEach { set.add(it.ssrc) }
-            mediaSources.forEach { it.rtpEncodings.forEach { set.addAll(it.ssrcs) } }
         }
 
     fun setSrtpInformation(srtpTransformers: SrtpTransformers) {
@@ -218,6 +224,7 @@ class RelayedEndpoint(
             updateStatsOnExpire()
             rtpReceiver.stop()
             logger.cdebug { getNodeStats().prettyPrint(0) }
+            rtpReceiver.tearDown()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }

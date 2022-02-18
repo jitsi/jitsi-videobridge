@@ -397,6 +397,7 @@ class Endpoint @JvmOverloads constructor(
     fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
         logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
         transceiver.addReceiveSsrc(ssrc, mediaType)
+        conference.addEndpointSsrc(this, ssrc)
     }
 
     override fun onNewSsrcAssociation(
@@ -784,6 +785,8 @@ class Endpoint @JvmOverloads constructor(
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
+
+    override fun getSsrcs() = transceiver.receiveSsrcs
 
     override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
 
