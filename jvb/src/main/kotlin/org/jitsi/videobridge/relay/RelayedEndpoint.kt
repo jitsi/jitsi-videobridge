@@ -114,7 +114,7 @@ class RelayedEndpoint(
         return streamInformationStore.receiveSsrcs.contains(ssrc)
     }
 
-    override fun getSsrcs() = streamInformationStore.receiveSsrcs
+    override fun getSsrcs() = HashSet(streamInformationStore.receiveSsrcs)
 
     fun hasReceiveSsrcs(): Boolean = streamInformationStore.receiveSsrcs.isNotEmpty()
 

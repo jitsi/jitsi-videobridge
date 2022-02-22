@@ -109,7 +109,7 @@ class OctoEndpoint(
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
-    override fun getSsrcs() = transceiver.receiveSsrcs
+    override fun getSsrcs() = HashSet(transceiver.receiveSsrcs)
 
     override fun addPayloadType(payloadType: PayloadType?) {
         transceiver.addPayloadType(payloadType)
