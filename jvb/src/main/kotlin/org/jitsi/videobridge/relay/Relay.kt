@@ -25,6 +25,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
@@ -590,6 +591,12 @@ class Relay @JvmOverloads constructor(
     }
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
+        /* We don't want to do any BWE for relay-relay channels; also, the sender split confuses things. */
+        if (rtpExtension.type == RtpExtensionType.TRANSPORT_CC ||
+            rtpExtension.type == RtpExtensionType.ABS_SEND_TIME
+        ) {
+            return
+        }
         transceiver.addRtpExtension(rtpExtension)
         rtpExtensions.add(rtpExtension)
         synchronized(endpointsLock) {
