@@ -238,10 +238,22 @@ class Relay @JvmOverloads constructor(
             put("transceiver", transceiver.getNodeStats().toJson())
             put("messageTransport", messageTransport.debugState)
             val remoteEndpoints = JSONObject()
-            for (r in relayedEndpoints.values) {
-                remoteEndpoints[r.id] = r.debugState
+            val endpointsBySsrcMap = JSONObject()
+            synchronized(endpointsLock) {
+                for (r in relayedEndpoints.values) {
+                    remoteEndpoints[r.id] = r.debugState
+                }
+                for ((s, e) in endpointsBySsrc) {
+                    endpointsBySsrcMap[s] = e.id
+                }
             }
             put("remoteEndpoints", remoteEndpoints)
+            put("endpointsBySsrc", endpointsBySsrcMap)
+            val endpointSenders = JSONObject()
+            for (s in senders.values) {
+                endpointSenders[s.id] = s.getDebugState()
+            }
+            put("senders", endpointSenders)
         }
 
     private fun setupIceTransport() {
