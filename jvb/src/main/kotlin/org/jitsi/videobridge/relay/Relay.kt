@@ -25,6 +25,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
@@ -237,10 +238,22 @@ class Relay @JvmOverloads constructor(
             put("transceiver", transceiver.getNodeStats().toJson())
             put("messageTransport", messageTransport.debugState)
             val remoteEndpoints = JSONObject()
-            for (r in relayedEndpoints.values) {
-                remoteEndpoints[r.id] = r.debugState
+            val endpointsBySsrcMap = JSONObject()
+            synchronized(endpointsLock) {
+                for (r in relayedEndpoints.values) {
+                    remoteEndpoints[r.id] = r.debugState
+                }
+                for ((s, e) in endpointsBySsrc) {
+                    endpointsBySsrcMap[s] = e.id
+                }
             }
             put("remoteEndpoints", remoteEndpoints)
+            put("endpointsBySsrc", endpointsBySsrcMap)
+            val endpointSenders = JSONObject()
+            for (s in senders.values) {
+                endpointSenders[s.id] = s.getDebugState()
+            }
+            put("senders", endpointSenders)
         }
 
     private fun setupIceTransport() {
@@ -590,6 +603,12 @@ class Relay @JvmOverloads constructor(
     }
 
     fun addRtpExtension(rtpExtension: RtpExtension) {
+        /* We don't want to do any BWE for relay-relay channels; also, the sender split confuses things. */
+        if (rtpExtension.type == RtpExtensionType.TRANSPORT_CC ||
+            rtpExtension.type == RtpExtensionType.ABS_SEND_TIME
+        ) {
+            return
+        }
         transceiver.addRtpExtension(rtpExtension)
         rtpExtensions.add(rtpExtension)
         synchronized(endpointsLock) {
