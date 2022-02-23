@@ -65,7 +65,7 @@ class RelayEndpointSender(
     }
 
     private val rtpSender: RtpSender = RtpSenderImpl(
-        id,
+        "${relay.id}-$id",
         rtcpEventNotifier,
         TaskPools.CPU_POOL,
         TaskPools.SCHEDULED_POOL,

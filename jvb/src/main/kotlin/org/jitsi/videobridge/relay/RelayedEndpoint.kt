@@ -80,7 +80,7 @@ class RelayedEndpoint(
     }
 
     private val rtpReceiver = RtpReceiverImpl(
-        id,
+        "${relay.id}-$id",
         { rtcpPacket ->
             if (rtcpPacket.length >= 1500) {
                 logger.warn(
