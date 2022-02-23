@@ -413,7 +413,13 @@ class Relay @JvmOverloads constructor(
 
     fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
         when (feature) {
-            EndpointDebugFeatures.PCAP_DUMP -> transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
+            EndpointDebugFeatures.PCAP_DUMP -> {
+                transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
+                synchronized(endpointsLock) {
+                    relayedEndpoints.values.forEach { e -> e.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled) }
+                }
+                senders.values.forEach { s -> s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled) }
+            }
         }
     }
 
@@ -536,6 +542,8 @@ class Relay @JvmOverloads constructor(
         rtpExtensions.forEach { rtpExtension -> ep.addRtpExtension(rtpExtension) }
 
         setEndpointMediaSources(ep, audioSources, videoSources)
+
+        ep.setFeature(Features.TRANSCEIVER_PCAP_DUMP, transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP))
     }
 
     fun updateRemoteEndpoint(
@@ -586,6 +594,7 @@ class Relay @JvmOverloads constructor(
             srtpTransformers?.let { s.setSrtpInformation(it) }
             payloadTypes.forEach { payloadType -> s.addPayloadType(payloadType) }
             rtpExtensions.forEach { rtpExtension -> s.addRtpExtension(rtpExtension) }
+            s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP))
 
             senders[endpointId] = s
 

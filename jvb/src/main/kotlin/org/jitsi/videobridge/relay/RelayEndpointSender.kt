@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
@@ -90,6 +91,10 @@ class RelayEndpointSender(
     }
 
     fun sendPacket(packetInfo: PacketInfo) = rtpSender.processPacket(packetInfo)
+
+    fun setFeature(feature: Features, enabled: Boolean) {
+        rtpSender.setFeature(feature, enabled)
+    }
 
     fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Remote Endpoint $id").apply {
