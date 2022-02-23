@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.MediaSources
 import org.jitsi.nlj.PacketInfo
@@ -34,6 +35,7 @@ import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
@@ -52,7 +54,8 @@ class RelayedEndpoint(
     conference: Conference,
     val relay: Relay,
     id: String,
-    parentLogger: Logger
+    parentLogger: Logger,
+    diagnosticContext: DiagnosticContext
 ) : AbstractEndpoint(conference, id, parentLogger), Relay.IncomingRelayPacketHandler {
     var audioSources: Array<AudioSourceDesc> = arrayOf()
         set(value) {
@@ -80,7 +83,7 @@ class RelayedEndpoint(
     }
 
     private val rtpReceiver = RtpReceiverImpl(
-        id,
+        "${relay.id}-$id",
         { rtcpPacket ->
             if (rtcpPacket.length >= 1500) {
                 logger.warn(
@@ -96,7 +99,8 @@ class RelayedEndpoint(
         TaskPools.SCHEDULED_POOL,
         streamInformationStore,
         RtpReceiverEventHandlerImpl(),
-        logger
+        logger,
+        diagnosticContext
     ).apply {
         packetHandler = object : ConsumerNode("receiver chain handler") {
             override fun consume(packetInfo: PacketInfo) {
@@ -185,6 +189,10 @@ class RelayedEndpoint(
     }
 
     override fun handleIncomingPacket(packetInfo: OctoPacketInfo) = rtpReceiver.processPacket(packetInfo)
+
+    fun setFeature(feature: Features, enabled: Boolean) {
+        rtpReceiver.setFeature(feature, enabled)
+    }
 
     fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Remote Endpoint $id").apply {

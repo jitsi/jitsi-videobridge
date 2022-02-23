@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
@@ -43,8 +44,8 @@ import java.time.Instant
 class RelayEndpointSender(
     val relay: Relay,
     val id: String,
-    diagnosticContext: DiagnosticContext,
-    parentLogger: Logger
+    parentLogger: Logger,
+    diagnosticContext: DiagnosticContext
 ) {
     private val logger = createChildLogger(parentLogger)
 
@@ -65,7 +66,7 @@ class RelayEndpointSender(
     }
 
     private val rtpSender: RtpSender = RtpSenderImpl(
-        id,
+        "${relay.id}-$id",
         rtcpEventNotifier,
         TaskPools.CPU_POOL,
         TaskPools.SCHEDULED_POOL,
@@ -90,6 +91,10 @@ class RelayEndpointSender(
     }
 
     fun sendPacket(packetInfo: PacketInfo) = rtpSender.processPacket(packetInfo)
+
+    fun setFeature(feature: Features, enabled: Boolean) {
+        rtpSender.setFeature(feature, enabled)
+    }
 
     fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Remote Endpoint $id").apply {
