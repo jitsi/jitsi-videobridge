@@ -525,7 +525,16 @@ class Relay @JvmOverloads constructor(
                 updateRemoteEndpoint(id, audioSources, videoSources)
                 return
             }
-            ep = RelayedEndpoint(conference, this, id, logger)
+            ep = RelayedEndpoint(
+                conference,
+                this,
+                id,
+                logger,
+                conference.newDiagnosticContext().apply {
+                    put("relay_id", this@Relay.id)
+                    put("endpoint_id", id)
+                }
+            )
             ep.statsId = statsId
             ep.audioSources = audioSources.toTypedArray()
             ep.mediaSources = videoSources.toTypedArray()
@@ -589,7 +598,15 @@ class Relay @JvmOverloads constructor(
         synchronized(senders) {
             senders[endpointId]?.let { return it }
 
-            val s = RelayEndpointSender(this, endpointId, diagnosticContext, logger)
+            val s = RelayEndpointSender(
+                this,
+                endpointId,
+                logger,
+                conference.newDiagnosticContext().apply {
+                    put("relay_id", id)
+                    put("endpoint_id", endpointId)
+                }
+            )
 
             srtpTransformers?.let { s.setSrtpInformation(it) }
             payloadTypes.forEach { payloadType -> s.addPayloadType(payloadType) }

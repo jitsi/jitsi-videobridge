@@ -35,6 +35,7 @@ import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
@@ -53,7 +54,8 @@ class RelayedEndpoint(
     conference: Conference,
     val relay: Relay,
     id: String,
-    parentLogger: Logger
+    parentLogger: Logger,
+    diagnosticContext: DiagnosticContext
 ) : AbstractEndpoint(conference, id, parentLogger), Relay.IncomingRelayPacketHandler {
     var audioSources: Array<AudioSourceDesc> = arrayOf()
         set(value) {
@@ -97,7 +99,8 @@ class RelayedEndpoint(
         TaskPools.SCHEDULED_POOL,
         streamInformationStore,
         RtpReceiverEventHandlerImpl(),
-        logger
+        logger,
+        diagnosticContext
     ).apply {
         packetHandler = object : ConsumerNode("receiver chain handler") {
             override fun consume(packetInfo: PacketInfo) {

@@ -44,8 +44,8 @@ import java.time.Instant
 class RelayEndpointSender(
     val relay: Relay,
     val id: String,
-    diagnosticContext: DiagnosticContext,
-    parentLogger: Logger
+    parentLogger: Logger,
+    diagnosticContext: DiagnosticContext
 ) {
     private val logger = createChildLogger(parentLogger)
 
