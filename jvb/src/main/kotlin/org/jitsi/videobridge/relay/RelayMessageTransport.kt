@@ -170,6 +170,11 @@ class RelayMessageTransport(
             return null
         }
 
+        if (MultiStreamConfig.config.enabled) {
+            logger.error("Relay: unexpected video type message while in the multi-stream mode, eId=$epId")
+            return null
+        }
+
         val ep = relay.getEndpoint(epId)
 
         if (ep == null) {
