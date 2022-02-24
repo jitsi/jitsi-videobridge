@@ -54,6 +54,8 @@ class AudioLevelReader(
 
         audioLevelExtId?.let { audioLevelId ->
             audioRtpPacket.getHeaderExtension(audioLevelId)?.let { ext ->
+                stats.audioLevel()
+
                 val level = AudioLevelHeaderExtension.getAudioLevel(ext)
                 val silence = level == MUTED_LEVEL
 
@@ -79,6 +81,7 @@ class AudioLevelReader(
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
         addString("audio_level_ext_id", audioLevelExtId.toString())
+        addNumber("num_audio_levels", stats.numAudioLevels)
         addNumber("num_silence_packets_discarded", stats.numDiscardedSilence)
         addNumber("num_force_mute_discarded", stats.numDiscardedForceMute)
         addNumber("num_ranking_discarded", stats.numDiscardedRanking)
@@ -97,12 +100,16 @@ class AudioLevelReader(
 }
 
 private class Stats(
+    var numAudioLevels: Long = 0,
     var numDiscardedSilence: Long = 0,
     var numDiscardedForceMute: Long = 0,
     var numDiscardedRanking: Long = 0,
     var numNonSilence: Long = 0,
     var numNonSilenceWithVad: Long = 0
 ) {
+    /** A packet contained an audio level header */
+    fun audioLevel() = numAudioLevels++
+
     /** A packet was discarded because it was silence. */
     fun discardedSilence() = numDiscardedSilence++
 
