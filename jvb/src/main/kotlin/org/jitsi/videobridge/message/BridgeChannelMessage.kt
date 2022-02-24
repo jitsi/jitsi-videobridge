@@ -351,6 +351,7 @@ class EndpointConnectionStatusMessage(
 /**
  * A message sent from the bridge to a client, indicating the set of endpoints that are currently being forwarded.
  */
+@Deprecated("Use ForwardedSourcesMessage", ReplaceWith("ForwardedSourcesMessage"), DeprecationLevel.WARNING)
 class ForwardedEndpointsMessage(
     @get:JsonProperty("lastNEndpoints")
     /**

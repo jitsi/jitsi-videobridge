@@ -50,6 +50,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     endpointsSupplier: Supplier<List<T>>,
     private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
+    private val useSourceNames: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) {
     val eventEmitter = SyncEventEmitter<EventHandler>()
@@ -96,7 +97,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             clock
         )
 
-    private val allocationSettingsWrapper = AllocationSettingsWrapper()
+    private val allocationSettingsWrapper = AllocationSettingsWrapper(useSourceNames)
     val allocationSettings
         get() = allocationSettingsWrapper.get()
 
@@ -313,19 +314,19 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)
 
-            // TODO(george) bring back sending this message on message transport  connect
-            val newForwardedEndpoints = allocation.forwardedEndpoints
-            if (forwardedEndpoints != newForwardedEndpoints) {
-                forwardedEndpoints = newForwardedEndpoints
-                eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
-            }
-
-            if (MultiStreamConfig.config.enabled) {
+            if (MultiStreamConfig.config.enabled && useSourceNames) {
                 // TODO as per George's comment above: should this message be sent on message transport connect?
                 val newForwardedSources = allocation.forwardedSources
                 if (forwardedSources != newForwardedSources) {
                     forwardedSources = newForwardedSources
                     eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
+                }
+            } else {
+                // TODO(george) bring back sending this message on message transport  connect
+                val newForwardedEndpoints = allocation.forwardedEndpoints
+                if (forwardedEndpoints != newForwardedEndpoints) {
+                    forwardedEndpoints = newForwardedEndpoints
+                    eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
                 }
             }
 

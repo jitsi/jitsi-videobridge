@@ -22,6 +22,7 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
+import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RtpExtension
@@ -86,7 +87,7 @@ import java.nio.ByteBuffer
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.Optional
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -104,6 +105,7 @@ class Endpoint @JvmOverloads constructor(
      * as a controlling ICE agent, false otherwise
      */
     iceControlling: Boolean,
+    private val isUsingSourceNames: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
     /**
@@ -207,7 +209,8 @@ class Endpoint @JvmOverloads constructor(
         },
         Supplier { getOrderedEndpoints() },
         diagnosticContext,
-        logger
+        logger,
+        isUsingSourceNames
     )
 
     /**
@@ -285,6 +288,8 @@ class Endpoint @JvmOverloads constructor(
         setupDtlsTransport()
 
         conference.videobridge.statistics.totalEndpoints.incrementAndGet()
+
+        logger.info("$id source names: $isUsingSourceNames")
     }
 
     override var mediaSources: Array<MediaSourceDesc>
@@ -545,10 +550,14 @@ class Endpoint @JvmOverloads constructor(
         if (findMediaSourceDesc(sourceName) == null) {
             logger.warn { "Suppressing sending a SenderVideoConstraints message, endpoint has no such source." }
         } else {
-            val senderSourceConstraintsMessage =
-                SenderSourceConstraintsMessage(sourceName, maxVideoConstraints.maxHeight)
-            logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
-            sendMessage(senderSourceConstraintsMessage)
+            if (isUsingSourceNames) {
+                val senderSourceConstraintsMessage =
+                    SenderSourceConstraintsMessage(sourceName, maxVideoConstraints.maxHeight)
+                logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
+                sendMessage(senderSourceConstraintsMessage)
+            } else {
+                sendVideoConstraints(maxReceiverVideoConstraintsMap[sourceName]!!)
+            }
         }
     }
 
@@ -687,6 +696,10 @@ class Endpoint @JvmOverloads constructor(
      */
     @Deprecated("", ReplaceWith("sendForwardedSourcesMessage"), DeprecationLevel.WARNING)
     fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
+        if (MultiStreamConfig.config.enabled && isUsingSourceNames) {
+            return
+        }
+
         val msg = ForwardedEndpointsMessage(forwardedEndpoints)
         TaskPools.IO_POOL.execute {
             try {
@@ -704,6 +717,10 @@ class Endpoint @JvmOverloads constructor(
      * @param forwardedSources the collection of forwarded media sources (by name).
      */
     fun sendForwardedSourcesMessage(forwardedSources: Collection<String>) {
+        if (!isUsingSourceNames) {
+            return
+        }
+
         val msg = ForwardedSourcesMessage(forwardedSources)
         TaskPools.IO_POOL.execute {
             try {
@@ -810,8 +827,9 @@ class Endpoint @JvmOverloads constructor(
 
     fun setMaxFrameHeight(maxFrameHeight: Int) = bitrateController.setMaxFrameHeight(maxFrameHeight)
 
-    fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) =
+    fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
         bitrateController.setBandwidthAllocationSettings(message)
+    }
 
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {

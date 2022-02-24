@@ -23,7 +23,8 @@ class AllocationSettingsTest : ShouldSpec() {
     init {
         context("computeVideoConstraints") {
             context("Stage view behavior") {
-                val allocationSettings = AllocationSettingsWrapper()
+                // TODO write a test for sourceNames=true
+                val allocationSettings = AllocationSettingsWrapper(false)
                 allocationSettings.setMaxFrameHeight(720)
                 allocationSettings.setSelectedEndpoints(listOf("A"))
 
@@ -37,7 +38,8 @@ class AllocationSettingsTest : ShouldSpec() {
                 )
             }
             context("Tile view behavior") {
-                val allocationSettings = AllocationSettingsWrapper()
+                // TODO write a test for sourceNames=true
+                val allocationSettings = AllocationSettingsWrapper(false)
                 allocationSettings.setMaxFrameHeight(180)
                 allocationSettings.setSelectedEndpoints(listOf("A", "B", "C", "D"))
 
