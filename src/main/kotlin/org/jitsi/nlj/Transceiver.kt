@@ -90,6 +90,13 @@ class Transceiver(
 
     private var mediaSources = MediaSources()
 
+    var srtpTransformers: SrtpTransformers? = null
+
+    /** Whether the srtpTransformers were created inside this object, or passed in externally.
+     * For external transformers it's the external owner's responsibility to close them.
+     */
+    var internalTransformers = false
+
     /**
      * Whether this [Transceiver] is receiving audio from the remote endpoint.
      */
@@ -261,20 +268,22 @@ class Transceiver(
                 "profile info:\n$srtpProfileInfo\n" +
                 "tls role: $tlsRole"
         }
-        val srtpTransformers = SrtpUtil.initializeTransformer(
+        srtpTransformers = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,
             tlsRole,
             logger
-        )
-
-        setSrtpInformation(srtpTransformers)
+        ).also { setSrtpInformationInternal(it, true) }
     }
 
-    fun setSrtpInformation(srtpTransformers: SrtpTransformers) {
+    private fun setSrtpInformationInternal(srtpTransformers: SrtpTransformers, internal: Boolean) {
         rtpReceiver.setSrtpTransformers(srtpTransformers)
         rtpSender.setSrtpTransformers(srtpTransformers)
+        internalTransformers = internal
     }
+
+    fun setSrtpInformation(srtpTransformers: SrtpTransformers) =
+        setSrtpInformationInternal(srtpTransformers, false)
 
     /**
      * Forcibly mute or unmute the incoming audio stream
@@ -330,6 +339,9 @@ class Transceiver(
     override fun stop() {
         rtpReceiver.stop()
         rtpSender.stop()
+        if (internalTransformers) {
+            srtpTransformers?.close()
+        }
     }
 
     fun teardown() {

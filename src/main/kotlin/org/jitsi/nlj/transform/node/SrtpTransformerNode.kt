@@ -143,7 +143,6 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
             cachedPackets.forEach { packetDiscarded(it) }
             cachedPackets.clear()
         }
-        transformer?.close()
     }
 }
 

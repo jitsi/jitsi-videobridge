@@ -232,4 +232,11 @@ data class SrtpTransformers(
     val srtpEncryptTransformer: SrtpEncryptTransformer,
     val srtcpDecryptTransformer: SrtcpDecryptTransformer,
     val srtcpEncryptTransformer: SrtcpEncryptTransformer
-)
+) {
+    fun close() {
+        srtpDecryptTransformer.close()
+        srtpEncryptTransformer.close()
+        srtcpDecryptTransformer.close()
+        srtcpEncryptTransformer.close()
+    }
+}
