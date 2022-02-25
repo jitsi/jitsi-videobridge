@@ -814,6 +814,7 @@ class Relay @JvmOverloads constructor(
         try {
             updateStatsOnExpire()
             transceiver.stop()
+            srtpTransformers?.close()
             logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
