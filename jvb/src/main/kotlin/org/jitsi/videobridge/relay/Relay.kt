@@ -777,11 +777,11 @@ class Relay @JvmOverloads constructor(
             }
 
     val outgoingBitrateBps: Double
-        get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.getBitrateBps() +
+        get() = transceiver.getTransceiverStats().outgoingPacketStreamStats.getBitrateBps() +
             senders.values.sumOf { it.getOutgoingStats().getBitrateBps() }
 
     val outgoingPacketRate: Long
-        get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.packetRate +
+        get() = transceiver.getTransceiverStats().outgoingPacketStreamStats.packetRate +
             senders.values.sumOf { it.getOutgoingStats().packetRate }
 
     /**
