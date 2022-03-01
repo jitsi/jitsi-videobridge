@@ -20,9 +20,10 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.rtp.rtcp.RtcpPacket
+import java.util.concurrent.ConcurrentHashMap
 
 class SentRtcpStats : ObserverNode("Sent RTCP stats") {
-    private var sentRtcpCounts = mutableMapOf<String, Int>()
+    private var sentRtcpCounts: MutableMap<String, Int> = ConcurrentHashMap()
 
     override fun observe(packetInfo: PacketInfo) {
         val rtcpPacket: RtcpPacket = packetInfo.packetAs()
