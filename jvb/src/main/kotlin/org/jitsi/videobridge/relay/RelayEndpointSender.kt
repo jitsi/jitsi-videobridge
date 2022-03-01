@@ -96,6 +96,8 @@ class RelayEndpointSender(
         rtpSender.setFeature(feature, enabled)
     }
 
+    fun getOutgoingStats() = rtpSender.getPacketStreamStats()
+
     fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Remote Endpoint $id").apply {
             addBlock(streamInformationStore.getNodeStats())

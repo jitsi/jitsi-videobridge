@@ -86,6 +86,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
+import kotlin.collections.sumOf
 
 /**
  * Models a relay (remote videobridge) in a [Conference].
@@ -762,6 +763,26 @@ class Relay @JvmOverloads constructor(
         val s = senders.remove(id)
         s?.expire()
     }
+
+    val incomingBitrateBps: Double
+        get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.getBitrateBps() +
+            synchronized(endpointsLock) {
+                relayedEndpoints.values.sumOf { it.getIncomingStats().getBitrateBps() }
+            }
+
+    val incomingPacketRate: Long
+        get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.packetRate +
+            synchronized(endpointsLock) {
+                relayedEndpoints.values.sumOf { it.getIncomingStats().packetRate }
+            }
+
+    val outgoingBitrateBps: Double
+        get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.getBitrateBps() +
+            senders.values.sumOf { it.getOutgoingStats().getBitrateBps() }
+
+    val outgoingPacketRate: Long
+        get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.packetRate +
+            senders.values.sumOf { it.getOutgoingStats().packetRate }
 
     /**
      * Updates the conference statistics with value from this endpoint. Since

@@ -380,15 +380,11 @@ public class VideobridgeStatistics
 
             for (Relay relay : conference.getRelays())
             {
-                TransceiverStats transceiverStats = relay.getTransceiver().getTransceiverStats();
-                PacketStreamStats.Snapshot incomingPacketStreamStats
-                    = transceiverStats.getRtpReceiverStats().getPacketStreamStats();
-                relayBitrateIncomingBps += incomingPacketStreamStats.getBitrateBps();
-                relayPacketRateIncoming += incomingPacketStreamStats.getPacketRate();
+                relayBitrateIncomingBps += relay.getIncomingBitrateBps();
+                relayPacketRateIncoming += relay.getIncomingPacketRate();
 
-                PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
-                relayBitrateOutgoingBps += outgoingStats.getBitrateBps();
-                relayPacketRateOutgoing += outgoingStats.getPacketRate();
+                relayBitrateOutgoingBps += relay.getOutgoingBitrateBps();
+                relayPacketRateOutgoing += relay.getOutgoingPacketRate();
 
                 /* TODO: report Relay RTT and loss, like we do for Endpoints? */
             }
