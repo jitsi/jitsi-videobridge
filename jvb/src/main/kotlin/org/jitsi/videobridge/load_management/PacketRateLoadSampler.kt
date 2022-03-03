@@ -32,6 +32,10 @@ class PacketRateLoadSampler(
                     totalPacketRate += outgoingPacketStreamStats.packetRate
                 }
             }
+            conf.relays.forEach { relay ->
+                totalPacketRate += relay.incomingPacketRate
+                totalPacketRate += relay.outgoingPacketRate
+            }
         }
         newMeasurementHandler(PacketRateMeasurement(totalPacketRate))
     }
