@@ -146,6 +146,7 @@ class RelayEndpointSender(
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
+        outgoingSrtpPacketQueue.close()
     }
 
     private fun updateStatsOnExpire() {
