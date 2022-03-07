@@ -47,6 +47,7 @@ import java.net.Inet6Address
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.LongAdder
 
 class IceTransport @JvmOverloads constructor(
     id: String,
@@ -219,10 +220,10 @@ class IceTransport @JvmOverloads constructor(
                 logger.warn("Stopping reader", e)
                 break
             }
-            packetStats.numPacketsReceived++
+            packetStats.numPacketsReceived.increment()
             incomingDataHandler?.dataReceived(receiveBuf, packet.offset, packet.length, receivedTime) ?: run {
                 logger.cdebug { "Data handler is null, dropping data" }
-                packetStats.numIncomingPacketsDroppedNoHandler++
+                packetStats.numIncomingPacketsDroppedNoHandler.increment()
             }
         }
         logger.info("No longer running, stopped reading packets")
@@ -235,13 +236,13 @@ class IceTransport @JvmOverloads constructor(
         if (running.get()) {
             try {
                 iceComponent.socket.send(DatagramPacket(data, off, length))
-                packetStats.numPacketsSent++
+                packetStats.numPacketsSent.increment()
             } catch (e: IOException) {
                 logger.error("Error sending packet", e)
                 throw RuntimeException()
             }
         } else {
-            packetStats.numOutgoingPacketsDroppedStopped++
+            packetStats.numOutgoingPacketsDroppedStopped.increment()
         }
     }
 
@@ -386,17 +387,17 @@ class IceTransport @JvmOverloads constructor(
         }
     }
 
-    private data class PacketStats(
-        var numPacketsReceived: Int = 0,
-        var numIncomingPacketsDroppedNoHandler: Int = 0,
-        var numPacketsSent: Int = 0,
-        var numOutgoingPacketsDroppedStopped: Int = 0
-    ) {
+    private class PacketStats {
+        val numPacketsReceived = LongAdder()
+        val numIncomingPacketsDroppedNoHandler = LongAdder()
+        val numPacketsSent = LongAdder()
+        val numOutgoingPacketsDroppedStopped = LongAdder()
+
         fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
-            put("num_packets_received", numPacketsReceived)
-            put("num_incoming_packets_dropped_no_handler", numIncomingPacketsDroppedNoHandler)
-            put("num_packets_sent", numPacketsSent)
-            put("num_outgoing_packets_dropped_stopped", numOutgoingPacketsDroppedStopped)
+            put("num_packets_received", numPacketsReceived.sum())
+            put("num_incoming_packets_dropped_no_handler", numIncomingPacketsDroppedNoHandler.sum())
+            put("num_packets_sent", numPacketsSent.sum())
+            put("num_outgoing_packets_dropped_stopped", numOutgoingPacketsDroppedStopped.sum())
         }
     }
 
