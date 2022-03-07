@@ -940,6 +940,10 @@ public class Videobridge
             getJsonFromQueueStatisticsAndErrorHandler(Relay.queueErrorCounter,
                 "Relay-outgoing-packet-queue"));
         queueStats.put(
+            "relay_endpoint_sender_srtp_send_queue",
+            getJsonFromQueueStatisticsAndErrorHandler(RelayEndpointSender.queueErrorCounter,
+                "RelayEndpointSender-outgoing-packet-queue"));
+        queueStats.put(
             "octo_receive_queue",
             getJsonFromQueueStatisticsAndErrorHandler(ConfOctoTransport.queueErrorCounter,
                 "octo-tentacle-outgoing-packet-queue"));
