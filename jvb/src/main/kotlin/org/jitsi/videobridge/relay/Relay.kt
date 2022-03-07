@@ -165,7 +165,8 @@ class Relay @JvmOverloads constructor(
             }
         }
 
-    /* This transceiver is only for packets that are not handled by RelayedEndpoints */
+    /* This transceiver is only for packets that are not handled by [RelayedEndpoint]s
+     * or [RelayEndpointSender]s */
     val transceiver = Transceiver(
         id,
         TaskPools.CPU_POOL,
@@ -221,7 +222,8 @@ class Relay @JvmOverloads constructor(
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
-     * out via the [IceTransport] on an IO thread.
+     * out via the [IceTransport] on an IO thread.  This queue is only
+     * for packets that are not handled by [RelayEndpointSender]s.
      */
     private val outgoingSrtpPacketQueue = PacketInfoQueue(
         "${javaClass.simpleName}-outgoing-packet-queue",
