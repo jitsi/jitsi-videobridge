@@ -27,6 +27,7 @@ import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -34,6 +35,9 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.queue.CountingErrorHandler
+import org.jitsi.videobridge.TransportConfig
+import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
 import java.time.Instant
@@ -76,9 +80,22 @@ class RelayEndpointSender(
     ).apply {
         onOutgoingPacket(object : PacketHandler {
             override fun processPacket(packetInfo: PacketInfo) {
-                relay.handleOutgoingPacket(packetInfo)
+                outgoingSrtpPacketQueue.add(packetInfo)
             }
         })
+    }
+
+    /**
+     * The queue we put outgoing SRTP packets onto so they can be sent
+     * out via the Relay's [IceTransport] on an IO thread.
+     */
+    private val outgoingSrtpPacketQueue = PacketInfoQueue(
+        "${javaClass.simpleName}-outgoing-packet-queue",
+        TaskPools.IO_POOL,
+        { packet -> relay.doSendSrtp(packet) },
+        TransportConfig.queueSize
+    ).apply {
+        setErrorHandler(queueErrorCounter)
     }
 
     private var expired = false
@@ -139,5 +156,13 @@ class RelayEndpointSender(
             bytesSent.getAndAdd(outgoingStats.bytes)
             packetsSent.getAndAdd(outgoingStats.packets)
         }
+    }
+
+    companion object {
+        /**
+         * Count the number of dropped packets and exceptions.
+         */
+        @JvmField
+        val queueErrorCounter = CountingErrorHandler()
     }
 }

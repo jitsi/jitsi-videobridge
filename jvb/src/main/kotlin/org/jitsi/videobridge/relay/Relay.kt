@@ -289,7 +289,7 @@ class Relay @JvmOverloads constructor(
                 eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
-                        handleOutgoingPacket(packetInfo)
+                        outgoingSrtpPacketQueue.add(packetInfo)
                     }
                 })
                 TaskPools.IO_POOL.execute(iceTransport::startReadingData)
@@ -475,8 +475,6 @@ class Relay @JvmOverloads constructor(
         conference.handleIncomingPacket(packetInfo)
     }
 
-    fun handleOutgoingPacket(packetInfo: PacketInfo) = outgoingSrtpPacketQueue.add(packetInfo)
-
     override fun onNewSsrcAssociation(
         endpointId: String,
         primarySsrc: Long,
@@ -490,7 +488,7 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+    fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         PacketTransitStats.packetSent(packetInfo)
 
         packetInfo.sent()
