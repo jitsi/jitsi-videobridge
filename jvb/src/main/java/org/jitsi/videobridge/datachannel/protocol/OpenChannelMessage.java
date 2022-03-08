@@ -57,7 +57,9 @@ public class OpenChannelMessage extends DataChannelProtocolMessage
         String label = null;
         if (labelLength > 0)
         {
-            buf.position(12);
+            // The cast is needed when the code is compiled with JDK9+ and run on JRE8.
+            // https://stackoverflow.com/questions/48693695/java-nio-buffer-not-loading-clear-method-on-runtime
+            ((Buffer) buf).position(12);
             byte[] labelBytes = new byte[labelLength];
             buf.get(labelBytes, 0, labelLength);
             label = new String(labelBytes);
@@ -65,7 +67,9 @@ public class OpenChannelMessage extends DataChannelProtocolMessage
         String protocol = null;
         if (protocolLength > 0)
         {
-            buf.position(12 + labelLength);
+            // The cast is needed when the code is compiled with JDK9+ and run on JRE8.
+            // https://stackoverflow.com/questions/48693695/java-nio-buffer-not-loading-clear-method-on-runtime
+            ((Buffer) buf).position(12 + labelLength);
             byte[] protocolBytes = new byte[protocolLength];
             buf.get(protocolBytes, 0, protocolLength);
             protocol = new String(protocolBytes);
