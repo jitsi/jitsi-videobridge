@@ -80,6 +80,7 @@ class RelayEndpointSender(
     ).apply {
         onOutgoingPacket(object : PacketHandler {
             override fun processPacket(packetInfo: PacketInfo) {
+                packetInfo.addEvent(SRTP_QUEUE_ENTRY_EVENT)
                 outgoingSrtpPacketQueue.add(packetInfo)
             }
         })
@@ -165,5 +166,7 @@ class RelayEndpointSender(
          */
         @JvmField
         val queueErrorCounter = CountingErrorHandler()
+
+        private const val SRTP_QUEUE_ENTRY_EVENT = "Entered RelayEndpointSender SRTP sender outgoing queue"
     }
 }

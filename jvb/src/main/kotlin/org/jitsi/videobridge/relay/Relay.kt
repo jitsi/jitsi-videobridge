@@ -291,6 +291,7 @@ class Relay @JvmOverloads constructor(
                 eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
+                        packetInfo.addEvent(SRTP_QUEUE_ENTRY_EVENT)
                         outgoingSrtpPacketQueue.add(packetInfo)
                     }
                 })
@@ -491,6 +492,7 @@ class Relay @JvmOverloads constructor(
     }
 
     fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+        packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
         PacketTransitStats.packetSent(packetInfo)
 
         packetInfo.sent()
@@ -861,6 +863,9 @@ class Relay @JvmOverloads constructor(
          */
         @JvmField
         val queueErrorCounter = CountingErrorHandler()
+
+        private const val SRTP_QUEUE_ENTRY_EVENT = "Entered Relay SRTP sender outgoing queue"
+        private const val SRTP_QUEUE_EXIT_EVENT = "Exited Relay SRTP sender outgoing queue"
     }
 
     class Statistics {

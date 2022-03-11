@@ -332,6 +332,7 @@ class Endpoint @JvmOverloads constructor(
                 eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
+                        packetInfo.addEvent(SRTP_QUEUE_ENTRY_EVENT)
                         outgoingSrtpPacketQueue.add(packetInfo)
                     }
                 })
@@ -435,6 +436,7 @@ class Endpoint @JvmOverloads constructor(
     }
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
+        packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
         PacketTransitStats.packetSent(packetInfo)
 
         packetInfo.sent()
@@ -1066,6 +1068,9 @@ class Endpoint @JvmOverloads constructor(
         private val TIMELINE_FRACTION = 10000L
 
         fun logTimeline() = timelineCounter.getAndIncrement() % TIMELINE_FRACTION == 0L
+
+        private const val SRTP_QUEUE_ENTRY_EVENT = "Entered Endpoint SRTP sender outgoing queue"
+        private const val SRTP_QUEUE_EXIT_EVENT = "Exited Endpoint SRTP sender outgoing queue"
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
