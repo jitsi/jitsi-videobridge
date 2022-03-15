@@ -55,6 +55,8 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedSourcesMessage::class, name = ForwardedSourcesMessage.TYPE),
+    JsonSubTypes.Type(value = VideoSourcesMap::class, name = VideoSourcesMap.TYPE),
+    JsonSubTypes.Type(value = AudioSourcesMap::class, name = AudioSourcesMap.TYPE),
     JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = SenderSourceConstraintsMessage::class, name = SenderSourceConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
@@ -120,6 +122,8 @@ open class MessageHandler {
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
             is ForwardedSourcesMessage -> forwardedSources(message)
+            is VideoSourcesMap -> videoSourcesMap(message)
+            is AudioSourcesMap -> audioSourcesMap(message)
             is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
             is SenderSourceConstraintsMessage -> senderSourceConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
@@ -148,6 +152,8 @@ open class MessageHandler {
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun forwardedSources(message: ForwardedSourcesMessage) = unhandledMessageReturnNull(message)
+    open fun videoSourcesMap(message: VideoSourcesMap) = unhandledMessageReturnNull(message)
+    open fun audioSourcesMap(message: AudioSourcesMap) = unhandledMessageReturnNull(message)
     open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun senderSourceConstraints(message: SenderSourceConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
@@ -374,6 +380,43 @@ class ForwardedSourcesMessage(
 ) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "ForwardedSources"
+    }
+}
+
+/**
+ * A mapping of a source to SSRCs.
+ */
+data class SourceMapping(
+    /** The name of the source being mapped. */
+    val source: String,
+    /** The primary SSRC of the source being mapped. */
+    val ssrc: Long,
+    /** The RTX SSRC of the source being mapped - only used for video. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    val rtx: Long? = null
+)
+
+/**
+ * A message sent from the bridge to a client to indicate video source mappings.
+ */
+class VideoSourcesMap(
+    /* The current list of maps of sources to ssrcs. */
+    val mappedSources: Collection<SourceMapping>
+) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "VideoSourcesMap"
+    }
+}
+
+/**
+ * A message sent from the bridge to a client to indicate audio source mappings.
+ */
+class AudioSourcesMap(
+    /* The current list of maps of sources to ssrcs. */
+    val mappedSources: Collection<SourceMapping>
+) : BridgeChannelMessage(TYPE) {
+    companion object {
+        const val TYPE = "AudioSourcesMap"
     }
 }
 
