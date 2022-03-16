@@ -920,16 +920,37 @@ class Endpoint @JvmOverloads constructor(
      */
     fun wantsStatsFrom(ep: AbstractEndpoint): Boolean {
         logger.debug {
-            "wantsStatsFrom(${ep.id}): isRecentSpeaker=${conference.speechActivity.isRecentSpeaker(ep)} " +
-                "isRankedSpeaker=${conference.isRankedSpeaker(ep)} " +
-                "isOnStageOrSelected=${bitrateController.isOnStageOrSelected(ep)} " +
-                "hasNonZeroEffectiveConstraints=${bitrateController.hasNonZeroEffectiveConstraints(ep)}"
+            buildString {
+                append("wantsStatsFrom(${ep.id}): isRecentSpeaker=${conference.speechActivity.isRecentSpeaker(ep)} ")
+                append("isRankedSpeaker=${conference.isRankedSpeaker(ep)} ")
+                if (MultiStreamConfig.config.enabled) {
+                    if (ep.mediaSources.isEmpty()) {
+                        append("(no media sources)")
+                    }
+                    ep.mediaSources.forEach { source ->
+                        val name = source.sourceName
+                        append("isOnStageOrSelected($name)=${bitrateController.isOnStageOrSelected(source)} ")
+                        append("hasNonZeroEffectiveConstraints($name)=")
+                        append("${bitrateController.hasNonZeroEffectiveConstraints(source)} ")
+                    }
+                } else {
+                    append("isOnStageOrSelected=${bitrateController.isOnStageOrSelected(ep)} ")
+                    append("hasNonZeroEffectiveConstraints=${bitrateController.hasNonZeroEffectiveConstraints(ep)}")
+                }
+            }
         }
 
-        return conference.speechActivity.isRecentSpeaker(ep) ||
-            conference.isRankedSpeaker(ep) ||
-            bitrateController.isOnStageOrSelected(ep) ||
-            bitrateController.hasNonZeroEffectiveConstraints(ep)
+        if (conference.speechActivity.isRecentSpeaker(ep) || conference.isRankedSpeaker(ep)) {
+            return true
+        }
+        return if (MultiStreamConfig.config.enabled) {
+            ep.mediaSources.any { source ->
+                bitrateController.isOnStageOrSelected(source) ||
+                    bitrateController.hasNonZeroEffectiveConstraints(source)
+            }
+        } else {
+            bitrateController.isOnStageOrSelected(ep) || bitrateController.hasNonZeroEffectiveConstraints(ep)
+        }
     }
 
     /**

@@ -474,7 +474,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Query whether the allocator has non-zero effective constraints for the given endpoint.
+     * Query whether the allocator has non-zero effective constraints for the given endpoint or source.
      */
     public boolean hasNonZeroEffectiveConstraints(String endpointId)
     {
