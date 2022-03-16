@@ -199,6 +199,14 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             allocationSettings.selectedEndpoints.contains(endpoint.id)
 
     /**
+     * Query whether this source is on stage or selected, as of the most recent
+     * video constraints
+     */
+    fun isOnStageOrSelected(source: MediaSourceDesc) =
+        allocationSettings.onStageSources.contains(source.sourceName) ||
+            allocationSettings.selectedSources.contains(source.sourceName)
+
+    /**
      * Query whether this allocator is forwarding a source from a given endpoint, as of its
      * most recent allocation decision.
      */
@@ -207,7 +215,16 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     /**
      * Query whether this allocator has non-zero effective constraints for a given endpoint.
      */
-    fun hasNonZeroEffectiveConstraints(endpoint: T) = bandwidthAllocator.hasNonZeroEffectiveConstraints(endpoint.id)
+    fun hasNonZeroEffectiveConstraints(endpoint: T) =
+        !MultiStreamConfig.config.enabled &&
+            bandwidthAllocator.hasNonZeroEffectiveConstraints(endpoint.id)
+
+    /**
+     * Query whether this allocator has non-zero effective constraints for a given source
+     */
+    fun hasNonZeroEffectiveConstraints(source: MediaSourceDesc) =
+        MultiStreamConfig.config.enabled &&
+            bandwidthAllocator.hasNonZeroEffectiveConstraints(source.sourceName)
 
     /**
      * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being
