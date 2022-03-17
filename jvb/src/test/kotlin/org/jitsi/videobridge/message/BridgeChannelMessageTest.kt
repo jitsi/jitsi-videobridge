@@ -334,8 +334,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
             val videoSourcesMapMessage = VideoSourcesMap(
                 listOf(
-                    SourceMapping(source1, ssrc1, rtxSsrc1),
-                    SourceMapping(source2, ssrc2, rtxSsrc2)
+                    VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                    VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
                 )
             )
 
@@ -344,15 +344,15 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        SourceMapping(source1, ssrc1, rtxSsrc1),
-                        SourceMapping(source2, ssrc2, rtxSsrc2)
+                        VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                        VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
                     )
             }
 
             val jsonString = """
                 {"colibriClass":"VideoSourcesMap",
-                 "mappedSources":[{"source":"source1234","ssrc":12345,"rtx":45678},
-                                  {"source":"source5678","ssrc":87654,"rtx":98765}
+                 "mappedSources":[{"source":"source1234","ssrc":12345,"rtx":45678,"videoType":"CAMERA"},
+                                  {"source":"source5678","ssrc":87654,"rtx":98765,"videoType":"DESKTOP"}
                                  ]
                 }
             """.trimIndent()
@@ -362,8 +362,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        SourceMapping(source1, ssrc1, rtxSsrc1),
-                        SourceMapping(source2, ssrc2, rtxSsrc2)
+                        VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                        VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
                     )
             }
         }
@@ -377,8 +377,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
             val audioSourcesMapMessage = AudioSourcesMap(
                 listOf(
-                    SourceMapping(source1, ssrc1),
-                    SourceMapping(source2, ssrc2)
+                    AudioSourceMapping(source1, ssrc1),
+                    AudioSourceMapping(source2, ssrc2)
                 )
             )
 
@@ -387,8 +387,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        SourceMapping(source1, ssrc1),
-                        SourceMapping(source2, ssrc2)
+                        AudioSourceMapping(source1, ssrc1),
+                        AudioSourceMapping(source2, ssrc2)
                     )
             }
 
@@ -405,8 +405,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        SourceMapping(source1, ssrc1),
-                        SourceMapping(source2, ssrc2)
+                        AudioSourceMapping(source1, ssrc1),
+                        AudioSourceMapping(source2, ssrc2)
                     )
             }
         }

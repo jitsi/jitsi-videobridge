@@ -384,16 +384,17 @@ class ForwardedSourcesMessage(
 }
 
 /**
- * A mapping of a source to SSRCs.
+ * A mapping of a video source to SSRCs.
  */
-data class SourceMapping(
+data class VideoSourceMapping(
     /** The name of the source being mapped. */
     val source: String,
     /** The primary SSRC of the source being mapped. */
     val ssrc: Long,
-    /** The RTX SSRC of the source being mapped - only used for video. */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    val rtx: Long? = null
+    /** The RTX SSRC of the source being mapped. */
+    val rtx: Long,
+    /** The video type of the source being mapped. */
+    val videoType: VideoType
 )
 
 /**
@@ -401,7 +402,7 @@ data class SourceMapping(
  */
 class VideoSourcesMap(
     /* The current list of maps of sources to ssrcs. */
-    val mappedSources: Collection<SourceMapping>
+    val mappedSources: Collection<VideoSourceMapping>
 ) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "VideoSourcesMap"
@@ -409,11 +410,21 @@ class VideoSourcesMap(
 }
 
 /**
+ * A mapping of an audio source to SSRCs.
+ */
+data class AudioSourceMapping(
+    /** The name of the source being mapped. */
+    val source: String,
+    /** The SSRC of the source being mapped. */
+    val ssrc: Long,
+)
+
+/**
  * A message sent from the bridge to a client to indicate audio source mappings.
  */
 class AudioSourcesMap(
     /* The current list of maps of sources to ssrcs. */
-    val mappedSources: Collection<SourceMapping>
+    val mappedSources: Collection<AudioSourceMapping>
 ) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "AudioSourcesMap"
