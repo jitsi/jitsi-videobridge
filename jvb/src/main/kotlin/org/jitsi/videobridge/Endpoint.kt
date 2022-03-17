@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge
 
+import org.jitsi.config.JitsiConfig
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
@@ -919,6 +920,10 @@ class Endpoint @JvmOverloads constructor(
      * Determine whether to forward endpoint stats from another endpoint to this one.
      */
     fun wantsStatsFrom(ep: AbstractEndpoint): Boolean {
+        // Always forward stats in small conferences
+        if (conference.endpointCount <= statsFilterThreshold) {
+            return true
+        }
         logger.debug {
             buildString {
                 append("wantsStatsFrom(${ep.id}): isRecentSpeaker=${conference.speechActivity.isRecentSpeaker(ep)} ")
@@ -1092,6 +1097,10 @@ class Endpoint @JvmOverloads constructor(
 
         private const val SRTP_QUEUE_ENTRY_EVENT = "Entered Endpoint SRTP sender outgoing queue"
         private const val SRTP_QUEUE_EXIT_EVENT = "Exited Endpoint SRTP sender outgoing queue"
+
+        private val statsFilterThreshold: Int by config {
+            "videobridge.stats-filter-threshold".from(JitsiConfig.newConfig)
+        }
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
