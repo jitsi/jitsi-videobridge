@@ -140,7 +140,7 @@ class Colibri2ConferenceHandler(
                 Condition.bad_request,
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
-            val sourceNames = c2endpoint.capabilities.find { c -> Capability.CAP_SOURCE_NAME_SUPPORT == c.name } != null
+            val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
             conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames).apply {
                 transport.sctp?.let { sctp ->
                     if (!SctpConfig.config.enabled) {
