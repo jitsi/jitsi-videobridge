@@ -32,7 +32,6 @@ import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.queue.PacketQueue
-import org.jitsi.videobridge.health.JvbHealthChecker
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
@@ -100,7 +99,7 @@ fun main(args: Array<String>) {
     val videobridge = Videobridge(
         xmppConnection, shutdownService, versionService.currentVersion, VersionConfig.config.release
     ).apply { start() }
-    val healthChecker = JvbHealthChecker().apply { start() }
+    val healthChecker = videobridge.jvbHealthChecker
     val octoRelayService = octoRelayService().get()?.apply { start() }
     val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
         start()

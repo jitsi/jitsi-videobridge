@@ -148,6 +148,7 @@ public class VideobridgeStatistics
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
+        unlockedSetStat("healthy", videobridge.getJvbHealthChecker().getResult() == null);
 
         // Set these once, they won't change.
         unlockedSetStat(VERSION, videobridge.getVersion().toString());
@@ -646,6 +647,7 @@ public class VideobridgeStatistics
             unlockedSetStat("preemptive_kfr_sent", jvbStats.preemptiveKeyframeRequestsSent.get());
             unlockedSetStat("preemptive_kfr_suppressed", jvbStats.preemptiveKeyframeRequestsSuppressed.get());
             unlockedSetStat("endpoints_with_spurious_remb", RembHandler.Companion.endpointsWithSpuriousRemb());
+            unlockedSetStat("healthy", videobridge.getJvbHealthChecker().getResult() == null);
         }
         finally
         {
