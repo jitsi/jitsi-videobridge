@@ -26,6 +26,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.stats.*;
 import org.jitsi.utils.version.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
@@ -107,6 +108,8 @@ public class Videobridge
      * meeting IDs.
      */
     private final Map<String, Conference> conferencesByMeetingId = new HashMap<>();
+
+    private final JvbHealthChecker jvbHealthChecker = new JvbHealthChecker();
 
     /**
      * The clock to use, pluggable for testing purposes.
@@ -204,6 +207,13 @@ public class Videobridge
         this.version = version;
         this.releaseId = releaseId;
         this.shutdownService = shutdownService;
+        jvbHealthChecker.start();
+    }
+
+    @NotNull
+    public JvbHealthChecker getJvbHealthChecker()
+    {
+        return jvbHealthChecker;
     }
 
     /**
