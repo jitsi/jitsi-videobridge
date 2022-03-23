@@ -288,7 +288,7 @@ class Endpoint @JvmOverloads constructor(
     }
 
     private val currentSsrcs = LRUCache<Long, Projection>(MAX_AUDIO_SSRCS, true /* accessOrder */)
-    private val allSsrcs = ConcurrentHashMap<Long, Projection>() // $ which map type
+    private val allSsrcs = HashMap<Long, Projection>()
 
     init {
         conference.encodingsManager.subscribe(this)
@@ -840,15 +840,15 @@ class Endpoint @JvmOverloads constructor(
 
     private fun rewriteAudioRtp(packet: AudioRtpPacket) {
         logger.debug { "audio packet: ${packet.ssrc}" }
-        var proj = allSsrcs.get(packet.ssrc)
-        if (proj == null) {
-            proj = Projection(packet)
-            allSsrcs.put(packet.ssrc, proj)
-            logger.debug { "added projection for: ${packet.ssrc}" }
-        }
         synchronized(currentSsrcs) {
             var entry = currentSsrcs.get(packet.ssrc)
             if (entry == null) {
+                var proj = allSsrcs.get(packet.ssrc)
+                if (proj == null) {
+                    proj = Projection(packet)
+                    allSsrcs.put(packet.ssrc, proj)
+                    logger.debug { "added projection for: ${packet.ssrc}" }
+                }
                 if (currentSsrcs.size == MAX_AUDIO_SSRCS) { // $ maybe add a getCacheSize()
                     val eldest = currentSsrcs.eldest()
                     proj.rtpState = eldest.value.rtpState
@@ -857,10 +857,11 @@ class Endpoint @JvmOverloads constructor(
                     logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.rtpState.ssrc}" }
                 }
                 currentSsrcs.put(packet.ssrc, proj)
+                entry = proj
             }
             logCurrentSsrcs()
+            entry.rewriteRtp(packet)
         }
-        proj.rewriteRtp(packet)
     }
 
     override fun send(packetInfo: PacketInfo) {
