@@ -287,7 +287,16 @@ class Endpoint @JvmOverloads constructor(
         recurringRunnableExecutor.registerRecurringRunnable(it)
     }
 
+    /**
+     * The most recently forwarded remote SSRCs. If this list is full and a new remote SSRC needs to be
+     * forwarded to the endpoint, the element at the front of this list will be removed and that element's
+     * local SSRC will be used.
+     */
     private val currentSsrcs = LRUCache<Long, Projection>(MAX_AUDIO_SSRCS, true /* accessOrder */)
+
+    /**
+     * All remote SSRCs that have been seen.
+     */
     private val allSsrcs = HashMap<Long, Projection>()
 
     init {
@@ -824,6 +833,9 @@ class Endpoint @JvmOverloads constructor(
     fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) =
         bitrateController.setBandwidthAllocationSettings(message)
 
+    /**
+     * Log the most recently forwarded remote SSRCs.
+     */
     private fun logCurrentSsrcs() {
         logger.debug {
             var s = String()
@@ -838,6 +850,9 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Rewrite RTP fields to ensure the number of local SSRCs used is limited.
+     */
     private fun rewriteAudioRtp(packet: AudioRtpPacket) {
         logger.debug { "audio packet: ${packet.ssrc}" }
         synchronized(currentSsrcs) {
@@ -1268,11 +1283,15 @@ class Endpoint @JvmOverloads constructor(
         override fun trace(f: () -> Unit) = f.invoke()
     }
 
+    /**
+     * Rewrite RTP packets so they appear to be a continuation of an already advertised ssrc.
+     * This is just a placeholder for now. We may add this functionality to existing objects.
+     */
     private class Projection(packet: AudioRtpPacket) {
         var rtpState = RtpState(packet.ssrc, packet.sequenceNumber, packet.timestamp)
         fun rewriteRtp(packet: AudioRtpPacket) {
             packet.ssrc = rtpState.ssrc
-            // $ ...
+            // $ apply sequence number and timestamp offsets.
         }
     }
 }
