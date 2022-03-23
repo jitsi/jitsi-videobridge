@@ -838,23 +838,22 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    private fun rewriteAudioRtp(packet : AudioRtpPacket) {
+    private fun rewriteAudioRtp(packet: AudioRtpPacket) {
         logger.debug { "audio packet: ${packet.ssrc}" }
         var proj = allSsrcs.get(packet.ssrc)
-        if(proj == null) {
+        if (proj == null) {
             proj = Projection(packet)
             allSsrcs.put(packet.ssrc, proj)
             logger.debug { "added projection for: ${packet.ssrc}" }
         }
         synchronized(currentSsrcs) {
             var entry = currentSsrcs.get(packet.ssrc)
-            if(entry == null) {
-                if(currentSsrcs.size == MAX_AUDIO_SSRCS) { // $ maybe add a getCacheSize()
+            if (entry == null) {
+                if (currentSsrcs.size == MAX_AUDIO_SSRCS) { // $ maybe add a getCacheSize()
                     val eldest = currentSsrcs.eldest()
                     proj.rtpState = eldest.value.rtpState
                     logger.debug { "${packet.ssrc} stealing ${eldest.value.rtpState.ssrc} from ${eldest.key}" }
-                }
-                else {
+                } else {
                     logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.rtpState.ssrc}" }
                 }
                 currentSsrcs.put(packet.ssrc, proj)
