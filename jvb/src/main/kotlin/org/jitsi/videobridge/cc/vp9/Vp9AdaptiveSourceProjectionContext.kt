@@ -585,6 +585,10 @@ class Vp9AdaptiveSourceProjectionContext(
         lastVp9FrameProjection.timestamp
     )
 
+    override fun setRtpState(rtpState: RtpState) {
+        lastVp9FrameProjection.setRtpState(rtpState)
+    }
+
     override fun getPayloadType(): PayloadType {
         return payloadType
     }

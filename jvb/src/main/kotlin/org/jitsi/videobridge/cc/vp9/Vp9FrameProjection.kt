@@ -20,6 +20,7 @@ import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
+import org.jitsi.videobridge.cc.RtpState
 import java.time.Instant
 
 /**
@@ -194,6 +195,10 @@ internal constructor(
             }
             synchronized(vp9Frame) { return rewriteSeqNo(vp9Frame.latestKnownSequenceNumber) }
         }
+
+    fun setRtpState(rtpState: RtpState) {
+        // $
+    }
 
     /**
      * Prevents the max sequence number of this frame to grow any further.

@@ -82,6 +82,11 @@ public interface AdaptiveSourceProjectionContext
     RtpState getRtpState();
 
     /**
+     * $
+     */
+    void setRtpState(RtpState rtpState);
+
+    /**
      * @return the {@link PayloadType} of the RTP packets that this context
      * processes.
      */
