@@ -45,6 +45,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging2.Logger
@@ -52,6 +53,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.mins
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.cc.BandwidthProbing
+import org.jitsi.videobridge.cc.RtpState
 import org.jitsi.videobridge.cc.allocation.BandwidthAllocation
 import org.jitsi.videobridge.cc.allocation.BitrateController
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
@@ -89,10 +91,14 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Optional
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
+
+const val MAX_VIDEO_SSRCS = 5
+const val MAX_AUDIO_SSRCS = 3
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -280,6 +286,9 @@ class Endpoint @JvmOverloads constructor(
     }.also {
         recurringRunnableExecutor.registerRecurringRunnable(it)
     }
+
+    private val currentSsrcs = LRUCache<Long, Projection>(MAX_AUDIO_SSRCS, true /* accessOrder */)
+    private val allSsrcs = ConcurrentHashMap<Long, Projection>() // $ which map type
 
     init {
         conference.encodingsManager.subscribe(this)
@@ -815,6 +824,46 @@ class Endpoint @JvmOverloads constructor(
     fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) =
         bitrateController.setBandwidthAllocationSettings(message)
 
+    private fun logCurrentSsrcs() {
+        logger.debug {
+            var s = String()
+            var sep = String()
+            s += "current ssrcs:["
+            currentSsrcs.forEach { t, u ->
+                s += "$sep($t -> ${u.rtpState.ssrc})"
+                sep = ", "
+            }
+            s += "]"
+            s
+        }
+    }
+
+    private fun rewriteAudioRtp(packet : AudioRtpPacket) {
+        logger.debug { "audio packet: ${packet.ssrc}" }
+        var proj = allSsrcs.get(packet.ssrc)
+        if(proj == null) {
+            proj = Projection(packet)
+            allSsrcs.put(packet.ssrc, proj)
+            logger.debug { "added projection for: ${packet.ssrc}" }
+        }
+        synchronized(currentSsrcs) {
+            var entry = currentSsrcs.get(packet.ssrc)
+            if(entry == null) {
+                if(currentSsrcs.size == MAX_AUDIO_SSRCS) { // $ maybe add a getCacheSize()
+                    val eldest = currentSsrcs.eldest()
+                    proj.rtpState = eldest.value.rtpState
+                    logger.debug { "${packet.ssrc} stealing ${eldest.value.rtpState.ssrc} from ${eldest.key}" }
+                }
+                else {
+                    logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.rtpState.ssrc}" }
+                }
+                currentSsrcs.put(packet.ssrc, proj)
+            }
+            logCurrentSsrcs()
+        }
+        proj.rewriteRtp(packet)
+    }
+
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> {
@@ -826,6 +875,7 @@ class Endpoint @JvmOverloads constructor(
                 }
                 return
             }
+            is AudioRtpPacket -> rewriteAudioRtp(packet)
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
                 bitrateController.transformRtcp(packet)
@@ -1216,5 +1266,13 @@ class Endpoint @JvmOverloads constructor(
         }
 
         override fun trace(f: () -> Unit) = f.invoke()
+    }
+
+    private class Projection(packet: AudioRtpPacket) {
+        var rtpState = RtpState(packet.ssrc, packet.sequenceNumber, packet.timestamp)
+        fun rewriteRtp(packet: AudioRtpPacket) {
+            packet.ssrc = rtpState.ssrc
+            // $ ...
+        }
     }
 }
