@@ -215,7 +215,7 @@ class GenericAdaptiveSourceProjectionContext
             }
 
             if (RtpUtils.isNewerTimestampThan(
-                destinationSequenceNumber, maxDestinationTimestamp))
+                destinationTimestamp, maxDestinationTimestamp))
             {
                 maxDestinationTimestamp = destinationTimestamp;
             }
@@ -247,7 +247,7 @@ class GenericAdaptiveSourceProjectionContext
         }
 
         if (RtpUtils.isNewerTimestampThan(
-            maxDestinationSequenceNumber, sourceTimestamp))
+            maxDestinationTimestamp, sourceTimestamp))
         {
             long destinationTimestamp =
                     RtpUtils.applyTimestampDelta(maxDestinationTimestamp, 3000);
