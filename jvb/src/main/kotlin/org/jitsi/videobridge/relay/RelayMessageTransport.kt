@@ -33,6 +33,7 @@ import org.jitsi.videobridge.message.SelectedEndpointsMessage
 import org.jitsi.videobridge.message.ServerHelloMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.message.VideoTypeMessage
+import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.json.simple.JSONObject
 import java.net.URI
@@ -309,7 +310,16 @@ class RelayMessageTransport(
                 logger.debug { "Relay expired, closed colibri web-socket." }
             }
         }
-        outgoingWebsocket?.stop()
+        outgoingWebsocket?.let {
+            // Stopping might block and we don't want to hold the thread processing signaling.
+            TaskPools.IO_POOL.submit {
+                try {
+                    it.stop()
+                } catch (e: Exception) {
+                    logger.warn("Error while stopping outgoing web socket", e)
+                }
+            }
+        }
         outgoingWebsocket = null
     }
 
