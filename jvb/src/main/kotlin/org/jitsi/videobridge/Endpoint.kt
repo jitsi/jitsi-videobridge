@@ -45,6 +45,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.LRUCache
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
@@ -53,7 +54,6 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.mins
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.cc.BandwidthProbing
-import org.jitsi.videobridge.cc.RtpState
 import org.jitsi.videobridge.cc.allocation.BandwidthAllocation
 import org.jitsi.videobridge.cc.allocation.BitrateController
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
@@ -842,7 +842,7 @@ class Endpoint @JvmOverloads constructor(
             var sep = String()
             s += "current ssrcs:["
             currentSsrcs.forEach { t, u ->
-                s += "$sep($t -> ${u.rtpState.ssrc})"
+                s += "$sep($t -> ${u.ssrc})"
                 sep = ", "
             }
             s += "]"
@@ -854,8 +854,8 @@ class Endpoint @JvmOverloads constructor(
      * Rewrite RTP fields to ensure the number of local SSRCs used is limited.
      */
     private fun rewriteAudioRtp(packet: AudioRtpPacket) {
-        logger.debug { "audio packet: ${packet.ssrc}" }
         synchronized(currentSsrcs) {
+            logger.debug { "audio packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
             var entry = currentSsrcs.get(packet.ssrc)
             if (entry == null) {
                 var proj = allSsrcs.get(packet.ssrc)
@@ -866,16 +866,17 @@ class Endpoint @JvmOverloads constructor(
                 }
                 if (currentSsrcs.size == MAX_AUDIO_SSRCS) { // $ maybe add a getCacheSize()
                     val eldest = currentSsrcs.eldest()
-                    proj.rtpState = eldest.value.rtpState
-                    logger.debug { "${packet.ssrc} stealing ${eldest.value.rtpState.ssrc} from ${eldest.key}" }
+                    proj.transferState(eldest.value)
+                    logger.debug { "${packet.ssrc} stealing ${eldest.value.ssrc} from ${eldest.key}" }
                 } else {
-                    logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.rtpState.ssrc}" }
+                    logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.ssrc}" }
                 }
                 currentSsrcs.put(packet.ssrc, proj)
                 entry = proj
             }
             logCurrentSsrcs()
             entry.rewriteRtp(packet)
+            logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
         }
     }
 
@@ -1288,10 +1289,27 @@ class Endpoint @JvmOverloads constructor(
      * This is just a placeholder for now. We may add this functionality to existing objects.
      */
     private class Projection(packet: AudioRtpPacket) {
-        var rtpState = RtpState(packet.ssrc, packet.sequenceNumber, packet.timestamp)
+        var ssrc = packet.ssrc
+            private set
+        private var lastSequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1) /* $ */
+        private var lastTimestamp = RtpUtils.applyTimestampDelta(packet.timestamp, -960); /* $ */
+        private var sequenceNumberDelta = 0
+        private var timestampDelta = 0L
+
+        fun transferState(other: Projection) {
+            ssrc = other.ssrc
+            sequenceNumberDelta = RtpUtils.applySequenceNumberDelta(sequenceNumberDelta,
+                    RtpUtils.getSequenceNumberDelta(other.lastSequenceNumber, lastSequenceNumber))
+            timestampDelta = RtpUtils.applyTimestampDelta(timestampDelta,
+                    RtpUtils.getTimestampDiff(other.lastTimestamp, lastTimestamp))
+        }
+
         fun rewriteRtp(packet: AudioRtpPacket) {
-            packet.ssrc = rtpState.ssrc
-            // $ apply sequence number and timestamp offsets.
+            packet.ssrc = ssrc
+            packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
+            packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
+            lastSequenceNumber = packet.sequenceNumber
+            lastTimestamp = packet.timestamp
         }
     }
 }
