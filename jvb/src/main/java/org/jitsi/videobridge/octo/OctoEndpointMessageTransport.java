@@ -220,9 +220,10 @@ class OctoEndpointMessageTransport
         }
 
         // Multi-stream mode is not supported in Octo v1
-        if (MultiStreamConfig.config.getEnabled()) {
+        if (MultiStreamConfig.config.getEnabled())
+        {
             getLogger().error(
-                    "OctoV1: unexpected videoType message while in the multi-stream mode, eId=" + endpointId);
+                "OctoV1: unexpected videoType message while in the multi-stream mode, eId=" + endpointId);
             return null;
         }
 

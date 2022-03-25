@@ -162,13 +162,13 @@ class RelayedEndpoint(
     fun relayMessageTransportConnected() {
         if (MultiStreamConfig.config.enabled) {
             maxReceiverVideoConstraintsMap.forEach {
-                (sourceName, constraints) -> sendVideoConstraintsV2(sourceName, constraints)
+                (sourceName, constraints) ->
+                sendVideoConstraintsV2(sourceName, constraints)
             }
         } else {
             sendVideoConstraints(maxReceiverVideoConstraints)
         }
     }
-
 
     private val _mediaSources = MediaSources()
 

@@ -129,7 +129,8 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage videoType(VideoTypeMessage videoTypeMessage)
     {
-        if (MultiStreamConfig.config.getEnabled()) {
+        if (MultiStreamConfig.config.getEnabled())
+        {
             sourceVideoType(
                 new SourceVideoTypeMessage(
                     videoTypeMessage.getVideoType(),
