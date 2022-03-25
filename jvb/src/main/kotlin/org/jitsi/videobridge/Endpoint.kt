@@ -290,7 +290,7 @@ class Endpoint @JvmOverloads constructor(
 
         conference.videobridge.statistics.totalEndpoints.incrementAndGet()
 
-        logger.info("$id source names: $isUsingSourceNames")
+        logger.info("Created new endpoint isUsingSourceNames=$isUsingSourceNames, iceControlling=$iceControlling")
     }
 
     override var mediaSources: Array<MediaSourceDesc>
@@ -549,7 +549,9 @@ class Endpoint @JvmOverloads constructor(
     override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (findMediaSourceDesc(sourceName) == null) {
-            logger.warn { "Suppressing sending a SenderVideoConstraints message, endpoint has no such source." }
+            logger.warn {
+                "Suppressing sending a SenderVideoConstraints message, endpoint has no such source: $sourceName"
+            }
         } else {
             if (isUsingSourceNames) {
                 val senderSourceConstraintsMessage =
@@ -557,7 +559,10 @@ class Endpoint @JvmOverloads constructor(
                 logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
                 sendMessage(senderSourceConstraintsMessage)
             } else {
-                sendVideoConstraints(maxReceiverVideoConstraintsMap[sourceName]!!)
+                maxReceiverVideoConstraintsMap[sourceName]?.let {
+                    sendVideoConstraints(it)
+                }
+                    ?: logger.error("No max receiver constraints mapping found for: $sourceName")
             }
         }
     }
@@ -718,7 +723,7 @@ class Endpoint @JvmOverloads constructor(
      * @param forwardedSources the collection of forwarded media sources (by name).
      */
     fun sendForwardedSourcesMessage(forwardedSources: Collection<String>) {
-        if (!isUsingSourceNames) {
+        if (!MultiStreamConfig.config.enabled || !isUsingSourceNames) {
             return
         }
 
