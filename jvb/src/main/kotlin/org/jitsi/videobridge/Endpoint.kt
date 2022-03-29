@@ -91,7 +91,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Optional
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -838,15 +837,9 @@ class Endpoint @JvmOverloads constructor(
      */
     private fun logCurrentSsrcs() {
         logger.debug {
-            var s = String()
-            var sep = String()
-            s += "current ssrcs:["
-            currentSsrcs.forEach { t, u ->
-                s += "$sep($t -> ${u.ssrc})"
-                sep = ", "
+            currentSsrcs.entries.joinToString(", ", "current ssrcs: [", "]") {
+                "(${it.key} -> ${it.value.ssrc})"
             }
-            s += "]"
-            s
         }
     }
 
@@ -1298,10 +1291,12 @@ class Endpoint @JvmOverloads constructor(
 
         fun transferState(other: Projection) {
             ssrc = other.ssrc
-            sequenceNumberDelta = RtpUtils.applySequenceNumberDelta(sequenceNumberDelta,
-                    RtpUtils.getSequenceNumberDelta(other.lastSequenceNumber, lastSequenceNumber))
-            timestampDelta = RtpUtils.applyTimestampDelta(timestampDelta,
-                    RtpUtils.getTimestampDiff(other.lastTimestamp, lastTimestamp))
+            sequenceNumberDelta = RtpUtils.applySequenceNumberDelta(
+                sequenceNumberDelta, RtpUtils.getSequenceNumberDelta(other.lastSequenceNumber, lastSequenceNumber)
+            )
+            timestampDelta = RtpUtils.applyTimestampDelta(
+                timestampDelta, RtpUtils.getTimestampDiff(other.lastTimestamp, lastTimestamp)
+            )
         }
 
         fun rewriteRtp(packet: AudioRtpPacket) {
