@@ -287,16 +287,14 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * The most recently forwarded remote SSRCs. If this list is full and a new remote SSRC needs to be
-     * forwarded to the endpoint, the element at the front of this list will be removed and that element's
-     * local SSRC will be used.
+     * $
      */
-    private val currentSsrcs = LRUCache<Long, Projection>(MAX_AUDIO_SSRCS, true /* accessOrder */)
+    private val videoSsrcs = SsrcCache("video", MAX_VIDEO_SSRCS)
 
     /**
-     * All remote SSRCs that have been seen.
+     * $
      */
-    private val allSsrcs = HashMap<Long, Projection>()
+    private val audioSsrcs = SsrcCache("audio", MAX_AUDIO_SSRCS)
 
     init {
         conference.encodingsManager.subscribe(this)
@@ -833,49 +831,27 @@ class Endpoint @JvmOverloads constructor(
         bitrateController.setBandwidthAllocationSettings(message)
 
     /**
-     * Log the most recently forwarded remote SSRCs.
+     * $
      */
-    private fun logCurrentSsrcs() {
-        logger.debug {
-            currentSsrcs.entries.joinToString(", ", "current ssrcs: [", "]") {
-                "(${it.key} -> ${it.value.ssrc})"
+    private fun findSourceProps(ssrc: Long): MediaSourceDesc? {
+        conference.getEndpointBySsrc(ssrc)?.let {
+            logger.debug("EP -> ${it.id} ${it.statsId} ${it.mediaSources.size}")
+            it.mediaSources.forEach {
+                logger.debug("\tSSRC -> ${it.primarySSRC} ${it.videoType} ${it.sourceName} ${it.owner}")
+                if (it.findRtpEncodingDesc(ssrc) != null) {
+                    logger.debug("that's one!")
+                    return it
+                }
             }
         }
-    }
-
-    /**
-     * Rewrite RTP fields to ensure the number of local SSRCs used is limited.
-     */
-    private fun rewriteAudioRtp(packet: AudioRtpPacket) {
-        synchronized(currentSsrcs) {
-            logger.debug { "audio packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
-            var entry = currentSsrcs.get(packet.ssrc)
-            if (entry == null) {
-                var proj = allSsrcs.get(packet.ssrc)
-                if (proj == null) {
-                    proj = Projection(packet)
-                    allSsrcs.put(packet.ssrc, proj)
-                    logger.debug { "added projection for: ${packet.ssrc}" }
-                }
-                if (currentSsrcs.size == MAX_AUDIO_SSRCS) { // $ maybe add a getCacheSize()
-                    val eldest = currentSsrcs.eldest()
-                    proj.transferState(eldest.value)
-                    logger.debug { "${packet.ssrc} stealing ${eldest.value.ssrc} from ${eldest.key}" }
-                } else {
-                    logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.ssrc}" }
-                }
-                currentSsrcs.put(packet.ssrc, proj)
-                entry = proj
-            }
-            logCurrentSsrcs()
-            entry.rewriteRtp(packet)
-            logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
-        }
+        logger.debug("\tnot found.")
+        return null
     }
 
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> {
+                videoSsrcs.rewriteRtp(packet)
                 if (bitrateController.transformRtp(packetInfo)) {
                     // The original packet was transformed in place.
                     transceiver.sendPacket(packetInfo)
@@ -884,7 +860,7 @@ class Endpoint @JvmOverloads constructor(
                 }
                 return
             }
-            is AudioRtpPacket -> rewriteAudioRtp(packet)
+            is AudioRtpPacket -> audioSsrcs.rewriteRtp(packet)
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
                 bitrateController.transformRtcp(packet)
@@ -1281,7 +1257,7 @@ class Endpoint @JvmOverloads constructor(
      * Rewrite RTP packets so they appear to be a continuation of an already advertised ssrc.
      * This is just a placeholder for now. We may add this functionality to existing objects.
      */
-    private class Projection(packet: AudioRtpPacket) {
+    private class Projection(val props: MediaSourceDesc?, packet: RtpPacket) {
         var ssrc = packet.ssrc
             private set
         private var lastSequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1) /* $ */
@@ -1299,12 +1275,68 @@ class Endpoint @JvmOverloads constructor(
             )
         }
 
-        fun rewriteRtp(packet: AudioRtpPacket) {
+        fun rewriteRtp(packet: RtpPacket) {
             packet.ssrc = ssrc
             packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
             packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
             lastSequenceNumber = packet.sequenceNumber
             lastTimestamp = packet.timestamp
+        }
+    }
+
+    private inner class SsrcCache(val name: String, val size: Int) {
+
+        /**
+         * The most recently forwarded remote SSRCs. If this list is full and a new remote SSRC needs to be
+         * forwarded to the endpoint, the element at the front of this list will be removed and that element's
+         * local SSRC will be used.
+         */
+        private val currentSsrcs = LRUCache<Long, Projection>(size, true /* accessOrder */)
+
+        /**
+         * All remote SSRCs that have been seen.
+         */
+        private val allSsrcs = HashMap<Long, Projection>()
+
+        /**
+         * $
+         */
+        private fun logCurrentSsrcs() {
+            logger.debug {
+                currentSsrcs.entries.joinToString(", ", "current $name ssrcs: [", "]") {
+                    "(${it.key} -> ${it.value.ssrc})"
+                }
+            }
+        }
+
+        /**
+         * Rewrite RTP fields to ensure the number of local SSRCs used is limited.
+         */
+        fun rewriteRtp(packet: RtpPacket) {
+            synchronized(currentSsrcs) {
+                logger.debug { "$name packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
+                var entry = currentSsrcs.get(packet.ssrc)
+                if (entry == null) {
+                    var proj = allSsrcs.get(packet.ssrc)
+                    if (proj == null) {
+                        proj = Projection(findSourceProps(packet.ssrc), packet)
+                        allSsrcs.put(packet.ssrc, proj)
+                        logger.debug { "added projection for: ${packet.ssrc}" }
+                    }
+                    if (currentSsrcs.size == size) {
+                        val eldest = currentSsrcs.eldest()
+                        proj.transferState(eldest.value)
+                        logger.debug { "${packet.ssrc} stealing ${eldest.value.ssrc} from ${eldest.key}" }
+                    } else {
+                        logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.ssrc}" }
+                    }
+                    currentSsrcs.put(packet.ssrc, proj)
+                    entry = proj
+                }
+                logCurrentSsrcs()
+                entry.rewriteRtp(packet)
+                logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
+            }
         }
     }
 }
