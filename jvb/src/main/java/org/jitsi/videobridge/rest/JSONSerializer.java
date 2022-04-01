@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.rest;
 
+import java.net.*;
 import java.util.*;
 
 import org.jetbrains.annotations.*;
@@ -228,6 +229,8 @@ public final class JSONSerializer
             Integer lastN = channel.getLastN();
             List<PayloadTypePacketExtension> payloadTypes
                 = channel.getPayloadTypes();
+            Collection<RTPHdrExtPacketExtension> rtpHdrExts
+                = channel.getRtpHeaderExtensions();
             Integer receivingSimulcastStream
                 = channel.getReceivingSimulcastLayer();
             RTPLevelRelayType rtpLevelRelayType
@@ -270,6 +273,12 @@ public final class JSONSerializer
                 jsonObject.put(
                         PAYLOAD_TYPES,
                         serializePayloadTypes(payloadTypes));
+            }
+            if ((rtpHdrExts != null) && !rtpHdrExts.isEmpty())
+            {
+                jsonObject.put(
+                    RTP_HEADER_EXTS,
+                    serializeRtpHdrExts(rtpHdrExts));
             }
             // rtpLevelRelayType
             if (rtpLevelRelayType != null)
@@ -788,6 +797,73 @@ public final class JSONSerializer
         }
         return payloadTypesJSONArray;
     }
+
+    public static JSONObject serializeRtpHdrExt(
+        RTPHdrExtPacketExtension rtpHdrExt)
+    {
+        JSONObject rtpHdrExtJSONObject;
+
+        if (rtpHdrExt == null)
+        {
+            rtpHdrExtJSONObject = null;
+        }
+        else
+        {
+            rtpHdrExtJSONObject = new JSONObject();
+
+            String id = rtpHdrExt.getID();
+            if (id != null)
+            {
+                rtpHdrExtJSONObject.put(
+                    RTPHdrExtPacketExtension.ID_ATTR_NAME,
+                    id);
+            }
+
+            URI uri = rtpHdrExt.getURI();
+            if (uri != null)
+            {
+                rtpHdrExtJSONObject.put(
+                    RTPHdrExtPacketExtension.URI_ATTR_NAME,
+                    uri.toString());
+            }
+
+            ContentPacketExtension.SendersEnum senders = rtpHdrExt.getSenders();
+            if (senders != null)
+            {
+                rtpHdrExtJSONObject.put(
+                    RTPHdrExtPacketExtension.SENDERS_ATTR_NAME,
+                    senders.toString());
+            }
+
+            String attributes = rtpHdrExt.getAttributes();
+            if (attributes != null)
+            {
+                rtpHdrExtJSONObject.put(
+                    RTPHdrExtPacketExtension.ATTRIBUTES_ATTR_NAME,
+                    attributes);
+            }
+        }
+        return rtpHdrExtJSONObject;
+    }
+
+    public static JSONArray serializeRtpHdrExts(
+        Collection<RTPHdrExtPacketExtension> rtpHdrExts)
+    {
+        JSONArray rtpHdrExtsJSONArray;
+
+        if (rtpHdrExts == null)
+        {
+            rtpHdrExtsJSONArray = null;
+        }
+        else
+        {
+            rtpHdrExtsJSONArray = new JSONArray();
+            for (RTPHdrExtPacketExtension rtpHdrExt : rtpHdrExts)
+                rtpHdrExtsJSONArray.add(serializeRtpHdrExt(rtpHdrExt));
+        }
+        return rtpHdrExtsJSONArray;
+    }
+
 
     public static JSONObject serializeSctpConnection(
             ColibriConferenceIQ.SctpConnection sctpConnection)
