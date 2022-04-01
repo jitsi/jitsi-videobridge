@@ -161,7 +161,9 @@ public abstract class AbstractEndpoint
         }
         else
         {
-            logger.error("setVideoType - source description not found for: " + sourceName);
+            // Logging on info level because this is expected to happen if the client opens the data channel, before
+            // the sources are signaled (see lib-jitsi-meet).
+            logger.info("setVideoType - source description not found for: " + sourceName);
         }
     }
 

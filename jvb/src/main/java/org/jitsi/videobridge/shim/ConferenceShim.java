@@ -306,7 +306,11 @@ public class ConferenceShim
             return;
         }
 
-        conference.createLocalEndpoint(endpointId, iceControlling);
+        conference.createLocalEndpoint(
+                endpointId,
+                iceControlling,
+                false /* no multi-stream in colibri V1 */
+        );
     }
 
     /**

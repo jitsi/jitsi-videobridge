@@ -338,9 +338,8 @@ public class MediaSourceFactory
      */
     private static List<SourceSsrcs> getSourceSsrcs(
             Collection<SourcePacketExtension> sources,
-            Collection<SourceGroupPacketExtension> sourceGroups,
-            @Nullable String owner,
-            @Nullable String name)
+            Collection<SourceGroupPacketExtension> sourceGroups
+    )
     {
         //FIXME: determining the individual sources should be done via msid,
         // but somewhere along the line we seem to lose the msid information
@@ -430,7 +429,7 @@ public class MediaSourceFactory
             }
         });
 
-        setOwnersAndNames(sources, sourceSsrcsList, owner, name);
+        setOwnersAndNames(sources, sourceSsrcsList);
 
         return sourceSsrcsList;
     }
@@ -443,14 +442,11 @@ public class MediaSourceFactory
      * the {@code owner} as an attribute of a {@code ssrc-info} child. The
      * list or the objects in the list will not be modified.
      * @param sourceSsrcsList the list of {@link SourceSsrcs} to update.
-     * @param owner An externally specified owner, if available.
-     * @param name An externally specified name, if available.
      */
     private static void setOwnersAndNames(
         Collection<SourcePacketExtension> sources,
-        Collection<SourceSsrcs> sourceSsrcsList,
-        @Nullable String owner,
-        @Nullable String name)
+        Collection<SourceSsrcs> sourceSsrcsList
+    )
     {
         for (SourceSsrcs sourceSsrcs : sourceSsrcsList)
         {
@@ -536,35 +532,12 @@ public class MediaSourceFactory
      * source groups.
      * @return an array of {@link MediaSourceDesc} that are described in the
      * jingle sources and source groups.
+     * @deprecated Use createMediaSource.
      */
+    @Deprecated
     public static MediaSourceDesc[] createMediaSources(
         Collection<SourcePacketExtension> sources,
         Collection<SourceGroupPacketExtension> sourceGroups)
-    {
-        return createMediaSources(sources, sourceGroups, null, null);
-    }
-
-    /**
-     * Creates {@link MediaSourceDesc}s from signaling params
-     *
-     * will receive the created {@link MediaSourceDesc}s.
-     * @param sources The {@link List} of {@link SourcePacketExtension} that
-     * describes the list of jingle sources.
-     * @param sourceGroups The {@link List} of
-     * {@link SourceGroupPacketExtension} that describes the list of jingle
-     * source groups.
-     * @return an array of {@link MediaSourceDesc} that are described in the
-     * jingle sources and source groups.
-     * @param owner An externally specified owner, if available.
-     * @param name An externally specified name, if available.
-     */
-    public static MediaSourceDesc[] createMediaSources(
-        Collection<SourcePacketExtension> sources,
-        Collection<SourceGroupPacketExtension> sourceGroups,
-
-        // TODO make owner and name mandatory when Colibri v1 is removed.
-        @Nullable String owner,
-        @Nullable String name)
     {
         final Collection<SourceGroupPacketExtension> finalSourceGroups
                 = sourceGroups == null ? new ArrayList<>() : sourceGroups;
@@ -573,7 +546,7 @@ public class MediaSourceFactory
             sources = new ArrayList<>();
         }
 
-        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups, owner, name);
+        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups);
         List<MediaSourceDesc> mediaSources = new ArrayList<>();
 
         sourceSsrcsList.forEach(sourceSsrcs -> {
@@ -598,11 +571,8 @@ public class MediaSourceFactory
                         numSpatialLayersPerStream,
                         numTemporalLayersPerStream,
                         secondarySsrcs,
-                        // Colibri 2 doesn't carry the owner as part of the <source/> element,
-                        // so it's passed as an argument to this function. Now Colibri v1 carries it in
-                        // the primary <source/> and the 'owner' argument is null.
-                        owner != null ? owner : sourceSsrcs.owner,
-                        name != null ? name : sourceSsrcs.name
+                        sourceSsrcs.owner,
+                        sourceSsrcs.name
             );
             mediaSources.add(mediaSource);
         });
@@ -611,7 +581,7 @@ public class MediaSourceFactory
     }
 
     // This method is to replace createMediaSources when Colibri V1 is removed
-    public static MediaSourceDesc[] createMediaSources2(
+    public static MediaSourceDesc createMediaSource(
             Collection<SourcePacketExtension> sources,
             Collection<SourceGroupPacketExtension> sourceGroups,
             String owner,
@@ -619,7 +589,52 @@ public class MediaSourceFactory
         Objects.requireNonNull(owner, "owner is required");
         Objects.requireNonNull(name, "name is required");
 
-        return createMediaSources(sources, sourceGroups, owner, name);
+        final Collection<SourceGroupPacketExtension> finalSourceGroups
+            = sourceGroups == null ? new ArrayList<>() : sourceGroups;
+        if (sources == null)
+        {
+            return null;
+        }
+
+        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups);
+
+        if (sourceSsrcsList.size() != 1)
+        {
+            logger.warn("sourceSsrcsList.size() != 1 for: " + sources + " groups: " + finalSourceGroups);
+        }
+
+        if (sourceSsrcsList.size() > 0)
+        {
+            SourceSsrcs sourceSsrcs = sourceSsrcsList.get(0);
+
+            // As of now, we only ever have 1 spatial layer per stream
+            int numSpatialLayersPerStream = 1;
+            // Previously, we assumed that when simulcast was enabled, 3 temporal layers would
+            // be present in each stream and if simulcast wasn't enabled, there would be only
+            // 1 temporal layer per stream, but we found that screenshare started sending 2
+            // temporal layers, and we'd therefore start dropping layer 1 packets since we didn't
+            // recognize them.  The truth is we have no way of _knowing_ how many temporal layers
+            // there are going to be (as it's not signaled) unless we dynamically read the layers
+            // as the packets come in (which we may want to do in the future)--but for now we'll
+            // over-estimate how many layers there are per stream to avoid dropping packets for a
+            // layer we don't recognize.  Since there are already situations where chrome sends fewer
+            // temporal layers than we assume, this should be safe.
+            final int numTemporalLayersPerStream = 3;
+            Map<Long, SecondarySsrcs> secondarySsrcs = getAllSecondarySsrcs(sourceSsrcs, finalSourceGroups);
+
+            return createSource(
+                    sourceSsrcs,
+                    numSpatialLayersPerStream,
+                    numTemporalLayersPerStream,
+                    secondarySsrcs,
+                    owner,
+                    name
+            );
+        }
+        else
+        {
+            return null;
+        }
     }
 
 

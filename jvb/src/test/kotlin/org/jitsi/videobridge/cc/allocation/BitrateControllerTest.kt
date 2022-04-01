@@ -1428,6 +1428,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         Supplier { endpoints },
         DiagnosticContext(),
         logger,
+        false, // TODO merge this test with BitrateControllerNewTest and use this flag
         clock
     )
 

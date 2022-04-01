@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
+import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
@@ -64,9 +65,11 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.Endpoint
+import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
 import org.jitsi.videobridge.message.BridgeChannelMessage
+import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.stats.PacketTransitStats
@@ -513,6 +516,23 @@ class Relay @JvmOverloads constructor(
 
     fun relayMessageTransportConnected() {
         relayedEndpoints.values.forEach { e -> e.relayMessageTransportConnected() }
+        if (MultiStreamConfig.config.enabled) {
+            conference.localEndpoints.forEach { e ->
+                e.mediaSources.forEach { msd: MediaSourceDesc ->
+                    val sourceName = msd.sourceName!! // Source names are mandatory/enforced in multi stream mode
+                    val videoType = msd.videoType
+                    // Do not send the initial value for CAMERA, because it's the default
+                    if (VideoType.CAMERA != videoType) {
+                        val videoTypeMsg = SourceVideoTypeMessage(
+                            videoType,
+                            sourceName,
+                            e.id
+                        )
+                        sendMessage(videoTypeMsg)
+                    }
+                }
+            }
+        }
     }
 
     fun addRemoteEndpoint(

@@ -791,10 +791,11 @@ public class Conference
      * @param iceControlling {@code true} if the ICE agent of this endpoint's
      * transport will be initialized to serve as a controlling ICE agent;
      * otherwise, {@code false}
+     * @param sourceNames whether this endpoint signaled the source names support.
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public Endpoint createLocalEndpoint(String id, boolean iceControlling)
+    public Endpoint createLocalEndpoint(String id, boolean iceControlling, boolean sourceNames)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint instanceof OctoEndpoint)
@@ -812,7 +813,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames);
 
         subscribeToEndpointEvents(endpoint);
 

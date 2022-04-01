@@ -33,6 +33,7 @@ import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
+import org.jitsi.xmpp.extensions.colibri2.Capability
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
@@ -154,7 +155,8 @@ class Colibri2ConferenceHandler(
                 Condition.bad_request,
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
-            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling).apply {
+            val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
+            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames).apply {
                 transport.sctp?.let { sctp ->
                     if (!SctpConfig.config.enabled) {
                         throw IqProcessingException(
@@ -238,10 +240,10 @@ class Colibri2ConferenceHandler(
 
             // Assume a message can only contain one source per media type.
             // If "sources" was signaled, but it didn't contain any video sources, clear the endpoint's video sources
-            val newMediaSources = sources.mediaSources.find { it.type == MediaType.VIDEO }?.let {
-                MediaSourceFactory.createMediaSources2(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
-            } ?: emptyArray()
-            endpoint.mediaSources = newMediaSources
+            val newMediaSources = sources.mediaSources.filter { it.type == MediaType.VIDEO }.mapNotNull {
+                MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
+            }
+            endpoint.mediaSources = newMediaSources.toTypedArray()
         }
 
         c2endpoint.forceMute?.let {
@@ -380,8 +382,10 @@ class Colibri2ConferenceHandler(
                         m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id)) }
                     }
                 } else if (m.type == MediaType.VIDEO) {
-                    val descs = MediaSourceFactory.createMediaSources2(m.sources, m.ssrcGroups, id, m.id)
-                    videoSources.addAll(listOf(*descs))
+                    val desc = MediaSourceFactory.createMediaSource(m.sources, m.ssrcGroups, id, m.id)
+                    if (desc != null) {
+                        videoSources.add(desc)
+                    }
                 } else {
                     logger.warn("Ignoring source ${m.id} in endpoint $id of a relay: unsupported type ${m.type}")
                 }
