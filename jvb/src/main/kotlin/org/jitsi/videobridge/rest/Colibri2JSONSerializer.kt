@@ -24,8 +24,10 @@ import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.ForceMute
 import org.jitsi.xmpp.extensions.colibri2.Media
 import org.jitsi.xmpp.extensions.colibri2.MediaSource
+import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
+import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 
@@ -37,19 +39,50 @@ object Colibri2JSONSerializer {
 
     private fun serializeMedia(media: Media): JSONObject {
         return JSONObject().apply {
-            // TODO
+            put(Media.TYPE_ATTR_NAME, media.type)
+            if (media.payloadTypes.isNotEmpty()) {
+                put(JSONSerializer.PAYLOAD_TYPES, JSONSerializer.serializePayloadTypes(media.payloadTypes))
+            }
+            if (media.rtpHdrExts.isNotEmpty()) {
+                put(JSONSerializer.RTP_HEADER_EXTS, JSONSerializer.serializeRtpHdrExts(media.rtpHdrExts))
+            }
+        }
+    }
+
+    private fun serializeSctp(sctp: Sctp): JSONObject {
+        return JSONObject().apply {
+            sctp.port?.let { put(Sctp.PORT_ATTR_NAME, it) }
+            sctp.role?.let { put(Sctp.ROLE_ATTR_NAME, it) }
         }
     }
 
     private fun serializeTransport(transport: Transport): JSONObject {
         return JSONObject().apply {
-            // TODO
+            if (transport.iceControlling != Transport.ICE_CONTROLLING_DEFAULT) {
+                put(Transport.ICE_CONTROLLING_ATTR_NAME, transport.iceControlling)
+            }
+            if (transport.useUniquePort != Transport.USE_UNIQUE_PORT_DEFAULT) {
+                put(Transport.USE_UNIQUE_PORT_ATTR_NAME, transport.useUniquePort)
+            }
+            transport.iceUdpTransport?.let {
+                put(IceUdpTransportPacketExtension.ELEMENT, JSONSerializer.serializeTransport(it))
+            }
+            transport.sctp?.let {
+                put(Sctp.ELEMENT, serializeSctp(it))
+            }
         }
     }
 
     private fun serializeMediaSource(source: MediaSource): JSONObject {
         return JSONObject().apply {
-            // TODO
+            put(MediaSource.TYPE_ATTR_NAME, source.type)
+            put(MediaSource.ID_NAME, source.id)
+            if (source.sources.isNotEmpty()) {
+                put(JSONSerializer.SOURCES, JSONSerializer.serializeSources(source.sources))
+            }
+            if (source.ssrcGroups.isNotEmpty()) {
+                put(JSONSerializer.SOURCE_GROUPS, JSONSerializer.serializeSourceGroups(source.ssrcGroups))
+            }
         }
     }
 
@@ -67,6 +100,8 @@ object Colibri2JSONSerializer {
 
     private fun serializeAbstractConferenceEntity(entity: AbstractConferenceEntity): JSONObject {
         return JSONObject().apply {
+            put(AbstractConferenceEntity.ID_ATTR_NAME, entity.id)
+
             if (entity.create != AbstractConferenceEntity.CREATE_DEFAULT) {
                 put(AbstractConferenceEntity.CREATE_ATTR_NAME, entity.create)
             }
