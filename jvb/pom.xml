@@ -256,6 +256,12 @@
         <scope>test</scope>
     </dependency>
     <dependency>
+        <groupId>io.kotest</groupId>
+        <artifactId>kotest-assertions-json-jvm</artifactId>
+        <version>${kotest.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-test-kotlin</artifactId>
         <scope>test</scope>
