@@ -323,6 +323,94 @@ class BridgeChannelMessageTest : ShouldSpec() {
             }
         }
 
+        context("serializing and parsing VideoSourceMap") {
+            val source1 = "source1234"
+            val ssrc1 = 12345L
+            val rtxSsrc1 = 45678L
+
+            val source2 = "source5678"
+            val ssrc2 = 87654L
+            val rtxSsrc2 = 98765L
+
+            val videoSourcesMapMessage = VideoSourcesMap(
+                listOf(
+                    VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                    VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
+                )
+            )
+
+            parse(videoSourcesMapMessage.toJson()).apply {
+                shouldBeInstanceOf<VideoSourcesMap>()
+                mappedSources.size shouldBe 2
+                mappedSources shouldContainExactly
+                    listOf(
+                        VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                        VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
+                    )
+            }
+
+            val jsonString = """
+                {"colibriClass":"VideoSourcesMap",
+                 "mappedSources":[{"source":"source1234","ssrc":12345,"rtx":45678,"videoType":"CAMERA"},
+                                  {"source":"source5678","ssrc":87654,"rtx":98765,"videoType":"DESKTOP"}
+                                 ]
+                }
+            """.trimIndent()
+
+            parse(jsonString).apply {
+                shouldBeInstanceOf<VideoSourcesMap>()
+                mappedSources.size shouldBe 2
+                mappedSources shouldContainExactly
+                    listOf(
+                        VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                        VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
+                    )
+            }
+        }
+
+        context("serializing and parsing AudioSourceMap") {
+            val source1 = "source1234-a"
+            val ssrc1 = 23456L
+
+            val source2 = "source5678-a"
+            val ssrc2 = 98765L
+
+            val audioSourcesMapMessage = AudioSourcesMap(
+                listOf(
+                    AudioSourceMapping(source1, ssrc1),
+                    AudioSourceMapping(source2, ssrc2)
+                )
+            )
+
+            parse(audioSourcesMapMessage.toJson()).apply {
+                shouldBeInstanceOf<AudioSourcesMap>()
+                mappedSources.size shouldBe 2
+                mappedSources shouldContainExactly
+                    listOf(
+                        AudioSourceMapping(source1, ssrc1),
+                        AudioSourceMapping(source2, ssrc2)
+                    )
+            }
+
+            val jsonString = """
+                {"colibriClass":"AudioSourcesMap",
+                 "mappedSources":[{"source":"source1234-a","ssrc":23456},
+                                  {"source":"source5678-a","ssrc":98765}
+                                 ]
+                }
+            """.trimIndent()
+
+            parse(jsonString).apply {
+                shouldBeInstanceOf<AudioSourcesMap>()
+                mappedSources.size shouldBe 2
+                mappedSources shouldContainExactly
+                    listOf(
+                        AudioSourceMapping(source1, ssrc1),
+                        AudioSourceMapping(source2, ssrc2)
+                    )
+            }
+        }
+
         context("Parsing ReceiverVideoConstraints") {
             context("With all fields present") {
                 val parsed = parse(RECEIVER_VIDEO_CONSTRAINTS)
