@@ -1,46 +1,75 @@
 # Setting up Octo (cascaded bridges)
 
-## Jitsi Videobridge
-Add these properties to `/etc/jitsi/videobridge/sip-communicator.properties` to
-enable support for Octo:
+## Versions
+Jitsi-videobridge supports two completely different implementations of bridge-to-bridge interconnection.
+
+### Octo
+We refer to the legacy implementation as simply "octo". It uses raw UDP on pre-configured ports, and does not protect
+the media traffic (it assumes a secure (virtual) network between the bridges).
+
+This implementation is only usable with version 1 of the colibri protocol over XMPP. It is deprecated and will be
+removed in future releases.
+
+### Secure-octo
+We refer to the new implementation as "secure-octo". It uses ICE and DTLS/SRTP between each pair of bridges, so a secure
+network is not required. It uses and requires colibri websockets for the bridge-bridge connections (endpoints can still
+use SCTP).
+
+This implementation is only usable with version 2 of the colibri protocol, which is currently only available over XMPP.
+
+## Jitsi Videobridge configuration
+
+### Octo (legacy)
+Octo can be configured with the following properties in `/etc/jitsi/videobridge/jvb.conf` (also see 
+[reference.conf](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L132)).
 ```
-# the address to bind to locally
-org.jitsi.videobridge.octo.BIND_ADDRESS=10.0.0.1
-# the address to advertise (in case BIND_ADDRESS is not accessible)
-org.jitsi.videobridge.octo.PUBLIC_ADDRESS=1.2.3.4
-# the port to bind to
-org.jitsi.videobridge.octo.BIND_PORT=4096
-# the region that the jitsi-videobridge instance is in
-org.jitsi.videobridge.REGION=region1
+videobridge {
+  octo {
+    # the address to bind to locally
+    bind-address=10.0.0.1
+    # the address to advertise (in case BIND_ADDRESS is not accessible)
+    public-address=1.2.3.4
+    # the port to bind to
+    bind-port=4096
+    # the region that the jitsi-videobridge instance is in
+    region="region1"
+  }
+}
 ```
 
-You need to make sure that all of the bridges can communicate via the socket
+You need to make sure that all bridges can communicate via the socket
 addresses described in the properties above, and that the network is secure.
 
-## Jicofo configuration
-To enable the use of Octo in jicofo, you need to enable octo in
-`/etc/jitsi/jicofo/jicofo.conf` by adding the following linesi within the
-"jicofo { }" part:
+### Secure-octo
+Secure-octo can be configured with the following properties in `/etc/jitsi/videobridge/jvb.conf` (also see
+[reference.conf](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L132)).
 ```
-octo {
-      // Whether or not to use Octo. Note that when enabled, its use will be determined by
-      // $jicofo.bridge.selection-strategy. There's a corresponding flag in the JVB and these
-      // two MUST be in sync (otherwise bridges will crash because they won't know how to
-      // deal with octo channels).
-      enabled = true
-
-      // An identifier of the Jicofo instance, used for the purpose of generating conference IDs unique across a set of
-      // Jicofo instances. Valid values are [1, 65535]. The value 0 is used when none is explicitly configured.
-      id = "1"
+  videobridge {
+    octo {
+      enabled=true
+      region="region1"
+      relay-id="unique-id-of-the-jitsi-videobridge-instance"
     }
+  }
 ```
 
-Additionally you need to set the "selection strategy" in the same file:
+Legacy configuration is detected and automatically adapted, so no configuration changes are necessary when upgrading.
+
+Secure-octo requires colibri websockets for the bridge-to-bridge connections, which can be enabled as described in
+[this document](https://github.com/jitsi/jitsi-videobridge/blob/master/doc/web-sockets.md).
+
+## Jicofo configuration
+The latest versions of jicofo support only colibri v2/secure-octo.
+
+The only configuration parameter that needs to be changed is the bridge selection strategy (in 
+`/etc/jitsi/jicofo/jicofo.conf`):
 
 ```
+jicofo {
   bridge {
     selection-strategy = RegionBasedBridgeSelectionStrategy
   }
+}
 ```
 
 The `RegionBasedBridgeSelectionStrategy` matches the region of the clients to
@@ -50,20 +79,6 @@ in the region of the client.
 The `SplitBridgeSelectionStrategy` can be used for testing. It tries to select a new bridge 
 for each client, regardless of the regions. This is useful while testing, because you can 
 verify that Octo works before setting up the region configuration for the clients.
-
-
-## Jitsi Meet configuration
-The last step in enabling bridge cascading is enabling the feature in the
-clients (in `config.js` (/etc/jitsi/meet/)):
-```$xslt
-testing: {
-    octo: {
-        probability: 1
-    }
-}
-```
-
-Values other than 1 can be used for an A/B test (e.g. use 0.5 for a 50% probability).
 
 
 ## Configuring client regions
