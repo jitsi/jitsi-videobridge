@@ -33,6 +33,7 @@ import org.jitsi.videobridge.message.SelectedEndpointsMessage
 import org.jitsi.videobridge.message.ServerHelloMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.message.VideoTypeMessage
+import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.json.simple.JSONObject
 import java.net.URI
@@ -94,10 +95,20 @@ class RelayMessageTransport(
     private fun doConnect() {
         val url = this.url ?: throw IllegalStateException("Cannot connect Relay transport when no URL set")
 
-        webSocket = ColibriWebSocket(relay.id, this)
+        webSocket?.let {
+            logger.warn("Re-connecting while webSocket != null, possible leak.")
+            webSocket = null
+        }
+
+        // this.webSocket should only be initialized when it has connected (via [webSocketConnected]).
+        val newWebSocket = ColibriWebSocket(relay.id, this)
+        outgoingWebsocket?.let {
+            logger.warn("Re-connecting while outgoingWebsocket != null, possible leak.")
+            it.stop()
+        }
         outgoingWebsocket = WebSocketClient().also {
             it.start()
-            it.connect(webSocket, URI(url), ClientUpgradeRequest())
+            it.connect(newWebSocket, URI(url), ClientUpgradeRequest())
         }
     }
 
@@ -261,9 +272,14 @@ class RelayMessageTransport(
     override fun webSocketConnected(ws: ColibriWebSocket) {
         synchronized(webSocketSyncRoot) {
             // If we already have a web-socket, discard it and use the new one.
-            webSocket?.session?.close(200, "replaced")
-            webSocket = ws
-            sendMessage(ws, createServerHello())
+            if (ws != webSocket) {
+                logger.info("Replacing an existing websocket.")
+                webSocket?.session?.close(200, "replaced")
+                webSocket = ws
+                sendMessage(ws, createServerHello())
+            } else {
+                logger.warn("Websocket already connected.")
+            }
         }
         try {
             notifyTransportChannelConnected()
@@ -290,8 +306,10 @@ class RelayMessageTransport(
                 logger.debug { "Web socket closed, statusCode $statusCode ( $reason)." }
             }
         }
-        if (outgoingWebsocket != null) {
+        outgoingWebsocket?.let {
             // Try to reconnect.  TODO: how to handle failures?
+            it.stop()
+            outgoingWebsocket = null
             doConnect()
         }
     }
@@ -309,7 +327,16 @@ class RelayMessageTransport(
                 logger.debug { "Relay expired, closed colibri web-socket." }
             }
         }
-        outgoingWebsocket?.stop()
+        outgoingWebsocket?.let {
+            // Stopping might block and we don't want to hold the thread processing signaling.
+            TaskPools.IO_POOL.submit {
+                try {
+                    it.stop()
+                } catch (e: Exception) {
+                    logger.warn("Error while stopping outgoing web socket", e)
+                }
+            }
+        }
         outgoingWebsocket = null
     }
 

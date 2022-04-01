@@ -49,7 +49,6 @@ class OctoRelayService {
         }
 
         val address = config.bindAddress
-        val publicAddress = config.publicAddress
         val port = config.bindPort
 
         try {
@@ -71,7 +70,7 @@ class OctoRelayService {
         }
         logger.info("Created Octo UDP transport")
 
-        bridgeOctoTransport = BridgeOctoTransport("$publicAddress:$port", logger)
+        bridgeOctoTransport = BridgeOctoTransport(config.relayId, logger)
 
         // Wire the data coming from the UdpTransport to the OctoTransport
         udpTransport.incomingDataHandler = object : UdpTransport.IncomingDataHandler {

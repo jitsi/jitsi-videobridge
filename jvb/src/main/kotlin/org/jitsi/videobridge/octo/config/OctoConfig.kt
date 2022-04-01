@@ -59,11 +59,17 @@ class OctoConfig private constructor() {
         "videobridge.octo.region".from(JitsiConfig.newConfig)
     }
 
+    /**
+     * This is deprecated and only used in octo v1.
+     */
     val bindAddress: String by config {
         "bind address from legacy config" { legacyBindAddress!! }
         "videobridge.octo.bind-address".from(JitsiConfig.newConfig)
     }
 
+    /**
+     * This is deprecated and only used in octo v1.
+     */
     val bindPort: Int by config {
         "bind port from legacy config" { legacyBindPort!! }
         "videobridge.octo.bind-port".from(JitsiConfig.newConfig)
@@ -73,11 +79,17 @@ class OctoConfig private constructor() {
      * If publicAddress doesn't have a value, default to the value of bindAddress.
      * Note: we can't use a substitution in reference.conf because that won't take into account
      * reading a value from the legacy config file
+     * This is deprecated and only used in octo v1.
      */
     val publicAddress: String by config {
         "org.jitsi.videobridge.octo.PUBLIC_ADDRESS".from(JitsiConfig.legacyConfig)
         "videobridge.octo.public-address".from(JitsiConfig.newConfig)
         "bindAddress" { bindAddress }
+    }
+
+    val relayId: String by config {
+        "videobridge.octo.relay-id".from(JitsiConfig.newConfig)
+        "default" { "$publicAddress:$bindPort" }
     }
 
     companion object {
