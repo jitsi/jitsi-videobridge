@@ -647,8 +647,7 @@ public final class JSONDeserializer
     }
 
     public static RTPHdrExtPacketExtension deserializeHeaderExtension(
-            JSONObject headerExtension,
-            ColibriConferenceIQ.Channel channelIQ)
+            JSONObject headerExtension)
     {
         RTPHdrExtPacketExtension headerExtensionIQ;
         if (headerExtension == null)
@@ -673,7 +672,6 @@ public final class JSONDeserializer
                 headerExtensionIQ = new RTPHdrExtPacketExtension();
                 headerExtensionIQ.setID(String.valueOf(id));
                 headerExtensionIQ.setURI(uri);
-                channelIQ.addRtpHeaderExtension(headerExtensionIQ);
             }
             else
             {
@@ -683,23 +681,33 @@ public final class JSONDeserializer
         return headerExtensionIQ;
     }
 
+    public static Collection<RTPHdrExtPacketExtension> deserializeHeaderExtensions(
+        JSONArray headerExtensions)
+    {
+        Collection<RTPHdrExtPacketExtension> headerExtensionIQs = new ArrayList<>();
+        for (Object headerExtension : headerExtensions)
+        {
+            RTPHdrExtPacketExtension headerExtensionIQ = deserializeHeaderExtension((JSONObject) headerExtension);
+            if (headerExtensionIQ != null) {
+                headerExtensionIQs.add(headerExtensionIQ);
+            }
+        }
+        return headerExtensionIQs;
+    }
+
     public static void deserializeHeaderExtensions(
         JSONArray headerExtensions,
         ColibriConferenceIQ.Channel channelIQ)
     {
         if ((headerExtensions != null) && !headerExtensions.isEmpty())
         {
-            for (Object headerExtension : headerExtensions)
-            {
-                deserializeHeaderExtension((JSONObject) headerExtension, channelIQ);
-            }
+            deserializeHeaderExtensions(headerExtensions).forEach(channelIQ::addRtpHeaderExtension);
         }
     }
 
 
     public static PayloadTypePacketExtension deserializePayloadType(
-            JSONObject payloadType,
-            ColibriConferenceIQ.Channel channelIQ)
+            JSONObject payloadType)
     {
         PayloadTypePacketExtension payloadTypeIQ;
 
@@ -728,10 +736,18 @@ public final class JSONDeserializer
             {
                 deserializeRtcpFbs((JSONArray) rtcpFbs, payloadTypeIQ);
             }
-
-            channelIQ.addPayloadType(payloadTypeIQ);
         }
         return payloadTypeIQ;
+    }
+
+    public static Collection<PayloadTypePacketExtension> deserializePayloadTypes(
+            JSONArray payloadTypes)
+    {
+        Collection<PayloadTypePacketExtension> payloadTypeIQs = new ArrayList<>();
+        for (Object payloadType : payloadTypes) {
+            payloadTypeIQs.add(deserializePayloadType((JSONObject) payloadType));
+        }
+        return payloadTypeIQs;
     }
 
     public static void deserializePayloadTypes(
@@ -740,10 +756,7 @@ public final class JSONDeserializer
     {
         if ((payloadTypes != null) && !payloadTypes.isEmpty())
         {
-            for (Object payloadType : payloadTypes)
-            {
-                deserializePayloadType((JSONObject) payloadType, channelIQ);
-            }
+            deserializePayloadTypes(payloadTypes).forEach(channelIQ::addPayloadType);
         }
     }
 
@@ -842,8 +855,7 @@ public final class JSONDeserializer
     }
 
     public static SourceGroupPacketExtension deserializeSourceGroup(
-            Object sourceGroup,
-            ColibriConferenceIQ.Channel channelIQ)
+            Object sourceGroup)
     {
         SourceGroupPacketExtension sourceGroupIQ;
 
@@ -889,7 +901,6 @@ public final class JSONDeserializer
                     sourceGroupIQ = new SourceGroupPacketExtension();
                     sourceGroupIQ.setSemantics(Objects.toString(semantics));
                     sourceGroupIQ.addSources(sourcePacketExtensions);
-                    channelIQ.addSourceGroup(sourceGroupIQ);
                 }
                 else
                 {
@@ -902,6 +913,21 @@ public final class JSONDeserializer
             }
         }
         return sourceGroupIQ;
+    }
+
+    public static SourceGroupPacketExtension deserializeSourceGroup(
+        Object sourceGroup,
+        ColibriConferenceIQ.Channel channelIQ)
+    {
+        SourceGroupPacketExtension sourceGroupPacketExtension
+            = deserializeSourceGroup(sourceGroup);
+
+        if (sourceGroupPacketExtension != null)
+        {
+            channelIQ.addSourceGroup(sourceGroupPacketExtension);
+        }
+
+        return sourceGroupPacketExtension;
     }
 
     public static void deserializeSourceGroups(
