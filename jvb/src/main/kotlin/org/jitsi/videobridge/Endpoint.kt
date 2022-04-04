@@ -66,6 +66,8 @@ import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
+import org.jitsi.videobridge.message.VideoSourceMapping
+import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
@@ -96,7 +98,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
 
-const val MAX_VIDEO_SSRCS = 5
+const val MAX_VIDEO_SSRCS = 3
 const val MAX_AUDIO_SSRCS = 3
 
 /**
@@ -1327,6 +1329,17 @@ class Endpoint @JvmOverloads constructor(
                         val eldest = currentSsrcs.eldest()
                         proj.transferState(eldest.value)
                         logger.debug { "${packet.ssrc} stealing ${eldest.value.ssrc} from ${eldest.key}" }
+
+                        proj.props?.let {
+                            val name = it.sourceName ?: "anon" // $
+                            val rtx = it.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $
+                            val list = ArrayList<VideoSourceMapping>()
+                            list.add(VideoSourceMapping(name, it.primarySSRC, rtx, it.videoType))
+                            logger.debug {
+                                "send message ${packet.ssrc} -> $name, ${it.primarySSRC}, $rtx, ${it.videoType}"
+                            }
+                            sendMessage(VideoSourcesMap(list))
+                        }
                     } else {
                         logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.ssrc}" }
                     }
