@@ -16,25 +16,53 @@
 package org.jitsi.videobridge.rest
 
 import io.kotest.assertions.json.shouldEqualJson
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.IqProviderUtils
 import org.jivesoftware.smack.util.PacketParserUtils
+import org.json.simple.JSONObject
+import org.json.simple.parser.JSONParser
+import org.xmlunit.builder.DiffBuilder
 
 class Colibri2JSONSerializerTest : ShouldSpec() {
 
     init {
         IqProviderUtils.registerProviders()
 
-        val parser = PacketParserUtils.getParserFor(expectedXml)
-        val iq = PacketParserUtils.parseIQ(parser)
+        context("serializing an IQ") {
+            val parser = PacketParserUtils.getParserFor(expectedXml)
+            val iq = PacketParserUtils.parseIQ(parser)
 
-        iq.shouldBeInstanceOf<ConferenceModifyIQ>()
+            iq.shouldBeInstanceOf<ConferenceModifyIQ>()
 
-        val json = Colibri2JSONSerializer.serializeConferenceModify(iq).toJSONString()
+            val json = Colibri2JSONSerializer.serializeConferenceModify(iq).toJSONString()
 
-        json.shouldEqualJson(expectedJson)
+            should("create the correct JSON") {
+                json.shouldEqualJson(expectedJson)
+            }
+        }
+
+        context("deserializing JSON") {
+            val parser = JSONParser()
+            val json = parser.parse(expectedJson)
+            json.shouldBeInstanceOf<JSONObject>()
+            val iq = Colibri2JSONDeserializer.deserializeConferenceModify(json)
+
+            val xml = iq.toXML().toString()
+
+            should("create the correct XML") {
+                val diff = DiffBuilder.compare(xml).withTest(expectedXml)
+                    .ignoreWhitespace()
+                    .checkForIdentical().build()
+
+                withClue(diff.toString()) {
+                    diff.hasDifferences() shouldBe false
+                }
+            }
+        }
     }
 
     companion object {
@@ -71,7 +99,7 @@ class Colibri2JSONSerializerTest : ShouldSpec() {
                    "id": "bd9b6765",
                    "stats-id": "Jayme-Clv",
                    "medias": [{"type":"audio", "payload-types": [{"name":"opus", "clockrate":"48000", "channels": "2"}]}],
-                   "transport": {"ice-controlling":"true"},
+                   "transport": {"ice-controlling":true},
                    "sources": [{"type":"video", "id":"bd9b6765-v1", "sources":[803354056]}],
                    "force-mute": {"audio":true, "video":true}
                 }
