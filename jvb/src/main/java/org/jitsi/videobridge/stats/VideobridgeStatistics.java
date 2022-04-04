@@ -558,7 +558,7 @@ public class VideobridgeStatistics
             unlockedSetStat(THREADS, threadCount);
             unlockedSetStat(
                     SHUTDOWN_IN_PROGRESS,
-                    videobridge.isShutdownInProgress());
+                    videobridge.isInGracefulShutdown());
             unlockedSetStat(DRAIN, videobridge.getDrainMode());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
                             jvbStats.totalDataChannelMessagesReceived.get());

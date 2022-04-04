@@ -46,7 +46,7 @@ class VideobridgeTest : ShouldSpec() {
                 context("starting a graceful shutdown") {
                     videobridge.shutdown(true)
                     should("report that shutdown is in progress") {
-                        videobridge.isShutdownInProgress shouldBe true
+                        videobridge.isInGracefulShutdown shouldBe true
                     }
                     should("not have started the shutdown yet") {
                         verify(exactly = 0) { shutdownService.beginShutdown() }

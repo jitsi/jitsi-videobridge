@@ -601,7 +601,7 @@ public class Videobridge
             throws ConferenceNotFoundException, InGracefulShutdownException
     {
         String conferenceId = conferenceIq.getID();
-        if (conferenceId == null && isShutdownInProgress())
+        if (conferenceId == null && isInGracefulShutdown())
         {
             throw new InGracefulShutdownException();
         }
@@ -644,7 +644,7 @@ public class Videobridge
                     logger.warn("Will not create conference, conference already exists for meetingId=" + meetingId);
                     throw new ConferenceAlreadyExistsException();
                 }
-                if (isShutdownInProgress())
+                if (isInGracefulShutdown())
                 {
                     logger.warn("Will not create conference in shutdown mode.");
                     throw new InGracefulShutdownException();
@@ -757,7 +757,7 @@ public class Videobridge
      * @return {@code true} if this instance has entered graceful shutdown mode;
      * otherwise, {@code false}
      */
-    public boolean isShutdownInProgress()
+    public boolean isInGracefulShutdown()
     {
         return shutdownRequestedTime != null;
     }

@@ -351,7 +351,7 @@ public class ConferenceShim
     {
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
-        responseConferenceIQ.setGracefulShutdown(conference.getVideobridge().isShutdownInProgress());
+        responseConferenceIQ.setGracefulShutdown(conference.getVideobridge().isInGracefulShutdown());
 
         initializeSignaledEndpoints(conferenceIQ);
 
