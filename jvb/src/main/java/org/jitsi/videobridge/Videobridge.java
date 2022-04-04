@@ -713,18 +713,10 @@ public class Videobridge
         else
         {
             logger.warn("Will shutdown in 1 second.");
-            new Thread(() -> {
-                try
-                {
-                    Thread.sleep(1000);
-                    logger.warn("JVB force shutdown - now");
-                    System.exit(0);
-                }
-                catch (InterruptedException e)
-                {
-                    throw new RuntimeException(e);
-                }
-            }, "ForceShutdownThread").start();
+            TaskPools.SCHEDULED_POOL.schedule(() -> {
+                logger.warn("JVB force shutdown - now");
+                System.exit(0);
+            }, 1, TimeUnit.SECONDS);
         }
     }
 
