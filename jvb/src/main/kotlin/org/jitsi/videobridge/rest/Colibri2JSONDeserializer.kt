@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.rest
 
+import org.jitsi.utils.MediaType
 import org.jitsi.xmpp.extensions.colibri2.AbstractConferenceEntity
 import org.jitsi.xmpp.extensions.colibri2.AbstractConferenceModificationIQ
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
@@ -23,10 +24,110 @@ import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.Endpoints
 import org.jitsi.xmpp.extensions.colibri2.ForceMute
+import org.jitsi.xmpp.extensions.colibri2.Media
+import org.jitsi.xmpp.extensions.colibri2.MediaSource
+import org.jitsi.xmpp.extensions.colibri2.Sctp
+import org.jitsi.xmpp.extensions.colibri2.Sources
+import org.jitsi.xmpp.extensions.colibri2.Transport
+import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 
 object Colibri2JSONDeserializer {
+    private fun deserializeMedia(media: JSONObject): Media {
+        return Media.getBuilder().apply {
+            media[Media.TYPE_ATTR_NAME]?.let {
+                if (it is String) { setType(MediaType.parseString(it)) }
+            }
+
+            media[JSONSerializer.PAYLOAD_TYPES]?.let { payloadTypes ->
+                if (payloadTypes is JSONArray) {
+                    JSONDeserializer.deserializePayloadTypes(payloadTypes).forEach { addPayloadType(it) }
+                }
+            }
+
+            media[JSONSerializer.RTP_HEADER_EXTS]?.let { rtpHdrExts ->
+                if (rtpHdrExts is JSONArray) {
+                    JSONDeserializer.deserializeHeaderExtensions(rtpHdrExts).forEach { addRtpHdrExt(it) }
+                }
+            }
+        }.build()
+    }
+
+    private fun deserializeSctp(sctp: JSONObject): Sctp {
+        return Sctp.Builder().apply {
+            sctp[Sctp.ROLE_ATTR_NAME]?.let {
+                if (it is String) { setRole(Sctp.Role.parseString(it)) }
+            }
+
+            sctp[Sctp.PORT_ATTR_NAME]?.let {
+                if (it is Number) { setPort(it.toInt()) }
+            }
+        }.build()
+    }
+
+    private fun deserializeTransport(transport: JSONObject): Transport {
+        return Transport.getBuilder().apply {
+            transport[Transport.ICE_CONTROLLING_ATTR_NAME]?.let {
+                if (it is Boolean) { setIceControlling(it) }
+            }
+
+            transport[Transport.USE_UNIQUE_PORT_ATTR_NAME]?.let {
+                if (it is Boolean) { setUseUniquePort(it) }
+            }
+
+            transport[IceUdpTransportPacketExtension.ELEMENT]?.let {
+                if (it is JSONObject) { setIceUdpExtension(JSONDeserializer.deserializeTransport(it)) }
+            }
+
+            transport[Sctp.ELEMENT]?.let {
+                if (it is JSONObject) { setSctp(deserializeSctp(it)) }
+            }
+        }.build()
+    }
+
+    private fun deserializeMediaSource(mediaSource: JSONObject): MediaSource {
+        return MediaSource.getBuilder().apply {
+            mediaSource[MediaSource.TYPE_ATTR_NAME]?.let {
+                if (it is String) { setType(MediaType.parseString(it)) }
+            }
+
+            mediaSource[MediaSource.ID_NAME]?.let {
+                if (it is String) { setId(it) }
+            }
+
+            mediaSource[JSONSerializer.SOURCES]?.let { sources ->
+                if (sources is JSONArray) {
+                    sources.forEach { addSource(JSONDeserializer.deserializeSource(it)) }
+                }
+            }
+
+            mediaSource[JSONSerializer.SOURCE_GROUPS]?.let { sourceGroups ->
+                if (sourceGroups is JSONArray) {
+                    sourceGroups.forEach { addSsrcGroup(JSONDeserializer.deserializeSourceGroup(it)) }
+                }
+            }
+        }.build()
+    }
+
+    private fun deserializeMedias(medias: JSONArray): Collection<Media> {
+        return ArrayList<Media>().apply {
+            medias.forEach {
+                if (it is JSONObject) { add(deserializeMedia(it)) }
+            }
+        }
+    }
+
+    private fun deserializeSources(sources: JSONArray): Sources {
+        return Sources.getBuilder().apply {
+            sources.forEach {
+                if (it is JSONObject) {
+                    addMediaSource(deserializeMediaSource(it))
+                }
+            }
+        }.build()
+    }
+
     private fun deserializeAbstractConferenceEntityToBuilder(
         entity: JSONObject,
         builder: AbstractConferenceEntity.Builder
@@ -43,7 +144,19 @@ object Colibri2JSONDeserializer {
             if (it is Boolean) { builder.setExpire(it) }
         }
 
-        // TODO: media, transport, sources
+        entity[Colibri2JSONSerializer.MEDIA_LIST]?.let { medias ->
+            if (medias is JSONArray) {
+                deserializeMedias(medias).forEach { builder.addMedia(it) }
+            }
+        }
+
+        entity[Transport.ELEMENT]?.let {
+            if (it is JSONObject) { builder.setTransport(deserializeTransport(it)) }
+        }
+
+        entity[Sources.ELEMENT]?.let {
+            if (it is JSONArray) { builder.setSources(deserializeSources(it)) }
+        }
     }
 
     private fun deserializeForceMute(forceMute: JSONObject): ForceMute {
@@ -149,7 +262,9 @@ object Colibri2JSONDeserializer {
         return ConferenceModifiedIQ.builder("id").apply {
             deserializeAbstractConferenceModificationToBuilder(conferenceModified, this)
 
-            // TODO sources
+            conferenceModified[Sources.ELEMENT]?.let {
+                if (it is JSONArray) { setSources(deserializeSources(it)) }
+            }
         }.build()
     }
 }
