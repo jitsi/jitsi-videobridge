@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge.rest
 
+import io.kotest.assertions.asClue
 import io.kotest.assertions.json.shouldEqualJson
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -58,7 +58,7 @@ class Colibri2JSONSerializerTest : ShouldSpec() {
                     .ignoreWhitespace()
                     .checkForIdentical().build()
 
-                withClue(diff.toString()) {
+                diff.asClue {
                     diff.hasDifferences() shouldBe false
                 }
             }
