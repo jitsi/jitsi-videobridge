@@ -657,7 +657,7 @@ public final class JSONDeserializer
         }
         else
         {
-            String id = (String)headerExtension.get(RTPHdrExtPacketExtension.ID_ATTR_NAME);
+            Long id = (Long)headerExtension.get(RTPHdrExtPacketExtension.ID_ATTR_NAME);
             String uriString = (String)headerExtension.get(RTPHdrExtPacketExtension.URI_ATTR_NAME);
             URI uri;
             try
@@ -671,7 +671,7 @@ public final class JSONDeserializer
             if (uri != null)
             {
                 headerExtensionIQ = new RTPHdrExtPacketExtension();
-                headerExtensionIQ.setID(id);
+                headerExtensionIQ.setID(String.valueOf(id));
                 headerExtensionIQ.setURI(uri);
                 channelIQ.addRtpHeaderExtension(headerExtensionIQ);
             }
