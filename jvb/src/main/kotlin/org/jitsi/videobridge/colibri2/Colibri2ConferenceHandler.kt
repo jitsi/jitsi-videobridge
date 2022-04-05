@@ -31,6 +31,7 @@ import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
+import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
 import org.jitsi.xmpp.extensions.colibri2.Capability
@@ -70,6 +71,13 @@ class Colibri2ConferenceHandler(
             responseBuilder.addEndpoint(handleColibri2Endpoint(e))
         }
         for (r in conferenceModifyIQ.relays) {
+            if (!WebsocketServiceConfig.config.enabled) {
+                logger.warn(
+                    "Can not use a colibri2 relay, because colibri web sockets are not enabled. See " +
+                        "https://github.com/jitsi/jitsi-videobridge/blob/master/doc/octo.md"
+                )
+                throw UnsupportedOperationException("Colibri websockets need to be enabled to use a colibri2 relay.")
+            }
             responseBuilder.addRelay(handleColibri2Relay(r))
         }
 
