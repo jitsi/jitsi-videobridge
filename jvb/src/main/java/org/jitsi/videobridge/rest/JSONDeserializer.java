@@ -124,6 +124,48 @@ public final class JSONDeserializer
         }
     }
 
+    public static void deserializeWebsocket(
+        String webSocketUrl,
+        IceUdpTransportPacketExtension transportIQ)
+    {
+        WebSocketPacketExtension webSocketIQ;
+
+        if (webSocketUrl == null)
+        {
+            webSocketIQ = null;
+        }
+        else
+        {
+            webSocketIQ = new WebSocketPacketExtension();
+
+            if (webSocketUrl.equals("active"))
+            {
+                webSocketIQ.setActive(true);
+            }
+            else
+            {
+                webSocketIQ.setUrl(webSocketUrl);
+            }
+
+            transportIQ.addChildExtension(webSocketIQ);
+        }
+    }
+
+    public static void deserializeWebsockets(
+        JSONArray webSockets,
+        IceUdpTransportPacketExtension transportIQ)
+    {
+        if ((webSockets != null) && !webSockets.isEmpty())
+        {
+            for (Object webSocket : webSockets)
+            {
+                deserializeWebsocket(
+                    (String)webSocket,
+                    transportIQ);
+            }
+        }
+    }
+
     public static ColibriConferenceIQ.Channel deserializeChannel(
             JSONObject channel,
             ColibriConferenceIQ.Content contentIQ)
@@ -1023,6 +1065,7 @@ public final class JSONDeserializer
             Object xmlns = transport.get(JSONSerializer.XMLNS);
             Object fingerprints = transport.get(JSONSerializer.FINGERPRINTS);
             Object candidateList = transport.get(JSONSerializer.CANDIDATE_LIST);
+            Object webSocketList = transport.get(JSONSerializer.WEBSOCKET_LIST);
             Object remoteCandidate
                 = transport.get(RemoteCandidatePacketExtension.ELEMENT);
             Object rtcpMux = transport.get(IceRtcpmuxPacketExtension.ELEMENT);
@@ -1055,6 +1098,12 @@ public final class JSONDeserializer
                     deserializeCandidates(
                             (JSONArray) candidateList,
                             transportIQ);
+                }
+                if (webSocketList != null)
+                {
+                    deserializeWebsockets(
+                        (JSONArray) webSocketList,
+                        transportIQ);
                 }
                 // remoteCandidate
                 if (remoteCandidate != null)
