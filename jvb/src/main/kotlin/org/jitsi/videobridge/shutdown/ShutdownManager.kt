@@ -18,9 +18,9 @@ package org.jitsi.videobridge.shutdown
 import org.jitsi.meet.ShutdownService
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.shutdown.ShutdownState.GRACEFUL_SHUTDOWN
 import org.jitsi.videobridge.shutdown.ShutdownState.RUNNING
+import org.jitsi.videobridge.util.TaskPools
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.TimeUnit
