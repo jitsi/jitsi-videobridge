@@ -650,6 +650,12 @@ public final class JSONDeserializer
                 Object name = e.getKey();
                 Object value = e.getValue();
 
+                /* Some payload formats - notably red - have a parameter without a name, but
+                 * JSON doesn't allow null as a key name */
+                if (name instanceof String && name.equals("null")) {
+                    name = null;
+                }
+
                 if ((name != null) || (value != null))
                 {
                     payloadTypeIQ.addParameter(
