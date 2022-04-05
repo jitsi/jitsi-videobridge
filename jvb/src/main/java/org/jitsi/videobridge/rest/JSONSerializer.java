@@ -1075,7 +1075,14 @@ public final class JSONSerializer
     private static String serializeWebSocket(
              WebSocketPacketExtension webSocket)
     {
-        return webSocket.getUrl();
+        if (webSocket.getActive())
+        {
+            return "active";
+        }
+        else
+        {
+            return webSocket.getUrl();
+        }
     }
 
     private static JSONArray serializeWebSockets(
