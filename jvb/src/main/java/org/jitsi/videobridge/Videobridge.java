@@ -118,7 +118,7 @@ public class Videobridge
      * Note that currently most code uses the system clock directly.
      */
     @NotNull
-    private Clock clock = Clock.systemUTC();
+    private final Clock clock;
 
     /**
      * A class that holds some instance statistics.
@@ -170,8 +170,10 @@ public class Videobridge
         @Nullable XmppConnection xmppConnection,
         @NotNull ShutdownServiceImpl shutdownService,
         @NotNull Version version,
-        @Nullable String releaseId)
+        @Nullable String releaseId,
+        @NotNull Clock clock)
     {
+        this.clock = clock;
         videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = new JvbLoadManager<>(
             PacketRateMeasurement.getLoadedThreshold(),
@@ -307,11 +309,6 @@ public class Videobridge
         });
 
         return conference;
-    }
-
-    protected void setClock(@NotNull Clock clock)
-    {
-        this.clock = clock;
     }
 
     /**
