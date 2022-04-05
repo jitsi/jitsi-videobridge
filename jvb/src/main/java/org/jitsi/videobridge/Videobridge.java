@@ -32,6 +32,7 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -120,11 +121,6 @@ public class Videobridge
     private Clock clock = Clock.systemUTC();
 
     /**
-     * The {@link clock} time at which graceful shutdown was requested, or null if it has never been requested.
-     */
-    private Instant shutdownRequestedTime = null;
-
-    /**
      * A class that holds some instance statistics.
      */
     private final Statistics statistics = new Statistics();
@@ -149,7 +145,7 @@ public class Videobridge
     @NotNull private final Version version;
     @Nullable private final String releaseId;
 
-    @NotNull private final ShutdownServiceImpl shutdownService;
+    @NotNull private final ShutdownManager shutdownManager;
 
     private final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
@@ -206,7 +202,7 @@ public class Videobridge
         }
         this.version = version;
         this.releaseId = releaseId;
-        this.shutdownService = shutdownService;
+        this.shutdownManager = new ShutdownManager(shutdownService, clock, logger);
         jvbHealthChecker.start();
     }
 
@@ -313,22 +309,7 @@ public class Videobridge
         return conference;
     }
 
-    /**
-     * Enables graceful shutdown mode on this bridge instance and eventually
-     * starts the shutdown immediately if no conferences are currently being
-     * hosted. Otherwise, the bridge will shutdown once all conferences expire.
-     */
-    private void enableGracefulShutdownMode()
-    {
-        if (shutdownRequestedTime == null)
-        {
-            logger.info("Entered graceful shutdown mode");
-            this.shutdownRequestedTime = clock.instant();
-        }
-        maybeDoShutdown();
-    }
-
-    protected void setClock(Clock clock)
+    protected void setClock(@NotNull Clock clock)
     {
         this.clock = clock;
     }
@@ -367,8 +348,11 @@ public class Videobridge
             }
         }
 
-        // Check if it's the time to shutdown now
-        maybeDoShutdown();
+        // If we're in graceful shutdown and there are no more conferences left, we should shutdown.
+        if (isInGracefulShutdown())
+        {
+            maybeShutdown();
+        }
     }
 
     /**
@@ -411,7 +395,7 @@ public class Videobridge
      */
     public Conference getConferenceByMeetingId(String meetingId)
     {
-        /* Note that conferenceByMeetingId is synchronzied on conferencesById. */
+        /* Note that conferenceByMeetingId is synchronized on conferencesById. */
         synchronized (conferencesById)
         {
             return conferencesByMeetingId.get(meetingId);
@@ -705,19 +689,8 @@ public class Videobridge
      */
     public void shutdown(boolean graceful)
     {
-        logger.warn("Received shutdown request, graceful=" + graceful);
-        if (graceful)
-        {
-            enableGracefulShutdownMode();
-        }
-        else
-        {
-            logger.warn("Will shutdown in 1 second.");
-            TaskPools.SCHEDULED_POOL.schedule(() -> {
-                logger.warn("JVB force shutdown - now");
-                System.exit(0);
-            }, 1, TimeUnit.SECONDS);
-        }
+        shutdownManager.shutdown(graceful);
+        maybeShutdown();
     }
 
     /**
@@ -751,16 +724,15 @@ public class Videobridge
      */
     public boolean isInGracefulShutdown()
     {
-        return shutdownRequestedTime != null;
+        return shutdownManager.getState() == ShutdownState.GRACEFUL_SHUTDOWN;
     }
 
     /**
-     * Triggers the shutdown given that we're in graceful shutdown mode and
-     * there are no conferences currently in progress.
+     * Initiate a shutdown if there are no conferences left.
      */
-    private void maybeDoShutdown()
+    private void maybeShutdown()
     {
-        if (shutdownRequestedTime == null)
+        if (!isInGracefulShutdown())
         {
             return;
         }
@@ -769,28 +741,31 @@ public class Videobridge
         {
             if (conferencesById.isEmpty())
             {
-                Duration timeSinceShutdownRequested = Duration.between(shutdownRequestedTime, clock.instant());
+                Instant shutdownRequestedTime = shutdownManager.getShutdownRequestedTime();
+                if (shutdownRequestedTime == null)
+                {
+                    throw new IllegalStateException("In graceful shutdown, but shutdownRequestedTime is null.");
+                }
+                Duration timeSinceShutdownRequested
+                        = Duration.between(shutdownManager.getShutdownRequestedTime(), clock.instant());
                 // Make sure that enough time passes for the "graceful shutdown" mode to be announced in presence.
                 // Otherwise, other components may detect this as a bridge going down non-gracefully.
                 Duration delay
                         = VideobridgeConfig.Companion.getGracefulShutdownDelay().minus(timeSinceShutdownRequested);
                 if (delay.isNegative() || delay.isZero())
                 {
-                    doShutdown();
+                    shutdownManager.doShutdown();
                 }
                 else
                 {
                     logger.info("Videobridge will shut down in " + delay);
-                    TaskPools.SCHEDULED_POOL.schedule(this::doShutdown, delay.toMillis(), TimeUnit.MILLISECONDS);
+                    TaskPools.SCHEDULED_POOL.schedule(
+                            shutdownManager::doShutdown,
+                            delay.toMillis(),
+                            TimeUnit.MILLISECONDS);
                 }
             }
         }
-    }
-
-    private void doShutdown()
-    {
-        logger.info("Videobridge is shutting down NOW");
-        shutdownService.beginShutdown();
     }
 
     /**
@@ -891,7 +866,8 @@ public class Videobridge
     public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
-        debugState.put("shutdownInProgress", (shutdownRequestedTime != null));
+        debugState.put("shutdownState", shutdownManager.getState().toString());
+        debugState.put("drain", drainMode);
         debugState.put("time", System.currentTimeMillis());
 
         debugState.put("load-management", jvbLoadManager.getStats());
@@ -993,6 +969,7 @@ public class Videobridge
         return json;
     }
 
+    @NotNull
     public Version getVersion()
     {
         return version;
