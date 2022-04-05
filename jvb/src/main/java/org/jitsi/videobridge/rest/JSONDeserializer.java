@@ -118,7 +118,7 @@ public final class JSONDeserializer
             {
                 deserializeCandidate(
                         (JSONObject) candidate,
-                        CandidatePacketExtension.class,
+                        IceCandidatePacketExtension.class,
                         transportIQ);
             }
         }
@@ -657,7 +657,7 @@ public final class JSONDeserializer
         }
         else
         {
-            Long id = (Long)headerExtension.get(RTPHdrExtPacketExtension.ID_ATTR_NAME);
+            String id = (String)headerExtension.get(RTPHdrExtPacketExtension.ID_ATTR_NAME);
             String uriString = (String)headerExtension.get(RTPHdrExtPacketExtension.URI_ATTR_NAME);
             URI uri;
             try
@@ -671,7 +671,7 @@ public final class JSONDeserializer
             if (uri != null)
             {
                 headerExtensionIQ = new RTPHdrExtPacketExtension();
-                headerExtensionIQ.setID(String.valueOf(id));
+                headerExtensionIQ.setID(id);
                 headerExtensionIQ.setURI(uri);
                 channelIQ.addRtpHeaderExtension(headerExtensionIQ);
             }
