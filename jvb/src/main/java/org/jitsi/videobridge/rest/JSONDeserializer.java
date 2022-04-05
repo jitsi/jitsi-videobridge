@@ -118,7 +118,7 @@ public final class JSONDeserializer
             {
                 deserializeCandidate(
                         (JSONObject) candidate,
-                        CandidatePacketExtension.class,
+                        IceCandidatePacketExtension.class,
                         transportIQ);
             }
         }

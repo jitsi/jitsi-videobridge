@@ -816,7 +816,7 @@ public final class JSONSerializer
             {
                 rtpHdrExtJSONObject.put(
                     RTPHdrExtPacketExtension.ID_ATTR_NAME,
-                    id);
+                    Long.valueOf(id));
             }
 
             URI uri = rtpHdrExt.getURI();
