@@ -688,7 +688,8 @@ public final class JSONDeserializer
         for (Object headerExtension : headerExtensions)
         {
             RTPHdrExtPacketExtension headerExtensionIQ = deserializeHeaderExtension((JSONObject) headerExtension);
-            if (headerExtensionIQ != null) {
+            if (headerExtensionIQ != null)
+            {
                 headerExtensionIQs.add(headerExtensionIQ);
             }
         }
