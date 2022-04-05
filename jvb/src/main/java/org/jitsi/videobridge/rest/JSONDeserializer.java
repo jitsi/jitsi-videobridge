@@ -1091,6 +1091,11 @@ public final class JSONDeserializer
                 deserializeAbstractPacketExtensionAttributes(
                         transport,
                         transportIQ);
+                // We don't want to put the xmlns as an attribute, it comes automatically from the namespace.
+                transportIQ.removeAttribute(JSONSerializer.XMLNS);
+                // deserializeAbstractPacketExtensionAttributes picks up rtcp-mux as an attribute, but
+                // it's an element
+                transportIQ.removeAttribute(IceRtcpmuxPacketExtension.ELEMENT);
                 // fingerprints
                 if (fingerprints != null)
                 {
