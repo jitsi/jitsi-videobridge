@@ -26,6 +26,7 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shim.*;
+import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 
@@ -559,6 +560,10 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     SHUTDOWN_IN_PROGRESS,
                     videobridge.isInGracefulShutdown());
+            if (videobridge.getShutdownState() == ShutdownState.SHUTTING_DOWN)
+            {
+                unlockedSetStat("shutting_down", true);
+            }
             unlockedSetStat(DRAIN, videobridge.getDrainMode());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
                             jvbStats.totalDataChannelMessagesReceived.get());

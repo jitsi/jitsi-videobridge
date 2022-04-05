@@ -18,13 +18,9 @@ package org.jitsi.videobridge
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
-import java.time.Duration
 
 class VideobridgeConfig private constructor() {
     companion object {
-        val gracefulShutdownDelay: Duration by config {
-            "videobridge.graceful-shutdown-delay".from(JitsiConfig.newConfig)
-        }
         val initialDrainMode: Boolean by config {
             "videobridge.initial-drain-mode".from(JitsiConfig.newConfig)
         }

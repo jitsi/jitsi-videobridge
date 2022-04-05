@@ -683,6 +683,11 @@ public class Videobridge
         return shutdownManager.getState() == ShutdownState.GRACEFUL_SHUTDOWN;
     }
 
+    public ShutdownState getShutdownState()
+    {
+        return shutdownManager.getState();
+    }
+
     /**
      * Initiate a shutdown if there are no conferences left.
      */
@@ -707,7 +712,7 @@ public class Videobridge
                 // Make sure that enough time passes for the "graceful shutdown" mode to be announced in presence.
                 // Otherwise, other components may detect this as a bridge going down non-gracefully.
                 Duration delay
-                        = VideobridgeConfig.Companion.getGracefulShutdownDelay().minus(timeSinceShutdownRequested);
+                        = ShutdownConfig.config.getGracefulShutdownDelay().minus(timeSinceShutdownRequested);
                 if (delay.isNegative() || delay.isZero())
                 {
                     shutdownManager.doShutdown();

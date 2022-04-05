@@ -17,5 +17,6 @@ package org.jitsi.videobridge.shutdown
 
 enum class ShutdownState {
     RUNNING,
-    GRACEFUL_SHUTDOWN
+    GRACEFUL_SHUTDOWN,
+    SHUTTING_DOWN
 }
