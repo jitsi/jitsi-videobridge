@@ -204,7 +204,7 @@ public class Videobridge
         }
         this.version = version;
         this.releaseId = releaseId;
-        this.shutdownManager = new ShutdownManager(shutdownService, clock, logger);
+        this.shutdownManager = new ShutdownManager(shutdownService, logger);
         jvbHealthChecker.start();
     }
 
@@ -256,6 +256,16 @@ public class Videobridge
         while (conference == null);
 
         return conference;
+    }
+
+    void endpointCreated()
+    {
+        statistics.currentLocalEndpoints.incrementAndGet();
+    }
+
+    void endpointExpired()
+    {
+        shutdownManager.maybeShutdown(statistics.currentLocalEndpoints.decrementAndGet());
     }
 
     /**
@@ -343,12 +353,6 @@ public class Videobridge
                     return Unit.INSTANCE;
                 });
             }
-        }
-
-        // If we're in graceful shutdown and there are no more conferences left, we should shutdown.
-        if (isInGracefulShutdown())
-        {
-            maybeShutdown();
         }
     }
 
@@ -645,8 +649,8 @@ public class Videobridge
      */
     public void shutdown(boolean graceful)
     {
-        shutdownManager.shutdown(graceful);
-        maybeShutdown();
+        shutdownManager.initiateShutdown(graceful);
+        shutdownManager.maybeShutdown(statistics.currentLocalEndpoints.get());
     }
 
     /**
@@ -686,47 +690,6 @@ public class Videobridge
     public ShutdownState getShutdownState()
     {
         return shutdownManager.getState();
-    }
-
-    /**
-     * Initiate a shutdown if there are no conferences left.
-     */
-    private void maybeShutdown()
-    {
-        if (!isInGracefulShutdown())
-        {
-            return;
-        }
-
-        synchronized (conferencesById)
-        {
-            if (conferencesById.isEmpty())
-            {
-                Instant shutdownRequestedTime = shutdownManager.getShutdownRequestedTime();
-                if (shutdownRequestedTime == null)
-                {
-                    throw new IllegalStateException("In graceful shutdown, but shutdownRequestedTime is null.");
-                }
-                Duration timeSinceShutdownRequested
-                        = Duration.between(shutdownManager.getShutdownRequestedTime(), clock.instant());
-                // Make sure that enough time passes for the "graceful shutdown" mode to be announced in presence.
-                // Otherwise, other components may detect this as a bridge going down non-gracefully.
-                Duration delay
-                        = ShutdownConfig.config.getGracefulShutdownDelay().minus(timeSinceShutdownRequested);
-                if (delay.isNegative() || delay.isZero())
-                {
-                    shutdownManager.doShutdown();
-                }
-                else
-                {
-                    logger.info("Videobridge will shut down in " + delay);
-                    TaskPools.SCHEDULED_POOL.schedule(
-                            shutdownManager::doShutdown,
-                            delay.toMillis(),
-                            TimeUnit.MILLISECONDS);
-                }
-            }
-        }
     }
 
     /**
@@ -1225,6 +1188,11 @@ public class Videobridge
          * This is updated on endpoint expiration.
          */
         public AtomicLong totalVideoStreamMillisecondsReceived = new AtomicLong();
+
+        /**
+         * Number of local endpoints that exist currently.
+         */
+        public AtomicLong currentLocalEndpoints = new AtomicLong();
     }
 
     public interface EventHandler {

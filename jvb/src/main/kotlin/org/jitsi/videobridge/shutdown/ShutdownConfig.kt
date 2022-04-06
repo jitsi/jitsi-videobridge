@@ -23,10 +23,6 @@ import java.time.Duration
 class ShutdownConfig {
     private constructor()
 
-    val gracefulShutdownDelay: Duration by config {
-        "videobridge.graceful-shutdown-delay".from(JitsiConfig.newConfig)
-        "videobridge.shutdown.graceful-shutdown-delay".from(JitsiConfig.newConfig)
-    }
     val gracefulShutdownMaxDuration: Duration by config {
         "videobridge.shutdown.graceful-shutdown-max-duration".from(JitsiConfig.newConfig)
     }

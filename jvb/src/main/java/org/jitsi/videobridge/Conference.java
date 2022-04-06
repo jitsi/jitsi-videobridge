@@ -814,6 +814,7 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames);
+        videobridge.endpointCreated();
 
         subscribeToEndpointEvents(endpoint);
 
@@ -1076,6 +1077,7 @@ public class Conference
         if (removedEndpoint != null)
         {
             endpointsChanged();
+            videobridge.endpointExpired();
         }
     }
 

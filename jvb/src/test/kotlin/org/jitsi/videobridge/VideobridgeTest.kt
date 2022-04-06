@@ -25,6 +25,7 @@ import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.mins
+import org.jitsi.videobridge.shutdown.ShutdownState
 import org.jivesoftware.smack.packet.ErrorIQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.json.simple.parser.JSONParser
@@ -42,11 +43,12 @@ class VideobridgeTest : ShouldSpec() {
         }
         context("Shutdown") {
             context("when a conference is active") {
-                val conf = videobridge.createConference(JidCreate.entityBareFrom("conf@domain.org"))
+                repeat(15) { videobridge.endpointCreated() }
                 context("starting a graceful shutdown") {
                     videobridge.shutdown(true)
                     should("report that shutdown is in progress") {
                         videobridge.isInGracefulShutdown shouldBe true
+                        videobridge.shutdownState shouldBe ShutdownState.GRACEFUL_SHUTDOWN
                     }
                     should("not have started the shutdown yet") {
                         verify(exactly = 0) { shutdownService.beginShutdown() }
@@ -57,12 +59,17 @@ class VideobridgeTest : ShouldSpec() {
                         resp.shouldBeInstanceOf<ErrorIQ>()
                         resp.error.condition shouldBe StanzaError.Condition.service_unavailable
                     }
-                    context("and once the conference expires") {
-                        clock.elapse(2.mins)
-                        videobridge.expireConference(conf)
-                        should("start the shutdown") {
-                            verify(exactly = 1) { shutdownService.beginShutdown() }
-                        }
+                    context("When the number of participants drops below the threshold") {
+                        repeat(10) { videobridge.endpointExpired() }
+                        videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
+                        // TODO: how can we verify that the shutdownService has been called when the task is scheduled
+                        // on TaskPools.SCHEDULED_POOL
+                    }
+                    context("When the graceful shutdown period expires") {
+                        clock.elapse(60.mins)
+                        // TODO: how can we verify that the state has transitioned to SHUTTING_DOWN when the task was
+                        // scheduled on TaskPools.SCHEDULED_POOL?
+                        // videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
                     }
                 }
             }

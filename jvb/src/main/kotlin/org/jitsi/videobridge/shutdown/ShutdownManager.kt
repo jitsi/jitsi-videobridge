@@ -23,10 +23,7 @@ import org.jitsi.videobridge.shutdown.ShutdownState.GRACEFUL_SHUTDOWN
 import org.jitsi.videobridge.shutdown.ShutdownState.RUNNING
 import org.jitsi.videobridge.shutdown.ShutdownState.SHUTTING_DOWN
 import org.jitsi.videobridge.util.TaskPools
-import java.time.Clock
-import java.time.Instant
 import java.util.concurrent.TimeUnit
-import kotlin.system.exitProcess
 
 /**
  * Implements the graceful shutdown logic.
@@ -42,30 +39,30 @@ import kotlin.system.exitProcess
  */
 class ShutdownManager(
     private val shutdownService: ShutdownService,
-    private val clock: Clock,
     parentLogger: Logger
 ) {
     val logger = createChildLogger(parentLogger)
 
-    /**
-     * The [clock] time at which graceful shutdown was requested, or null if it has never been requested.
-     */
-    var shutdownRequestedTime: Instant? = null
-        private set
-
     var state: ShutdownState = RUNNING
         private set
 
-    fun shutdown(graceful: Boolean) {
+    fun initiateShutdown(graceful: Boolean) {
         logger.info("Received shutdown request, graceful=$graceful")
 
         if (graceful) {
             if (state == RUNNING) {
                 state = GRACEFUL_SHUTDOWN
-                shutdownRequestedTime = clock.instant()
-                logger.info("Entered graceful shutdown mode")
+                logger.info(
+                    "Entered graceful shutdown mode, will stay in this mode for up to " +
+                        config.gracefulShutdownMaxDuration
+                )
                 TaskPools.SCHEDULED_POOL.schedule(
-                    { changeToShuttingDown() },
+                    {
+                        if (state == GRACEFUL_SHUTDOWN) {
+                            logger.info("Graceful shutdown period expired, changing to SHUTTING_DOWN.")
+                            changeToShuttingDown()
+                        }
+                    },
                     config.gracefulShutdownMaxDuration.toMillis(),
                     TimeUnit.MILLISECONDS
                 )
@@ -73,16 +70,20 @@ class ShutdownManager(
                 logger.info("Graceful shutdown already initiated mode.")
             }
         } else {
-            // Give time for a response to be sent back if this was requested via HTTP/XMPP?
-            state = GRACEFUL_SHUTDOWN
-            logger.warn("Will shutdown in 1 second.")
-            TaskPools.SCHEDULED_POOL.schedule(
-                {
-                    logger.warn("JVB force shutdown - now")
-                    exitProcess(0)
-                },
-                1, TimeUnit.SECONDS
-            )
+            changeToShuttingDown()
+        }
+    }
+
+    /**
+     * Change to SHUTTING_DOWN if the number of endpoints has dropped below the threshold.
+     */
+    fun maybeShutdown(endpointCount: Long) {
+        // If we're RUNNING we don't want to shutdown. If we're SHUTTING_DOWN we've already done this.
+        if (state == GRACEFUL_SHUTDOWN) {
+            if (endpointCount < config.gracefulShutdownMinParticipants) {
+                logger.info("Entering SHUTTING_DOWN with $endpointCount participants.")
+                changeToShuttingDown()
+            }
         }
     }
 
@@ -91,17 +92,15 @@ class ShutdownManager(
             return
         }
 
-        logger.info("Changing to SHUTTING_DOWN, will shut down in ${config.shuttingDownDelay}")
+        logger.info("Will shut down in ${config.shuttingDownDelay}")
         state = SHUTTING_DOWN
         TaskPools.SCHEDULED_POOL.schedule(
-            { doShutdown() },
+            {
+                logger.info("Videobridge is shutting down NOW")
+                shutdownService.beginShutdown()
+            },
             config.shuttingDownDelay.toMillis(),
             TimeUnit.MILLISECONDS
         )
-    }
-
-    fun doShutdown() {
-        logger.info("Videobridge is shutting down NOW")
-        shutdownService.beginShutdown()
     }
 }
