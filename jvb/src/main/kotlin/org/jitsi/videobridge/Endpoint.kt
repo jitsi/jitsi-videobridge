@@ -855,9 +855,9 @@ class Endpoint @JvmOverloads constructor(
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> {
-                videoSsrcs.rewriteRtp(packet)
                 if (bitrateController.transformRtp(packetInfo)) {
                     // The original packet was transformed in place.
+                    videoSsrcs.rewriteRtp(packet)
                     transceiver.sendPacket(packetInfo)
                 } else {
                     logger.warn("Dropping a packet which was supposed to be accepted:$packet")
