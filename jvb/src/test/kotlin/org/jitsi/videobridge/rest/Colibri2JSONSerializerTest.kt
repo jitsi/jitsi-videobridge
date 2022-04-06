@@ -449,12 +449,84 @@ class Colibri2JSONSerializerTest : ShouldSpec() {
                 }
             """.trimIndent()
 
-        private val expectedXmls = arrayOf(expectedXml1, expectedXml2, expectedXml3, expectedXml4)
-        private val expectedJsons = arrayOf(expectedJson1, expectedJson2, expectedJson3, expectedJson4)
+        private val expectedXml5 =
+            """
+            <iq xmlns="jabber:client" id="id" type="get">
+              <conference-modify xmlns="jitsi:colibri2" meeting-id="cbccc2bd-c3c7-4880-acb8-cdb7accc4073">
+                <relay xmlns="jitsi:colibri2" id="10.44.106.218:4096">
+                  <endpoints>
+                    <endpoint id="6f14308e">
+                      <sources>
+                        <media-source type="video" id="6f14308e-v0">
+                          <source xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" ssrc="215028838"/>
+                          <source xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" ssrc="300407142"/>
+                          <source xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" ssrc="443647824"/>
+                          <source xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" ssrc="604327257"/>
+                          <source xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" ssrc="1827691320"/>
+                          <source xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" ssrc="2580436281"/>
+                          <ssrc-group xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" semantics="FID">
+                            <source ssrc="1827691320"/>
+                            <source ssrc="300407142"/>
+                          </ssrc-group>
+                          <ssrc-group xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" semantics="SIM">
+                            <source ssrc="1827691320"/>
+                            <source ssrc="2580436281"/>
+                            <source ssrc="604327257"/>
+                          </ssrc-group>
+                          <ssrc-group xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" semantics="FID">
+                            <source ssrc="2580436281"/>
+                            <source ssrc="443647824"/>
+                          </ssrc-group>
+                          <ssrc-group xmlns="urn:xmpp:jingle:apps:rtp:ssma:0" semantics="FID">
+                            <source ssrc="604327257"/>
+                            <source ssrc="215028838"/>
+                          </ssrc-group>
+                        </media-source>
+                      </sources>
+                    </endpoint>
+                  </endpoints>
+                </relay>
+              </conference-modify>
+            </iq>
+            """.trimIndent()
+
+        private val expectedJson5 =
+            """
+                {
+                  "meeting-id":"cbccc2bd-c3c7-4880-acb8-cdb7accc4073",
+                  "relays": [
+                    {
+                       "id":"10.44.106.218:4096",
+                       "endpoints": [
+                          {
+                            "id":"6f14308e",
+                            "sources": [
+                              {
+                                "type": "video",
+                                "id": "6f14308e-v0",
+                                "sources": [ 215028838, 300407142, 443647824, 604327257, 1827691320, 2580436281 ],
+                                "ssrc-groups": [
+                                   { "semantics": "FID", "sources": [ 1827691320, 300407142 ] },
+                                   { "semantics": "SIM", "sources": [ 1827691320, 2580436281, 604327257 ] },
+                                   { "semantics": "FID", "sources": [ 2580436281, 443647824 ] },
+                                   { "semantics": "FID", "sources": [ 604327257, 215028838 ] }
+                                ]
+                              }
+                            ]
+                          }
+                       ] 
+                    }
+                  ]
+                }
+            """.trimIndent()
+
+        private val expectedXmls = arrayOf(expectedXml1, expectedXml2, expectedXml3, expectedXml4, expectedXml5)
+        private val expectedJsons = arrayOf(expectedJson1, expectedJson2, expectedJson3, expectedJson4, expectedJson5)
         private val expectedClasses = arrayOf(
             ConferenceModifyIQ::class,
             ConferenceModifyIQ::class,
             ConferenceModifiedIQ::class,
+            ConferenceModifyIQ::class,
             ConferenceModifyIQ::class
         )
     }
