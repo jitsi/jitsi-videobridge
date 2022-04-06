@@ -905,9 +905,40 @@ public final class JSONSerializer
         return jsonArray;
     }
 
-    public static Long serializeSource(SourcePacketExtension source)
+    public static Object serializeSource(SourcePacketExtension source)
     {
-        return (source == null) ? null : Long.valueOf(source.getSSRC());
+        if (source == null)
+        {
+            return null;
+        }
+
+        String name = source.getName();
+        String rid = source.getRid();
+        List<ParameterPacketExtension> parameters = source.getParameters();
+
+        /* Backward compatibility - sources used to just be their ssrc values. */
+        if (name == null && rid == null && parameters.isEmpty())
+        {
+            return source.getSSRC();
+        }
+
+        JSONObject sourceJSONObject = new JSONObject();
+
+        sourceJSONObject.put(SourcePacketExtension.SSRC_ATTR_NAME, source.getSSRC());
+        if (name != null)
+        {
+            sourceJSONObject.put(SourcePacketExtension.NAME_ATTR_NAME, name);
+        }
+        if (rid != null)
+        {
+            sourceJSONObject.put(SourcePacketExtension.RID_ATTR_NAME, rid);
+        }
+        if (!parameters.isEmpty())
+        {
+            sourceJSONObject.put(JSONSerializer.PARAMETERS, serializeParameters(parameters));
+        }
+
+        return sourceJSONObject;
     }
 
     private static Object serializeSourceGroup(

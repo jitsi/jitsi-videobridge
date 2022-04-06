@@ -855,8 +855,7 @@ public final class JSONDeserializer
         }
     }
 
-    public static SourcePacketExtension deserializeSource(
-            Object source)
+    public static SourcePacketExtension deserializeSource(Object source)
     {
         SourcePacketExtension sourceIQ;
 
@@ -864,27 +863,68 @@ public final class JSONDeserializer
         {
             sourceIQ = null;
         }
-        else
+        else if (source instanceof Number || source instanceof String)
         {
+            long ssrc;
+            try
+            {
+                ssrc = deserializeSSRC(source);
+            } catch (NumberFormatException nfe)
+            {
+                return null;
+            }
+            sourceIQ = new SourcePacketExtension();
+            sourceIQ.setSSRC(ssrc);
+        }
+        else if (source instanceof JSONObject)
+        {
+            JSONObject sourceJSONObject = (JSONObject) source;
+            Object ssrcAttr = sourceJSONObject.get(SourcePacketExtension.SSRC_ATTR_NAME);
             long ssrc;
 
             try
             {
-                ssrc = deserializeSSRC(source);
+                ssrc = deserializeSSRC(ssrcAttr);
             }
             catch (NumberFormatException nfe)
             {
-                ssrc = -1;
+                return null;
             }
-            if (ssrc == -1)
+            sourceIQ = new SourcePacketExtension();
+            sourceIQ.setSSRC(ssrc);
+
+            Object name = sourceJSONObject.get(SourcePacketExtension.NAME_ATTR_NAME);
+            Object rid = sourceJSONObject.get(SourcePacketExtension.RID_ATTR_NAME);
+            Object parameters = sourceJSONObject.get(JSONSerializer.PARAMETERS);
+            if (name instanceof String)
             {
-                sourceIQ = null;
+                sourceIQ.setName((String)name);
             }
-            else
+            if (rid instanceof String)
             {
-                sourceIQ = new SourcePacketExtension();
-                sourceIQ.setSSRC(ssrc);
+                sourceIQ.setRid((String)rid);
             }
+            if (parameters instanceof JSONObject)
+            {
+                for (Map.Entry<Object, Object> e
+                    : (Iterable<Map.Entry<Object, Object>>)((JSONObject)parameters).entrySet())
+                {
+                    Object paramName = e.getKey();
+                    Object paramValue = e.getValue();
+
+                    if ((paramName != null) || (paramValue != null))
+                    {
+                        sourceIQ.addParameter(
+                            new ParameterPacketExtension(
+                                Objects.toString(paramName, null),
+                                Objects.toString(paramValue, null)));
+                    }
+                }
+            }
+        }
+        else
+        {
+            sourceIQ = null;
         }
         return sourceIQ;
     }
