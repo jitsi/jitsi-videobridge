@@ -30,6 +30,7 @@ import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
+import org.jivesoftware.smack.packet.IQ
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 
@@ -266,8 +267,8 @@ object Colibri2JSONDeserializer {
 
     fun deserializeConferenceModified(conferenceModified: JSONObject): ConferenceModifiedIQ {
         return ConferenceModifiedIQ.builder("id").apply {
+            ofType(IQ.Type.result)
             deserializeAbstractConferenceModificationToBuilder(conferenceModified, this)
-
             conferenceModified[Sources.ELEMENT]?.let {
                 if (it is JSONArray) { setSources(deserializeSources(it)) }
             }
