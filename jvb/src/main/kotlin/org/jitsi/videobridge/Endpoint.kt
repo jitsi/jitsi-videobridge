@@ -60,6 +60,8 @@ import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
+import org.jitsi.videobridge.message.AudioSourceMapping
+import org.jitsi.videobridge.message.AudioSourcesMap
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
@@ -1259,13 +1261,29 @@ class Endpoint @JvmOverloads constructor(
      * Rewrite RTP packets so they appear to be a continuation of an already advertised ssrc.
      * This is just a placeholder for now. We may add this functionality to existing objects.
      */
-    private class Projection(val props: MediaSourceDesc?, packet: RtpPacket) {
+    private class Projection(props: MediaSourceDesc?, packet: RtpPacket) {
         var ssrc = packet.ssrc
             private set
         private var lastSequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1) /* $ */
         private var lastTimestamp = RtpUtils.applyTimestampDelta(packet.timestamp, -960); /* $ */
         private var sequenceNumberDelta = 0
         private var timestampDelta = 0L
+
+        val message: BridgeChannelMessage
+
+        init {
+            if (props == null) { // $ when?
+                val list = ArrayList<AudioSourceMapping>()
+                list.add(AudioSourceMapping("unknown", packet.ssrc)) // $ name
+                message = AudioSourcesMap(list)
+            } else {
+                val name = props.sourceName ?: "unknown"
+                val rtx = props.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
+                val list = ArrayList<VideoSourceMapping>()
+                list.add(VideoSourceMapping(name, props.primarySSRC, rtx, props.videoType))
+                message = VideoSourcesMap(list)
+            }
+        }
 
         fun transferState(other: Projection) {
             ssrc = other.ssrc
@@ -1329,17 +1347,7 @@ class Endpoint @JvmOverloads constructor(
                         val eldest = currentSsrcs.eldest()
                         proj.transferState(eldest.value)
                         logger.debug { "${packet.ssrc} stealing ${eldest.value.ssrc} from ${eldest.key}" }
-
-                        proj.props?.let {
-                            val name = it.sourceName ?: "anon" // $
-                            val rtx = it.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $
-                            val list = ArrayList<VideoSourceMapping>()
-                            list.add(VideoSourceMapping(name, it.primarySSRC, rtx, it.videoType))
-                            logger.debug {
-                                "send message ${packet.ssrc} -> $name, ${it.primarySSRC}, $rtx, ${it.videoType}"
-                            }
-                            sendMessage(VideoSourcesMap(list))
-                        }
+                        sendMessage(proj.message)
                     } else {
                         logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.ssrc}" }
                     }
