@@ -180,6 +180,12 @@ object Colibri2JSONDeserializer {
             endpoint[ForceMute.ELEMENT]?.let {
                 if (it is JSONObject) { setForceMute(deserializeForceMute(it)) }
             }
+
+            endpoint[Colibri2JSONSerializer.CAPABILITIES_LIST]?.let { capabilities ->
+                if (capabilities is JSONArray) {
+                    capabilities.forEach { if (it is String) { addCapability(it) } }
+                }
+            }
         }.build()
     }
 

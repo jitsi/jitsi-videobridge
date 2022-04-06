@@ -17,6 +17,7 @@ package org.jitsi.videobridge.rest
 
 import org.jitsi.xmpp.extensions.colibri2.AbstractConferenceEntity
 import org.jitsi.xmpp.extensions.colibri2.AbstractConferenceModificationIQ
+import org.jitsi.xmpp.extensions.colibri2.Capability
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
@@ -36,6 +37,7 @@ object Colibri2JSONSerializer {
 
     val ENDPOINT_LIST = Colibri2Endpoint.ELEMENT + "s"
     val RELAY_LIST = Colibri2Relay.ELEMENT + "s"
+    val CAPABILITIES_LIST = "capabilities"
 
     private fun serializeMedia(media: Media): JSONObject {
         return JSONObject().apply {
@@ -127,10 +129,19 @@ object Colibri2JSONSerializer {
         }
     }
 
+    private fun serializeCapabilities(capabilities: Collection<Capability>): JSONArray {
+        return JSONArray().apply {
+            capabilities.forEach { add(it.name) }
+        }
+    }
+
     private fun serializeEndpoint(endpoint: Colibri2Endpoint): JSONObject {
         return serializeAbstractConferenceEntity(endpoint).apply {
             endpoint.statsId?.apply { put(Colibri2Endpoint.STATS_ID_ATTR_NAME, this) }
             endpoint.forceMute?.apply { put(ForceMute.ELEMENT, serializeForceMute(this)) }
+            if (endpoint.capabilities.isNotEmpty()) {
+                put(CAPABILITIES_LIST, serializeCapabilities(endpoint.capabilities))
+            }
         }
     }
 
