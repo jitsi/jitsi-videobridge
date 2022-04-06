@@ -652,7 +652,8 @@ public final class JSONDeserializer
 
                 /* Some payload formats - notably red - have a parameter without a name, but
                  * JSON doesn't allow null as a key name */
-                if (name instanceof String && name.equals("null")) {
+                if (name instanceof String && name.equals("null"))
+                {
                     name = null;
                 }
 
