@@ -30,7 +30,6 @@ import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
-import org.jivesoftware.smack.packet.IQ
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 
@@ -239,7 +238,8 @@ object Colibri2JSONDeserializer {
         }
     }
 
-    fun deserializeConferenceModify(conferenceModify: JSONObject): ConferenceModifyIQ {
+    @JvmStatic
+    fun deserializeConferenceModify(conferenceModify: JSONObject): ConferenceModifyIQ.Builder {
         return ConferenceModifyIQ.builder("id").apply {
             deserializeAbstractConferenceModificationToBuilder(conferenceModify, this)
 
@@ -262,16 +262,16 @@ object Colibri2JSONDeserializer {
             conferenceModify[ConferenceModifyIQ.RTCSTATS_ENABLED_ATTR_NAME]?.let {
                 if (it is Boolean) { setRtcstatsEnabled(it) }
             }
-        }.build()
+        }
     }
 
-    fun deserializeConferenceModified(conferenceModified: JSONObject): ConferenceModifiedIQ {
+    @JvmStatic
+    fun deserializeConferenceModified(conferenceModified: JSONObject): ConferenceModifiedIQ.Builder {
         return ConferenceModifiedIQ.builder("id").apply {
-            ofType(IQ.Type.result)
             deserializeAbstractConferenceModificationToBuilder(conferenceModified, this)
             conferenceModified[Sources.ELEMENT]?.let {
                 if (it is JSONArray) { setSources(deserializeSources(it)) }
             }
-        }.build()
+        }
     }
 }

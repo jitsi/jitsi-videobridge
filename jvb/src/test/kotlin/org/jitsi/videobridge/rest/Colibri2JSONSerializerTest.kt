@@ -25,6 +25,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.IqProviderUtils
+import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.util.PacketParserUtils
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
@@ -65,13 +66,17 @@ class Colibri2JSONSerializerTest : ShouldSpec() {
                 val json = parser.parse(expectedJson)
                 json.shouldBeInstanceOf<JSONObject>()
 
-                val iq = when (expectedClasses[index]) {
+                val builder = when (expectedClasses[index]) {
                     ConferenceModifyIQ::class -> Colibri2JSONDeserializer.deserializeConferenceModify(json)
-                    ConferenceModifiedIQ::class -> Colibri2JSONDeserializer.deserializeConferenceModified(json)
+                    ConferenceModifiedIQ::class -> {
+                        Colibri2JSONDeserializer.deserializeConferenceModified(json).also {
+                            it.ofType(IQ.Type.result)
+                        }
+                    }
                     else -> throw IllegalStateException("Bad type in test")
                 }
 
-                val xml = iq.toXML().toString()
+                val xml = builder.build().toXML().toString()
 
                 should("create the correct XML for JSON $index") {
                     val diff = DiffBuilder.compare(xml).withTest(expectedXml)

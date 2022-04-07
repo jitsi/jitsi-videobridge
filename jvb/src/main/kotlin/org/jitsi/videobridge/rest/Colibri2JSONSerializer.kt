@@ -174,6 +174,7 @@ object Colibri2JSONSerializer {
         }
     }
 
+    @JvmStatic
     fun serializeConferenceModify(iq: ConferenceModifyIQ): JSONObject {
         return serializeAbstractConferenceModificationIQ(iq).apply {
             if (iq.create != ConferenceModifyIQ.CREATE_DEFAULT) {
@@ -194,6 +195,7 @@ object Colibri2JSONSerializer {
         }
     }
 
+    @JvmStatic
     fun serializeConferenceModified(iq: ConferenceModifiedIQ): JSONObject {
         return serializeAbstractConferenceModificationIQ(iq).apply {
             iq.sources?.let { put(Sources.ELEMENT, serializeSources(it)) }
