@@ -869,7 +869,8 @@ public final class JSONDeserializer
             try
             {
                 ssrc = deserializeSSRC(source);
-            } catch (NumberFormatException nfe)
+            }
+            catch (NumberFormatException nfe)
             {
                 return null;
             }
