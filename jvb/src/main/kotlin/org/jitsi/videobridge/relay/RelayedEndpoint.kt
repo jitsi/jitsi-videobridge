@@ -178,6 +178,9 @@ class RelayedEndpoint(
     override var mediaSources: Array<MediaSourceDesc>
         get() = _mediaSources.getMediaSources()
         set(value) {
+            if (MultiStreamConfig.config.enabled) {
+                applyVideoTypeCache(value)
+            }
             val changed = _mediaSources.setMediaSources(value)
             if (changed) {
                 val setMediaSourcesEvent = SetMediaSourcesEvent(mediaSources)

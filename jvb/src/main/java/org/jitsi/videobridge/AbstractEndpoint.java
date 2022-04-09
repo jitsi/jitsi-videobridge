@@ -111,6 +111,8 @@ public abstract class AbstractEndpoint
     @Deprecated
     private VideoType videoType = VideoType.CAMERA;
 
+    protected Map<String, VideoType> videoTypeCache = new HashMap<>();
+
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
@@ -148,7 +150,8 @@ public abstract class AbstractEndpoint
         return videoType;
     }
 
-    public void setVideoType(String sourceName, VideoType videoType) {
+    public void setVideoType(String sourceName, VideoType videoType)
+    {
         MediaSourceDesc mediaSourceDesc = findMediaSourceDesc(sourceName);
 
         if (mediaSourceDesc != null)
@@ -161,9 +164,21 @@ public abstract class AbstractEndpoint
         }
         else
         {
-            // Logging on info level because this is expected to happen if the client opens the data channel, before
-            // the sources are signaled (see lib-jitsi-meet).
-            logger.info("setVideoType - source description not found for: " + sourceName);
+            videoTypeCache.put(sourceName, videoType);
+        }
+    }
+
+    protected void applyVideoTypeCache(MediaSourceDesc[] mediaSourceDescs)
+    {
+        // Video types are signaled over JVB data channel vs MediaStreamDesc over Colibri, so the two channels need
+        // to be synchronized. Sync cached video type which arrived before media source description was created.
+        for (MediaSourceDesc mediaSourceDesc : mediaSourceDescs)
+        {
+            VideoType videoType = videoTypeCache.remove(mediaSourceDesc.getSourceName());
+            if (videoType != null)
+            {
+                mediaSourceDesc.setVideoType(videoType);
+            }
         }
     }
 
