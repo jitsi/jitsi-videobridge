@@ -162,19 +162,17 @@ public abstract class AbstractEndpoint
                 conference.getSpeechActivity().endpointVideoAvailabilityChanged();
             }
         }
-        else
-        {
-            videoTypeCache.put(sourceName, videoType);
-        }
+
+        videoTypeCache.put(sourceName, videoType);
     }
 
     protected void applyVideoTypeCache(MediaSourceDesc[] mediaSourceDescs)
     {
-        // Video types are signaled over JVB data channel vs MediaStreamDesc over Colibri, so the two channels need
-        // to be synchronized. Sync cached video type which arrived before media source description was created.
+        // Video types are signaled over JVB data channel while MediaStreamDesc over Colibri. The two channels need
+        // to be synchronized.
         for (MediaSourceDesc mediaSourceDesc : mediaSourceDescs)
         {
-            VideoType videoType = videoTypeCache.remove(mediaSourceDesc.getSourceName());
+            VideoType videoType = videoTypeCache.get(mediaSourceDesc.getSourceName());
             if (videoType != null)
             {
                 mediaSourceDesc.setVideoType(videoType);
