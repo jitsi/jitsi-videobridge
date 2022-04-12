@@ -99,8 +99,17 @@ public class Conferences
                     "Failed to create conference, could not parse JSON: " + pe.getMessage());
         }
 
-        ConferenceModifyIQ conferenceModifyIQ
+        ConferenceModifyIQ conferenceModifyIQ;
+
+        try
+        {
+            conferenceModifyIQ
                 = Colibri2JSONDeserializer.deserializeConferenceModify((JSONObject) requestJson).build();
+        }
+        catch (Exception e)
+        {
+            throw new BadRequestExceptionWithMessage("Failed to parse ConferenceModify JSON:" + e.getMessage());
+        }
 
         return getVideobridgeIqResponseAsJson(conferenceModifyIQ);
     }
@@ -130,8 +139,16 @@ public class Conferences
             throw new BadRequestException();
         }
 
-        ConferenceModifyIQ.Builder conferenceModifyIQBuilder
-            = Colibri2JSONDeserializer.deserializeConferenceModify((JSONObject) requestJson);
+        ConferenceModifyIQ.Builder conferenceModifyIQBuilder;
+        try
+        {
+            conferenceModifyIQBuilder
+                = Colibri2JSONDeserializer.deserializeConferenceModify((JSONObject) requestJson);
+        }
+        catch (Exception e)
+        {
+            throw new BadRequestExceptionWithMessage("Failed to parse ConferenceModify JSON:" + e.getMessage());
+        }
 
         conferenceModifyIQBuilder.setMeetingId(meetingId);
 
