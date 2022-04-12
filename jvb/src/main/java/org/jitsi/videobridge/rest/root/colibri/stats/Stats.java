@@ -42,7 +42,7 @@ public class Stats
 
         if (this.statsManager != null)
         {
-            return JSONSerializer.serializeStatistics(statsManager.getStatistics()).toJSONString();
+            return new JSONObject(statsManager.getStatistics().getStats()).toJSONString();
         }
         return new JSONObject().toJSONString();
     }
