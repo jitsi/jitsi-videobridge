@@ -42,7 +42,7 @@ public class Conferences
     @Produces(MediaType.APPLICATION_JSON)
     public String getConferences()
     {
-        /* TODO */
+        /* Not clear what this should do.  If you have a use case please contact us with requirements. */
         throw new ServerErrorException(Response.Status.NOT_IMPLEMENTED);
     }
 
@@ -58,7 +58,7 @@ public class Conferences
             throw new NotFoundException();
         }
 
-        /* TODO */
+        /* Not clear what this should do.  If you have a use case please contact us with requirements. */
         throw new ServerErrorException(Response.Status.NOT_IMPLEMENTED);
     }
 
