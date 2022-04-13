@@ -32,7 +32,7 @@ import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
  * they're already known.  If they're null, this instance
  * will do the parsing itself.
  */
-class Vp9Packet private constructor (
+class Vp9Packet private constructor(
     buffer: ByteArray,
     offset: Int,
     length: Int,
