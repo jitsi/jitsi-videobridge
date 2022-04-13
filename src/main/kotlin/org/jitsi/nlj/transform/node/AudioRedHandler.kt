@@ -248,8 +248,8 @@ class AudioRedHandler(
                     }
                 } catch (e: IllegalArgumentException) {
                     logger.warn(
-                        "Dropping invalid RED packet (${e.message}): $redPacket. Contents (100B): " +
-                            redPacket.toHex(100)
+                        "Dropping invalid RED packet from ep=${packetInfo.endpointId} (${e.message}): " +
+                            "$redPacket. Contents (50B): ${redPacket.toHex(50)}"
                     )
                     stats.invalidRedPacketDropped()
                     return@buildList
