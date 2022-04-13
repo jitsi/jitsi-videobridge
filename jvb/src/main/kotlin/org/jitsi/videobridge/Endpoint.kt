@@ -296,6 +296,9 @@ class Endpoint @JvmOverloads constructor(
     override var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
         set(value) {
+            if (MultiStreamConfig.config.enabled) {
+                applyVideoTypeCache(value)
+            }
             val wasEmpty = transceiver.getMediaSources().isEmpty()
             if (transceiver.setMediaSources(value)) {
                 eventEmitter.fireEvent { sourcesChanged() }
