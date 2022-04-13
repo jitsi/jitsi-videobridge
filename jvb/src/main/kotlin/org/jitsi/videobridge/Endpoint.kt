@@ -100,9 +100,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
 
-const val MAX_VIDEO_SSRCS = 3
-const val MAX_AUDIO_SSRCS = 3
-
 /**
  * Models a local endpoint (participant) in a [Conference]
  */
@@ -291,14 +288,14 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * $
+     * The set of video ssrcs that have been sent already, ordered by last use.
      */
-    private val videoSsrcs = SsrcCache("video", MAX_VIDEO_SSRCS)
+    private val videoSsrcs = SsrcCache("video", maxVideoSsrcs)
 
     /**
-     * $
+     * The set of audio ssrcs that have been sent already, ordered by last use.
      */
-    private val audioSsrcs = SsrcCache("audio", MAX_AUDIO_SSRCS)
+    private val audioSsrcs = SsrcCache("audio", maxAudioSsrcs)
 
     init {
         conference.encodingsManager.subscribe(this)
@@ -1140,6 +1137,14 @@ class Endpoint @JvmOverloads constructor(
 
         private val statsFilterThreshold: Int by config {
             "videobridge.stats-filter-threshold".from(JitsiConfig.newConfig)
+        }
+
+        private val maxVideoSsrcs: Int by config {
+            "videobridge.ssrc-limit.video".from(JitsiConfig.newConfig)
+        }
+
+        private val maxAudioSsrcs: Int by config {
+            "videobridge.ssrc-limit.audio".from(JitsiConfig.newConfig)
         }
     }
 
