@@ -17,16 +17,20 @@ package org.jitsi.videobridge
 
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.core.test.TestCase
+import io.kotest.core.test.TestResult
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import org.jitsi.config.withNewConfig
 import org.jitsi.shutdown.ShutdownServiceImpl
-import org.jitsi.test.time.FakeClock
+import org.jitsi.test.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.OrderedJsonObject
-import org.jitsi.utils.mins
+import org.jitsi.videobridge.shutdown.ShutdownConfig
 import org.jitsi.videobridge.shutdown.ShutdownState
+import org.jitsi.videobridge.util.TaskPools
 import org.jivesoftware.smack.packet.ErrorIQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.json.simple.parser.JSONParser
@@ -36,8 +40,17 @@ class VideobridgeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
 
     private val shutdownService: ShutdownServiceImpl = mockk(relaxed = true)
-    private val clock = FakeClock()
-    private val videobridge = Videobridge(null, shutdownService, mockk(), null, clock)
+    private val mockExecutor = spyk<FakeScheduledExecutorService>()
+    private val videobridge = Videobridge(null, shutdownService, mockk(), null, mockExecutor.clock)
+
+    override fun beforeAny(testCase: TestCase) = super.beforeAny(testCase).also {
+        TaskPools.SCHEDULED_POOL = mockExecutor
+    }
+
+    override fun afterAny(testCase: TestCase, result: TestResult) = super.afterAny(testCase, result).also {
+        TaskPools.resetScheduledPool()
+    }
+
     init {
         context("Debug state should be JSON") {
             videobridge.getDebugState(null, null, true).shouldBeValidJson()
@@ -64,14 +77,21 @@ class VideobridgeTest : ShouldSpec() {
                         context("When the number of participants drops below the threshold") {
                             repeat(10) { videobridge.endpointExpired() }
                             videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
-                            // TODO: how can we verify that the shutdownService has been called when the task is
-                            // scheduled on TaskPools.SCHEDULED_POOL
+                            mockExecutor.clock.elapse(ShutdownConfig.config.shuttingDownDelay)
+                            mockExecutor.run()
+                            verify(exactly = 1) { shutdownService.beginShutdown() }
                         }
                         context("When the graceful shutdown period expires") {
-                            clock.elapse(60.mins)
-                            // TODO: how can we verify that the state has transitioned to SHUTTING_DOWN when the task
-                            // was scheduled on TaskPools.SCHEDULED_POOL?
-                            // videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
+                            should("go to SHUTTING_DOWN") {
+                                mockExecutor.clock.elapse(ShutdownConfig.config.gracefulShutdownMaxDuration)
+                                mockExecutor.run()
+                                videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
+                                should("and then shut down after shuttingDownDelay") {
+                                    mockExecutor.clock.elapse(ShutdownConfig.config.shuttingDownDelay)
+                                    mockExecutor.run()
+                                    verify(exactly = 1) { shutdownService.beginShutdown() }
+                                }
+                            }
                         }
                     }
                 }
