@@ -139,7 +139,7 @@ class RtpSenderImpl(
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         outgoingRtpRoot = pipeline {
-            node(AudioRedHandler(streamInformationStore))
+            node(AudioRedHandler(streamInformationStore, logger))
             node(HeaderExtStripper(streamInformationStore))
             node(outgoingPacketCache)
             node(absSendTime)

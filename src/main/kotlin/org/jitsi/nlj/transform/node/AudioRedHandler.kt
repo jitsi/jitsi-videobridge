@@ -27,16 +27,21 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpPacketCache
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtp.RedundancyBlockHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiffAsInt
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 
 class AudioRedHandler(
-    streamInformationStore: ReadOnlyStreamInformationStore
+    streamInformationStore: ReadOnlyStreamInformationStore,
+    parentLogger: Logger
 ) : MultipleOutputTransformerNode("RedHandler") {
 
+    private val logger = createChildLogger(parentLogger)
     private val stats = Stats()
 
     var audioLevelExtId: Int? = null
@@ -80,6 +85,7 @@ class AudioRedHandler(
         addNumber("audio_packets_forwarded", stats.audioPacketsForwarded)
         addNumber("lost_packets_recovered", stats.lostPacketsRecovered)
         addNumber("redundancy_packets_added", stats.redundancyPacketsAdded)
+        addNumber("invalid_red_packets_dropped", stats.invalidRedPacketsDropped)
     }
 
     override fun stop() = super.stop().also {
@@ -226,18 +232,27 @@ class AudioRedHandler(
                 val prevMissing = !sentAudioCache.contains(prev)
                 val prev2Missing = !sentAudioCache.contains(prev2)
 
-                if (prevMissing || prev2Missing) {
-                    redPacket.removeRedAndGetRedundancyPackets().forEach {
-                        if ((it.sequenceNumber == prev && prevMissing) ||
-                            (it.sequenceNumber == prev2 && prev2Missing)
-                        ) {
-                            add(PacketInfo(it))
-                            stats.lostPacketRecovered()
+                try {
+                    if (prevMissing || prev2Missing) {
+                        redPacket.removeRedAndGetRedundancyPackets().forEach {
+                            if ((it.sequenceNumber == prev && prevMissing) ||
+                                (it.sequenceNumber == prev2 && prev2Missing)
+                            ) {
+                                add(PacketInfo(it))
+                                stats.lostPacketRecovered()
+                            }
+                            sentAudioCache.insert(it)
                         }
-                        sentAudioCache.insert(it)
+                    } else {
+                        redPacket.removeRed()
                     }
-                } else {
-                    redPacket.removeRed()
+                } catch (e: IllegalArgumentException) {
+                    logger.warn(
+                        "Dropping invalid RED packet (${e.message}): $redPacket. Contents (100B): " +
+                            redPacket.toHex(100)
+                    )
+                    stats.invalidRedPacketDropped()
+                    return@buildList
                 }
 
                 stats.redPacketDecapsulated()
@@ -289,6 +304,7 @@ enum class RedDistance {
 data class Stats(
     var redPacketsDecapsulated: Int = 0,
     var redPacketsForwarded: Int = 0,
+    var invalidRedPacketsDropped: Int = 0,
     var audioPacketsEncapsulated: Int = 0,
     var audioPacketsForwarded: Int = 0,
     var lostPacketsRecovered: Int = 0,
@@ -296,6 +312,7 @@ data class Stats(
 ) {
     fun redPacketDecapsulated() = redPacketsDecapsulated++
     fun redPacketForwarded() = redPacketsForwarded++
+    fun invalidRedPacketDropped() = invalidRedPacketsDropped++
     fun audioPacketEncapsulated() = audioPacketsEncapsulated++
     fun audioPacketForwarded() = audioPacketsForwarded++
     fun lostPacketRecovered() = lostPacketsRecovered++
