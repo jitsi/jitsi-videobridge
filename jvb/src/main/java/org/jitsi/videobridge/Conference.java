@@ -824,7 +824,7 @@ public class Conference
     }
 
     @NotNull
-    public Relay createRelay(String id, boolean iceControlling, boolean useUniquePort)
+    public Relay createRelay(String id, @Nullable String meshId, boolean iceControlling, boolean useUniquePort)
     {
         final Relay existingRelay = getRelay(id);
         if (existingRelay != null)
@@ -832,7 +832,7 @@ public class Conference
             throw new IllegalArgumentException("Relay with ID = " + id + "already created");
         }
 
-        final Relay relay = new Relay(id, this, logger, iceControlling, useUniquePort);
+        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
 
         relaysById.put(id, relay);
 

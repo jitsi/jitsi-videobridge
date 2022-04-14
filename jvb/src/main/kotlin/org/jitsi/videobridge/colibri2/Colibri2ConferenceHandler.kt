@@ -318,7 +318,12 @@ class Colibri2ConferenceHandler(
                 "Attempt to create relay ${c2relay.id} with no <transport>"
             )
 
-            relay = conference.createRelay(c2relay.id, transport.iceControlling, transport.useUniquePort)
+            relay = conference.createRelay(
+                c2relay.id,
+                c2relay.meshId,
+                transport.iceControlling,
+                transport.useUniquePort
+            )
         } else {
             relay = conference.getRelay(c2relay.id) ?: throw IqProcessingException(
                 // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.

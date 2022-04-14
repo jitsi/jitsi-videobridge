@@ -108,6 +108,7 @@ class Relay @JvmOverloads constructor(
     /**
      * True if the ICE agent for this [Relay] will be initialized to serve as a controlling ICE agent, false otherwise.
      */
+    val meshId: String?,
     iceControlling: Boolean,
     useUniquePort: Boolean,
     clock: Clock = Clock.systemUTC()
@@ -280,7 +281,8 @@ class Relay @JvmOverloads constructor(
                     System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
                     val pktInfo =
                         OctoPacketInfo(
-                            UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
+                            UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length),
+                            meshId
                         ).apply {
                             this.receivedTime = receivedTime
                         }
@@ -769,9 +771,14 @@ class Relay @JvmOverloads constructor(
      */
     private fun isTransportConnected(): Boolean = iceTransport.isConnected() && dtlsTransport.isConnected
 
-    /* If we're connected, forward everything that didn't come in over a relay.
+    /* If we're connected, forward everything that didn't come in over a relay or that came from a different
+       relay mesh.
         TODO: worry about bandwidth limits on relay links? */
-    override fun wants(packet: PacketInfo): Boolean = isTransportConnected() && packet !is OctoPacketInfo
+    override fun wants(packet: PacketInfo): Boolean =
+        isTransportConnected() && (
+            packet !is OctoPacketInfo ||
+                packet.meshId != meshId
+            )
 
     override fun send(packet: PacketInfo) {
         packet.endpointId?.let {
