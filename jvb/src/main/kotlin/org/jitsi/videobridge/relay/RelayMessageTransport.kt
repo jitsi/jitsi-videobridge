@@ -436,6 +436,7 @@ class RelayMessageTransport(
             return null
         }
         conference.localEndpoints.filter { it.wantsStatsFrom(from) }.forEach { it.sendMessage(message) }
+        conference.relays.filter { it.meshId != relay.meshId }.forEach { it.sendMessage(message) }
         return null
     }
 
