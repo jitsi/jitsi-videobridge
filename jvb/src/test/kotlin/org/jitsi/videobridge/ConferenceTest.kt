@@ -31,7 +31,7 @@ import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    private val videobridge = mockk<Videobridge> {
+    private val videobridge = mockk<Videobridge>(relaxed = true) {
         every { statistics } returns Videobridge.Statistics()
     }
 

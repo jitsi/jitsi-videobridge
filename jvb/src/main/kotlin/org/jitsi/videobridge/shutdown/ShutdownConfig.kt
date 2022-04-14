@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 - Present, 8x8 Inc
+ * Copyright @ 2022 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,27 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge
+package org.jitsi.videobridge.shutdown
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import java.time.Duration
 
-class VideobridgeConfig private constructor() {
+class ShutdownConfig {
+    private constructor()
+
+    val gracefulShutdownMaxDuration: Duration by config {
+        "videobridge.shutdown.graceful-shutdown-max-duration".from(JitsiConfig.newConfig)
+    }
+    val gracefulShutdownMinParticipants: Int by config {
+        "videobridge.shutdown.graceful-shutdown-min-participants".from(JitsiConfig.newConfig)
+    }
+    val shuttingDownDelay: Duration by config {
+        "videobridge.shutdown.shutting-down-delay".from(JitsiConfig.newConfig)
+    }
+
     companion object {
-        val initialDrainMode: Boolean by config {
-            "videobridge.initial-drain-mode".from(JitsiConfig.newConfig)
-        }
+        @JvmField
+        val config = ShutdownConfig()
     }
 }

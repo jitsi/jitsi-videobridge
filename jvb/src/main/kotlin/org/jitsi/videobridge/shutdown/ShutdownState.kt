@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 - Present, 8x8 Inc
+ * Copyright @ 2022 - Present, 8x8 Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.videobridge.shutdown
 
-package org.jitsi.videobridge
-
-import org.jitsi.config.JitsiConfig
-import org.jitsi.metaconfig.config
-
-class VideobridgeConfig private constructor() {
-    companion object {
-        val initialDrainMode: Boolean by config {
-            "videobridge.initial-drain-mode".from(JitsiConfig.newConfig)
-        }
-    }
+enum class ShutdownState {
+    RUNNING,
+    GRACEFUL_SHUTDOWN,
+    SHUTTING_DOWN
 }
