@@ -46,7 +46,7 @@ class RedPacketParser<PacketType : RtpPacket>(
         val redundancyBlockHeaders = mutableListOf<RedundancyBlockHeader>()
         lateinit var primaryBlockHeader: PrimaryBlockHeader
         do {
-            if (currentOffset > length) {
+            if (currentOffset >= offset + length) {
                 throw IllegalArgumentException(
                     "Invalid RED packet: no last header block found within the allowed length."
                 )

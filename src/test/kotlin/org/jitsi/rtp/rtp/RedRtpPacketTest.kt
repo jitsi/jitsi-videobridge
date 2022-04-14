@@ -9,6 +9,7 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeTypeOf
+import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.bytearray.byteArrayOf
 import org.jitsi.test_helpers.matchers.haveSameFixedHeader
 import org.jitsi.test_helpers.matchers.haveSamePayload
@@ -59,16 +60,16 @@ class RedRtpPacketTest : ShouldSpec() {
             }
         }
         context("Parsing a RED packet with a single block") {
-            context("Without reading the redundancy blocks") {
-                val packet = RtpRedPacket(redPacketBytesSingleBlock.clone(), 0, redPacketBytesSingleBlock.size)
-                packet.payloadType shouldBe 112
-                packet.sequenceNumber shouldBe 0x7b2b
-                packet.timestamp shouldBe 0x44b2836e
-                packet.ssrc shouldBe 0x16493f2d
-                packet.hasExtensions shouldBe true
-                packet.getHeaderExtension(1).shouldHaveId1AndLen1()
-                packet.payloadLength shouldBe 66
+            val packet = RtpRedPacket(redPacketBytesSingleBlock.clone(), 0, redPacketBytesSingleBlock.size)
+            packet.payloadType shouldBe 112
+            packet.sequenceNumber shouldBe 0x7b2b
+            packet.timestamp shouldBe 0x44b2836e
+            packet.ssrc shouldBe 0x16493f2d
+            packet.hasExtensions shouldBe true
+            packet.getHeaderExtension(1).shouldHaveId1AndLen1()
+            packet.payloadLength shouldBe 66
 
+            context("Without reading the redundancy blocks") {
                 packet.decapsulate(parseRedundancy = false)
                 packet.payloadType shouldBe 111
                 packet.sequenceNumber shouldBe 0x7b2b
@@ -79,15 +80,6 @@ class RedRtpPacketTest : ShouldSpec() {
                 packet.payloadLength shouldBe 65
             }
             context("And reading the redundancy blocks") {
-                val packet = RtpRedPacket(redPacketBytesSingleBlock.clone(), 0, redPacketBytesSingleBlock.size)
-                packet.payloadType shouldBe 112
-                packet.sequenceNumber shouldBe 0x7b2b
-                packet.timestamp shouldBe 0x44b2836e
-                packet.ssrc shouldBe 0x16493f2d
-                packet.hasExtensions shouldBe true
-                packet.getHeaderExtension(1).shouldHaveId1AndLen1()
-                packet.payloadLength shouldBe 66
-
                 val redundantPackets = packet.decapsulate(parseRedundancy = true)
                 redundantPackets.shouldBeEmpty()
                 packet.payloadType shouldBe 111
@@ -100,16 +92,16 @@ class RedRtpPacketTest : ShouldSpec() {
             }
         }
         context("Parsing a RED packet with multiple blocks") {
-            context("Without reading the redundancy blocks") {
-                val packet = RtpRedPacket(redPacketBytes.clone(), 0, redPacketBytes.size)
-                packet.payloadType shouldBe 112
-                packet.sequenceNumber shouldBe 0x7b2b
-                packet.timestamp shouldBe 0x44b2836e
-                packet.ssrc shouldBe 0x16493f2d
-                packet.hasExtensions shouldBe true
-                packet.getHeaderExtension(1).shouldHaveId1AndLen1()
-                packet.payloadLength shouldBe 4 + 4 + 1 + 65 + 68 + 62 // block headers + block lengths
+            val packet = RtpRedPacket(redPacketBytes.clone(), 0, redPacketBytes.size)
+            packet.payloadType shouldBe 112
+            packet.sequenceNumber shouldBe 0x7b2b
+            packet.timestamp shouldBe 0x44b2836e
+            packet.ssrc shouldBe 0x16493f2d
+            packet.hasExtensions shouldBe true
+            packet.getHeaderExtension(1).shouldHaveId1AndLen1()
+            packet.payloadLength shouldBe 4 + 4 + 1 + 65 + 68 + 62 // block headers + block lengths
 
+            context("Without reading the redundancy blocks") {
                 packet.decapsulate(parseRedundancy = false)
                 packet.payloadType shouldBe 111
                 packet.sequenceNumber shouldBe 0x7b2b
@@ -120,16 +112,8 @@ class RedRtpPacketTest : ShouldSpec() {
                 packet.payloadLength shouldBe 62
             }
             context("And reading the redundancy block") {
-                val packet = RtpRedPacket(redPacketBytes.clone(), 0, redPacketBytes.size)
-                packet.payloadType shouldBe 112
-                packet.sequenceNumber shouldBe 0x7b2b
                 // Make sure we test the case when the sequence numbers wrap
                 packet.sequenceNumber = 1
-                packet.timestamp shouldBe 0x44b2836e
-                packet.ssrc shouldBe 0x16493f2d
-                packet.hasExtensions shouldBe true
-                packet.getHeaderExtension(1).shouldHaveId1AndLen1()
-                packet.payloadLength shouldBe 4 + 4 + 1 + 65 + 68 + 62 // block headers + block lengths
 
                 val redundancyPackets = packet.decapsulate(parseRedundancy = true)
                 redundancyPackets.size shouldBe 2
@@ -153,6 +137,156 @@ class RedRtpPacketTest : ShouldSpec() {
                 packet.hasExtensions shouldBe true
                 packet.getHeaderExtension(1).shouldHaveId1AndLen1()
                 packet.payloadLength shouldBe 62
+            }
+        }
+        context("Parsing a RED packet with short blocks") {
+            val buffer = ByteArray(
+                redPacketBytesShortBlocks.size +
+                    RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                    Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
+            )
+            redPacketBytesShortBlocks.copyInto(buffer, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET)
+            val packet = RtpRedPacket(
+                buffer,
+                RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                redPacketBytesShortBlocks.size
+            )
+            packet.payloadType shouldBe 112
+            packet.sequenceNumber shouldBe 35006
+            packet.timestamp shouldBe 862774129L
+            packet.ssrc shouldBe 624250097L
+            packet.hasExtensions shouldBe true
+            packet.getHeaderExtension(1).shouldHaveId1AndLen1()
+            packet.payloadLength shouldBe 4 + 1 + 3 + 3 // block headers + block lengths
+
+            context("Without reading the redundancy blocks") {
+                packet.decapsulate(parseRedundancy = false)
+                packet.payloadType shouldBe 111
+                packet.sequenceNumber shouldBe 35006
+                packet.timestamp shouldBe 862774129L
+                packet.ssrc shouldBe 624250097L
+                packet.hasExtensions shouldBe true
+                packet.getHeaderExtension(1).shouldHaveId1AndLen1()
+                packet.payloadLength shouldBe 3
+            }
+            context("And reading the redundancy block") {
+                val redundancyPackets = packet.decapsulate(parseRedundancy = true)
+                redundancyPackets.size shouldBe 1
+
+                redundancyPackets[0].payloadType shouldBe 111
+                redundancyPackets[0].sequenceNumber shouldBe 35005
+                redundancyPackets[0].timestamp shouldBe 862774129L - 960L
+                redundancyPackets[0].ssrc shouldBe 624250097L
+                redundancyPackets[0].hasExtensions shouldBe false
+                redundancyPackets[0].payloadLength shouldBe 3
+
+                packet.payloadType shouldBe 111
+                packet.sequenceNumber shouldBe 35006
+                packet.timestamp shouldBe 862774129L
+                packet.ssrc shouldBe 624250097L
+                packet.hasExtensions shouldBe true
+                packet.getHeaderExtension(1).shouldHaveId1AndLen1()
+                packet.payloadLength shouldBe 3
+            }
+        }
+        context("Parsing a RED packet with zero-length blocks") {
+            val packet = RtpRedPacket(
+                redPacketBytesZeroLengthBlocks.clone(),
+                0,
+                redPacketBytesZeroLengthBlocks.size
+            )
+            packet.payloadType shouldBe 112
+            packet.sequenceNumber shouldBe 35006
+            packet.timestamp shouldBe 862774129L
+            packet.ssrc shouldBe 624250097L
+            packet.hasExtensions shouldBe false
+            packet.payloadLength shouldBe 4 + 1 // block headers
+
+            context("Without reading the redundancy blocks") {
+                packet.decapsulate(parseRedundancy = false)
+                packet.payloadType shouldBe 0
+                packet.sequenceNumber shouldBe 35006
+                packet.timestamp shouldBe 862774129L
+                packet.ssrc shouldBe 624250097L
+                packet.hasExtensions shouldBe false
+                packet.payloadLength shouldBe 0
+            }
+            context("And reading the redundancy block") {
+                val redundancyPackets = packet.decapsulate(parseRedundancy = true)
+                redundancyPackets.size shouldBe 1
+
+                redundancyPackets[0].payloadType shouldBe 0
+                redundancyPackets[0].sequenceNumber shouldBe 35005
+                redundancyPackets[0].timestamp shouldBe 862774129L
+                redundancyPackets[0].ssrc shouldBe 624250097L
+                redundancyPackets[0].hasExtensions shouldBe false
+                redundancyPackets[0].payloadLength shouldBe 0
+
+                packet.payloadType shouldBe 0
+                packet.sequenceNumber shouldBe 35006
+                packet.timestamp shouldBe 862774129L
+                packet.ssrc shouldBe 624250097L
+                packet.hasExtensions shouldBe false
+                packet.payloadLength shouldBe 0
+            }
+        }
+        context("Parsing a truncated RED packet") {
+            context("Without buffer padding") {
+                val packet = RtpRedPacket(
+                    redPacketBytesZeroLengthBlocks.clone(),
+                    0,
+                    redPacketBytesZeroLengthBlocks.size - 1
+                )
+
+                should("throw IllegalArgumentException") {
+                    shouldThrow<IllegalArgumentException> {
+                        packet.decapsulate(parseRedundancy = false)
+                    }
+                    shouldThrow<IllegalArgumentException> {
+                        packet.decapsulate(parseRedundancy = true)
+                    }
+                }
+            }
+            context("With buffer padding") {
+                val buffer = ByteArray(
+                    redPacketBytesZeroLengthBlocks.size - 1 +
+                        RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
+                        Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
+                )
+                redPacketBytesZeroLengthBlocks.copyInto(
+                    buffer,
+                    RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                    0,
+                    redPacketBytesZeroLengthBlocks.size - 1
+                )
+                val packet = RtpRedPacket(
+                    buffer,
+                    RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                    redPacketBytesZeroLengthBlocks.size - 1
+                )
+
+                should("throw IllegalArgumentException") {
+                    shouldThrow<IllegalArgumentException> {
+                        packet.decapsulate(parseRedundancy = false)
+                    }
+                    shouldThrow<IllegalArgumentException> {
+                        packet.decapsulate(parseRedundancy = true)
+                    }
+                }
+            }
+            context("With a short buffer") {
+                val buffer = ByteArray(redPacketBytesZeroLengthBlocks.size - 1)
+                redPacketBytesZeroLengthBlocks.copyInto(buffer, 0, 0, redPacketBytesZeroLengthBlocks.size - 1)
+                val packet = RtpRedPacket(buffer, 0, redPacketBytesZeroLengthBlocks.size - 1)
+
+                should("throw IllegalArgumentException") {
+                    shouldThrow<IllegalArgumentException> {
+                        packet.decapsulate(parseRedundancy = false)
+                    }
+                    shouldThrow<IllegalArgumentException> {
+                        packet.decapsulate(parseRedundancy = true)
+                    }
+                }
             }
         }
         context("Creating a RED packet without redundancy") {
@@ -340,4 +474,38 @@ private val redPacketBytesSingleBlock = byteArrayOf(
     0x74, 0xf8, 0xd5, 0xb9,
     0x07, 0xda, 0x18, 0x19,
     0x92
+)
+
+private val redPacketBytesShortBlocks = byteArrayOf(
+    // RTP Header. PT=112, seq=35006
+    0x90, 0x70, 0x88, 0xBE,
+    // TS
+    0x33, 0x6C, 0xE3, 0x71,
+    // SSRC
+    0x25, 0x35, 0x4C, 0xF1,
+    // Extension
+    0xBE, 0xDE, 0x00, 0x02,
+    // ID=5, val=0xEA4D; ID=1, val=0xFF
+    0x51, 0xEA, 0x4D, 0x10, 0xFF, 0x00, 0x00, 0x00,
+    // RED Header block 1: follow=true, pt=111, ts_offset=960, length=3
+    0xEF, 0x0F, 0x00, 0x03,
+    // RED Header block 2: follow=false, pt=111 (remaining length=3)
+    0x6F,
+    // Block 1
+    0xD8, 0xFF, 0xFE,
+    // Block 2
+    0xD8, 0xFF, 0xFE
+)
+
+private val redPacketBytesZeroLengthBlocks = byteArrayOf(
+    // RTP Header. PT=112, seq=35006
+    0x80, 0x70, 0x88, 0xBE,
+    // TS
+    0x33, 0x6C, 0xE3, 0x71,
+    // SSRC
+    0x25, 0x35, 0x4C, 0xF1,
+    // RED Header block 1: follow=true, pt=0, ts_offset=0, length=0
+    0x80, 0x00, 0x00, 0x00,
+    // RED Header block 2: follow=false, pt=0 (remaining length=0)
+    0x00
 )
