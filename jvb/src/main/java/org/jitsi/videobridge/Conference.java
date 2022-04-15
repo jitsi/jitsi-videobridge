@@ -418,6 +418,36 @@ public class Conference
     }
 
     /**
+     * Sends a message that originated from a relay, forwarding it to local endpoints
+     * and to those relays with different mesh-id values than the source relay
+     *
+     * @param msg the message to be sent
+     * @param meshId the ID of the mesh from which the message was received.
+     */
+    public void sendMessageFromRelay(
+        BridgeChannelMessage msg,
+        @Nullable String meshId)
+    {
+        for (Endpoint endpoint : getLocalEndpoints())
+        {
+            endpoint.sendMessage(msg);
+        }
+
+        for (Relay relay: relaysById.values())
+        {
+            if (!Objects.equals(meshId, relay.getMeshId()))
+            {
+                relay.sendMessage(msg);
+            }
+        }
+
+        if (tentacle != null && meshId != null)
+        {
+            tentacle.sendMessage(msg);
+        }
+    }
+
+    /**
      * Used to send a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
