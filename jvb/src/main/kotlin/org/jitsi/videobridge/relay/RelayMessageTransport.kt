@@ -195,6 +195,8 @@ class RelayMessageTransport(
 
         ep.setVideoType(message.videoType)
 
+        relay.conference.sendMessageFromRelay(message, relay.meshId)
+
         return null
     }
 
@@ -217,6 +219,8 @@ class RelayMessageTransport(
         }
 
         ep.setVideoType(message.sourceName, message.videoType)
+
+        relay.conference.sendMessageFromRelay(message, relay.meshId)
 
         return null
     }
