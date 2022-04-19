@@ -165,6 +165,9 @@ class Colibri2ConferenceHandler(
             )
             val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
             conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames).apply {
+                c2endpoint.statsId?.let {
+                    statsId = it
+                }
                 transport.sctp?.let { sctp ->
                     if (!SctpConfig.config.enabled) {
                         throw IqProcessingException(
