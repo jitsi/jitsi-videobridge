@@ -106,9 +106,13 @@ class Relay @JvmOverloads constructor(
     val conference: Conference,
     parentLogger: Logger,
     /**
-     * True if the ICE agent for this [Relay] will be initialized to serve as a controlling ICE agent, false otherwise.
+     * The ID of the mesh to which this [Relay] connection belongs.
+     * (Note that a bridge can be a member of more than one mesh, but each relay link will belong to only one.)
      */
     val meshId: String?,
+    /**
+     * True if the ICE agent for this [Relay] will be initialized to serve as a controlling ICE agent, false otherwise.
+     */
     iceControlling: Boolean,
     useUniquePort: Boolean,
     clock: Clock = Clock.systemUTC()
