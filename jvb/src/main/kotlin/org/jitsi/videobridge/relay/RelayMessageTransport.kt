@@ -195,7 +195,7 @@ class RelayMessageTransport(
 
         ep.setVideoType(message.videoType)
 
-        relay.conference.sendMessageFromRelay(message, relay.meshId)
+        relay.conference.sendMessageFromRelay(message, false, relay.meshId)
 
         return null
     }
@@ -220,7 +220,7 @@ class RelayMessageTransport(
 
         ep.setVideoType(message.sourceName, message.videoType)
 
-        relay.conference.sendMessageFromRelay(message, relay.meshId)
+        relay.conference.sendMessageFromRelay(message, false, relay.meshId)
 
         return null
     }
@@ -400,7 +400,7 @@ class RelayMessageTransport(
             return null
         }
         if (message.isBroadcast()) {
-            conference.sendMessageFromRelay(message, relay.meshId)
+            conference.sendMessageFromRelay(message, true, relay.meshId)
         } else {
             // 1:1 message
             val to = message.to
@@ -448,7 +448,7 @@ class RelayMessageTransport(
             logger.warn("Unable to send EndpointConnectionStatusMessage, conference is expired")
             return null
         }
-        conference.sendMessageFromRelay(message, relay.meshId)
+        conference.sendMessageFromRelay(message, true, relay.meshId)
         return null
     }
 }

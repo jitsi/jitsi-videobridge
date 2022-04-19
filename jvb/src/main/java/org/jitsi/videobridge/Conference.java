@@ -419,18 +419,22 @@ public class Conference
 
     /**
      * Sends a message that originated from a relay, forwarding it to local endpoints
-     * and to those relays with different mesh-id values than the source relay
+     * (if {@param sendToEndpoints} is true) and to those relays with different mesh-id values than the source relay
      *
      * @param msg the message to be sent
      * @param meshId the ID of the mesh from which the message was received.
      */
     public void sendMessageFromRelay(
         BridgeChannelMessage msg,
+        boolean sendToEndpoints,
         @Nullable String meshId)
     {
-        for (Endpoint endpoint : getLocalEndpoints())
+        if (sendToEndpoints)
         {
-            endpoint.sendMessage(msg);
+            for (Endpoint endpoint : getLocalEndpoints())
+            {
+                endpoint.sendMessage(msg);
+            }
         }
 
         for (Relay relay: relaysById.values())
@@ -441,10 +445,7 @@ public class Conference
             }
         }
 
-        if (tentacle != null && meshId != null)
-        {
-            tentacle.sendMessage(msg);
-        }
+        /* Never need to send to tentacle, meshId != null cannot be true for Colibri1. */
     }
 
     /**
