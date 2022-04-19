@@ -40,9 +40,11 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val executor: FakeScheduledExecutorService = spyk()
     val localEp1: Endpoint = mockk {
         every { id } returns "1"
+        every { visitor } returns false
     }
     val localEp2: Endpoint = mockk {
         every { id } returns "2"
+        every { visitor } returns false
     }
     val eps = listOf(localEp1, localEp2)
 
