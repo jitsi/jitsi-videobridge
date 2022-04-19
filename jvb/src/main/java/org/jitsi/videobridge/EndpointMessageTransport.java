@@ -569,6 +569,10 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage endpointMessage(EndpointMessage message)
     {
+        if (endpoint.getVisitor()) {
+            getLogger().warn("Not forwarding endpoint stats from visitor endpoint");
+        }
+
         // First insert/overwrite the "from" to prevent spoofing.
         String from = endpoint.getId();
         message.setFrom(from);
@@ -624,6 +628,10 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage endpointStats(@NotNull EndpointStats message)
     {
+        if (endpoint.getVisitor()) {
+            getLogger().warn("Not forwarding endpoint stats from visitor endpoint");
+        }
+
         // First insert/overwrite the "from" to prevent spoofing.
         String from = endpoint.getId();
         message.setFrom(from);
