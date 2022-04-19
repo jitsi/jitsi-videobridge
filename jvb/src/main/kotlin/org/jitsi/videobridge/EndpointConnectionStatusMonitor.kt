@@ -66,7 +66,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
     }
 
     private fun run() {
-        conference.localEndpoints.forEach(::monitorEndpointActivity)
+        conference.localEndpoints.filter { !it.visitor }.forEach(::monitorEndpointActivity)
     }
 
     private fun monitorEndpointActivity(endpoint: Endpoint) {
@@ -140,7 +140,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
      */
     fun endpointConnected(endpointId: String) {
         synchronized(inactiveEndpointIds) {
-            val localEndpointIds = conference.localEndpoints.map { it.id }
+            val localEndpointIds = conference.localEndpoints.filter { !it.visitor }.map { it.id }
             inactiveEndpointIds.forEach { inactiveEpId ->
                 // inactiveEndpointIds may contain endpoints that have already expired and/or moved to another bridge.
                 if (localEndpointIds.contains(inactiveEpId)) {
