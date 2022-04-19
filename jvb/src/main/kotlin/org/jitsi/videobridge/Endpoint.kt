@@ -88,7 +88,7 @@ import java.nio.ByteBuffer
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.Optional
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -113,6 +113,12 @@ class Endpoint @JvmOverloads constructor(
      * The time at which this endpoint was created
      */
     private val creationTime = clock.instant()
+
+    /**
+     * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
+     */
+    var visitor = false
+    /* TODO: may need a setter method which does something when this transitions */
 
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
@@ -801,6 +807,12 @@ class Endpoint @JvmOverloads constructor(
      * transceiver's incoming pipeline.
      */
     fun handleIncomingPacket(packetInfo: PacketInfo) {
+        if (visitor) {
+            /* Never forward RTP/RTCP from a visitor. */
+            ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
+            return
+        }
+
         packetInfo.endpointId = id
         conference.handleIncomingPacket(packetInfo)
     }

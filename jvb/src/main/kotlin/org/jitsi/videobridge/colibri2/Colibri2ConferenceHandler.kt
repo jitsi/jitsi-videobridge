@@ -50,6 +50,7 @@ import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
 import org.jitsi.xmpp.util.IQUtils
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
+import org.jivesoftware.smackx.muc.MUCRole
 
 class Colibri2ConferenceHandler(
     private val conference: Conference,
@@ -199,6 +200,12 @@ class Colibri2ConferenceHandler(
             )
         }
 
+        if (c2endpoint.mucRole == MUCRole.visitor) {
+            endpoint.visitor = true
+        } else if (c2endpoint.mucRole != null) {
+            endpoint.visitor = false
+        }
+
         for (media in c2endpoint.media) {
             // TODO: support removing payload types/header extensions
             media.payloadTypes.forEach { ptExt ->
@@ -239,6 +246,13 @@ class Colibri2ConferenceHandler(
         }
 
         c2endpoint.sources?.let { sources ->
+            if (endpoint.visitor) {
+                throw IqProcessingException(
+                    Condition.bad_request,
+                    "Attempt to set sources for visitor endpoint ${c2endpoint.id}"
+                )
+            }
+
             sources.mediaSources.forEach { mediaSource ->
                 mediaSource.sources.forEach {
                     endpoint.addReceiveSsrc(it.ssrc, mediaSource.type)
