@@ -569,7 +569,8 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage endpointMessage(EndpointMessage message)
     {
-        if (endpoint.getVisitor()) {
+        if (endpoint.getVisitor())
+        {
             getLogger().warn("Not forwarding endpoint stats from visitor endpoint");
         }
 
@@ -628,7 +629,8 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage endpointStats(@NotNull EndpointStats message)
     {
-        if (endpoint.getVisitor()) {
+        if (endpoint.getVisitor())
+        {
             getLogger().warn("Not forwarding endpoint stats from visitor endpoint");
         }
 
