@@ -195,6 +195,8 @@ class RelayMessageTransport(
 
         ep.setVideoType(message.videoType)
 
+        relay.conference.sendMessageFromRelay(message, false, relay.meshId)
+
         return null
     }
 
@@ -217,6 +219,8 @@ class RelayMessageTransport(
         }
 
         ep.setVideoType(message.sourceName, message.videoType)
+
+        relay.conference.sendMessageFromRelay(message, false, relay.meshId)
 
         return null
     }
@@ -395,21 +399,19 @@ class RelayMessageTransport(
             logger.warn("Unable to send EndpointMessage, conference is expired")
             return null
         }
-        val targets = if (message.isBroadcast()) {
-            // Broadcast message
-            conference.localEndpoints
+        if (message.isBroadcast()) {
+            conference.sendMessageFromRelay(message, true, relay.meshId)
         } else {
             // 1:1 message
             val to = message.to
             val targetEndpoint = conference.getLocalEndpoint(to)
-            if (targetEndpoint != null) {
-                listOf(targetEndpoint)
-            } else {
+            if (targetEndpoint == null) {
                 logger.warn("Unable to find endpoint to send EndpointMessage to: $to")
                 return null
             }
+
+            conference.sendMessage(message, listOf(targetEndpoint), false /* sendToOcto */)
         }
-        conference.sendMessage(message, targets, false /* sendToOcto */)
         return null
     }
 
@@ -436,6 +438,7 @@ class RelayMessageTransport(
             return null
         }
         conference.localEndpoints.filter { it.wantsStatsFrom(from) }.forEach { it.sendMessage(message) }
+        conference.relays.filter { it.meshId != relay.meshId }.forEach { it.sendMessage(message) }
         return null
     }
 
@@ -445,7 +448,7 @@ class RelayMessageTransport(
             logger.warn("Unable to send EndpointConnectionStatusMessage, conference is expired")
             return null
         }
-        conference.broadcastMessage(message, false /* sendToOcto */)
+        conference.sendMessageFromRelay(message, true, relay.meshId)
         return null
     }
 }

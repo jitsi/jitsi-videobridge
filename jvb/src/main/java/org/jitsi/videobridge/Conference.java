@@ -418,6 +418,37 @@ public class Conference
     }
 
     /**
+     * Sends a message that originated from a relay, forwarding it to local endpoints
+     * (if {@param sendToEndpoints} is true) and to those relays with different mesh-id values than the source relay
+     *
+     * @param msg the message to be sent
+     * @param meshId the ID of the mesh from which the message was received.
+     */
+    public void sendMessageFromRelay(
+        BridgeChannelMessage msg,
+        boolean sendToEndpoints,
+        @Nullable String meshId)
+    {
+        if (sendToEndpoints)
+        {
+            for (Endpoint endpoint : getLocalEndpoints())
+            {
+                endpoint.sendMessage(msg);
+            }
+        }
+
+        for (Relay relay: relaysById.values())
+        {
+            if (!Objects.equals(meshId, relay.getMeshId()))
+            {
+                relay.sendMessage(msg);
+            }
+        }
+
+        /* Never need to send to tentacle, meshId != null cannot be true for Colibri1. */
+    }
+
+    /**
      * Used to send a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
@@ -824,7 +855,7 @@ public class Conference
     }
 
     @NotNull
-    public Relay createRelay(String id, boolean iceControlling, boolean useUniquePort)
+    public Relay createRelay(String id, @Nullable String meshId, boolean iceControlling, boolean useUniquePort)
     {
         final Relay existingRelay = getRelay(id);
         if (existingRelay != null)
@@ -832,7 +863,7 @@ public class Conference
             throw new IllegalArgumentException("Relay with ID = " + id + "already created");
         }
 
-        final Relay relay = new Relay(id, this, logger, iceControlling, useUniquePort);
+        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
 
         relaysById.put(id, relay);
 
