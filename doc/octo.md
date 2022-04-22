@@ -61,13 +61,15 @@ Secure-octo requires colibri websockets for the bridge-to-bridge connections, wh
 ## Jicofo configuration
 The latest versions of jicofo support only colibri v2/secure-octo.
 
-The only configuration parameter that needs to be changed is the bridge selection strategy (in 
-`/etc/jitsi/jicofo/jicofo.conf`):
+Octo needs to be enabled, and a suitable bridge selection strategy needs to be configured in `/etc/jitsi/jicofo/jicofo.conf`:
 
 ```
 jicofo {
   bridge {
     selection-strategy = RegionBasedBridgeSelectionStrategy
+  }
+  octo {
+    enabled = true
   }
 }
 ```
@@ -79,6 +81,29 @@ in the region of the client.
 The `SplitBridgeSelectionStrategy` can be used for testing. It tries to select a new bridge 
 for each client, regardless of the regions. This is useful while testing, because you can 
 verify that Octo works before setting up the region configuration for the clients.
+
+*Important note*: Jicofo will not mix bridges with different versions in the same conference. Even with
+`SplitBridgeSelectionStrategy` if the bridges have different versions only bridges with the same version will be used.
+
+## Debugging
+Jicofo's debug interface can be used for troubleshooting.
+
+To list the bridges available to jicofo (with their versions, regions, etc):
+```commandline
+curl "http://localhost:8888/debug" | jq .bridge_selector
+```
+
+To list currently running conferences:
+```commandline
+curl "http://localhost:8888/debug" | jq .focus_manager
+```
+
+To list the full state of a conference (get actual conference ID with the command above, escaping the '@' sign):
+```commandline
+curl "http://localhost:8888/debug/test\@conference.example.com" | jq .
+```
+
+Look under `colibri_session_manager` for the different bridge sessions.
 
 
 ## Configuring client regions
