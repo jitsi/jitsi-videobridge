@@ -1170,6 +1170,11 @@ public class Videobridge
         public AtomicInteger totalEndpoints = new AtomicInteger();
 
         /**
+         * The total number of visitor endpoints.
+         */
+        public AtomicInteger visitorEndpoints = new AtomicInteger();
+
+        /**
          * The number of endpoints which had not established an endpoint
          * message transport even after some delay.
          */

@@ -118,7 +118,20 @@ class Endpoint @JvmOverloads constructor(
      * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
      */
     var visitor = false
-    /* TODO: may need a setter method which does something when this transitions */
+        set(value) {
+            val oldValue = field
+            field = value
+            if (oldValue == value) {
+                return
+            }
+            /* Keep stats of number of visitors, even if it changes. */
+            if (value) {
+                conference.videobridge.statistics.visitorEndpoints.incrementAndGet()
+            } else {
+                conference.videobridge.statistics.visitorEndpoints.decrementAndGet()
+            }
+            /* TODO: do we need to take any other actions when this transitions, e.g. for EndpointStatusMonitor? */
+        }
 
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
