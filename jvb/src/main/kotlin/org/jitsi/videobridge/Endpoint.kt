@@ -1072,6 +1072,7 @@ class Endpoint @JvmOverloads constructor(
             put("transceiver", transceiver.getNodeStats().toJson())
             put("acceptAudio", acceptAudio)
             put("acceptVideo", acceptVideo)
+            put("visitor", visitor)
             put("messageTransport", messageTransport.debugState)
         }
     }
