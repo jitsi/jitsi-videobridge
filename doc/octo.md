@@ -56,7 +56,8 @@ Secure-octo can be configured with the following properties in `/etc/jitsi/video
 Legacy configuration is detected and automatically adapted, so no configuration changes are necessary when upgrading.
 
 Secure-octo requires colibri websockets for the bridge-to-bridge connections, which can be enabled as described in
-[this document](https://github.com/jitsi/jitsi-videobridge/blob/master/doc/web-sockets.md).
+[this document](https://github.com/jitsi/jitsi-videobridge/blob/master/doc/web-sockets.md). Note that the `colibri-relay-ws`
+endpoints also need to be proxied.
 
 ## Jicofo configuration
 The latest versions of jicofo support only colibri v2/secure-octo.
