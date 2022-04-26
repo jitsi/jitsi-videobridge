@@ -67,7 +67,7 @@ class ColibriWebSocketService(
         if (!config.enabled) {
             return null
         }
-        // "wss://example.com/colibri-relay-ws/server-id/conf-id/endpoint-id?pwd=123
+        // "wss://example.com/colibri-relay-ws/server-id/conf-id/relay-id?pwd=123
         return "$relayUrl/$conferenceId/$relayId?pwd=$pwd"
     }
 

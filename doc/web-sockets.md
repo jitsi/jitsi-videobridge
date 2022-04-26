@@ -15,7 +15,7 @@ wss://example.com/colibri-ws/server-id/conf-id/endpoint-id?pwd=123
 
 For secure-octo relays the URL has the following format:
 ```
-wss://example.com/colibri-relay-ws/server-id/conf-id/endpoint-id?pwd=123
+wss://example.com/colibri-relay-ws/server-id/conf-id/relay-id?pwd=123
 ```
 
 # Bridge configuration
