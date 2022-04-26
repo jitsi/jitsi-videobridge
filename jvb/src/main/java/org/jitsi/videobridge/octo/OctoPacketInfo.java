@@ -24,8 +24,21 @@ import org.jitsi.rtp.*;
  */
 public class OctoPacketInfo extends PacketInfo
 {
+    @Nullable private final String meshId;
     public OctoPacketInfo(@NotNull Packet packet)
     {
         super(packet);
+        meshId = null;
+    }
+
+    public OctoPacketInfo(@NotNull Packet packet, @Nullable String meshId)
+    {
+        super(packet);
+        this.meshId = meshId;
+    }
+
+    public String getMeshId()
+    {
+        return meshId;
     }
 }
