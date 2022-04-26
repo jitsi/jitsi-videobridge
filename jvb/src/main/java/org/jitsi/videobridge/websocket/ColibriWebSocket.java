@@ -84,6 +84,12 @@ public class ColibriWebSocket extends WebSocketAdapter
         eventHandler.webSocketClosed(this, statusCode, reason);
     }
 
+    @Override
+    public void onWebSocketError(Throwable cause)
+    {
+        eventHandler.webSocketError(cause);
+    }
+
     public interface EventHandler {
         /**
          * Notifies that a specific {@link ColibriWebSocket}
@@ -103,5 +109,6 @@ public class ColibriWebSocket extends WebSocketAdapter
          * @param ws the {@link ColibriWebSocket} from which a message was received.
          */
         void webSocketTextReceived(ColibriWebSocket ws, String message);
+        default void webSocketError(Throwable cause) {}
     }
 }

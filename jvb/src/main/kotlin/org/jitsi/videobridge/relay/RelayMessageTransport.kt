@@ -323,6 +323,9 @@ class RelayMessageTransport(
         }
     }
 
+    override fun webSocketError(cause: Throwable) =
+        logger.error("Failed to establish colibri websocket: ${cause.message}")
+
     /**
      * {@inheritDoc}
      */
