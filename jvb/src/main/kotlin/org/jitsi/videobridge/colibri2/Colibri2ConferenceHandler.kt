@@ -18,6 +18,7 @@ import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
+import org.jitsi.xmpp.extensions.colibri2.Capability
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Relay
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifiedIQ
@@ -139,7 +140,10 @@ class Colibri2ConferenceHandler(
                 Condition.bad_request,
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
-            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling).apply {
+            conference.createLocalEndpoint(
+                c2endpoint.id, transport.iceControlling,
+                c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
+            ).apply {
                 transport.sctp?.let { sctp ->
                     if (!SctpConfig.config.enabled) {
                         throw IqProcessingException(

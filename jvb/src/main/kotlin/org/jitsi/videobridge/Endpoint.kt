@@ -112,6 +112,7 @@ class Endpoint @JvmOverloads constructor(
      * as a controlling ICE agent, false otherwise
      */
     iceControlling: Boolean,
+    private val doSsrcRewriting: Boolean = false,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
     /**

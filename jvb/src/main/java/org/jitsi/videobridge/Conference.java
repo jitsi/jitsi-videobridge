@@ -794,7 +794,7 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public Endpoint createLocalEndpoint(String id, boolean iceControlling)
+    public Endpoint createLocalEndpoint(String id, boolean iceControlling, boolean doSsrcRewriting)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint instanceof OctoEndpoint)
@@ -812,7 +812,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling);
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, doSsrcRewriting);
 
         subscribeToEndpointEvents(endpoint);
 

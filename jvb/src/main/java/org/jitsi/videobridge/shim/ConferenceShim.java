@@ -306,7 +306,7 @@ public class ConferenceShim
             return;
         }
 
-        conference.createLocalEndpoint(endpointId, iceControlling);
+        conference.createLocalEndpoint(endpointId, iceControlling, false); /* $ check */
     }
 
     /**
