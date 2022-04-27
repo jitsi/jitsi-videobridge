@@ -833,20 +833,21 @@ class Endpoint @JvmOverloads constructor(
         bitrateController.setBandwidthAllocationSettings(message)
 
     /**
-     * $
+     * Find the properties of the source indicated by the given SSRC. Returns null if not found.
      */
     private fun findSourceProps(ssrc: Long): MediaSourceDesc? {
+        // $ remove some of the logs before merging
         conference.getEndpointBySsrc(ssrc)?.let {
-            logger.debug("EP -> ${it.id} ${it.statsId} ${it.mediaSources.size}")
+            logger.debug { "EP -> ${it.id} ${it.statsId} ${it.mediaSources.size}" }
             it.mediaSources.forEach {
-                logger.debug("\tSSRC -> ${it.primarySSRC} ${it.videoType} ${it.sourceName} ${it.owner}")
+                logger.debug { "\tSSRC -> ${it.primarySSRC} ${it.videoType} ${it.sourceName} ${it.owner}" }
                 if (it.findRtpEncodingDesc(ssrc) != null) {
-                    logger.debug("that's one!")
+                    logger.debug("that's the one!")
                     return it
                 }
             }
         }
-        logger.debug("\tnot found.")
+        logger.debug { "\tNo properties found for SSRC $ssrc." }
         return null
     }
 
@@ -1324,7 +1325,7 @@ class Endpoint @JvmOverloads constructor(
         private val allSsrcs = HashMap<Long, Projection>()
 
         /**
-         * $
+         * Log the current SSRC mappings.
          */
         private fun logCurrentSsrcs() {
             logger.debug {
