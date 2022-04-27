@@ -323,6 +323,9 @@ class RelayMessageTransport(
         }
     }
 
+    override fun webSocketError(ws: ColibriWebSocket, cause: Throwable) =
+        logger.error("Colibri websocket error: ${cause.message}")
+
     /**
      * {@inheritDoc}
      */

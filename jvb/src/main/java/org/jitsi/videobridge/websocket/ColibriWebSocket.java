@@ -84,6 +84,15 @@ public class ColibriWebSocket extends WebSocketAdapter
         eventHandler.webSocketClosed(this, statusCode, reason);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onWebSocketError(Throwable cause)
+    {
+        eventHandler.webSocketError(this, cause);
+    }
+
     public interface EventHandler {
         /**
          * Notifies that a specific {@link ColibriWebSocket}
@@ -103,5 +112,12 @@ public class ColibriWebSocket extends WebSocketAdapter
          * @param ws the {@link ColibriWebSocket} from which a message was received.
          */
         void webSocketTextReceived(ColibriWebSocket ws, String message);
+
+        /**
+         * An error occurred for a specific websocket.
+         * @param ws the websocket.
+         * @param cause the cause of the error.
+         */
+        void webSocketError(ColibriWebSocket ws, Throwable cause);
     }
 }
