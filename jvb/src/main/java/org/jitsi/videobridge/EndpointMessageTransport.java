@@ -571,7 +571,8 @@ public class EndpointMessageTransport
     {
         if (endpoint.getVisitor())
         {
-            getLogger().warn("Not forwarding endpoint stats from visitor endpoint");
+            getLogger().warn("Not forwarding endpoint message from visitor endpoint");
+            return null;
         }
 
         // First insert/overwrite the "from" to prevent spoofing.
@@ -632,6 +633,7 @@ public class EndpointMessageTransport
         if (endpoint.getVisitor())
         {
             getLogger().warn("Not forwarding endpoint stats from visitor endpoint");
+            return null;
         }
 
         // First insert/overwrite the "from" to prevent spoofing.
