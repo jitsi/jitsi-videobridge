@@ -306,7 +306,12 @@ public class ConferenceShim
             return;
         }
 
-        conference.createLocalEndpoint(endpointId, iceControlling, false); /* $ check */
+        conference.createLocalEndpoint(
+                endpointId,
+                iceControlling,
+                false, /* no multi-stream in colibri V1 */
+                false /* $ check */
+        );
     }
 
     /**
@@ -347,7 +352,7 @@ public class ConferenceShim
     {
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
-        responseConferenceIQ.setGracefulShutdown(conference.getVideobridge().isShutdownInProgress());
+        responseConferenceIQ.setGracefulShutdown(conference.getVideobridge().isInGracefulShutdown());
 
         initializeSignaledEndpoints(conferenceIQ);
 

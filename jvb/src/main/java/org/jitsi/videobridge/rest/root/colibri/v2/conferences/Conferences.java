@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.rest.root.colibri.conferences;
+package org.jitsi.videobridge.rest.root.colibri.v2.conferences;
 
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.rest.exceptions.*;
-import org.jitsi.xmpp.extensions.colibri.*;
-import org.jitsi.xmpp.extensions.colibri.json.*;
+import org.jitsi.xmpp.extensions.colibri2.*;
+import org.jitsi.xmpp.extensions.colibri2.json.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
@@ -31,7 +31,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.util.*;
 
-@Path("/colibri/conferences")
+@Path("/colibri/v2/conferences")
 @EnabledByConfig(RestApis.COLIBRI)
 public class Conferences
 {
@@ -42,57 +42,32 @@ public class Conferences
     @Produces(MediaType.APPLICATION_JSON)
     public String getConferences()
     {
-        Videobridge videobridge = this.videobridge;
-        List<ColibriConferenceIQ> conferenceIQs = new ArrayList<>();
-
-        for (Conference conference : videobridge.getConferences())
-        {
-            ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
-
-            conferenceIQ.setID(conference.getID());
-            conferenceIQs.add(conferenceIQ);
-        }
-
-        JSONArray conferencesJSONArray
-                = JSONSerializer.serializeConferences(conferenceIQs);
-
-        if (conferencesJSONArray == null)
-        {
-            conferencesJSONArray = new JSONArray();
-        }
-
-
-        return conferencesJSONArray.toJSONString();
+        /* Not clear what this should do.  If you have a use case please contact us with requirements. */
+        throw new ServerErrorException(Response.Status.NOT_IMPLEMENTED);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("/{confId}")
-    public String getConference(@PathParam("confId") String confId)
+    @Path("/{meetingId}")
+    public String getConference(@PathParam("meetingId") String meetingId)
     {
-        Conference conference = videobridge.getConference(confId);
+        Conference conference = videobridge.getConferenceByMeetingId(meetingId);
 
         if (conference == null)
         {
             throw new NotFoundException();
         }
 
-        ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
-
-        conference.getShim().describeDeep(conferenceIQ);
-
-        JSONObject conferenceJSONObject
-                = JSONSerializer.serializeConference(conferenceIQ);
-
-        return conferenceJSONObject.toJSONString();
+        /* Not clear what this should do.  If you have a use case please contact us with requirements. */
+        throw new ServerErrorException(Response.Status.NOT_IMPLEMENTED);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("/{confId}/dominant-speaker-identification")
-    public String getDominantSpeakerIdentification(@PathParam("confId") String confId)
+    @Path("/{meetingId}/dominant-speaker-identification")
+    public String getDominantSpeakerIdentification(@PathParam("meetingId") String meetingId)
     {
-        Conference conference = videobridge.getConference(confId);
+        Conference conference = videobridge.getConferenceByMeetingId(meetingId);
 
         if (conference == null)
         {
@@ -124,24 +99,28 @@ public class Conferences
                     "Failed to create conference, could not parse JSON: " + pe.getMessage());
         }
 
-        ColibriConferenceIQ requestConferenceIQ
-                = JSONDeserializer.deserializeConference((JSONObject) requestJson);
+        ConferenceModifyIQ conferenceModifyIQ;
 
-        if ((requestConferenceIQ == null) || requestConferenceIQ.getID() != null)
+        try
         {
-            throw new BadRequestExceptionWithMessage("Must not include conference ID");
+            conferenceModifyIQ
+                = Colibri2JSONDeserializer.deserializeConferenceModify((JSONObject) requestJson).build();
+        }
+        catch (Exception e)
+        {
+            throw new BadRequestExceptionWithMessage("Failed to parse ConferenceModify JSON:" + e.getMessage());
         }
 
-        return getVideobridgeIqResponseAsJson(requestConferenceIQ);
+        return getVideobridgeIqResponseAsJson(conferenceModifyIQ);
     }
 
     @PATCH
-    @Path("/{confId}")
+    @Path("/{meetingId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public String patchConference(@PathParam("confId") String confId, String requestBody)
+    public String patchConference(@PathParam("meetingId") String meetingId, String requestBody)
     {
-        Conference conference = videobridge.getConference(confId);
+        Conference conference = videobridge.getConferenceByMeetingId(meetingId);
         if (conference == null)
         {
             throw new NotFoundException();
@@ -150,26 +129,37 @@ public class Conferences
         try
         {
             requestJson = new JSONParser().parse(requestBody);
+            if (!(requestJson instanceof JSONObject))
+            {
+                throw new BadRequestException();
+            }
         }
         catch (ParseException e)
         {
             throw new BadRequestException();
         }
 
-        ColibriConferenceIQ requestIq = JSONDeserializer.deserializeConference((JSONObject)requestJson);
-
-        if (requestIq == null || ((requestIq.getID() != null) &&
-                !requestIq.getID().equalsIgnoreCase(conference.getID())))
+        ConferenceModifyIQ.Builder conferenceModifyIQBuilder;
+        try
         {
-            throw new BadRequestException();
+            conferenceModifyIQBuilder
+                = Colibri2JSONDeserializer.deserializeConferenceModify((JSONObject) requestJson);
+        }
+        catch (Exception e)
+        {
+            throw new BadRequestExceptionWithMessage("Failed to parse ConferenceModify JSON:" + e.getMessage());
         }
 
-        return getVideobridgeIqResponseAsJson(requestIq);
+        conferenceModifyIQBuilder.setMeetingId(meetingId);
+
+        ConferenceModifyIQ conferenceModifyIQ = conferenceModifyIQBuilder.build();
+
+        return getVideobridgeIqResponseAsJson(conferenceModifyIQ);
     }
 
-    private String getVideobridgeIqResponseAsJson(ColibriConferenceIQ request)
+    private String getVideobridgeIqResponseAsJson(ConferenceModifyIQ request)
     {
-        IQ responseIq = videobridge.handleColibriConferenceIQ(request);
+        IQ responseIq = videobridge.handleConferenceModifyIq(request);
 
         if (responseIq.getError() != null)
         {
@@ -177,17 +167,12 @@ public class Conferences
                     "Failed to create conference: " + responseIq.getError().getDescriptiveText());
         }
 
-        if (!(responseIq instanceof ColibriConferenceIQ))
+        if (!(responseIq instanceof ConferenceModifiedIQ))
         {
             throw new InternalServerErrorExceptionWithMessage("Non-error, non-colibri IQ result");
         }
 
-        JSONObject responseJson = JSONSerializer.serializeConference((ColibriConferenceIQ)responseIq);
-
-        if (responseJson == null)
-        {
-            responseJson = new JSONObject();
-        }
+        JSONObject responseJson = Colibri2JSONSerializer.serializeConferenceModified((ConferenceModifiedIQ)responseIq);
 
         return responseJson.toJSONString();
     }

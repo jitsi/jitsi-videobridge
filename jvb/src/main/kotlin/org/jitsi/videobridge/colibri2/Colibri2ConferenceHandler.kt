@@ -1,3 +1,18 @@
+/*
+ * Copyright @ 2022 - Present, 8x8 Inc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.jitsi.videobridge.colibri2
 
 import org.jitsi.nlj.MediaSourceDesc
@@ -16,6 +31,7 @@ import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
+import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
 import org.jitsi.xmpp.extensions.colibri2.Capability
@@ -55,6 +71,13 @@ class Colibri2ConferenceHandler(
             responseBuilder.addEndpoint(handleColibri2Endpoint(e))
         }
         for (r in conferenceModifyIQ.relays) {
+            if (!WebsocketServiceConfig.config.enabled) {
+                logger.warn(
+                    "Can not use a colibri2 relay, because colibri web sockets are not enabled. See " +
+                        "https://github.com/jitsi/jitsi-videobridge/blob/master/doc/octo.md"
+                )
+                throw UnsupportedOperationException("Colibri websockets need to be enabled to use a colibri2 relay.")
+            }
             responseBuilder.addRelay(handleColibri2Relay(r))
         }
 
@@ -140,10 +163,12 @@ class Colibri2ConferenceHandler(
                 Condition.bad_request,
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
-            conference.createLocalEndpoint(
-                c2endpoint.id, transport.iceControlling,
-                c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
-            ).apply {
+            val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
+            val ssrcRewriting = c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
+            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames, ssrcRewriting).apply {
+                c2endpoint.statsId?.let {
+                    statsId = it
+                }
                 transport.sctp?.let { sctp ->
                     if (!SctpConfig.config.enabled) {
                         throw IqProcessingException(
@@ -227,10 +252,10 @@ class Colibri2ConferenceHandler(
 
             // Assume a message can only contain one source per media type.
             // If "sources" was signaled, but it didn't contain any video sources, clear the endpoint's video sources
-            val newMediaSources = sources.mediaSources.find { it.type == MediaType.VIDEO }?.let {
-                MediaSourceFactory.createMediaSources2(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
-            } ?: emptyArray()
-            endpoint.mediaSources = newMediaSources
+            val newMediaSources = sources.mediaSources.filter { it.type == MediaType.VIDEO }.mapNotNull {
+                MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
+            }
+            endpoint.mediaSources = newMediaSources.toTypedArray()
         }
 
         c2endpoint.forceMute?.let {
@@ -297,7 +322,12 @@ class Colibri2ConferenceHandler(
                 "Attempt to create relay ${c2relay.id} with no <transport>"
             )
 
-            relay = conference.createRelay(c2relay.id, transport.iceControlling, transport.useUniquePort)
+            relay = conference.createRelay(
+                c2relay.id,
+                c2relay.meshId,
+                transport.iceControlling,
+                transport.useUniquePort
+            )
         } else {
             relay = conference.getRelay(c2relay.id) ?: throw IqProcessingException(
                 // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
@@ -369,8 +399,10 @@ class Colibri2ConferenceHandler(
                         m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id)) }
                     }
                 } else if (m.type == MediaType.VIDEO) {
-                    val descs = MediaSourceFactory.createMediaSources2(m.sources, m.ssrcGroups, id, m.id)
-                    videoSources.addAll(listOf(*descs))
+                    val desc = MediaSourceFactory.createMediaSource(m.sources, m.ssrcGroups, id, m.id)
+                    if (desc != null) {
+                        videoSources.add(desc)
+                    }
                 } else {
                     logger.warn("Ignoring source ${m.id} in endpoint $id of a relay: unsupported type ${m.type}")
                 }

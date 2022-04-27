@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
+import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
@@ -64,9 +65,11 @@ import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.Endpoint
+import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
 import org.jitsi.videobridge.message.BridgeChannelMessage
+import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.stats.PacketTransitStats
@@ -102,6 +105,11 @@ class Relay @JvmOverloads constructor(
      */
     val conference: Conference,
     parentLogger: Logger,
+    /**
+     * The ID of the mesh to which this [Relay] connection belongs.
+     * (Note that a bridge can be a member of more than one mesh, but each relay link will belong to only one.)
+     */
+    val meshId: String?,
     /**
      * True if the ICE agent for this [Relay] will be initialized to serve as a controlling ICE agent, false otherwise.
      */
@@ -277,7 +285,8 @@ class Relay @JvmOverloads constructor(
                     System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
                     val pktInfo =
                         OctoPacketInfo(
-                            UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
+                            UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length),
+                            meshId
                         ).apply {
                             this.receivedTime = receivedTime
                         }
@@ -513,6 +522,25 @@ class Relay @JvmOverloads constructor(
 
     fun relayMessageTransportConnected() {
         relayedEndpoints.values.forEach { e -> e.relayMessageTransportConnected() }
+        if (MultiStreamConfig.config.enabled) {
+            conference.endpoints.forEach { e ->
+                if (e is Endpoint || (e is RelayedEndpoint && e.relay.meshId != meshId)) {
+                    e.mediaSources.forEach { msd: MediaSourceDesc ->
+                        val sourceName = msd.sourceName!! // Source names are mandatory/enforced in multi stream mode
+                        val videoType = msd.videoType
+                        // Do not send the initial value for CAMERA, because it's the default
+                        if (VideoType.CAMERA != videoType) {
+                            val videoTypeMsg = SourceVideoTypeMessage(
+                                videoType,
+                                sourceName,
+                                e.id
+                            )
+                            sendMessage(videoTypeMsg)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fun addRemoteEndpoint(
@@ -749,9 +777,14 @@ class Relay @JvmOverloads constructor(
      */
     private fun isTransportConnected(): Boolean = iceTransport.isConnected() && dtlsTransport.isConnected
 
-    /* If we're connected, forward everything that didn't come in over a relay.
+    /* If we're connected, forward everything that didn't come in over a relay or that came from a different
+       relay mesh.
         TODO: worry about bandwidth limits on relay links? */
-    override fun wants(packet: PacketInfo): Boolean = isTransportConnected() && packet !is OctoPacketInfo
+    override fun wants(packet: PacketInfo): Boolean =
+        isTransportConnected() && (
+            packet !is OctoPacketInfo ||
+                packet.meshId != meshId
+            )
 
     override fun send(packet: PacketInfo) {
         packet.endpointId?.let {

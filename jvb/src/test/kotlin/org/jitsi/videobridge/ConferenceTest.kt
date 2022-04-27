@@ -31,7 +31,7 @@ import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    private val videobridge = mockk<Videobridge> {
+    private val videobridge = mockk<Videobridge>(relaxed = true) {
         every { statistics } returns Videobridge.Statistics()
     }
 
@@ -44,7 +44,7 @@ class ConferenceTest : ConfigTest() {
         context("Adding local endpoints should work") {
             with(Conference(videobridge, "id", name, Conference.GID_NOT_SET, null, false, false)) {
                 endpointCount shouldBe 0
-                createLocalEndpoint("abcdabcd", true, false)
+                createLocalEndpoint("abcdabcd", true, false, false) // TODO cover the case when they're true
                 endpointCount shouldBe 1
                 debugState.shouldBeValidJson()
             }

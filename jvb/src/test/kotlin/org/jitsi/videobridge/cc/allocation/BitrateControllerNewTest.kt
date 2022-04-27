@@ -1363,6 +1363,7 @@ class BitrateControllerWrapper2(initialEndpoints: List<MediaSourceContainer>, va
         Supplier { endpoints },
         DiagnosticContext(),
         logger,
+        true, // TODO merge BitrateControllerNewTest with old and use this flag
         clock
     )
 

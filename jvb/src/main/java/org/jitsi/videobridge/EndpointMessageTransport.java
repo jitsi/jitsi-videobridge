@@ -34,6 +34,7 @@ import java.util.stream.*;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.jitsi.videobridge.VersionConfig.config;
+import static org.jitsi.videobridge.util.MultiStreamCompatibilityKt.endpointIdToSourceName;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -128,6 +129,18 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage videoType(VideoTypeMessage videoTypeMessage)
     {
+        if (MultiStreamConfig.config.getEnabled())
+        {
+            sourceVideoType(
+                new SourceVideoTypeMessage(
+                    videoTypeMessage.getVideoType(),
+                    endpointIdToSourceName(endpoint.getId()),
+                    videoTypeMessage.getEndpointId())
+            );
+
+            return null;
+        }
+
         endpoint.setVideoType(videoTypeMessage.getVideoType());
 
         Conference conference = endpoint.getConference();
@@ -385,6 +398,15 @@ public class EndpointMessageTransport
             }
         }
 
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void webSocketError(ColibriWebSocket ws, Throwable cause)
+    {
+        getLogger().error("Colibri websocket error: " +  cause.getMessage());
     }
 
     /**

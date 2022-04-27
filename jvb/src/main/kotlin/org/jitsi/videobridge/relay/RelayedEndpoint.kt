@@ -40,6 +40,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.octo.OctoPacketInfo
@@ -159,8 +160,16 @@ class RelayedEndpoint(
         )
     }
 
-    fun relayMessageTransportConnected() =
-        sendVideoConstraints(maxReceiverVideoConstraints)
+    fun relayMessageTransportConnected() {
+        if (MultiStreamConfig.config.enabled) {
+            maxReceiverVideoConstraintsMap.forEach {
+                (sourceName, constraints) ->
+                sendVideoConstraintsV2(sourceName, constraints)
+            }
+        } else {
+            sendVideoConstraints(maxReceiverVideoConstraints)
+        }
+    }
 
     private val _mediaSources = MediaSources()
 
@@ -169,6 +178,9 @@ class RelayedEndpoint(
     override var mediaSources: Array<MediaSourceDesc>
         get() = _mediaSources.getMediaSources()
         set(value) {
+            if (MultiStreamConfig.config.enabled) {
+                applyVideoTypeCache(value)
+            }
             val changed = _mediaSources.setMediaSources(value)
             if (changed) {
                 val setMediaSourcesEvent = SetMediaSourcesEvent(mediaSources)

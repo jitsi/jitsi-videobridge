@@ -40,9 +40,15 @@ public class TaskPools
                     Runtime.getRuntime().availableProcessors(),
                     new CustomizableThreadFactory("Global CPU pool", false)
             );
-
-    public static final ScheduledExecutorService SCHEDULED_POOL =
+    private final static ScheduledExecutorService DEFAULT_SCHEDULED_POOL =
             Executors.newSingleThreadScheduledExecutor(new CustomizableThreadFactory("Global scheduled pool", false));
+    public static ScheduledExecutorService SCHEDULED_POOL = DEFAULT_SCHEDULED_POOL;
+
+    public static void resetScheduledPool()
+    {
+        SCHEDULED_POOL = DEFAULT_SCHEDULED_POOL;
+    }
+
 
     @SuppressWarnings("unchecked")
     public static JSONObject getStatsJson(ExecutorService es)

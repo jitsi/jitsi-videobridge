@@ -13,6 +13,11 @@ The URL has the following format:
 wss://example.com/colibri-ws/server-id/conf-id/endpoint-id?pwd=123
 ```
 
+For secure-octo relays the URL has the following format:
+```
+wss://example.com/colibri-relay-ws/server-id/conf-id/relay-id?pwd=123
+```
+
 # Bridge configuration
 To enable WebSockets on the bridge, both the publicly-accessible HTTP server and WebSockets
 themselves must be enabled.
@@ -87,6 +92,26 @@ ports `9090` and `9091` without TLS, and are configured with
 
 This configuration allows two jitsi-videobridge instances to run on the same
 machine, which is useful while testing Octo.
+
+For secure-octo the `/colibri-relay-ws` endpoints also need to be proxied:
+```
+   # colibri secure-octo relay websockets for jvb1
+   location ~ ^/colibri-relay-ws/jvb1/(.*) {
+       proxy_pass http://127.0.0.1:9090/colibri-relay-ws/jvb1/$1$is_args$args;
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection "upgrade";
+       tcp_nodelay on;
+   }
+   location ~ ^/colibri-relay-ws/jvb2/(.*) {
+       proxy_pass http://127.0.0.1:9091/colibri-relay-ws/jvb2/$1$is_args$args;
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection "upgrade";
+       proxy_set_header Host alpha.jitsi.net;
+       tcp_nodelay on;
+   }
+```
 
 # Troubleshooting
 To verify that WebSockets are configured and used, first check that the Colibri

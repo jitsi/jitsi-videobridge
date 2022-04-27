@@ -45,6 +45,7 @@ import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jxmpp.stringprep.XmppStringPrepUtil
+import java.time.Clock
 import kotlin.concurrent.thread
 import org.jitsi.videobridge.octo.singleton as octoRelayService
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
@@ -97,7 +98,7 @@ fun main(args: Array<String>) {
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(
-        xmppConnection, shutdownService, versionService.currentVersion, VersionConfig.config.release
+        xmppConnection, shutdownService, versionService.currentVersion, VersionConfig.config.release, Clock.systemUTC()
     ).apply { start() }
     val healthChecker = videobridge.jvbHealthChecker
     val octoRelayService = octoRelayService().get()?.apply { start() }

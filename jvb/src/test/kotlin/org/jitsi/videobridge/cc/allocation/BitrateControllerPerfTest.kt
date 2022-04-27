@@ -75,7 +75,8 @@ class BitrateControllerPerfTest : StringSpec() {
         Supplier { endpoints.toList() },
         DiagnosticContext(),
         createLogger(),
-        clock
+        false, // TODO cover the case for true?
+        clock,
     ).apply {
         // The BC only starts working 10 seconds after it first received media, so fake that.
         transformRtp(PacketInfo(VideoRtpPacket(ByteArray(100), 0, 100)))
