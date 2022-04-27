@@ -1265,7 +1265,6 @@ class Endpoint @JvmOverloads constructor(
 
     /**
      * Rewrite RTP packets so they appear to be a continuation of an already advertised ssrc.
-     * This is just a placeholder for now. We may add this functionality to existing objects.
      */
     private class Projection(props: MediaSourceDesc?, packet: RtpPacket) {
         var ssrc = packet.ssrc

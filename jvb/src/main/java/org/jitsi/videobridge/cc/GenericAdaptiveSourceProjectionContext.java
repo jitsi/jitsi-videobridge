@@ -328,14 +328,6 @@ class GenericAdaptiveSourceProjectionContext
     }
 
     @Override
-    public void setRtpState(RtpState rtpState)
-    {
-        // $ ssrc = rtpState.ssrc;
-        maxDestinationSequenceNumber = rtpState.maxSequenceNumber;
-        maxDestinationTimestamp = rtpState.maxTimestamp;
-    }
-
-    @Override
     public PayloadType getPayloadType()
     {
         return payloadType;

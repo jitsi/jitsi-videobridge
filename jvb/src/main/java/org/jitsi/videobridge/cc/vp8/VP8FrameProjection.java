@@ -19,7 +19,6 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
-import org.jitsi.videobridge.cc.RtpState;
 
 import java.time.*;
 
@@ -280,11 +279,6 @@ public class VP8FrameProjection
         {
             return rewriteSeqNo(vp8Frame.getLatestKnownSequenceNumber());
         }
-    }
-
-    public void setRtpState(RtpState rtpState)
-    {
-        // $
     }
 
     /**

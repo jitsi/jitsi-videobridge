@@ -673,12 +673,6 @@ public class VP8AdaptiveSourceProjectionContext
     }
 
     @Override
-    public void setRtpState(RtpState rtpState)
-    {
-        lastVP8FrameProjection.setRtpState(rtpState);
-    }
-
-    @Override
     public PayloadType getPayloadType()
     {
         return payloadType;
