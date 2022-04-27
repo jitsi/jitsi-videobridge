@@ -246,7 +246,7 @@ class Colibri2ConferenceHandler(
         }
 
         c2endpoint.sources?.let { sources ->
-            if (endpoint.visitor) {
+            if (endpoint.visitor && sources.mediaSources.isNotEmpty()) {
                 throw IqProcessingException(
                     Condition.bad_request,
                     "Attempt to set sources for visitor endpoint ${c2endpoint.id}"
