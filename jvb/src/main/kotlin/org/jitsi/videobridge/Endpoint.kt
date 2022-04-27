@@ -881,14 +881,15 @@ class Endpoint @JvmOverloads constructor(
             is VideoRtpPacket -> {
                 if (bitrateController.transformRtp(packetInfo)) {
                     // The original packet was transformed in place.
-                    videoSsrcs.rewriteRtp(packet)
+                    if (doSsrcRewriting)
+                        videoSsrcs.rewriteRtp(packet)
                     transceiver.sendPacket(packetInfo)
                 } else {
                     logger.warn("Dropping a packet which was supposed to be accepted:$packet")
                 }
                 return
             }
-            is AudioRtpPacket -> audioSsrcs.rewriteRtp(packet)
+            is AudioRtpPacket -> if (doSsrcRewriting) audioSsrcs.rewriteRtp(packet)
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
                 bitrateController.transformRtcp(packet)
