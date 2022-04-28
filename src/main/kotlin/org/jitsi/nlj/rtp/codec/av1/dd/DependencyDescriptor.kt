@@ -10,6 +10,12 @@ data class DependencyDescriptor(
     var activeDecodeTargetsBitmask: Int? = null,
     var attachedStructure: FrameDependencyStructure? = null
 ) {
+    fun isKeyFrame(): Boolean {
+        return frameDependencies?.let {
+            it.chainDiffs.size == 1 && it.chainDiffs.first() == 0 && it.frameDiffs.isEmpty()
+        } ?: false
+    }
+
     companion object {
         const val kMaxSpatialIds = 4
         const val kMaxTemporalIds = 8

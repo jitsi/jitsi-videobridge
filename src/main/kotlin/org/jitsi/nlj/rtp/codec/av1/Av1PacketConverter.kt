@@ -48,7 +48,7 @@ class Av1PacketConverter(val streamInformationStore: ReadOnlyStreamInformationSt
             rtpPacket.buffer,
             rtpPacket.offset,
             rtpPacket.length,
-            isKeyframe = true,
+            isKeyframe = descriptor.isKeyFrame(),
             isStartOfFrame = descriptor.firstPacketInFrame,
             isEndOfFrame = descriptor.lastPacketInFrame,
             frameNumber = descriptor.frameNumber,
