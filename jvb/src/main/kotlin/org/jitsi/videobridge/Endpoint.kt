@@ -1379,11 +1379,11 @@ class Endpoint @JvmOverloads constructor(
                         val eldest = currentSsrcs.eldest()
                         proj.transferState(eldest.value)
                         logger.debug { "${packet.ssrc} stealing ${eldest.value.ssrc} from ${eldest.key}" }
-                        sendMessage(proj.message)
                     } else {
                         logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.ssrc}" }
                     }
                     currentSsrcs.put(packet.ssrc, proj)
+                    sendMessage(proj.message)
                     entry = proj
                 }
                 logCurrentSsrcs()
