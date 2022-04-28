@@ -19,9 +19,12 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
+import org.jitsi.nlj.format.Av1PayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
+import org.jitsi.nlj.rtp.codec.av1.Av1PacketConverter
+import org.jitsi.nlj.rtp.codec.av1.Av1Parser
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Parser
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
@@ -50,6 +53,7 @@ class VideoParser(
     private var signaledSources: Array<MediaSourceDesc> = sources
 
     private var videoCodecParser: VideoCodecParser? = null
+    private val av1PacketConverter = Av1PacketConverter(streamInformationStore)
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packetAs<RtpPacket>()
@@ -89,6 +93,19 @@ class VideoParser(
                         videoCodecParser = Vp9Parser(sources, logger)
                     }
                     vp9Packet
+                }
+                is Av1PayloadType -> {
+                    val av1packet = av1PacketConverter.parse(packet)
+                    packetInfo.packet = av1packet
+                    packetInfo.resetPayloadVerification()
+
+                    if (videoCodecParser !is Av1Parser) {
+                        resetSources()
+                        packetInfo.layeringChanged = true
+                        videoCodecParser = Av1Parser(sources, logger)
+                    }
+
+                    av1packet
                 }
                 else -> {
                     if (videoCodecParser != null) {
