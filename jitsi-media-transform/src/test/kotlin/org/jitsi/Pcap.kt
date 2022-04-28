@@ -19,14 +19,14 @@ import java.io.EOFException
 import java.nio.ByteBuffer
 
 class Pcap : ShouldSpec() {
-    init {
-//        context("parse") {
-//            parse()
-//        }
-    }
+    /*init {
+        context("parse") {
+            parse()
+        }
+    }*/
 
     fun parse() {
-        val rawPackets = Pcaps.openOffline("/Users/jackz/Downloads/av1_1.pcapng").getPackets().toList()
+        val rawPackets = Pcaps.openOffline("/Users/paweldomas/Desktop/av1-svc.pcapng").getPackets().toList()
         // BsdLoopbackPacket
         val udpPackets = rawPackets
             .mapNotNull { it.payload as? IpV4Packet }
@@ -41,8 +41,8 @@ class Pcap : ShouldSpec() {
 
         val av1PayloadType = 41
         val rtxPayloadType = 42
-        val ddExtId = 8
-        val vlaExtId = 9
+        val ddExtId = 11
+        val vlaExtId = 12
 
         val av1PacketsPerSSRC = rtpPackets
             .filter { it.payloadType == av1PayloadType }
@@ -50,22 +50,42 @@ class Pcap : ShouldSpec() {
 
         val descriptors = mutableListOf<DependencyDescriptor>()
         var lastStructure: FrameDependencyStructure? = null
+        val av1WithDescriptors = mutableListOf<RtpPacket>()
+        val av1WithoutDescriptors = mutableListOf<RtpPacket>()
 
         av1PacketsPerSSRC.entries.first().value.forEach { rtpPacket ->
-            // TODO check if there are 2 bytes header
-            rtpPacket.getHeaderExtension(ddExtId)?.let {
+            val ddExt = rtpPacket.getHeaderExtension(ddExtId)
+
+            ddExt?.let {
                 val (descriptor, structure) = DependencyDescriptorReader(it, lastStructure).parse()
                 lastStructure = structure
                 descriptors.add(descriptor)
             }
 
-            rtpPacket.getHeaderExtension(vlaExtId)
+            val vlaExt = rtpPacket.getHeaderExtension(vlaExtId)
+
+            vlaExt
                 ?.let { VideoLayersAllocation.parse(it) }
                 ?.let { vlas.add(it) }
+
+            if (ddExt != null) {
+                av1WithDescriptors.add(rtpPacket)
+            } else {
+                av1WithoutDescriptors.add(rtpPacket)
+            }
         }
 
         descriptors.forEach {
             println(it)
+        }
+
+        println("AV1 with descriptors: ")
+        av1WithDescriptors.forEach {
+            println(it.sequenceNumber)
+        }
+        println("AV1 without descriptors: ")
+        av1WithoutDescriptors.forEach {
+            println(it.sequenceNumber)
         }
     }
 
