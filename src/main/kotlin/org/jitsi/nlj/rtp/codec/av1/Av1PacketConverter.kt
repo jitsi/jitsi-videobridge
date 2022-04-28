@@ -39,7 +39,7 @@ class Av1PacketConverter(val streamInformationStore: ReadOnlyStreamInformationSt
         val lastStructure = structures[ssrc]
 
         val extId = checkNotNull(ddExtId) { "missing dd ext id" }
-        val ddExt = checkNotNull(rtpPacket.getHeaderExtension(extId)) { "missing dd ext from $rtpPacket" }
+        val ddExt = checkNotNull(rtpPacket.getHeaderExtension(extId)) { "missing dd ext($ddExtId) from $rtpPacket" }
         val (descriptor, structure) = DependencyDescriptorReader(ddExt, lastStructure).parse()
 
         structures[ssrc] = structure
