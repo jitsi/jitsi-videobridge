@@ -47,7 +47,7 @@ class Av1PacketConverter(val streamInformationStore: ReadOnlyStreamInformationSt
 
         val ddView = checkNotNull(
             twoBytesExtensions.find { it.id == extId }?.let { BytesView(it) }
-            ?: rtpPacket.getHeaderExtension(extId)?.let { BytesView(it) }
+                ?: rtpPacket.getHeaderExtension(extId)?.let { BytesView(it) }
         ) {
             "missing dd ext($ddExtId) from $rtpPacket"
         }
@@ -65,7 +65,8 @@ class Av1PacketConverter(val streamInformationStore: ReadOnlyStreamInformationSt
             isEndOfFrame = descriptor.lastPacketInFrame,
             frameNumber = descriptor.frameNumber,
             temporalLayerIndex = descriptor.frameDependencies!!.temporalId,
-            spatialLayerIndex = descriptor.frameDependencies!!.spatialId
+            spatialLayerIndex = descriptor.frameDependencies!!.spatialId,
+            structure = descriptor.attachedStructure
         )
     }
 }

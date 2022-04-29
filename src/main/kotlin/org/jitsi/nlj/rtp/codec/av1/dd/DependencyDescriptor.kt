@@ -11,9 +11,7 @@ data class DependencyDescriptor(
     var attachedStructure: FrameDependencyStructure? = null
 ) {
     fun isKeyFrame(): Boolean {
-        return frameDependencies?.let {
-            it.chainDiffs.size == 1 && it.chainDiffs.first() == 0 && it.frameDiffs.isEmpty()
-        } ?: false
+        return frameDependencies?.decodeTargetIndications?.all { it == DecodeTargetIndication.SWITCH } ?: false
     }
 
     companion object {

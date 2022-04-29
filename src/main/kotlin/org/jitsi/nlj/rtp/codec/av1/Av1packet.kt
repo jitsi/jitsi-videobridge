@@ -19,6 +19,7 @@ package org.jitsi.nlj.rtp.codec.av1
 
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.ParsedVideoPacket
+import org.jitsi.nlj.rtp.codec.av1.dd.FrameDependencyStructure
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
@@ -32,7 +33,8 @@ class Av1packet(
     override val isEndOfFrame: Boolean,
     val frameNumber: Int,
     val temporalLayerIndex: Int,
-    val spatialLayerIndex: Int
+    val spatialLayerIndex: Int,
+    val structure: FrameDependencyStructure?
 ) : ParsedVideoPacket(buffer, offset, length, null) {
 
     override val layerId: Int
@@ -62,7 +64,8 @@ class Av1packet(
             isEndOfFrame = isEndOfFrame,
             frameNumber = frameNumber,
             temporalLayerIndex = temporalLayerIndex,
-            spatialLayerIndex = spatialLayerIndex
+            spatialLayerIndex = spatialLayerIndex,
+            structure = structure
         )
     }
 

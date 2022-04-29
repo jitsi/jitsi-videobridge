@@ -2,8 +2,11 @@ package org.jitsi
 
 import io.kotest.core.spec.style.ShouldSpec
 import org.jcodec.common.io.NIOUtils
-import org.jitsi.nlj.rtp.RtpExtension
-import org.jitsi.nlj.rtp.codec.av1.dd.*
+import org.jitsi.nlj.rtp.codec.av1.dd.DependencyDescriptorReader
+import org.jitsi.nlj.rtp.codec.av1.dd.DependencyDescriptor
+import org.jitsi.nlj.rtp.codec.av1.dd.FrameDependencyStructure
+import org.jitsi.nlj.rtp.codec.av1.dd.TwoBytesExtNormalizer
+import org.jitsi.nlj.rtp.codec.av1.dd.BytesView
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
@@ -11,7 +14,6 @@ import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.pcap4j.core.PcapHandle
 import org.pcap4j.core.Pcaps
-import org.pcap4j.packet.EthernetPacket
 import org.pcap4j.packet.IpV4Packet
 import org.pcap4j.packet.Packet
 import org.pcap4j.packet.UdpPacket
