@@ -9,9 +9,14 @@ class BytesView(val bytes: ByteArray, val offset: Int, val length: Int) {
     private val bitStream = BitInputStream(ByteArrayInputStream(bytes, offset, length), ByteOrder.BIG_ENDIAN)
     constructor(ext: RtpPacket.HeaderExtension) : this(
         ext.currExtBuffer,
-        // TODO what about 2 bytes header
         ext.currExtOffset + 1,
         ext.currExtLength - 1
+    )
+
+    constructor(ext: TwoBytesExtNormalizer.TwoBytesExtension) : this(
+        ext.payload,
+        0,
+        ext.payloadLength
     )
 
     fun readBoolean(): Boolean {

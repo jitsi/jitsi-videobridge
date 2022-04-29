@@ -1,12 +1,9 @@
 package org.jitsi.nlj.rtp.codec.av1.dd
 
-import org.jitsi.rtp.rtp.RtpPacket
-
 class DependencyDescriptorReader(
-    ext: RtpPacket.HeaderExtension,
+    private val rawData: BytesView,
     private var structure: FrameDependencyStructure?
 ) {
-    private val rawData = BytesView(ext)
     private var frameDependencyTemplateId = 0
     private var activeDecodeTargetsPresentFlag = false
     private var customDTIsFlag = false

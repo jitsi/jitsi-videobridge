@@ -18,8 +18,10 @@
 package org.jitsi.nlj.rtp.codec.av1
 
 import org.jitsi.nlj.rtp.RtpExtensionType
+import org.jitsi.nlj.rtp.codec.av1.dd.BytesView
 import org.jitsi.nlj.rtp.codec.av1.dd.DependencyDescriptorReader
 import org.jitsi.nlj.rtp.codec.av1.dd.FrameDependencyStructure
+import org.jitsi.nlj.rtp.codec.av1.dd.TwoBytesExtNormalizer
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import java.util.concurrent.ConcurrentHashMap
@@ -27,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 class Av1PacketConverter(val streamInformationStore: ReadOnlyStreamInformationStore) {
     private var ddExtId: Int? = null
     private var structures = ConcurrentHashMap<Long, FrameDependencyStructure>()
+    private val twoBytesExtNormalizer = TwoBytesExtNormalizer()
 
     init {
         streamInformationStore.onRtpExtensionMapping(RtpExtensionType.AV1_DEPENDENCY_DESCRIPTOR) {
@@ -39,8 +42,17 @@ class Av1PacketConverter(val streamInformationStore: ReadOnlyStreamInformationSt
         val lastStructure = structures[ssrc]
 
         val extId = checkNotNull(ddExtId) { "missing dd ext id" }
-        val ddExt = checkNotNull(rtpPacket.getHeaderExtension(extId)) { "missing dd ext($ddExtId) from $rtpPacket" }
-        val (descriptor, structure) = DependencyDescriptorReader(ddExt, lastStructure).parse()
+
+        val twoBytesExtensions = twoBytesExtNormalizer.handle(rtpPacket)
+
+        val ddView = checkNotNull(
+            twoBytesExtensions.find { it.id == extId }?.let { BytesView(it) }
+            ?: rtpPacket.getHeaderExtension(extId)?.let { BytesView(it) }
+        ) {
+            "missing dd ext($ddExtId) from $rtpPacket"
+        }
+
+        val (descriptor, structure) = DependencyDescriptorReader(ddView, lastStructure).parse()
 
         structures[ssrc] = structure
 

@@ -2,9 +2,8 @@ package org.jitsi
 
 import io.kotest.core.spec.style.ShouldSpec
 import org.jcodec.common.io.NIOUtils
-import org.jitsi.nlj.rtp.codec.av1.dd.DependencyDescriptor
-import org.jitsi.nlj.rtp.codec.av1.dd.DependencyDescriptorReader
-import org.jitsi.nlj.rtp.codec.av1.dd.FrameDependencyStructure
+import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.rtp.codec.av1.dd.*
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
@@ -12,6 +11,7 @@ import org.jitsi.rtp.rtcp.CompoundRtcpPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.pcap4j.core.PcapHandle
 import org.pcap4j.core.Pcaps
+import org.pcap4j.packet.EthernetPacket
 import org.pcap4j.packet.IpV4Packet
 import org.pcap4j.packet.Packet
 import org.pcap4j.packet.UdpPacket
@@ -19,17 +19,18 @@ import java.io.EOFException
 import java.nio.ByteBuffer
 
 class Pcap : ShouldSpec() {
-    /*init {
+    init {
         context("parse") {
             parse()
         }
-    }*/
+    }
 
     fun parse() {
-        val rawPackets = Pcaps.openOffline("/Users/paweldomas/Desktop/av1-svc.pcapng").getPackets().toList()
+        val rawPackets = Pcaps.openOffline("/Users/jackz/Downloads/av1_2.pcapng").getPackets().toList()
         // BsdLoopbackPacket
         val udpPackets = rawPackets
             .mapNotNull { it.payload as? IpV4Packet }
+            .filter { it.header.dstAddr.hostAddress == "217.61.26.65" }
             .mapNotNull { it.payload as? UdpPacket }
             .toList()
 
@@ -41,8 +42,9 @@ class Pcap : ShouldSpec() {
 
         val av1PayloadType = 41
         val rtxPayloadType = 42
-        val ddExtId = 11
-        val vlaExtId = 12
+//        val ddExtId = 11
+        val ddExtId = 12
+//        val vlaExtId = 12
 
         val av1PacketsPerSSRC = rtpPackets
             .filter { it.payloadType == av1PayloadType }
@@ -52,23 +54,27 @@ class Pcap : ShouldSpec() {
         var lastStructure: FrameDependencyStructure? = null
         val av1WithDescriptors = mutableListOf<RtpPacket>()
         val av1WithoutDescriptors = mutableListOf<RtpPacket>()
+        val twoBytesExtNormalizer = TwoBytesExtNormalizer()
 
         av1PacketsPerSSRC.entries.first().value.forEach { rtpPacket ->
-            val ddExt = rtpPacket.getHeaderExtension(ddExtId)
+            val twoBytesExtensions = twoBytesExtNormalizer.handle(rtpPacket)
 
-            ddExt?.let {
+            val ddView = twoBytesExtensions.find { it.id == ddExtId }?.let { BytesView(it) }
+                ?: rtpPacket.getHeaderExtension(ddExtId)?.let { BytesView(it) }
+
+            ddView?.let {
                 val (descriptor, structure) = DependencyDescriptorReader(it, lastStructure).parse()
                 lastStructure = structure
                 descriptors.add(descriptor)
             }
 
-            val vlaExt = rtpPacket.getHeaderExtension(vlaExtId)
+//            val vlaExt = rtpPacket.getHeaderExtension(vlaExtId)
+//
+//            vlaExt
+//                ?.let { VideoLayersAllocation.parse(it) }
+//                ?.let { vlas.add(it) }
 
-            vlaExt
-                ?.let { VideoLayersAllocation.parse(it) }
-                ?.let { vlas.add(it) }
-
-            if (ddExt != null) {
+            if (ddView != null) {
                 av1WithDescriptors.add(rtpPacket)
             } else {
                 av1WithoutDescriptors.add(rtpPacket)
