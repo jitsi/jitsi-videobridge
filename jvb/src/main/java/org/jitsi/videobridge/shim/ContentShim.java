@@ -95,7 +95,7 @@ public class ContentShim
         }
         this.logger = parentLogger.createChildLogger(
                 ContentShim.class.getName(),
-                JMap.of("type", mediaType.toString())
+                Map.of("type", mediaType.toString())
         );
     }
 

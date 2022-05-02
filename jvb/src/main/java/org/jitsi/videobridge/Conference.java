@@ -49,8 +49,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
 
-import static org.jitsi.utils.collections.JMap.*;
-
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
  *
@@ -255,10 +253,7 @@ public class Conference
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         this.isRtcStatsEnabled = isRtcStatsEnabled;
         this.isCallStatsEnabled = isCallStatsEnabled;
-        Map<String, String> context = JMap.ofEntries(
-            entry("confId", id),
-            entry("gid", String.valueOf(gid))
-        );
+        Map<String, String> context = new HashMap<>(Map.of("confId", id, "gid", String.valueOf(gid)));
         if (conferenceName != null)
         {
             context.put("conf_name", conferenceName.toString());
