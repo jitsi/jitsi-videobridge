@@ -227,7 +227,7 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
         }
 
     @get:JsonAnyGetter
-    val otherFields = mutableMapOf<String, Any>()
+    val otherFields = mutableMapOf<String, Any?>()
 
     /**
      * Whether this message is to be broadcast or targeted to a specific endpoint.
@@ -236,7 +236,7 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
     fun isBroadcast(): Boolean = to.isBlank()
 
     @JsonAnySetter
-    fun put(key: String, value: Any) {
+    fun put(key: String, value: Any?) {
         otherFields[key] = value
     }
 
@@ -264,10 +264,10 @@ class EndpointStats : BridgeChannelMessage(TYPE) {
         }
 
     @get:JsonAnyGetter
-    val otherFields = mutableMapOf<String, Any>()
+    val otherFields = mutableMapOf<String, Any?>()
 
     @JsonAnySetter
-    fun put(key: String, value: Any) {
+    fun put(key: String, value: Any?) {
         otherFields[key] = value
     }
 
