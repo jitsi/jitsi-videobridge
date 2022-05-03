@@ -325,7 +325,7 @@ class DtlsUtils {
                 throw IllegalStateException("error in calculation of seed for export")
             }
 
-            return TlsUtils.PRF(context, masterSecret, asciiLabel, seed, length).extract()
+            return TlsUtils.PRF(sp, masterSecret, asciiLabel, seed, length).extract()
         }
     }
 
