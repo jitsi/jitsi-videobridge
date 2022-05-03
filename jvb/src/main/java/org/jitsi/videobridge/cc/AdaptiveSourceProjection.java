@@ -122,7 +122,7 @@ public class AdaptiveSourceProjection
         this.payloadTypes = payloadTypes;
         this.parentLogger = parentLogger;
         this.logger = parentLogger.createChildLogger(AdaptiveSourceProjection.class.getName(),
-            JMap.of("targetSsrc", Long.toString(targetSsrc),
+            Map.of("targetSsrc", Long.toString(targetSsrc),
                 "srcEpId", Objects.toString(source.getOwner(), "")));
         this.keyframeRequester = keyframeRequester;
     }

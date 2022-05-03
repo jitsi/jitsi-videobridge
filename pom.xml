@@ -27,8 +27,8 @@
         <kotlin.version>1.5.31</kotlin.version>
         <kotest.version>4.6.3</kotest.version>
         <junit.version>5.8.1</junit.version>
-        <jicoco.version>1.1-104-g20c4353</jicoco.version>
-        <jitsi.utils.version>1.0-113-g8b75d53</jitsi.utils.version>
+        <jicoco.version>1.1-105-g15bcb36</jicoco.version>
+        <jitsi.utils.version>1.0-114-g43815ed</jitsi.utils.version>
         <ktlint-maven-plugin.version>1.11.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
         <spotbugs.version>4.5.0</spotbugs.version>
@@ -97,7 +97,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-56-g1f97cf2</version>
+                <version>3.0-57-gdec3a87</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
