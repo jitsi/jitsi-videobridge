@@ -404,6 +404,15 @@ public class EndpointMessageTransport
      * {@inheritDoc}
      */
     @Override
+    public void webSocketError(ColibriWebSocket ws, Throwable cause)
+    {
+        getLogger().error("Colibri websocket error: " +  cause.getMessage());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void close()
     {
         synchronized (webSocketSyncRoot)

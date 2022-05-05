@@ -80,7 +80,7 @@ class ShutdownManager(
     fun maybeShutdown(endpointCount: Long) {
         // If we're RUNNING we don't want to shutdown. If we're SHUTTING_DOWN we've already done this.
         if (state == GRACEFUL_SHUTDOWN) {
-            if (endpointCount < config.gracefulShutdownMinParticipants) {
+            if (endpointCount <= config.gracefulShutdownMinParticipants) {
                 logger.info("Entering SHUTTING_DOWN with $endpointCount participants.")
                 changeToShuttingDown()
             }

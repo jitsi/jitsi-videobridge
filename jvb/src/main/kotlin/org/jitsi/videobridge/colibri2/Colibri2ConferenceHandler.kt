@@ -82,8 +82,10 @@ class Colibri2ConferenceHandler(
             responseBuilder.addRelay(handleColibri2Relay(r))
         }
 
-        /* Report feedback sources if we haven't reported them yet. */
-        if (conferenceModifyIQ.create) {
+        // Include feedback sources with any "create conference" or "create endpoint" request. This allows async
+        // handling of responses in jicofo without potentially losing the feedback sources.
+        // TODO: perhaps colibri clients should be required to process responses in order?
+        if (conferenceModifyIQ.create || conferenceModifyIQ.endpoints.any { it.create }) {
             responseBuilder.setSources(buildFeedbackSources())
         }
 
