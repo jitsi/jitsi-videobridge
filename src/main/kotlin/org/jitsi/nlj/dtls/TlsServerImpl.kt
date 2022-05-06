@@ -121,7 +121,7 @@ class TlsServerImpl(
             PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
             certificateInfo.certificate,
             /* For DTLS 1.0 support (needed for Jigasi) we can't set this to sha256 fixed */
-            if (TlsUtils.isSignatureAlgorithmsExtensionAllowed(context.clientVersion)) SignatureAndHashAlgorithm(
+            if (TlsUtils.isSignatureAlgorithmsExtensionAllowed(context.serverVersion)) SignatureAndHashAlgorithm(
                 HashAlgorithm.sha256,
                 SignatureAlgorithm.ecdsa
             )
