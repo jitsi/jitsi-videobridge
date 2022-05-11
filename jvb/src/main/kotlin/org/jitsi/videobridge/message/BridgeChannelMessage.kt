@@ -390,6 +390,8 @@ class ForwardedSourcesMessage(
 data class VideoSourceMapping(
     /** The name of the source being mapped. */
     val source: String,
+    /** The endpoint that is the sender of the source. */
+    val owner: String?,
     /** The primary SSRC of the source being mapped. */
     val ssrc: Long,
     /** The RTX SSRC of the source being mapped. */
@@ -416,6 +418,8 @@ class VideoSourcesMap(
 data class AudioSourceMapping(
     /** The name of the source being mapped. */
     val source: String,
+    /** The endpoint that is the sender of the source. */
+    val owner: String?,
     /** The SSRC of the source being mapped. */
     val ssrc: Long,
 )

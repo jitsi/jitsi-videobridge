@@ -1306,13 +1306,13 @@ class Endpoint @JvmOverloads constructor(
         init {
             if (props == null) { // $ when?
                 val list = ArrayList<AudioSourceMapping>()
-                list.add(AudioSourceMapping("unknown", packet.ssrc)) // $ name
+                list.add(AudioSourceMapping("unknown", "unknown", packet.ssrc)) // $ name, owner
                 message = AudioSourcesMap(list)
             } else {
                 val name = props.sourceName ?: "unknown"
                 val rtx = props.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
                 val list = ArrayList<VideoSourceMapping>()
-                list.add(VideoSourceMapping(name, props.primarySSRC, rtx, props.videoType))
+                list.add(VideoSourceMapping(name, props.owner, props.primarySSRC, rtx, props.videoType))
                 message = VideoSourcesMap(list)
             }
         }

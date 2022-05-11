@@ -325,17 +325,19 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
         context("serializing and parsing VideoSourceMap") {
             val source1 = "source1234"
+            val owner1 = "endpoint1"
             val ssrc1 = 12345L
             val rtxSsrc1 = 45678L
 
             val source2 = "source5678"
+            val owner2 = "endpoint2"
             val ssrc2 = 87654L
             val rtxSsrc2 = 98765L
 
             val videoSourcesMapMessage = VideoSourcesMap(
                 listOf(
-                    VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
-                    VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
+                    VideoSourceMapping(source1, owner1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                    VideoSourceMapping(source2, owner2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
                 )
             )
 
@@ -344,15 +346,15 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
-                        VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
+                        VideoSourceMapping(source1, owner1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                        VideoSourceMapping(source2, owner2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
                     )
             }
 
             val jsonString = """
                 {"colibriClass":"VideoSourcesMap",
-                 "mappedSources":[{"source":"source1234","ssrc":12345,"rtx":45678,"videoType":"CAMERA"},
-                                  {"source":"source5678","ssrc":87654,"rtx":98765,"videoType":"DESKTOP"}
+                 "mappedSources":[{"source":"source1234","owner":"endpoint1","ssrc":12345,"rtx":45678,"videoType":"CAMERA"},
+                                  {"source":"source5678","owner":"endpoint2","ssrc":87654,"rtx":98765,"videoType":"DESKTOP"}
                                  ]
                 }
             """.trimIndent()
@@ -362,23 +364,25 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        VideoSourceMapping(source1, ssrc1, rtxSsrc1, VideoType.CAMERA),
-                        VideoSourceMapping(source2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
+                        VideoSourceMapping(source1, owner1, ssrc1, rtxSsrc1, VideoType.CAMERA),
+                        VideoSourceMapping(source2, owner2, ssrc2, rtxSsrc2, VideoType.DESKTOP)
                     )
             }
         }
 
         context("serializing and parsing AudioSourceMap") {
             val source1 = "source1234-a"
+            val owner1 = "endpoint1"
             val ssrc1 = 23456L
 
             val source2 = "source5678-a"
+            val owner2 = "endpoint2"
             val ssrc2 = 98765L
 
             val audioSourcesMapMessage = AudioSourcesMap(
                 listOf(
-                    AudioSourceMapping(source1, ssrc1),
-                    AudioSourceMapping(source2, ssrc2)
+                    AudioSourceMapping(source1, owner1, ssrc1),
+                    AudioSourceMapping(source2, owner2, ssrc2)
                 )
             )
 
@@ -387,15 +391,15 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        AudioSourceMapping(source1, ssrc1),
-                        AudioSourceMapping(source2, ssrc2)
+                        AudioSourceMapping(source1, owner1, ssrc1),
+                        AudioSourceMapping(source2, owner2, ssrc2)
                     )
             }
 
             val jsonString = """
                 {"colibriClass":"AudioSourcesMap",
-                 "mappedSources":[{"source":"source1234-a","ssrc":23456},
-                                  {"source":"source5678-a","ssrc":98765}
+                 "mappedSources":[{"source":"source1234-a","owner":"endpoint1","ssrc":23456},
+                                  {"source":"source5678-a","owner":"endpoint2","ssrc":98765}
                                  ]
                 }
             """.trimIndent()
@@ -405,8 +409,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 mappedSources.size shouldBe 2
                 mappedSources shouldContainExactly
                     listOf(
-                        AudioSourceMapping(source1, ssrc1),
-                        AudioSourceMapping(source2, ssrc2)
+                        AudioSourceMapping(source1, owner1, ssrc1),
+                        AudioSourceMapping(source2, owner2, ssrc2)
                     )
             }
         }
