@@ -1320,7 +1320,7 @@ class Endpoint @JvmOverloads constructor(
 
         constructor(props: MediaSourceDesc, packet: RtpPacket) : this(packet, getVideoMessage(props)) {
         }
-        constructor(props: AudioSourceDesc, packet: RtpPacket) : this(packet, getAudioMessage(props, packet.ssrc)) {
+        constructor(props: AudioSourceDesc, packet: RtpPacket) : this(packet, getAudioMessage(props)) {
         }
 
         companion object {
@@ -1331,10 +1331,10 @@ class Endpoint @JvmOverloads constructor(
                 list.add(VideoSourceMapping(name, props.owner, props.primarySSRC, rtx, props.videoType))
                 return VideoSourcesMap(list)
             }
-            private fun getAudioMessage(props: AudioSourceDesc, ssrc: Long): BridgeChannelMessage {
+            private fun getAudioMessage(props: AudioSourceDesc): BridgeChannelMessage {
                 val name = props.sourceName ?: "unknown"
                 val list = ArrayList<AudioSourceMapping>()
-                list.add(AudioSourceMapping(name, props.owner, ssrc))
+                list.add(AudioSourceMapping(name, props.owner, props.ssrc))
                 return AudioSourcesMap(list)
             }
         }
