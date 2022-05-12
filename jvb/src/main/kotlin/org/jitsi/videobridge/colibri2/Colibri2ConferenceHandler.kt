@@ -256,6 +256,14 @@ class Colibri2ConferenceHandler(
                 MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
             }
             endpoint.mediaSources = newMediaSources.toTypedArray()
+
+            val audioSources: ArrayList<AudioSourceDesc> = ArrayList()
+            sources.mediaSources.filter { it.type == MediaType.AUDIO }.forEach {
+                it.sources.forEach { s ->
+                    audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id))
+                }
+            }
+            endpoint.audioSources = audioSources
         }
 
         c2endpoint.forceMute?.let {

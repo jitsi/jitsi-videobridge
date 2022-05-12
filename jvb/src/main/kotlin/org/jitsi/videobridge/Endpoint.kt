@@ -70,6 +70,7 @@ import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
+import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
@@ -293,12 +294,12 @@ class Endpoint @JvmOverloads constructor(
     /**
      * The set of video ssrcs that have been sent already, ordered by last use.
      */
-    private val videoSsrcs = SsrcCache("video", maxVideoSsrcs)
+    private val videoSsrcs = SsrcCache(MediaType.VIDEO, maxVideoSsrcs)
 
     /**
      * The set of audio ssrcs that have been sent already, ordered by last use.
      */
-    private val audioSsrcs = SsrcCache("audio", maxAudioSsrcs)
+    private val audioSsrcs = SsrcCache(MediaType.AUDIO, maxAudioSsrcs)
 
     init {
         conference.encodingsManager.subscribe(this)
@@ -327,6 +328,9 @@ class Endpoint @JvmOverloads constructor(
 
     override val mediaSource: MediaSourceDesc?
         get() = mediaSources.firstOrNull()
+
+    /* $ move to base MediaSourceContainer? merge with RelayedEndpoint's version? */
+    public var audioSources: ArrayList<AudioSourceDesc> = ArrayList()
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -858,21 +862,34 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Find the properties of the source indicated by the given SSRC. Returns null if not found.
+     * Find the properties of the video source indicated by the given SSRC. Returns null if not found.
      */
-    private fun findSourceProps(ssrc: Long): MediaSourceDesc? {
+    private fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
         // $ remove some of the logs before merging
-        conference.getEndpointBySsrc(ssrc)?.let {
-            logger.debug { "EP -> ${it.id} ${it.statsId} ${it.mediaSources.size}" }
-            it.mediaSources.forEach {
-                logger.debug { "\tSSRC -> ${it.primarySSRC} ${it.videoType} ${it.sourceName} ${it.owner}" }
-                if (it.findRtpEncodingDesc(ssrc) != null) {
+        conference.getEndpointBySsrc(ssrc)?.let { ep ->
+            logger.debug { "EP -> ${ep.id} ${ep.statsId} V${ep.mediaSources.size}" }
+            ep.mediaSources.forEach { s ->
+                logger.debug { "\tSSRC -> ${s.primarySSRC} ${s.videoType} ${s.sourceName} ${s.owner}" }
+                if (s.findRtpEncodingDesc(ssrc) != null) {
                     logger.debug("that's the one!")
-                    return it
+                    return s
                 }
             }
         }
-        logger.debug { "\tNo properties found for SSRC $ssrc." }
+        logger.error { "\tNo properties found for SSRC $ssrc." }
+        return null
+    }
+
+    /**
+     * Find the properties of the audio source indicated by the given SSRC. Returns null if not found.
+     */
+    private fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
+        conference.getEndpointBySsrc(ssrc)?.let { ep ->
+            if (ep !is Endpoint) // $ revisit
+                return null
+            return ep.audioSources.find { s -> s.ssrc == ssrc }
+        }
+        logger.error { "\tNo properties found for SSRC $ssrc." }
         return null
     }
 
@@ -1293,7 +1310,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Rewrite RTP packets so they appear to be a continuation of an already advertised ssrc.
      */
-    private class Projection(props: MediaSourceDesc?, packet: RtpPacket) {
+    private class Projection private constructor(packet: RtpPacket, val message: BridgeChannelMessage) {
         var ssrc = packet.ssrc
             private set
         private var lastSequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1) /* $ */
@@ -1301,19 +1318,24 @@ class Endpoint @JvmOverloads constructor(
         private var sequenceNumberDelta = 0
         private var timestampDelta = 0L
 
-        val message: BridgeChannelMessage
+        constructor(props: MediaSourceDesc, packet: RtpPacket) : this(packet, getVideoMessage(props)) {
+        }
+        constructor(props: AudioSourceDesc, packet: RtpPacket) : this(packet, getAudioMessage(props, packet.ssrc)) {
+        }
 
-        init {
-            if (props == null) { // $ when?
-                val list = ArrayList<AudioSourceMapping>()
-                list.add(AudioSourceMapping("unknown", "unknown", packet.ssrc)) // $ name, owner
-                message = AudioSourcesMap(list)
-            } else {
+        companion object {
+            private fun getVideoMessage(props: MediaSourceDesc): BridgeChannelMessage {
                 val name = props.sourceName ?: "unknown"
                 val rtx = props.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
                 val list = ArrayList<VideoSourceMapping>()
                 list.add(VideoSourceMapping(name, props.owner, props.primarySSRC, rtx, props.videoType))
-                message = VideoSourcesMap(list)
+                return VideoSourcesMap(list)
+            }
+            private fun getAudioMessage(props: AudioSourceDesc, ssrc: Long): BridgeChannelMessage {
+                val name = props.sourceName ?: "unknown"
+                val list = ArrayList<AudioSourceMapping>()
+                list.add(AudioSourceMapping(name, props.owner, ssrc))
+                return AudioSourcesMap(list)
             }
         }
 
@@ -1336,7 +1358,7 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    private inner class SsrcCache(val name: String, val size: Int) {
+    private inner class SsrcCache(val mediaType: MediaType, val size: Int) {
 
         /**
          * The most recently forwarded remote SSRCs. If this list is full and a new remote SSRC needs to be
@@ -1355,7 +1377,7 @@ class Endpoint @JvmOverloads constructor(
          */
         private fun logCurrentSsrcs() {
             logger.debug {
-                currentSsrcs.entries.joinToString(", ", "current $name ssrcs: [", "]") {
+                currentSsrcs.entries.joinToString(", ", "current $mediaType ssrcs: [", "]") {
                     "(${it.key} -> ${it.value.ssrc})"
                 }
             }
@@ -1366,12 +1388,24 @@ class Endpoint @JvmOverloads constructor(
          */
         fun rewriteRtp(packet: RtpPacket) {
             synchronized(currentSsrcs) {
-                logger.debug { "$name packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
+                logger.debug { "$mediaType packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
                 var entry = currentSsrcs.get(packet.ssrc)
                 if (entry == null) {
                     var proj = allSsrcs.get(packet.ssrc)
                     if (proj == null) {
-                        proj = Projection(findSourceProps(packet.ssrc), packet)
+                        if (mediaType == MediaType.AUDIO) {
+                            val source = findAudioSourceProps(packet.ssrc)
+                            if (source == null) {
+                                return
+                            }
+                            proj = Projection(source, packet)
+                        } else {
+                            val source = findVideoSourceProps(packet.ssrc)
+                            if (source == null) {
+                                return
+                            }
+                            proj = Projection(source, packet)
+                        }
                         allSsrcs.put(packet.ssrc, proj)
                         logger.debug { "added projection for: ${packet.ssrc}" }
                     }
