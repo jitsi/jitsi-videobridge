@@ -33,7 +33,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-66-ge69c30b</version>
+            <version>1.0-69-gd8300a6</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>

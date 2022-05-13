@@ -89,6 +89,10 @@ class RetransmissionRequester(
             }
             synchronized(requests) {
                 when {
+                    seqNum == highestReceivedSeqNum -> {
+                        logger.cdebug { "$ssrc packet $seqNum was received, currently missing ${getMissingSeqNums()}" }
+                        // By definition we've already received highestReceivedSeqNum, so nothing needs to be done.
+                    }
                     seqNum isOlderThan highestReceivedSeqNum -> {
                         logger.cdebug { "$ssrc packet $seqNum was received, currently missing ${getMissingSeqNums()}" }
                         // An older packet, possibly already requested
@@ -169,6 +173,9 @@ class RetransmissionRequester(
             logger.cdebug { "$ssrc doing work at ${clock.instant()}" }
             val now = clock.instant()
             val missingSeqNums = getMissingSeqNums()
+            if (missingSeqNums.size >= maxMissingSeqNums) {
+                logger.warn { "$ssrc sending NACK for ${missingSeqNums.size} missing packets" }
+            }
             val nackPacket = RtcpFbNackPacketBuilder(
                 mediaSourceSsrc = ssrc,
                 missingSeqNums = missingSeqNums

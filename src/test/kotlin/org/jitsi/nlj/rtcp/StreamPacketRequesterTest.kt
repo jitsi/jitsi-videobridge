@@ -67,6 +67,12 @@ class StreamPacketRequesterTest : ShouldSpec() {
                     }
                 }
             }
+            context("and then receiving it again") {
+                streamPacketRequester.packetReceived(1)
+                should("not schedule any work") {
+                    scheduler.numPendingJobs() shouldBe 0
+                }
+            }
         }
         context("a nack for a specific packet") {
             streamPacketRequester.packetReceived(1)
