@@ -148,7 +148,7 @@ private class NackBlock(
             val missingSeqNums = mutableListOf(packetId)
             for (shiftAmount in 0..15) {
                 if (((blp ushr shiftAmount) and 0x1) == 1) {
-                    missingSeqNums.add(packetId + shiftAmount + 1)
+                    missingSeqNums.add((packetId + shiftAmount + 1) and 0xffff)
                 }
             }
             return missingSeqNums

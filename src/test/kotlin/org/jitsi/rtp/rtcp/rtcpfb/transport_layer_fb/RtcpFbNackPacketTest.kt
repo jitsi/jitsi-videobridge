@@ -19,9 +19,11 @@ package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.util.byteBufferOf
+import org.jitsi.test_helpers.matchers.haveSameContentAs
 
 internal class RtcpFbNackPacketTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -49,6 +51,14 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
         0xAF, 0x32, 0x00, 0x28
     )
 
+    val wrappingNackBlockBuf = byteBufferOf(
+        0x81, 0xCD, 0x00, 0x03,
+        0xA2, 0x78, 0xEB, 0x18,
+        0x84, 0x50, 0x49, 0x6C,
+        // packet id = 65530, other nacked packets = 65534, 0, 7
+        0xFF, 0xFA, 0x10, 0x28,
+    )
+
     init {
         context("Creating an RtcpFbNackPacket") {
 //            context("from a buffer") {
@@ -69,6 +79,16 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
                 )
                 should("parse the values correctly") {
                     nackPacket.missingSeqNums shouldContainExactly sortedSetOf(44832, 44838, 44848, 44850, 44854, 44856)
+                }
+            }
+            context("from a buffer with a wrapping NACK block") {
+                val nackPacket = RtcpFbNackPacket(
+                    wrappingNackBlockBuf.array(),
+                    wrappingNackBlockBuf.arrayOffset(),
+                    wrappingNackBlockBuf.limit()
+                )
+                should("parse the values correctly") {
+                    nackPacket.missingSeqNums shouldContainExactly sortedSetOf(65530, 65534, 0, 7)
                 }
             }
             context("from values") {
@@ -104,19 +124,20 @@ internal class RtcpFbNackPacketTest : ShouldSpec() {
 //                    }
 //                }
             }
-//            context("from values too big to fit into a single NACK block") {
-//                val rtcpFbNackPacket =
-//                    RtcpFbNackPacket.fromValues(
-//                        header = RtcpHeader(senderSsrc = 2725833496),
-//                        mediaSourceSsrc = 2219854188,
-//                        missingSeqNums = sortedSetOf(44832, 44838, 44848, 44850, 44854, 44856))
-//                context("and then serializing it") {
-//                    val buf = rtcpFbNackPacket.getBuffer()
-//                    should("serialize into multiple nack blocks") {
-//                        buf should haveSameContentAs(multipleNackBlocksBuf)
-//                    }
-//                }
-//            }
+            context("from values too big to fit into a single NACK block") {
+                val rtcpFbNackPacket =
+                    RtcpFbNackPacketBuilder(
+                        rtcpHeader = RtcpHeaderBuilder(senderSsrc = 2725833496),
+                        mediaSourceSsrc = 2219854188,
+                        missingSeqNums = sortedSetOf(44832, 44838, 44848, 44850, 44854, 44856)
+                    ).build()
+                context("and then serializing it") {
+                    val buf = rtcpFbNackPacket.getBuffer()
+                    should("serialize into multiple nack blocks") {
+                        buf should haveSameContentAs(multipleNackBlocksBuf.array())
+                    }
+                }
+            }
         }
     }
 }
