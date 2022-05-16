@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.eclipse.jetty.websocket.api.WriteCallback
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.utils.logging2.Logger
@@ -252,7 +253,7 @@ class RelayMessageTransport(
         // We'll use the async version of sendString since this may be called
         // from multiple threads.  It's just fire-and-forget though, so we
         // don't wait on the result
-        dst.remote?.sendStringByFuture(message.toJson())
+        dst.remote?.sendString(message.toJson(), WriteCallback.Adaptor())
         statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet()
     }
 

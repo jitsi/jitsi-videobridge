@@ -18,6 +18,7 @@ package org.jitsi.videobridge.websocket
 
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Companion.config
@@ -82,6 +83,9 @@ class ColibriWebSocketService(
             }
             servletContextHandler.addServlet(holder, "/$COLIBRI_WS_ENDPOINT/*")
             servletContextHandler.addServlet(holder, "/$COLIBRI_RELAY_WS_ENDPOINT/*")
+            /* TODO, if you want to register additional Websocket servlets elsewhere:
+                factor this out, it should only be called once. */
+            JettyWebSocketServletContainerInitializer.configure(servletContextHandler, null)
         } else {
             logger.info("Disabled, not registering servlet")
         }

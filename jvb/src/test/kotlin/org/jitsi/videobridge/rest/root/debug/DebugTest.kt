@@ -20,6 +20,9 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkClass
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.client.Entity
+import jakarta.ws.rs.core.Application
 import org.eclipse.jetty.http.HttpStatus
 import org.glassfish.hk2.utilities.binding.AbstractBinder
 import org.glassfish.jersey.client.ClientConfig
@@ -43,9 +46,6 @@ import org.reflections.util.ConfigurationBuilder
 import org.reflections.util.FilterBuilder
 import java.util.logging.Level
 import java.util.logging.Logger
-import javax.ws.rs.Path
-import javax.ws.rs.client.Entity
-import javax.ws.rs.core.Application
 
 class DebugTest : JerseyTest() {
     private val endpoint: Endpoint = mockk(relaxed = true)
