@@ -22,10 +22,10 @@ import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
-import javax.inject.*;
-import javax.servlet.http.*;
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
+import jakarta.inject.*;
+import jakarta.servlet.http.*;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
 
 /**
  * Add or remove XMPP environments to which the bridge will connect

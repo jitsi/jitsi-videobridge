@@ -32,10 +32,10 @@ import org.jitsi.videobridge.transport.ice.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 
-import javax.inject.*;
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
-import javax.ws.rs.core.MediaType;
+import jakarta.inject.*;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
+import jakarta.ws.rs.core.MediaType;
 import java.net.*;
 
 /**

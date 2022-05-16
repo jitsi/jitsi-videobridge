@@ -20,6 +20,8 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import jakarta.ws.rs.client.Entity
+import jakarta.ws.rs.core.Application
 import org.eclipse.jetty.http.HttpStatus
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.test.JerseyTest
@@ -29,8 +31,6 @@ import org.jitsi.videobridge.xmpp.XmppConnection
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import org.junit.Test
-import javax.ws.rs.client.Entity
-import javax.ws.rs.core.Application
 
 class MucClientTest : JerseyTest() {
     private lateinit var xmppConnection: XmppConnection

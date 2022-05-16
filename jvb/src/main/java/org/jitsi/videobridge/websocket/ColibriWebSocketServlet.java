@@ -15,8 +15,9 @@
  */
 package org.jitsi.videobridge.websocket;
 
-import org.eclipse.jetty.websocket.api.extensions.*;
-import org.eclipse.jetty.websocket.servlet.*;
+import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.websocket.api.*;
+import org.eclipse.jetty.websocket.server.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
@@ -24,6 +25,7 @@ import org.jitsi.videobridge.relay.*;
 import static org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.config;
 
 import java.io.*;
+import java.time.*;
 import java.util.*;
 import java.util.stream.*;
 
@@ -31,7 +33,7 @@ import java.util.stream.*;
  * @author Boris Grozev
  */
 class ColibriWebSocketServlet
-    extends WebSocketServlet
+    extends JettyWebSocketServlet
 {
     /**
      * The logger instance used by this {@link ColibriWebSocketServlet}.
@@ -62,10 +64,10 @@ class ColibriWebSocketServlet
      * {@inheritDoc}
      */
     @Override
-    public void configure(WebSocketServletFactory webSocketServletFactory)
+    public void configure(JettyWebSocketServletFactory webSocketServletFactory)
     {
         // set a timeout of 1min
-        webSocketServletFactory.getPolicy().setIdleTimeout(60000);
+        webSocketServletFactory.setIdleTimeout(Duration.ofMinutes(1));
 
         webSocketServletFactory.setCreator((request, response) ->
         {
@@ -77,7 +79,7 @@ class ColibriWebSocketServlet
             }
             catch (IOException ioe)
             {
-                response.setSuccess(false);
+                response.setStatusCode(Response.SC_INTERNAL_SERVER_ERROR);
                 return null;
             }
         });
@@ -89,8 +91,8 @@ class ColibriWebSocketServlet
      * rejects the request and sends an error.
      */
     private ColibriWebSocket createWebSocket(
-            ServletUpgradeRequest request,
-            ServletUpgradeResponse response)
+            JettyServerUpgradeRequest request,
+            JettyServerUpgradeResponse response)
         throws IOException
     {
         // A valid request URI looks like this:

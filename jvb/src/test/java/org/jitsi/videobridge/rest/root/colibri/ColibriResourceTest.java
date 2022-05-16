@@ -22,7 +22,7 @@ import org.reflections.*;
 import org.reflections.scanners.*;
 import org.reflections.util.*;
 
-import javax.ws.rs.*;
+import jakarta.ws.rs.*;
 
 import static org.junit.Assert.*;
 

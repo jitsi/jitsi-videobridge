@@ -245,7 +245,7 @@ public class EndpointMessageTransport
             // We'll use the async version of sendString since this may be called
             // from multiple threads.  It's just fire-and-forget though, so we
             // don't wait on the result
-            remote.sendStringByFuture(message.toJson());
+            remote.sendString(message.toJson(), new WriteCallback.Adaptor());
         }
         statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
     }
