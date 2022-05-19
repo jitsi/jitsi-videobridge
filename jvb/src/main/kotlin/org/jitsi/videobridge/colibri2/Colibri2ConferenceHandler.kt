@@ -64,7 +64,9 @@ class Colibri2ConferenceHandler(
     fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
-        var expire = false
+        var expire = conferenceModifyIQ.expire.also {
+            if (it) logger.info("Received request to expire conference.")
+        }
 
         /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
         for (e in conferenceModifyIQ.endpoints) {
