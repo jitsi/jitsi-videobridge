@@ -698,6 +698,7 @@ public class Conference
 
         logger.debug(() -> "Expiring endpoints.");
         getEndpoints().forEach(AbstractEndpoint::expire);
+        getRelays().forEach(Relay::expire);
         speechActivity.expire();
         if (tentacle != null)
         {
