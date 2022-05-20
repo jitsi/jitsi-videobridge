@@ -18,11 +18,9 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
@@ -698,6 +696,7 @@ public class Conference
 
         logger.debug(() -> "Expiring endpoints.");
         getEndpoints().forEach(AbstractEndpoint::expire);
+        getRelays().forEach(Relay::expire);
         speechActivity.expire();
         if (tentacle != null)
         {
