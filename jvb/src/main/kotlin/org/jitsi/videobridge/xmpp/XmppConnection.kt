@@ -267,7 +267,7 @@ class XmppConnection : IQListener {
             Version.NAMESPACE
         )
 
-        private val delayThresholds = longArrayOf(5, 50, 100, 1000)
+        private val delayThresholds = listOf(0, 5, 50, 100, 1000, Long.MAX_VALUE)
 
         private val colibriProcessingDelayStats = DelayStats(delayThresholds)
         private val colibriDelayStats = DelayStats(delayThresholds)
