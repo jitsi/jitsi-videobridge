@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.eclipse.jetty.websocket.api.*;
+import org.eclipse.jetty.websocket.core.CloseStatus;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -351,7 +352,7 @@ public class EndpointMessageTransport
                 Session session = webSocket.getSession();
                 if (session != null)
                 {
-                    session.close(200, "replaced");
+                    session.close(CloseStatus.NORMAL, "replaced");
                 }
             }
 
@@ -419,9 +420,9 @@ public class EndpointMessageTransport
         {
             if (webSocket != null)
             {
-                // 410 Gone indicates that the resource requested is no longer
-                // available and will not be available again.
-                webSocket.getSession().close(410, "replaced");
+                //  1001 indicates that an endpoint is "going away", such as a server
+                //  going down or a browser having navigated away from a page.
+                webSocket.getSession().close(CloseStatus.SHUTDOWN, "endpoint closed");
                 webSocket = null;
                 getLogger().debug(() -> "Endpoint expired, closed colibri web-socket.");
             }
