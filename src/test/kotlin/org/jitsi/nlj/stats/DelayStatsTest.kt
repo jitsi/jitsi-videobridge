@@ -28,7 +28,7 @@ class DelayStatsTest : ShouldSpec() {
 
     init {
         context("adding stats") {
-            val delayStats = DelayStats(longArrayOf(2, 5, 200, 999))
+            val delayStats = DelayStats(listOf(0, 2, 5, 200, 999, Long.MAX_VALUE))
 
             should("calculate the average correctly") {
                 repeat(100) { delayStats.addDelay(1) }
@@ -45,16 +45,18 @@ class DelayStatsTest : ShouldSpec() {
 
             should("export the buckets correctly to json") {
                 repeat(100) { delayStats.addDelay(1) }
-                repeat(100) { delayStats.addDelay(5) }
+                repeat(50) { delayStats.addDelay(2) }
+                repeat(50) { delayStats.addDelay(4) }
                 delayStats.addDelay(150)
                 delayStats.addDelay(1500)
                 val bucketsJson = delayStats.toJson()["buckets"]
                 bucketsJson.shouldBeInstanceOf<OrderedJsonObject>()
 
-                bucketsJson["<= 2 ms"] shouldBe 100
-                bucketsJson["<= 5 ms"] shouldBe 100
-                bucketsJson["<= 200 ms"] shouldBe 1
-                bucketsJson["> 999 ms"] shouldBe 1
+                bucketsJson["0_to_2_ms"] shouldBe 100
+                bucketsJson["2_to_5_ms"] shouldBe 100
+                bucketsJson["5_to_200_ms"] shouldBe 1
+                bucketsJson["200_to_999_ms"] shouldBe 0
+                bucketsJson["999_to_max_ms"] shouldBe 1
             }
 
             should("calculate p99 and p999 correctly") {
@@ -68,8 +70,8 @@ class DelayStatsTest : ShouldSpec() {
                 repeat(800) { delayStats.addDelay(1) }
                 delayStats.snapshot.buckets.p999bound shouldBe 2
 
-                delayStats.addDelay(5)
-                delayStats.addDelay(5)
+                delayStats.addDelay(4)
+                delayStats.addDelay(4)
                 delayStats.snapshot.buckets.p99bound shouldBe 2
                 delayStats.snapshot.buckets.p999bound shouldBe 5
 
@@ -80,7 +82,7 @@ class DelayStatsTest : ShouldSpec() {
 
         context("initializing with invalid thresholds should throw") {
             shouldThrow<IllegalArgumentException> {
-                DelayStats(longArrayOf(2, 10, 5))
+                DelayStats(listOf(2, 10, 5))
             }
         }
     }

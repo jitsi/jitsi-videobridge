@@ -23,8 +23,8 @@ import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.atomic.LongAdder
 
-open class DelayStats(thresholdsNoMax: LongArray = defaultThresholds) :
-    BucketStats(thresholdsNoMax, "_delay_ms", " ms") {
+open class DelayStats(thresholds: List<Long> = defaultThresholds) :
+    BucketStats(thresholds, "_delay_ms", "_ms") {
 
     fun addDelay(delay: Duration) {
         addDelay(delay.toMillis())
@@ -32,14 +32,14 @@ open class DelayStats(thresholdsNoMax: LongArray = defaultThresholds) :
     fun addDelay(delayMs: Long) = addValue(delayMs)
 
     companion object {
-        val defaultThresholds = longArrayOf(2, 5, 20, 50, 200, 500, 1000)
+        val defaultThresholds = listOf(0, 5, 50, 500, Long.MAX_VALUE)
     }
 }
 
 class PacketDelayStats(
-    thresholdsNoMax: LongArray = defaultThresholds,
+    thresholds: List<Long> = defaultThresholds,
     private val clock: Clock = Clock.systemUTC()
-) : DelayStats(thresholdsNoMax) {
+) : DelayStats(thresholds) {
     private val numPacketsWithoutTimestamps = LongAdder()
     fun addPacket(packetInfo: PacketInfo) {
         packetInfo.receivedTime?.let { addDelay(Duration.between(it, clock.instant())) } ?: run {
@@ -47,8 +47,8 @@ class PacketDelayStats(
         }
     }
 
-    override fun toJson(): OrderedJsonObject {
-        return super.toJson().apply {
+    override fun toJson(format: Format): OrderedJsonObject {
+        return super.toJson(format).apply {
             put("packets_without_timestamps", numPacketsWithoutTimestamps.sum())
         }
     }
