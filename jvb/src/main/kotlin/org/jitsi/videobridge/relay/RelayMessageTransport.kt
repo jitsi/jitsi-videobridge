@@ -18,6 +18,7 @@ package org.jitsi.videobridge.relay
 import org.eclipse.jetty.websocket.api.WriteCallback
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
+import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.MultiStreamConfig
@@ -284,7 +285,7 @@ class RelayMessageTransport(
             // If we already have a web-socket, discard it and use the new one.
             if (ws != webSocket) {
                 logger.info("Replacing an existing websocket.")
-                webSocket?.session?.close(200, "replaced")
+                webSocket?.session?.close(CloseStatus.NORMAL, "replaced")
                 webSocket = ws
                 sendMessage(ws, createServerHello())
             } else {
@@ -335,7 +336,7 @@ class RelayMessageTransport(
             if (webSocket != null) {
                 // 410 Gone indicates that the resource requested is no longer
                 // available and will not be available again.
-                webSocket?.session?.close(410, "replaced")
+                webSocket?.session?.close(CloseStatus.SHUTDOWN, "relay closed")
                 webSocket = null
                 logger.debug { "Relay expired, closed colibri web-socket." }
             }
