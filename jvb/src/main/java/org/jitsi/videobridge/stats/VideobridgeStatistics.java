@@ -626,9 +626,9 @@ public class VideobridgeStatistics
                     jvbStats.totalDominantSpeakerChanges.sum());
 
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
-            if (octoRelayServiceStats != null)
+            if (OctoConfig.config.getEnabled())
             {
-                unlockedSetStat(RELAY_ID, octoRelayServiceStats.getRelayId());
+                unlockedSetStat(RELAY_ID, OctoConfig.config.getRelayId());
             }
             if (region != null)
             {
