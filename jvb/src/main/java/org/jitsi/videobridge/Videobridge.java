@@ -54,6 +54,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
 
+import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceAlreadyExistsError;
+import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceNotFoundError;
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
@@ -414,7 +416,7 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            return createConferenceNotFoundResponse(conferenceIq, conferenceIq.getID(), false);
+            return createConferenceNotFoundError(conferenceIq, conferenceIq.getID(), false);
         }
         catch (InGracefulShutdownException e)
         {
@@ -438,11 +440,11 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            return createConferenceNotFoundResponse(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
+            return createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
         }
         catch (ConferenceAlreadyExistsException e)
         {
-            return createConferenceAlreadyExistsResponse(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
+            return createConferenceAlreadyExistsError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
         }
         catch (InGracefulShutdownException e)
         {
@@ -479,8 +481,7 @@ public class Videobridge
         }
         else
         {
-            throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() +
-                    " in handleColibriRequest");
+            throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() + " in handleColibriRequest");
         }
 
         try
@@ -500,12 +501,12 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            request.getCallback().invoke(createConferenceNotFoundResponse(iq, id, colibri2));
+            request.getCallback().invoke(createConferenceNotFoundError(iq, id, colibri2));
             return;
         }
         catch (ConferenceAlreadyExistsException e)
         {
-            request.getCallback().invoke(createConferenceAlreadyExistsResponse(iq, id, colibri2));
+            request.getCallback().invoke(createConferenceAlreadyExistsError(iq, id, colibri2));
             return;
         }
         catch (InGracefulShutdownException e)
@@ -522,26 +523,6 @@ public class Videobridge
 
         // It is now the responsibility of Conference to send a response.
         conference.enqueueColibriRequest(request);
-    }
-
-    private IQ createConferenceAlreadyExistsResponse(IQ iq, String conferenceId, boolean colibri2)
-    {
-        return createError(
-                iq,
-                // Jicofo's colibri1 impl requires a bad_request
-                colibri2 ? StanzaError.Condition.conflict : StanzaError.Condition.bad_request,
-                "Conference already exists for ID: " + conferenceId,
-                colibri2 ? new Colibri2Error(Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS) : null);
-    }
-
-    public static IQ createConferenceNotFoundResponse(IQ iq, String conferenceId, boolean colibri2)
-    {
-        return createError(
-                iq,
-                // Jicofo's colibri1 impl requires a bad_request
-                colibri2 ? StanzaError.Condition.item_not_found : StanzaError.Condition.bad_request,
-                "Conference not found for ID: " + conferenceId,
-                colibri2 ? new Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND) : null);
     }
 
     private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)
