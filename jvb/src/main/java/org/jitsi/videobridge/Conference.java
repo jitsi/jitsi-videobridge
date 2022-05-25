@@ -1328,7 +1328,7 @@ public class Conference
 
     public boolean isOctoEnabled()
     {
-        return tentacle != null;
+        return tentacle != null || !relaysById.isEmpty();
     }
 
     /**
