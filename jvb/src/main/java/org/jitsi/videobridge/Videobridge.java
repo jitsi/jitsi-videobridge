@@ -457,17 +457,11 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            return IQUtils.createError(
-                    conferenceModifyIQ,
-                    StanzaError.Condition.bad_request,
-                    "Conference not found for ID: " + conferenceModifyIQ.getMeetingId());
+            return createConferenceNotFoundResponse(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
         }
         catch (ConferenceAlreadyExistsException e)
         {
-            return IQUtils.createError(
-                    conferenceModifyIQ,
-                    StanzaError.Condition.bad_request,
-                    "Conference already exists for ID: " + conferenceModifyIQ.getMeetingId());
+            return createConferenceAlreadyExistsResponse(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
         }
         catch (InGracefulShutdownException e)
         {
