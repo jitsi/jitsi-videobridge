@@ -62,7 +62,7 @@ class OctoConfig private constructor() {
     /**
      * This is deprecated and only used in octo v1.
      */
-    val bindAddress: String by config {
+    val bindAddress: String? by optionalconfig {
         "bind address from legacy config" { legacyBindAddress!! }
         "videobridge.octo.bind-address".from(JitsiConfig.newConfig)
     }
@@ -70,7 +70,7 @@ class OctoConfig private constructor() {
     /**
      * This is deprecated and only used in octo v1.
      */
-    val bindPort: Int by config {
+    val bindPort: Int? by optionalconfig {
         "bind port from legacy config" { legacyBindPort!! }
         "videobridge.octo.bind-port".from(JitsiConfig.newConfig)
     }
@@ -81,10 +81,10 @@ class OctoConfig private constructor() {
      * reading a value from the legacy config file
      * This is deprecated and only used in octo v1.
      */
-    val publicAddress: String by config {
+    private val publicAddress: String by config {
         "org.jitsi.videobridge.octo.PUBLIC_ADDRESS".from(JitsiConfig.legacyConfig)
         "videobridge.octo.public-address".from(JitsiConfig.newConfig)
-        "bindAddress" { bindAddress }
+        "bindAddress" { bindAddress!! }
     }
 
     val relayId: String by config {

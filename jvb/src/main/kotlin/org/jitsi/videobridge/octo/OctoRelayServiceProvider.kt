@@ -16,22 +16,36 @@
 
 package org.jitsi.videobridge.octo
 
+import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.octo.config.OctoConfig
 
 class OctoRelayServiceProvider {
     private val octoRelayService: OctoRelayService? by lazy {
         if (OctoConfig.config.enabled) {
-            try {
-                OctoRelayService()
-            } catch (t: Throwable) {
+            if (OctoConfig.config.bindAddress == null || OctoConfig.config.bindPort == null) {
+                logger.info(
+                    "Secure-octo is enabled, octo v1 is disabled (configure bindAddress and bindPort to enable)."
+                )
                 null
+            } else {
+                try {
+                    OctoRelayService()
+                } catch (t: Throwable) {
+                    logger.error("Error initializing OctoRelayService", t)
+                    null
+                }
             }
         } else {
+            logger.info("Octo disabled in configuration.")
             null
         }
     }
 
     fun get(): OctoRelayService? = octoRelayService
+
+    companion object {
+        val logger = createLogger()
+    }
 }
 
 private val supplierSingleton: OctoRelayServiceProvider = OctoRelayServiceProvider()

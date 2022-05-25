@@ -48,8 +48,8 @@ class OctoRelayService {
             throw IllegalStateException("Octo relay service is not enabled")
         }
 
-        val address = config.bindAddress
-        val port = config.bindPort
+        val address = config.bindAddress ?: throw IllegalStateException("bind-address not configured.")
+        val port = config.bindPort ?: throw IllegalStateException("bind-port not configured")
 
         try {
             udpTransport = UdpTransport(address, port, logger, OCTO_SO_RCVBUF, OCTO_SO_SNDBUF)
