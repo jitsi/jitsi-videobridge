@@ -41,7 +41,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
@@ -54,6 +53,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
+
+import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -430,10 +431,7 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            return IQUtils.createError(
-                    conferenceIq,
-                    StanzaError.Condition.bad_request,
-                    "Conference not found for ID: " + conferenceIq.getID());
+            return createConferenceNotFoundResponse(conferenceIq, conferenceIq.getID(), false);
         }
         catch (InGracefulShutdownException e)
         {
@@ -469,7 +467,7 @@ public class Videobridge
         }
         catch (XmppStringprepException e)
         {
-            return IQUtils.createError(
+            return createError(
                     conferenceModifyIQ,
                     StanzaError.Condition.bad_request,
                     "Invalid conference name (not a JID)");
@@ -535,10 +533,7 @@ public class Videobridge
         catch (XmppStringprepException e)
         {
             request.getCallback().invoke(
-                IQUtils.createError(
-                    iq,
-                    StanzaError.Condition.bad_request,
-                    "Invalid conference name (not a JID)"));
+                createError(iq, StanzaError.Condition.bad_request, "Invalid conference name (not a JID)"));
             return;
         }
 
@@ -548,32 +543,22 @@ public class Videobridge
 
     private IQ createConferenceAlreadyExistsResponse(IQ iq, String conferenceId, boolean colibri2)
     {
-        IQ error = IQUtils.createError(
+        return createError(
                 iq,
                 // Jicofo's colibri1 impl requires a bad_request
                 colibri2 ? StanzaError.Condition.conflict : StanzaError.Condition.bad_request,
-                "Conference already exists for ID: " + conferenceId);
-        if (colibri2)
-        {
-            error.addExtension(new Colibri2Error(Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS));
-        }
-
-        return error;
+                "Conference already exists for ID: " + conferenceId,
+                colibri2 ? new Colibri2Error(Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS) : null);
     }
 
-    private IQ createConferenceNotFoundResponse(IQ iq, String conferenceId, boolean colibri2)
+    public static IQ createConferenceNotFoundResponse(IQ iq, String conferenceId, boolean colibri2)
     {
-        IQ error = IQUtils.createError(
+        return createError(
                 iq,
                 // Jicofo's colibri1 impl requires a bad_request
                 colibri2 ? StanzaError.Condition.item_not_found : StanzaError.Condition.bad_request,
-                "Conference not found for ID: " + conferenceId);
-        if (colibri2)
-        {
-            error.addExtension(new Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND));
-        }
-
-        return error;
+                "Conference not found for ID: " + conferenceId,
+                colibri2 ? new Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND) : null);
     }
 
     private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)
@@ -671,11 +656,7 @@ public class Videobridge
         catch (Exception e)
         {
             logger.warn("Exception while handling health check IQ request", e);
-            return
-                IQUtils.createError(
-                        healthCheckIQ,
-                        StanzaError.Condition.internal_server_error,
-                        e.getMessage());
+            return createError(healthCheckIQ, StanzaError.Condition.internal_server_error, e.getMessage());
         }
     }
 

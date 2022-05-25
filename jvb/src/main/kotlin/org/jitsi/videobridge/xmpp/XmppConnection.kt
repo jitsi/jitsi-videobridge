@@ -30,7 +30,7 @@ import org.jitsi.xmpp.mucclient.IQListener
 import org.jitsi.xmpp.mucclient.MucClient
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 import org.jitsi.xmpp.mucclient.MucClientManager
-import org.jitsi.xmpp.util.IQUtils
+import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.ExtensionElement
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
@@ -180,7 +180,7 @@ class XmppConnection : IQListener {
     }
 
     private fun handleIqRequest(iq: IQ, mucClient: MucClient): IQ? {
-        val handler = eventHandler ?: return IQUtils.createError(
+        val handler = eventHandler ?: return createError(
             iq,
             StanzaError.Condition.service_unavailable,
             "Service unavailable"
@@ -203,7 +203,7 @@ class XmppConnection : IQListener {
             is HealthCheckIQ -> measureDelay(healthDelayStats, { iq.toXML() }) {
                 handler.healthCheckIqReceived(iq)
             }
-            else -> IQUtils.createError(
+            else -> createError(
                 iq,
                 StanzaError.Condition.service_unavailable,
                 "Unsupported IQ request ${iq.childElementName}"

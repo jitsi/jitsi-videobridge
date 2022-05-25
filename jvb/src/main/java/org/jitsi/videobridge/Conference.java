@@ -36,7 +36,6 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
-import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
@@ -46,6 +45,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
+
+import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -306,7 +307,7 @@ public class Conference
                     {
                         logger.warn("Failed to handle colibri request: ", e);
                         request.getCallback().invoke(
-                                IQUtils.createError(
+                                createError(
                                         request.getRequest(),
                                         StanzaError.Condition.internal_server_error,
                                         e.getMessage()));

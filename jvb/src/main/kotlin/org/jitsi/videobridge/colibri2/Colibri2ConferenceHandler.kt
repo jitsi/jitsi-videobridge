@@ -47,7 +47,7 @@ import org.jitsi.xmpp.extensions.colibri2.Transport
 import org.jitsi.xmpp.extensions.jingle.ParameterPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
 import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
-import org.jitsi.xmpp.util.IQUtils
+import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
 
@@ -104,7 +104,7 @@ class Colibri2ConferenceHandler(
         } else {
             logger.error("Error processing conference-modify IQ: $e")
         }
-        Pair(IQUtils.createError(conferenceModifyIQ, e.condition, e.message), false)
+        Pair(createError(conferenceModifyIQ, e.condition, e.message), false)
     }
 
     private fun buildFeedbackSources(): Sources = Sources.getBuilder().apply {
