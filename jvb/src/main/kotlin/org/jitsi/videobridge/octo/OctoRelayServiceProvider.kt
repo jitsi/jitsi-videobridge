@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.octo
 
+import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.octo.config.OctoConfig
 
 class OctoRelayServiceProvider {
@@ -24,14 +25,20 @@ class OctoRelayServiceProvider {
             try {
                 OctoRelayService()
             } catch (t: Throwable) {
+                logger.error("Error initializing OctoRelayService", t)
                 null
             }
         } else {
+            logger.info("Octo disabled in configuration.")
             null
         }
     }
 
     fun get(): OctoRelayService? = octoRelayService
+
+    companion object {
+        val logger = createLogger()
+    }
 }
 
 private val supplierSingleton: OctoRelayServiceProvider = OctoRelayServiceProvider()
