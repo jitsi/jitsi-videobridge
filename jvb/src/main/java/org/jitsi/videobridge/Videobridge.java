@@ -275,23 +275,6 @@ public class Videobridge
      * adds the new instance to the list of existing <tt>Conference</tt>
      * instances.
      *
-     * This is only used for testing.
-     *
-     * @param name world readable name of the conference to create.
-     * the {@link Conference}.
-     */
-    public @NotNull Conference createConference(EntityBareJid name)
-    {
-        // we default to rtcstatsEnabled=false and callstatsEnabled=false because this is only used for testing
-        return createConference(name, Conference.GID_NOT_SET, null, false, false, false);
-    }
-
-    /**
-     * Initializes a new {@link Conference} instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
-     * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances.
-     *
      * @param name world readable name of the conference to create.
      * @param gid the "global" id of the conference (or
      * {@link Conference#GID_NOT_SET} if it is not specified.
