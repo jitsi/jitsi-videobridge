@@ -24,14 +24,14 @@
 
     <properties>
         <jetty.version>11.0.9</jetty.version>
-        <kotlin.version>1.5.31</kotlin.version>
-        <kotest.version>4.6.3</kotest.version>
-        <junit.version>5.8.1</junit.version>
+        <kotlin.version>1.6.21</kotlin.version>
+        <kotest.version>5.3.0</kotest.version>
+        <junit.version>5.8.2</junit.version>
         <jicoco.version>1.1-107-gfb316f8</jicoco.version>
         <jitsi.utils.version>1.0-115-gb93957d</jitsi.utils.version>
-        <ktlint-maven-plugin.version>1.11.0</ktlint-maven-plugin.version>
+        <ktlint-maven-plugin.version>1.13.1</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
-        <spotbugs.version>4.5.0</spotbugs.version>
+        <spotbugs.version>4.6.0</spotbugs.version>
         <jersey.version>3.0.4</jersey.version>
         <jackson.version>2.12.4</jackson.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -130,7 +130,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.7</version>
+                        <version>0.8.8</version>
                         <executions>
                             <execution>
                                 <goals>
