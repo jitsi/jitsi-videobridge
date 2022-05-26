@@ -64,7 +64,7 @@ class TccGeneratorNode(
     private var numTccSent: Int = 0
     private var numMultipleTccPackets = 0
     private var enabled: Boolean by observableWhenChanged(false) {
-        _, _, newValue ->
+            _, _, newValue ->
         logger.debug("Setting enabled=$newValue")
     }
     private val rfc3711IndexTracker = Rfc3711IndexTracker()

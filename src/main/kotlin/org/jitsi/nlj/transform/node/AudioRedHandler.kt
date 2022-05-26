@@ -58,7 +58,6 @@ class AudioRedHandler(
         }
     }
 
-    @ExperimentalStdlibApi
     override fun transform(packetInfo: PacketInfo): List<PacketInfo> {
         val audioPacket = packetInfo.packet as? AudioRtpPacket ?: return listOf(packetInfo)
 
@@ -211,7 +210,6 @@ class AudioRedHandler(
          * RED format, it is either forwarded as it is or it is "stripped" to its primary encoding, with redundancy
          * blocks being read if there are non-received packets.
          */
-        @ExperimentalStdlibApi
         fun transformRed(packetInfo: PacketInfo): List<PacketInfo> {
             // Whether we need to strip the RED encapsulation
             val strip = when (redPayloadType) {

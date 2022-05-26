@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj
 
-fun main(args: Array<String>) {
+fun main() {
 
     /*
     val pg = PacketGenerator()

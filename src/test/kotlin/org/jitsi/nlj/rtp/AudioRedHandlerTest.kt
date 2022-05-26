@@ -20,7 +20,7 @@ import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeTypeOf
-import org.jitsi.config.useNewConfig
+import org.jitsi.config.withNewConfig
 import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.nlj.format.AudioRedPayloadType
 import org.jitsi.nlj.node.processPackets
@@ -41,10 +41,6 @@ class AudioRedHandlerTest : ShouldSpec() {
     override fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         MetaconfigSettings.cacheEnabled = false
-    }
-
-    private inline fun withNewConfig(config: String, block: () -> Unit) {
-        useNewConfig("new-${this::class.simpleName}", config, true, block)
     }
 
     private val streamInformationStore = StreamInformationStoreImpl()

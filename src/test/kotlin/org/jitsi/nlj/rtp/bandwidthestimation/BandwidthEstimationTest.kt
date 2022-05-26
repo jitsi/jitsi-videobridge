@@ -58,7 +58,7 @@ abstract class FixedRateSender(
     var running = false
 
     var rate: Bandwidth by Delegates.observable(0.bps) {
-        _, _, _ ->
+            _, _, _ ->
         nextPacket?.cancel(false)
         schedulePacket(false)
     }

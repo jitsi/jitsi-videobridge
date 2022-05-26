@@ -18,18 +18,13 @@ package org.jitsi.nlj.node
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import org.jitsi.config.useNewConfig
+import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.rtp.audioPacketBytes
 import org.jitsi.nlj.transform.node.PacketLossConfig
 import org.jitsi.nlj.transform.node.PacketLossNode
 import org.jitsi.rtp.rtp.RtpPacket
 
 class PacketLossTest : ShouldSpec() {
-
-    private inline fun withNewConfig(config: String, block: () -> Unit) {
-        useNewConfig("new-${this::class.simpleName}", config, true, block)
-    }
-
     init {
         context("Burst loss") {
             withNewConfig(

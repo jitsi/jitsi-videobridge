@@ -47,7 +47,7 @@ data class PcapInformation(
     var ssrcAssociations: List<SourceAssociation>
 )
 
-val DEFAULT_HEADER_EXTENSIONS = listOf(
+private val DEFAULT_HEADER_EXTENSIONS = listOf(
     RtpExtension(1, RtpExtensionType.SSRC_AUDIO_LEVEL),
     RtpExtension(3, RtpExtensionType.ABS_SEND_TIME),
     RtpExtension(4, RtpExtensionType.RTP_STREAM_ID),

@@ -24,6 +24,8 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
     <!-- False positives with lateinit -->
     <Bug pattern="NP_NULL_PARAM_DEREF"/>
+    <!-- False positives with lateinit -->
+    <Bug pattern="NP_NONNULL_RETURN_VIOLATION"/>
     <!-- False positives with method references -->
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
     <!-- False positives with kotlin's "when" -->
@@ -32,7 +34,8 @@
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
     <!-- False positives with lazy vals -->
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
-
+    <!-- False positives with Kotlin inlines -->
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
 
     <!-- False positives for an unknown reason -->
     <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
@@ -55,6 +58,10 @@
     <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
     <!-- Looks like a false positive. -->
     <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS"/>
+    <!-- Confused by kotest beforeSpec patterns. -->
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION" />
+    <!-- False positives for an unknown reason. -->
+    <Bug pattern="SA_LOCAL_SELF_ASSIGNMENT"/>
   </Or>
   <Or>
     <Source name="~.*\.*Test.kt" />

@@ -45,7 +45,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cerror
 import org.jitsi.utils.logging2.cinfo
 
-val SECURE_RANDOM = SecureRandom()
+private val SECURE_RANDOM = SecureRandom()
 val BC_TLS_CRYPTO = BcTlsCrypto(SECURE_RANDOM)
 
 /**

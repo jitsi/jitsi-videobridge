@@ -10,14 +10,14 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.5.20</kotlin.version>
-        <kotest.version>4.6.1</kotest.version>
-        <junit.version>5.2.0</junit.version>
+        <kotlin.version>1.6.21</kotlin.version>
+        <kotest.version>4.6.4</kotest.version>
+        <junit.version>5.8.2</junit.version>
         <bouncycastle.version>1.70</bouncycastle.version>
         <jitsi.utils.version>1.0-115-gb93957d</jitsi.utils.version>
         <ktlint.skip>false</ktlint.skip>
-        <spotbugs.version>4.0.6</spotbugs.version>
-        <jicoco.version>1.1-90-gfa0e11e</jicoco.version>
+        <spotbugs.version>4.6.0</spotbugs.version>
+        <jicoco.version>1.1-108-g737afd1</jicoco.version>
     </properties>
     <dependencies>
         <dependency>
@@ -245,52 +245,25 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.8</version>
+                <groupId>com.github.gantsign.maven</groupId>
+                <artifactId>ktlint-maven-plugin</artifactId>
+                <version>1.13.1</version>
+                <configuration>
+                    <sourceRoots>
+                       <sourceRoot>${project.basedir}/src/main/kotlin</sourceRoot>
+                    </sourceRoots>
+                    <testSourceRoots>
+                        <testSourceRoot>${project.basedir}/src/test/kotlin</testSourceRoot>
+                    </testSourceRoots>
+                </configuration>
                 <executions>
                     <execution>
-                        <id>ktlint</id>
-                        <phase>verify</phase>
-                        <configuration>
-                            <skip>${ktlint.skip}</skip>
-                            <target name="ktlint">
-                                <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                                    classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
-                                    <arg value="src/**/*.kt"/>
-                                    <!-- to generate report in checkstyle format prepend following args: -->
-                                    <!--
-                                    <arg value="[dash][dash]reporter=plain"/>
-                                    <arg value="[dash][dash]reporter=checkstyle,output=${project.build.directory}/ktlint.xml"/>
-                                    -->
-                                    <!-- see https://github.com/shyiko/ktlint#usage for more -->
-                                </java>
-                            </target>
-                        </configuration>
-                        <goals><goal>run</goal></goals>
-                    </execution>
-                    <execution>
-                        <id>ktlint-format</id>
-                        <configuration>
-                            <target name="ktlint">
-                                <java taskname="ktlint" dir="${basedir}" fork="true" failonerror="true"
-                                    classpathref="maven.plugin.classpath" classname="com.pinterest.ktlint.Main">
-                                    <arg value="-F"/>
-                                    <arg value="src/**/*.kt"/>
-                                </java>
-                            </target>
-                        </configuration>
-                        <goals><goal>run</goal></goals>
+                      <id>check</id>
+                      <goals>
+                          <goal>check</goal>
+                      </goals>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.pinterest</groupId>
-                        <artifactId>ktlint</artifactId>
-                        <version>0.41.0</version>
-                    </dependency>
-                    <!-- additional 3rd party ruleset(s) can be specified here -->
-                </dependencies>
             </plugin>
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
@@ -310,7 +283,7 @@
           <plugin>
               <groupId>com.github.spotbugs</groupId>
               <artifactId>spotbugs-maven-plugin</artifactId>
-              <version>4.2.2</version>
+              <version>4.7.0.0</version>
               <configuration>
                   <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
                   <includeTests>true</includeTests>
@@ -367,7 +340,7 @@
         <profile>
             <id>coverage</id>
             <properties>
-                <jacoco.version>0.8.7</jacoco.version>
+                <jacoco.version>0.8.8</jacoco.version>
             </properties>
             <build>
                 <plugins>

@@ -225,7 +225,7 @@ private fun createSource(
     var height = 720
 
     val encodings = Array(primarySsrcs.size) {
-        encodingIdx ->
+            encodingIdx ->
         val primarySsrc: Long = primarySsrcs.get(encodingIdx)
         val ret = createRtpEncodingDesc(
             primarySsrc,

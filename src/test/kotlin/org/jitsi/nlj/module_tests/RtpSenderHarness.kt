@@ -26,7 +26,7 @@ import org.jitsi.utils.secs
 import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
 
-fun main(args: Array<String>) {
+fun main() {
     val pcap = Pcaps.Outgoing.ONE_PARITICPANT_RTP_AND_RTCP_DECRYPTED
 
     val producer = PcapPacketProducer(pcap.filePath)
