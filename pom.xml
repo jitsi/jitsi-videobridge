@@ -9,11 +9,11 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <kotlin.version>1.5.20</kotlin.version>
-        <kotest.version>4.6.1</kotest.version>
-        <junit.version>5.2.0</junit.version>
+        <kotlin.version>1.6.21</kotlin.version>
+        <kotest.version>5.3.0</kotest.version>
+        <junit.version>5.8.2</junit.version>
         <jitsi.utils.version>1.0-94-ge7c7a43</jitsi.utils.version>
-        <spotbugs.version>4.0.0-RC1</spotbugs.version>
+        <spotbugs.version>4.6.0</spotbugs.version>
     </properties>
 
     <dependencies>
@@ -174,7 +174,7 @@
             <plugin>
               <groupId>com.github.gantsign.maven</groupId>
               <artifactId>ktlint-maven-plugin</artifactId>
-              <version>1.9.0</version>
+              <version>1.13.1</version>
               <configuration>
                 <sourceRoots>
                   <sourceRoot>${project.basedir}/src/main/kotlin</sourceRoot>
@@ -195,7 +195,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.2.2</version>
+                <version>4.7.0.0</version>
                 <configuration>
                     <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
                     <includeTests>true</includeTests>
@@ -250,7 +250,7 @@
         <profile>
             <id>coverage</id>
             <properties>
-                <jacoco.version>0.8.7</jacoco.version>
+                <jacoco.version>0.8.8</jacoco.version>
             </properties>
             <build>
                 <plugins>

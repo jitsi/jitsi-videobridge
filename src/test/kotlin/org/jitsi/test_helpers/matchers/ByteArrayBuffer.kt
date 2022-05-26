@@ -38,8 +38,8 @@ fun haveSameContentAs(expected: ByteArrayBuffer) = object : Matcher<ByteArrayBuf
     override fun test(value: ByteArrayBuffer): MatcherResult {
         return MatcherResult(
             value.hasSameContentAs(expected),
-            "\n${value.toHex()}\nwas supposed to be:\n${expected.toHex()}",
-            "\n${value.toHex()}\nshould not have equaled \n${expected.toHex()}"
+            { "\n${value.toHex()}\nwas supposed to be:\n${expected.toHex()}" },
+            { "\n${value.toHex()}\nshould not have equaled \n${expected.toHex()}" }
         )
     }
 }

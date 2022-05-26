@@ -51,9 +51,8 @@ fun haveSameFixedHeader(expected: RtpPacket) = object : Matcher<RtpPacket> {
 
         return MatcherResult(
             valueHeader.hasSameContentAs(expectedHeader),
-            "\n${valueHeader.toHex()}\nwas supposed to be:\n${expectedHeader.toHex()}",
-
-            "\n${valueHeader.toHex()}\nshould not have equaled \n${expectedHeader.toHex()}"
+            { "\n${valueHeader.toHex()}\nwas supposed to be:\n${expectedHeader.toHex()}" },
+            { "\n${valueHeader.toHex()}\nshould not have equaled \n${expectedHeader.toHex()}" }
         )
     }
 }
