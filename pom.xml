@@ -27,7 +27,7 @@
         <kotlin.version>1.6.21</kotlin.version>
         <kotest.version>5.3.0</kotest.version>
         <junit.version>5.8.2</junit.version>
-        <jicoco.version>1.1-107-gfb316f8</jicoco.version>
+        <jicoco.version>1.1-109-gd47a5e0</jicoco.version>
         <jitsi.utils.version>1.0-115-gb93957d</jitsi.utils.version>
         <ktlint-maven-plugin.version>1.13.1</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
@@ -112,7 +112,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-50-gdbc408f</version>
+                <version>1.0-53-g0113a6b</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>

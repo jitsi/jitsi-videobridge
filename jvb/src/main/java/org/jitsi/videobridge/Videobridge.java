@@ -41,7 +41,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.health.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
@@ -54,6 +53,10 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
+
+import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceAlreadyExistsError;
+import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceNotFoundError;
+import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -274,23 +277,6 @@ public class Videobridge
      * adds the new instance to the list of existing <tt>Conference</tt>
      * instances.
      *
-     * This is only used for testing.
-     *
-     * @param name world readable name of the conference to create.
-     * the {@link Conference}.
-     */
-    public @NotNull Conference createConference(EntityBareJid name)
-    {
-        // we default to rtcstatsEnabled=false and callstatsEnabled=false because this is only used for testing
-        return createConference(name, Conference.GID_NOT_SET, null, false, false, false);
-    }
-
-    /**
-     * Initializes a new {@link Conference} instance with an ID unique to the
-     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
-     * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances.
-     *
      * @param name world readable name of the conference to create.
      * @param gid the "global" id of the conference (or
      * {@link Conference#GID_NOT_SET} if it is not specified.
@@ -430,10 +416,7 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            return IQUtils.createError(
-                    conferenceIq,
-                    StanzaError.Condition.bad_request,
-                    "Conference not found for ID: " + conferenceIq.getID());
+            return createConferenceNotFoundError(conferenceIq, conferenceIq.getID(), false);
         }
         catch (InGracefulShutdownException e)
         {
@@ -457,17 +440,11 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            return IQUtils.createError(
-                    conferenceModifyIQ,
-                    StanzaError.Condition.bad_request,
-                    "Conference not found for ID: " + conferenceModifyIQ.getMeetingId());
+            return createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
         }
         catch (ConferenceAlreadyExistsException e)
         {
-            return IQUtils.createError(
-                    conferenceModifyIQ,
-                    StanzaError.Condition.bad_request,
-                    "Conference already exists for ID: " + conferenceModifyIQ.getMeetingId());
+            return createConferenceAlreadyExistsError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
         }
         catch (InGracefulShutdownException e)
         {
@@ -475,7 +452,7 @@ public class Videobridge
         }
         catch (XmppStringprepException e)
         {
-            return IQUtils.createError(
+            return createError(
                     conferenceModifyIQ,
                     StanzaError.Condition.bad_request,
                     "Invalid conference name (not a JID)");
@@ -504,8 +481,7 @@ public class Videobridge
         }
         else
         {
-            throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() +
-                    " in handleColibriRequest");
+            throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() + " in handleColibriRequest");
         }
 
         try
@@ -525,12 +501,12 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            request.getCallback().invoke(createConferenceNotFoundResponse(iq, id, colibri2));
+            request.getCallback().invoke(createConferenceNotFoundError(iq, id, colibri2));
             return;
         }
         catch (ConferenceAlreadyExistsException e)
         {
-            request.getCallback().invoke(createConferenceAlreadyExistsResponse(iq, id, colibri2));
+            request.getCallback().invoke(createConferenceAlreadyExistsError(iq, id, colibri2));
             return;
         }
         catch (InGracefulShutdownException e)
@@ -541,45 +517,12 @@ public class Videobridge
         catch (XmppStringprepException e)
         {
             request.getCallback().invoke(
-                IQUtils.createError(
-                    iq,
-                    StanzaError.Condition.bad_request,
-                    "Invalid conference name (not a JID)"));
+                createError(iq, StanzaError.Condition.bad_request, "Invalid conference name (not a JID)"));
             return;
         }
 
         // It is now the responsibility of Conference to send a response.
         conference.enqueueColibriRequest(request);
-    }
-
-    private IQ createConferenceAlreadyExistsResponse(IQ iq, String conferenceId, boolean colibri2)
-    {
-        IQ error = IQUtils.createError(
-                iq,
-                // Jicofo's colibri1 impl requires a bad_request
-                colibri2 ? StanzaError.Condition.conflict : StanzaError.Condition.bad_request,
-                "Conference already exists for ID: " + conferenceId);
-        if (colibri2)
-        {
-            error.addExtension(new Colibri2Error(Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS));
-        }
-
-        return error;
-    }
-
-    private IQ createConferenceNotFoundResponse(IQ iq, String conferenceId, boolean colibri2)
-    {
-        IQ error = IQUtils.createError(
-                iq,
-                // Jicofo's colibri1 impl requires a bad_request
-                colibri2 ? StanzaError.Condition.item_not_found : StanzaError.Condition.bad_request,
-                "Conference not found for ID: " + conferenceId);
-        if (colibri2)
-        {
-            error.addExtension(new Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND));
-        }
-
-        return error;
     }
 
     private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)
@@ -677,11 +620,7 @@ public class Videobridge
         catch (Exception e)
         {
             logger.warn("Exception while handling health check IQ request", e);
-            return
-                IQUtils.createError(
-                        healthCheckIQ,
-                        StanzaError.Condition.internal_server_error,
-                        e.getMessage());
+            return createError(healthCheckIQ, StanzaError.Condition.internal_server_error, e.getMessage());
         }
     }
 

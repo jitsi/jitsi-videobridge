@@ -25,13 +25,13 @@ import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
-import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
 import java.util.stream.*;
 
 import static org.jitsi.videobridge.Conference.GID_NOT_SET;
+import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
  * Handles Colibri-related logic for a {@link Conference}, e.g.
@@ -367,7 +367,7 @@ public class ConferenceShim
             ContentShim contentShim = getOrCreateContent(contentType);
             if (contentShim == null)
             {
-                return IQUtils.createError(
+                return createError(
                         conferenceIQ,
                         StanzaError.Condition.internal_server_error,
                         "Failed to create new content for type: " + contentType);
@@ -394,7 +394,7 @@ public class ConferenceShim
                 {
                     logger.error("Error processing channels: " + e);
                 }
-                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
+                return createError(conferenceIQ, e.getCondition(), e.getMessage());
             }
 
             // We want to handle the two Octo channels together.
@@ -423,7 +423,7 @@ public class ConferenceShim
             catch (IqProcessingException e)
             {
                 logger.error("Error processing sctp connections in IQ: ", e);
-                return IQUtils.createError(conferenceIQ, e.getCondition(), e.getMessage());
+                return createError(conferenceIQ, e.getCondition(), e.getMessage());
             }
         }
 
@@ -431,7 +431,7 @@ public class ConferenceShim
         {
             if (conference.getGid() == GID_NOT_SET)
             {
-                return IQUtils.createError(
+                return createError(
                         conferenceIQ,
                         StanzaError.Condition.bad_request,
                         "Can not enable octo without a valid GID.");
@@ -443,7 +443,7 @@ public class ConferenceShim
         else if (octoAudioChannel != null || octoVideoChannel != null)
         {
             logger.error("Octo must be enabled for audio and video together");
-            return IQUtils.createError(
+            return createError(
                     conferenceIQ,
                     StanzaError.Condition.bad_request,
                     "Octo only enabled for one media type");
