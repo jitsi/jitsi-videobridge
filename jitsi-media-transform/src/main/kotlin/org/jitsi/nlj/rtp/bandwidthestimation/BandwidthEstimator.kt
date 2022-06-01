@@ -16,18 +16,18 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation
 
-import java.time.Duration
-import java.time.Instant
-import java.util.LinkedList
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.formatMilli
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.LinkedList
 
 /**
  * An abstract interface to a bandwidth estimation algorithm.

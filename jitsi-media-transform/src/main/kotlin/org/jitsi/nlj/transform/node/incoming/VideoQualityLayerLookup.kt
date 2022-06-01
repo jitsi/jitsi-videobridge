@@ -16,15 +16,15 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
+import org.jitsi.nlj.findRtpLayerDesc
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.nlj.MediaSourceDesc
-import org.jitsi.nlj.findRtpLayerDesc
 import java.util.concurrent.atomic.AtomicInteger
 
 /**

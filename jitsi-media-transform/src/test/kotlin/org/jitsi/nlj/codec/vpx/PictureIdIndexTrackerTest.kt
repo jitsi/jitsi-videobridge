@@ -17,9 +17,9 @@
 package org.jitsi.nlj.codec.vpx
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
 
 internal class PictureIdIndexTrackerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

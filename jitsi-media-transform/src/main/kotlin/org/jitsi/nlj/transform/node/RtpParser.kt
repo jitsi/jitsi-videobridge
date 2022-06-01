@@ -21,10 +21,10 @@ import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RedAudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.utils.logging2.cdebug
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 
 class RtpParser(

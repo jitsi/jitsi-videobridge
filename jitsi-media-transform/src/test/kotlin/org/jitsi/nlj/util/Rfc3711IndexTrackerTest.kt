@@ -17,9 +17,9 @@
 package org.jitsi.nlj.util
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
 
 internal class Rfc3711IndexTrackerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

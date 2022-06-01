@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.rtcp
 
-import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Instant
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * A central place to allow the publishing of when RTCP packets are received or sent.  We're

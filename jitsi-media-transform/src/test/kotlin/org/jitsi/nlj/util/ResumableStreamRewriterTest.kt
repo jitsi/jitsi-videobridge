@@ -17,8 +17,8 @@
 package org.jitsi.nlj.util
 
 import io.kotest.assertions.withClue
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.rtp.ResumableStreamRewriter
 
 internal class ResumableStreamRewriterTest : ShouldSpec() {

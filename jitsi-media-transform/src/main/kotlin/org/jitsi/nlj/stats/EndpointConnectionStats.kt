@@ -16,15 +16,7 @@
 
 package org.jitsi.nlj.stats
 
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.util.Collections
-import java.util.concurrent.CopyOnWriteArrayList
 import org.jitsi.nlj.rtcp.RtcpListener
-import org.jitsi.utils.OrderedJsonObject
-import org.jitsi.utils.logging2.cdebug
-import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.nlj.util.toDoubleMillis
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -33,9 +25,17 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
 import org.jitsi.utils.LRUCache
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.secs
 import org.jitsi.utils.stats.RateTracker
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.Collections
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * The maximum number of SR packets and their timestamps to save.

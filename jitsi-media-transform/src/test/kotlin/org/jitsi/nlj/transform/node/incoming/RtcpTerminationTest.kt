@@ -17,9 +17,9 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.jitsi.nlj.PacketInfo

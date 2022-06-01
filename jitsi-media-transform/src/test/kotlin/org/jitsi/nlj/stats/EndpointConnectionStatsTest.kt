@@ -17,19 +17,19 @@
 package org.jitsi.nlj.stats
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import java.time.Duration
 import org.jitsi.nlj.resources.logging.StdoutLogger
-import org.jitsi.test.time.FakeClock
 import org.jitsi.nlj.test_utils.timeline
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.ms
+import java.time.Duration
 
 class EndpointConnectionStatsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

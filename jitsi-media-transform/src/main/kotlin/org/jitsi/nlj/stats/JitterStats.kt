@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.stats
 
-import kotlin.math.abs
 import org.jitsi.nlj.PacketInfo
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.abs
 
 open class JitterStats {
     var jitter: Double = 0.0

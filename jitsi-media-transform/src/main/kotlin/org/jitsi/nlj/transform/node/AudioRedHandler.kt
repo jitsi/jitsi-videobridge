@@ -20,8 +20,8 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.AudioRedPayloadType
-import org.jitsi.nlj.rtp.RedAudioRtpPacket
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.RedAudioRtpPacket
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.util.BufferPool

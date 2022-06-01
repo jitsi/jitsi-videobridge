@@ -17,8 +17,8 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket

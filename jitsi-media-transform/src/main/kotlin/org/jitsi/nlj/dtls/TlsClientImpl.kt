@@ -16,8 +16,6 @@
 package org.jitsi.nlj.dtls
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import java.nio.ByteBuffer
-import java.util.Hashtable
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
@@ -41,11 +39,13 @@ import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
 import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.SrtpUtil
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.rtp.extensions.toHex
-import org.jitsi.utils.logging2.Logger
+import java.nio.ByteBuffer
+import java.util.Hashtable
 
 /**
  * Implementation of [DefaultTlsClient].

@@ -17,6 +17,7 @@
 package org.jitsi.nlj.srtp
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.srtp.SrtpConfig.Companion.maxConsecutivePacketsDiscardedEarly
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtp.RtpPacket
@@ -29,7 +30,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.logging2.cwarn
 import java.util.concurrent.ConcurrentHashMap
-import org.jitsi.nlj.srtp.SrtpConfig.Companion.maxConsecutivePacketsDiscardedEarly
 
 /**
  * Implements the methods common to all 4 transformer implementation (encrypt/decrypt for SRTP/SRTCP)

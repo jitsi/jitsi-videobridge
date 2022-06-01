@@ -21,10 +21,10 @@ import org.bouncycastle.tls.DTLSClientProtocol
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.utils.logging2.cerror
-import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.cerror
+import org.jitsi.utils.logging2.createChildLogger
 
 class DtlsClient(
     private val datagramTransport: DatagramTransport,

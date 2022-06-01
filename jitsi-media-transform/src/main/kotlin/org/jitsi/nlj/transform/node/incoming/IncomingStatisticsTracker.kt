@@ -15,13 +15,11 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import java.util.concurrent.ConcurrentHashMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.JitterStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils.Companion.convertRtpTimestampToInstant
@@ -30,8 +28,10 @@ import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.numPacketsTo
 import org.jitsi.rtp.util.rolledOverTo
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks

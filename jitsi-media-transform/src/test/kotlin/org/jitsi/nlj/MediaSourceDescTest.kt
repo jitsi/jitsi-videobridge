@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj
 
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bps

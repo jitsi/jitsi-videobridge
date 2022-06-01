@@ -18,9 +18,9 @@ package org.jitsi.nlj.test_utils.matchers
 
 import io.kotest.matchers.Matcher
 import io.kotest.matchers.MatcherResult
-import java.nio.ByteBuffer
 import org.jitsi.rtp.extensions.compareToFromBeginning
 import org.jitsi.rtp.extensions.toHex
+import java.nio.ByteBuffer
 
 fun haveSameContentAs(expected: ByteBuffer) = object : Matcher<ByteBuffer> {
     override fun test(value: ByteBuffer): MatcherResult {

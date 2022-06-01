@@ -15,18 +15,18 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation
 
-import java.time.Duration
-import java.time.Instant
-import kotlin.properties.Delegates
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
-import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.nlj.util.mbps
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateEstimatorAbsSendTime
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation
+import java.time.Duration
+import java.time.Instant
+import kotlin.properties.Delegates
 
 private val defaultInitBw: Bandwidth = 2.5.mbps
 

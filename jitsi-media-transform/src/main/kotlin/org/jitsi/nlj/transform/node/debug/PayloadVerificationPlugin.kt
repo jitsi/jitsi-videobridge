@@ -16,12 +16,12 @@
 
 package org.jitsi.nlj.transform.node.debug
 
-import java.util.concurrent.atomic.AtomicInteger
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodePlugin
 import org.jitsi.utils.logging2.createLogger
 import org.json.simple.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Verifies that the payload verification string of the packet hasn't changed.

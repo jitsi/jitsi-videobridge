@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.utils.OrderedJsonObject
 
 class NodeStatsBlock(val name: String) {
     private val stats = mutableMapOf<String, Any>()

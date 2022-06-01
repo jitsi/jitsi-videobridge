@@ -18,8 +18,6 @@ package org.jitsi.nlj
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.CompoundRtcpParser
 import org.jitsi.nlj.rtcp.RembHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -44,36 +42,37 @@ import org.jitsi.nlj.transform.node.SrtpDecryptNode
 import org.jitsi.nlj.transform.node.ToggleablePcapWriter
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
+import org.jitsi.nlj.transform.node.incoming.DiscardableDiscarder
 import org.jitsi.nlj.transform.node.incoming.DuplicateTermination
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
-import org.jitsi.nlj.transform.node.incoming.VideoQualityLayerLookup
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RemoteBandwidthEstimator
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequesterNode
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
-import org.jitsi.nlj.transform.node.incoming.DiscardableDiscarder
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
-import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.VideoMuteNode
+import org.jitsi.nlj.transform.node.incoming.VideoParser
+import org.jitsi.nlj.transform.node.incoming.VideoQualityLayerLookup
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
+import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.utils.logging2.cdebug
-import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
-
-import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.nlj.util.BufferPool
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: String,

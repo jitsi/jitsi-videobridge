@@ -17,11 +17,11 @@
 package org.jitsi.nlj.util
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeStatsProducer
 import java.lang.Integer.max
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.NodeStatsProducer
 
 /**
  * Implements a fixed-sized cache based on a pre-filled array. The main use-case is the outgoing RTP packet cache.

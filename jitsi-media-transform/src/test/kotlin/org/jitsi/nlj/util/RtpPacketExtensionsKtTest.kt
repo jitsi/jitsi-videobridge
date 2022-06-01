@@ -17,14 +17,14 @@
 package org.jitsi.nlj.util
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.should
-import java.nio.ByteBuffer
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.test_utils.matchers.haveSameContentAs
 import org.jitsi.rtp.extensions.plus
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.byteBufferOf
+import java.nio.ByteBuffer
 
 class RtpPacketExtensionsKtTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

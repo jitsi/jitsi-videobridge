@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.util
 
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.shouldBe
 
 internal class ArrayCacheTest : ShouldSpec() {
 

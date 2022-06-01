@@ -15,8 +15,6 @@
  */
 package org.jitsi.nlj.rtcp
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.transform.node.incoming.IncomingSsrcStats
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.util.schedule
@@ -31,6 +29,8 @@ import org.jitsi.utils.times
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ScheduledExecutorService
 
 /**
  * Information about a sender that is used in the generation of RTCP report blocks.  NOTE that this does NOT correspond

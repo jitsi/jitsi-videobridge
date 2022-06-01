@@ -17,8 +17,8 @@ package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.nlj.util.bytes
+import org.jitsi.utils.OrderedJsonObject
 import java.util.concurrent.atomic.AtomicLong
 
 /**

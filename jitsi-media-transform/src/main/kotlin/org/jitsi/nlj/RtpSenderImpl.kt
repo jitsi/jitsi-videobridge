@@ -18,9 +18,6 @@ package org.jitsi.nlj
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
-import java.time.Duration
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ScheduledExecutorService
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -45,24 +42,26 @@ import org.jitsi.nlj.transform.node.SrtpEncryptNode
 import org.jitsi.nlj.transform.node.ToggleablePcapWriter
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtEncoder
+import org.jitsi.nlj.transform.node.outgoing.HeaderExtStripper
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
-import org.jitsi.nlj.transform.node.outgoing.HeaderExtStripper
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
+import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
-import org.jitsi.utils.logging2.cdebug
-import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
-
-import org.jitsi.nlj.util.BufferPool
+import java.time.Duration
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 
 class RtpSenderImpl(
     val id: String,

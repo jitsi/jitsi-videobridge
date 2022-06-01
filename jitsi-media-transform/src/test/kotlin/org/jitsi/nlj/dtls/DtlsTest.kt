@@ -17,8 +17,8 @@
 package org.jitsi.nlj.dtls
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.transform.node.PcapWriter

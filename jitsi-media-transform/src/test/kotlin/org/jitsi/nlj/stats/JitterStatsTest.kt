@@ -18,9 +18,9 @@ package org.jitsi.nlj.stats
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.rtp.RtpPacket
 import java.time.Instant

@@ -15,12 +15,10 @@
  */
 package org.jitsi.nlj.transform.node
 
-import java.net.Inet4Address
-import java.util.Random
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.logging2.Logger
 import org.pcap4j.core.Pcaps
 import org.pcap4j.packet.EthernetPacket
 import org.pcap4j.packet.IpV4Packet
@@ -33,6 +31,8 @@ import org.pcap4j.packet.namednumber.IpNumber
 import org.pcap4j.packet.namednumber.IpVersion
 import org.pcap4j.packet.namednumber.UdpPort
 import org.pcap4j.util.MacAddress
+import java.net.Inet4Address
+import java.util.Random
 
 class PcapWriter(
     parentLogger: Logger,

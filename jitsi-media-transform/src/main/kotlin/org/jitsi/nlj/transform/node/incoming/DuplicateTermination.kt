@@ -15,12 +15,12 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import java.util.TreeMap
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.LRUCache
+import java.util.TreeMap
 
 /**
  * A node which drops packets with SSRC and sequence number pairs identical to ones

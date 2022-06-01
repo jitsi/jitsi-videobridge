@@ -17,10 +17,10 @@
 package org.jitsi.nlj.transform.node.outgoing
 
 import io.kotest.core.spec.IsolationMode
-import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample

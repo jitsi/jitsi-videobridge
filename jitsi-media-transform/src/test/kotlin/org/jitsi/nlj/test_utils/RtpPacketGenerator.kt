@@ -18,9 +18,9 @@ package org.jitsi.nlj.test_utils
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.`in`
 import org.jitsi.nlj.util.atRate
 import org.jitsi.nlj.util.howMuchCanISendAtRate
+import org.jitsi.nlj.util.`in`
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.div

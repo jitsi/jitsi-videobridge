@@ -15,17 +15,14 @@
  */
 package org.jitsi.nlj.rtp
 
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.instantOfEpochMicro
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.nlj.util.formatMilli
+import org.jitsi.nlj.util.instantOfEpochMicro
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
@@ -35,6 +32,9 @@ import org.jitsi.utils.joinToRangedString
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.json.simple.JSONObject
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.atomic.LongAdder
 
 /**

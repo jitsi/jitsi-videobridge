@@ -16,9 +16,9 @@
 package org.jitsi.nlj
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import java.time.Duration
 import org.jitsi.rtp.Packet
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.util.Collections
 
