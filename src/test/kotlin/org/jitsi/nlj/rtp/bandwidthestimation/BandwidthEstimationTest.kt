@@ -17,7 +17,6 @@ package org.jitsi.nlj.rtp.bandwidthestimation
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.doubles.shouldBeBetween
-import io.mockk.spyk
 import org.jitsi.test.concurrent.FakeScheduledExecutorService
 import java.time.Clock
 import java.time.Duration
@@ -204,7 +203,7 @@ class PacketReceiver(
 }
 
 class BandwidthEstimationTest : ShouldSpec() {
-    private val scheduler: FakeScheduledExecutorService = spyk()
+    private val scheduler = FakeScheduledExecutorService()
     private val clock: Clock = scheduler.clock
 
     private val ctx = DiagnosticContext(clock)
