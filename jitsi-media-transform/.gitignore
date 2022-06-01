@@ -1,0 +1,12 @@
+/classes/
+/target/
+*.class
+/.classpath
+*.jar
+/.project
+*.swp
+**/.idea/
+*.iml
+.mvn/
+.kotlintest/
+**/.DS_Store
