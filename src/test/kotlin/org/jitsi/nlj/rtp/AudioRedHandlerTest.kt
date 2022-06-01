@@ -38,7 +38,7 @@ import org.jitsi.utils.logging2.createLogger
 class AudioRedHandlerTest : ShouldSpec() {
     val logger = createLogger()
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
-    override fun beforeSpec(spec: Spec) {
+    override suspend fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         MetaconfigSettings.cacheEnabled = false
     }

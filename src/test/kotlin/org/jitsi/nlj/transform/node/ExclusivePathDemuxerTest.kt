@@ -51,7 +51,7 @@ internal class ExclusivePathDemuxerTest : ShouldSpec() {
     private val rtpPacket = PacketInfo(RtpPacket(ByteArray(50), 0, 50))
     private val rtcpPacket = PacketInfo(DummyRtcpPacket())
 
-    override fun beforeSpec(spec: Spec) {
+    override suspend fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         rtpPath.name = "RTP"
         rtpPath.predicate = PacketPredicate { it is RtpPacket }
