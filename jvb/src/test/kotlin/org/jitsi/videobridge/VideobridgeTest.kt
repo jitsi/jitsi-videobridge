@@ -42,11 +42,11 @@ class VideobridgeTest : ShouldSpec() {
     private val fakeExecutor = FakeScheduledExecutorService()
     private val videobridge = Videobridge(null, shutdownService, mockk(), null, fakeExecutor.clock)
 
-    override fun beforeAny(testCase: TestCase) = super.beforeAny(testCase).also {
+    override suspend fun beforeAny(testCase: TestCase) = super.beforeAny(testCase).also {
         TaskPools.SCHEDULED_POOL = fakeExecutor
     }
 
-    override fun afterAny(testCase: TestCase, result: TestResult) = super.afterAny(testCase, result).also {
+    override suspend fun afterAny(testCase: TestCase, result: TestResult) = super.afterAny(testCase, result).also {
         TaskPools.resetScheduledPool()
     }
 

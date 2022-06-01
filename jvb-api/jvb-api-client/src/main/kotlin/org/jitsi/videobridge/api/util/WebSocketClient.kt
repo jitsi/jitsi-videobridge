@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.api.util
 
 import io.ktor.client.HttpClient
-import io.ktor.client.features.websocket.ws
-import io.ktor.http.cio.websocket.Frame
+import io.ktor.client.plugins.websocket.ws
+import io.ktor.websocket.Frame
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

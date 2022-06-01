@@ -51,7 +51,7 @@ class BitrateControllerNewTest : ShouldSpec() {
     private val C = bc.endpoints.find { it.id == "C" }!! as TestEndpoint2
     private val D = bc.endpoints.find { it.id == "D" }!! as TestEndpoint2
 
-    override fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
+    override suspend fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
         // We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
         // because these tests are designed to test the decisions themselves and not necessarily when they are made.
         setNewConfig(
@@ -61,7 +61,7 @@ class BitrateControllerNewTest : ShouldSpec() {
         )
     }
 
-    override fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
+    override suspend fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
         setNewConfig("", true)
     }
 

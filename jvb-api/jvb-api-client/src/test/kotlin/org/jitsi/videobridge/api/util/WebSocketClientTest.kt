@@ -24,14 +24,14 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.features.websocket.WebSockets
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.readText
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
+import io.ktor.websocket.Frame
+import io.ktor.websocket.readText
 import org.jitsi.utils.logging2.LoggerImpl
 import kotlin.random.Random
-import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
@@ -76,7 +76,7 @@ class WebSocketClientTest : ShouldSpec() {
                 ws.run()
                 ws.sendString("hello")
                 should("send a message") {
-                    eventually(Duration.seconds(5)) {
+                    eventually(5.seconds) {
                         wsServer.receivedMessages shouldHaveSize 1
                     }
                     wsServer.receivedMessages.first().shouldBeInstanceOf<Frame.Text>()
@@ -88,7 +88,7 @@ class WebSocketClientTest : ShouldSpec() {
                 ws.run()
                 ws.sendString("hello")
                 should("invoke the incoming message handler") {
-                    eventually(Duration.seconds(5)) {
+                    eventually(5.seconds) {
                         receivedMessages shouldHaveSize 1
                     }
                     receivedMessages.first().shouldBeInstanceOf<Frame.Text>()
