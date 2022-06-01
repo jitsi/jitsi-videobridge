@@ -4,21 +4,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>org.jitsi</groupId>
+        <artifactId>jvb-parent</artifactId>
+        <version>2.1-SNAPSHOT</version>
+    </parent>
+
     <groupId>org.jitsi</groupId>
     <artifactId>jitsi-media-transform</artifactId>
-    <version>1.0-SNAPSHOT</version>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.6.21</kotlin.version>
-        <kotest.version>5.3.0</kotest.version>
-        <junit.version>5.8.2</junit.version>
-        <bouncycastle.version>1.70</bouncycastle.version>
-        <jitsi.utils.version>1.0-115-gb93957d</jitsi.utils.version>
-        <ktlint.skip>false</ktlint.skip>
-        <spotbugs.version>4.6.0</spotbugs.version>
-        <jicoco.version>1.1-110-g42c01d9</jicoco.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -33,7 +27,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0-69-gd8300a6</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -285,7 +279,7 @@
               <artifactId>spotbugs-maven-plugin</artifactId>
               <version>4.7.0.0</version>
               <configuration>
-                  <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                  <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
                   <includeTests>true</includeTests>
               </configuration>
               <executions>
