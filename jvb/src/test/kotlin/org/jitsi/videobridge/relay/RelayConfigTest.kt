@@ -50,6 +50,12 @@ internal class RelayConfigTest : ConfigTest() {
             withNewConfig("videobridge.octo.relay-id=abc") {
                 RelayConfig.config.relayId shouldBe "abc"
             }
+            withNewConfig("videobridge.relay.relay-id=abc") {
+                RelayConfig.config.relayId shouldBe "abc"
+            }
+            withNewConfig("videobridge.octo.relay-id=xyz\nvidebridge.relay.relay-id=abc") {
+                RelayConfig.config.relayId shouldBe "xyz"
+            }
         }
     }
 }
