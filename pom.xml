@@ -34,7 +34,6 @@
         <spotbugs.version>4.6.0</spotbugs.version>
         <jersey.version>3.0.4</jersey.version>
         <jackson.version>2.12.4</jackson.version>
-        <bouncycastle.version>1.70</bouncycastle.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -64,8 +63,6 @@
     </build>
 
     <modules>
-        <module>rtp</module>
-        <module>jitsi-media-transform</module>
         <module>jvb-api</module>
         <module>jvb</module>
     </modules>
@@ -101,6 +98,16 @@
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
                 <version>3.0-58-gf41542d</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>rtp</artifactId>
+                <version>1.0-69-gd8300a6</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jitsi-media-transform</artifactId>
+                <version>1.0-304-g3131b52</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
