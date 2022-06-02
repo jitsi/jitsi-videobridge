@@ -267,7 +267,9 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                             + " effectiveConstraints=" + prettyPrint(effectiveConstraints));
 
             // Compute the bandwidth allocation.
-            newAllocation = allocate(sortedEndpoints);
+            List<MediaSourceDesc> sortedMediaSources =
+                    sortedEndpoints.stream().map(e -> e.getMediaSource()).collect(Collectors.toList());
+            newAllocation = allocate2(sortedMediaSources);
         }
 
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
@@ -320,77 +322,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             }
         });
         return selectedSources;
-    }
-
-    /**
-     * Implements the bandwidth allocation algorithm for the given ordered list of endpoints.
-     *
-     * @param conferenceEndpoints the list of endpoints in order of priority to allocate for.
-     * @return the new {@link BandwidthAllocation}.
-     */
-    private synchronized @NotNull BandwidthAllocation allocate(List<T> conferenceEndpoints)
-    {
-        List<MediaSourceDesc> conferenceMediaSources =
-                conferenceEndpoints.stream().map(e -> e.getMediaSource()).collect(Collectors.toList());
-        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceMediaSources);
-
-        if (sourceBitrateAllocations.isEmpty())
-        {
-            return new BandwidthAllocation(Collections.emptySet());
-        }
-
-        long remainingBandwidth = getAvailableBandwidth();
-        long oldRemainingBandwidth = -1;
-
-        boolean oversending = false;
-        while (oldRemainingBandwidth != remainingBandwidth)
-        {
-            oldRemainingBandwidth = remainingBandwidth;
-
-            for (int i = 0; i < sourceBitrateAllocations.size(); i++)
-            {
-                SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
-                if (sourceBitrateAllocation.getConstraints().getMaxHeight() <= 0)
-                {
-                    continue;
-                }
-
-                // In stage view improve greedily until preferred, in tile view go step-by-step.
-                remainingBandwidth -= sourceBitrateAllocation.improve(remainingBandwidth, i == 0);
-                if (remainingBandwidth < 0)
-                {
-                    oversending = true;
-                }
-
-                // In stage view, do not allocate bandwidth for thumbnails until the on-stage reaches "preferred".
-                // This prevents enabling thumbnail only to disable them when bwe slightly increases allowing on-stage
-                // to take more.
-                if (sourceBitrateAllocation.isOnStage() && !sourceBitrateAllocation.hasReachedPreferred())
-                {
-                    break;
-                }
-            }
-        }
-
-        // The endpoints which are in lastN, and are sending video, but were suspended due to bwe.
-        List<String> suspendedIds = sourceBitrateAllocations.stream()
-                .filter(SingleSourceAllocation::isSuspended)
-                .map(ssa -> ssa.getEndpointId()).collect(Collectors.toList());
-        if (!suspendedIds.isEmpty())
-        {
-            logger.info("Endpoints were suspended due to insufficient bandwidth (bwe="
-                    + getAvailableBandwidth() + " bps): " + String.join(",", suspendedIds));
-        }
-
-        Set<SingleAllocation> allocations = new HashSet<>();
-
-        long targetBps = 0, idealBps = 0;
-        for (SingleSourceAllocation sourceBitrateAllocation : sourceBitrateAllocations) {
-            allocations.add(sourceBitrateAllocation.getResult());
-            targetBps += sourceBitrateAllocation.getTargetBitrate();
-            idealBps += sourceBitrateAllocation.getIdealBitrate();
-        }
-        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps);
     }
 
     /**
