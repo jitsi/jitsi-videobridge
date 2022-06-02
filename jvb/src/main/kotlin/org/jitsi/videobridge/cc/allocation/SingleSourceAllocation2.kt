@@ -44,7 +44,7 @@ internal class SingleSourceAllocation2(
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
-    val logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
+    val logger: Logger = LoggerImpl(SingleSourceAllocation2::class.qualifiedName)
 ) {
     /**
      * Constructor to match the legacy constructor for convenience until we migrate. Note that it requires the
@@ -58,7 +58,7 @@ internal class SingleSourceAllocation2(
         onStage: Boolean,
         diagnosticContext: DiagnosticContext,
         clock: Clock,
-        logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
+        logger: Logger = LoggerImpl(SingleSourceAllocation2::class.qualifiedName)
     ) : this(endpoint.id, endpoint.mediaSource!!, constraints, onStage, diagnosticContext, clock, logger)
     /**
      * The immutable list of layers to be considered when allocating bandwidth.
