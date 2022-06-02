@@ -251,7 +251,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
                     + " effectiveConstraints=" + prettyPrint(effectiveConstraints));
 
             // Compute the bandwidth allocation.
-            newAllocation = allocate2(sortedSources);
+            newAllocation = allocate(sortedSources);
         }
         else
         {
@@ -269,7 +269,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             // Compute the bandwidth allocation.
             List<MediaSourceDesc> sortedMediaSources =
                     sortedEndpoints.stream().map(e -> e.getMediaSource()).collect(Collectors.toList());
-            newAllocation = allocate2(sortedMediaSources);
+            newAllocation = allocate(sortedMediaSources);
         }
 
         boolean allocationChanged = !allocation.isTheSameAs(newAllocation);
@@ -332,7 +332,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      * @param conferenceMediaSources the list of endpoint media sources in order of priority to allocate for.
      * @return the new {@link BandwidthAllocation}.
      */
-    private synchronized @NotNull BandwidthAllocation allocate2(List<MediaSourceDesc> conferenceMediaSources)
+    private synchronized @NotNull BandwidthAllocation allocate(List<MediaSourceDesc> conferenceMediaSources)
     {
         List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceMediaSources);
 
