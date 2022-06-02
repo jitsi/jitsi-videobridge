@@ -1,44 +1,13 @@
 # Setting up Octo (cascaded bridges)
 
-## Versions
-Jitsi-videobridge supports two completely different implementations of bridge-to-bridge interconnection.
+### Secure Octo
+Secure Octo uses ICE and DTLS/SRTP between each pair of bridges, so a secure
+network is not required. It uses and requires colibri websockets for the
+bridge-bridge connections (endpoints can still use SCTP).
 
-### Octo
-We refer to the legacy implementation as simply "octo". It uses raw UDP on pre-configured ports, and does not protect
-the media traffic (it assumes a secure (virtual) network between the bridges).
-
-This implementation is only usable with version 1 of the colibri protocol over XMPP. It is deprecated and will be
-removed in future releases.
-
-### Secure-octo
-We refer to the new implementation as "secure-octo". It uses ICE and DTLS/SRTP between each pair of bridges, so a secure
-network is not required. It uses and requires colibri websockets for the bridge-bridge connections (endpoints can still
-use SCTP).
-
-This implementation is only usable with version 2 of the colibri protocol, which is currently only available over XMPP.
+Secure Octoo is only usable with version 2 of the colibri protocol.
 
 ## Jitsi Videobridge configuration
-
-### Octo (legacy)
-Octo can be configured with the following properties in `/etc/jitsi/videobridge/jvb.conf` (also see 
-[reference.conf](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L132)).
-```
-videobridge {
-  octo {
-    # the address to bind to locally
-    bind-address=10.0.0.1
-    # the address to advertise (in case BIND_ADDRESS is not accessible)
-    public-address=1.2.3.4
-    # the port to bind to
-    bind-port=4096
-    # the region that the jitsi-videobridge instance is in
-    region="region1"
-  }
-}
-```
-
-You need to make sure that all bridges can communicate via the socket
-addresses described in the properties above, and that the network is secure.
 
 ### Secure-octo
 Secure-octo can be configured with the following properties in `/etc/jitsi/videobridge/jvb.conf` (also see

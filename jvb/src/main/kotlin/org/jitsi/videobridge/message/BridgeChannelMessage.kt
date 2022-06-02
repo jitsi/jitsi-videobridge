@@ -423,8 +423,8 @@ class SenderSourceConstraintsMessage(
 }
 
 /**
- * A message sent from one bridge to another (via Octo) indicating that the first bridge wishes to receive video streams
- * from the specified endpoint with the specified constraints.
+ * A message sent from one bridge to another (via a relay connection) indicating that the first bridge wishes to
+ * receive video streams from the specified endpoint with the specified constraints.
  */
 class AddReceiverMessage(
     val bridgeId: String,
@@ -447,8 +447,8 @@ class AddReceiverMessage(
 }
 
 /**
- * A message sent from one bridge to another (via Octo) indicating that it no longer wishes to receive video streams
- * from the specified endpoint.
+ * A message sent from one bridge to another (via a relay connection) indicating that it no longer wishes to receive
+ * video streams from the specified endpoint.
  */
 class RemoveReceiverMessage(
     val bridgeId: String,
@@ -489,7 +489,7 @@ class SourceVideoTypeMessage(
     sourceName: String,
     /**
      * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
-     * message was received on (non-null values are needed only for Octo).
+     * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {
@@ -519,7 +519,7 @@ class VideoTypeMessage(
     val videoType: VideoType,
     /**
      * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
-     * message was received on (non-null values are needed only for Octo).
+     * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {

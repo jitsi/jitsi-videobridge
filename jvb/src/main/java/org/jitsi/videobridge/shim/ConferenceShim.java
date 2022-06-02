@@ -15,14 +15,9 @@
  */
 package org.jitsi.videobridge.shim;
 
-import org.jetbrains.annotations.*;
-import org.jitsi.nlj.format.*;
-import org.jitsi.nlj.rtp.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.octo.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jivesoftware.smack.packet.*;
@@ -30,7 +25,6 @@ import org.jivesoftware.smack.packet.*;
 import java.util.*;
 import java.util.stream.*;
 
-import static org.jitsi.videobridge.Conference.GID_NOT_SET;
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
@@ -191,73 +185,6 @@ public class ConferenceShim
     }
 
     /**
-     * Processes the Octo channels from a Colibri request.
-     */
-    public void processOctoChannels(
-                @NotNull ColibriConferenceIQ.Channel audioChannel,
-                @NotNull ColibriConferenceIQ.Channel videoChannel)
-    {
-        ConfOctoTransport tentacle = conference.getTentacle();
-
-        int expire
-                = Math.min(audioChannel.getExpire(), videoChannel.getExpire());
-        if (expire == 0)
-        {
-            tentacle.expire();
-        }
-        else if (audioChannel instanceof ColibriConferenceIQ.OctoChannel
-            && videoChannel instanceof ColibriConferenceIQ.OctoChannel)
-        {
-            ColibriConferenceIQ.OctoChannel audioOctoChannel
-                    = (ColibriConferenceIQ.OctoChannel) audioChannel;
-            ColibriConferenceIQ.OctoChannel videoOctoChannel
-                    = (ColibriConferenceIQ.OctoChannel) videoChannel;
-
-            Set<String> relays = new HashSet<>(audioOctoChannel.getRelays());
-            relays.addAll(videoOctoChannel.getRelays());
-            tentacle.setRelays(relays);
-        }
-
-        Set<RTPHdrExtPacketExtension> headerExtensions
-                = new HashSet<>(audioChannel.getRtpHeaderExtensions());
-        headerExtensions.addAll(videoChannel.getRtpHeaderExtensions());
-
-        // Like for payload types, we never clear the transceiver's list of RTP
-        // header extensions. See the note in #addPayloadTypes.
-        headerExtensions.forEach(ext -> {
-                RtpExtension rtpExtension = ChannelShim.createRtpExtension(ext);
-                if (rtpExtension != null)
-                {
-                    tentacle.addRtpExtension(rtpExtension);
-                }
-        });
-
-        Map<PayloadTypePacketExtension, MediaType> payloadTypes
-                = new HashMap<>();
-        audioChannel.getPayloadTypes()
-                .forEach(ext -> payloadTypes.put(ext, MediaType.AUDIO));
-        videoChannel.getPayloadTypes()
-                .forEach(ext -> payloadTypes.put(ext, MediaType.VIDEO));
-
-        payloadTypes.forEach((ext, mediaType) -> {
-            PayloadType pt = PayloadTypeUtil.create(ext, mediaType);
-            if (pt == null)
-            {
-                logger.warn("Unrecognized payload type " + ext.toXML());
-            }
-            else
-            {
-                tentacle.addPayloadType(pt);
-            }
-        });
-
-        tentacle.setSources(
-                audioChannel.getSources(),
-                videoChannel.getSources(),
-                videoChannel.getSourceGroups());
-    }
-
-    /**
      * Process whole {@link ColibriConferenceIQ} and initialize all signaled
      * endpoints that have not been initialized before.
      * @param conferenceIQ conference IQ having endpoints
@@ -355,9 +282,6 @@ public class ConferenceShim
 
         initializeSignaledEndpoints(conferenceIQ);
 
-        ColibriConferenceIQ.Channel octoAudioChannel = null;
-        ColibriConferenceIQ.Channel octoVideoChannel = null;
-
         for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
         {
             // The content element springs into existence whenever it gets
@@ -397,22 +321,10 @@ public class ConferenceShim
                 return createError(conferenceIQ, e.getCondition(), e.getMessage());
             }
 
-            // We want to handle the two Octo channels together.
             ColibriConferenceIQ.Channel octoChannel = ColibriUtil.findOctoChannel(contentIQ);
             if (octoChannel != null)
             {
-                if (MediaType.VIDEO.equals(contentType))
-                {
-                    octoVideoChannel = octoChannel;
-                }
-                else
-                {
-                    octoAudioChannel = octoChannel;
-                }
-
-                ColibriConferenceIQ.OctoChannel octoChannelResponse = new ColibriConferenceIQ.OctoChannel();
-                octoChannelResponse.setID(ColibriUtil.getOctoChannelId(contentType));
-                responseContentIQ.addChannel(octoChannelResponse);
+                return createError(conferenceIQ, StanzaError.Condition.feature_not_implemented, "Octo not supported.");
             }
 
             try
@@ -427,27 +339,6 @@ public class ConferenceShim
             }
         }
 
-        if (octoAudioChannel != null && octoVideoChannel != null)
-        {
-            if (conference.getGid() == GID_NOT_SET)
-            {
-                return createError(
-                        conferenceIQ,
-                        StanzaError.Condition.bad_request,
-                        "Can not enable octo without a valid GID.");
-            }
-
-            processOctoChannels(octoAudioChannel, octoVideoChannel);
-
-        }
-        else if (octoAudioChannel != null || octoVideoChannel != null)
-        {
-            logger.error("Octo must be enabled for audio and video together");
-            return createError(
-                    conferenceIQ,
-                    StanzaError.Condition.bad_request,
-                    "Octo only enabled for one media type");
-        }
 
         for (ColibriConferenceIQ.ChannelBundle channelBundleIq : conferenceIQ.getChannelBundles())
         {

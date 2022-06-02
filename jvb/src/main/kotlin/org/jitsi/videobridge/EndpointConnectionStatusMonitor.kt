@@ -41,8 +41,8 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
      * Note that we intentionally do not prune this set when an endpoint expires, because if an endpoint expires and
      * is recreated, we need to send an "active" message (the other endpoints in the conference are not aware that the
      * object on the bridge was expired and recreated).
-     * Also note that when an endpoint is moved to another bridge, it will be expired and an OctoEndpoint with the same
-     * ID will be created.
+     * Also note that when an endpoint is moved to another bridge, it will be expired and a RelayedEndpoint with the
+     * same ID will be created.
      */
     private val inactiveEndpointIds = mutableSetOf<String>()
 
