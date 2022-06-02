@@ -14,29 +14,31 @@
  * limitations under the License.
  */
 
-package org.jitsi.videobridge.octo.config
+package org.jitsi.videobridge.relay
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
-import org.jitsi.metaconfig.from
 import org.jitsi.metaconfig.optionalconfig
 
-class OctoConfig private constructor() {
+class RelayConfig private constructor() {
     val enabled: Boolean by config {
         "videobridge.octo.enabled".from(JitsiConfig.newConfig)
+        "videobridge.relay.enabled".from(JitsiConfig.newConfig)
     }
 
     val region: String? by optionalconfig {
         "org.jitsi.videobridge.REGION".from(JitsiConfig.legacyConfig)
         "videobridge.octo.region".from(JitsiConfig.newConfig)
+        "videobridge.relay.region".from(JitsiConfig.newConfig)
     }
 
     val relayId: String by config {
         "videobridge.octo.relay-id".from(JitsiConfig.newConfig)
+        "videobridge.relay.relay-id".from(JitsiConfig.newConfig)
     }
 
     companion object {
         @JvmField
-        val config = OctoConfig()
+        val config = RelayConfig()
     }
 }

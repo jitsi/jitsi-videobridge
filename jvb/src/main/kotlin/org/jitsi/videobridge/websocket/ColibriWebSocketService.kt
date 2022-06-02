@@ -21,7 +21,7 @@ import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
-import org.jitsi.videobridge.octo.config.OctoConfig
+import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Companion.config
 
 class ColibriWebSocketService(
@@ -38,7 +38,7 @@ class ColibriWebSocketService(
             val useTls = config.useTls ?: webserverIsTls
             val protocol = if (useTls) "wss" else "ws"
             baseUrl = "$protocol://${config.domain}/$COLIBRI_WS_ENDPOINT/${config.serverId}"
-            relayUrl = if (OctoConfig.config.enabled) {
+            relayUrl = if (RelayConfig.config.enabled) {
                 "$protocol://${config.domain}/$COLIBRI_RELAY_WS_ENDPOINT/${config.serverId}"
             } else {
                 null

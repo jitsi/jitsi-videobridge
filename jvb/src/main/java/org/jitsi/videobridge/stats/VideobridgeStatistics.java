@@ -21,7 +21,6 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.load_management.*;
-import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -57,8 +56,8 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    private static final String region = OctoConfig.config.getRegion();
-    private static final String relayId = OctoConfig.config.getEnabled() ? OctoConfig.config.getRelayId() : null;
+    private static final String region = RelayConfig.config.getRegion();
+    private static final String relayId = RelayConfig.config.getEnabled() ? RelayConfig.config.getRelayId() : null;
 
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY = "num_eps_no_msg_transport_after_delay";
     public static final String TOTAL_ICE_SUCCEEDED_RELAYED = "total_ice_succeeded_relayed";
