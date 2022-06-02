@@ -26,7 +26,7 @@ import org.jitsi.videobridge.Endpoint
 
 /**
  * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
- * [Endpoint], [Relay], and [ConfOctoTransport] are the 'last place' that is aware of [PacketInfo] in the outgoing
+ * [Endpoint] and [Relay] are the 'last place' that is aware of [PacketInfo] in the outgoing
  * chains; they track these stats here.  Since they're static, these members will track the delay
  * for packets going out to all endpoints.
  */

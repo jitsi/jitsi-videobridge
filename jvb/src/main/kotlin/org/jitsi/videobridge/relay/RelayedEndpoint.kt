@@ -43,8 +43,6 @@ import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
-import org.jitsi.videobridge.octo.OctoPacketInfo
-import org.jitsi.videobridge.octo.config.OctoConfig
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
 import java.time.Instant
@@ -141,7 +139,7 @@ class RelayedEndpoint(
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         relay.sendMessage(
             AddReceiverMessage(
-                OctoConfig.config.relayId,
+                RelayConfig.config.relayId,
                 id,
                 null, /* source name  - used in multi-stream */
                 maxVideoConstraints
@@ -152,7 +150,7 @@ class RelayedEndpoint(
     override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
         relay.sendMessage(
             AddReceiverMessage(
-                OctoConfig.config.relayId,
+                RelayConfig.config.relayId,
                 null, // Endpoint ID - will be removed
                 sourceName,
                 maxVideoConstraints
@@ -201,7 +199,7 @@ class RelayedEndpoint(
         rtpReceiver.setSrtpTransformers(srtpTransformers)
     }
 
-    override fun handleIncomingPacket(packetInfo: OctoPacketInfo) = rtpReceiver.processPacket(packetInfo)
+    override fun handleIncomingPacket(packetInfo: RelayedPacketInfo) = rtpReceiver.processPacket(packetInfo)
 
     fun setFeature(feature: Features, enabled: Boolean) {
         rtpReceiver.setFeature(feature, enabled)

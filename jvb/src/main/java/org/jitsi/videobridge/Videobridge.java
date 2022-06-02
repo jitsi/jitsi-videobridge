@@ -28,10 +28,7 @@ import org.jitsi.utils.stats.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
-import org.jitsi.videobridge.octo.*;
-import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.relay.*;
-import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -227,7 +224,6 @@ public class Videobridge
      */
     private @NotNull Conference doCreateConference(
             @Nullable EntityBareJid name,
-            long gid,
             String meetingId,
             boolean isRtcStatsEnabled,
             boolean isCallStatsEnabled,
@@ -247,7 +243,7 @@ public class Videobridge
 
                 if (!conferencesById.containsKey(id))
                 {
-                    conference = new Conference(this, id, name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
+                    conference = new Conference(this, id, name, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
                     conferencesById.put(id, conference);
                     if (meetingId != null)
                     {
@@ -285,7 +281,6 @@ public class Videobridge
      */
     private @NotNull Conference createConference(
             @Nullable EntityBareJid name,
-            long gid,
             String meetingId,
             boolean isRtcStatsEnabled,
             boolean isCallStatsEnabled,
@@ -293,10 +288,9 @@ public class Videobridge
     {
         final Conference conference
                 = doCreateConference(
-                        name, gid, meetingId, isRtcStatsEnabled, isCallStatsEnabled, checkForMeetingIdCollision);
+                        name, meetingId, isRtcStatsEnabled, isCallStatsEnabled, checkForMeetingIdCollision);
 
-        logger.info(() -> "create_conf, id=" + conference.getID() + " gid=" + conference.getGid() +
-            " meetingId=" + meetingId);
+        logger.info(() -> "create_conf, id=" + conference.getID() + " meetingId=" + meetingId);
 
         eventEmitter.fireEvent(handler ->
         {
@@ -538,7 +532,6 @@ public class Videobridge
         {
             return createConference(
                     conferenceIq.getName(),
-                    ColibriUtil.parseGid(conferenceIq.getGID()),
                     conferenceIq.getMeetingId(),
                     conferenceIq.isRtcStatsEnabled(),
                     conferenceIq.isCallStatsEnabled(),
@@ -581,7 +574,6 @@ public class Videobridge
                 String conferenceName = conferenceModifyIQ.getConferenceName();
                 return createConference(
                     conferenceName == null ? null : JidCreate.entityBareFrom(conferenceName),
-                    Conference.GID_COLIBRI2,
                     meetingId,
                     conferenceModifyIQ.isRtcstatsEnabled(),
                     conferenceModifyIQ.isCallstatsEnabled(),
@@ -825,14 +817,6 @@ public class Videobridge
             "relay_endpoint_sender_srtp_send_queue",
             getJsonFromQueueStatisticsAndErrorHandler(RelayEndpointSender.queueErrorCounter,
                 "RelayEndpointSender-outgoing-packet-queue"));
-        queueStats.put(
-            "octo_receive_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(ConfOctoTransport.queueErrorCounter,
-                "octo-tentacle-outgoing-packet-queue"));
-        queueStats.put(
-            "octo_send_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(OctoRtpReceiver.queueErrorCounter,
-                "octo-transceiver-incoming-packet-queue"));
         queueStats.put(
             "rtp_receiver_queue",
             getJsonFromQueueStatisticsAndErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter(),

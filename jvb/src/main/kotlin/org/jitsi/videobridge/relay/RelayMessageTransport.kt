@@ -415,13 +415,13 @@ class RelayMessageTransport(
                 return null
             }
 
-            conference.sendMessage(message, listOf(targetEndpoint), false /* sendToOcto */)
+            conference.sendMessage(message, listOf(targetEndpoint), false /* sendToRelays */)
         }
         return null
     }
 
     /**
-     * Handles an endpoint statistics message on the Octo channel that should be forwarded to
+     * Handles an endpoint statistics message on the Relay channel that should be forwarded to
      * local endpoints as appropriate.
      *
      * @param message the message that was received from the endpoint.

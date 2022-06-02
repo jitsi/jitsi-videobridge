@@ -19,13 +19,9 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
-import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.load_management.*;
-import org.jitsi.videobridge.octo.*;
-import org.jitsi.videobridge.octo.config.*;
 import org.jitsi.videobridge.relay.*;
-import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
@@ -60,8 +56,8 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    private static final String region = OctoConfig.config.getRegion();
-
+    private static final String region = RelayConfig.config.getRegion();
+    private static final String relayId = RelayConfig.config.getEnabled() ? RelayConfig.config.getRelayId() : null;
 
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY = "num_eps_no_msg_transport_after_delay";
     public static final String TOTAL_ICE_SUCCEEDED_RELAYED = "total_ice_succeeded_relayed";
@@ -118,7 +114,6 @@ public class VideobridgeStatistics
     private boolean inGenerate = false;
 
     private final @NotNull Videobridge videobridge;
-    private final @Nullable OctoRelayService octoRelayService;
     private final @NotNull XmppConnection xmppConnection;
 
     /**
@@ -126,12 +121,10 @@ public class VideobridgeStatistics
      */
     public VideobridgeStatistics(
         @NotNull Videobridge videobridge,
-        @Nullable OctoRelayService octoRelayService,
         @NotNull XmppConnection xmppConnection
     )
     {
         this.videobridge = videobridge;
-        this.octoRelayService = octoRelayService;
         this.xmppConnection = xmppConnection;
 
         timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -285,7 +278,7 @@ public class VideobridgeStatistics
                 numLocalActiveEndpoints += conference.getLocalEndpointCount();
             }
 
-            if (conference.isOctoEnabled())
+            if (conference.hasRelays())
             {
                 octoConferences++;
             }
@@ -581,54 +574,22 @@ public class VideobridgeStatistics
                     TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
 
-            OctoRelayService.Stats octoRelayServiceStats
-                = octoRelayService == null ? null : octoRelayService.getStats();
-
             unlockedSetStat("colibri2", true);
 
-            unlockedSetStat(
-                    TOTAL_BYTES_RECEIVED_OCTO,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getBytesReceived()) +
-                        jvbStats.totalRelayBytesReceived.get());
-            unlockedSetStat(
-                    TOTAL_BYTES_SENT_OCTO,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getBytesSent()) +
-                        jvbStats.totalRelayBytesSent.get());
-            unlockedSetStat(
-                    TOTAL_PACKETS_RECEIVED_OCTO,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getPacketsReceived()) +
-                        jvbStats.totalRelayPacketsReceived.get());
-            unlockedSetStat(
-                    TOTAL_PACKETS_SENT_OCTO,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getPacketsSent()) +
-                        jvbStats.totalRelayPacketsSent.get());
-            unlockedSetStat(
-                    TOTAL_PACKETS_DROPPED_OCTO,
-                    octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getPacketsDropped());
-            unlockedSetStat(
-                    OCTO_RECEIVE_BITRATE,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getReceiveBitrate()) +
-                        relayBitrateIncomingBps);
-            unlockedSetStat(
-                    OCTO_RECEIVE_PACKET_RATE,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getReceivePacketRate()) +
-                        relayPacketRateIncoming);
-            unlockedSetStat(
-                    OCTO_SEND_BITRATE,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getSendBitrate()) +
-                        relayBitrateOutgoingBps);
-            unlockedSetStat(
-                    OCTO_SEND_PACKET_RATE,
-                    (octoRelayServiceStats == null ? 0 : octoRelayServiceStats.getSendPacketRate()) +
-                        relayPacketRateOutgoing);
-            unlockedSetStat(
-                    TOTAL_DOMINANT_SPEAKER_CHANGES,
-                    jvbStats.totalDominantSpeakerChanges.sum());
+            unlockedSetStat(TOTAL_BYTES_RECEIVED_OCTO, jvbStats.totalRelayBytesReceived.get());
+            unlockedSetStat(TOTAL_BYTES_SENT_OCTO, jvbStats.totalRelayBytesSent.get());
+            unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO, jvbStats.totalRelayPacketsReceived.get());
+            unlockedSetStat(TOTAL_PACKETS_SENT_OCTO, jvbStats.totalRelayPacketsSent.get());
+            unlockedSetStat(OCTO_RECEIVE_BITRATE, relayBitrateIncomingBps);
+            unlockedSetStat(OCTO_RECEIVE_PACKET_RATE, relayPacketRateIncoming);
+            unlockedSetStat(OCTO_SEND_BITRATE, relayBitrateOutgoingBps);
+            unlockedSetStat(OCTO_SEND_PACKET_RATE, relayPacketRateOutgoing);
+            unlockedSetStat(TOTAL_DOMINANT_SPEAKER_CHANGES, jvbStats.totalDominantSpeakerChanges.sum());
 
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
-            if (OctoConfig.config.getEnabled())
+            if (relayId != null)
             {
-                unlockedSetStat(RELAY_ID, OctoConfig.config.getRelayId());
+                unlockedSetStat(RELAY_ID, relayId);
             }
             if (region != null)
             {

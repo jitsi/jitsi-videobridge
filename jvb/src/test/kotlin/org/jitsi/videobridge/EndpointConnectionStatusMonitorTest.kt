@@ -46,28 +46,32 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val eps = listOf(localEp1, localEp2)
 
     val broadcastMessage = slot<EndpointConnectionStatusMessage>()
-    val broadcastSendToOcto = slot<Boolean>()
+    val broadcastSendToRelays = slot<Boolean>()
     val broadcastCalls = mutableListOf<Pair<EndpointConnectionStatusMessage, Boolean>>()
 
     val sendMessageMessage = slot<EndpointConnectionStatusMessage>()
     val sendMessageDestinationEps = slot<List<Endpoint>>()
-    val sendMessageSendToOcto = slot<Boolean>()
+    val sendMessageSendToRelays = slot<Boolean>()
     val sendMessageCalls = mutableListOf<Triple<EndpointConnectionStatusMessage, List<Endpoint>, Boolean>>()
 
     val conference: Conference = mockk {
         every { localEndpoints } returns eps
-        every { broadcastMessage(capture(broadcastMessage), capture(broadcastSendToOcto)) } answers {
-            broadcastCalls += Pair(broadcastMessage.captured, broadcastSendToOcto.captured)
+        every { broadcastMessage(capture(broadcastMessage), capture(broadcastSendToRelays)) } answers {
+            broadcastCalls += Pair(broadcastMessage.captured, broadcastSendToRelays.captured)
         }
         every {
             sendMessage(
                 capture(sendMessageMessage),
                 capture(sendMessageDestinationEps),
-                capture(sendMessageSendToOcto)
+                capture(sendMessageSendToRelays)
             )
         } answers {
             sendMessageCalls +=
-                Triple(sendMessageMessage.captured, sendMessageDestinationEps.captured, sendMessageSendToOcto.captured)
+                Triple(
+                    sendMessageMessage.captured,
+                    sendMessageDestinationEps.captured,
+                    sendMessageSendToRelays.captured
+                )
         }
     }
 
@@ -101,14 +105,14 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 should("fire broadcast events for the local endpoints") {
                     sendMessageCalls.shouldBeEmpty()
                     broadcastCalls shouldHaveSize 2
-                    broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto && msg.endpoint == "1" && msg.active == "false"
-                        sendToOcto shouldBe true
+                    broadcastCalls.forAny { (msg, sendToRelays) ->
+                        sendToRelays && msg.endpoint == "1" && msg.active == "false"
+                        sendToRelays shouldBe true
                         msg.endpoint shouldBe "1"
                         msg.active shouldBe "false"
                     }
-                    broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto shouldBe true
+                    broadcastCalls.forAny { (msg, sendToRelays) ->
+                        sendToRelays shouldBe true
                         msg.endpoint shouldBe "2"
                         msg.active shouldBe "false"
                     }
@@ -123,13 +127,13 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                         sendMessageCalls.shouldBeEmpty()
                         // 2 from the messages when it went inactive, and 2 more now for going active
                         broadcastCalls shouldHaveSize 4
-                        broadcastCalls.forAny { (msg, sendToOcto) ->
-                            sendToOcto shouldBe true
+                        broadcastCalls.forAny { (msg, sendToRelays) ->
+                            sendToRelays shouldBe true
                             msg.endpoint shouldBe "1"
                             msg.active shouldBe "true"
                         }
-                        broadcastCalls.forAny { (msg, sendToOcto) ->
-                            sendToOcto shouldBe true
+                        broadcastCalls.forAny { (msg, sendToRelays) ->
+                            sendToRelays shouldBe true
                             msg.endpoint shouldBe "2"
                             msg.active shouldBe "true"
                         }
@@ -156,13 +160,13 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 should("fire inactive events") {
                     sendMessageCalls.shouldBeEmpty()
                     broadcastCalls shouldHaveSize 2
-                    broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto shouldBe true
+                    broadcastCalls.forAny { (msg, sendToRelays) ->
+                        sendToRelays shouldBe true
                         msg.endpoint shouldBe "1"
                         msg.active shouldBe "false"
                     }
-                    broadcastCalls.forAny { (msg, sendToOcto) ->
-                        sendToOcto shouldBe true
+                    broadcastCalls.forAny { (msg, sendToRelays) ->
+                        sendToRelays shouldBe true
                         msg.endpoint shouldBe "2"
                         msg.active shouldBe "false"
                     }
@@ -174,8 +178,8 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     should("fire an active event for that ep") {
                         sendMessageCalls.shouldBeEmpty()
                         broadcastCalls shouldHaveSize 3
-                        broadcastCalls.last().let { (msg, sendToOcto) ->
-                            sendToOcto shouldBe true
+                        broadcastCalls.last().let { (msg, sendToRelays) ->
+                            sendToRelays shouldBe true
                             msg.endpoint shouldBe "1"
                             msg.active shouldBe "true"
                         }
@@ -186,10 +190,10 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     monitor.endpointConnected("4")
                     should("update the new endpoint of the other endpoints' statuses") {
                         sendMessageCalls shouldHaveSize 2
-                        sendMessageCalls.forAll { (_, destEps, sendToOcto) ->
+                        sendMessageCalls.forAll { (_, destEps, sendToRelays) ->
                             destEps shouldHaveSize 1
                             destEps.first().id shouldBe "4"
-                            sendToOcto shouldBe false
+                            sendToRelays shouldBe false
                         }
                         sendMessageCalls.forAny { (msg, _, _) ->
                             msg.endpoint shouldBe "1"
