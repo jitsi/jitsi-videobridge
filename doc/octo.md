@@ -5,7 +5,7 @@ Secure Octo uses ICE and DTLS/SRTP between each pair of bridges, so a secure
 network is not required. It uses and requires colibri websockets for the
 bridge-bridge connections (endpoints can still use SCTP).
 
-Secure Octoo is only usable with version 2 of the colibri protocol.
+Secure Octo is only usable with version 2 of the colibri protocol.
 
 ## Jitsi Videobridge configuration
 

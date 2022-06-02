@@ -42,7 +42,7 @@ class ConferenceTest : ConfigTest() {
                 debugState.shouldBeValidJson()
             }
         }
-        context("Enabling octo should work") {
+        context("Creating relays should work") {
             with(Conference(videobridge, "id", name, null, false, false)) {
                 hasRelays() shouldBe false
                 createRelay("relay-id", "mesh-id", true, true)
