@@ -279,7 +279,7 @@ public class VideobridgeStatistics
                 numLocalActiveEndpoints += conference.getLocalEndpointCount();
             }
 
-            if (conference.isOctoEnabled())
+            if (conference.hasRelays())
             {
                 octoConferences++;
             }

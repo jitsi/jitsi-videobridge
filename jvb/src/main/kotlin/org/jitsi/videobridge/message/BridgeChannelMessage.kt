@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Represent a message sent over the "bridge channel" between an endpoint (or "client") and jitsi-videobridge, or
- * between two jitsi-videobridge instances over Octo.
+ * between two jitsi-videobridge instances over a relay connection.
  *
  * The messages are formatted in JSON with a required "colibriClass" field, which indicates the message type. Different
  * message types have different (if any) additional fields.

@@ -42,15 +42,11 @@ class ConferenceTest : ConfigTest() {
                 debugState.shouldBeValidJson()
             }
         }
-        context("Enabling octo should fail when the GID is not set") {
-            with(Conference(videobridge, "id", name, null, false, false)) {
-                isOctoEnabled shouldBe false
-                debugState.shouldBeValidJson()
-            }
-        }
         context("Enabling octo should work") {
             with(Conference(videobridge, "id", name, null, false, false)) {
-                isOctoEnabled shouldBe false
+                hasRelays() shouldBe false
+                createRelay("relay-id", "mesh-id", true, true)
+                hasRelays() shouldBe true
                 debugState.shouldBeValidJson()
             }
         }

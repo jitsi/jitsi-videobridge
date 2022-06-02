@@ -345,14 +345,14 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessage(BridgeChannelMessage msg, List<Endpoint> endpoints, boolean sendToOcto)
+    public void sendMessage(BridgeChannelMessage msg, List<Endpoint> endpoints, boolean sendToRelays)
     {
         for (Endpoint endpoint : endpoints)
         {
             endpoint.sendMessage(msg);
         }
 
-        if (sendToOcto)
+        if (sendToRelays)
         {
             for (Relay relay: relaysById.values())
             {
@@ -392,9 +392,9 @@ public class Conference
      *
      * @param msg the message to be broadcast.
      */
-    public void broadcastMessage(BridgeChannelMessage msg, boolean sendToOcto)
+    public void broadcastMessage(BridgeChannelMessage msg, boolean sendToRelays)
     {
-        sendMessage(msg, getLocalEndpoints(), sendToOcto);
+        sendMessage(msg, getLocalEndpoints(), sendToRelays);
     }
 
     /**
@@ -1200,7 +1200,7 @@ public class Conference
         }
     }
 
-    public boolean isOctoEnabled()
+    public boolean hasRelays()
     {
         return !relaysById.isEmpty();
     }

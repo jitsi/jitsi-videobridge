@@ -125,7 +125,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
 
         if (receiverEpId == null) {
             // We broadcast the message also to the endpoint itself for
-            // debugging purposes, and we also broadcast it through Octo.
+            // debugging purposes, and we also send it to Relays.
             conference.broadcastMessage(msg, true)
         } else {
             conference.getLocalEndpoint(receiverEpId)?.let {

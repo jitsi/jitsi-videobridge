@@ -154,7 +154,7 @@ public class EndpointMessageTransport
 
         videoTypeMessage.setEndpointId(endpoint.getId());
 
-        /* Forward videoType messages to Octo. */
+        /* Forward videoType messages to Relays. */
         conference.sendMessage(videoTypeMessage, Collections.emptyList(), true);
 
         return null;
@@ -187,7 +187,7 @@ public class EndpointMessageTransport
 
         sourceVideoTypeMessage.setEndpointId(endpoint.getId());
 
-        /* Forward videoType messages to Octo. */
+        /* Forward videoType messages to Relays. */
         conference.sendMessage(sourceVideoTypeMessage, Collections.emptyList(), true);
 
         return null;
@@ -593,10 +593,10 @@ public class EndpointMessageTransport
 
         if (message.isBroadcast())
         {
-            // Broadcast message to all local endpoints + octo.
+            // Broadcast message to all local endpoints and relays.
             List<Endpoint> targets = new LinkedList<>(conference.getLocalEndpoints());
             targets.remove(endpoint);
-            conference.sendMessage(message, targets, /* sendToOcto */ true);
+            conference.sendMessage(message, targets, /* sendToRelays */ true);
         }
         else
         {
@@ -614,7 +614,7 @@ public class EndpointMessageTransport
             }
             else if (targetEndpoint != null)
             {
-                conference.sendMessage(message, Collections.emptyList(), /* sendToOcto */ true);
+                conference.sendMessage(message, Collections.emptyList(), /* sendToRelays */ true);
             }
             else
             {
@@ -627,7 +627,7 @@ public class EndpointMessageTransport
 
     /**
      * Handles an endpoint statistics message from this {@code Endpoint} that should be forwarded to
-     * other endpoints as appropriate, and also to Octo.
+     * other endpoints as appropriate, and also to relays.
      *
      * @param message the message that was received from the endpoint.
      */
