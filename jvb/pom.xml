@@ -97,10 +97,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -469,7 +471,7 @@
         <artifactId>spotbugs-maven-plugin</artifactId>
         <version>4.7.0.0</version>
         <configuration>
-          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+          <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
           <includeTests>true</includeTests>
         </configuration>
         <dependencies>
