@@ -47,6 +47,7 @@ import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jxmpp.stringprep.XmppStringPrepUtil
 import java.time.Clock
 import kotlin.concurrent.thread
+import kotlin.system.exitProcess
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 
 fun main(args: Array<String>) {
@@ -191,6 +192,8 @@ fun main(args: Array<String>) {
     TaskPools.SCHEDULED_POOL.shutdownNow()
     TaskPools.CPU_POOL.shutdownNow()
     TaskPools.IO_POOL.shutdownNow()
+
+    exitProcess(0)
 }
 
 private fun setupMetaconfigLogger() {
