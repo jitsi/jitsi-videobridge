@@ -25,6 +25,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.octo.config.OctoConfig
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.sctp.SctpConfig
@@ -73,6 +74,9 @@ class Colibri2ConferenceHandler(
             responseBuilder.addEndpoint(handleColibri2Endpoint(e))
         }
         for (r in conferenceModifyIQ.relays) {
+            if (!OctoConfig.config.enabled) {
+                throw IqProcessingException(Condition.feature_not_implemented, "Octo is disable in configuration.")
+            }
             if (!WebsocketServiceConfig.config.enabled) {
                 logger.warn(
                     "Can not use a colibri2 relay, because colibri web sockets are not enabled. See " +
