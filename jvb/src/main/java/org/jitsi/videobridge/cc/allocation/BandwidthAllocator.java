@@ -332,7 +332,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     {
         List<MediaSourceDesc> conferenceMediaSources =
                 conferenceEndpoints.stream().map(e -> e.getMediaSource()).collect(Collectors.toList());
-        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations2(conferenceMediaSources);
+        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceMediaSources);
 
         if (sourceBitrateAllocations.isEmpty())
         {
@@ -403,7 +403,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     private synchronized @NotNull BandwidthAllocation allocate2(List<MediaSourceDesc> conferenceMediaSources)
     {
-        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations2(conferenceMediaSources);
+        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceMediaSources);
 
         if (sourceBitrateAllocations.isEmpty())
         {
@@ -489,7 +489,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     // The new version which works with multiple streams per endpoint.
-    private synchronized @NotNull List<SingleSourceAllocation> createAllocations2(
+    private synchronized @NotNull List<SingleSourceAllocation> createAllocations(
             List<MediaSourceDesc> conferenceMediaSources)
     {
         // Init.
