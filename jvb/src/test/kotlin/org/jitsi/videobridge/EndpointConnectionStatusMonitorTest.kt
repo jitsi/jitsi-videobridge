@@ -67,7 +67,11 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
             )
         } answers {
             sendMessageCalls +=
-                Triple(sendMessageMessage.captured, sendMessageDestinationEps.captured, sendMessageSendToRelays.captured)
+                Triple(
+                    sendMessageMessage.captured,
+                    sendMessageDestinationEps.captured,
+                    sendMessageSendToRelays.captured
+                )
         }
     }
 

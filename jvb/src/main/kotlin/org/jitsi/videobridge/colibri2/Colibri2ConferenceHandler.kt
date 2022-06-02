@@ -25,9 +25,9 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
+import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.IqProcessingException

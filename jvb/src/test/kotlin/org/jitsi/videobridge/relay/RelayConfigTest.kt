@@ -18,7 +18,6 @@ package org.jitsi.videobridge.relay
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
 import org.jitsi.config.withNewConfig
-import org.jitsi.videobridge.relay.RelayConfig
 
 internal class RelayConfigTest : ConfigTest() {
     init {
@@ -44,7 +43,6 @@ internal class RelayConfigTest : ConfigTest() {
                     RelayConfig.config.enabled shouldBe false
                 }
             }
-
         }
         context("relay-id") {
             withNewConfig("videobridge.octo.relay-id=abc") {
