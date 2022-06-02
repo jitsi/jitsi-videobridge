@@ -26,7 +26,6 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.spyk
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.test.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.LoggerImpl
@@ -37,7 +36,7 @@ import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
 class EndpointConnectionStatusMonitorTest : ShouldSpec({
     isolationMode = IsolationMode.InstancePerLeaf
 
-    val executor: FakeScheduledExecutorService = spyk()
+    val executor = FakeScheduledExecutorService()
     val localEp1: Endpoint = mockk {
         every { id } returns "1"
     }

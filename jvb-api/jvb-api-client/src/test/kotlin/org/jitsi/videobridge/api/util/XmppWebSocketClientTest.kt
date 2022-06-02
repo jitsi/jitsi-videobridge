@@ -20,7 +20,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.comparables.shouldBeEqualComparingTo
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.ktor.http.cio.websocket.Frame
+import io.ktor.websocket.Frame
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
