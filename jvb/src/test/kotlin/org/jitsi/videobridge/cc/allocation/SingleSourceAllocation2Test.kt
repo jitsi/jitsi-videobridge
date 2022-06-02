@@ -62,7 +62,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
 
                 context("Without constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             endpointId, mediaSource, VideoConstraints(720), false, diagnosticContext, clock
                         )
 
@@ -74,7 +74,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                 }
                 context("With constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             endpointId, mediaSource, VideoConstraints(360), false, diagnosticContext, clock
                         )
 
@@ -95,7 +95,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
 
                     context("Non-zero constraints") {
                         val allocation =
-                            SingleSourceAllocation2(
+                            SingleSourceAllocation(
                                 endpointId, mediaSource, VideoConstraints(360), false, diagnosticContext, clock
                             )
 
@@ -106,7 +106,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                     }
                     context("Zero constraints") {
                         val allocation =
-                            SingleSourceAllocation2(
+                            SingleSourceAllocation(
                                 endpointId, mediaSource, VideoConstraints(0), false, diagnosticContext, clock
                             )
 
@@ -134,7 +134,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                 )
 
                 val allocation =
-                    SingleSourceAllocation2(
+                    SingleSourceAllocation(
                         endpointId, mediaSource, VideoConstraints(720), false, diagnosticContext, clock
                     )
 
@@ -159,7 +159,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             endpointId, mediaSource, VideoConstraints(720), true, diagnosticContext, clock
                         )
 
@@ -172,7 +172,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                 }
                 context("With 360p constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             endpointId, mediaSource, VideoConstraints(360), true, diagnosticContext, clock
                         )
 
@@ -196,7 +196,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                 )
 
                 val allocation =
-                    SingleSourceAllocation2(
+                    SingleSourceAllocation(
                         "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
                     )
 
@@ -225,7 +225,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
                         )
 
@@ -237,7 +237,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                 }
                 context("With 180p constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             "A", mediaSource, VideoConstraints(180), true, diagnosticContext, clock
                         )
 
@@ -265,7 +265,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
                         )
 
@@ -275,7 +275,7 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                 }
                 context("With 180p constraints") {
                     val allocation =
-                        SingleSourceAllocation2(
+                        SingleSourceAllocation(
                             "A", mediaSource, VideoConstraints(180), true, diagnosticContext, clock
                         )
 

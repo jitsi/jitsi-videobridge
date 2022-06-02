@@ -63,7 +63,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                 context("Without constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(720), false, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(720), false, diagnosticContext, clock)
 
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                     // "preferred FPS") layers for higher resolutions.
@@ -73,7 +73,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(360), false, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(360), false, diagnosticContext, clock)
 
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                     // "preferred FPS") layers for higher resolutions.
@@ -93,7 +93,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                     context("Non-zero constraints") {
                         val allocation =
-                            SingleSourceAllocation2(endpoint, VideoConstraints(360), false, diagnosticContext, clock)
+                            SingleSourceAllocation(endpoint, VideoConstraints(360), false, diagnosticContext, clock)
 
                         // The receiver set 360p constraints, but we only have a 720p stream.
                         allocation.preferredLayer shouldBe hd30
@@ -102,7 +102,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     }
                     context("Zero constraints") {
                         val allocation =
-                            SingleSourceAllocation2(endpoint, VideoConstraints(0), false, diagnosticContext, clock)
+                            SingleSourceAllocation(endpoint, VideoConstraints(0), false, diagnosticContext, clock)
 
                         // The receiver set a maxHeight=0 constraint.
                         allocation.preferredLayer shouldBe null
@@ -130,7 +130,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 )
 
                 val allocation =
-                    SingleSourceAllocation2(endpoint, VideoConstraints(720), false, diagnosticContext, clock)
+                    SingleSourceAllocation(endpoint, VideoConstraints(720), false, diagnosticContext, clock)
 
                 // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                 // "preferred FPS") layers for higher resolutions.
@@ -155,7 +155,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints.
@@ -166,7 +166,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With 360p constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(360), true, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(360), true, diagnosticContext, clock)
 
                     allocation.preferredLayer shouldBe sd30
                     allocation.oversendLayer shouldBe sd7_5
@@ -191,7 +191,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 )
 
                 val allocation =
-                    SingleSourceAllocation2(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                    SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
 
                 // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                 // endpoints.
@@ -221,7 +221,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints.
@@ -231,7 +231,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With 180p constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
@@ -260,7 +260,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
 
                     allocation.preferredLayer shouldBe l3
                     allocation.oversendLayer shouldBe l1
@@ -268,7 +268,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With 180p constraints") {
                     val allocation =
-                        SingleSourceAllocation2(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
+                        SingleSourceAllocation(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
