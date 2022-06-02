@@ -330,7 +330,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     private synchronized @NotNull BandwidthAllocation allocate(List<T> conferenceEndpoints)
     {
-        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceEndpoints);
+        List<SingleSourceAllocation2> sourceBitrateAllocations = createAllocations(conferenceEndpoints);
 
         if (sourceBitrateAllocations.isEmpty())
         {
@@ -347,7 +347,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
             for (int i = 0; i < sourceBitrateAllocations.size(); i++)
             {
-                SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
+                SingleSourceAllocation2 sourceBitrateAllocation = sourceBitrateAllocations.get(i);
                 if (sourceBitrateAllocation.getConstraints().getMaxHeight() <= 0)
                 {
                     continue;
@@ -372,8 +372,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         // The endpoints which are in lastN, and are sending video, but were suspended due to bwe.
         List<String> suspendedIds = sourceBitrateAllocations.stream()
-                .filter(SingleSourceAllocation::isSuspended)
-                .map(ssa -> ssa.getEndpoint().getId()).collect(Collectors.toList());
+                .filter(SingleSourceAllocation2::isSuspended)
+                .map(ssa -> ssa.getEndpointId()).collect(Collectors.toList());
         if (!suspendedIds.isEmpty())
         {
             logger.info("Endpoints were suspended due to insufficient bandwidth (bwe="
@@ -383,7 +383,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         Set<SingleAllocation> allocations = new HashSet<>();
 
         long targetBps = 0, idealBps = 0;
-        for (SingleSourceAllocation sourceBitrateAllocation : sourceBitrateAllocations) {
+        for (SingleSourceAllocation2 sourceBitrateAllocation : sourceBitrateAllocations) {
             allocations.add(sourceBitrateAllocation.getResult());
             targetBps += sourceBitrateAllocation.getTargetBitrate();
             idealBps += sourceBitrateAllocation.getIdealBitrate();
@@ -486,10 +486,10 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         return constraints.getMaxHeight() > 0;
     }
 
-    private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
+    private synchronized @NotNull List<SingleSourceAllocation2> createAllocations(List<T> conferenceEndpoints)
     {
         // Init.
-        List<SingleSourceAllocation> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
+        List<SingleSourceAllocation2> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
 
         for (MediaSourceContainer endpoint : conferenceEndpoints)
         {
@@ -498,8 +498,9 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             if (source != null)
             {
                 sourceBitrateAllocations.add(
-                        new SingleSourceAllocation(
-                                endpoint,
+                        new SingleSourceAllocation2(
+                                source.getOwner(),
+                                source,
                                 // Note that we use the effective constraints and not the receiver's constraints
                                 // directly. This means we never even try to allocate bitrate to endpoints "outside
                                 // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
