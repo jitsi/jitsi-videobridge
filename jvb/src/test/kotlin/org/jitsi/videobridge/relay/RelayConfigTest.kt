@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.octo.config
+package org.jitsi.videobridge.relay
 
 import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
