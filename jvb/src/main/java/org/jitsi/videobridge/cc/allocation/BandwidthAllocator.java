@@ -330,7 +330,9 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     private synchronized @NotNull BandwidthAllocation allocate(List<T> conferenceEndpoints)
     {
-        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations(conferenceEndpoints);
+        List<MediaSourceDesc> conferenceMediaSources =
+                conferenceEndpoints.stream().map(e -> e.getMediaSource()).collect(Collectors.toList());
+        List<SingleSourceAllocation> sourceBitrateAllocations = createAllocations2(conferenceMediaSources);
 
         if (sourceBitrateAllocations.isEmpty())
         {
@@ -484,39 +486,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             return false;
         }
         return constraints.getMaxHeight() > 0;
-    }
-
-    private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
-    {
-        // Init.
-        List<SingleSourceAllocation> sourceBitrateAllocations = new ArrayList<>(conferenceEndpoints.size());
-
-        for (MediaSourceContainer endpoint : conferenceEndpoints)
-        {
-            MediaSourceDesc source = endpoint.getMediaSource();
-
-            if (source != null)
-            {
-                sourceBitrateAllocations.add(
-                        new SingleSourceAllocation(
-                                source.getOwner(),
-                                source,
-                                // Note that we use the effective constraints and not the receiver's constraints
-                                // directly. This means we never even try to allocate bitrate to endpoints "outside
-                                // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
-                                // stream with bitrate higher that the available bandwidth, we will forward no
-                                // video at all instead of going to the second endpoint in the list.
-                                // I think this is not desired behavior. However, it is required for the "effective
-                                // constraints" to work as designed.
-                                effectiveConstraints.get(endpoint.getId()),
-                                allocationSettings.getOnStageEndpoints().contains(endpoint.getId()),
-                                diagnosticContext,
-                                clock,
-                                logger));
-            }
-        }
-
-        return sourceBitrateAllocations;
     }
 
     // The new version which works with multiple streams per endpoint.
