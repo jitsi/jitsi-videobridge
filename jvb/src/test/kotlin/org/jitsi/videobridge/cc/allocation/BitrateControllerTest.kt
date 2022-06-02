@@ -1517,18 +1517,21 @@ fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
             createSource(
                 3 * i + 1,
                 3 * i + 2,
-                3 * i + 3
+                3 * i + 3,
+                ids[i]
             )
         )
     }
 }
 
-fun createSource(ssrc1: Int, ssrc2: Int, ssrc3: Int): MediaSourceDesc = MediaSourceDesc(
+fun createSource(ssrc1: Int, ssrc2: Int, ssrc3: Int, id: String): MediaSourceDesc = MediaSourceDesc(
     arrayOf(
         RtpEncodingDesc(ssrc1.toLong(), arrayOf(ld7_5, ld15, ld30)),
         RtpEncodingDesc(ssrc2.toLong(), arrayOf(sd7_5, sd15, sd30)),
         RtpEncodingDesc(ssrc3.toLong(), arrayOf(hd7_5, hd15, hd30))
-    )
+    ),
+    sourceName = id,
+    owner = id
 )
 
 val bitrateLd = 150.kbps
