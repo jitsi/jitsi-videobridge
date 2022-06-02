@@ -1,20 +1,20 @@
-# Setting up Octo (cascaded bridges)
+# Setting up relays (cascaded bridges)
 
-### Secure Octo
-Secure Octo uses ICE and DTLS/SRTP between each pair of bridges, so a secure
+### Relays
+Relays (aka secure octo) use ICE and DTLS/SRTP between each pair of bridges, so a secure
 network is not required. It uses and requires colibri websockets for the
 bridge-bridge connections (endpoints can still use SCTP).
 
-Secure Octo is only usable with version 2 of the colibri protocol.
+Relays are only usable with version 2 of the colibri protocol.
 
 ## Jitsi Videobridge configuration
 
-### Secure-octo
-Secure-octo can be configured with the following properties in `/etc/jitsi/videobridge/jvb.conf` (also see
+### Relay configuratioon
+Relays can be configured with the following properties in `/etc/jitsi/videobridge/jvb.conf` (also see
 [reference.conf](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L132)).
 ```
   videobridge {
-    octo {
+    relay {
       enabled=true
       region="region1"
       relay-id="unique-id-of-the-jitsi-videobridge-instance"
@@ -24,7 +24,7 @@ Secure-octo can be configured with the following properties in `/etc/jitsi/video
 
 Legacy configuration is detected and automatically adapted, so no configuration changes are necessary when upgrading.
 
-Secure-octo requires colibri websockets for the bridge-to-bridge connections, which can be enabled as described in
+Relays require colibri websockets for the bridge-to-bridge connections, which can be enabled as described in
 [this document](https://github.com/jitsi/jitsi-videobridge/blob/master/doc/web-sockets.md). Note that the `colibri-relay-ws`
 endpoints also need to be proxied.
 
@@ -78,7 +78,7 @@ Look under `colibri_session_manager` for the different bridge sessions.
 
 ## Configuring client regions
 Clients learn about the region that they are in via the value of
-`config.deploymentInfo.userRegion`. Thus, in order for Octo to actually work
+`config.deploymentInfo.userRegion`. Thus, in order for relays to actually work
 for geolocation, `config.js` must be served with the correct values. The best
 way to implement this is outside the scope of this document, and it depends on
 the environment in which Jitsi Meet is installed.
