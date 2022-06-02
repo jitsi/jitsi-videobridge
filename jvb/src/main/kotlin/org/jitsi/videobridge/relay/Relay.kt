@@ -70,7 +70,6 @@ import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.TransportConfig
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
-import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
@@ -284,7 +283,7 @@ class Relay @JvmOverloads constructor(
                     )
                     System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
                     val pktInfo =
-                        OctoPacketInfo(
+                        RelayedPacketInfo(
                             UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length),
                             meshId
                         ).apply {
@@ -445,7 +444,7 @@ class Relay @JvmOverloads constructor(
     /**
      * Handle media packets that have arrived, using the appropriate endpoint's transceiver.
      */
-    private fun handleMediaPacket(packetInfo: OctoPacketInfo) {
+    private fun handleMediaPacket(packetInfo: RelayedPacketInfo) {
         if (packetInfo.packet.looksLikeRtp()) {
             val ssrc = RtpHeader.getSsrc(packetInfo.packet.buffer, packetInfo.packet.offset)
             val ep = getEndpointBySsrc(ssrc)
@@ -782,7 +781,7 @@ class Relay @JvmOverloads constructor(
         TODO: worry about bandwidth limits on relay links? */
     override fun wants(packet: PacketInfo): Boolean =
         isTransportConnected() && (
-            packet !is OctoPacketInfo ||
+            packet !is RelayedPacketInfo ||
                 packet.meshId != meshId
             )
 
@@ -940,6 +939,6 @@ class Relay @JvmOverloads constructor(
     }
 
     interface IncomingRelayPacketHandler {
-        fun handleIncomingPacket(packetInfo: OctoPacketInfo)
+        fun handleIncomingPacket(packetInfo: RelayedPacketInfo)
     }
 }

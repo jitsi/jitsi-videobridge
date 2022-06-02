@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.octo;
+package org.jitsi.videobridge.relay;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.*;
 
 /**
- * Currently we only use this to recognize packets coming from Octo.
+ * A packet received from a {@link Relay}.
  */
-public class OctoPacketInfo extends PacketInfo
+public class RelayedPacketInfo extends PacketInfo
 {
     @Nullable private final String meshId;
 
-    public OctoPacketInfo(@NotNull Packet packet, @Nullable String meshId)
+    public RelayedPacketInfo(@NotNull Packet packet, @Nullable String meshId)
     {
         super(packet);
         this.meshId = meshId;

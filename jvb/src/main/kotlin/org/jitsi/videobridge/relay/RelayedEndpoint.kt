@@ -43,7 +43,6 @@ import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
-import org.jitsi.videobridge.octo.OctoPacketInfo
 import org.jitsi.videobridge.octo.config.OctoConfig
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
@@ -201,7 +200,7 @@ class RelayedEndpoint(
         rtpReceiver.setSrtpTransformers(srtpTransformers)
     }
 
-    override fun handleIncomingPacket(packetInfo: OctoPacketInfo) = rtpReceiver.processPacket(packetInfo)
+    override fun handleIncomingPacket(packetInfo: RelayedPacketInfo) = rtpReceiver.processPacket(packetInfo)
 
     fun setFeature(feature: Features, enabled: Boolean) {
         rtpReceiver.setFeature(feature, enabled)
