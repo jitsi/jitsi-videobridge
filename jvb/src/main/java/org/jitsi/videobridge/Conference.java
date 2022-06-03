@@ -753,7 +753,7 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames);
-        videobridge.endpointCreated();
+        videobridge.localEndpointCreated();
 
         subscribeToEndpointEvents(endpoint);
 
@@ -1008,7 +1008,7 @@ public class Conference
             updateEndpointsCache();
             endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
             relaysById.forEach((i, relay) -> relay.localEndpointExpired(id));
-            videobridge.endpointExpired();
+            videobridge.localEndpointExpired();
         }
 
         endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));

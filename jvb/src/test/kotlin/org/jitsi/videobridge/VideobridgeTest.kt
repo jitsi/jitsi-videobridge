@@ -57,7 +57,7 @@ class VideobridgeTest : ShouldSpec() {
         context("Shutdown") {
             context("when a conference is active") {
                 withNewConfig("videobridge.shutdown.graceful-shutdown-min-participants=10") {
-                    repeat(15) { videobridge.endpointCreated() }
+                    repeat(15) { videobridge.localEndpointCreated() }
                     context("starting a graceful shutdown") {
                         videobridge.shutdown(true)
                         should("report that shutdown is in progress") {
@@ -74,7 +74,7 @@ class VideobridgeTest : ShouldSpec() {
                             resp.error.condition shouldBe StanzaError.Condition.service_unavailable
                         }
                         context("When the number of participants drops below the threshold") {
-                            repeat(10) { videobridge.endpointExpired() }
+                            repeat(10) { videobridge.localEndpointExpired() }
                             videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
                             fakeExecutor.clock.elapse(ShutdownConfig.config.shuttingDownDelay)
                             fakeExecutor.run()

@@ -257,12 +257,12 @@ public class Videobridge
         return conference;
     }
 
-    void endpointCreated()
+    void localEndpointCreated()
     {
         statistics.currentLocalEndpoints.incrementAndGet();
     }
 
-    void endpointExpired()
+    void localEndpointExpired()
     {
         shutdownManager.maybeShutdown(statistics.currentLocalEndpoints.decrementAndGet());
     }
