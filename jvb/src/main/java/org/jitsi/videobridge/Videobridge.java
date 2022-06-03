@@ -264,7 +264,13 @@ public class Videobridge
 
     void localEndpointExpired()
     {
-        shutdownManager.maybeShutdown(statistics.currentLocalEndpoints.decrementAndGet());
+        long remainingEndpoints = statistics.currentLocalEndpoints.decrementAndGet();
+        if (remainingEndpoints < 0)
+        {
+            logger.warn("Invalid endpoint count " + remainingEndpoints + ". Disabling endpoint-count based shutdown!");
+            return;
+        }
+        shutdownManager.maybeShutdown(remainingEndpoints);
     }
 
     /**
