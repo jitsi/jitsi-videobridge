@@ -996,22 +996,23 @@ public class Conference
         final AbstractEndpoint removedEndpoint;
         String id = endpoint.getId();
         removedEndpoint = endpointsById.remove(id);
-        if (removedEndpoint != null)
+        if (removedEndpoint == null)
         {
-            updateEndpointsCache();
+            logger.warn("No endpoint found, id=" + id);
+            return;
         }
 
-        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
-
-        endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));
-
-        relaysById.forEach((i, relay) -> relay.localEndpointExpired(id));
-
-        if (removedEndpoint != null)
+        if (removedEndpoint instanceof Endpoint)
         {
-            endpointsChanged();
+            // The removed endpoint was a local Endpoint as opposed to a RelayedEndpoint.
+            updateEndpointsCache();
+            endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
+            relaysById.forEach((i, relay) -> relay.localEndpointExpired(id));
             videobridge.endpointExpired();
         }
+
+        endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));
+        endpointsChanged();
     }
 
     /**
