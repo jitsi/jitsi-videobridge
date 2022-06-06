@@ -794,7 +794,7 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    fun localEndpointExpired(id: String) {
+    fun endpointExpired(id: String) {
         val s = senders.remove(id)
         s?.expire()
     }
