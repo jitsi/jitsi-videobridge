@@ -64,6 +64,7 @@ class MediaSources : NodeStatsProducer {
         sources.forEachIndexed { i, source ->
             val sourceBlock = NodeStatsBlock("source_$i")
             source.owner?.let { sourceBlock.addString("owner", it) }
+            sourceBlock.addString("video_type", source.videoType.toString())
             source.rtpEncodings.forEach { sourceBlock.addBlock(it.getNodeStats()) }
 
             addBlock(sourceBlock)
