@@ -753,7 +753,7 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames);
-        videobridge.endpointCreated();
+        videobridge.localEndpointCreated();
 
         subscribeToEndpointEvents(endpoint);
 
@@ -996,22 +996,23 @@ public class Conference
         final AbstractEndpoint removedEndpoint;
         String id = endpoint.getId();
         removedEndpoint = endpointsById.remove(id);
-        if (removedEndpoint != null)
+        if (removedEndpoint == null)
         {
+            logger.warn("No endpoint found, id=" + id);
+            return;
+        }
+
+        if (removedEndpoint instanceof Endpoint)
+        {
+            // The removed endpoint was a local Endpoint as opposed to a RelayedEndpoint.
             updateEndpointsCache();
+            endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
+            videobridge.localEndpointExpired();
         }
 
-        endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
-
+        relaysById.forEach((i, relay) -> relay.endpointExpired(id));
         endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));
-
-        relaysById.forEach((i, relay) -> relay.localEndpointExpired(id));
-
-        if (removedEndpoint != null)
-        {
-            endpointsChanged();
-            videobridge.endpointExpired();
-        }
+        endpointsChanged();
     }
 
     /**
