@@ -620,9 +620,7 @@ class Relay @JvmOverloads constructor(
                 endpointsBySsrc.keys.removeAll(ep.ssrcs)
             }
         }
-        if (ep != null) {
-            conference.endpointExpired(ep)
-        }
+        ep?.expire()
     }
 
     private fun getOrCreateRelaySender(endpointId: String): RelayEndpointSender {
@@ -862,7 +860,7 @@ class Relay @JvmOverloads constructor(
         expired = true
         logger.info("Expiring.")
         synchronized(endpointsLock) {
-            relayedEndpoints.values.forEach { conference.endpointExpired(it) }
+            relayedEndpoints.values.forEach { it.expire() }
         }
         senders.values.forEach { it.expire() }
         conference.relayExpired(this)
