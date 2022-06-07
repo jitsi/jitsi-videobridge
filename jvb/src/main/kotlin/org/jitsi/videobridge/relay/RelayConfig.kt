@@ -35,6 +35,8 @@ class RelayConfig private constructor() {
     val relayId: String by config {
         "videobridge.octo.relay-id".from(JitsiConfig.newConfig)
         "videobridge.relay.relay-id".from(JitsiConfig.newConfig)
+        // Fallback to the legacy "bind-address" property.
+        "videobridge.octo.bind-address".from(JitsiConfig.newConfig)
     }
 
     companion object {
