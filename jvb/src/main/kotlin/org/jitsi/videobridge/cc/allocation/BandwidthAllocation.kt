@@ -66,6 +66,8 @@ class BandwidthAllocation @JvmOverloads constructor(
         get() = JSONObject().apply {
             put("idealBps", idealBps)
             put("targetBps", targetBps)
+            put("oversending", oversending.toString())
+            put("has_suspended_sources", hasSuspendedSources.toString())
         }
 }
 
