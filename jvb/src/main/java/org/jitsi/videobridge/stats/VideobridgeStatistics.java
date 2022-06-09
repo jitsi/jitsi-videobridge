@@ -258,6 +258,7 @@ public class VideobridgeStatistics
         int numOversending = 0;
         int endpointsWithHighOutgoingLoss = 0;
         int numLocalActiveEndpoints = 0;
+        int endpointsWithSuspendedSources = 0;
 
         for (Conference conference : videobridge.getConferences())
         {
@@ -321,6 +322,10 @@ public class VideobridgeStatistics
                 if (!sendingAudio && !sendingVideo && !inactive)
                 {
                     receiveOnlyEndpoints++;
+                }
+                if (endpoint.hasSuspendedSources())
+                {
+                    endpointsWithSuspendedSources++;
                 }
                 TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
                 IncomingStatisticsSnapshot incomingStats = transceiverStats.getRtpReceiverStats().getIncomingStats();
@@ -585,6 +590,7 @@ public class VideobridgeStatistics
             unlockedSetStat(OCTO_SEND_BITRATE, relayBitrateOutgoingBps);
             unlockedSetStat(OCTO_SEND_PACKET_RATE, relayPacketRateOutgoing);
             unlockedSetStat(TOTAL_DOMINANT_SPEAKER_CHANGES, jvbStats.totalDominantSpeakerChanges.sum());
+            unlockedSetStat("endpoints_with_suspended_sources", endpointsWithSuspendedSources);
 
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
             if (relayId != null)

@@ -96,6 +96,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             diagnosticContext,
             clock
         )
+    fun hasSuspendedSources() = bandwidthAllocator.allocation.hasSuspendedSources
 
     private val allocationSettingsWrapper = AllocationSettingsWrapper(useSourceNames)
     val allocationSettings

@@ -388,7 +388,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             targetBps += sourceBitrateAllocation.getTargetBitrate();
             idealBps += sourceBitrateAllocation.getIdealBitrate();
         }
-        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps);
+        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps, !suspendedIds.isEmpty());
     }
 
     /**
@@ -461,7 +461,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             targetBps += sourceBitrateAllocation.getTargetBitrate();
             idealBps += sourceBitrateAllocation.getIdealBitrate();
         }
-        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps);
+        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps, !suspendedIds.isEmpty());
     }
 
     /**
