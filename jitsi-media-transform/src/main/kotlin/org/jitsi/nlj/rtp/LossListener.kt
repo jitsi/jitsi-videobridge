@@ -33,8 +33,8 @@ class LossTracker : LossListener {
     }
 
     @Synchronized
-    override fun packetLost() {
-        lostPackets.update(1)
+    override fun packetLost(numLost: Int) {
+        lostPackets.update(numLost.toLong())
     }
 
     @Synchronized
@@ -63,5 +63,5 @@ class LossTracker : LossListener {
 *   don't have all the information the BandwidthEstimator API needs. */
 interface LossListener {
     fun packetReceived(previouslyReportedLost: Boolean)
-    fun packetLost()
+    fun packetLost(numLost: Int)
 }

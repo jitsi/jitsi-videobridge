@@ -155,7 +155,7 @@ class TransportCcEngine(
                         numPacketsReportedLost.increment()
                         synchronized(this) {
                             lossListeners.forEach {
-                                it.packetLost()
+                                it.packetLost(1)
                             }
                         }
                     }
