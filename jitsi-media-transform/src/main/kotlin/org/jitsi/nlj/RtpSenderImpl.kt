@@ -22,6 +22,7 @@ import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrUpdater
+import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
@@ -232,6 +233,10 @@ class RtpSenderImpl(
 
     override fun requestKeyframe(mediaSsrc: Long?) {
         keyframeRequester.requestKeyframe(mediaSsrc)
+    }
+
+    override fun addLossListener(lossListener: LossListener) {
+        transportCcEngine.addLossListener(lossListener)
     }
 
     override fun setFeature(feature: Features, enabled: Boolean) {

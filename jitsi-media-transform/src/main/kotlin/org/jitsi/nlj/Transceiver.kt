@@ -146,6 +146,9 @@ class Transceiver(
             }
         )
 
+        rtpReceiver.addLossListener(endpointConnectionStats.incomingLossTracker)
+        rtpSender.addLossListener(endpointConnectionStats.outgoingLossTracker)
+
         rtcpEventNotifier.addRtcpEventListener(endpointConnectionStats)
 
         endpointConnectionStats.addListener(rtpSender)

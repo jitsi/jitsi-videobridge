@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.RtpReceiverStats
@@ -49,6 +50,8 @@ abstract class RtpReceiver :
 
     abstract fun isReceivingAudio(): Boolean
     abstract fun isReceivingVideo(): Boolean
+
+    abstract fun addLossListener(lossListener: LossListener)
 
     abstract fun setFeature(feature: Features, enabled: Boolean)
     abstract fun isFeatureEnabled(feature: Features): Boolean

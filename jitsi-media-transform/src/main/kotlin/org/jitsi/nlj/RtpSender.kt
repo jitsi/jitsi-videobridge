@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
@@ -42,6 +43,7 @@ abstract class RtpSender :
     abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
     abstract fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot
     abstract fun requestKeyframe(mediaSsrc: Long? = null)
+    abstract fun addLossListener(lossListener: LossListener)
     abstract fun setFeature(feature: Features, enabled: Boolean)
     abstract fun isFeatureEnabled(feature: Features): Boolean
     abstract fun tearDown()

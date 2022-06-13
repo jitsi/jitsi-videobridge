@@ -35,6 +35,7 @@ import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.atomic.LongAdder
 
 /**
@@ -89,6 +90,8 @@ class TransportCcEngine(
 
     private var lastRtt: Duration? = null
 
+    private val lossListeners = LinkedList<LossListener>()
+
     /**
      * Called when an RTP sender has a new round-trip time estimate.
      */
@@ -102,6 +105,24 @@ class TransportCcEngine(
         if (rtcpPacket is RtcpFbTccPacket) {
             tccReceived(rtcpPacket)
         }
+    }
+
+    /**
+     * Adds a loss listener to be notified about packet arrival and loss reports.
+     * @param listener
+     */
+    @Synchronized
+    fun addLossListener(listener: LossListener) {
+        lossListeners.add(listener)
+    }
+
+    /**
+     * Removes a loss listener.
+     * @param listener
+     */
+    @Synchronized
+    fun removeLossListener(listener: LossListener) {
+        lossListeners.remove(listener)
     }
 
     private fun tccReceived(tccPacket: RtcpFbTccPacket) {
@@ -132,6 +153,11 @@ class TransportCcEngine(
                         packetDetail.state = PacketDetailState.reportedLost
                         numPacketsReported.increment()
                         numPacketsReportedLost.increment()
+                        synchronized(this) {
+                            lossListeners.forEach {
+                                it.packetLost()
+                            }
+                        }
                     }
                 }
                 is ReceivedPacketReport -> {
@@ -156,6 +182,11 @@ class TransportCcEngine(
                                 tccSeqNum, packetDetail.packetLength,
                                 previouslyReportedLost = previouslyReportedLost
                             )
+                            synchronized(this) {
+                                lossListeners.forEach {
+                                    it.packetReceived(previouslyReportedLost)
+                                }
+                            }
                             packetDetail.state = PacketDetailState.reportedReceived
                         }
 

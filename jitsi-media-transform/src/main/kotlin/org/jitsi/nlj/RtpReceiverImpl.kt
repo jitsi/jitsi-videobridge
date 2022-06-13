@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtcp.RembHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
@@ -146,6 +147,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun isReceivingAudio() = audioBitrateCalculator.active
     override fun isReceivingVideo() = videoBitrateCalculator.active
+    override fun addLossListener(lossListener: LossListener) {
+        /* TODO */
+    }
 
     companion object {
         val queueErrorCounter = CountingErrorHandler()
