@@ -33,7 +33,25 @@ class TransportCcEngineTest : FunSpec() {
     private val clock: FakeClock = FakeClock()
     private val logger = StdoutLogger(_level = Level.INFO)
 
-    private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger, clock)
+    private val lossListener = object : LossListener {
+        var numReceived = 0
+        var numLost = 0
+
+        override fun packetReceived(previouslyReportedLost: Boolean) {
+            numReceived++
+            if (previouslyReportedLost) {
+                numLost--
+            }
+        }
+
+        override fun packetLost(numLost: Int) {
+            this.numLost += numLost
+        }
+    }
+
+    private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger, clock).also {
+        it.addLossListener(lossListener)
+    }
 
     init {
         test("Missing packet reports") {
@@ -56,6 +74,8 @@ class TransportCcEngineTest : FunSpec() {
                 numPacketsReportedAfterLost shouldBe 0
                 numPacketsUnreported shouldBe 0
             }
+            lossListener.numReceived shouldBe 1
+            lossListener.numLost shouldBe 0
         }
         test("Duplicate packet reports") {
             transportCcEngine.mediaPacketSent(4, 1300.bytes)
@@ -80,6 +100,8 @@ class TransportCcEngineTest : FunSpec() {
                 numPacketsReportedAfterLost shouldBe 0
                 numPacketsUnreported shouldBe 0
             }
+            lossListener.numReceived shouldBe 1
+            lossListener.numLost shouldBe 0
         }
         test("Packets reported after lost") {
             transportCcEngine.mediaPacketSent(4, 1300.bytes)
@@ -91,6 +113,9 @@ class TransportCcEngineTest : FunSpec() {
                 build()
             }
             transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant())
+
+            lossListener.numReceived shouldBe 1
+            lossListener.numLost shouldBe 1
 
             val tccPacket2 = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 2)) {
                 SetBase(4, 130)
@@ -106,6 +131,8 @@ class TransportCcEngineTest : FunSpec() {
                 numPacketsReportedAfterLost shouldBe 1
                 numPacketsUnreported shouldBe 0
             }
+            lossListener.numReceived shouldBe 2
+            lossListener.numLost shouldBe 0
         }
         test("Packet unreported") {
             transportCcEngine.mediaPacketSent(4, 1300.bytes)
@@ -118,6 +145,8 @@ class TransportCcEngineTest : FunSpec() {
                 numPacketsReportedAfterLost shouldBe 0
                 numPacketsUnreported shouldBe 1
             }
+            lossListener.numReceived shouldBe 0
+            lossListener.numLost shouldBe 0
         }
     }
 }
