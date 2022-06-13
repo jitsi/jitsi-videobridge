@@ -127,14 +127,18 @@ class TccGeneratorNode(
             }
 
             timestamp?.run {
-                if (packetArrivalTimes.isEmpty()) {
+                if (packetArrivalTimes.isEmpty() && windowStartSeq == -1) {
                     lossListeners.forEach {
                         it.packetReceived(false)
                     }
                 } else {
-                    val oldMax = packetArrivalTimes.lastKey()
+                    val oldMax = if (packetArrivalTimes.isNotEmpty()) {
+                        packetArrivalTimes.lastKey()
+                    } else {
+                        windowStartSeq - 1
+                    }
                     if (tccSeqNum > oldMax) {
-                        val numLost = tccSeqNum - oldMax + 1
+                        val numLost = tccSeqNum - oldMax - 1
                         /* TODO: should we squelch for large tcc jumps? */
                         lossListeners.forEach {
                             if (numLost > 0) {
