@@ -107,43 +107,7 @@ The preferred resolution [can be configured](https://github.com/jitsi/jitsi-vide
 # Signaling
 This section describes the signaling between the client and the bridge that affects bandwidth allocation.
 
-## Legacy message format
-This is the signaling currently used in jitsi-meet, but the intention is to replace it with the new format and
-eventually deprecate this format.
-
-This format is not expressive enough to enable all features supported by the bridge, so the following assumption is
-made: The client is in TileView if it has selected more than one endpoint, otherwise it is in StageView.
-
-In StageView, we set the single endpoint as "on-stage". In TileView, the signaled selected endpoints are ignored (for
-backward compatibility with jitsi-meet).
-
-Constraints are constructed solely based on `maxFrameHeight` and the signaled selected endpoints.
-### LastN
-LastN is set with a `LastNChangedEvent` message:
-```json
-{
-  "colibriClass": "LastNChangedEvent",
-  "lastN": 3
-}
-```
-
-### MaxFrameHeight
-A global maximum resolution is set with a `ReceiverVideoConstraint` message:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraint",
-  "maxFrameHeight": 360
-}
-```
-
-### Selected endpoints
-Selected endpoints are set with a `SelectedEndpointsChangedEvent` message:
-```json
-{
-  "colibriClass": "SelectedEndpointsChangedEvent",
-  "selectedEndpoints": ["A", "B"]
-}
-```
+TODO: PAWEL: describe source name based format
 
 ## New message format
 The new format uses a single message with a set of fields:

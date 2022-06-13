@@ -18,32 +18,47 @@ package org.jitsi.videobridge.cc.allocation
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 
 class AllocationSettingsTest : ShouldSpec() {
     init {
         context("computeVideoConstraints") {
-            context("Stage view behavior") {
+            context("Convert selectedEndpoints to selectedSources") {
                 // TODO write a test for sourceNames=true
                 val allocationSettings = AllocationSettingsWrapper(false)
-                allocationSettings.setMaxFrameHeight(720)
-                allocationSettings.setSelectedEndpoints(listOf("A"))
+                allocationSettings.setBandwidthAllocationSettings(
+                    ReceiverVideoConstraintsMessage(
+                        onStageEndpoints = listOf("A"),
+                        constraints = mapOf("A" to VideoConstraints(720))
+                    )
+                )
 
-                // This tests the legacy API, which intentionally translates "selected" to "on-stage".
+                // Backwards compatibility mode converts endpoints to source names
                 allocationSettings.get().selectedEndpoints shouldBe emptyList()
-                allocationSettings.get().onStageEndpoints shouldBe listOf("A")
+                allocationSettings.get().onStageEndpoints shouldBe emptyList()
+                allocationSettings.get().onStageSources shouldBe listOf("A-v0")
                 allocationSettings.get().videoConstraints.shouldContainExactly(
                     mapOf(
-                        "A" to VideoConstraints(720)
+                        "A-v0" to VideoConstraints(720)
                     )
                 )
             }
             context("Tile view behavior") {
                 // TODO write a test for sourceNames=true
                 val allocationSettings = AllocationSettingsWrapper(false)
-                allocationSettings.setMaxFrameHeight(180)
-                allocationSettings.setSelectedEndpoints(listOf("A", "B", "C", "D"))
+                allocationSettings.setBandwidthAllocationSettings(
+                    ReceiverVideoConstraintsMessage(
+                        selectedEndpoints = listOf("A", "B", "C", "D"),
+                        constraints = mapOf(
+                            "A" to VideoConstraints(180),
+                            "B" to VideoConstraints(360),
+                            "C" to VideoConstraints(720),
+                        )
+                    )
+                )
 
-                allocationSettings.get().onStageEndpoints shouldBe emptyList()
+                allocationSettings.get().selectedEndpoints shouldBe emptyList()
+                allocationSettings.get().selectedSources shouldBe listOf("A-v0", "B-v0", "C-v0", "D-v0")
                 allocationSettings.get().videoConstraints.shouldContainExactly(
                     mapOf(
                         "A" to VideoConstraints(180),
@@ -52,10 +67,6 @@ class AllocationSettingsTest : ShouldSpec() {
                         "D" to VideoConstraints(180)
                     )
                 )
-                // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView, and the
-                // desired behavior in TileView is to not have selected endpoints.
-                allocationSettings.get().selectedEndpoints shouldBe emptyList()
-                allocationSettings.get().onStageEndpoints shouldBe emptyList()
             }
         }
     }

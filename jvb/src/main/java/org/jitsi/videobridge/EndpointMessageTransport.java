@@ -493,66 +493,11 @@ public class EndpointMessageTransport
         return debugState;
     }
 
-    /**
-     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    @Override
-    public BridgeChannelMessage selectedEndpoint(SelectedEndpointMessage message)
-    {
-        String newSelectedEndpointID = message.getSelectedEndpoint();
-
-        List<String> newSelectedIDs =
-                isBlank(newSelectedEndpointID) ?
-                        Collections.emptyList() :
-                        Collections.singletonList(newSelectedEndpointID);
-
-        selectedEndpoints(new SelectedEndpointsMessage(newSelectedIDs));
-        return null;
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     * @deprecated use receiverVideoConstraints, selecting endpoints will not be supported in the multi-stream mode
-     */
-    @Override
-    @Deprecated
-    public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
-    {
-        List<String> newSelectedEndpoints = new ArrayList<>(message.getSelectedEndpoints());
-
-        getLogger().debug(() -> "Selected " + newSelectedEndpoints);
-        endpoint.setSelectedEndpoints(newSelectedEndpoints);
-        return null;
-    }
-
     @Nullable
     @Override
     public BridgeChannelMessage receiverVideoConstraints(@NotNull ReceiverVideoConstraintsMessage message)
     {
         endpoint.setBandwidthAllocationSettings(message);
-        return null;
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a
-     * {@link ReceiverVideoConstraintMessage} has been received
-     *
-     * @param message the message that was received.
-     */
-    @Override
-    public BridgeChannelMessage receiverVideoConstraint(ReceiverVideoConstraintMessage message)
-    {
-        int maxFrameHeight = message.getMaxFrameHeight();
-        getLogger().debug(
-                () -> "Received a maxFrameHeight video constraint from " + endpoint.getId() + ": " + maxFrameHeight);
-
-        endpoint.setMaxFrameHeight(maxFrameHeight);
         return null;
     }
 

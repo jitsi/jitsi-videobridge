@@ -828,16 +828,10 @@ class Endpoint @JvmOverloads constructor(
     /** Whether we are currently oversending to this endpoint. */
     fun isOversending(): Boolean = bitrateController.isOversending()
 
-    @Deprecated("Use the receiver constraints message instead")
-    fun setSelectedEndpoints(selectedEndpoints: List<String>) =
-        bitrateController.setSelectedEndpoints(selectedEndpoints)
-
     /**
      * Returns how many endpoints this Endpoint is currently forwarding video for
      */
     fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
-
-    fun setMaxFrameHeight(maxFrameHeight: Int) = bitrateController.setMaxFrameHeight(maxFrameHeight)
 
     fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
         bitrateController.setBandwidthAllocationSettings(message)
