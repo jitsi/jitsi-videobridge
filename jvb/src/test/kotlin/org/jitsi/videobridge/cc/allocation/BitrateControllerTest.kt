@@ -41,7 +41,6 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.configWithMultiStreamDisabled
-import org.jitsi.videobridge.configWithMultiStreamEnabled
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.time.Instant
 import java.util.function.Supplier
@@ -66,8 +65,9 @@ class BitrateControllerTest : ShouldSpec() {
     override suspend fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
         setNewConfig(
             "videobridge.cc.bwe-change-threshold=0" +
-            "\n" + configWithMultiStreamDisabled, // Also disable multi stream support,
-            true)
+                "\n" + configWithMultiStreamDisabled, // Also disable multi stream support,
+            true
+        )
     }
 
     override suspend fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
