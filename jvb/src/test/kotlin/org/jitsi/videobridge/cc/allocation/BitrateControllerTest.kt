@@ -40,10 +40,14 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.videobridge.configWithMultiStreamDisabled
+import org.jitsi.videobridge.configWithMultiStreamEnabled
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.time.Instant
 import java.util.function.Supplier
 
+// This tests the old flow which runs with multi stream flag disabled.
+// TODO remove the old flow and unify BitrateControllerTest and BitrateControllerNewTest
 class BitrateControllerTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
 
@@ -60,7 +64,10 @@ class BitrateControllerTest : ShouldSpec() {
      * because these tests are designed to test the decisions themselves and not necessarily when they are made.
      */
     override suspend fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
-        setNewConfig("videobridge.cc.bwe-change-threshold=0", true)
+        setNewConfig(
+            "videobridge.cc.bwe-change-threshold=0" +
+            "\n" + configWithMultiStreamDisabled, // Also disable multi stream support,
+            true)
     }
 
     override suspend fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
