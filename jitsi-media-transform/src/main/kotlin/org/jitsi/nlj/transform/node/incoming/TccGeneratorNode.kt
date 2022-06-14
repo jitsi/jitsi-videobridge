@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtensionType.TRANSPORT_CC
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
@@ -39,7 +40,7 @@ import org.jitsi.utils.secs
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.TreeMap
+import java.util.*
 
 /**
  * Extract the TCC sequence numbers from each passing packet and generate
@@ -69,6 +70,8 @@ class TccGeneratorNode(
     }
     private val rfc3711IndexTracker = Rfc3711IndexTracker()
 
+    private val lossListeners = LinkedList<LossListener>()
+
     init {
         streamInformation.onRtpExtensionMapping(TRANSPORT_CC) {
             tccExtensionId = it
@@ -91,6 +94,27 @@ class TccGeneratorNode(
     }
 
     /**
+     * Adds a loss listener to be notified about packet arrival and loss reports.
+     * @param listener
+     */
+    fun addLossListener(listener: LossListener) {
+        synchronized(lock) {
+            lossListeners.add(listener)
+        }
+    }
+
+    /**
+     * Removes a loss listener.
+     * @param listener
+     */
+    @Synchronized
+    fun removeLossListener(listener: LossListener) {
+        synchronized(lock) {
+            lossListeners.remove(listener)
+        }
+    }
+
+    /**
      * @param tccSeqNum the extended sequence number.
      */
     private fun addPacket(tccSeqNum: Int, timestamp: Instant?, isMarked: Boolean, ssrc: Long) {
@@ -101,11 +125,43 @@ class TccGeneratorNode(
                 // TODO: Chrome does something more advanced, keeping older sequences to replay on packet reordering.
                 packetArrivalTimes.clear()
             }
-            if (windowStartSeq == -1 || tccSeqNum < windowStartSeq) {
-                windowStartSeq = tccSeqNum
-            }
 
-            timestamp?.run { packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp) }
+            timestamp?.run {
+                if (packetArrivalTimes.isEmpty() && windowStartSeq == -1) {
+                    lossListeners.forEach {
+                        it.packetReceived(false)
+                    }
+                } else {
+                    val oldMax = if (packetArrivalTimes.isNotEmpty()) {
+                        packetArrivalTimes.lastKey()
+                    } else {
+                        windowStartSeq - 1
+                    }
+                    if (tccSeqNum > oldMax) {
+                        val numLost = tccSeqNum - oldMax - 1
+                        /* TODO: should we squelch for large tcc jumps? */
+                        lossListeners.forEach {
+                            if (numLost > 0) {
+                                it.packetLost(numLost)
+                            }
+                            it.packetReceived(false)
+                        }
+                    } else if (tccSeqNum < windowStartSeq || !packetArrivalTimes.containsKey(tccSeqNum)) {
+                        /* If we've already cleared the arrival info about this packet, assume it was previously
+                        * reported as lost - there are some corner cases where this isn't true, but they should be rare.
+                        */
+                        lossListeners.forEach {
+                            it.packetReceived(true)
+                        }
+                    }
+                }
+
+                if (windowStartSeq == -1 || tccSeqNum < windowStartSeq) {
+                    windowStartSeq = tccSeqNum
+                }
+
+                packetArrivalTimes.putIfAbsent(tccSeqNum, timestamp)
+            }
             if (isTccReadyToSend(isMarked)) {
                 buildFeedback(ssrc).forEach { sendTcc(it) }
             }

@@ -12,6 +12,7 @@ import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
+import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.util.StreamInformationStoreImpl
@@ -43,6 +44,22 @@ class TccGeneratorNodeTest : ShouldSpec() {
 
     private lateinit var tccGenerator: TccGeneratorNode
 
+    private var lossListener = object : LossListener {
+        var numReceived = 0
+        var numLost = 0
+
+        override fun packetReceived(previouslyReportedLost: Boolean) {
+            numReceived++
+            if (previouslyReportedLost) {
+                numLost--
+            }
+        }
+
+        override fun packetLost(numLost: Int) {
+            this.numLost += numLost
+        }
+    }
+
     override suspend fun beforeSpec(spec: Spec) {
         super.beforeSpec(spec)
         streamInformationStore.addRtpExtensionMapping(
@@ -50,6 +67,7 @@ class TccGeneratorNodeTest : ShouldSpec() {
         )
         streamInformationStore.addRtpPayloadType(vp8PayloadType)
         tccGenerator = TccGeneratorNode(onTccReady, streamInformationStore, StdoutLogger(), clock)
+        tccGenerator.addLossListener(lossListener)
     }
 
     init {
@@ -91,6 +109,12 @@ class TccGeneratorNodeTest : ShouldSpec() {
                     }
                 }
             }
+            context("loss statistics") {
+                should("be correct") {
+                    lossListener.numReceived shouldBe 11
+                    lossListener.numLost shouldBe 0
+                }
+            }
         }
         context("when a series of packets (where one is marked) is received") {
             with(clock) {
@@ -127,6 +151,12 @@ class TccGeneratorNodeTest : ShouldSpec() {
                     tccPackets.size shouldBe 2
                 }
             }
+            context("loss statistics") {
+                should("be correct") {
+                    lossListener.numReceived shouldBe 4
+                    lossListener.numLost shouldBe 0
+                }
+            }
         }
         context("when random packets are added") {
             val random = Random(1234)
@@ -150,6 +180,12 @@ class TccGeneratorNodeTest : ShouldSpec() {
                         receivedTime = clock.instant()
                     }
                 )
+            }
+            context("loss statistics") {
+                should("be correct") {
+                    lossListener.numReceived shouldBe 7
+                    lossListener.numLost shouldBe 6 * 9999
+                }
             }
             for (i in 2..5000) {
                 tccGenerator.processPacket(
@@ -248,11 +284,25 @@ class TccGeneratorNodeTest : ShouldSpec() {
                     }
                 )
 
+                context("loss statistics") {
+                    should("be correct before reordered packet") {
+                        lossListener.numReceived shouldBe 10
+                        lossListener.numLost shouldBe 1
+                    }
+                }
+
                 tccGenerator.processPacket(
                     PacketInfo(createPacket(9)).apply {
                         receivedTime = clock.instant() - Duration.ofMillis(10)
                     }
                 )
+
+                context("loss statistics") {
+                    should("be correct after reordered packet") {
+                        lossListener.numReceived shouldBe 11
+                        lossListener.numLost shouldBe 0
+                    }
+                }
 
                 elapse(100.ms)
                 tccGenerator.processPacket(

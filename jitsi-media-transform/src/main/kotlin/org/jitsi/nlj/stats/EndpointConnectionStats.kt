@@ -17,20 +17,18 @@
 package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.rtcp.RtcpListener
+import org.jitsi.nlj.rtp.LossTracker
 import org.jitsi.nlj.util.toDoubleMillis
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
-import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
 import org.jitsi.utils.LRUCache
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.secs
-import org.jitsi.utils.stats.RateTracker
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -55,23 +53,13 @@ class EndpointConnectionStats(
     }
     data class Snapshot(
         val rtt: Double,
-        val incomingLossStats: LossStatsSnapshot,
-        val outgoingLossStats: LossStatsSnapshot
+        val incomingLossStats: LossTracker.Snapshot,
+        val outgoingLossStats: LossTracker.Snapshot
     ) {
         fun toJson() = OrderedJsonObject().apply {
             put("rtt", rtt)
             put("incoming_loss_stats", incomingLossStats.toJson())
             put("outgoing_loss_stats", outgoingLossStats.toJson())
-        }
-    }
-
-    data class LossStatsSnapshot(
-        val packetsLost: Long,
-        val packetsReceived: Long
-    ) {
-        fun toJson() = OrderedJsonObject().apply {
-            put("packets_lost", packetsLost)
-            put("packets_received", packetsReceived)
         }
     }
 
@@ -89,8 +77,8 @@ class EndpointConnectionStats(
      */
     private var rtt: Double = 0.0
 
-    private val incomingLossTracker = LossTracker()
-    private val outgoingLossTracker = LossTracker()
+    val incomingLossTracker = LossTracker()
+    val outgoingLossTracker = LossTracker()
 
     fun addListener(listener: EndpointConnectionStatsListener) {
         endpointConnectionStatsListeners.add(listener)
@@ -104,14 +92,8 @@ class EndpointConnectionStats(
         return synchronized(lock) {
             Snapshot(
                 rtt = rtt,
-                incomingLossStats = LossStatsSnapshot(
-                    packetsLost = incomingLossTracker.lostPackets.getAccumulatedCount(),
-                    packetsReceived = incomingLossTracker.receivedPackets.getAccumulatedCount()
-                ),
-                outgoingLossStats = LossStatsSnapshot(
-                    packetsLost = outgoingLossTracker.lostPackets.getAccumulatedCount(),
-                    packetsReceived = outgoingLossTracker.receivedPackets.getAccumulatedCount()
-                )
+                incomingLossStats = incomingLossTracker.getSnapshot(),
+                outgoingLossStats = outgoingLossTracker.getSnapshot()
             )
         }
     }
@@ -126,8 +108,6 @@ class EndpointConnectionStats(
                 logger.cdebug { "Received RR packet with ${packet.reportBlocks.size} report blocks" }
                 packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedTime, reportBlock) }
             }
-            // Received TCC feedback reports loss on packets we *sent*
-            is RtcpFbTccPacket -> processTcc(packet, outgoingLossTracker)
         }
     }
 
@@ -141,8 +121,6 @@ class EndpointConnectionStats(
                 val entry = SsrcAndTimestamp(packet.senderSsrc, packet.senderInfo.compactedNtpTimestamp)
                 srSentTimes[entry] = clock.instant()
             }
-            // Sent TCC feedback reports loss on packets we *received*
-            is RtcpFbTccPacket -> processTcc(packet, incomingLossTracker)
         }
     }
 
@@ -187,23 +165,5 @@ class EndpointConnectionStats(
                     "timestamp ${reportBlock.lastSrTimestamp}"
             }
         }
-    }
-
-    private fun processTcc(tccPacket: RtcpFbTccPacket, lossTracker: LossTracker) = synchronized(lock) {
-        var lost = 0L
-        var received = 0L
-        for (packetReport in tccPacket) {
-            when (packetReport) {
-                is UnreceivedPacketReport -> lost++
-                else -> received++
-            }
-        }
-        lossTracker.lostPackets.update(lost)
-        lossTracker.receivedPackets.update(received)
-    }
-
-    private class LossTracker {
-        val lostPackets = RateTracker(60.secs, 1.secs)
-        val receivedPackets = RateTracker(60.secs, 1.secs)
     }
 }
