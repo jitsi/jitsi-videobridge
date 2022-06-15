@@ -205,8 +205,17 @@ class Endpoint @JvmOverloads constructor(
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) =
                 sendForwardedEndpointsMessage(forwardedEndpoints)
 
-            override fun forwardedSourcesChanged(forwardedSources: Set<String>) =
+            override fun forwardedSourcesChanged(forwardedSources: Set<String>) {
                 sendForwardedSourcesMessage(forwardedSources)
+                val remappings = mutableListOf<VideoSourceMapping>()
+                forwardedSources.forEach { s ->
+                    conference.getSource(s)?.let {
+                        this@Endpoint.videoSsrcs.activate(it, remappings)
+                    }
+                }
+                if (!remappings.isEmpty())
+                    sendMessage(VideoSourcesMap(remappings))
+            }
 
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
@@ -1310,51 +1319,73 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Rewrite RTP packets so they appear to be a continuation of an already advertised ssrc.
      */
-    private class Projection private constructor(packet: RtpPacket, val message: BridgeChannelMessage) {
-        var ssrc = packet.ssrc
+    private class Projection(val props: Any) {
+        var sendSsrc = nextSsrc++ // $ randomize
             private set
-        private var lastSequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1) /* $ */
-        private var lastTimestamp = RtpUtils.applyTimestampDelta(packet.timestamp, -960); /* $ */
+        private var lastReceivedSequenceNumber = 0
+        private var lastReceivedTimestamp = 0L
+        private var hasReceived = false
+        private var lastSentSequenceNumber = 0
+        private var lastSentTimestamp = 0L
+        private var hasSent = false
         private var sequenceNumberDelta = 0
         private var timestampDelta = 0L
 
-        constructor(props: MediaSourceDesc, packet: RtpPacket) : this(packet, getVideoMessage(props)) {
-        }
-        constructor(props: AudioSourceDesc, packet: RtpPacket) : this(packet, getAudioMessage(props)) {
-        }
-
         companion object {
-            private fun getVideoMessage(props: MediaSourceDesc): BridgeChannelMessage {
-                val name = props.sourceName ?: "unknown"
-                val rtx = props.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
-                val list = ArrayList<VideoSourceMapping>()
-                list.add(VideoSourceMapping(name, props.owner, props.primarySSRC, rtx, props.videoType))
-                return VideoSourcesMap(list)
-            }
-            private fun getAudioMessage(props: AudioSourceDesc): BridgeChannelMessage {
-                val name = props.sourceName ?: "unknown"
-                val list = ArrayList<AudioSourceMapping>()
-                list.add(AudioSourceMapping(name, props.owner, props.ssrc))
-                return AudioSourcesMap(list)
-            }
+            private var nextSsrc = 999000001L // $ test
         }
 
         fun transferState(other: Projection) {
-            ssrc = other.ssrc
-            sequenceNumberDelta = RtpUtils.applySequenceNumberDelta(
-                sequenceNumberDelta, RtpUtils.getSequenceNumberDelta(other.lastSequenceNumber, lastSequenceNumber)
-            )
-            timestampDelta = RtpUtils.applyTimestampDelta(
-                timestampDelta, RtpUtils.getTimestampDiff(other.lastTimestamp, lastTimestamp)
-            )
+            if (!other.hasSent) {
+                sequenceNumberDelta = 0
+                timestampDelta = 0L
+            } else if (hasReceived) {
+                sequenceNumberDelta =
+                    RtpUtils.getSequenceNumberDelta(other.lastSentSequenceNumber, lastReceivedSequenceNumber)
+                timestampDelta = RtpUtils.getTimestampDiff(other.lastSentTimestamp, lastReceivedTimestamp)
+            }
+
+            sendSsrc = other.sendSsrc
+            lastSentSequenceNumber = other.lastSentSequenceNumber
+            lastSentTimestamp = other.lastSentTimestamp
+            hasSent = other.hasSent
         }
 
         fun rewriteRtp(packet: RtpPacket) {
-            packet.ssrc = ssrc
+            if (!hasReceived && hasSent) {
+                lastReceivedSequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1) /* $ */
+                lastReceivedTimestamp = RtpUtils.applyTimestampDelta(packet.timestamp, -960); /* $ */
+                sequenceNumberDelta = RtpUtils.getSequenceNumberDelta(
+                    lastSentSequenceNumber, lastReceivedSequenceNumber
+                )
+                timestampDelta = RtpUtils.getTimestampDiff(lastSentTimestamp, lastReceivedTimestamp)
+            }
+
+            lastReceivedSequenceNumber = packet.sequenceNumber
+            lastReceivedTimestamp = packet.timestamp
+            hasReceived = true
+
+            packet.ssrc = sendSsrc
             packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
             packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
-            lastSequenceNumber = packet.sequenceNumber
-            lastTimestamp = packet.timestamp
+
+            lastSentSequenceNumber = packet.sequenceNumber
+            lastSentTimestamp = packet.timestamp
+            hasSent = true
+        }
+
+        override fun toString(): String {
+            return sendSsrc.toString() + (
+                if (hasReceived)
+                    " R" + lastReceivedSequenceNumber + "/" + lastReceivedTimestamp
+                else
+                    " -"
+                ) + (
+                if (hasSent)
+                    " S" + lastSentSequenceNumber + "/" + lastSentTimestamp
+                else
+                    " -"
+                ) + " DEL" + sequenceNumberDelta + "/" + timestampDelta
         }
     }
 
@@ -1373,12 +1404,27 @@ class Endpoint @JvmOverloads constructor(
         private val allSsrcs = HashMap<Long, Projection>()
 
         /**
+         * Add a receive SSRC to the set of current SSRCs, and mark it as the newest.
+         * Transfer state from the eldest receive SSRC that is about to be popped.
+         */
+        private fun makeSsrcCurrent(ssrc: Long, proj: Projection) {
+            if (currentSsrcs.size == size) {
+                val eldest = currentSsrcs.eldest()
+                proj.transferState(eldest.value)
+                logger.debug { "$ssrc stealing ${eldest.value.sendSsrc} from ${eldest.key}" }
+            } else {
+                logger.debug { "added new entry to current $mediaType ssrcs: $ssrc ${proj.sendSsrc}" }
+            }
+            currentSsrcs.put(ssrc, proj)
+        }
+
+        /**
          * Log the current SSRC mappings.
          */
         private fun logCurrentSsrcs() {
             logger.debug {
                 currentSsrcs.entries.joinToString(", ", "current $mediaType ssrcs: [", "]") {
-                    "(${it.key} -> ${it.value.ssrc})"
+                    "(${it.key} -> ${it.value})"
                 }
             }
         }
@@ -1393,36 +1439,75 @@ class Endpoint @JvmOverloads constructor(
                 if (entry == null) {
                     var proj = allSsrcs.get(packet.ssrc)
                     if (proj == null) {
-                        if (mediaType == MediaType.AUDIO) {
-                            val source = findAudioSourceProps(packet.ssrc)
-                            if (source == null) {
-                                return
-                            }
-                            proj = Projection(source, packet)
+                        val source: Any? = if (mediaType == MediaType.AUDIO) {
+                            findAudioSourceProps(packet.ssrc)
                         } else {
-                            val source = findVideoSourceProps(packet.ssrc)
-                            if (source == null) {
-                                return
-                            }
-                            proj = Projection(source, packet)
+                            findVideoSourceProps(packet.ssrc)
                         }
+                        if (source == null) {
+                            return
+                        }
+                        proj = Projection(source)
                         allSsrcs.put(packet.ssrc, proj)
                         logger.debug { "added projection for: ${packet.ssrc}" }
                     }
-                    if (currentSsrcs.size == size) {
-                        val eldest = currentSsrcs.eldest()
-                        proj.transferState(eldest.value)
-                        logger.debug { "${packet.ssrc} stealing ${eldest.value.ssrc} from ${eldest.key}" }
-                    } else {
-                        logger.debug { "added new entry to currentSsrcs: ${packet.ssrc} ${proj.ssrc}" }
+                    makeSsrcCurrent(packet.ssrc, proj)
+                    if (mediaType == MediaType.AUDIO) {
+                        val props = proj.props as AudioSourceDesc
+                        val name = props.sourceName ?: "unknown"
+                        val list = arrayListOf<AudioSourceMapping>(AudioSourceMapping(name, props.owner, proj.sendSsrc))
+                        sendMessage(AudioSourcesMap(list))
                     }
-                    currentSsrcs.put(packet.ssrc, proj)
-                    sendMessage(proj.message)
                     entry = proj
                 }
                 logCurrentSsrcs()
                 entry.rewriteRtp(packet)
                 logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
+            }
+        }
+
+        /**
+         * Result of activateSsrc function.
+         */
+        private inner class ActivateInfo(val ssrc: Long, val changed: Boolean)
+
+        /**
+         * Add a mapping from a receive SSRC to a send SSRC.
+         */
+        private fun activateSsrc(ssrc: Long, source: MediaSourceDesc): ActivateInfo {
+            val entry = currentSsrcs.get(ssrc)
+            if (entry == null) {
+                logger.debug { "activating $mediaType ssrc: $ssrc" }
+                var proj = allSsrcs.get(ssrc)
+                if (proj == null) {
+                    proj = Projection(source)
+                    allSsrcs.put(ssrc, proj)
+                    logger.debug { "added projection for ssrc $ssrc" }
+                }
+                makeSsrcCurrent(ssrc, proj)
+                return ActivateInfo(proj.sendSsrc, changed = true)
+            } else {
+                logger.debug { "$ssrc already active" }
+                return ActivateInfo(entry.sendSsrc, changed = false)
+            }
+        }
+
+        /**
+         * Assign active SSRCs to the given source. Add any remapped SSRCs to the remappings list.
+         * This list will be notified to the client when all sources have been activated.
+         */
+        fun activate(source: MediaSourceDesc, remappings: MutableList<VideoSourceMapping>) {
+            synchronized(currentSsrcs) {
+                val rtx = source.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
+                val info1 = activateSsrc(source.primarySSRC, source)
+                val info2 = activateSsrc(rtx, source)
+                if (info1.changed || info2.changed) {
+                    val name = source.sourceName ?: "unknown"
+                    remappings.add(VideoSourceMapping(name, source.owner, info1.ssrc, info2.ssrc, source.videoType))
+                    logCurrentSsrcs()
+                } else {
+                    logger.debug { "no changed to current $mediaType ssrcs" }
+                }
             }
         }
     }

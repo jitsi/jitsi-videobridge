@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.videobridge.MultiStreamConfig
@@ -29,6 +31,12 @@ class BandwidthAllocation @JvmOverloads constructor(
     val idealBps: Long = -1,
     val targetBps: Long = -1,
 ) {
+    // $ share Endpoint's copy of this.
+    // $ should config say number of sources or ssrcs?
+    private val maxVideoSsrcs: Int by config {
+        "videobridge.ssrc-limit.video".from(JitsiConfig.newConfig)
+    }
+
     val forwardedEndpoints: Set<String> =
         allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
@@ -38,10 +46,19 @@ class BandwidthAllocation @JvmOverloads constructor(
         else
             emptySet()
 
+    val allSources: Set<String> =
+        if (MultiStreamConfig.config.enabled)
+            allocations.mapIndexedNotNull { index, it ->
+                if (index < (maxVideoSsrcs / 2)) it.mediaSource?.sourceName!! else null
+            }.toSet()
+        else
+            emptySet()
+
     /**
      * Whether the two allocations have the same endpoints and same layers.
      */
-    fun isTheSameAs(other: BandwidthAllocation) =
+    fun isTheSameAs(other: BandwidthAllocation) = false // $ for now. check allSources.
+    /*
         allocations.size == other.allocations.size &&
             oversending == other.oversending &&
             allocations.all { allocation ->
@@ -51,7 +68,7 @@ class BandwidthAllocation @JvmOverloads constructor(
                         otherAllocation.mediaSource?.primarySSRC &&
                         allocation.targetLayer?.index == otherAllocation.targetLayer?.index
                 }
-            }
+            }*/
 
     /**
      * Whether this allocation is forwarding a source from an endpoint with this ID.

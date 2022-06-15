@@ -1174,6 +1174,8 @@ public class Conference
             {
                 endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
             }
+
+            endpointSourcesChanged(abstractEndpoint);
         }
     }
 
@@ -1194,6 +1196,20 @@ public class Conference
     public void removeEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
     {
         endpointsBySsrc.remove(ssrc, endpoint);
+    }
+
+    /* $ If we need this, replace it with a more efficient look-up. */
+    public @Nullable MediaSourceDesc getSource(@NotNull String name)
+    {
+        Iterator<AbstractEndpoint> it = endpointsById.values().iterator();
+        while (it.hasNext()) {
+            AbstractEndpoint ep = it.next();
+            MediaSourceDesc source = Arrays.stream(ep.getMediaSources())
+                .filter(s -> s.getSourceName() == name).findFirst().orElse(null);
+            if (source != null)
+                return source;
+        }
+        return null;
     }
 
     /**

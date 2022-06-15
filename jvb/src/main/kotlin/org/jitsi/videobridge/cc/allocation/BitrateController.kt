@@ -316,7 +316,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
             if (MultiStreamConfig.config.enabled && useSourceNames) {
                 // TODO as per George's comment above: should this message be sent on message transport connect?
-                val newForwardedSources = allocation.forwardedSources
+                val newForwardedSources = allocation.allSources // $ condition?
                 if (forwardedSources != newForwardedSources) {
                     forwardedSources = newForwardedSources
                     eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
