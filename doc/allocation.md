@@ -107,10 +107,167 @@ The preferred resolution [can be configured](https://github.com/jitsi/jitsi-vide
 # Signaling
 This section describes the signaling between the client and the bridge that affects bandwidth allocation.
 
-TODO: PAWEL: describe source name based format
+## Message format
 
-## New message format
-The new format uses a single message with a set of fields:
+The receiver' video constraint message is used to signal preference of the client in regard to which media streams it
+wants to receive. Usually only portion of all available videos is displayed on the client. Each video is identified by
+a source name and each endpoint can send multiple videos. The default format used in jitsi-meet follows a pattern where
+the first part is the endpoint ID followed by '-v' and the zero based index of the video source (see the example below).
+
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "lastN": 2,
+  "selectedSources": ["A-v0", "B-v0"],
+  "onStageSources": ["A-v1","C-v0", "D-v0"],
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A-v1": { "maxHeight": 720 },
+    "B-v0": { "maxHeight": 360 }
+  }
+}
+```
+
+All fields are optional. The ones which are included will be updated, and the ones which are not included are not
+changed.
+
+The `defaultConstraints` are used for sources not explicitly included in `constraints` (including new sources).
+
+The initial values are `lastN: -1` (unlimited), `strategy: StaveView`, `defaultConstraints: {maxHeight: 180}`
+([configurable](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L38)),
+and the rest empty.
+
+### Examples
+
+#### Stage view (1)
+Stage view with source `A-v0` in high definition and all other sources in 180p:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "onStageSources": ["A-v0"],
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A-v0": { "maxHeight": 720 }
+  }
+}
+```
+
+#### Stage view (2)
+Stage view with source `A-v0` in high definition, `B-v0`, `C-v0`, `D-v0` in 180p and all others disabled:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "onStageSources": ["A-v0"],
+  "defaultConstraints": { "maxHeight":  0 },
+  "constraints": {
+    "A-v0": { "maxHeight": 720 },
+    "B-v0": { "maxHeight": 180 },
+    "C-v0": { "maxHeight": 180 },
+    "D-v0": { "maxHeight": 180 }
+  }
+}
+```
+
+#### Stage view (3)
+Stage view with source `A-v0` in high definition, `B-v0`, `C-v0`, `D-v0` disabled and all others in 180p:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "onStageSources": ["A-v0"],
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A-v0": { "maxHeight": 720 },
+    "B-v0": { "maxHeight": 0 },
+    "C-v0": { "maxHeight": 0 },
+    "D-v0": { "maxHeight": 0 }
+  }
+}
+```
+
+#### Stage view (4)
+Stage view with source `A-v0` in high definition and all other sources in 180p, with "D-v0" prioritized higher than
+the dominant speaker's video source:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "onStageEndpoints": ["A-v0"],
+  "selectedEndpoints": ["D-v0"],
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A-v0": { "maxHeight": 720 }
+  }
+}
+```
+
+#### Tile view (1)
+Tile view with all sources in 180p/15fps:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "defaultConstraints": { "maxHeight":  180, "maxFrameRate": 15 }
+}
+```
+
+#### Tile view (2)
+Tile view with all sources in 360p:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "defaultConstraints": { "maxHeight":  360 }
+}
+```
+
+#### Tile view (3)
+Tile view with 180p, sources `A-v0` and `B-v0` prioritized, and sources `C-v0` and `D-v0` disabled:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "selectedSources": ["A-v0", "B-v0"],
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "C-v0": { "maxHeight":  0 },
+    "D-v0": { "maxHeight":  0 }
+  }
+}
+```
+
+#### Tile view (4)
+Tile view with all sources disabled except `A-v0`, `B-v0`, `C-v0`:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "defaultConstraints": { "maxHeight":  0 },
+  "constraints": {
+    "A-v0": { "maxHeight":  180 },
+    "B-v0": { "maxHeight":  180 },
+    "C-v0": { "maxHeight":  180 }
+  }
+}
+```
+#### Multi-stage view (1)
+With two on-stage sources, and up-to 4 other sources at 180p:
+```json
+{
+  "colibriClass": "ReceiverVideoConstraints",
+  "onStageSources": ["A-v0", "B-v0"],
+  "lastN": 6,
+  "defaultConstraints": { "maxHeight":  180 },
+  "constraints": {
+    "A-v0": { "maxHeight":  720 },
+    "B-v0": { "maxHeight":  720 }
+  }
+}
+```
+
+
+## Old message format
+The old format works with endpoint IDs rather than source names. Also uses `selectedEndpoints` and `onStageEndpoints`
+rather than `selectedSources` and `onStageSources`. All use cases described in the examples above are valid here as
+well, but the assumption is that every endpoint has only one video source.
+
+The support for source names vs legacy endpoint ID based format is determined on the ColibriV2 level.
+Source names and endpoint IDs should not be mixed together in a single message.
+
 ```json
 {
   "colibriClass": "ReceiverVideoConstraints",
@@ -121,137 +278,6 @@ The new format uses a single message with a set of fields:
   "constraints": {
     "A": { "maxHeight": 720 },
     "B": { "maxHeight": 360 }
-  }
-}
-```
-
-All fields are optional. The ones which are included will be updated, and the ones which are not included are not
-changed.
-
-The `defaultConstraints` are used for endpoints not explicitly included in `constraints` (including new endpoints).
-
-The initial values are `lastN: -1` (unlimited), `strategy: StaveView`, `defaultConstraints: {maxHeight: 180}`
-([configurable](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L38)),
-and the rest empty.
-
-### Examples
-
-#### Stage view (1)
-Stage view with endpoint `A` in high definition and all other endpoints in 180p:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "onStageEndpoints": ["A"],
-  "defaultConstraints": { "maxHeight":  180 },
-  "constraints": {
-    "A": { "maxHeight": 720 }
-  }
-}
-```
-
-#### Stage view (2)
-Stage view with endpoint `A` in high definition, `B`, `C`, `D` in 180p and all others disabled:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "onStageEndpoints": ["A"],
-  "defaultConstraints": { "maxHeight":  0 },
-  "constraints": {
-    "A": { "maxHeight": 720 },
-    "B": { "maxHeight": 180 },
-    "C": { "maxHeight": 180 },
-    "D": { "maxHeight": 180 }
-  }
-}
-```
-
-#### Stage view (3)
-Stage view with endpoint `A` in high definition, `B`, `C`, `D` disabled and all others in 180p:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "onStageEndpoints": ["A"],
-  "defaultConstraints": { "maxHeight":  180 },
-  "constraints": {
-    "A": { "maxHeight": 720 },
-    "B": { "maxHeight": 0 },
-    "C": { "maxHeight": 0 },
-    "D": { "maxHeight": 0 }
-  }
-}
-```
-
-#### Stage view (4)
-Stage view with endpoint `A` in high definition and all other endpoints in 180p, with "D" prioritized higher than 
-the dominant speaker:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "onStageEndpoints": ["A"],
-  "selectedEndpoints": ["D"],
-  "defaultConstraints": { "maxHeight":  180 },
-  "constraints": {
-    "A": { "maxHeight": 720 }
-  }
-}
-```
-
-#### Tile view (1)
-Tile view with all endpoints in 180p/15fps:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "defaultConstraints": { "maxHeight":  180, "maxFrameRate": 15 }
-}
-```
-
-#### Tile view (2)
-Tile view with all endpoints in 360p:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "defaultConstraints": { "maxHeight":  360 }
-}
-```
-
-#### Tile view (3)
-Tile view with 180p, endpoints `A` and `B` prioritized, and endpoints `C` and `D` disabled:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "selectedEndpoints": ["A", "B"],
-  "defaultConstraints": { "maxHeight":  180 },
-  "constraints": {
-    "C": { "maxHeight":  0 },
-    "D": { "maxHeight":  0 }
-  }
-}
-```
-
-#### Tile view (4)
-Tile view with all endpoints disabled except `A`, `B`, `C`:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "defaultConstraints": { "maxHeight":  0 },
-  "constraints": {
-    "A": { "maxHeight":  180 },
-    "B": { "maxHeight":  180 },
-    "C": { "maxHeight":  180 }
-  }
-}
-```
-#### Multi-stage view (1)
-With two on-stage endpoints, and up-to 4 other endpoints at 180p:
-```json
-{
-  "colibriClass": "ReceiverVideoConstraints",
-  "onStageEndpoints": ["A", "B"],
-  "lastN": 6,
-  "defaultConstraints": { "maxHeight":  180 },
-  "constraints": {
-    "A": { "maxHeight":  720 },
-    "B": { "maxHeight":  720 }
   }
 }
 ```
