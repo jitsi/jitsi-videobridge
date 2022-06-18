@@ -1500,13 +1500,13 @@ class Endpoint @JvmOverloads constructor(
             synchronized(currentSsrcs) {
                 val rtx = source.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
                 val info1 = activateSsrc(source.primarySSRC, source)
-                val info2 = activateSsrc(rtx, source)
+                val info2 = if(rtx != -1L) activateSsrc(rtx, source) else ActivateInfo(-1, changed = false)
                 if (info1.changed || info2.changed) {
                     val name = source.sourceName ?: "unknown"
                     remappings.add(VideoSourceMapping(name, source.owner, info1.ssrc, info2.ssrc, source.videoType))
                     logCurrentSsrcs()
                 } else {
-                    logger.debug { "no changed to current $mediaType ssrcs" }
+                    logger.debug { "no change to current $mediaType ssrcs" }
                 }
             }
         }
