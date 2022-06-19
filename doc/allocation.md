@@ -28,15 +28,16 @@ The following settings are controlled by the receiver, with messages over the "b
 LastN is the maximum number of video streams that the receiver wants to receive. To effectively stop receiving video
 (for example to conserve bandwidth), the receiver can set LastN=0.
 
-#### Selected endpoints
-This is a list of endpoints to be prioritized first, overriding the natural speech activity order of the endpoints.
+#### Selected sources
+This is a list of sources to be prioritized first, overriding the natural speech activity order of the endpoints which
+own the sources.
 
-For example, if the receiver wants to always receive an endpoint that is screensharing, regardless of who is speaking
-in the conference, it can "select" this endpoint. 
+For example, if the receiver wants to always receive a screensharing source, regardless of who is speaking
+in the conference, it can "select" this source. 
 
-#### On-stage endpoints
-This is a list of endpoints for which allocation should be prioritized up to a higher resolution (since they are
-displayed "on stage"). On-stage endpoints are prioritized higher than selected endpoints, and in addition:
+#### On-stage sources
+This is a list of sources for which allocation should be prioritized up to a higher resolution (since they are
+displayed "on stage"). On-stage sources are prioritized higher than selected sources, and in addition:
 1. Allocation for them is greedy up to the preferred resolution
 ([360p by default](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L40))
 2. Above the preferred resolution, only frame rates of
@@ -44,12 +45,12 @@ displayed "on stage"). On-stage endpoints are prioritized higher than selected e
 are considered.
 
 #### Video Constraints
-Video constraints are resolution (`maxHeight`) and frame rate (`maxFrameRate`) constraints for each endpoint. These are
+Video constraints are resolution (`maxHeight`) and frame rate (`maxFrameRate`) constraints for each source. These are
 "soft" constraints in the sense that the bridge may exceed them in some circumstances (see below).
  
 When set to a negative number, they indicate no constraints.
 
-When set to 0, they signal that no video should be forwarded for the associated endpoint, and this is never exceeded.
+When set to 0, they signal that no video should be forwarded for the associated source, and this is never exceeded.
 
 When set to a positive number, the algorithm will attempt to select a layer which satisfies the constraints. If no
 layers satisfy the constraints, and there is sufficient bandwidth, the algorithm will exceed the constraints and 
@@ -62,15 +63,18 @@ The bandwidth allocation algorithm is implemented in [BandwidthAllocator](https:
 
 It consists of 3 phases:
 ### 1. Prioritize
-This phase orders the available endpoints in the desired way. It starts with the endpoints ordered by speech activity
-(dominant speaker, followed by the previous dominant speaker, etc). Then, it moves the endpoints which are NOT sending
-video to the bottom of the list (this is actually implemented in [ConferenceSpeechActivity](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/java/org/jitsi/videobridge/ConferenceSpeechActivity.java).
-Finally, the selected endpoints are moved to the TOP of the list.
+This phase orders the available sources in the desired way. It starts with sources coming from the endpoints ordered by
+speech activity (dominant speaker, followed by the previous dominant speaker, etc).
+
+TODO: Pawel: I don't see the following logic in ConferenceSpeechActivity
+Then, it moves the endpoints which are NOT sending video to the bottom of the list (this is actually implemented in
+[ConferenceSpeechActivity](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/java/org/jitsi/videobridge/ConferenceSpeechActivity.java).
+Finally, the selected sources are moved to the TOP of the list.
 
 TODO: Update the algorithm, to only move selected endpoint when they are sending video.
 
 ### 2. Apply LastN
-This phase disables video for endpoints in the list that are not among the first `LastN`. Note that the effective 
+This phase disables the video sources in the list that are not among the first `LastN`. Note that the effective 
 `LastN` value comes from the number signaled by the client, potentially also limited by [static](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/kotlin/org/jitsi/videobridge/JvbLastN.kt)
 and [dynamic](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/kotlin/org/jitsi/videobridge/load_management/LastNReducer.kt)
 configuration of the bridge. This is implemented by setting the `maxHeight` constraint to 0.
@@ -83,8 +87,8 @@ allows us to do "aggressive layer suspension" (i.e. set sender-side constraints 
 The final phase is the actual allocation.
 
 #### 3.1 Initialize potential layers
-The first step is to initialize a list of layers to consider for each endpoint. It starts with the list of all layers
-for the endpoint, and prunes ones which should not be considered:
+The first step is to initialize a list of layers to consider for each source. It starts with the list of all layers
+for the source, and prunes ones which should not be considered:
 
 A) The ones with resolution and frame rate higher than the constraints
 
@@ -96,11 +100,11 @@ For example, with the defaults of preferred resolution 360p and preferred frame 
 not be considered: 360p/7.5fps, 360p/15fps, 720p/7.5fps, 720p/15fps.
 
 #### 3.2 Allocation loop
-It starts with no layers selected for any endpoint, and remaining bandwidth equal to the total available bandwidth.
-Until there is remaining bandwidth, it loops over the endpoints in the order obtained in [phase 1](#1.-Prioritize),
+It starts with no layers selected for any source, and remaining bandwidth equal to the total available bandwidth.
+Until there is remaining bandwidth, it loops over the sources in the order obtained in [phase 1](#1.-Prioritize),
 and tries to `improve()` the layer of each.
 
-The normal `improve()` step selects the next higher layer if there is sufficient bandwidth. For on-stage endpoints
+The normal `improve()` step selects the next higher layer if there is sufficient bandwidth. For on-stage sources
 the `improve()` step works eagerly up to the "preferred" resolution.
 The preferred resolution [can be configured](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L40).
 
@@ -262,11 +266,8 @@ With two on-stage sources, and up-to 4 other sources at 180p:
 
 ## Old message format
 The old format works with endpoint IDs rather than source names. Also uses `selectedEndpoints` and `onStageEndpoints`
-rather than `selectedSources` and `onStageSources`. All use cases described in the examples above are valid here as
+instead of `selectedSources` and `onStageSources`. All use cases described in the examples above are valid here as
 well, but the assumption is that every endpoint has only one video source.
-
-The support for source names vs legacy endpoint ID based format is determined on the ColibriV2 level.
-Source names and endpoint IDs should not be mixed together in a single message.
 
 ```json
 {
@@ -281,3 +282,11 @@ Source names and endpoint IDs should not be mixed together in a single message.
   }
 }
 ```
+
+The support for source names vs legacy endpoint ID based format is determined on the ColibriV2 level:
+TODO finish example
+```xml
+<capability name='source-names'/>
+```
+
+Source names and endpoint IDs should not be mixed together in a single message.
