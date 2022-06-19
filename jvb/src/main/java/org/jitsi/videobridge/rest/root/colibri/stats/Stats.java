@@ -22,9 +22,9 @@ import org.jitsi.videobridge.stats.*;
 import org.json.simple.*;
 import org.jvnet.hk2.annotations.*;
 
-import javax.inject.*;
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
+import jakarta.inject.*;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
 
 @Path("/colibri/stats")
 @EnabledByConfig(RestApis.COLIBRI)

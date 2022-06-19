@@ -45,7 +45,7 @@ public class ColibriWebSocket extends WebSocketAdapter
         EventHandler eventHandler
     )
     {
-        this.logger = new LoggerImpl(getClass().getName(), new LogContext(JMap.of("id", id)));
+        this.logger = new LoggerImpl(getClass().getName(), new LogContext(Map.of("id", id)));
         this.eventHandler = Objects.requireNonNull(eventHandler, "eventHandler");
     }
 

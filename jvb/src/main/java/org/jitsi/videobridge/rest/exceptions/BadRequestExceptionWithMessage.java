@@ -16,9 +16,9 @@
 
 package org.jitsi.videobridge.rest.exceptions;
 
-import javax.servlet.http.*;
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
+import jakarta.servlet.http.*;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
 
 /**
  * The ctor for {@link BadRequestException} which takes in a String doesn't

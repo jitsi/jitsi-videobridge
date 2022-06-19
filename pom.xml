@@ -23,17 +23,18 @@
     <packaging>pom</packaging>
 
     <properties>
-        <jetty.version>9.4.44.v20210927</jetty.version>
-        <kotlin.version>1.5.31</kotlin.version>
-        <kotest.version>4.6.3</kotest.version>
-        <junit.version>5.8.1</junit.version>
-        <jicoco.version>1.1-104-g20c4353</jicoco.version>
-        <jitsi.utils.version>1.0-113-g8b75d53</jitsi.utils.version>
-        <ktlint-maven-plugin.version>1.11.0</ktlint-maven-plugin.version>
+        <jetty.version>11.0.9</jetty.version>
+        <kotlin.version>1.6.21</kotlin.version>
+        <kotest.version>5.3.0</kotest.version>
+        <junit.version>5.8.2</junit.version>
+        <jicoco.version>1.1-110-g42c01d9</jicoco.version>
+        <jitsi.utils.version>1.0-115-gb93957d</jitsi.utils.version>
+        <ktlint-maven-plugin.version>1.13.1</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.2.2</maven-shade-plugin.version>
-        <spotbugs.version>4.5.0</spotbugs.version>
-        <jersey.version>2.35</jersey.version>
+        <spotbugs.version>4.6.0</spotbugs.version>
+        <jersey.version>3.0.4</jersey.version>
         <jackson.version>2.12.4</jackson.version>
+        <bouncycastle.version>1.70</bouncycastle.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -63,6 +64,8 @@
     </build>
 
     <modules>
+        <module>rtp</module>
+        <module>jitsi-media-transform</module>
         <module>jvb-api</module>
         <module>jvb</module>
     </modules>
@@ -97,22 +100,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-56-g1f97cf2</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>rtp</artifactId>
-                <version>1.0-68-g0eb94bf</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>jitsi-media-transform</artifactId>
-                <version>1.0-299-gcc91b29</version>
+                <version>3.0-58-gf41542d</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-47-gc7154e0</version>
+                <version>1.0-53-g0113a6b</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
@@ -130,7 +123,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.7</version>
+                        <version>0.8.8</version>
                         <executions>
                             <execution>
                                 <goals>

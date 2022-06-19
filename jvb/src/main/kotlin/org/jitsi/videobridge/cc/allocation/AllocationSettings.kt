@@ -205,7 +205,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
             if (MultiStreamConfig.config.enabled && !useSourceNames) {
                 newConstraints = HashMap(it.size)
                 it.entries.stream().forEach {
-                    entry ->
+                        entry ->
                     newConstraints[endpointIdToSourceName(entry.key)] = entry.value
                 }
             }

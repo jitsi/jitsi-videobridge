@@ -19,9 +19,9 @@ package org.jitsi.videobridge.rest.filters;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 
-import javax.ws.rs.*;
-import javax.ws.rs.container.*;
-import javax.ws.rs.core.*;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.container.*;
+import jakarta.ws.rs.core.*;
 
 /**
  * A filter which returns 404 not found for any path which:

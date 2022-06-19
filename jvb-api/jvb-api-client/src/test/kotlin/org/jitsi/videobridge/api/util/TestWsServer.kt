@@ -16,14 +16,14 @@
 
 package org.jitsi.videobridge.api.util
 
-import io.ktor.application.Application
-import io.ktor.application.install
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.readText
-import io.ktor.routing.route
-import io.ktor.routing.routing
-import io.ktor.websocket.WebSockets
-import io.ktor.websocket.webSocket
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
+import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.Frame
+import io.ktor.websocket.readText
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 

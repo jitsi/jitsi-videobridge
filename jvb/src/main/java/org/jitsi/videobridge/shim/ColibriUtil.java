@@ -17,7 +17,6 @@ package org.jitsi.videobridge.shim;
 
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri.*;
@@ -25,17 +24,13 @@ import org.jitsi.xmpp.extensions.jingle.*;
 import org.jivesoftware.smack.packet.*;
 
 import java.util.*;
-import java.util.stream.*;
-
-import static org.jitsi.videobridge.Conference.GID_NOT_SET;
 
 public class ColibriUtil
 {
     private static final Logger logger = new LoggerImpl(ColibriUtil.class.getName());
 
     /**
-     * This method collects all of the channel bundle IDs referenced in the
-     * given IQ.
+     * This method collects all of the channel bundle IDs referenced in the given IQ.
      * @param conferenceIq
      * @return
      */
@@ -93,8 +88,7 @@ public class ColibriUtil
     }
 
     /**
-     * Gets the channel ID we will use for the Octo channel with a given media
-     * type.
+     * Gets the channel ID we will use for the Octo channel with a given media type.
      * @param mediaType
      * @return
      */
@@ -245,52 +239,9 @@ public class ColibriUtil
     /**
      * Gets the first {@code OctoChannel} in the given content, or null.
      */
-    static ColibriConferenceIQ.Channel findOctoChannel(
-            ColibriConferenceIQ.Content content)
+    static ColibriConferenceIQ.Channel findOctoChannel(ColibriConferenceIQ.Content content)
     {
-        return
-                content.getChannels().stream()
-                        .filter(ColibriUtil::isOctoChannel)
-                        .findAny().orElse(null);
-    }
-
-    /**
-     * Parses the "gid" field encoded in {@link ColibriConferenceIQ#getGID()}.
-     * It is a 32-bit unsigned integer encoded in hex. Returns
-     * {@link Conference#GID_NOT_SET} if parsing fails.
-     *
-     * @param gidStr the string to parse
-     * @return the GID parsed as a {@code long}, or
-     * {@link Conference#GID_NOT_SET -1} on failure.
-     */
-    public static long parseGid(String gidStr)
-    {
-        long gid;
-
-        if (gidStr == null)
-        {
-            gid = GID_NOT_SET;
-        }
-        else
-        {
-            try
-            {
-                gid = Long.parseLong(gidStr, 16);
-            }
-            catch (NumberFormatException nfe)
-            {
-                logger.warn("Invalid GID: " + gidStr + ". Assuming it's unset.");
-                gid = GID_NOT_SET;
-            }
-
-            if (gid < 0 || gid > 0xffff_ffffL)
-            {
-                logger.warn("Invalid GID (not a 32-bit unsigned): " + gidStr + ". Assuming it's unset");
-                gid = GID_NOT_SET;
-            }
-        }
-
-        return gid;
+        return content.getChannels().stream().filter(ColibriUtil::isOctoChannel) .findAny().orElse(null);
     }
 
     private ColibriUtil() {}

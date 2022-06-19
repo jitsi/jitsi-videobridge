@@ -32,7 +32,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 val targetIndex = RtpLayerDesc.getIndex(0, 0, 0)
 
                 testGenerator(generator, filter, targetIndex) {
-                    _, result ->
+                        _, result ->
                     result.accept shouldBe true
                     result.mark shouldBe true
                     filter.needsKeyframe shouldBe false
@@ -47,7 +47,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 val targetIndex = RtpLayerDesc.getIndex(0, 0, 2)
 
                 testGenerator(generator, filter, targetIndex) {
-                    _, result ->
+                        _, result ->
                     result.accept shouldBe true
                     result.mark shouldBe true
                     filter.needsKeyframe shouldBe false
@@ -59,7 +59,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 val targetIndex = RtpLayerDesc.getIndex(0, 0, 0)
 
                 testGenerator(generator, filter, targetIndex) {
-                    f, result ->
+                        f, result ->
                     result.accept shouldBe (f.temporalLayer == 0)
                     if (result.accept) {
                         result.mark shouldBe true
@@ -73,7 +73,7 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 val targetIndex = RtpLayerDesc.getIndex(0, 0, 1)
 
                 testGenerator(generator, filter, targetIndex) {
-                    f, result ->
+                        f, result ->
                     result.accept shouldBe (f.temporalLayer <= 1)
                     if (result.accept) {
                         result.mark shouldBe true

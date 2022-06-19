@@ -231,6 +231,9 @@ class Endpoint @JvmOverloads constructor(
         isUsingSourceNames
     )
 
+    /** Whether any sources are suspended from being sent to this endpoint because of BWE. */
+    fun hasSuspendedSources() = bitrateController.hasSuspendedSources()
+
     /**
      * The instance which manages the Colibri messaging (over a data channel
      * or web sockets).

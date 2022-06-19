@@ -18,15 +18,17 @@ package org.jitsi.videobridge.websocket
 
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Companion.config
 
 class ColibriWebSocketService(
     webserverIsTls: Boolean
 ) {
     private val baseUrl: String?
-    private val relayUrl: String? /* TODO: only enable this if secure octo is enabled? */
+    private val relayUrl: String?
 
     init {
         // We default to matching the protocol used by the local jetty
@@ -36,7 +38,11 @@ class ColibriWebSocketService(
             val useTls = config.useTls ?: webserverIsTls
             val protocol = if (useTls) "wss" else "ws"
             baseUrl = "$protocol://${config.domain}/$COLIBRI_WS_ENDPOINT/${config.serverId}"
-            relayUrl = "$protocol://${config.domain}/$COLIBRI_RELAY_WS_ENDPOINT/${config.serverId}"
+            relayUrl = if (RelayConfig.config.enabled) {
+                "$protocol://${config.domain}/$COLIBRI_RELAY_WS_ENDPOINT/${config.serverId}"
+            } else {
+                null
+            }
             logger.info("Base URL: $baseUrl Relay URL: $relayUrl")
         } else {
             logger.info("WebSockets are not enabled")
@@ -82,6 +88,9 @@ class ColibriWebSocketService(
             }
             servletContextHandler.addServlet(holder, "/$COLIBRI_WS_ENDPOINT/*")
             servletContextHandler.addServlet(holder, "/$COLIBRI_RELAY_WS_ENDPOINT/*")
+            /* TODO, if you want to register additional Websocket servlets elsewhere:
+                factor this out, it should only be called once. */
+            JettyWebSocketServletContainerInitializer.configure(servletContextHandler, null)
         } else {
             logger.info("Disabled, not registering servlet")
         }

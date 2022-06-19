@@ -29,7 +29,7 @@
     <artifactId>jvb-api-client</artifactId>
 
     <properties>
-        <ktor.version>1.6.1</ktor.version>
+        <ktor.version>2.0.1</ktor.version>
     </properties>
 
     <dependencies>
@@ -46,12 +46,7 @@
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-client-apache</artifactId>
-            <version>${ktor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-client-cio</artifactId>
+            <artifactId>ktor-client-apache-jvm</artifactId>
             <version>${ktor.version}</version>
         </dependency>
         <dependency>
@@ -61,7 +56,7 @@
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-client-jackson</artifactId>
+            <artifactId>ktor-client-jackson-jvm</artifactId>
             <version>${ktor.version}</version>
         </dependency>
         <dependency>
@@ -95,12 +90,6 @@
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-client-mock</artifactId>
-            <version>${ktor.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
             <artifactId>ktor-client-mock-jvm</artifactId>
             <version>${ktor.version}</version>
             <scope>test</scope>
@@ -108,26 +97,26 @@
         <dependency>
             <groupId>io.mockk</groupId>
             <artifactId>mockk</artifactId>
-            <version>1.10.2</version>
+            <version>1.12.4</version>
             <scope>test</scope>
         </dependency>
         <!-- We include the server libs in test, as it's currently the only way
         to test websockets -->
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-server-jetty</artifactId>
+            <artifactId>ktor-server-jetty-jvm</artifactId>
             <version>${ktor.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-websockets</artifactId>
+            <artifactId>ktor-server-websockets-jvm</artifactId>
             <version>${ktor.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-server-core</artifactId>
+            <artifactId>ktor-server-core-jvm</artifactId>
             <version>${ktor.version}</version>
             <scope>test</scope>
         </dependency>

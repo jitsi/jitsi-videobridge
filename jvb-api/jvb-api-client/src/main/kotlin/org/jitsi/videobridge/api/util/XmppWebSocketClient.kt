@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.api.util
 
 import io.ktor.client.HttpClient
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.readText
+import io.ktor.websocket.Frame
+import io.ktor.websocket.readText
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.createChildLogger
 import org.jivesoftware.smack.packet.IQ

@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Represent a message sent over the "bridge channel" between an endpoint (or "client") and jitsi-videobridge, or
- * between two jitsi-videobridge instances over Octo.
+ * between two jitsi-videobridge instances over a relay connection.
  *
  * The messages are formatted in JSON with a required "colibriClass" field, which indicates the message type. Different
  * message types have different (if any) additional fields.
@@ -233,7 +233,7 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
         }
 
     @get:JsonAnyGetter
-    val otherFields = mutableMapOf<String, Any>()
+    val otherFields = mutableMapOf<String, Any?>()
 
     /**
      * Whether this message is to be broadcast or targeted to a specific endpoint.
@@ -242,7 +242,7 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
     fun isBroadcast(): Boolean = to.isBlank()
 
     @JsonAnySetter
-    fun put(key: String, value: Any) {
+    fun put(key: String, value: Any?) {
         otherFields[key] = value
     }
 
@@ -270,10 +270,10 @@ class EndpointStats : BridgeChannelMessage(TYPE) {
         }
 
     @get:JsonAnyGetter
-    val otherFields = mutableMapOf<String, Any>()
+    val otherFields = mutableMapOf<String, Any?>()
 
     @JsonAnySetter
-    fun put(key: String, value: Any) {
+    fun put(key: String, value: Any?) {
         otherFields[key] = value
     }
 
@@ -481,8 +481,8 @@ class SenderSourceConstraintsMessage(
 }
 
 /**
- * A message sent from one bridge to another (via Octo) indicating that the first bridge wishes to receive video streams
- * from the specified endpoint with the specified constraints.
+ * A message sent from one bridge to another (via a relay connection) indicating that the first bridge wishes to
+ * receive video streams from the specified endpoint with the specified constraints.
  */
 class AddReceiverMessage(
     val bridgeId: String,
@@ -505,8 +505,8 @@ class AddReceiverMessage(
 }
 
 /**
- * A message sent from one bridge to another (via Octo) indicating that it no longer wishes to receive video streams
- * from the specified endpoint.
+ * A message sent from one bridge to another (via a relay connection) indicating that it no longer wishes to receive
+ * video streams from the specified endpoint.
  */
 class RemoveReceiverMessage(
     val bridgeId: String,
@@ -547,7 +547,7 @@ class SourceVideoTypeMessage(
     sourceName: String,
     /**
      * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
-     * message was received on (non-null values are needed only for Octo).
+     * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {
@@ -577,7 +577,7 @@ class VideoTypeMessage(
     val videoType: VideoType,
     /**
      * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
-     * message was received on (non-null values are needed only for Octo).
+     * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {

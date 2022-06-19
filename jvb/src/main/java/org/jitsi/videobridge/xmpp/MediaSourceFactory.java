@@ -492,9 +492,6 @@ public class MediaSourceFactory
              *          .getResourceOrEmpty().toString();
              *
              * but avoids expensive construction of a lot of JID parts we just throw away.
-             *
-             * This function is called repeatedly by {@link ConfOctoTransport#setSources}
-             * so needs to be fast.
              */
             String ownerAttr = ssrcInfoPacketExtension.getAttributeAsString(SSRCInfoPacketExtension.OWNER_ATTR_NAME);
             if (ownerAttr != null)

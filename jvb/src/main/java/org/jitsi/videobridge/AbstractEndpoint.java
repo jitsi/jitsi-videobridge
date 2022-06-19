@@ -35,8 +35,8 @@ import java.util.*;
  * Represents an endpoint in a conference (i.e. the entity associated with
  * a participant in the conference, which connects the participant's audio
  * and video channel). This might be an endpoint connected to this instance of
- * jitsi-videobridge, or a "remote" endpoint connected to another bridge in the
- * same conference (if Octo is being used).
+ * jitsi-videobridge, or a relayed endpoint connected to another bridge in the
+ * same conference.
  *
  * @author Boris Grozev
  * @author Brian Baldino

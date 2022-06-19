@@ -22,9 +22,9 @@ import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.json.simple.*;
 
-import javax.inject.*;
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
+import jakarta.inject.*;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
 
 /**
  * A resource for putting the videobridge in drain via REST.

@@ -97,6 +97,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
             val endpointsMessage = EndpointMessage("to_value")
             endpointsMessage.otherFields["other_field1"] = "other_value1"
             endpointsMessage.put("other_field2", 97)
+            endpointsMessage.put("other_null", null)
 
             val json = endpointsMessage.toJson()
             // Make sure we don't mistakenly serialize the "broadcast" flag.
@@ -112,6 +113,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.to shouldBe "to_value"
             parsed.otherFields["other_field1"] shouldBe "other_value1"
             parsed.otherFields["other_field2"] shouldBe 97
+            parsed.otherFields["other_null"] shouldBe null
+            parsed.otherFields.containsKey("other_null") shouldBe true
+            parsed.otherFields.containsKey("nonexistent") shouldBe false
 
             endpointsMessage.from = "new"
             (parse(endpointsMessage.toJson()) as EndpointMessage).from shouldBe "new"
@@ -123,6 +127,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed2.to shouldBe "to_value"
                 parsed2.otherFields["other_field1"] shouldBe "other_value1"
                 parsed2.otherFields["other_field2"] shouldBe 97
+                parsed2.otherFields.containsKey("other_null") shouldBe true
+                parsed2.otherFields.containsKey("nonexistent") shouldBe false
             }
         }
 
@@ -498,7 +504,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
               "colibriClass": "EndpointMessage",
               "to": "to_value",
               "other_field1": "other_value1",
-              "other_field2": 97
+              "other_field2": 97,
+              "other_null": null
             }
         """
 
