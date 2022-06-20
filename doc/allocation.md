@@ -66,7 +66,8 @@ It consists of 3 phases:
 This phase orders the available sources in the desired way. It starts with sources coming from the endpoints ordered by
 speech activity (dominant speaker, followed by the previous dominant speaker, etc).
 
-TODO: Pawel: I don't see the following logic in ConferenceSpeechActivity
+TODO: Pawel: I don't see the following logic in ConferenceSpeechActivity:
+
 Then, it moves the endpoints which are NOT sending video to the bottom of the list (this is actually implemented in
 [ConferenceSpeechActivity](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/java/org/jitsi/videobridge/ConferenceSpeechActivity.java).
 Finally, the selected sources are moved to the TOP of the list.
@@ -283,10 +284,24 @@ well, but the assumption is that every endpoint has only one video source.
 }
 ```
 
-The support for source names vs legacy endpoint ID based format is determined on the ColibriV2 level:
-TODO finish example
-```xml
-<capability name='source-names'/>
-```
+The support for source names vs legacy endpoint ID based format is determined on the ColibriV2 level. The endpoint
+create request must indicate "source-names" capability on the endpoint that will be using the new format. This is done
+automatically by Jicofo when multi stream support is enabled in jitsi-meet, but if you're using JVB without Jicofo then
+remember to do that yourself.
 
-Source names and endpoint IDs should not be mixed together in a single message.
+```xml
+<iq xmlns='jabber:client' to='jvbbrewery@internal-muc.meet.jitsi/jvb1' id='VFLJ9-10' type='get'>
+   <conference-modify xmlns='jitsi:colibri2' meeting-id='62a5bc4c-c79c-4eab-a071-6740eb549296'>
+       <endpoint xmlns='jitsi:colibri2' id='fefbee3e' create='true' >
+           <capability name='source-names'/> <---- SOURCE NAME CAPABILITY
+           <media type='audio'>
+               ...
+           </media>
+           <media type='video'>
+               ...
+           </media>
+           <transport ice-controlling='true'/>
+       </endpoint>
+   </conference-modify>
+</iq>
+```
