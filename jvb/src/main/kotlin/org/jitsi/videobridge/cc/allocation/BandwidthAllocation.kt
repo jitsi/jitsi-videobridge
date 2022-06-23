@@ -51,7 +51,7 @@ class BandwidthAllocation @JvmOverloads constructor(
     val allSources: Set<String> =
         if (MultiStreamConfig.config.enabled)
             allocations.mapIndexedNotNull { index, it ->
-                if (index < (maxVideoSsrcs / 2)) it.mediaSource?.sourceName!! else null
+                if (index < maxVideoSsrcs) it.mediaSource?.sourceName!! else null
             }.toSet()
         else
             emptySet()
