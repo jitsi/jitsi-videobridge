@@ -64,11 +64,8 @@ The bandwidth allocation algorithm is implemented in [BandwidthAllocator](https:
 It consists of 3 phases:
 ### 1. Prioritize
 This phase orders the available sources in the desired way. It starts with sources coming from the endpoints ordered by
-speech activity (dominant speaker, followed by the previous dominant speaker, etc).
-
-TODO: Pawel: I don't see the following logic in ConferenceSpeechActivity:
-
-Then, it moves the endpoints which are NOT sending video to the bottom of the list (this is actually implemented in
+speech activity (dominant speaker, followed by the previous dominant speaker, etc). Then, it moves the sources from
+the endpoints which are NOT sending video to the bottom of the list (this is actually implemented in
 [ConferenceSpeechActivity](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/java/org/jitsi/videobridge/ConferenceSpeechActivity.java).
 Finally, the selected sources are moved to the TOP of the list.
 
