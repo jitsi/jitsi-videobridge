@@ -111,10 +111,11 @@ This section describes the signaling between the client and the bridge that affe
 
 ## Message format
 
-The receiver' video constraint message is used to signal preference of the client in regard to which media streams it
-wants to receive. Usually only portion of all available videos is displayed on the client. Each video is identified by
-a source name and each endpoint can send multiple videos. The default format used in jitsi-meet follows a pattern where
-the first part is the endpoint ID followed by '-v' and the zero based index of the video source (see the example below).
+The receiver's video constraint message is used to signal the preference of the client in regard to which media streams
+it wants to receive. Usually only a portion of all available videos is displayed on the client. Each video is identified
+by a source name and each endpoint can send multiple videos. The default format used in jitsi-meet follows a pattern
+where the first part is the endpoint ID followed by '-v' and the zero based index of the video source (see the example
+below).
 
 ```json
 {
