@@ -104,11 +104,11 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
             synchronized(inactiveEndpointIds) {
                 val wasActive = !inactiveEndpointIds.contains(endpoint.id)
                 if (wasActive && !active) {
-                    logger.cdebug { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
+                    logger.info { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
                     inactiveEndpointIds += endpoint.id
                     changed = true
                 } else if (!wasActive && active) {
-                    logger.cdebug { "${endpoint.id} has reconnected" }
+                    logger.info { "${endpoint.id} has reconnected" }
                     inactiveEndpointIds -= endpoint.id
                     changed = true
                 }
