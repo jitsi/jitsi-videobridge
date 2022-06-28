@@ -264,7 +264,7 @@ With two on-stage sources, and up-to 4 other sources at 180p:
 
 
 ## Old message format
-The old format works with endpoint IDs rather than source names. Also uses `selectedEndpoints` and `onStageEndpoints`
+The old format works with endpoint IDs rather than source names. It also uses `selectedEndpoints` and `onStageEndpoints`
 instead of `selectedSources` and `onStageSources`. All use cases described in the examples above are valid here as
 well, but the assumption is that every endpoint has only one video source.
 
