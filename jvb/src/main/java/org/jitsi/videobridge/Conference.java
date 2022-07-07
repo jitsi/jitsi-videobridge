@@ -1078,7 +1078,7 @@ public class Conference
                 endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
             }
 
-            endpointSourcesChanged(endpoint);
+            abstractEndpoint.onMessageTransportConnect();
         }
     }
 

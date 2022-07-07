@@ -243,6 +243,11 @@ class Endpoint @JvmOverloads constructor(
 
     override fun getMessageTransport(): EndpointMessageTransport = _messageTransport
 
+    override fun onMessageTransportConnect() {
+        this.videoSsrcs.sendAllMappings()
+        this.audioSsrcs.sendAllMappings()
+    }
+
     /**
      * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
      */
@@ -1553,6 +1558,42 @@ class Endpoint @JvmOverloads constructor(
 
             if (!remappings.isEmpty())
                 sendMessage(VideoSourcesMap(remappings))
+        }
+
+        /**
+         * Send all current mappings to the endpoint.
+         * Can be used to resynchronize after message transport reconnects.
+         */
+        fun sendAllMappings() {
+            if (mediaType == MediaType.VIDEO) {
+                val remappings = mutableListOf<VideoSourceMapping>()
+
+                synchronized(sendSources) {
+                    sendSources.forEach { _, sendSource ->
+                        val props = sendSource.props
+                        val mapping = VideoSourceMapping(
+                            props.name, props.owner, sendSource.send1.ssrc, sendSource.send2.ssrc, props.videoType
+                        )
+                        remappings.add(mapping)
+                    }
+                }
+
+                if (!remappings.isEmpty())
+                    sendMessage(VideoSourcesMap(remappings))
+            } else if (mediaType == MediaType.AUDIO) {
+                val remappings = mutableListOf<AudioSourceMapping>()
+
+                synchronized(sendSources) {
+                    sendSources.forEach { _, sendSource ->
+                        val props = sendSource.props
+                        val mapping = AudioSourceMapping(props.name, props.owner, sendSource.send1.ssrc)
+                        remappings.add(mapping)
+                    }
+                }
+
+                if (!remappings.isEmpty())
+                    sendMessage(AudioSourcesMap(remappings))
+            }
         }
 
         /**
