@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.allocation
 
 import io.kotest.core.spec.style.StringSpec
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
@@ -65,6 +66,7 @@ class BitrateControllerPerfTest : StringSpec() {
         object : BitrateController.EventHandler {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
+            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) { }
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
                 newEffectiveConstraints: Map<String, VideoConstraints>
@@ -76,6 +78,7 @@ class BitrateControllerPerfTest : StringSpec() {
         DiagnosticContext(),
         createLogger(),
         false, // TODO cover the case for true?
+        false,
         clock,
     ).apply {
         // The BC only starts working 10 seconds after it first received media, so fake that.

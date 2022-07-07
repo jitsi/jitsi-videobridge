@@ -115,7 +115,7 @@ class Endpoint @JvmOverloads constructor(
      */
     iceControlling: Boolean,
     private val isUsingSourceNames: Boolean,
-    private val doSsrcRewriting: Boolean = false,
+    private val doSsrcRewriting: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
     /**
@@ -208,8 +208,23 @@ class Endpoint @JvmOverloads constructor(
 
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) {
                 sendForwardedSourcesMessage(forwardedSources)
-                forwardedSources.mapNotNull { s -> conference.getSource(s) }.let {
-                    this@Endpoint.videoSsrcs.activate(it)
+            }
+
+            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
+                sourceList.mapIndexedNotNull { index, s ->
+                    val name = s.sourceName
+                    if (name != null && index < maxVideoSsrcs)
+                        conference.getSource(name)
+                    else
+                        null
+                }.let {
+                    // $ locking
+                    val newSources = it.mapNotNull { s -> s.sourceName }.toSet()
+                    if (activeSources != newSources) {
+                        activeSources = newSources
+                        sendForwardedSourcesMessage(newSources)
+                        videoSsrcs.activate(it)
+                    }
                 }
             }
 
@@ -224,7 +239,8 @@ class Endpoint @JvmOverloads constructor(
         Supplier { getOrderedEndpoints() },
         diagnosticContext,
         logger,
-        isUsingSourceNames
+        isUsingSourceNames,
+        doSsrcRewriting
     )
 
     /** Whether any sources are suspended from being sent to this endpoint because of BWE. */
@@ -244,8 +260,8 @@ class Endpoint @JvmOverloads constructor(
     override fun getMessageTransport(): EndpointMessageTransport = _messageTransport
 
     override fun onMessageTransportConnect() {
-        this.videoSsrcs.sendAllMappings()
-        this.audioSsrcs.sendAllMappings()
+        videoSsrcs.sendAllMappings()
+        audioSsrcs.sendAllMappings()
     }
 
     /**
@@ -313,6 +329,11 @@ class Endpoint @JvmOverloads constructor(
      * Manages remapping of audio SSRCs when enabled.
      */
     private val audioSsrcs = SsrcCache(MediaType.AUDIO, maxAudioSsrcs)
+
+    /**
+     * Last advertised forwarded-sources in remapping mode.
+     */
+    private var activeSources: Set<String> = emptySet()
 
     init {
         conference.encodingsManager.subscribe(this)
