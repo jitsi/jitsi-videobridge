@@ -21,6 +21,7 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.load_management.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -56,7 +57,9 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    private static final String region = RelayConfig.config.getRegion();
+    private static final InfoMetric regionInfo = MetricsContainer.getInstance()
+            .registerInfo(REGION, "The currently configured region.", RelayConfig.config.getRegion());
+
     private static final String relayId = RelayConfig.config.getEnabled() ? RelayConfig.config.getRelayId() : null;
 
     public static final String EPS_NO_MSG_TRANSPORT_AFTER_DELAY = "num_eps_no_msg_transport_after_delay";
@@ -116,12 +119,16 @@ public class VideobridgeStatistics
     private final @NotNull Videobridge videobridge;
     private final @NotNull XmppConnection xmppConnection;
 
+    private final BooleanMetric healthy = MetricsContainer.getInstance().registerBooleanMetric(
+            "healthy",
+            "Whether the Videobridge instance is healthy or not.");
+
     /**
      * Creates instance of <tt>VideobridgeStatistics</tt>.
      */
     public VideobridgeStatistics(
-        @NotNull Videobridge videobridge,
-        @NotNull XmppConnection xmppConnection
+            @NotNull Videobridge videobridge,
+            @NotNull XmppConnection xmppConnection
     )
     {
         this.videobridge = videobridge;
@@ -142,7 +149,8 @@ public class VideobridgeStatistics
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
-        unlockedSetStat("healthy", videobridge.getJvbHealthChecker().getResult() == null);
+        unlockedSetStat("healthy",
+                healthy.setAndGetBoolean(videobridge.getJvbHealthChecker().getResult() == null));
 
         // Set these once, they won't change.
         unlockedSetStat(VERSION, videobridge.getVersion().toString());
@@ -151,6 +159,10 @@ public class VideobridgeStatistics
         if (releaseId != null)
         {
             unlockedSetStat(RELEASE, releaseId);
+        }
+        if (regionInfo != null)
+        {
+            unlockedSetStat(REGION, regionInfo.get());
         }
     }
 
@@ -484,7 +496,7 @@ public class VideobridgeStatistics
                     jvbStats.totalPartiallyFailedConferences.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_CREATED,
-                    jvbStats.totalConferencesCreated.get());
+                    jvbStats.totalConferencesCreated.getLong());
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
                     jvbStats.totalConferencesCompleted.get());
@@ -537,7 +549,7 @@ public class VideobridgeStatistics
                 JvbLoadManager.Companion.getAverageParticipantStress()
             );
             unlockedSetStat("num_eps_oversending", numOversending);
-            unlockedSetStat(CONFERENCES, conferences);
+            unlockedSetStat(CONFERENCES, jvbStats.currentConferences.getLong());
             unlockedSetStat(OCTO_CONFERENCES, octoConferences);
             unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);
             unlockedSetStat(P2P_CONFERENCES, p2pConferences);
@@ -597,10 +609,6 @@ public class VideobridgeStatistics
             {
                 unlockedSetStat(RELAY_ID, relayId);
             }
-            if (region != null)
-            {
-                unlockedSetStat(REGION, region);
-            }
 
             // TODO(brian): expose these stats in a `getStats` call in XmppConnection
             //  rather than calling xmppConnection.getMucClientManager?
@@ -619,7 +627,8 @@ public class VideobridgeStatistics
             unlockedSetStat("preemptive_kfr_sent", jvbStats.preemptiveKeyframeRequestsSent.get());
             unlockedSetStat("preemptive_kfr_suppressed", jvbStats.preemptiveKeyframeRequestsSuppressed.get());
             unlockedSetStat("endpoints_with_spurious_remb", RembHandler.Companion.endpointsWithSpuriousRemb());
-            unlockedSetStat("healthy", videobridge.getJvbHealthChecker().getResult() == null);
+            unlockedSetStat("healthy",
+                    healthy.setAndGetBoolean(videobridge.getJvbHealthChecker().getResult() == null));
         }
         finally
         {
