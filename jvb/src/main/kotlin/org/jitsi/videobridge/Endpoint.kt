@@ -27,6 +27,7 @@ import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
@@ -951,8 +952,13 @@ class Endpoint @JvmOverloads constructor(
             is VideoRtpPacket -> {
                 if (bitrateController.transformRtp(packetInfo)) {
                     // The original packet was transformed in place.
-                    if (doSsrcRewriting)
-                        videoSsrcs.rewriteRtp(packet)
+                    if (doSsrcRewriting) {
+                        val start = packet !is ParsedVideoPacket || (packet.isKeyframe && packet.isStartOfFrame)
+                        if (!videoSsrcs.rewriteRtp(packet, start)) {
+                            logger.error("Waiting for key frame")
+                            return
+                        }
+                    }
                     transceiver.sendPacket(packetInfo)
                 } else {
                     logger.warn("Dropping a packet which was supposed to be accepted:$packet")
@@ -1483,6 +1489,15 @@ class Endpoint @JvmOverloads constructor(
          * Update deltas when a receive SSRC is remapped.
          */
         fun updateDeltas(ssrc: Long, recv: ReceiveSsrc) = getSender(ssrc).updateDeltas(recv)
+
+        // $ order, docs
+        private var waitForKeyFrame = true
+        fun canSend(start: Boolean): Boolean {
+            if (start) {
+                waitForKeyFrame = false
+            }
+            return !waitForKeyFrame
+        }
     }
 
     /**
@@ -1621,7 +1636,10 @@ class Endpoint @JvmOverloads constructor(
          * Rewrite RTP fields for a relayed packet.
          * Activates a send SSRC if necessary.
          */
-        fun rewriteRtp(packet: RtpPacket) {
+        // $ update docs
+        fun rewriteRtp(packet: RtpPacket, start: Boolean = true): Boolean {
+
+            val send: Boolean
 
             logger.debug {
                 "$mediaType packet: ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}"
@@ -1632,17 +1650,20 @@ class Endpoint @JvmOverloads constructor(
                 if (rs == null) {
                     val props = findSourceProps(packet.ssrc, mediaType)
                     if (props == null) {
-                        return
+                        return false
                     }
                     rs = ReceiveSsrc(props)
                     receivedSsrcs.put(packet.ssrc, rs)
                     logger.debug { "added receive SSRC: ${packet.ssrc}" }
                 }
 
-                getSendSource(rs.props.ssrc1, rs.props, null).rewriteRtp(packet, rs)
+                val ss = getSendSource(rs.props.ssrc1, rs.props, null)
+                ss.rewriteRtp(packet, rs)
+                send = ss.canSend(start)
             }
 
             logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
+            return send
         }
     }
 }
