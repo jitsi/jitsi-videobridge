@@ -51,17 +51,30 @@ public final class BooleanMetric implements Metric<Boolean>
     }
 
     /**
+     * Atomically sets the gauge to the given value.
+     *
+     * @param newValue the value to set this gauge to
+     */
+    public void set(boolean newValue)
+    {
+        synchronized (gauge)
+        {
+            gauge.set(newValue ? 1.0 : 0.0);
+        }
+    }
+
+    /**
      * Atomically sets the gauge to the given value, returning the updated value.
      *
      * @param newValue the value to set this gauge to
      * @return the updated value
      */
-    public boolean setAndGetBoolean(boolean newValue)
+    public Boolean setAndGet(boolean newValue)
     {
         synchronized (gauge)
         {
             gauge.set(newValue ? 1.0 : 0.0);
-            return gauge.get() != 0;
+            return newValue;
         }
     }
 }

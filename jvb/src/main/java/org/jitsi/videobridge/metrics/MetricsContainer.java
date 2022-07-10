@@ -113,25 +113,25 @@ public final class MetricsContainer
     }
 
     /**
-     * Creates and registers a {@link LongCounterMetric} with the given name and help string.
+     * Creates and registers a {@link CounterMetric} with the given name and help string.
      *
      * @param name the name of this metric
      * @param help the descriptive help string of this metric
      * @return the registered metric
      */
-    public LongCounterMetric registerLongCounter(String name, String help)
+    public CounterMetric registerCounter(String name, String help)
     {
-        LongCounterMetric counter = null;
+        CounterMetric counter = null;
         if (!metrics.containsKey(name))
         {
-            counter = new LongCounterMetric(name, help, METRICS_NAMESPACE);
+            counter = new CounterMetric(name, help, METRICS_NAMESPACE);
             metrics.put(name, counter);
         }
         return counter;
     }
 
     /**
-     * Creates and registers a {@link LongCounterMetric} with the given name and help string.
+     * Creates and registers a {@link CounterMetric} with the given name and help string.
      *
      * @param name the name of this metric
      * @param help the descriptive help string of this metric

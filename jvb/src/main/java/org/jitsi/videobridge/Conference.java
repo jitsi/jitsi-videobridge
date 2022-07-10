@@ -294,7 +294,7 @@ public class Conference
         }, 3, 3, TimeUnit.SECONDS);
 
         Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
-        videobridgeStatistics.totalConferencesCreated.incrementAndGetLong();
+        videobridgeStatistics.totalConferencesCreated.inc();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
     }

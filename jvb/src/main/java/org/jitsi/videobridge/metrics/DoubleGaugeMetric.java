@@ -20,7 +20,7 @@ import io.prometheus.client.*;
 
 /**
  * A double metric wrapper for Prometheus {@link Gauge Gauges}.
- * Provides atomic operations such as {@link #incrementAndGet()}.
+ * Provides atomic operations such as {@link #incAndGet()}.
  *
  * @see <a href="https://prometheus.io/docs/concepts/metric_types/#gauge">Prometheus Gauge</a>
  */
@@ -87,7 +87,7 @@ public class DoubleGaugeMetric implements Metric<Double>
      *
      * @return the updated value
      */
-    public Double incrementAndGet()
+    public Double incAndGet()
     {
         return addAndGet(1);
     }
@@ -97,7 +97,7 @@ public class DoubleGaugeMetric implements Metric<Double>
      *
      * @return the updated value
      */
-    public Double decrementAndGet()
+    public Double decAndGet()
     {
         return addAndGet(-1);
     }

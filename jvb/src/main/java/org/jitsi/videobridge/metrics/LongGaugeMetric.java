@@ -20,7 +20,7 @@ import io.prometheus.client.*;
 
 /**
  * A long metric wrapper for Prometheus {@link Gauge Gauges}.
- * Provides atomic operations such as {@link #incrementAndGetLong()}.
+ * Provides atomic operations such as {@link #incAndGet()}.
  *
  * @see <a href="https://prometheus.io/docs/concepts/metric_types/#gauge">Prometheus Gauge</a>
  */
@@ -53,17 +53,63 @@ public final class LongGaugeMetric implements Metric<Long>
     }
 
     /**
+     * Atomically sets the gauge to the given value.
+     *
+     * @param newValue the value to set this gauge to
+     */
+    public void set(long newValue)
+    {
+        synchronized (gauge)
+        {
+            gauge.set(newValue);
+        }
+    }
+
+    /**
+     * Atomically increments the value of this gauge by one.
+     */
+    public void inc()
+    {
+        synchronized (gauge)
+        {
+            gauge.inc();
+        }
+    }
+
+    /**
+     * Atomically decrements the value of this gauge by one.
+     */
+    public void dec()
+    {
+        synchronized (gauge)
+        {
+            gauge.dec();
+        }
+    }
+
+    /**
+     * Atomically adds the given value to this gauge, returning the updated value.
+     *
+     * @param delta the value to add
+     * @return the updated value
+     */
+    public Long addAndGet(long delta)
+    {
+        synchronized (gauge)
+        {
+            gauge.inc(delta);
+            return (long) gauge.get();
+        }
+    }
+
+    /**
      * Atomically increments the value of this gauge by one, returning the updated value.
      *
      * @return the updated value
      */
-    public long incrementAndGetLong()
+    public Long incAndGet()
     {
-        synchronized (gauge)
-        {
-            gauge.inc(1);
-            return (long) gauge.get();
-        }
+        return addAndGet(1);
     }
 
     /**
@@ -71,12 +117,9 @@ public final class LongGaugeMetric implements Metric<Long>
      *
      * @return the updated value
      */
-    public long decrementAndGetLong()
+    public Long decAndGet()
     {
-        synchronized (gauge)
-        {
-            gauge.dec();
-            return (long) gauge.get();
-        }
+        return addAndGet(-1);
     }
+
 }

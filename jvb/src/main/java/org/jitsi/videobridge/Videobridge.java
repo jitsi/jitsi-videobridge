@@ -122,11 +122,6 @@ public class Videobridge
     private final Clock clock;
 
     /**
-     * A (singleton) class that defines and exports metrics.
-     */
-    private static final MetricsContainer METRICS_CONTAINER = MetricsContainer.getInstance();
-
-    /**
      * A class that holds some instance statistics.
      */
     private final Statistics statistics = new Statistics();
@@ -251,7 +246,7 @@ public class Videobridge
                 {
                     conference = new Conference(this, id, name, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
                     conferencesById.put(id, conference);
-                    statistics.currentConferences.incrementAndGetLong();
+                    statistics.currentConferences.inc();
 
                     if (meetingId != null)
                     {
@@ -267,12 +262,12 @@ public class Videobridge
 
     void localEndpointCreated()
     {
-        statistics.currentLocalEndpoints.incrementAndGetLong();
+        statistics.currentLocalEndpoints.inc();
     }
 
     void localEndpointExpired()
     {
-        long remainingEndpoints = statistics.currentLocalEndpoints.decrementAndGetLong();
+        long remainingEndpoints = statistics.currentLocalEndpoints.decAndGet();
         if (remainingEndpoints < 0)
         {
             logger.warn("Invalid endpoint count " + remainingEndpoints + ". Disabling endpoint-count based shutdown!");
@@ -333,7 +328,7 @@ public class Videobridge
             if (conference.equals(conferencesById.get(id)))
             {
                 conferencesById.remove(id);
-                statistics.currentConferences.decrementAndGetLong();
+                statistics.currentConferences.dec();
 
                 if (meetingId != null)
                 {
@@ -972,7 +967,7 @@ public class Videobridge
          * The cumulative/total number of conferences created on this
          * {@link Videobridge}.
          */
-        public LongCounterMetric totalConferencesCreated = METRICS_CONTAINER.registerLongCounter(
+        public CounterMetric totalConferencesCreated = MetricsContainer.getInstance().registerCounter(
                 "created_conferences",
                 "The total number of conferences created on the Videobridge.");
 
@@ -1177,15 +1172,15 @@ public class Videobridge
         /**
          * Number of local endpoints that exist currently.
          */
-        public LongGaugeMetric currentLocalEndpoints = METRICS_CONTAINER.registerLongGauge(
-                "current_local_endpoints",
+        public LongGaugeMetric currentLocalEndpoints = MetricsContainer.getInstance().registerLongGauge(
+                "local_endpoints",
                 "Number of local endpoints that exist currently."
         );
 
         /**
          * Current number of conferences.
          */
-        public LongGaugeMetric currentConferences = METRICS_CONTAINER.registerLongGauge(
+        public LongGaugeMetric currentConferences = MetricsContainer.getInstance().registerLongGauge(
                 "conferences",
                 "Current number of conferences."
         );

@@ -20,24 +20,24 @@ import io.prometheus.client.*;
 
 /**
  * A long metric wrapper for Prometheus {@link Counter Counters}, which are monotonically increasing.
- * Provides atomic operations such as {@link #incrementAndGetLong()}.
+ * Provides atomic operations such as {@link #incAndGet()}.
  *
  * @see <a href="https://prometheus.io/docs/concepts/metric_types/#counter">Prometheus Counter</a>
  * @see <a href="https://prometheus.io/docs/concepts/metric_types/#gauge">Prometheus Gauge</a>
  */
-public class LongCounterMetric implements Metric<Long>
+public class CounterMetric implements Metric<Long>
 {
     private final Counter counter;
 
     /**
-     * Initializes a new {@code LongCounterMetric} instance,
+     * Initializes a new {@code CounterMetric} instance,
      * registering the underlying {@code Counter} with the default registry.
      *
      * @param name      the name of this counter
      * @param help      the description of this counter
      * @param namespace the namespace (prefix) of this counter
      */
-    public LongCounterMetric(String name, String help, String namespace)
+    public CounterMetric(String name, String help, String namespace)
     {
         this.counter = Counter.build(name, help).namespace(namespace).register();
     }
@@ -59,7 +59,7 @@ public class LongCounterMetric implements Metric<Long>
      * @param delta the value to add
      * @return the updated value
      */
-    public final Long addAndGetLong(double delta)
+    public final Long addAndGet(long delta)
     {
         synchronized (counter)
         {
@@ -73,8 +73,19 @@ public class LongCounterMetric implements Metric<Long>
      *
      * @return the updated value
      */
-    public final Long incrementAndGetLong()
+    public final Long incAndGet()
     {
-        return addAndGetLong(1);
+        return addAndGet(1);
+    }
+
+    /**
+     * Atomically increments the value of this counter by one.
+     */
+    public void inc()
+    {
+        synchronized (counter)
+        {
+            counter.inc();
+        }
     }
 }
