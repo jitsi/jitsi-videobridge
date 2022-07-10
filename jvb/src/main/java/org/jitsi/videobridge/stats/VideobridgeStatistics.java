@@ -496,7 +496,7 @@ public class VideobridgeStatistics
                     jvbStats.totalPartiallyFailedConferences.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_CREATED,
-                    jvbStats.totalConferencesCreated.getLong());
+                    jvbStats.totalConferencesCreated.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
                     jvbStats.totalConferencesCompleted.get());
@@ -549,7 +549,7 @@ public class VideobridgeStatistics
                 JvbLoadManager.Companion.getAverageParticipantStress()
             );
             unlockedSetStat("num_eps_oversending", numOversending);
-            unlockedSetStat(CONFERENCES, jvbStats.currentConferences.getLong());
+            unlockedSetStat(CONFERENCES, jvbStats.currentConferences.get());
             unlockedSetStat(OCTO_CONFERENCES, octoConferences);
             unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);
             unlockedSetStat(P2P_CONFERENCES, p2pConferences);

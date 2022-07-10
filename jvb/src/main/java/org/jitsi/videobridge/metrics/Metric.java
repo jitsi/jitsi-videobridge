@@ -17,16 +17,16 @@
 package org.jitsi.videobridge.metrics;
 
 /**
- * Supplies the current value of a metric, cast as an {@code Object}.
+ * Supplies the current value of a metric.
  * Metrics are held in the {@link MetricsContainer}.
  */
 @FunctionalInterface
-public interface Metric
+public interface Metric<T>
 {
     /**
-     * Supplies the value of a metric.
+     * Supplies the current value of a metric.
      *
      * @return the current value of a metric
      */
-    Object getMetricValue();
+    T get();
 }

@@ -40,10 +40,9 @@ public final class MetricsContainer
     public static final String METRICS_NAMESPACE = "jitsi";
 
     /**
-     * Metrics are just wrappers for different Prometheus metric types.
-     * These are wrapped {@link Gauge Gauges} that also provide atomic operations.
+     * Map metric names to wrapped Prometheus metric types using the  {@link Metric} interface.
      */
-    private final Map<String, Metric> metrics;
+    private final Map<String, Metric<?>> metrics;
 
     /**
      * Initializes a new {@code MetricsContainer} instance.
@@ -71,7 +70,7 @@ public final class MetricsContainer
     public String getJsonString()
     {
         Map<String, Object> map = new HashMap<>(metrics.size());
-        metrics.forEach((key, metric) -> map.put(key, metric.getMetricValue()));
+        metrics.forEach((key, metric) -> map.put(key, metric.get()));
         return new JSONObject(map).toJSONString();
     }
 

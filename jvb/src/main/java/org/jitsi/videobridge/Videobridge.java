@@ -638,7 +638,7 @@ public class Videobridge
     public void shutdown(boolean graceful)
     {
         shutdownManager.initiateShutdown(graceful);
-        shutdownManager.maybeShutdown(statistics.currentLocalEndpoints.getLong());
+        shutdownManager.maybeShutdown(statistics.currentLocalEndpoints.get());
     }
 
     /**

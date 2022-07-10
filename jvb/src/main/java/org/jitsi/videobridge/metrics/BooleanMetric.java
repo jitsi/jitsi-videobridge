@@ -16,12 +16,16 @@
 
 package org.jitsi.videobridge.metrics;
 
+import io.prometheus.client.*;
+
 /**
- * Extends an {@link GaugeMetric} with methods that return {@code boolean} values.
+ * A metric that represents booleans using Prometheus {@link Gauge Gauges}.
  * A non-zero value corresponds to {@code true}, zero corresponds to {@code false}.
  */
-public final class BooleanMetric extends GaugeMetric
+public final class BooleanMetric implements Metric<Boolean>
 {
+    private final Gauge gauge;
+
     /**
      * Initializes a new {@code BooleanMetric} instance,
      * registering the underlying {@code Gauge} with the default registry.
@@ -32,7 +36,7 @@ public final class BooleanMetric extends GaugeMetric
      */
     public BooleanMetric(String name, String help, String namespace)
     {
-        super(name, help, namespace);
+        this.gauge = Gauge.build(name, help).namespace(namespace).register();
     }
 
     /**
@@ -40,9 +44,10 @@ public final class BooleanMetric extends GaugeMetric
      *
      * @return the value of this gauge
      */
-    public boolean getBoolean()
+    @Override
+    public Boolean get()
     {
-        return get() != 0;
+        return gauge.get() != 0;
     }
 
     /**
@@ -53,13 +58,10 @@ public final class BooleanMetric extends GaugeMetric
      */
     public boolean setAndGetBoolean(boolean newValue)
     {
-        double ret = setAndGet(newValue ? 1.0 : 0.0);
-        return ret != 0;
-    }
-
-    @Override
-    public Boolean getMetricValue()
-    {
-        return getBoolean();
+        synchronized (gauge)
+        {
+            gauge.set(newValue ? 1.0 : 0.0);
+            return gauge.get() != 0;
+        }
     }
 }

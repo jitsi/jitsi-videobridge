@@ -24,7 +24,7 @@ import io.prometheus.client.*;
  * In the Prometheus exposition format, these are shown as labels of either a custom metric (OpenMetrics)
  * or a {@link Gauge} (0.0.4 plain text).
  */
-public final class InfoMetric implements Metric
+public final class InfoMetric implements Metric<String>
 {
     private final Info info;
     private final String name;
@@ -50,14 +50,9 @@ public final class InfoMetric implements Metric
      *
      * @return the value of this metric
      */
+    @Override
     public String get()
     {
         return info.get().get(name);
-    }
-
-    @Override
-    public String getMetricValue()
-    {
-        return get();
     }
 }

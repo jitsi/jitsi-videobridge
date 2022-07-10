@@ -19,14 +19,15 @@ package org.jitsi.videobridge.metrics;
 import io.prometheus.client.*;
 
 /**
- * Wraps around a (monotonically increasing) Prometheus {@code Counter} and provides atomic operations
- * such as {@link #incrementAndGetLong()}.
+ * A long metric wrapper for Prometheus {@link Counter Counters}, which are monotonically increasing.
+ * Provides atomic operations such as {@link #incrementAndGetLong()}.
  *
  * @see <a href="https://prometheus.io/docs/concepts/metric_types/#counter">Prometheus Counter</a>
+ * @see <a href="https://prometheus.io/docs/concepts/metric_types/#gauge">Prometheus Gauge</a>
  */
-public class LongCounterMetric implements Metric
+public class LongCounterMetric implements Metric<Long>
 {
-    protected final Counter counter;
+    private final Counter counter;
 
     /**
      * Initializes a new {@code LongCounterMetric} instance,
@@ -46,7 +47,8 @@ public class LongCounterMetric implements Metric
      *
      * @return the value of this counter
      */
-    public long getLong()
+    @Override
+    public Long get()
     {
         return (long) counter.get();
     }
@@ -57,7 +59,7 @@ public class LongCounterMetric implements Metric
      * @param delta the value to add
      * @return the updated value
      */
-    public final long addAndGetLong(double delta)
+    public final Long addAndGetLong(double delta)
     {
         synchronized (counter)
         {
@@ -71,14 +73,8 @@ public class LongCounterMetric implements Metric
      *
      * @return the updated value
      */
-    public final long incrementAndGetLong()
+    public final Long incrementAndGetLong()
     {
         return addAndGetLong(1);
-    }
-
-    @Override
-    public Long getMetricValue()
-    {
-        return getLong();
     }
 }

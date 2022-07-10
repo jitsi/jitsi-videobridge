@@ -16,11 +16,18 @@
 
 package org.jitsi.videobridge.metrics;
 
+import io.prometheus.client.*;
+
 /**
- * Extends an {@link GaugeMetric} with methods that return {@code long} values.
+ * A long metric wrapper for Prometheus {@link Gauge Gauges}.
+ * Provides atomic operations such as {@link #incrementAndGetLong()}.
+ *
+ * @see <a href="https://prometheus.io/docs/concepts/metric_types/#gauge">Prometheus Gauge</a>
  */
-public final class LongGaugeMetric extends GaugeMetric
+public final class LongGaugeMetric implements Metric<Long>
 {
+    private final Gauge gauge;
+
     /**
      * Initializes a new {@code LongGaugeMetric} instance,
      * registering the underlying {@code Gauge} with the default registry.
@@ -31,7 +38,7 @@ public final class LongGaugeMetric extends GaugeMetric
      */
     public LongGaugeMetric(String name, String help, String namespace)
     {
-        super(name, help, namespace);
+        this.gauge = Gauge.build(name, help).namespace(namespace).register();
     }
 
     /**
@@ -39,9 +46,10 @@ public final class LongGaugeMetric extends GaugeMetric
      *
      * @return the value of this gauge
      */
-    public long getLong()
+    @Override
+    public Long get()
     {
-        return (long) get();
+        return (long) gauge.get();
     }
 
     /**
@@ -51,7 +59,11 @@ public final class LongGaugeMetric extends GaugeMetric
      */
     public long incrementAndGetLong()
     {
-        return (long) incrementAndGet();
+        synchronized (gauge)
+        {
+            gauge.inc(1);
+            return (long) gauge.get();
+        }
     }
 
     /**
@@ -61,12 +73,10 @@ public final class LongGaugeMetric extends GaugeMetric
      */
     public long decrementAndGetLong()
     {
-        return (long) decrementAndGet();
-    }
-
-    @Override
-    public Long getMetricValue()
-    {
-        return getLong();
+        synchronized (gauge)
+        {
+            gauge.dec();
+            return (long) gauge.get();
+        }
     }
 }

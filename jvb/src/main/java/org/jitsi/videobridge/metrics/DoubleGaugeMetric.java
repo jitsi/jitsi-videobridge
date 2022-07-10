@@ -19,24 +19,24 @@ package org.jitsi.videobridge.metrics;
 import io.prometheus.client.*;
 
 /**
- * Wraps around a Prometheus {@code Gauge} and provides atomic operations
- * such as {@link #incrementAndGet()}.
+ * A double metric wrapper for Prometheus {@link Gauge Gauges}.
+ * Provides atomic operations such as {@link #incrementAndGet()}.
  *
  * @see <a href="https://prometheus.io/docs/concepts/metric_types/#gauge">Prometheus Gauge</a>
  */
-public class GaugeMetric implements Metric
+public class DoubleGaugeMetric implements Metric<Double>
 {
-    protected final Gauge gauge;
+    private final Gauge gauge;
 
     /**
-     * Initializes a new {@code GaugeMetric} instance,
+     * Initializes a new {@code DoubleGaugeMetric} instance,
      * registering the underlying {@code Gauge} with the default registry.
      *
      * @param name      the name of this gauge
      * @param help      the description of this gauge
      * @param namespace the namespace (prefix) of this gauge
      */
-    public GaugeMetric(String name, String help, String namespace)
+    public DoubleGaugeMetric(String name, String help, String namespace)
     {
         this.gauge = Gauge.build(name, help).namespace(namespace).register();
     }
@@ -46,7 +46,8 @@ public class GaugeMetric implements Metric
      *
      * @return the value of this gauge
      */
-    protected double get()
+    @Override
+    public Double get()
     {
         return gauge.get();
     }
@@ -57,7 +58,7 @@ public class GaugeMetric implements Metric
      * @param newValue the value to set this gauge to
      * @return the updated value
      */
-    protected double setAndGet(double newValue)
+    public Double setAndGet(double newValue)
     {
         synchronized (gauge)
         {
@@ -72,7 +73,7 @@ public class GaugeMetric implements Metric
      * @param delta the value to add
      * @return the updated value
      */
-    protected double addAndGet(double delta)
+    public Double addAndGet(double delta)
     {
         synchronized (gauge)
         {
@@ -86,7 +87,7 @@ public class GaugeMetric implements Metric
      *
      * @return the updated value
      */
-    protected double incrementAndGet()
+    public Double incrementAndGet()
     {
         return addAndGet(1);
     }
@@ -96,13 +97,8 @@ public class GaugeMetric implements Metric
      *
      * @return the updated value
      */
-    protected double decrementAndGet()
+    public Double decrementAndGet()
     {
         return addAndGet(-1);
-    }
-
-    public Object getMetricValue()
-    {
-        return gauge.get();
     }
 }
