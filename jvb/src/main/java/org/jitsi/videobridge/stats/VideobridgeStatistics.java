@@ -57,8 +57,8 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    private static final InfoMetric regionInfo = MetricsContainer.getInstance()
-            .registerInfo(REGION, "The currently configured region.", RelayConfig.config.getRegion());
+    private static final InfoMetric regionInfo = RelayConfig.config.getRegion() != null ? MetricsContainer.getInstance()
+            .registerInfo(REGION, "The currently configured region.", RelayConfig.config.getRegion()) : null;
 
     private static final String relayId = RelayConfig.config.getEnabled() ? RelayConfig.config.getRelayId() : null;
 
@@ -119,9 +119,8 @@ public class VideobridgeStatistics
     private final @NotNull Videobridge videobridge;
     private final @NotNull XmppConnection xmppConnection;
 
-    private final BooleanMetric healthy = MetricsContainer.getInstance().registerBooleanMetric(
-            "healthy",
-            "Whether the Videobridge instance is healthy or not.");
+    private final BooleanMetric healthy = MetricsContainer.getInstance()
+            .registerBooleanMetric("healthy", "Whether the Videobridge instance is healthy or not.", true);
 
     /**
      * Creates instance of <tt>VideobridgeStatistics</tt>.
@@ -227,7 +226,6 @@ public class VideobridgeStatistics
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
         int videoChannels = 0;
-        int conferences = 0;
         int octoConferences = 0;
         int endpoints = 0;
         int localEndpoints = 0;
@@ -274,7 +272,6 @@ public class VideobridgeStatistics
 
         for (Conference conference : videobridge.getConferences())
         {
-            conferences++;
             if (conference.isP2p())
             {
                 p2pConferences++;

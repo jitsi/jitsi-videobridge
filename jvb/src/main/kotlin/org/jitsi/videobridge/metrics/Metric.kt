@@ -13,20 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.jitsi.videobridge.metrics;
+package org.jitsi.videobridge.metrics
 
 /**
  * Supplies the current value of a metric.
- * Metrics are held in the {@link MetricsContainer}.
+ * Metrics are held in the [MetricsContainer].
  */
-@FunctionalInterface
-public interface Metric<T>
-{
+fun interface Metric<T> {
     /**
      * Supplies the current value of a metric.
-     *
-     * @return the current value of a metric
      */
-    T get();
+    fun get(): T
 }
