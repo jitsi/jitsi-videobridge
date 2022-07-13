@@ -31,12 +31,12 @@ class InfoMetric(
     /** the namespace (prefix) of this metric */
     namespace: String,
     /** the value of this info metric */
-    value: String?
+    private val value: String
 ) : Metric<String> {
     private val info = Info.build(name, help).namespace(namespace).register().also { it.info(name, value) }
 
     /**
      * Returns the value of this info metric.
      */
-    override fun get() = info.get()[name]!!
+    override fun get() = value
 }

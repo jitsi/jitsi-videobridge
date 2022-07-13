@@ -28,7 +28,14 @@ class MetricsContainer private constructor() {
     /**
      * Map metric names to wrapped Prometheus metric types using the [Metric] interface.
      */
-    private val metrics: MutableMap<String, Metric<*>> = HashMap()
+    private val metrics = mutableMapOf<String, Metric<*>>()
+
+    /**
+     * Defines the behavior when registering a metric with a name in use by an existing metric. Defaults to `true`.
+     * If `true`, throws an exception if a metric with a given name already exists.
+     * If `false`, returns the existing metric (which is not guaranteed to be of the same type).
+     */
+    var checkForNameConflicts = true
 
     /**
      * Returns the metrics in this instance as a JSON string.
@@ -36,11 +43,7 @@ class MetricsContainer private constructor() {
      * @return a JSON string of the metrics in this instance
      */
     val jsonString: String
-        get() {
-            val map: MutableMap<String, Any?> = HashMap(metrics.size)
-            metrics.forEach { (key: String?, metric: Metric<*>) -> map[key] = metric.get() }
-            return JSONObject(map).toJSONString()
-        }
+        get() = JSONObject(metrics.mapValues { it.value.get() }).toJSONString()
 
     /**
      * Returns the metrics in this instance in the Prometheus text-based format.
@@ -70,13 +73,14 @@ class MetricsContainer private constructor() {
         help: String,
         /** the optional initial value of the metric */
         initialValue: Boolean = false
-    ): BooleanMetric? {
-        val metric = if (!metrics.containsKey(name)) {
-            BooleanMetric(name, help, METRICS_NAMESPACE, initialValue).also { metrics[name] = it }
-        } else {
-            null
+    ): BooleanMetric {
+        if (metrics.containsKey(name)) {
+            if (checkForNameConflicts) {
+                throw RuntimeException("Could not register metric '$name'. A metric with that name already exists.")
+            }
+            return metrics[name] as BooleanMetric
         }
-        return metric
+        return BooleanMetric(name, help, METRICS_NAMESPACE, initialValue).also { metrics[name] = it }
     }
 
     /**
@@ -90,13 +94,14 @@ class MetricsContainer private constructor() {
         help: String,
         /** the optional initial value of the metric */
         initialValue: Long = 0
-    ): CounterMetric? {
-        val metric = if (!metrics.containsKey(name)) {
-            CounterMetric(name, help, METRICS_NAMESPACE, initialValue).also { metrics[name] = it }
-        } else {
-            null
+    ): CounterMetric {
+        if (metrics.containsKey(name)) {
+            if (checkForNameConflicts) {
+                throw RuntimeException("Could not register metric '$name'. A metric with that name already exists.")
+            }
+            return metrics[name] as CounterMetric
         }
-        return metric
+        return CounterMetric(name, help, METRICS_NAMESPACE, initialValue).also { metrics[name] = it }
     }
 
     /**
@@ -110,13 +115,14 @@ class MetricsContainer private constructor() {
         help: String,
         /** the optional initial value of the metric */
         initialValue: Long = 0
-    ): LongGaugeMetric? {
-        val metric = if (!metrics.containsKey(name)) {
-            LongGaugeMetric(name, help, METRICS_NAMESPACE, initialValue).also { metrics[name] = it }
-        } else {
-            null
+    ): LongGaugeMetric {
+        if (metrics.containsKey(name)) {
+            if (checkForNameConflicts) {
+                throw RuntimeException("Could not register metric '$name'. A metric with that name already exists.")
+            }
+            return metrics[name] as LongGaugeMetric
         }
-        return metric
+        return LongGaugeMetric(name, help, METRICS_NAMESPACE, initialValue).also { metrics[name] = it }
     }
 
     /**
@@ -129,13 +135,14 @@ class MetricsContainer private constructor() {
         help: String,
         /** the value of the metric */
         value: String
-    ): InfoMetric? {
-        val metric = if (!metrics.containsKey(name)) {
-            InfoMetric(name, help, METRICS_NAMESPACE, value).also { metrics[name] = it }
-        } else {
-            null
+    ): InfoMetric {
+        if (metrics.containsKey(name)) {
+            if (checkForNameConflicts) {
+                throw RuntimeException("Could not register metric '$name'. A metric with that name already exists.")
+            }
+            return metrics[name] as InfoMetric
         }
-        return metric
+        return InfoMetric(name, help, METRICS_NAMESPACE, value).also { metrics[name] = it }
     }
 
     companion object {
