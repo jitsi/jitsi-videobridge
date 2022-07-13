@@ -1472,7 +1472,7 @@ class Endpoint @JvmOverloads constructor(
         constructor(props: SourceDesc) : this(props, SendSsrc(null), SendSsrc(null))
 
         override fun toString(): String {
-            return "(" + props.ssrc1 + "/" + props.ssrc2 + " -> " + send1.ssrc + "/" + send2.ssrc + ")"
+            return "(" + props.name + " -> " + send1.ssrc + "/" + send2.ssrc + ")"
         }
 
         /**
@@ -1524,17 +1524,21 @@ class Endpoint @JvmOverloads constructor(
          * Assign a group of send SSRCs to use for the specified source.
          * If remapping the send SSRCs from another source, transfer RTP state from the old source.
          * Collect remappings in the list if it is present, else notify them immediately.
+         * // $
          */
         private fun getSendSource(
             ssrc: Long,
             props: SourceDesc,
+            allowCreate: Boolean,
             remappings: MutableList<VideoSourceMapping>?
-        ): SendSource {
+        ): SendSource? {
 
             /* Moves to end of LRU when found. */
             var sendSource = sendSources.get(ssrc)
 
             if (sendSource == null) {
+                if (!allowCreate)
+                    return null
                 if (sendSources.size == size) {
                     val eldest = sendSources.eldest().value
                     sendSource = SendSource(props, eldest.send1, eldest.send2)
@@ -1588,7 +1592,7 @@ class Endpoint @JvmOverloads constructor(
 
             synchronized(sendSources) {
                 sources.forEach { source ->
-                    getSendSource(source.primarySSRC, SourceDesc(source), remappings)
+                    getSendSource(source.primarySSRC, SourceDesc(source), true, remappings)
                 }
             }
 
@@ -1639,7 +1643,7 @@ class Endpoint @JvmOverloads constructor(
         // $ update docs
         fun rewriteRtp(packet: RtpPacket, start: Boolean = true): Boolean {
 
-            val send: Boolean
+            var send: Boolean = false
 
             logger.debug {
                 "$mediaType packet: ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}"
@@ -1657,12 +1661,15 @@ class Endpoint @JvmOverloads constructor(
                     logger.debug { "added receive SSRC: ${packet.ssrc}" }
                 }
 
-                val ss = getSendSource(rs.props.ssrc1, rs.props, null)
-                ss.rewriteRtp(packet, rs)
-                send = ss.canSend(start)
+                getSendSource(
+                    rs.props.ssrc1, rs.props, mediaType == MediaType.AUDIO, null
+                )?.let { ss ->
+                    ss.rewriteRtp(packet, rs)
+                    send = ss.canSend(start)
+                    logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp} source=${rs.props.name} start=$start send=$send" }
+                }
             }
 
-            logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" }
             return send
         }
     }
