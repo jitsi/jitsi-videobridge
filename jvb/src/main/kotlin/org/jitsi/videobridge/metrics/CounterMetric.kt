@@ -36,7 +36,7 @@ class CounterMetric @JvmOverloads constructor(
     initialValue: Long = 0L
 ) : Metric<Long> {
     private val counter =
-        Counter.build(name, help).namespace(namespace).register().also { it.inc(initialValue.toDouble()) }
+        Counter.build(name, help).namespace(namespace).register().apply { inc(initialValue.toDouble()) }
 
     /**
      * Returns the value of this metric.

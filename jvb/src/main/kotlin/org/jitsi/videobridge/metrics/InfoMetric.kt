@@ -33,7 +33,7 @@ class InfoMetric(
     /** the value of this info metric */
     private val value: String
 ) : Metric<String> {
-    private val info = Info.build(name, help).namespace(namespace).register().also { it.info(name, value) }
+    private val info = Info.build(name, help).namespace(namespace).register().apply { info(name, value) }
 
     /**
      * Returns the value of this info metric.

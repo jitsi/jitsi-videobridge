@@ -31,9 +31,11 @@ class MetricsContainer private constructor() {
     private val metrics = mutableMapOf<String, Metric<*>>()
 
     /**
-     * Defines the behavior when registering a metric with a name in use by an existing metric. Defaults to `true`.
+     * Defines the behavior when registering a metric with a name in use by an existing metric.
+     * Useful for testing. Defaults to `true`.
+     *
      * If `true`, throws an exception if a metric with a given name already exists.
-     * If `false`, returns the existing metric (which is not guaranteed to be of the same type).
+     * If `false`, attempts to return the existing metric, throwing an exception if there is a type mismatch.
      */
     var checkForNameConflicts = true
 
@@ -64,6 +66,8 @@ class MetricsContainer private constructor() {
 
     /**
      * Creates and registers a [BooleanMetric] with the given [name], [help] string and optional [initialValue].
+     *
+     * Throws an exception if a metric with the same name but a different type exists.
      */
     @JvmOverloads
     fun registerBooleanMetric(
@@ -85,6 +89,8 @@ class MetricsContainer private constructor() {
 
     /**
      * Creates and registers a [CounterMetric] with the given [name], [help] string and optional [initialValue].
+     *
+     * Throws an exception if a metric with the same name but a different type exists.
      */
     @JvmOverloads
     fun registerCounter(
@@ -106,6 +112,8 @@ class MetricsContainer private constructor() {
 
     /**
      * Creates and registers a [CounterMetric] with the given [name], [help] string and optional [initialValue].
+     *
+     * Throws an exception if a metric with the same name but a different type exists.
      */
     @JvmOverloads
     fun registerLongGauge(
@@ -127,6 +135,8 @@ class MetricsContainer private constructor() {
 
     /**
      * Creates and registers an [InfoMetric] with the given [name], [help] string and [value].
+     *
+     * Throws an exception if a metric with the same name but a different type exists.
      */
     fun registerInfo(
         /** the name of the metric */

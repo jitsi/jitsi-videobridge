@@ -33,7 +33,7 @@ class LongGaugeMetric @JvmOverloads constructor(
     /** an optional initial value for this metric */
     initialValue: Long = 0L
 ) : Metric<Long> {
-    private val gauge = Gauge.build(name, help).namespace(namespace).register().also { it.set(initialValue.toDouble()) }
+    private val gauge = Gauge.build(name, help).namespace(namespace).register().apply { set(initialValue.toDouble()) }
 
     /**
      * Returns the value of this gauge.

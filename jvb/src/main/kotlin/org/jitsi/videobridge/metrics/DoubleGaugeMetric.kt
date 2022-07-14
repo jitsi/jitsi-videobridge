@@ -33,7 +33,7 @@ class DoubleGaugeMetric @JvmOverloads constructor(
     /** an optional initial value for this metric */
     initialValue: Double = 0.0
 ) : Metric<Double> {
-    private val gauge = Gauge.build(name, help).namespace(namespace).register().also { it.set(initialValue) }
+    private val gauge = Gauge.build(name, help).namespace(namespace).register().apply { set(initialValue) }
 
     /**
      * Returns the value of this metric.

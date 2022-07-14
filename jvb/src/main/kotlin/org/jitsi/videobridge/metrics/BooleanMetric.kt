@@ -32,7 +32,7 @@ class BooleanMetric @JvmOverloads constructor(
     initialValue: Boolean = false
 ) : Metric<Boolean> {
     private val gauge =
-        Gauge.build(name, help).namespace(namespace).register().also { it.set(if (initialValue) 1.0 else 0.0) }
+        Gauge.build(name, help).namespace(namespace).register().apply { set(if (initialValue) 1.0 else 0.0) }
 
     /**
      * Initializes a new `BooleanMetric` instance,
