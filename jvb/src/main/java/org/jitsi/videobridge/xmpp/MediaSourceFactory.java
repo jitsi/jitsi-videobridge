@@ -582,7 +582,8 @@ public class MediaSourceFactory
             Collection<SourcePacketExtension> sources,
             Collection<SourceGroupPacketExtension> sourceGroups,
             String owner,
-            String name) {
+            String name)
+    {
         Objects.requireNonNull(owner, "owner is required");
         Objects.requireNonNull(name, "name is required");
 

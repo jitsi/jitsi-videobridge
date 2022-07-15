@@ -300,7 +300,8 @@ public class ByteBufferPool
         return bookkeepingEnabled;
     }
 
-    private static class BufferEvent {
+    private static class BufferEvent
+    {
         final String context;
         final Long timestamp;
         final Exception trace;
