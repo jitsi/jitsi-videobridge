@@ -93,7 +93,8 @@ public class ColibriWebSocket extends WebSocketAdapter
         eventHandler.webSocketError(this, cause);
     }
 
-    public interface EventHandler {
+    public interface EventHandler
+    {
         /**
          * Notifies that a specific {@link ColibriWebSocket}
          * instance associated with it has been closed.

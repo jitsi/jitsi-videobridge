@@ -598,7 +598,8 @@ public abstract class AbstractEndpoint
         }
     }
 
-   public interface EventHandler {
+   public interface EventHandler
+    {
         void iceSucceeded();
         void iceFailed();
         void sourcesChanged();

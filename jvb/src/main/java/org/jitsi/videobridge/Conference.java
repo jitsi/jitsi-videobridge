@@ -901,7 +901,10 @@ public class Conference
     /**
      * Gets the list of the relays this conference is using.
      */
-    public List<Relay> getRelays() { return new ArrayList<>(this.relaysById.values()); }
+    public List<Relay> getRelays()
+    {
+        return new ArrayList<>(this.relaysById.values());
+    }
 
     /**
      * Gets the (unique) identifier/ID of this instance.

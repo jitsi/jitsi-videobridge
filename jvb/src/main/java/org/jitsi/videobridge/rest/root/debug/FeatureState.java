@@ -16,17 +16,20 @@
 
 package org.jitsi.videobridge.rest.root.debug;
 
-public enum FeatureState {
+public enum FeatureState
+{
     ENABLE(true),
     DISABLE(false);
 
     boolean value;
 
-    FeatureState(boolean value) {
+    FeatureState(boolean value)
+    {
         this.value = value;
     }
 
-    public boolean getValue() {
+    public boolean getValue()
+    {
         return value;
     }
 
