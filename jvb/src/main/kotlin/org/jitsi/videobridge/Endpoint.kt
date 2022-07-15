@@ -955,7 +955,6 @@ class Endpoint @JvmOverloads constructor(
                     if (doSsrcRewriting) {
                         val start = packet !is ParsedVideoPacket || (packet.isKeyframe && packet.isStartOfFrame)
                         if (!videoSsrcs.rewriteRtp(packet, start)) {
-                            logger.error("Waiting for key frame")
                             return
                         }
                     }
@@ -1469,10 +1468,16 @@ class Endpoint @JvmOverloads constructor(
      */
     private class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc) {
 
+        /**
+         * If true, do not send on this SSRC until a packet with start=true arrives.
+         */
+        private var waitForKeyFrame = true
+
         constructor(props: SourceDesc) : this(props, SendSsrc(null), SendSsrc(null))
 
         override fun toString(): String {
-            return "(" + props.name + " -> " + send1.ssrc + "/" + send2.ssrc + ")"
+            return "(" + props.name + ":" + props.ssrc1 + "/" + props.ssrc2 + " -> " +
+                send1.ssrc + "/" + send2.ssrc + ")"
         }
 
         /**
@@ -1490,8 +1495,9 @@ class Endpoint @JvmOverloads constructor(
          */
         fun updateDeltas(ssrc: Long, recv: ReceiveSsrc) = getSender(ssrc).updateDeltas(recv)
 
-        // $ order, docs
-        private var waitForKeyFrame = true
+        /**
+         * See if the current packet should be sent.
+         */
         fun canSend(start: Boolean): Boolean {
             if (start) {
                 waitForKeyFrame = false
@@ -1521,10 +1527,21 @@ class Endpoint @JvmOverloads constructor(
         private val sendSources = LRUCache<Long, SendSource>(size, true /* accessOrder */)
 
         /**
+         * Log the current SSRC mappings.
+         */
+        private fun logSendSources() {
+            logger.debug {
+                sendSources.entries.joinToString(", ", "current $mediaType send SSRCs: [", "]") {
+                    "${it.value}"
+                }
+            }
+        }
+
+        /**
          * Assign a group of send SSRCs to use for the specified source.
          * If remapping the send SSRCs from another source, transfer RTP state from the old source.
          * Collect remappings in the list if it is present, else notify them immediately.
-         * // $
+         * Returns null if no current mapping exists and allowCreate is false.
          */
         private fun getSendSource(
             ssrc: Long,
@@ -1563,6 +1580,7 @@ class Endpoint @JvmOverloads constructor(
                     val mapping = AudioSourceMapping(props.name, props.owner, sendSource.send1.ssrc)
                     sendMessage(AudioSourcesMap(arrayListOf<AudioSourceMapping>(mapping)))
                 } else if (mediaType == MediaType.VIDEO) {
+                    /* Currently unused. allowCreate should be false for video. */
                     val mapping = VideoSourceMapping(
                         props.name, props.owner, sendSource.send1.ssrc, sendSource.send2.ssrc, props.videoType
                     )
@@ -1570,13 +1588,6 @@ class Endpoint @JvmOverloads constructor(
                         remappings.add(mapping)
                     else
                         sendMessage(VideoSourcesMap(arrayListOf<VideoSourceMapping>(mapping)))
-                }
-            }
-
-            /* Log the current SSRC mappings. */
-            logger.debug {
-                sendSources.entries.joinToString(", ", "current $mediaType send SSRCs: [", "]") {
-                    "${it.value}"
                 }
             }
 
@@ -1594,6 +1605,7 @@ class Endpoint @JvmOverloads constructor(
                 sources.forEach { source ->
                     getSendSource(source.primarySSRC, SourceDesc(source), true, remappings)
                 }
+                logSendSources()
             }
 
             if (!remappings.isEmpty())
@@ -1639,8 +1651,10 @@ class Endpoint @JvmOverloads constructor(
         /**
          * Rewrite RTP fields for a relayed packet.
          * Activates a send SSRC if necessary.
+         * @param packet the packet about to be sent.
+         * @param start whether this packet can be the first packet sent on a new SSRC mapping.
+         * @return whether to send this packet.
          */
-        // $ update docs
         fun rewriteRtp(packet: RtpPacket, start: Boolean = true): Boolean {
 
             var send: Boolean = false
@@ -1661,12 +1675,21 @@ class Endpoint @JvmOverloads constructor(
                     logger.debug { "added receive SSRC: ${packet.ssrc}" }
                 }
 
-                getSendSource(
-                    rs.props.ssrc1, rs.props, mediaType == MediaType.AUDIO, null
-                )?.let { ss ->
+                val ss = getSendSource(rs.props.ssrc1, rs.props, mediaType == MediaType.AUDIO, null)
+                if (ss != null) {
                     ss.rewriteRtp(packet, rs)
                     send = ss.canSend(start)
-                    logger.debug { "output packet: ${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp} source=${rs.props.name} start=$start send=$send" }
+                    logSendSources()
+                    logger.debug {
+                        if (send) {
+                            "output packet: ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp} " +
+                                "source=${rs.props.name} start=$start send=$send"
+                        } else {
+                            "dropping packet. waiting for key frame on source ${rs.props.name}."
+                        }
+                    }
+                } else {
+                    logger.debug { "dropping packet. source ${rs.props.name} not active." }
                 }
             }
 
