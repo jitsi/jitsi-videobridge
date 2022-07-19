@@ -1416,6 +1416,12 @@ class Endpoint @JvmOverloads constructor(
      */
     private class ReceiveSsrc(val props: SourceDesc) {
         val state = RtpState()
+
+        /**
+         * True when sequence number and timestamp deltas have been calculated.
+         * If false, calculate them on the next relayed packet.
+         */
+        var hasDeltas = false
     }
 
     /**
@@ -1433,32 +1439,40 @@ class Endpoint @JvmOverloads constructor(
         /**
          * Update RTP state and apply deltas.
          */
-        fun rewriteRtp(packet: RtpPacket, recv: ReceiveSsrc) {
+        fun rewriteRtp(packet: RtpPacket, sending: Boolean, recv: ReceiveSsrc) {
+            if (sending) {
+                if (!recv.hasDeltas) {
+                    /* Calculate new deltas the first time a receive ssrc is mapped to a send ssrc. */
+                    if (state.valid) {
+                        if (recv.state.valid) {
+                            sequenceNumberDelta =
+                                RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, recv.state.lastSequenceNumber)
+                            timestampDelta =
+                                RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
+                        } else {
+                            val prevSequenceNumber =
+                                RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1)
+                            val prevTimestamp =
+                                RtpUtils.applyTimestampDelta(packet.timestamp, -960); /* guessing */
+                            sequenceNumberDelta =
+                                RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, prevSequenceNumber)
+                            timestampDelta =
+                                RtpUtils.getTimestampDiff(state.lastTimestamp, prevTimestamp)
+                        }
+                    }
+                    recv.hasDeltas = true
+                }
 
-            if (!recv.state.valid && state.valid) {
-                val prevSequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1) /* $ */
-                val prevTimestamp = RtpUtils.applyTimestampDelta(packet.timestamp, -960); /* $ */
-                sequenceNumberDelta = RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, prevSequenceNumber)
-                timestampDelta = RtpUtils.getTimestampDiff(state.lastTimestamp, prevTimestamp)
-            }
+                recv.state.update(packet)
 
-            recv.state.update(packet)
+                packet.ssrc = ssrc
+                packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
+                packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
 
-            packet.ssrc = ssrc
-            packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
-            packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
-
-            state.update(packet)
-        }
-
-        /**
-         * Update deltas when a receive SSRC is remapped.
-         */
-        fun updateDeltas(recv: ReceiveSsrc) {
-            if (state.valid && recv.state.valid) {
-                sequenceNumberDelta =
-                    RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, recv.state.lastSequenceNumber)
-                timestampDelta = RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
+                state.update(packet)
+            } else {
+                /* Don't touch send state if we're dropping the packet. */
+                recv.state.update(packet)
             }
         }
     }
@@ -1469,15 +1483,14 @@ class Endpoint @JvmOverloads constructor(
     private class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc) {
 
         /**
-         * If true, do not send on this SSRC until a packet with start=true arrives.
+         * If false, do not send on this SSRC until a packet with start=true arrives.
          */
-        private var waitForKeyFrame = true
+        private var started = false
 
         constructor(props: SourceDesc) : this(props, SendSsrc(null), SendSsrc(null))
 
         override fun toString(): String {
-            return "(" + props.name + ":" + props.ssrc1 + "/" + props.ssrc2 + " -> " +
-                send1.ssrc + "/" + send2.ssrc + ")"
+            return "(${props.name}:${props.ssrc1}/${props.ssrc2} -> ${send1.ssrc}/${send2.ssrc}. started: $started)"
         }
 
         /**
@@ -1487,22 +1500,14 @@ class Endpoint @JvmOverloads constructor(
 
         /**
          * Update RTP state and apply deltas.
+         * Returns true if packet should be sent.
          */
-        fun rewriteRtp(packet: RtpPacket, recv: ReceiveSsrc) = getSender(packet.ssrc).rewriteRtp(packet, recv)
-
-        /**
-         * Update deltas when a receive SSRC is remapped.
-         */
-        fun updateDeltas(ssrc: Long, recv: ReceiveSsrc) = getSender(ssrc).updateDeltas(recv)
-
-        /**
-         * See if the current packet should be sent.
-         */
-        fun canSend(start: Boolean): Boolean {
+        fun rewriteRtp(packet: RtpPacket, start: Boolean, recv: ReceiveSsrc): Boolean {
             if (start) {
-                waitForKeyFrame = false
+                started = true
             }
-            return !waitForKeyFrame
+            getSender(packet.ssrc).rewriteRtp(packet, started, recv)
+            return started
         }
     }
 
@@ -1562,14 +1567,10 @@ class Endpoint @JvmOverloads constructor(
                     logger.debug {
                         "remapping $mediaType send SSRC: $sendSource. removed: $eldest."
                     }
-                    // $ only if sent?
-                    val recv1 = receivedSsrcs.get(props.ssrc1)
-                    if (recv1 != null)
-                        sendSource.updateDeltas(props.ssrc1, recv1)
+                    /* Request new deltas on next sent packet */
+                    receivedSsrcs.get(props.ssrc1)?.hasDeltas = false
                     if (props.ssrc2 != -1L) {
-                        val recv2 = receivedSsrcs.get(props.ssrc2)
-                        if (recv2 != null)
-                            sendSource.updateDeltas(props.ssrc2, recv2)
+                        receivedSsrcs.get(props.ssrc2)?.hasDeltas = false
                     }
                 } else {
                     sendSource = SendSource(props)
@@ -1677,8 +1678,7 @@ class Endpoint @JvmOverloads constructor(
 
                 val ss = getSendSource(rs.props.ssrc1, rs.props, mediaType == MediaType.AUDIO, null)
                 if (ss != null) {
-                    ss.rewriteRtp(packet, rs)
-                    send = ss.canSend(start)
+                    send = ss.rewriteRtp(packet, start, rs)
                     logSendSources()
                     logger.debug {
                         if (send) {
