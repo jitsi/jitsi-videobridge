@@ -218,7 +218,9 @@ class Transceiver(
     fun setMediaSources(mediaSources: Array<MediaSourceDesc>): Boolean {
         logger.cdebug { "$id setting media sources: ${mediaSources.joinToString()}" }
         val ret = this.mediaSources.setMediaSources(mediaSources)
-        rtpReceiver.handleEvent(SetMediaSourcesEvent(this.mediaSources.getMediaSources()))
+        val mergedMediaSources = this.mediaSources.getMediaSources()
+        val signaledMediaSources = if (mediaSources === mergedMediaSources) mediaSources.copy() else mediaSources
+        rtpReceiver.handleEvent(SetMediaSourcesEvent(mergedMediaSources, signaledMediaSources))
         return ret
     }
 
