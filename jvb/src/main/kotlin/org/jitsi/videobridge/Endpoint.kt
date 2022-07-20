@@ -102,6 +102,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
+import kotlin.random.Random
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -1432,12 +1433,28 @@ class Endpoint @JvmOverloads constructor(
      * RTP state for sent SSRCs.
      */
     private class SendSsrc(ssrc_: Long?) {
-        val ssrc = ssrc_ ?: nextSsrc++ /* $ randomize instead */
+        val ssrc = ssrc_ ?: getNextSsrc()
         private val state = RtpState()
         private var sequenceNumberDelta = 0
         private var timestampDelta = 0L
+
         companion object {
-            private var nextSsrc = 777000001L /* use serial number for testing */
+            private val useRandom = true; /* switch off to ease debugging */
+            private var nextSsrc = 777000001L /* use serial number for debugging */
+            private val random = Random(System.currentTimeMillis())
+
+            /**
+             * Get a unique send SSRC.
+             */
+            fun getNextSsrc(): Long {
+                if (useRandom) {
+                    return random.nextLong(until = 0x100000000L)
+                } else {
+                    synchronized(this) {
+                        return nextSsrc++
+                    }
+                }
+            }
         }
 
         /**
