@@ -31,8 +31,8 @@ import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.nlj.util.mbps
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AbsSendTimeHeaderExtension
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 import java.time.Duration
 
 class RemoteBandwidthEstimatorTest : ShouldSpec() {

@@ -40,7 +40,7 @@ import org.jitsi.utils.secs
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.TreeMap
 
 /**
  * Extract the TCC sequence numbers from each passing packet and generate
@@ -70,7 +70,7 @@ class TccGeneratorNode(
     }
     private val rfc3711IndexTracker = Rfc3711IndexTracker()
 
-    private val lossListeners = LinkedList<LossListener>()
+    private val lossListeners = mutableListOf<LossListener>()
 
     init {
         streamInformation.onRtpExtensionMapping(TRANSPORT_CC) {

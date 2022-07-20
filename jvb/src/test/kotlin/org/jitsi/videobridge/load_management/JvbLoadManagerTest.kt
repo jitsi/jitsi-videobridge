@@ -23,9 +23,9 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.ConfigTest
 import org.jitsi.config.withNewConfig
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.mins
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 
 class JvbLoadManagerTest : ConfigTest() {
     init {

@@ -25,7 +25,7 @@ import org.jitsi.nlj.util.bits
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.mbps
-import org.jitsi.test.concurrent.FakeScheduledExecutorService
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.LoggerImpl

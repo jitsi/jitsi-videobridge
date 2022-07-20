@@ -25,8 +25,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.config.withNewConfig
 import org.jitsi.shutdown.ShutdownServiceImpl
-import org.jitsi.test.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.videobridge.shutdown.ShutdownConfig
 import org.jitsi.videobridge.shutdown.ShutdownState
 import org.jitsi.videobridge.util.TaskPools
