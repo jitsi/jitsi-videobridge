@@ -24,8 +24,8 @@ import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.time.FakeClock
 
 /**
  * Test the logic for selecting the layers to be considered for an endpoint and the "preferred" layer.
