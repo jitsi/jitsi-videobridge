@@ -35,11 +35,11 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.mbps
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 import org.jitsi.videobridge.configWithMultiStreamDisabled
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.time.Instant

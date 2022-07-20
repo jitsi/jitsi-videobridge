@@ -31,11 +31,11 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.mbps
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.util.function.Supplier
 

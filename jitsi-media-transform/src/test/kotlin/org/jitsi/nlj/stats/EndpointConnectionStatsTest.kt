@@ -27,8 +27,8 @@ import org.jitsi.nlj.test_utils.timeline
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.ms
+import org.jitsi.utils.time.FakeClock
 import java.time.Duration
 
 class EndpointConnectionStatsTest : ShouldSpec() {

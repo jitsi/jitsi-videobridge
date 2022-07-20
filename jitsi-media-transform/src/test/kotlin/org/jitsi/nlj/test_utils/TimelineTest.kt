@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.test_utils
 
-import org.jitsi.test.time.FakeClock
+import org.jitsi.utils.time.FakeClock
 import java.time.Duration
 import java.time.Instant
 

@@ -21,8 +21,8 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 import java.time.Instant
 
 internal class TimeExpiringCacheTest : ShouldSpec() {
