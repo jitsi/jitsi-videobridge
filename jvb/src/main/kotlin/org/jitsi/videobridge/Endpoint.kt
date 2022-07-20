@@ -900,13 +900,9 @@ class Endpoint @JvmOverloads constructor(
      * Find the properties of the video source indicated by the given SSRC. Returns null if not found.
      */
     private fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
-        // $ remove some of the logs before merging
         conference.getEndpointBySsrc(ssrc)?.let { ep ->
-            logger.debug { "EP -> ${ep.id} ${ep.statsId} V${ep.mediaSources.size}" }
             ep.mediaSources.forEach { s ->
-                logger.debug { "\tSSRC -> ${s.primarySSRC} ${s.videoType} ${s.sourceName} ${s.owner}" }
                 if (s.findRtpEncodingDesc(ssrc) != null) {
-                    logger.debug("that's the one!")
                     return s
                 }
             }
@@ -1387,6 +1383,11 @@ class Endpoint @JvmOverloads constructor(
                 return s.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
             }
         }
+
+        /**
+         * {@inheritDoc}
+         */
+        override fun toString(): String = "$owner:$ssrc1/$ssrc2"
     }
 
     /**
@@ -1403,12 +1404,10 @@ class Endpoint @JvmOverloads constructor(
             valid = true
         }
 
-        override fun toString(): String {
-            if (valid)
-                return lastSequenceNumber.toString() + "/" + lastTimestamp
-            else
-                return "-"
-        }
+        /**
+         * {@inheritDoc}
+         */
+        override fun toString(): String = if (valid) "$lastSequenceNumber/$lastTimestamp" else "-"
     }
 
     /**
@@ -1422,6 +1421,11 @@ class Endpoint @JvmOverloads constructor(
          * If false, calculate them on the next relayed packet.
          */
         var hasDeltas = false
+
+        /**
+         * {@inheritDoc}
+         */
+        override fun toString(): String = "$state" + if (hasDeltas) "" else " (no \u2206)"
     }
 
     /**
@@ -1475,6 +1479,11 @@ class Endpoint @JvmOverloads constructor(
                 recv.state.update(packet)
             }
         }
+
+        /**
+         * {@inheritDoc}
+         */
+        override fun toString(): String = "$ssrc{$state,\u2206=$sequenceNumberDelta/$timestampDelta}"
     }
 
     /**
@@ -1488,10 +1497,6 @@ class Endpoint @JvmOverloads constructor(
         private var started = false
 
         constructor(props: SourceDesc) : this(props, SendSsrc(null), SendSsrc(null))
-
-        override fun toString(): String {
-            return "(${props.name}:${props.ssrc1}/${props.ssrc2} -> ${send1.ssrc}/${send2.ssrc}. started: $started)"
-        }
 
         /**
          * Demux to proper SSRC.
@@ -1509,6 +1514,11 @@ class Endpoint @JvmOverloads constructor(
             getSender(packet.ssrc).rewriteRtp(packet, started, recv)
             return started
         }
+
+        /**
+         * {@inheritDoc}
+         */
+        override fun toString(): String = "$send1, $send2" + if (started) "" else " (not started)"
     }
 
     /**
@@ -1532,17 +1542,6 @@ class Endpoint @JvmOverloads constructor(
         private val sendSources = LRUCache<Long, SendSource>(size, true /* accessOrder */)
 
         /**
-         * Log the current SSRC mappings.
-         */
-        private fun logSendSources() {
-            logger.debug {
-                sendSources.entries.joinToString(", ", "current $mediaType send SSRCs: [", "]") {
-                    "${it.value}"
-                }
-            }
-        }
-
-        /**
          * Assign a group of send SSRCs to use for the specified source.
          * If remapping the send SSRCs from another source, transfer RTP state from the old source.
          * Collect remappings in the list if it is present, else notify them immediately.
@@ -1562,11 +1561,9 @@ class Endpoint @JvmOverloads constructor(
                 if (!allowCreate)
                     return null
                 if (sendSources.size == size) {
-                    val eldest = sendSources.eldest().value
-                    sendSource = SendSource(props, eldest.send1, eldest.send2)
-                    logger.debug {
-                        "remapping $mediaType send SSRC: $sendSource. removed: $eldest."
-                    }
+                    val eldest = sendSources.eldest()
+                    sendSource = SendSource(props, eldest.value.send1, eldest.value.send2)
+                    logger.debug { "remapping $mediaType SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                     /* Request new deltas on next sent packet */
                     receivedSsrcs.get(props.ssrc1)?.hasDeltas = false
                     if (props.ssrc2 != -1L) {
@@ -1574,7 +1571,7 @@ class Endpoint @JvmOverloads constructor(
                     }
                 } else {
                     sendSource = SendSource(props)
-                    logger.debug { "added new entry to $mediaType send SSRCs: $sendSource" }
+                    logger.debug { "added $mediaType send SSRC: ${props.ssrc1}->$sendSource" }
                 }
                 sendSources.put(ssrc, sendSource)
                 if (mediaType == MediaType.AUDIO) {
@@ -1606,7 +1603,7 @@ class Endpoint @JvmOverloads constructor(
                 sources.forEach { source ->
                     getSendSource(source.primarySSRC, SourceDesc(source), true, remappings)
                 }
-                logSendSources()
+                logger.debug { this.toString() }
             }
 
             if (!remappings.isEmpty())
@@ -1673,13 +1670,13 @@ class Endpoint @JvmOverloads constructor(
                     }
                     rs = ReceiveSsrc(props)
                     receivedSsrcs.put(packet.ssrc, rs)
-                    logger.debug { "added receive SSRC: ${packet.ssrc}" }
+                    logger.debug { "added $mediaType receive SSRC: ${packet.ssrc}" }
                 }
 
                 val ss = getSendSource(rs.props.ssrc1, rs.props, mediaType == MediaType.AUDIO, null)
                 if (ss != null) {
                     send = ss.rewriteRtp(packet, start, rs)
-                    logSendSources()
+                    logger.debug { this.toString() }
                     logger.debug {
                         if (send) {
                             "output packet: ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp} " +
@@ -1694,6 +1691,20 @@ class Endpoint @JvmOverloads constructor(
             }
 
             return send
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        override fun toString(): String {
+            return "$mediaType SSRCs: received=" +
+                receivedSsrcs.entries.joinToString(", ", "[", "]") {
+                    "(${it.key}->${it.value})"
+                } +
+                " mappings=" +
+                sendSources.entries.joinToString(", ", "[", "]") {
+                    "(${it.key}->${it.value})"
+                }
         }
     }
 }
