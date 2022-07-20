@@ -23,7 +23,7 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.util.bps
-import org.jitsi.test.time.FakeClock
+import org.jitsi.utils.time.FakeClock
 import java.time.Instant
 
 /**
