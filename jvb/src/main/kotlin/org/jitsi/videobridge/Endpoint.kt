@@ -31,6 +31,7 @@ import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -1397,18 +1398,20 @@ class Endpoint @JvmOverloads constructor(
     private class RtpState() {
         var lastSequenceNumber = 0
         var lastTimestamp = 0L
+        var lastTl0Index = -1
         var valid = false
 
         fun update(packet: RtpPacket) {
             lastSequenceNumber = packet.sequenceNumber
             lastTimestamp = packet.timestamp
+            lastTl0Index = if (packet is Vp9Packet) packet.TL0PICIDX else -1
             valid = true
         }
 
         /**
          * {@inheritDoc}
          */
-        override fun toString(): String = if (valid) "$lastSequenceNumber/$lastTimestamp" else "-"
+        override fun toString(): String = if (valid) "$lastSequenceNumber/$lastTimestamp/$lastTl0Index" else "-"
     }
 
     /**
@@ -1437,6 +1440,7 @@ class Endpoint @JvmOverloads constructor(
         private val state = RtpState()
         private var sequenceNumberDelta = 0
         private var timestampDelta = 0L
+        private var tl0IndexDelta = 0
 
         companion object {
             private val useRandom = true; /* switch off to ease debugging */
@@ -1470,6 +1474,10 @@ class Endpoint @JvmOverloads constructor(
                                 RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, recv.state.lastSequenceNumber)
                             timestampDelta =
                                 RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
+                            if (state.lastTl0Index != -1 && recv.state.lastTl0Index != 1)
+                                tl0IndexDelta = (256 + state.lastTl0Index - recv.state.lastTl0Index) % 256 // $ check
+                            else
+                                tl0IndexDelta = 0
                         } else {
                             val prevSequenceNumber =
                                 RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1)
@@ -1479,6 +1487,10 @@ class Endpoint @JvmOverloads constructor(
                                 RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, prevSequenceNumber)
                             timestampDelta =
                                 RtpUtils.getTimestampDiff(state.lastTimestamp, prevTimestamp)
+                            if (state.lastTl0Index != -1 && packet is Vp9Packet)
+                                tl0IndexDelta = (256 + state.lastTl0Index - (packet.TL0PICIDX - 1)) % 256 // $ check
+                            else
+                                tl0IndexDelta = 0
                         }
                     }
                     recv.hasDeltas = true
@@ -1489,6 +1501,9 @@ class Endpoint @JvmOverloads constructor(
                 packet.ssrc = ssrc
                 packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
                 packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
+                if (packet is Vp9Packet) {
+                    packet.TL0PICIDX = (packet.TL0PICIDX + tl0IndexDelta) % 256
+                }
 
                 state.update(packet)
             } else {
@@ -1500,7 +1515,7 @@ class Endpoint @JvmOverloads constructor(
         /**
          * {@inheritDoc}
          */
-        override fun toString(): String = "$ssrc{$state,\u2206=$sequenceNumberDelta/$timestampDelta}"
+        override fun toString(): String = "$ssrc{$state,\u2206=$sequenceNumberDelta/$timestampDelta/$tl0IndexDelta}"
     }
 
     /**
