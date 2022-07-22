@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
+import org.jitsi.metrics.*;
 import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
@@ -967,7 +968,7 @@ public class Videobridge
          * The cumulative/total number of conferences created on this
          * {@link Videobridge}.
          */
-        public CounterMetric totalConferencesCreated = MetricsContainer.getInstance().registerCounter(
+        public CounterMetric totalConferencesCreated = VideobridgeMetricsContainer.getInstance().registerCounter(
                 "created_conferences",
                 "The total number of conferences created on the Videobridge.");
 
@@ -1172,7 +1173,7 @@ public class Videobridge
         /**
          * Number of local endpoints that exist currently.
          */
-        public LongGaugeMetric currentLocalEndpoints = MetricsContainer.getInstance().registerLongGauge(
+        public LongGaugeMetric currentLocalEndpoints = VideobridgeMetricsContainer.getInstance().registerLongGauge(
                 "local_endpoints",
                 "Number of local endpoints that exist currently."
         );
@@ -1180,7 +1181,7 @@ public class Videobridge
         /**
          * Current number of conferences.
          */
-        public LongGaugeMetric currentConferences = MetricsContainer.getInstance().registerLongGauge(
+        public LongGaugeMetric currentConferences = VideobridgeMetricsContainer.getInstance().registerLongGauge(
                 "conferences",
                 "Current number of conferences."
         );

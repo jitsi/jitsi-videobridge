@@ -34,7 +34,7 @@ import org.jitsi.videobridge.metrics.*;
 @Path("/metrics")
 public class Prometheus
 {
-    protected MetricsContainer metricsContainer = MetricsContainer.getInstance();
+    protected VideobridgeMetricsContainer metricsContainer = VideobridgeMetricsContainer.getInstance();
 
     @GET
     @Produces(TextFormat.CONTENT_TYPE_004)

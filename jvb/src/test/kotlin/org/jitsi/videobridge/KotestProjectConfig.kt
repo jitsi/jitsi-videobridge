@@ -18,7 +18,7 @@ package org.jitsi.videobridge
 
 import io.kotest.core.config.AbstractProjectConfig
 import org.jitsi.metaconfig.MetaconfigSettings
-import org.jitsi.videobridge.metrics.MetricsContainer
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 
 class KotestProjectConfig : AbstractProjectConfig() {
     override fun beforeAll() = super.beforeAll().also {
@@ -31,6 +31,6 @@ class KotestProjectConfig : AbstractProjectConfig() {
         // We want this flag disabled so that instancing classes that register metrics (such as Videobridge) does not
         // result in runtime exceptions. Note that metrics with matching name and type are returned this way.
         // As such, tests that rely on metric values changing may require additional steps.
-        MetricsContainer.instance.checkForNameConflicts = false
+        VideobridgeMetricsContainer.instance.checkForNameConflicts = false
     }
 }

@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.stats;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.metrics.*;
 import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
@@ -57,8 +58,9 @@ public class VideobridgeStatistics
     /**
      * The currently configured region.
      */
-    private static final InfoMetric regionInfo = RelayConfig.config.getRegion() != null ? MetricsContainer.getInstance()
-            .registerInfo(REGION, "The currently configured region.", RelayConfig.config.getRegion()) : null;
+    private static final InfoMetric regionInfo = RelayConfig.config.getRegion() != null ?
+            VideobridgeMetricsContainer.getInstance()
+                .registerInfo(REGION, "The currently configured region.", RelayConfig.config.getRegion()) : null;
 
     private static final String relayId = RelayConfig.config.getEnabled() ? RelayConfig.config.getRelayId() : null;
 
@@ -119,7 +121,7 @@ public class VideobridgeStatistics
     private final @NotNull Videobridge videobridge;
     private final @NotNull XmppConnection xmppConnection;
 
-    private final BooleanMetric healthy = MetricsContainer.getInstance()
+    private final BooleanMetric healthy = VideobridgeMetricsContainer.getInstance()
             .registerBooleanMetric("healthy", "Whether the Videobridge instance is healthy or not.", true);
 
     /**

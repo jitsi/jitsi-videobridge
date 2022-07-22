@@ -15,13 +15,18 @@
  */
 package org.jitsi.videobridge.metrics
 
+import org.jitsi.metrics.MetricsContainer
+
 /**
- * Supplies the current value of a metric.
- * Metrics are held in the [MetricsContainer].
+ * `MetricsContainer` gathers and exports metrics from a [Videobridge][org.jitsi.videobridge.Videobridge] instance.
  */
-fun interface Metric<T> {
-    /**
-     * Supplies the current value of a metric.
-     */
-    fun get(): T
+class VideobridgeMetricsContainer private constructor(): MetricsContainer() {
+
+    companion object {
+        /**
+         * The singleton instance of `MetricsContainer`.
+         */
+        @JvmStatic
+        val instance = VideobridgeMetricsContainer()
+    }
 }
