@@ -131,7 +131,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-metrics</artifactId>
-      <version>${jicoco.version}</version>
     </dependency>
     <!-- Note that this is not part of jitsi/jitsi, and it has a separate version. -->
     <dependency>
