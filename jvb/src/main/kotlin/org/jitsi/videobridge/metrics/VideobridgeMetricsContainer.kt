@@ -20,7 +20,7 @@ import org.jitsi.metrics.MetricsContainer
 /**
  * `MetricsContainer` gathers and exports metrics from a [Videobridge][org.jitsi.videobridge.Videobridge] instance.
  */
-class VideobridgeMetricsContainer private constructor(): MetricsContainer() {
+class VideobridgeMetricsContainer private constructor() : MetricsContainer() {
 
     companion object {
         /**
