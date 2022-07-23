@@ -221,8 +221,9 @@ class Endpoint @JvmOverloads constructor(
                     else
                         null
                 }.let {
-                    // $ locking
                     val newSources = it.mapNotNull { s -> s.sourceName }.toSet()
+                    /* safe unlocked access of activeSources.
+                     * BitrateController will not overlap calls to this method. */
                     if (activeSources != newSources) {
                         activeSources = newSources
                         sendForwardedSourcesMessage(newSources)
@@ -1247,6 +1248,14 @@ class Endpoint @JvmOverloads constructor(
         private val maxAudioSsrcs: Int by config {
             "videobridge.ssrc-limit.audio".from(JitsiConfig.newConfig)
         }
+
+        /**
+         * Print packet fields relevant to rewriting mode.
+         */
+        private fun debugInfo(packet: RtpPacket): String {
+            val vp9Info = if (packet is Vp9Packet) " tl0PicIdx=${packet.TL0PICIDX}" else ""
+            return "ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" + vp9Info
+        }
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
@@ -1365,7 +1374,7 @@ class Endpoint @JvmOverloads constructor(
 
     /**
      * Align common fields from different source types.
-     * $ should there be a real base class?
+     * Perhaps this could become a base class of those types.
      */
     private class SourceDesc private constructor(
         val name: String,
@@ -1382,7 +1391,8 @@ class Endpoint @JvmOverloads constructor(
         )
         companion object {
             fun getRtx(s: MediaSourceDesc): Long {
-                return s.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX) // $ which entry?
+                /* Ignoring any additional entries for now. */
+                return s.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX)
             }
         }
 
@@ -1475,7 +1485,7 @@ class Endpoint @JvmOverloads constructor(
                             timestampDelta =
                                 RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
                             if (state.lastTl0Index != -1 && recv.state.lastTl0Index != 1)
-                                tl0IndexDelta = (256 + state.lastTl0Index - recv.state.lastTl0Index) % 256 // $ check
+                                tl0IndexDelta = (256 + state.lastTl0Index - recv.state.lastTl0Index) % 256
                             else
                                 tl0IndexDelta = 0
                         } else {
@@ -1488,7 +1498,7 @@ class Endpoint @JvmOverloads constructor(
                             timestampDelta =
                                 RtpUtils.getTimestampDiff(state.lastTimestamp, prevTimestamp)
                             if (state.lastTl0Index != -1 && packet is Vp9Packet)
-                                tl0IndexDelta = (256 + state.lastTl0Index - (packet.TL0PICIDX - 1)) % 256 // $ check
+                                tl0IndexDelta = (256 + state.lastTl0Index - (packet.TL0PICIDX - 1)) % 256
                             else
                                 tl0IndexDelta = 0
                         }
@@ -1689,9 +1699,7 @@ class Endpoint @JvmOverloads constructor(
 
             var send: Boolean = false
 
-            logger.debug {
-                "$mediaType packet: ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}"
-            }
+            logger.debug { "$mediaType packet: ${debugInfo(packet)}" }
 
             synchronized(sendSources) {
                 var rs = receivedSsrcs.get(packet.ssrc)
@@ -1711,14 +1719,13 @@ class Endpoint @JvmOverloads constructor(
                     logger.debug { this.toString() }
                     logger.debug {
                         if (send) {
-                            "output packet: ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp} " +
-                                "source=${rs.props.name} start=$start send=$send"
+                            "output packet: ${debugInfo(packet)} source=${rs.props.name} start=$start send=$send"
                         } else {
-                            "dropping packet. waiting for key frame on source ${rs.props.name}."
+                            "dropping packet from ${rs.props.name}/${packet.ssrc}. waiting for key frame."
                         }
                     }
                 } else {
-                    logger.debug { "dropping packet. source ${rs.props.name} not active." }
+                    logger.debug { "dropping packet from ${rs.props.name}/${packet.ssrc}. source not active." }
                 }
             }
 

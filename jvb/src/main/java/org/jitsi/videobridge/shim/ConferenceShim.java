@@ -237,7 +237,7 @@ public class ConferenceShim
                 endpointId,
                 iceControlling,
                 false, /* no multi-stream in colibri V1 */
-                false /* $ check */
+                false /* no ssrc rewriting */
         );
     }
 
