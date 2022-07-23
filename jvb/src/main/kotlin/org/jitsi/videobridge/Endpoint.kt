@@ -214,13 +214,7 @@ class Endpoint @JvmOverloads constructor(
             }
 
             override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
-                sourceList.mapIndexedNotNull { index, s ->
-                    val name = s.sourceName
-                    if (name != null && index < maxVideoSsrcs)
-                        conference.getSource(name)
-                    else
-                        null
-                }.let {
+                sourceList.take(maxVideoSsrcs).let {
                     val newSources = it.mapNotNull { s -> s.sourceName }.toSet()
                     /* safe unlocked access of activeSources.
                      * BitrateController will not overlap calls to this method. */
