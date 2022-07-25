@@ -907,7 +907,7 @@ class Endpoint @JvmOverloads constructor(
      */
     private fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
         conference.getEndpointBySsrc(ssrc)?.let { ep ->
-            if (ep !is Endpoint) // $ revisit
+            if (ep !is Endpoint)
                 return null
             return ep.audioSources.find { s -> s.ssrc == ssrc }
         }
