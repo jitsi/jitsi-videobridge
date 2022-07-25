@@ -20,12 +20,13 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.nanos
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
+import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import java.util.function.Supplier
 import kotlin.random.Random
 import kotlin.time.ExperimentalTime
@@ -119,8 +120,12 @@ class BitrateControllerPerfTest : StringSpec() {
             clock.elapse(100.ms)
         }
 
-        bc.setSelectedEndpoints(selectedEndpoints)
-        bc.setMaxFrameHeight(maxFrameHeight)
+        bc.setBandwidthAllocationSettings(
+            ReceiverVideoConstraintsMessage(
+                selectedEndpoints = selectedEndpoints,
+                defaultConstraints = VideoConstraints(maxFrameHeight)
+            )
+        )
         bc.endpointOrderingChanged()
 
         // Change the dominant speaker just a couple of times.

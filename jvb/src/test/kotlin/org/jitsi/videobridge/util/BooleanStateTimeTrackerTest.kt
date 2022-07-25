@@ -18,8 +18,8 @@ package org.jitsi.videobridge.util
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 import java.time.Duration
 
 class BooleanStateTimeTrackerTest : ShouldSpec() {

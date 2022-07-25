@@ -19,7 +19,6 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
-import org.jitsi.nlj.copy
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
@@ -134,7 +133,7 @@ class VideoParser(
         when (event) {
             is SetMediaSourcesEvent -> {
                 sources = event.mediaSourceDescs
-                signaledSources = sources.copy()
+                signaledSources = event.signaledMediaSourceDescs
                 videoCodecParser?.sources = sources
             }
         }

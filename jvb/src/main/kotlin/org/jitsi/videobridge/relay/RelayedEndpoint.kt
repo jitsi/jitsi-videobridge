@@ -23,6 +23,7 @@ import org.jitsi.nlj.RtpReceiverEventHandler
 import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.SetMediaSourcesEvent
+import org.jitsi.nlj.copy
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
@@ -180,8 +181,10 @@ class RelayedEndpoint(
                 applyVideoTypeCache(value)
             }
             val changed = _mediaSources.setMediaSources(value)
+            val mergedMediaSources = _mediaSources.getMediaSources()
+            val signaledMediaSources = if (value === mergedMediaSources) value.copy() else value
             if (changed) {
-                val setMediaSourcesEvent = SetMediaSourcesEvent(mediaSources)
+                val setMediaSourcesEvent = SetMediaSourcesEvent(mediaSources, signaledMediaSources)
 
                 rtpReceiver.handleEvent(setMediaSourcesEvent)
                 mediaSources.forEach {

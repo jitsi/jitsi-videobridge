@@ -35,7 +35,6 @@ import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.atomic.LongAdder
 
 /**
@@ -90,7 +89,7 @@ class TransportCcEngine(
 
     private var lastRtt: Duration? = null
 
-    private val lossListeners = LinkedList<LossListener>()
+    private val lossListeners = mutableListOf<LossListener>()
 
     /**
      * Called when an RTP sender has a new round-trip time estimate.

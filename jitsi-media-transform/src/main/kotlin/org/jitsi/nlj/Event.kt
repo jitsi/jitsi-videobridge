@@ -19,7 +19,10 @@ import org.jitsi.utils.MediaType
 
 interface Event
 
-class SetMediaSourcesEvent(val mediaSourceDescs: Array<MediaSourceDesc>) : Event
+class SetMediaSourcesEvent(
+    val mediaSourceDescs: Array<MediaSourceDesc>,
+    val signaledMediaSourceDescs: Array<MediaSourceDesc>
+) : Event
 
 class SetLocalSsrcEvent(val mediaType: MediaType, val ssrc: Long) : Event
 

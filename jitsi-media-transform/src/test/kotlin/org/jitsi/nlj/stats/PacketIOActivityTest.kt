@@ -19,8 +19,8 @@ package org.jitsi.nlj.stats
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 import java.time.Duration
 
 class PacketIOActivityTest : ShouldSpec() {

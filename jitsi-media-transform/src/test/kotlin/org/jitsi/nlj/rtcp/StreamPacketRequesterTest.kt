@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
-import org.jitsi.test.concurrent.FakeScheduledExecutorService
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 
 class StreamPacketRequesterTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

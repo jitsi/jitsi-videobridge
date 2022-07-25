@@ -84,7 +84,8 @@ public class UlimitCheck
      * (threads) by running {@code bash}'s {@code ulimit} builtin, and logs
      * the values.
      */
-    public static void printUlimits() {
+    public static void printUlimits()
+    {
 
         Integer fileLimit = getIntFromCommand("ulimit -n");
         Integer fileLimitHard = getIntFromCommand("ulimit -Hn");

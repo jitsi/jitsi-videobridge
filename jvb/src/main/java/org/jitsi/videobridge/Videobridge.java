@@ -1168,7 +1168,8 @@ public class Videobridge
         public AtomicLong currentLocalEndpoints = new AtomicLong();
     }
 
-    public interface EventHandler {
+    public interface EventHandler
+    {
         void conferenceCreated(@NotNull Conference conference);
         void conferenceExpired(@NotNull Conference conference);
     }

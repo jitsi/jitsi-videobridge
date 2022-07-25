@@ -35,9 +35,9 @@ import org.jitsi.nlj.util.RtpExtensionHandler
 import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.utils.time.FakeClock
 
 class KeyframeRequesterTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf

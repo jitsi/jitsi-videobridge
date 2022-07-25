@@ -125,20 +125,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             }
         }
 
-    @Deprecated("Use the ReceiverVideoConstraints msg")
-    fun setMaxFrameHeight(maxFrameHeight: Int) {
-        if (allocationSettingsWrapper.setMaxFrameHeight(maxFrameHeight)) {
-            bandwidthAllocator.update(allocationSettingsWrapper.get())
-        }
-    }
-
-    @Deprecated("Use the ReceiverVideoConstraints msg")
-    fun setSelectedEndpoints(selectedEndpoints: List<String>) {
-        if (allocationSettingsWrapper.setSelectedEndpoints(selectedEndpoints)) {
-            bandwidthAllocator.update(allocationSettingsWrapper.get())
-        }
-    }
-
     /**
      * Return the number of endpoints whose streams are currently being forwarded.
      */

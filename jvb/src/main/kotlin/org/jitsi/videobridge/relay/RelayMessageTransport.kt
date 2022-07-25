@@ -30,8 +30,6 @@ import org.jitsi.videobridge.message.ClientHelloMessage
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
 import org.jitsi.videobridge.message.EndpointMessage
 import org.jitsi.videobridge.message.EndpointStats
-import org.jitsi.videobridge.message.SelectedEndpointMessage
-import org.jitsi.videobridge.message.SelectedEndpointsMessage
 import org.jitsi.videobridge.message.ServerHelloMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.message.VideoTypeMessage
@@ -375,21 +373,6 @@ class RelayMessageTransport(
             debugState["sent_counts"] = sentCounts
             return debugState
         }
-
-    /**
-     * Notifies this `Endpoint` that a [SelectedEndpointsMessage]
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    override fun selectedEndpoint(message: SelectedEndpointMessage): BridgeChannelMessage? {
-        val newSelectedEndpointID = message.selectedEndpoint
-        val newSelectedIDs: List<String> =
-            if (newSelectedEndpointID == null || newSelectedEndpointID.isBlank()) emptyList()
-            else listOf(newSelectedEndpointID)
-        selectedEndpoints(SelectedEndpointsMessage(newSelectedIDs))
-        return null
-    }
 
     /**
      * Handles an opaque message received on the Relay channel. The message originates from an endpoint with an ID of

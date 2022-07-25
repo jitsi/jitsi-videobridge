@@ -224,9 +224,8 @@ private fun createSource(
 ): MediaSourceDesc {
     var height = 720
 
-    val encodings = Array(primarySsrcs.size) {
-            encodingIdx ->
-        val primarySsrc: Long = primarySsrcs.get(encodingIdx)
+    val encodings = Array(primarySsrcs.size) { encodingIdx ->
+        val primarySsrc: Long = primarySsrcs[encodingIdx]
         val ret = createRtpEncodingDesc(
             primarySsrc,
             numSpatialLayersPerStream, numTemporalLayersPerStream, encodingIdx, height
