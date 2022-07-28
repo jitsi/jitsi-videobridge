@@ -249,7 +249,11 @@ internal class SingleSourceAllocation2(
 
         val oversendIdx = if (onStage && config.allowOversendOnStage()) {
             val maxHeight = selectedLayers.map { it.layer.height }.maxOrNull() ?: return Layers.noLayers
-            selectedLayers.firstIndexWhich { it.layer.height == maxHeight }
+            // Of all layers with the highest resolution select the one with lowest bitrate. In case of VP9 the layers
+            // are not necessarily ordered by bitrate.
+            val lowestBitrateLayer = selectedLayers.filter { it.layer.height == maxHeight }.minByOrNull { it.bitrate }
+                ?: return Layers.noLayers
+            selectedLayers.indexOf(lowestBitrateLayer)
         } else {
             -1
         }
