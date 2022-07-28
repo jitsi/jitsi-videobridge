@@ -48,6 +48,8 @@ class VideobridgeTest : ShouldSpec() {
 
     override suspend fun afterAny(testCase: TestCase, result: TestResult) = super.afterAny(testCase, result).also {
         TaskPools.resetScheduledPool()
+        // we need this to test shutdown behavior since metrics are preserved across tests
+        videobridge.statistics.currentLocalEndpoints.set(0)
     }
 
     init {

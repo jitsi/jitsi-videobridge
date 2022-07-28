@@ -18,11 +18,19 @@ package org.jitsi.videobridge
 
 import io.kotest.core.config.AbstractProjectConfig
 import org.jitsi.metaconfig.MetaconfigSettings
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 
 class KotestProjectConfig : AbstractProjectConfig() {
     override fun beforeAll() = super.beforeAll().also {
         // The only purpose of config caching is performance. We always want caching disabled in tests (so we can
         // freely modify the config without affecting other tests executing afterwards).
         MetaconfigSettings.cacheEnabled = false
+
+        // By default, MetricsContainer throws an exception when attempting to register a metric with the same name
+        // as an existing metric. MetricsContainer is a singleton with a static instance and is preserved across tests.
+        // We want this flag disabled so that instancing classes that register metrics (such as Videobridge) does not
+        // result in runtime exceptions. Note that metrics with matching name and type are returned this way.
+        // As such, tests that rely on metric values changing may require additional steps.
+        VideobridgeMetricsContainer.instance.checkForNameConflicts = false
     }
 }

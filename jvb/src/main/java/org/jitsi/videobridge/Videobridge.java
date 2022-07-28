@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
+import org.jitsi.metrics.*;
 import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
@@ -28,6 +29,7 @@ import org.jitsi.utils.stats.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
@@ -245,6 +247,8 @@ public class Videobridge
                 {
                     conference = new Conference(this, id, name, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
                     conferencesById.put(id, conference);
+                    statistics.currentConferences.inc();
+
                     if (meetingId != null)
                     {
                         conferencesByMeetingId.put(meetingId, conference);
@@ -259,12 +263,12 @@ public class Videobridge
 
     void localEndpointCreated()
     {
-        statistics.currentLocalEndpoints.incrementAndGet();
+        statistics.currentLocalEndpoints.inc();
     }
 
     void localEndpointExpired()
     {
-        long remainingEndpoints = statistics.currentLocalEndpoints.decrementAndGet();
+        long remainingEndpoints = statistics.currentLocalEndpoints.decAndGet();
         if (remainingEndpoints < 0)
         {
             logger.warn("Invalid endpoint count " + remainingEndpoints + ". Disabling endpoint-count based shutdown!");
@@ -325,6 +329,8 @@ public class Videobridge
             if (conference.equals(conferencesById.get(id)))
             {
                 conferencesById.remove(id);
+                statistics.currentConferences.dec();
+
                 if (meetingId != null)
                 {
                     if (conference.equals(conferencesByMeetingId.get(meetingId)))
@@ -686,7 +692,7 @@ public class Videobridge
                 ColibriConferenceIQ.ELEMENT,
                 ColibriConferenceIQ.NAMESPACE,
                 new ColibriConferenceIqProvider());
-        
+
         // <force-shutdown>
         ForcefulShutdownIqProvider.registerIQProvider();
 
@@ -962,7 +968,9 @@ public class Videobridge
          * The cumulative/total number of conferences created on this
          * {@link Videobridge}.
          */
-        public AtomicInteger totalConferencesCreated = new AtomicInteger(0);
+        public CounterMetric totalConferencesCreated = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "created_conferences",
+                "The total number of conferences created on the Videobridge.");
 
         /**
          * The total duration in seconds of all completed conferences on this
@@ -1165,7 +1173,18 @@ public class Videobridge
         /**
          * Number of local endpoints that exist currently.
          */
-        public AtomicLong currentLocalEndpoints = new AtomicLong();
+        public LongGaugeMetric currentLocalEndpoints = VideobridgeMetricsContainer.getInstance().registerLongGauge(
+                "local_endpoints",
+                "Number of local endpoints that exist currently."
+        );
+
+        /**
+         * Current number of conferences.
+         */
+        public LongGaugeMetric currentConferences = VideobridgeMetricsContainer.getInstance().registerLongGauge(
+                "conferences",
+                "Current number of conferences."
+        );
     }
 
     public interface EventHandler
