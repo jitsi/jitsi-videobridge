@@ -27,6 +27,6 @@ class VideobridgeMetricsContainer private constructor() : MetricsContainer() {
          * The singleton instance of `MetricsContainer`.
          */
         @JvmStatic
-        val instance = VideobridgeMetricsContainer()
+        val instance = MetricsContainer()
     }
 }
