@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2020 - present 8x8, Inc.
+ * Copyright @ 2022 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.rest
+package org.jitsi.videobridge.metrics
 
-enum class RestApis {
-    COLIBRI,
-    DEBUG,
-    HEALTH,
-    SHUTDOWN,
-    DRAIN,
-    VERSION,
-    PROMETHEUS
+import org.jitsi.metrics.MetricsContainer
+
+/**
+ * `MetricsContainer` gathers and exports metrics from a [Videobridge][org.jitsi.videobridge.Videobridge] instance.
+ */
+class VideobridgeMetricsContainer private constructor() : MetricsContainer() {
+
+    companion object {
+        /**
+         * The singleton instance of `MetricsContainer`.
+         */
+        @JvmStatic
+        val instance = MetricsContainer()
+    }
 }

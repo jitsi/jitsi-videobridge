@@ -47,6 +47,9 @@ class RestConfigTest : ConfigTest() {
             context("Version") {
                 config.isEnabled(RestApis.VERSION) shouldBe true
             }
+            context("Prometheus") {
+                config.isEnabled(RestApis.PROMETHEUS) shouldBe true
+            }
         }
         context("Enable/disable with new config") {
             context("Colibri") {
@@ -87,6 +90,11 @@ class RestConfigTest : ConfigTest() {
             context("Version") {
                 withNewConfig("videobridge.rest.version.enabled=false") {
                     config.isEnabled(RestApis.VERSION) shouldBe false
+                }
+            }
+            context("Prometheus") {
+                withNewConfig("videobridge.rest.prometheus.enabled=false") {
+                    config.isEnabled(RestApis.PROMETHEUS) shouldBe false
                 }
             }
         }
