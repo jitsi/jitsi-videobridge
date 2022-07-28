@@ -21,5 +21,6 @@ enum class RestApis {
     HEALTH,
     SHUTDOWN,
     DRAIN,
-    VERSION
+    VERSION,
+    PROMETHEUS
 }

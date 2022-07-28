@@ -84,12 +84,16 @@ class RestConfig private constructor() {
         "videobridge.rest.version.enabled".from(JitsiConfig.newConfig)
     }
 
+    private val prometheusEnabled: Boolean by config {
+        "videobridge.rest.prometheus.enabled".from(JitsiConfig.newConfig)
+    }
+
     /**
      * Whether any of the REST APIs are enabled by the configuration. If there aren't, the HTTP server doesn't need to
      * be started at all.
      */
     fun isEnabled() = colibriEnabled || debugEnabled || healthEnabled ||
-        shutdownEnabled || drainEnabled || versionEnabled
+        shutdownEnabled || drainEnabled || versionEnabled || prometheusEnabled
 
     fun isEnabled(api: RestApis) = when (api) {
         RestApis.COLIBRI -> colibriEnabled
@@ -98,6 +102,7 @@ class RestConfig private constructor() {
         RestApis.SHUTDOWN -> shutdownEnabled
         RestApis.DRAIN -> drainEnabled
         RestApis.VERSION -> versionEnabled
+        RestApis.PROMETHEUS -> prometheusEnabled
     }
 
     companion object {
