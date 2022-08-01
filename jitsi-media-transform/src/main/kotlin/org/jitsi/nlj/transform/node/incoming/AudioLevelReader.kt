@@ -87,6 +87,7 @@ class AudioLevelReader(
         addNumber("num_ranking_discarded", stats.numDiscardedRanking)
         addNumber("num_non_silence", stats.numNonSilence)
         addNumber("num_non_silence_with_vad", stats.numNonSilenceWithVad)
+        addBoolean("force_mute", forceMute)
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

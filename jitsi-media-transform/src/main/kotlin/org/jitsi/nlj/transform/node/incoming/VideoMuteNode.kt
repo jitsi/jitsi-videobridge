@@ -20,6 +20,7 @@ class VideoMuteNode : ObserverNode("Video mute node") {
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
         addNumber("num_video_packets_discarded", numMutedPackets)
+        addBoolean("force_mute", forceMute)
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
