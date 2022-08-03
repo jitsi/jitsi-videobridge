@@ -949,14 +949,20 @@ public class Videobridge
          * channels failed because there was no transport activity (which
          * includes those that failed because there was no payload activity).
          */
-        public AtomicInteger totalFailedConferences = new AtomicInteger(0);
+        public CounterMetric totalFailedConferences = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "failed_conferences",
+                "The total number of conferences that had ALL of their channels failed because " +
+                        "there was no transport/payload activity.");
 
         /**
          * The cumulative/total number of conferences that had some of their
          * channels failed because there was no transport activity (which
          * includes those that failed because there was no payload activity).
          */
-        public AtomicInteger totalPartiallyFailedConferences = new AtomicInteger(0);
+        public CounterMetric totalPartiallyFailedConferences = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("partially_failed_conferences",
+                        "The total number of conferences that had SOME of their channels failed because " +
+                                "there was no transport/payload activity.");
 
         /**
          * The cumulative/total number of conferences completed/expired on this
