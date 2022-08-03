@@ -26,8 +26,8 @@ NAME=jvb
 USER=jvb
 # A tmpfs backed directory just for the JVB process. This is introduced
 # to hold packet arrival times, but it may be otherwise useful in the future.
-TMPPATH=/var/run/jitsi-videobridge
-PIDFILE=/var/run/jitsi-videobridge.pid
+TMPPATH=/run/jitsi-videobridge
+PIDFILE=/run/jitsi-videobridge.pid
 LOGFILE=/var/log/jitsi/jvb.log
 DESC=jitsi-videobridge
 

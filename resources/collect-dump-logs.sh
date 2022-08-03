@@ -5,7 +5,7 @@
 
 JVB_HEAPDUMP_PATH="/tmp/java_*.hprof"
 STAMP=`date +%Y-%m-%d-%H%M`
-PID_PATH="/var/run/jitsi-videobridge.pid"
+PID_PATH="/run/jitsi-videobridge.pid"
 JVB_UID=`id -u jvb`
 
 RUNNING=""
@@ -13,7 +13,7 @@ unset PID
 
 # for systemd we use different pid file
 if [ ! -f $PID_PATH ]; then
-    PID_PATH="/var/run/jitsi-videobridge/jitsi-videobridge.pid"
+    PID_PATH="/run/jitsi-videobridge/jitsi-videobridge.pid"
 fi
 
 [ -e $PID_PATH ] && PID=$(cat $PID_PATH)
