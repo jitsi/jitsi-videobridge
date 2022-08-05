@@ -489,10 +489,10 @@ public class VideobridgeStatistics
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
             unlockedSetStat(
                     TOTAL_FAILED_CONFERENCES,
-                    jvbStats.totalFailedConferences.get());
+                    jvbStats.failedConferences.get());
             unlockedSetStat(
                     TOTAL_PARTIALLY_FAILED_CONFERENCES,
-                    jvbStats.totalPartiallyFailedConferences.get());
+                    jvbStats.partiallyFailedConferences.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_CREATED,
                     jvbStats.totalConferencesCreated.get());

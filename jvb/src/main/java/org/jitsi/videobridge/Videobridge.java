@@ -945,18 +945,18 @@ public class Videobridge
         public AtomicInteger incomingBitrateExpirations = new AtomicInteger(0);
 
         /**
-         * The cumulative/total number of conferences that had all of their
-         * channels failed because there was no transport activity (which
-         * includes those that failed because there was no payload activity).
+         * The cumulative/total number of conferences in which ALL of the endpoints failed ICE.
          */
-        public AtomicInteger totalFailedConferences = new AtomicInteger(0);
+        public CounterMetric failedConferences = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "failed_conferences",
+                "Number of conferences in which ALL of the endpoints failed ICE.");
 
         /**
-         * The cumulative/total number of conferences that had some of their
-         * channels failed because there was no transport activity (which
-         * includes those that failed because there was no payload activity).
+         * The cumulative/total number of conferences in which SOME of the endpoints failed ICE.
          */
-        public AtomicInteger totalPartiallyFailedConferences = new AtomicInteger(0);
+        public CounterMetric partiallyFailedConferences = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "partially_failed_conferences",
+                "Number of conferences in which SOME of the endpoints failed ICE.");
 
         /**
          * The cumulative/total number of conferences completed/expired on this

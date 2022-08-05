@@ -660,12 +660,12 @@ public class Conference
 
         if (hasPartiallyFailed)
         {
-            videobridgeStatistics.totalPartiallyFailedConferences.incrementAndGet();
+            videobridgeStatistics.partiallyFailedConferences.incAndGet();
         }
 
         if (hasFailed)
         {
-            videobridgeStatistics.totalFailedConferences.incrementAndGet();
+            videobridgeStatistics.failedConferences.incAndGet();
         }
 
         if (logger.isInfoEnabled())
