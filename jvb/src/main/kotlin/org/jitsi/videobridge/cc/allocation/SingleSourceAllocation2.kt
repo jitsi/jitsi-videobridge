@@ -247,8 +247,9 @@ internal class SingleSourceAllocation2(
             selectedLayers = activeLayers.filter { it.layer.height == minHeight }
 
             // This recognizes the structure used with VP9 (multiple encodings with the same resolution and unknown frame
-            // rate). In this case, we only want the low quality layer.
-            if (selectedLayers.isNotEmpty() && selectedLayers[0].layer.frameRate < 0) {
+            // rate). In this case, we only want the low quality layer. Unless we're on stage, in which case we should
+            // consider all layers.
+            if (!onStage && selectedLayers.isNotEmpty() && selectedLayers[0].layer.frameRate < 0) {
                 selectedLayers = listOf(selectedLayers[0])
             }
         }
