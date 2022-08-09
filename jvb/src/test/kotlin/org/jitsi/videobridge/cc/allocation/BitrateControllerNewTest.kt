@@ -53,7 +53,16 @@ class BitrateControllerNewTest : ShouldSpec() {
     override suspend fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
         // We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
         // because these tests are designed to test the decisions themselves and not necessarily when they are made.
-        setNewConfig("videobridge.cc.bwe-change-threshold=0", true)
+        setNewConfig(
+            """
+            videobridge.cc {
+              bwe-change-threshold = 0
+              // Effectively disable periodic updates.
+              max-time-between-calculations = 1 hour 
+            }
+            """.trimIndent(),
+            true
+        )
     }
 
     override suspend fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
