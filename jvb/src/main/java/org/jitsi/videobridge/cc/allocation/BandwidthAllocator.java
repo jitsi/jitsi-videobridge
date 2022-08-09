@@ -142,6 +142,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
     private final DiagnosticContext diagnosticContext;
 
+    /**
+     * The task scheduled to call {@link #update()}.
+     */
+    private ScheduledFuture<?> updateTask = null;
+
     BandwidthAllocator(
             EventHandler eventHandler,
             Supplier<List<T>> endpointsSupplier,
@@ -568,6 +573,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     void expire()
     {
+        ScheduledFuture<?> updateTask = this.updateTask;
+        if (updateTask != null)
+        {
+            updateTask.cancel(false);
+        }
         expired = true;
     }
 
@@ -601,7 +611,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         // Add 5ms to avoid having to re-schedule right away. This increases the average period at which we
         // re-allocate by an insignificant amount.
-        TaskPools.SCHEDULED_POOL.schedule(
+        updateTask = TaskPools.SCHEDULED_POOL.schedule(
                 this::rescheduleUpdate,
                 delayMs + 5,
                 TimeUnit.MILLISECONDS);
