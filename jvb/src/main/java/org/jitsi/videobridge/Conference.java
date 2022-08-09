@@ -789,14 +789,12 @@ public class Conference
             public void iceSucceeded()
             {
                 getStatistics().hasIceSucceededEndpoint = true;
-                getVideobridge().getStatistics().totalIceSucceeded.incrementAndGet();
             }
 
             @Override
             public void iceFailed()
             {
                 getStatistics().hasIceFailedEndpoint = true;
-                getVideobridge().getStatistics().totalIceFailed.incrementAndGet();
             }
 
             @Override

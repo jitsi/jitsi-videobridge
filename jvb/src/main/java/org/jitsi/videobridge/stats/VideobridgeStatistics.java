@@ -25,6 +25,7 @@ import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shutdown.*;
+import org.jitsi.videobridge.transport.ice.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 
@@ -501,16 +502,16 @@ public class VideobridgeStatistics
                     jvbStats.conferencesCompleted.get());
             unlockedSetStat(
                     TOTAL_ICE_FAILED,
-                    jvbStats.totalIceFailed.get());
+                    IceTransport.Companion.getIceFailed().get());
             unlockedSetStat(
                     TOTAL_ICE_SUCCEEDED,
-                    jvbStats.totalIceSucceeded.get());
+                    IceTransport.Companion.getIceSucceeded().get());
             unlockedSetStat(
                     TOTAL_ICE_SUCCEEDED_TCP,
-                    jvbStats.totalIceSucceededTcp.get());
+                    IceTransport.Companion.getIceSucceededTcp().get());
             unlockedSetStat(
                     TOTAL_ICE_SUCCEEDED_RELAYED,
-                    jvbStats.totalIceSucceededRelayed.get());
+                    IceTransport.Companion.getIceSucceededRelayed().get());
             unlockedSetStat(
                     TOTAL_CONFERENCE_SECONDS,
                     jvbStats.totalConferenceSeconds.get());
