@@ -945,31 +945,33 @@ public class Videobridge
         public AtomicInteger incomingBitrateExpirations = new AtomicInteger(0);
 
         /**
-         * The cumulative/total number of conferences that had all of their
-         * channels failed because there was no transport activity (which
-         * includes those that failed because there was no payload activity).
+         * The cumulative/total number of conferences in which ALL of the endpoints failed ICE.
          */
-        public AtomicInteger totalFailedConferences = new AtomicInteger(0);
+        public CounterMetric failedConferences = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "failed_conferences",
+                "Number of conferences in which ALL of the endpoints failed ICE.");
 
         /**
-         * The cumulative/total number of conferences that had some of their
-         * channels failed because there was no transport activity (which
-         * includes those that failed because there was no payload activity).
+         * The cumulative/total number of conferences in which SOME of the endpoints failed ICE.
          */
-        public AtomicInteger totalPartiallyFailedConferences = new AtomicInteger(0);
+        public CounterMetric partiallyFailedConferences = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "partially_failed_conferences",
+                "Number of conferences in which SOME of the endpoints failed ICE.");
 
         /**
          * The cumulative/total number of conferences completed/expired on this
          * {@link Videobridge}.
          */
-        public AtomicInteger totalConferencesCompleted = new AtomicInteger(0);
+        public CounterMetric conferencesCompleted = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "conferences_completed",
+                "The total number of conferences completed/expired on the Videobridge.");
 
         /**
          * The cumulative/total number of conferences created on this
          * {@link Videobridge}.
          */
-        public CounterMetric totalConferencesCreated = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "created_conferences",
+        public CounterMetric conferencesCreated = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "conferences_created",
                 "The total number of conferences created on the Videobridge.");
 
         /**

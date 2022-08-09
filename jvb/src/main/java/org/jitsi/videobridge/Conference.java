@@ -294,7 +294,7 @@ public class Conference
         }, 3, 3, TimeUnit.SECONDS);
 
         Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
-        videobridgeStatistics.totalConferencesCreated.inc();
+        videobridgeStatistics.conferencesCreated.inc();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
     }
@@ -500,17 +500,20 @@ public class Conference
      * dominant speaker.
      * @param recentSpeakers the list of recent speakers (including the dominant speaker at index 0).
      */
-    private void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged)
+    private void recentSpeakersChanged(
+            List<AbstractEndpoint> recentSpeakers,
+            boolean dominantSpeakerChanged,
+            boolean silence)
     {
         if (!recentSpeakers.isEmpty())
         {
             List<String> recentSpeakersIds
                     = recentSpeakers.stream().map(AbstractEndpoint::getId).collect(Collectors.toList());
             logger.info("Recent speakers changed: " + recentSpeakersIds + ", dominant speaker changed: "
-                    + dominantSpeakerChanged);
-            broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds));
+                    + dominantSpeakerChanged + " silence:" + silence);
+            broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds, silence));
 
-            if (dominantSpeakerChanged)
+            if (dominantSpeakerChanged && !silence)
             {
                 getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
                 if (getEndpointCount() > 2)
@@ -640,7 +643,7 @@ public class Conference
 
         Videobridge.Statistics videobridgeStatistics = getVideobridge().getStatistics();
 
-        videobridgeStatistics.totalConferencesCompleted.incrementAndGet();
+        videobridgeStatistics.conferencesCompleted.incAndGet();
         videobridgeStatistics.totalConferenceSeconds.addAndGet(durationSeconds);
 
         videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
@@ -660,12 +663,12 @@ public class Conference
 
         if (hasPartiallyFailed)
         {
-            videobridgeStatistics.totalPartiallyFailedConferences.incrementAndGet();
+            videobridgeStatistics.partiallyFailedConferences.incAndGet();
         }
 
         if (hasFailed)
         {
-            videobridgeStatistics.totalFailedConferences.incrementAndGet();
+            videobridgeStatistics.failedConferences.incAndGet();
         }
 
         if (logger.isInfoEnabled())
@@ -1078,7 +1081,7 @@ public class Conference
 
             if (!recentSpeakers.isEmpty())
             {
-                endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
+                endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers, speechActivity.isInSilence()));
             }
 
             abstractEndpoint.onMessageTransportConnect();
@@ -1525,9 +1528,12 @@ public class Conference
     private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
         @Override
-        public void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged)
+        public void recentSpeakersChanged(
+                List<AbstractEndpoint> recentSpeakers,
+                boolean dominantSpeakerChanged,
+                boolean silence)
         {
-            Conference.this.recentSpeakersChanged(recentSpeakers, dominantSpeakerChanged);
+            Conference.this.recentSpeakersChanged(recentSpeakers, dominantSpeakerChanged, silence);
         }
 
         @Override

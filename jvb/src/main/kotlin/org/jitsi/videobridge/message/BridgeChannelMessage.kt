@@ -265,13 +265,16 @@ class LastNMessage(val lastN: Int) : BridgeChannelMessage(TYPE) {
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class DominantSpeakerMessage @JvmOverloads constructor(
     val dominantSpeakerEndpoint: String,
-    val previousSpeakers: List<String>? = null
+    val previousSpeakers: List<String>? = null,
+    val silence: Boolean = false
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Construct a message from a list of speakers with the dominant speaker on top. The list must have at least one
      * element.
      */
-    constructor(previousSpeakers: List<String>) : this(previousSpeakers[0], previousSpeakers.drop(1))
+    constructor(previousSpeakers: List<String>, silence: Boolean) : this(
+        previousSpeakers[0], previousSpeakers.drop(1), silence
+    )
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
     }
