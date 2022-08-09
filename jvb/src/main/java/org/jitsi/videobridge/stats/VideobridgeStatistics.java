@@ -495,10 +495,10 @@ public class VideobridgeStatistics
                     jvbStats.partiallyFailedConferences.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_CREATED,
-                    jvbStats.totalConferencesCreated.get());
+                    jvbStats.conferencesCreated.get());
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
-                    jvbStats.totalConferencesCompleted.get());
+                    jvbStats.conferencesCompleted.get());
             unlockedSetStat(
                     TOTAL_ICE_FAILED,
                     jvbStats.totalIceFailed.get());
