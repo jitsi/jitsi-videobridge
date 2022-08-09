@@ -17,14 +17,23 @@ package org.jitsi.videobridge
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import java.time.Duration
 
 class ConferenceSpeechActivityConfig {
     val recentSpeakersCount: Int by config {
         "videobridge.speech-activity.recent-speakers-count".from(JitsiConfig.newConfig)
     }
 
+    val enableSilenceDetection: Boolean by config {
+        "videobridge.speech-activity.enable-silence-detection".from(JitsiConfig.newConfig)
+    }
+
+    val silenceDetectionTimeout: Duration by config {
+        "videobridge.speech-activity.silence-detection-timeout".from(JitsiConfig.newConfig)
+    }
+
     companion object {
-        @JvmStatic
+        @JvmField
         val config = ConferenceSpeechActivityConfig()
     }
 }

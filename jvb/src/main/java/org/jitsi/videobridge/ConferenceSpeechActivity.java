@@ -54,8 +54,7 @@ public class ConferenceSpeechActivity
      * The <tt>DominantSpeakerIdentification</tt> instance which detects/identifies the active/dominant speaker in a
      * conference.
      */
-    private DominantSpeakerIdentification<String> dominantSpeakerIdentification
-            = new DominantSpeakerIdentification<>();
+    private DominantSpeakerIdentification<String> dominantSpeakerIdentification;
 
     /**
      * The listener to be notified when the dominant speaker or endpoint order changes.
@@ -88,7 +87,13 @@ public class ConferenceSpeechActivity
      */
     @NotNull
     private final RecentSpeakersList<AbstractEndpoint> recentSpeakers
-            = new RecentSpeakersList<>(ConferenceSpeechActivityConfig.getConfig().getRecentSpeakersCount() + 1);
+            = new RecentSpeakersList<>(ConferenceSpeechActivityConfig.config.getRecentSpeakersCount() + 1);
+
+    /**
+     * Whether we're currently in a period of silence. With silence detection enabled we initialize to `true` because
+     * (the {@link #dominantSpeakerIdentification} will fire an initial "silence" event and we don't want to act on it.
+     */
+    private boolean inSilence = ConferenceSpeechActivityConfig.config.getEnableSilenceDetection();
 
     /**
      * The <tt>Object</tt> used to synchronize the access to the state of this
@@ -114,6 +119,14 @@ public class ConferenceSpeechActivity
                         new LoggerImpl(ConferenceSpeechActivity.class.getName()) :
                         parentLogger.createChildLogger(ConferenceSpeechActivity.class.getName());
 
+        long silenceTimeoutMs = -1;
+        if (ConferenceSpeechActivityConfig.config.getEnableSilenceDetection())
+        {
+            silenceTimeoutMs = ConferenceSpeechActivityConfig.config.getSilenceDetectionTimeout().toMillis();
+
+        }
+        dominantSpeakerIdentification = new DominantSpeakerIdentification<>(silenceTimeoutMs);
+
         dominantSpeakerIdentification.addActiveSpeakerChangedListener(activeSpeakerChangedListener);
         int numLoudestToTrack = LoudestConfig.Companion.getRouteLoudestOnly() ?
                 LoudestConfig.Companion.getNumLoudest() : 0;
@@ -122,13 +135,18 @@ public class ConferenceSpeechActivity
                 LoudestConfig.Companion.getEnergyAlphaPct());
     }
 
+    boolean isInSilence()
+    {
+        return inSilence;
+    }
+
     /**
      * Notifies this instance that the underlying {@code dominant speaker identification} has elected a new
      * active/dominant speaker.
      *
-     * @param id the ID of the new active/dominant speaker.
+     * @param id the ID of the new active/dominant speaker or null if a period of silence began.
      */
-    protected void activeSpeakerChanged(@NotNull String id)
+    protected void activeSpeakerChanged(@Nullable String id)
     {
         final Listener listener = this.listener;
         if (listener == null)
@@ -136,31 +154,49 @@ public class ConferenceSpeechActivity
             return;
         }
 
-        Objects.requireNonNull(id);
         logger.trace(() -> "The dominant speaker is now " + id + ".");
 
         boolean endpointListChanged;
+        boolean dominantSpeakerChanged;
         synchronized (syncRoot)
         {
-            AbstractEndpoint endpoint
-                    = endpointsBySpeechActivity.stream()
+            if (id == null)
+            {
+                endpointListChanged = false;
+                dominantSpeakerChanged = false;
+                if (!inSilence)
+                {
+                    inSilence = true;
+                }
+            }
+            else
+            {
+                dominantSpeakerChanged = true;
+                if (inSilence)
+                {
+                    inSilence = false;
+                }
+
+                AbstractEndpoint endpoint
+                        = endpointsBySpeechActivity.stream()
                         .filter(e -> id.equals(e.getId()))
                         .findFirst().orElse(null);
-            // Move this endpoint to the top of our sorted list
-            if (!endpointsBySpeechActivity.remove(endpoint))
-            {
-                logger.warn("Got active speaker notification for an unknown endpoint: " + id + ", ignoring");
-                return;
+                // Move this endpoint to the top of our sorted list
+                if (!endpointsBySpeechActivity.remove(endpoint))
+                {
+                    logger.warn("Got active speaker notification for an unknown endpoint: " + id + ", ignoring");
+                    return;
+                }
+                endpointsBySpeechActivity.add(0, endpoint);
+
+                recentSpeakers.promote(endpoint);
+
+                endpointListChanged = updateLastNEndpoints();
             }
-            endpointsBySpeechActivity.add(0, endpoint);
-
-            recentSpeakers.promote(endpoint);
-
-            endpointListChanged = updateLastNEndpoints();
         }
 
         TaskPools.IO_POOL.execute(() -> {
-            listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), true);
+            listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), dominantSpeakerChanged, inSilence);
             if (endpointListChanged)
             {
                 listener.lastNEndpointsChanged();
@@ -321,7 +357,8 @@ public class ConferenceSpeechActivity
             TaskPools.IO_POOL.execute(() -> {
                 if (finalRecentSpeakersChanged)
                 {
-                    listener.recentSpeakersChanged(recentSpeakers.getRecentSpeakers(), dominantSpeakerChanged);
+                    listener.recentSpeakersChanged(
+                            recentSpeakers.getRecentSpeakers(), dominantSpeakerChanged, inSilence);
                 }
                 if (finalEndpointsChanged)
                 {
@@ -386,8 +423,12 @@ public class ConferenceSpeechActivity
          * endpoint was removed).
          * @param recentSpeakers the new list of recent speakers (including the dominant speaker at index 0).
          * @param dominantSpeakerChanged whether the dominant speaker changed.
+         * @param silence whether we're in a period of silence
          */
-        void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged);
+        void recentSpeakersChanged(
+                List<AbstractEndpoint> recentSpeakers,
+                boolean dominantSpeakerChanged,
+                boolean silence);
         void lastNEndpointsChanged();
     }
 }
