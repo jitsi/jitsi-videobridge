@@ -1608,7 +1608,7 @@ class Endpoint @JvmOverloads constructor(
                 if (sendSources.size == size) {
                     val eldest = sendSources.eldest()
                     sendSource = SendSource(props, eldest.value.send1, eldest.value.send2)
-                    logger.debug { "remapping $mediaType SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
+                    logger.debug { "Remapping $mediaType SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                     /* Request new deltas on next sent packet */
                     receivedSsrcs.get(props.ssrc1)?.hasDeltas = false
                     if (props.ssrc2 != -1L) {
@@ -1618,7 +1618,7 @@ class Endpoint @JvmOverloads constructor(
                     val ssrc1 = this@Endpoint.getNextSendSsrc()
                     val ssrc2 = this@Endpoint.getNextSendSsrc()
                     sendSource = SendSource(props, ssrc1, ssrc2)
-                    logger.debug { "added $mediaType send SSRC: ${props.ssrc1}->$sendSource" }
+                    logger.debug { "Added $mediaType send SSRC: ${props.ssrc1}->$sendSource" }
                 }
                 sendSources.put(ssrc, sendSource)
                 if (mediaType == MediaType.AUDIO) {
@@ -1704,7 +1704,7 @@ class Endpoint @JvmOverloads constructor(
 
             var send: Boolean = false
 
-            logger.debug { "$mediaType packet: ${debugInfo(packet)}" }
+            logger.debug { "Received $mediaType packet: ${debugInfo(packet)}" }
 
             synchronized(sendSources) {
                 var rs = receivedSsrcs.get(packet.ssrc)
@@ -1715,7 +1715,7 @@ class Endpoint @JvmOverloads constructor(
                     }
                     rs = ReceiveSsrc(props)
                     receivedSsrcs.put(packet.ssrc, rs)
-                    logger.debug { "added $mediaType receive SSRC: ${packet.ssrc}" }
+                    logger.debug { "Added $mediaType receive SSRC: ${packet.ssrc}" }
                 }
 
                 val ss = getSendSource(rs.props.ssrc1, rs.props, mediaType == MediaType.AUDIO, null)
@@ -1724,13 +1724,13 @@ class Endpoint @JvmOverloads constructor(
                     logger.debug { this.toString() }
                     logger.debug {
                         if (send) {
-                            "output packet: ${debugInfo(packet)} source=${rs.props.name} start=$start send=$send"
+                            "Sending packet: ${debugInfo(packet)} source=${rs.props.name} start=$start send=$send"
                         } else {
-                            "dropping packet from ${rs.props.name}/${packet.ssrc}. waiting for key frame."
+                            "Dropping packet from ${rs.props.name}/${packet.ssrc}. waiting for key frame."
                         }
                     }
                 } else {
-                    logger.debug { "dropping packet from ${rs.props.name}/${packet.ssrc}. source not active." }
+                    logger.debug { "Dropping packet from ${rs.props.name}/${packet.ssrc}. source not active." }
                 }
             }
 
