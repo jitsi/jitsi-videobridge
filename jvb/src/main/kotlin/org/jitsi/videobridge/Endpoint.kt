@@ -100,10 +100,10 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
-import kotlin.random.Random
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -332,6 +332,16 @@ class Endpoint @JvmOverloads constructor(
      * Last advertised forwarded-sources in remapping mode.
      */
     private var activeSources: Set<String> = emptySet()
+
+    /**
+     * Track allocated send SSRCs to avoid collisions.
+     */
+    private val sendSsrcs = mutableSetOf<Long>()
+
+    /**
+     * Next allocated send SSRC, when allocating serially (off by default).
+     */
+    private var nextSendSsrc = 777000001L
 
     init {
         conference.encodingsManager.subscribe(this)
@@ -934,6 +944,22 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Get a unique send SSRC.
+     */
+    private fun getNextSendSsrc(): Long {
+        synchronized(sendSsrcs) {
+            while (true) {
+                val ssrc = if (useRandomSendSsrcs)
+                    ThreadLocalRandom.current().nextLong(0x100000000L)
+                else
+                    nextSendSsrc++
+                if (sendSsrcs.add(ssrc))
+                    return ssrc
+            }
+        }
+    }
+
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> {
@@ -1238,6 +1264,11 @@ class Endpoint @JvmOverloads constructor(
         }
 
         /**
+         * This can be switched off to ease debugging.
+         */
+        private val useRandomSendSsrcs = true
+
+        /**
          * Print packet fields relevant to rewriting mode.
          */
         private fun debugInfo(packet: RtpPacket): String {
@@ -1433,31 +1464,11 @@ class Endpoint @JvmOverloads constructor(
     /**
      * RTP state for sent SSRCs.
      */
-    private class SendSsrc(ssrc_: Long?) {
-        val ssrc = ssrc_ ?: getNextSsrc()
+    private class SendSsrc(val ssrc: Long) {
         private val state = RtpState()
         private var sequenceNumberDelta = 0
         private var timestampDelta = 0L
         private var tl0IndexDelta = 0
-
-        companion object {
-            private val useRandom = true; /* switch off to ease debugging */
-            private var nextSsrc = 777000001L /* use serial number for debugging */
-            private val random = Random(System.currentTimeMillis())
-
-            /**
-             * Get a unique send SSRC.
-             */
-            fun getNextSsrc(): Long {
-                if (useRandom) {
-                    return random.nextLong(until = 0x100000000L)
-                } else {
-                    synchronized(this) {
-                        return nextSsrc++
-                    }
-                }
-            }
-        }
 
         /**
          * Update RTP state and apply deltas.
@@ -1518,6 +1529,7 @@ class Endpoint @JvmOverloads constructor(
 
     /**
      * Associates primary and secondary send SSRCs.
+     * Primary constructor preserves state of the existing send SSRCs.
      */
     private class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc) {
 
@@ -1526,7 +1538,10 @@ class Endpoint @JvmOverloads constructor(
          */
         private var started = false
 
-        constructor(props: SourceDesc) : this(props, SendSsrc(null), SendSsrc(null))
+        /**
+         * Create object with new send SSRCs.
+         */
+        constructor(props: SourceDesc, ssrc1: Long, ssrc2: Long) : this(props, SendSsrc(ssrc1), SendSsrc(ssrc2))
 
         /**
          * Demux to proper SSRC.
@@ -1600,7 +1615,9 @@ class Endpoint @JvmOverloads constructor(
                         receivedSsrcs.get(props.ssrc2)?.hasDeltas = false
                     }
                 } else {
-                    sendSource = SendSource(props)
+                    val ssrc1 = this@Endpoint.getNextSendSsrc()
+                    val ssrc2 = this@Endpoint.getNextSendSsrc()
+                    sendSource = SendSource(props, ssrc1, ssrc2)
                     logger.debug { "added $mediaType send SSRC: ${props.ssrc1}->$sendSource" }
                 }
                 sendSources.put(ssrc, sendSource)
