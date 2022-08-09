@@ -131,7 +131,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     /**
      * The last time {@link BandwidthAllocator#update()} was called.
      */
-    private Instant lastUpdateTime = Instant.MIN;
+    @NotNull
+    private Instant lastUpdateTime;
 
     /**
      * The result of the bitrate control algorithm, the last time it ran.
@@ -156,6 +157,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         this.endpointsSupplier = endpointsSupplier;
         eventEmitter.addHandler(eventHandler);
+        // Don't trigger an update immediately, the settings might not have been configured.
+        lastUpdateTime = clock.instant();
         rescheduleUpdate();
     }
 
