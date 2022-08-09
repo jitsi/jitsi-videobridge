@@ -1004,24 +1004,36 @@ public class Videobridge
          * The total number of times an ICE Agent failed to establish
          * connectivity.
          */
-        public AtomicInteger totalIceFailed = new AtomicInteger();
+        public CounterMetric iceFailed = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "ice_failed",
+                "Number of times an ICE Agent failed to establish connectivity."
+        );
 
         /**
          * The total number of times an ICE Agent succeeded.
          */
-        public AtomicInteger totalIceSucceeded = new AtomicInteger();
+        public CounterMetric iceSucceeded = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "ice_succeeded",
+                "Number of times an ICE Agent succeeded."
+        );
 
         /**
          * The total number of times an ICE Agent succeeded and the selected
          * candidate was a TCP candidate.
          */
-        public AtomicInteger totalIceSucceededTcp = new AtomicInteger();
+        public CounterMetric iceSucceededTcp = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "ice_succeeded_tcp",
+                "Number of times an ICE Agent succeeded and the selected candidate was a TCP candidate."
+        );
 
         /**
          * The total number of times an ICE Agent succeeded and the selected
          * candidate pair included a relayed candidate.
          */
-        public AtomicInteger totalIceSucceededRelayed = new AtomicInteger();
+        public CounterMetric iceSucceededRelayed = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "ice_succeeded_relayed",
+                "Number of times an ICE Agent succeeded and the selected pair included a relayed candidate."
+        );
 
         /**
          * The total number of messages received from the data channels of

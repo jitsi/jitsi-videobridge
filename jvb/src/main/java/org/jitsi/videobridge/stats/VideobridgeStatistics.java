@@ -501,16 +501,16 @@ public class VideobridgeStatistics
                     jvbStats.conferencesCompleted.get());
             unlockedSetStat(
                     TOTAL_ICE_FAILED,
-                    jvbStats.totalIceFailed.get());
+                    jvbStats.iceFailed.get());
             unlockedSetStat(
                     TOTAL_ICE_SUCCEEDED,
-                    jvbStats.totalIceSucceeded.get());
+                    jvbStats.iceSucceeded.get());
             unlockedSetStat(
                     TOTAL_ICE_SUCCEEDED_TCP,
-                    jvbStats.totalIceSucceededTcp.get());
+                    jvbStats.iceSucceededTcp.get());
             unlockedSetStat(
                     TOTAL_ICE_SUCCEEDED_RELAYED,
-                    jvbStats.totalIceSucceededRelayed.get());
+                    jvbStats.iceSucceededRelayed.get());
             unlockedSetStat(
                     TOTAL_CONFERENCE_SECONDS,
                     jvbStats.totalConferenceSeconds.get());
