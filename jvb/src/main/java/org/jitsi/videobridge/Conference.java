@@ -294,7 +294,7 @@ public class Conference
         }, 3, 3, TimeUnit.SECONDS);
 
         Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
-        videobridgeStatistics.totalConferencesCreated.inc();
+        videobridgeStatistics.conferencesCreated.inc();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
     }
@@ -640,7 +640,7 @@ public class Conference
 
         Videobridge.Statistics videobridgeStatistics = getVideobridge().getStatistics();
 
-        videobridgeStatistics.totalConferencesCompleted.incrementAndGet();
+        videobridgeStatistics.conferencesCompleted.incAndGet();
         videobridgeStatistics.totalConferenceSeconds.addAndGet(durationSeconds);
 
         videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());

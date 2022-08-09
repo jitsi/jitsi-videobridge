@@ -962,14 +962,16 @@ public class Videobridge
          * The cumulative/total number of conferences completed/expired on this
          * {@link Videobridge}.
          */
-        public AtomicInteger totalConferencesCompleted = new AtomicInteger(0);
+        public CounterMetric conferencesCompleted = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "conferences_completed",
+                "The total number of conferences completed/expired on the Videobridge.");
 
         /**
          * The cumulative/total number of conferences created on this
          * {@link Videobridge}.
          */
-        public CounterMetric totalConferencesCreated = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "created_conferences",
+        public CounterMetric conferencesCreated = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "conferences_created",
                 "The total number of conferences created on the Videobridge.");
 
         /**
