@@ -20,7 +20,11 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
+import io.kotest.matchers.longs.shouldBeWithinPercentageOf
 import io.kotest.matchers.shouldBe
+import io.mockk.CapturingSlot
+import io.mockk.every
+import io.mockk.mockk
 import org.jitsi.config.setNewConfig
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -36,7 +40,11 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.util.TaskPools
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 
 class BitrateControllerNewTest : ShouldSpec() {
@@ -66,10 +74,35 @@ class BitrateControllerNewTest : ShouldSpec() {
     }
 
     override suspend fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
+        bc.bc.expire()
         setNewConfig("", true)
     }
 
     init {
+        context("Expire") {
+            val captureDelay = CapturingSlot<Long>()
+            val captureDelayTimeunit = CapturingSlot<TimeUnit>()
+            val captureCancel = CapturingSlot<Boolean>()
+            val executor: ScheduledExecutorService = mockk {
+                every { schedule(any(), capture(captureDelay), capture(captureDelayTimeunit)) } returns mockk {
+                    every { cancel(capture(captureCancel)) } returns true
+                }
+            }
+            TaskPools.SCHEDULED_POOL = executor
+            val bc = BitrateControllerWrapper2(createEndpoints2(), clock = clock)
+            val delayMs = TimeUnit.MILLISECONDS.convert(captureDelay.captured, captureDelayTimeunit.captured)
+
+            delayMs.shouldBeWithinPercentageOf(
+                BitrateControllerConfig.config.maxTimeBetweenCalculations().toMillis(),
+                10.0
+            )
+
+            captureCancel.isCaptured shouldBe false
+            bc.bc.expire()
+            captureCancel.isCaptured shouldBe true
+
+            TaskPools.resetScheduledPool()
+        }
         context("Prioritization") {
             context("Without selection") {
                 val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
