@@ -500,17 +500,20 @@ public class Conference
      * dominant speaker.
      * @param recentSpeakers the list of recent speakers (including the dominant speaker at index 0).
      */
-    private void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged)
+    private void recentSpeakersChanged(
+            List<AbstractEndpoint> recentSpeakers,
+            boolean dominantSpeakerChanged,
+            boolean silence)
     {
         if (!recentSpeakers.isEmpty())
         {
             List<String> recentSpeakersIds
                     = recentSpeakers.stream().map(AbstractEndpoint::getId).collect(Collectors.toList());
             logger.info("Recent speakers changed: " + recentSpeakersIds + ", dominant speaker changed: "
-                    + dominantSpeakerChanged);
-            broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds));
+                    + dominantSpeakerChanged + " silence:" + silence);
+            broadcastMessage(new DominantSpeakerMessage(recentSpeakersIds, silence));
 
-            if (dominantSpeakerChanged)
+            if (dominantSpeakerChanged && !silence)
             {
                 getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
                 if (getEndpointCount() > 2)
@@ -1077,7 +1080,7 @@ public class Conference
 
             if (!recentSpeakers.isEmpty())
             {
-                endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers));
+                endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers, speechActivity.isInSilence()));
             }
         }
     }
@@ -1522,9 +1525,12 @@ public class Conference
     private class SpeechActivityListener implements ConferenceSpeechActivity.Listener
     {
         @Override
-        public void recentSpeakersChanged(List<AbstractEndpoint> recentSpeakers, boolean dominantSpeakerChanged)
+        public void recentSpeakersChanged(
+                List<AbstractEndpoint> recentSpeakers,
+                boolean dominantSpeakerChanged,
+                boolean silence)
         {
-            Conference.this.recentSpeakersChanged(recentSpeakers, dominantSpeakerChanged);
+            Conference.this.recentSpeakersChanged(recentSpeakers, dominantSpeakerChanged, silence);
         }
 
         @Override
