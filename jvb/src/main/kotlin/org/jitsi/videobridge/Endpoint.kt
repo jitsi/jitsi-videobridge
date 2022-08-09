@@ -898,7 +898,7 @@ class Endpoint @JvmOverloads constructor(
                 }
             }
         }
-        logger.error { "\tNo properties found for SSRC $ssrc." }
+        logger.error { "No properties found for SSRC $ssrc." }
         return null
     }
 
@@ -911,7 +911,7 @@ class Endpoint @JvmOverloads constructor(
                 return null
             return ep.audioSources.find { s -> s.ssrc == ssrc }
         }
-        logger.error { "\tNo properties found for SSRC $ssrc." }
+        logger.error { "No properties found for SSRC $ssrc." }
         return null
     }
 
