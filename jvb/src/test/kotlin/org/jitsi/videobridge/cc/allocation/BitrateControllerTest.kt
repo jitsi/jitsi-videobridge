@@ -78,6 +78,7 @@ class BitrateControllerTest : ShouldSpec() {
     }
 
     override suspend fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
+        bc.bc.expire()
         setNewConfig("", true)
     }
 
