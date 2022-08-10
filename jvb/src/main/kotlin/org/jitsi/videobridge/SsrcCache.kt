@@ -34,6 +34,10 @@ import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
+/**
+ * Get tl0PicIdx field for codecs that have it.
+ * Return -1 if not applicable.
+ */
 private fun RtpPacket.getTl0Index(): Int {
     return when (this) {
         is Vp9Packet -> this.TL0PICIDX
@@ -42,12 +46,35 @@ private fun RtpPacket.getTl0Index(): Int {
     }
 }
 
+/**
+ * Set tl0PicIdx field for codecs that have it.
+ * No-op if not applicable.
+ */
 private fun RtpPacket.setTl0Index(tl0Index: Int) {
     when (this) {
         is Vp9Packet -> this.TL0PICIDX = tl0Index
         is Vp8Packet -> this.TL0PICIDX = tl0Index
     }
 }
+
+/**
+ * Truncate to 8 unsigned bits.
+ */
+private fun Int.fixByte(): Int {
+    val s = this.rem(256)
+    /* Adjust if dividend was negative. */
+    return if (s < 0) (s + 256) else s
+}
+
+/**
+ * Addition clipped to 8 unsigned bits.
+ */
+private infix fun Int.bytePlus(x: Int) = this.plus(x).fixByte()
+
+/**
+ * Subtraction clipped to 8 unsigned bits.
+ */
+private infix fun Int.byteMinus(x: Int) = this.minus(x).fixByte()
 
 /**
  * Align common fields from different source types.
@@ -145,7 +172,7 @@ class SendSsrc(val ssrc: Long) {
                         timestampDelta =
                             RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
                         if (state.lastTl0Index != -1 && recv.state.lastTl0Index != 1)
-                            tl0IndexDelta = (256 + state.lastTl0Index - recv.state.lastTl0Index) % 256
+                            tl0IndexDelta = state.lastTl0Index byteMinus recv.state.lastTl0Index
                         else
                             tl0IndexDelta = 0
                     } else {
@@ -158,7 +185,7 @@ class SendSsrc(val ssrc: Long) {
                         timestampDelta =
                             RtpUtils.getTimestampDiff(state.lastTimestamp, prevTimestamp)
                         if (state.lastTl0Index != -1 && tl0Index != -1)
-                            tl0IndexDelta = (256 + state.lastTl0Index - (tl0Index - 1)) % 256
+                            tl0IndexDelta = state.lastTl0Index byteMinus (tl0Index - 1)
                         else
                             tl0IndexDelta = 0
                     }
@@ -172,7 +199,7 @@ class SendSsrc(val ssrc: Long) {
             packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
             packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
             if (tl0Index != -1) {
-                packet.setTl0Index((tl0Index + tl0IndexDelta) % 256)
+                packet.setTl0Index(tl0Index bytePlus tl0IndexDelta)
             }
 
             state.update(packet)
