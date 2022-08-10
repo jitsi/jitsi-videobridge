@@ -64,13 +64,21 @@ class BitrateControllerTest : ShouldSpec() {
      */
     override suspend fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
         setNewConfig(
-            "videobridge.cc.bwe-change-threshold=0" +
-                "\n" + configWithMultiStreamDisabled, // Also disable multi stream support,
+            """
+            videobridge.cc {
+              bwe-change-threshold = 0
+              // Effectively disable periodic updates.
+              max-time-between-calculations = 1 hour 
+            }
+            // Also disable multi stream support,
+            $configWithMultiStreamDisabled
+            """.trimIndent(),
             true
         )
     }
 
     override suspend fun afterSpec(spec: Spec) = super.afterSpec(spec).also {
+        bc.bc.expire()
         setNewConfig("", true)
     }
 

@@ -1055,6 +1055,7 @@ class Endpoint @JvmOverloads constructor(
         super.expire()
 
         try {
+            bitrateController.expire()
             endpointShim?.expire()
             endpointShim = null
             updateStatsOnExpire()
