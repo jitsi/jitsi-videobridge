@@ -19,6 +19,7 @@ package org.jitsi.videobridge
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils
@@ -32,6 +33,21 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
+
+private fun RtpPacket.getTl0Index(): Int {
+    return when (this) {
+        is Vp9Packet -> this.TL0PICIDX
+        is Vp8Packet -> this.TL0PICIDX
+        else -> -1
+    }
+}
+
+private fun RtpPacket.setTl0Index(tl0Index: Int) {
+    when (this) {
+        is Vp9Packet -> this.TL0PICIDX = tl0Index
+        is Vp8Packet -> this.TL0PICIDX = tl0Index
+    }
+}
 
 /**
  * Align common fields from different source types.
@@ -75,7 +91,7 @@ class RtpState {
     fun update(packet: RtpPacket) {
         lastSequenceNumber = packet.sequenceNumber
         lastTimestamp = packet.timestamp
-        lastTl0Index = if (packet is Vp9Packet) packet.TL0PICIDX else -1
+        lastTl0Index = packet.getTl0Index()
         valid = true
     }
 
@@ -117,6 +133,9 @@ class SendSsrc(val ssrc: Long) {
      */
     fun rewriteRtp(packet: RtpPacket, sending: Boolean, recv: ReceiveSsrc) {
         if (sending) {
+
+            val tl0Index = packet.getTl0Index()
+
             if (!recv.hasDeltas) {
                 /* Calculate new deltas the first time a receive ssrc is mapped to a send ssrc. */
                 if (state.valid) {
@@ -138,8 +157,8 @@ class SendSsrc(val ssrc: Long) {
                             RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, prevSequenceNumber)
                         timestampDelta =
                             RtpUtils.getTimestampDiff(state.lastTimestamp, prevTimestamp)
-                        if (state.lastTl0Index != -1 && packet is Vp9Packet)
-                            tl0IndexDelta = (256 + state.lastTl0Index - (packet.TL0PICIDX - 1)) % 256
+                        if (state.lastTl0Index != -1 && tl0Index != -1)
+                            tl0IndexDelta = (256 + state.lastTl0Index - (tl0Index - 1)) % 256
                         else
                             tl0IndexDelta = 0
                     }
@@ -152,8 +171,8 @@ class SendSsrc(val ssrc: Long) {
             packet.ssrc = ssrc
             packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
             packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
-            if (packet is Vp9Packet) {
-                packet.TL0PICIDX = (packet.TL0PICIDX + tl0IndexDelta) % 256
+            if (tl0Index != -1) {
+                packet.setTl0Index((tl0Index + tl0IndexDelta) % 256)
             }
 
             state.update(packet)
@@ -266,8 +285,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
          * Print packet fields relevant to rewriting mode.
          */
         private fun debugInfo(packet: RtpPacket): String {
-            val vp9Info = if (packet is Vp9Packet) " tl0PicIdx=${packet.TL0PICIDX}" else ""
-            return "ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" + vp9Info
+            val tl0Index = packet.getTl0Index()
+            val tl0Info = if (tl0Index != -1) " tl0PicIdx=$tl0Index" else ""
+            return "ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" + tl0Info
         }
     }
 
