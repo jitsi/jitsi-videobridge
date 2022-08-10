@@ -269,8 +269,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("With 180p constraints") {
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
-                    // lowest available resolution (which is high). If we are off-stage we only consider the lowest
-                    // first of these layers.
+                    // lowest available resolution (which is high). If we are off-stage we only consider the first of
+                    // these layers.
                     context("On stage") {
                         val allocation =
                             SingleSourceAllocation(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
