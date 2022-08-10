@@ -321,12 +321,12 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Manages remapping of video SSRCs when enabled.
      */
-    private val videoSsrcs = SsrcCache(MediaType.VIDEO, maxVideoSsrcs)
+    private val videoSsrcs = VideoSsrcCache(maxVideoSsrcs)
 
     /**
      * Manages remapping of audio SSRCs when enabled.
      */
-    private val audioSsrcs = SsrcCache(MediaType.AUDIO, maxAudioSsrcs)
+    private val audioSsrcs = AudioSsrcCache(maxAudioSsrcs)
 
     /**
      * Last advertised forwarded-sources in remapping mode.
@@ -926,25 +926,6 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Find the properties of the source indicated by the given SSRC. Returns null if not found.
-     */
-    private fun findSourceProps(ssrc: Long, mediaType: MediaType): SourceDesc? {
-        if (mediaType == MediaType.AUDIO) {
-            val p = findAudioSourceProps(ssrc)
-            if (p == null || p.sourceName == null || p.owner == null)
-                return null
-            else
-                return SourceDesc(p)
-        } else {
-            val p = findVideoSourceProps(ssrc)
-            if (p == null || p.sourceName == null || p.owner == null)
-                return null
-            else
-                return SourceDesc(p)
-        }
-    }
-
-    /**
      * Get a unique send SSRC.
      */
     private fun getNextSendSsrc(): Long {
@@ -1424,7 +1405,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Some RTP header state to track.
      */
-    private class RtpState() {
+    private class RtpState {
         var lastSequenceNumber = 0
         var lastTimestamp = 0L
         var lastTl0Index = -1
@@ -1572,7 +1553,7 @@ class Endpoint @JvmOverloads constructor(
      * SSRCs are remapped. RTP packets have their header fields rewritten so the stream appears
      * to be a continuation of an already advertised SSRC.
      */
-    private inner class SsrcCache(val mediaType: MediaType, val size: Int) {
+    private abstract inner class SsrcCache(val size: Int, val label: String) {
 
         /**
          * All remote SSRCs that have been seen.
@@ -1587,16 +1568,33 @@ class Endpoint @JvmOverloads constructor(
         private val sendSources = LRUCache<Long, SendSource>(size, true /* accessOrder */)
 
         /**
+         * Whether an incoming RTP packet can automatically activate its source (i.e. acquire a send SSRC).
+         * If false, sources must be activated using the activate() method.
+         */
+        abstract val allowCreateOnPacket: Boolean
+
+        /**
+         * Find the properties of the source indicated by the given SSRC. Returns null if not found.
+         */
+        abstract fun findSourceProps(ssrc: Long): SourceDesc?
+
+        /**
+         * Notify new SSRC mappings to the client. The list will contain at least one element.
+         */
+        abstract fun notifyMappings(sources: List<SendSource>)
+
+        /**
          * Assign a group of send SSRCs to use for the specified source.
          * If remapping the send SSRCs from another source, transfer RTP state from the old source.
-         * Collect remappings in the list if it is present, else notify them immediately.
+         * Collect any remapped sources into the provided list.
          * Returns null if no current mapping exists and allowCreate is false.
+         * Otherwise, returns the send source information to use.
          */
         private fun getSendSource(
             ssrc: Long,
             props: SourceDesc,
             allowCreate: Boolean,
-            remappings: MutableList<VideoSourceMapping>?
+            remappings: MutableList<SendSource>
         ): SendSource? {
 
             /* Moves to end of LRU when found. */
@@ -1608,32 +1606,20 @@ class Endpoint @JvmOverloads constructor(
                 if (sendSources.size == size) {
                     val eldest = sendSources.eldest()
                     sendSource = SendSource(props, eldest.value.send1, eldest.value.send2)
-                    logger.debug { "Remapping $mediaType SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
+                    logger.debug { "Remapping $label SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                     /* Request new deltas on next sent packet */
                     receivedSsrcs.get(props.ssrc1)?.hasDeltas = false
                     if (props.ssrc2 != -1L) {
                         receivedSsrcs.get(props.ssrc2)?.hasDeltas = false
                     }
                 } else {
-                    val ssrc1 = this@Endpoint.getNextSendSsrc()
-                    val ssrc2 = this@Endpoint.getNextSendSsrc()
+                    val ssrc1 = getNextSendSsrc()
+                    val ssrc2 = getNextSendSsrc()
                     sendSource = SendSource(props, ssrc1, ssrc2)
-                    logger.debug { "Added $mediaType send SSRC: ${props.ssrc1}->$sendSource" }
+                    logger.debug { "Added $label send SSRC: ${props.ssrc1}->$sendSource" }
                 }
                 sendSources.put(ssrc, sendSource)
-                if (mediaType == MediaType.AUDIO) {
-                    val mapping = AudioSourceMapping(props.name, props.owner, sendSource.send1.ssrc)
-                    sendMessage(AudioSourcesMap(arrayListOf<AudioSourceMapping>(mapping)))
-                } else if (mediaType == MediaType.VIDEO) {
-                    /* Currently unused. allowCreate should be false for video. */
-                    val mapping = VideoSourceMapping(
-                        props.name, props.owner, sendSource.send1.ssrc, sendSource.send2.ssrc, props.videoType
-                    )
-                    if (remappings != null)
-                        remappings.add(mapping)
-                    else
-                        sendMessage(VideoSourcesMap(arrayListOf<VideoSourceMapping>(mapping)))
-                }
+                remappings.add(sendSource)
             }
 
             return sendSource
@@ -1644,17 +1630,17 @@ class Endpoint @JvmOverloads constructor(
          */
         fun activate(sources: List<MediaSourceDesc>) {
 
-            val remappings = mutableListOf<VideoSourceMapping>()
+            val remappings = mutableListOf<SendSource>()
 
             synchronized(sendSources) {
                 sources.forEach { source ->
-                    getSendSource(source.primarySSRC, SourceDesc(source), true, remappings)
+                    getSendSource(source.primarySSRC, SourceDesc(source), allowCreate = true, remappings)
                 }
                 logger.debug { this.toString() }
             }
 
-            if (!remappings.isEmpty())
-                sendMessage(VideoSourcesMap(remappings))
+            if (remappings.isNotEmpty())
+                notifyMappings(remappings)
         }
 
         /**
@@ -1662,35 +1648,14 @@ class Endpoint @JvmOverloads constructor(
          * Can be used to resynchronize after message transport reconnects.
          */
         fun sendAllMappings() {
-            if (mediaType == MediaType.VIDEO) {
-                val remappings = mutableListOf<VideoSourceMapping>()
+            val remappings: List<SendSource>
 
-                synchronized(sendSources) {
-                    sendSources.forEach { _, sendSource ->
-                        val props = sendSource.props
-                        val mapping = VideoSourceMapping(
-                            props.name, props.owner, sendSource.send1.ssrc, sendSource.send2.ssrc, props.videoType
-                        )
-                        remappings.add(mapping)
-                    }
-                }
-
-                if (!remappings.isEmpty())
-                    sendMessage(VideoSourcesMap(remappings))
-            } else if (mediaType == MediaType.AUDIO) {
-                val remappings = mutableListOf<AudioSourceMapping>()
-
-                synchronized(sendSources) {
-                    sendSources.forEach { _, sendSource ->
-                        val props = sendSource.props
-                        val mapping = AudioSourceMapping(props.name, props.owner, sendSource.send1.ssrc)
-                        remappings.add(mapping)
-                    }
-                }
-
-                if (!remappings.isEmpty())
-                    sendMessage(AudioSourcesMap(remappings))
+            synchronized(sendSources) {
+                remappings = sendSources.values.toList()
             }
+
+            if (remappings.isNotEmpty())
+                notifyMappings(remappings)
         }
 
         /**
@@ -1702,29 +1667,27 @@ class Endpoint @JvmOverloads constructor(
          */
         fun rewriteRtp(packet: RtpPacket, start: Boolean = true): Boolean {
 
+            val remappings = mutableListOf<SendSource>()
             var send: Boolean = false
 
-            logger.debug { "Received $mediaType packet: ${debugInfo(packet)}" }
+            logger.debug { "Received $label packet: ${debugInfo(packet)}" }
 
             synchronized(sendSources) {
                 var rs = receivedSsrcs.get(packet.ssrc)
                 if (rs == null) {
-                    val props = findSourceProps(packet.ssrc, mediaType)
-                    if (props == null) {
-                        return false
-                    }
+                    val props = findSourceProps(packet.ssrc) ?: return false
                     rs = ReceiveSsrc(props)
                     receivedSsrcs.put(packet.ssrc, rs)
-                    logger.debug { "Added $mediaType receive SSRC: ${packet.ssrc}" }
+                    logger.debug { "Added $label receive SSRC: ${packet.ssrc}" }
                 }
 
-                val ss = getSendSource(rs.props.ssrc1, rs.props, mediaType == MediaType.AUDIO, null)
+                val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreateOnPacket, remappings)
                 if (ss != null) {
                     send = ss.rewriteRtp(packet, start, rs)
                     logger.debug { this.toString() }
                     logger.debug {
                         if (send) {
-                            "Sending packet: ${debugInfo(packet)} source=${rs.props.name} start=$start send=$send"
+                            "Sending packet: ${debugInfo(packet)} source=${rs.props.name} start=$start"
                         } else {
                             "Dropping packet from ${rs.props.name}/${packet.ssrc}. waiting for key frame."
                         }
@@ -1734,6 +1697,9 @@ class Endpoint @JvmOverloads constructor(
                 }
             }
 
+            if (remappings.isNotEmpty())
+                notifyMappings(remappings)
+
             return send
         }
 
@@ -1741,7 +1707,7 @@ class Endpoint @JvmOverloads constructor(
          * {@inheritDoc}
          */
         override fun toString(): String {
-            return "$mediaType SSRCs: received=" +
+            return "$label SSRCs: received=" +
                 receivedSsrcs.entries.joinToString(", ", "[", "]") {
                     "(${it.key}->${it.value})"
                 } +
@@ -1749,6 +1715,50 @@ class Endpoint @JvmOverloads constructor(
                 sendSources.entries.joinToString(", ", "[", "]") {
                     "(${it.key}->${it.value})"
                 }
+        }
+    }
+
+    private inner class AudioSsrcCache(size: Int) : SsrcCache(size, MediaType.AUDIO.toString()) {
+
+        override val allowCreateOnPacket = true
+
+        override fun findSourceProps(ssrc: Long): SourceDesc? {
+            val p = findAudioSourceProps(ssrc)
+            if (p == null || p.sourceName == null || p.owner == null)
+                return null
+            else
+                return SourceDesc(p)
+        }
+
+        override fun notifyMappings(sources: List<SendSource>) {
+            sources.map {
+                val props = it.props
+                AudioSourceMapping(props.name, props.owner, it.send1.ssrc)
+            }.also {
+                sendMessage(AudioSourcesMap(it))
+            }
+        }
+    }
+
+    private inner class VideoSsrcCache(size: Int) : SsrcCache(size, MediaType.VIDEO.toString()) {
+
+        override val allowCreateOnPacket = false
+
+        override fun findSourceProps(ssrc: Long): SourceDesc? {
+            val p = findVideoSourceProps(ssrc)
+            if (p == null || p.sourceName == null || p.owner == null)
+                return null
+            else
+                return SourceDesc(p)
+        }
+
+        override fun notifyMappings(sources: List<SendSource>) {
+            sources.map {
+                val props = it.props
+                VideoSourceMapping(props.name, props.owner, it.send1.ssrc, it.send2.ssrc, props.videoType)
+            }.also {
+                sendMessage(VideoSourcesMap(it))
+            }
         }
     }
 }
