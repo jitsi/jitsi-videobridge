@@ -243,7 +243,7 @@ internal class SingleSourceAllocation2(
             }
         // If no layers satisfy the constraints, we use the layers with the lowest resolution.
         if (selectedLayers.isEmpty()) {
-            val minHeight = activeLayers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
+            val minHeight = activeLayers.minOfOrNull { it.layer.height } ?: return Layers.noLayers
             selectedLayers = activeLayers.filter { it.layer.height == minHeight }
 
             // This recognizes the structure used with VP9 (multiple encodings with the same resolution and unknown frame
@@ -255,7 +255,7 @@ internal class SingleSourceAllocation2(
         }
 
         val oversendIdx = if (onStage && config.allowOversendOnStage()) {
-            val maxHeight = selectedLayers.map { it.layer.height }.maxOrNull() ?: return Layers.noLayers
+            val maxHeight = selectedLayers.maxOfOrNull { it.layer.height } ?: return Layers.noLayers
             // Of all layers with the highest resolution select the one with lowest bitrate. In case of VP9 the layers
             // are not necessarily ordered by bitrate.
             val lowestBitrateLayer = selectedLayers.filter { it.layer.height == maxHeight }.minByOrNull { it.bitrate }
