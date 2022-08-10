@@ -54,6 +54,7 @@ import org.jitsi.utils.MediaType
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.mins
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.cc.BandwidthProbing
@@ -105,6 +106,28 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
 
+interface SsrcRewriter {
+    /**
+     * Find the properties of the video source indicated by the given SSRC. Returns null if not found.
+     */
+    fun findVideoSourceProps(ssrc: Long): MediaSourceDesc?
+
+    /**
+     * Find the properties of the audio source indicated by the given SSRC. Returns null if not found.
+     */
+    fun findAudioSourceProps(ssrc: Long): AudioSourceDesc?
+
+    /**
+     * Get a unique send SSRC.
+     */
+    fun getNextSendSsrc(): Long
+
+    /**
+     * Sends a specific message to this endpoint over its bridge channel.
+     */
+    fun sendMessage(msg: BridgeChannelMessage)
+}
+
 /**
  * Models a local endpoint (participant) in a [Conference]
  */
@@ -120,7 +143,10 @@ class Endpoint @JvmOverloads constructor(
     private val isUsingSourceNames: Boolean,
     private val doSsrcRewriting: Boolean,
     private val clock: Clock = Clock.systemUTC()
-) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
+) : AbstractEndpoint(conference, id, parentLogger),
+    PotentialPacketHandler,
+    EncodingsManager.EncodingsUpdateListener,
+    SsrcRewriter {
     /**
      * The time at which this endpoint was created
      */
@@ -321,12 +347,12 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Manages remapping of video SSRCs when enabled.
      */
-    private val videoSsrcs = VideoSsrcCache(maxVideoSsrcs)
+    private val videoSsrcs = VideoSsrcCache(maxVideoSsrcs, this, logger)
 
     /**
      * Manages remapping of audio SSRCs when enabled.
      */
-    private val audioSsrcs = AudioSsrcCache(maxAudioSsrcs)
+    private val audioSsrcs = AudioSsrcCache(maxAudioSsrcs, this, logger)
 
     /**
      * Last advertised forwarded-sources in remapping mode.
@@ -526,9 +552,9 @@ class Endpoint @JvmOverloads constructor(
     fun lastNEndpointsChanged() = bitrateController.endpointOrderingChanged()
 
     /**
-     * Sends a specific msg to this endpoint over its bridge channel
+     * {@inheritDoc}
      */
-    fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
+    override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() {
@@ -898,9 +924,9 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Find the properties of the video source indicated by the given SSRC. Returns null if not found.
+     * {@inheritDoc}
      */
-    private fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
+    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
         conference.getEndpointBySsrc(ssrc)?.let { ep ->
             ep.mediaSources.forEach { s ->
                 if (s.findRtpEncodingDesc(ssrc) != null) {
@@ -913,9 +939,9 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Find the properties of the audio source indicated by the given SSRC. Returns null if not found.
+     * {@inheritDoc}
      */
-    private fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
+    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
         conference.getEndpointBySsrc(ssrc)?.let { ep ->
             if (ep !is Endpoint)
                 return null
@@ -926,9 +952,9 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Get a unique send SSRC.
+     * {@inheritDoc}
      */
-    private fun getNextSendSsrc(): Long {
+    override fun getNextSendSsrc(): Long {
         synchronized(sendSsrcs) {
             while (true) {
                 val ssrc = if (useRandomSendSsrcs)
@@ -1553,7 +1579,9 @@ class Endpoint @JvmOverloads constructor(
      * SSRCs are remapped. RTP packets have their header fields rewritten so the stream appears
      * to be a continuation of an already advertised SSRC.
      */
-    private abstract inner class SsrcCache(val size: Int, val label: String) {
+    private abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: Logger, label: String) {
+
+        private val logger = createChildLogger(parentLogger).apply { addContext("type", label) }
 
         /**
          * All remote SSRCs that have been seen.
@@ -1606,17 +1634,17 @@ class Endpoint @JvmOverloads constructor(
                 if (sendSources.size == size) {
                     val eldest = sendSources.eldest()
                     sendSource = SendSource(props, eldest.value.send1, eldest.value.send2)
-                    logger.debug { "Remapping $label SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
+                    logger.debug { "Remapping SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                     /* Request new deltas on next sent packet */
                     receivedSsrcs.get(props.ssrc1)?.hasDeltas = false
                     if (props.ssrc2 != -1L) {
                         receivedSsrcs.get(props.ssrc2)?.hasDeltas = false
                     }
                 } else {
-                    val ssrc1 = getNextSendSsrc()
-                    val ssrc2 = getNextSendSsrc()
+                    val ssrc1 = ep.getNextSendSsrc()
+                    val ssrc2 = ep.getNextSendSsrc()
                     sendSource = SendSource(props, ssrc1, ssrc2)
-                    logger.debug { "Added $label send SSRC: ${props.ssrc1}->$sendSource" }
+                    logger.debug { "Added send SSRC: ${props.ssrc1}->$sendSource" }
                 }
                 sendSources.put(ssrc, sendSource)
                 remappings.add(sendSource)
@@ -1670,7 +1698,7 @@ class Endpoint @JvmOverloads constructor(
             val remappings = mutableListOf<SendSource>()
             var send: Boolean = false
 
-            logger.debug { "Received $label packet: ${debugInfo(packet)}" }
+            logger.debug { "Received packet: ${debugInfo(packet)}" }
 
             synchronized(sendSources) {
                 var rs = receivedSsrcs.get(packet.ssrc)
@@ -1678,7 +1706,7 @@ class Endpoint @JvmOverloads constructor(
                     val props = findSourceProps(packet.ssrc) ?: return false
                     rs = ReceiveSsrc(props)
                     receivedSsrcs.put(packet.ssrc, rs)
-                    logger.debug { "Added $label receive SSRC: ${packet.ssrc}" }
+                    logger.debug { "Added receive SSRC: ${packet.ssrc}" }
                 }
 
                 val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreateOnPacket, remappings)
@@ -1707,7 +1735,7 @@ class Endpoint @JvmOverloads constructor(
          * {@inheritDoc}
          */
         override fun toString(): String {
-            return "$label SSRCs: received=" +
+            return "SSRCs: received=" +
                 receivedSsrcs.entries.joinToString(", ", "[", "]") {
                     "(${it.key}->${it.value})"
                 } +
@@ -1718,12 +1746,13 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    private inner class AudioSsrcCache(size: Int) : SsrcCache(size, MediaType.AUDIO.toString()) {
+    private class AudioSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
+        SsrcCache(size, ep, parentLogger, MediaType.AUDIO.toString()) {
 
         override val allowCreateOnPacket = true
 
         override fun findSourceProps(ssrc: Long): SourceDesc? {
-            val p = findAudioSourceProps(ssrc)
+            val p = ep.findAudioSourceProps(ssrc)
             if (p == null || p.sourceName == null || p.owner == null)
                 return null
             else
@@ -1735,17 +1764,18 @@ class Endpoint @JvmOverloads constructor(
                 val props = it.props
                 AudioSourceMapping(props.name, props.owner, it.send1.ssrc)
             }.also {
-                sendMessage(AudioSourcesMap(it))
+                ep.sendMessage(AudioSourcesMap(it))
             }
         }
     }
 
-    private inner class VideoSsrcCache(size: Int) : SsrcCache(size, MediaType.VIDEO.toString()) {
+    private class VideoSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
+        SsrcCache(size, ep, parentLogger, MediaType.VIDEO.toString()) {
 
         override val allowCreateOnPacket = false
 
         override fun findSourceProps(ssrc: Long): SourceDesc? {
-            val p = findVideoSourceProps(ssrc)
+            val p = ep.findVideoSourceProps(ssrc)
             if (p == null || p.sourceName == null || p.owner == null)
                 return null
             else
@@ -1757,7 +1787,7 @@ class Endpoint @JvmOverloads constructor(
                 val props = it.props
                 VideoSourceMapping(props.name, props.owner, it.send1.ssrc, it.send2.ssrc, props.videoType)
             }.also {
-                sendMessage(VideoSourcesMap(it))
+                ep.sendMessage(VideoSourcesMap(it))
             }
         }
     }
