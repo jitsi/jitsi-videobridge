@@ -573,12 +573,12 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     void expire()
     {
+        expired = true;
         ScheduledFuture<?> updateTask = this.updateTask;
         if (updateTask != null)
         {
             updateTask.cancel(false);
         }
-        expired = true;
     }
 
     /**
