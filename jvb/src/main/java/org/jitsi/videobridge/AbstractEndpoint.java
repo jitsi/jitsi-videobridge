@@ -214,12 +214,6 @@ public abstract class AbstractEndpoint
     }
 
     /**
-     * Invoked when the message transport becomes usable.
-     * Gives endpoint the chance to send messages that were dropped while it was down.
-     */
-    public void onMessageTransportConnect() {}
-
-    /**
      * Gets the description of the video {@link MediaSourceDesc} that this endpoint has advertised, or {@code null} if
      * it hasn't advertised any video sources.
      */

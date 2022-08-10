@@ -252,11 +252,6 @@ class Endpoint @JvmOverloads constructor(
 
     override fun getMessageTransport(): EndpointMessageTransport = _messageTransport
 
-    override fun onMessageTransportConnect() {
-        videoSsrcs.sendAllMappings()
-        audioSsrcs.sendAllMappings()
-    }
-
     /**
      * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
      */
@@ -528,6 +523,8 @@ class Endpoint @JvmOverloads constructor(
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() {
         sendAllVideoConstraints()
+        videoSsrcs.sendAllMappings()
+        audioSsrcs.sendAllMappings()
     }
 
     private fun sendAllVideoConstraints() {

@@ -1083,8 +1083,6 @@ public class Conference
             {
                 endpoint.sendMessage(new DominantSpeakerMessage(recentSpeakers, speechActivity.isInSilence()));
             }
-
-            abstractEndpoint.onMessageTransportConnect();
         }
     }
 
