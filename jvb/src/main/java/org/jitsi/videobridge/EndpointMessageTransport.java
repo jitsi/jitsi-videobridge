@@ -247,7 +247,7 @@ public class EndpointMessageTransport
             // don't wait on the result
             remote.sendString(message.toJson(), new WriteCallback.Adaptor());
         }
-        statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
+        statisticsSupplier.get().colibriWebSocketMessagesSent.inc();
     }
 
     @Override
@@ -440,7 +440,7 @@ public class EndpointMessageTransport
             return;
         }
 
-        statisticsSupplier.get().totalColibriWebSocketMessagesReceived.incrementAndGet();
+        statisticsSupplier.get().colibriWebSocketMessagesReceived.inc();
 
         webSocketLastActive = true;
         onMessage(ws, message);

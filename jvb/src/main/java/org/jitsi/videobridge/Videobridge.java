@@ -1022,13 +1022,17 @@ public class Videobridge
          * The total number of messages received from the data channels of
          * the endpoints of this conference.
          */
-        public AtomicLong totalColibriWebSocketMessagesReceived = new AtomicLong();
+        public CounterMetric colibriWebSocketMessagesReceived = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("colibri_web_socket_messages_received",
+                        "Number of messages received from the data channels of the endpoints of this conference.");
 
         /**
          * The total number of messages sent via the data channels of the
          * endpoints of this conference.
          */
-        public AtomicLong totalColibriWebSocketMessagesSent = new AtomicLong();
+        public CounterMetric colibriWebSocketMessagesSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "colibri_web_socket_messages_sent",
+                "Number of messages sent via the data channels of the endpoints of this conference.");
 
         /**
          * The total number of bytes received in RTP packets in conferences on
