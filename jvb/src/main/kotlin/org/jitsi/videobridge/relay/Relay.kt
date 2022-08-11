@@ -798,7 +798,7 @@ class Relay @JvmOverloads constructor(
                 true
             }
             else -> {
-                logger.warn("Ignoring an unknown packet type:" + packet.javaClass.simpleName)
+                logger.warn("Ignoring an unknown packet type:" + packet.packet.javaClass.simpleName)
                 false
             }
         }
