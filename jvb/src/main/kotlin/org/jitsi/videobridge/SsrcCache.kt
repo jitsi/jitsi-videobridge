@@ -378,9 +378,15 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
         val remappings = mutableListOf<SendSource>()
 
         synchronized(sendSources) {
-            sources.forEach { source ->
+            /* Before creating any new send sources, do a first pass that
+            touches the already active sources, to prevent them from being
+            bumped out of the LRU by earlier elements of the list. */
+            sources.filter { source ->
+                sendSources.get(source.primarySSRC) == null
+            }.forEach { source ->
                 getSendSource(source.primarySSRC, SourceDesc(source), allowCreate = true, remappings)
             }
+
             logger.debug { this.toString() }
         }
 
