@@ -942,7 +942,9 @@ public class Videobridge
          * (and which would otherwise result in video suspension).
          * (see {@link AimdRateControl#incomingBitrateExpirations}).
          */
-        public AtomicInteger incomingBitrateExpirations = new AtomicInteger(0);
+        public CounterMetric incomingBitrateExpirations = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "incoming_bitrate_expirations",
+                "Number of times our AIMDs have expired the incoming bitrate.");
 
         /**
          * The cumulative/total number of conferences in which ALL of the endpoints failed ICE.
@@ -1004,13 +1006,17 @@ public class Videobridge
          * The total number of messages received from the data channels of
          * the endpoints of this conference.
          */
-        public AtomicLong totalDataChannelMessagesReceived = new AtomicLong();
+        public CounterMetric dataChannelMessagesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "data_channel_messages_received",
+                "Number of messages received from the data channels of the endpoints of this conference.");
 
         /**
          * The total number of messages sent via the data channels of the
          * endpoints of this conference.
          */
-        public AtomicLong totalDataChannelMessagesSent = new AtomicLong();
+        public CounterMetric dataChannelMessagesSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "data_channel_messages_sent",
+                "Number of messages sent via the data channels of the endpoints of this conference.");
 
         /**
          * The total number of messages received from the data channels of

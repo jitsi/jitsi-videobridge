@@ -576,9 +576,9 @@ public class VideobridgeStatistics
             }
             unlockedSetStat(DRAIN, videobridge.getDrainMode());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
-                            jvbStats.totalDataChannelMessagesReceived.get());
+                            jvbStats.dataChannelMessagesReceived.get());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_SENT,
-                            jvbStats.totalDataChannelMessagesSent.get());
+                            jvbStats.dataChannelMessagesSent.get());
             unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED,
                             jvbStats.totalColibriWebSocketMessagesReceived.get());
             unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
