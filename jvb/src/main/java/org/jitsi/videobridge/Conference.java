@@ -683,13 +683,12 @@ public class Conference
 
     /**
      * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with a specific SSRC and with a specific <tt>MediaType</tt>.
+     * stream with a specific SSRC.
      *
      * @param receiveSSRC the SSRC of an RTP stream received by this
      * <tt>Conference</tt> whose sending <tt>Endpoint</tt> is to be found
      * @return <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with the specified <tt>ssrc</tt> and with the specified
-     * <tt>mediaType</tt>; otherwise, <tt>null</tt>
+     * stream with the specified <tt>ssrc</tt>; otherwise, <tt>null</tt>
      */
     AbstractEndpoint findEndpointByReceiveSSRC(long receiveSSRC)
     {
