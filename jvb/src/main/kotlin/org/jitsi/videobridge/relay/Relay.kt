@@ -864,7 +864,7 @@ class Relay @JvmOverloads constructor(
 
         conference.videobridge.statistics.apply {
             /* TODO: should these be separate stats from the endpoint stats? */
-            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
+            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
             totalLayeringChangesReceived.addAndGet(
                 transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
             )

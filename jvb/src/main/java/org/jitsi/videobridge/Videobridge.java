@@ -1137,13 +1137,19 @@ public class Videobridge
                 "", "");
 
         /** Number of preemptive keyframe requests that were sent. */
-        public AtomicInteger preemptiveKeyframeRequestsSent = new AtomicInteger();
+        public CounterMetric preemptiveKeyframeRequestsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "preemptive_keyframe_requests_sent",
+                "Number of preemptive keyframe requests that were sent.");
 
         /** Number of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
-        public AtomicInteger preemptiveKeyframeRequestsSuppressed = new AtomicInteger();
+        public CounterMetric preemptiveKeyframeRequestsSuppressed = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("preemptive_keyframe_requests_suppressed",
+                "Number of preemptive keyframe requests that were not sent because no endpoints were in stage view.");
 
         /** The total number of keyframes that were received (updated on endpoint expiration). */
-        public AtomicInteger totalKeyframesReceived = new AtomicInteger();
+        public CounterMetric keyframesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "keyframes_received",
+                "Number of keyframes that were received (updated on endpoint expiration).");
 
         /**
          * The total number of times the layering of an incoming video stream changed (updated on endpoint expiration).

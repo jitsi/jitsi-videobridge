@@ -549,10 +549,10 @@ public class Conference
         {
             // If all other endpoints are in tile view, there is no switch to anticipate. Don't trigger an unnecessary
             // keyframe.
-            getVideobridge().getStatistics().preemptiveKeyframeRequestsSuppressed.incrementAndGet();
+            getVideobridge().getStatistics().preemptiveKeyframeRequestsSuppressed.inc();
             return;
         }
-        getVideobridge().getStatistics().preemptiveKeyframeRequestsSent.incrementAndGet();
+        getVideobridge().getStatistics().preemptiveKeyframeRequestsSent.inc();
 
         double senderRtt = getRtt(dominantSpeaker);
         double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getId());
