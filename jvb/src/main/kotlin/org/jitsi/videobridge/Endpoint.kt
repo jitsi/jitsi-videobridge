@@ -43,6 +43,7 @@ import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
@@ -361,8 +362,10 @@ class Endpoint @JvmOverloads constructor(
     override val mediaSource: MediaSourceDesc?
         get() = mediaSources.firstOrNull()
 
-    /* $ move to base MediaSourceContainer? merge with RelayedEndpoint's version? */
-    public var audioSources: ArrayList<AudioSourceDesc> = ArrayList()
+    /**
+     *  Keep track of this endpoint's audio sources.
+     */
+    var audioSources: ArrayList<AudioSourceDesc> = ArrayList()
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -869,6 +872,10 @@ class Endpoint @JvmOverloads constructor(
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
+    fun doesSsrcRewriting(): Boolean = doSsrcRewriting
+
+    fun unmapRtcpFbSsrc(packet: RtcpFbPacket) = videoSsrcs.unmapRtcpFbSsrc(packet)
+
     override fun getSsrcs() = HashSet(transceiver.receiveSsrcs)
 
     override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
@@ -954,6 +961,11 @@ class Endpoint @JvmOverloads constructor(
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
                 bitrateController.transformRtcp(packet)
+                if (doSsrcRewriting) {
+                    // Just check both tables instead of looking up the type first.
+                    if (!videoSsrcs.rewriteRtcp(packet) && !audioSsrcs.rewriteRtcp(packet))
+                        return
+                }
                 logger.trace {
                     "relaying an sr from ssrc=${packet.senderSsrc}, timestamp=${packet.senderInfo.rtpTimestamp}"
                 }

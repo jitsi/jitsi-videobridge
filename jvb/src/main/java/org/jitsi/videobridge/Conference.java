@@ -19,6 +19,7 @@ import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.Packet;
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.dsi.*;
@@ -1227,12 +1228,30 @@ public class Conference
         }
         else if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
         {
+            AbstractEndpoint targetEndpoint = null;
+            boolean rewriter = false;
+
             long mediaSsrc = (packet instanceof RtcpFbPliPacket)
                 ? ((RtcpFbPliPacket) packet).getMediaSourceSsrc()
                 : ((RtcpFbFirPacket) packet).getMediaSenderSsrc();
 
-            // XXX we could make this faster with a map
-            AbstractEndpoint targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
+            /* If we are rewriting SSRCs to this endpoint, we must ask
+            it to convert back the SSRC to the media sender's SSRC. */
+            String endpointId = packetInfo.getEndpointId();
+            if(endpointId != null) {
+                AbstractEndpoint ep = getEndpoint(endpointId);
+                if(ep instanceof Endpoint && ((Endpoint) ep).doesSsrcRewriting()) {
+                    rewriter = true;
+                    String owner = ((Endpoint) ep).unmapRtcpFbSsrc((RtcpFbPacket) packet);
+                    if(owner != null)
+                        targetEndpoint = getEndpoint(owner);
+                }
+            }
+
+            if (!rewriter) {
+                // XXX we could make this faster with a map
+                targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
+            }
 
             PotentialPacketHandler pph = null;
             if (targetEndpoint instanceof Endpoint)

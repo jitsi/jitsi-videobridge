@@ -21,6 +21,9 @@ import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
+import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.LRUCache
@@ -210,6 +213,19 @@ class SendSsrc(val ssrc: Long) {
     }
 
     /**
+     * Fix SSRC and timestamps in an RTCP packet.
+     * For packets in the same direction as media flow; feedback messages handled separately.
+     */
+    fun rewriteRtcp(packet: RtcpPacket) {
+        packet.senderSsrc = ssrc
+        if (packet is RtcpSrPacket) {
+            packet.senderInfo.rtpTimestamp = RtpUtils.applyTimestampDelta(
+                packet.senderInfo.rtpTimestamp, timestampDelta
+            )
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     override fun toString(): String = "$ssrc{$state,\u2206=$sequenceNumberDelta/$timestampDelta/$tl0IndexDelta}"
@@ -247,6 +263,12 @@ class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc
         getSender(packet.ssrc).rewriteRtp(packet, started, recv)
         return started
     }
+
+    /**
+     * Fix SSRC and timestamps in an RTCP packet.
+     * For packets in the same direction as media flow; feedback messages handled separately.
+     */
+    fun rewriteRtcp(packet: RtcpPacket) { getSender(packet.senderSsrc).rewriteRtcp(packet) }
 
     /**
      * {@inheritDoc}
@@ -452,6 +474,64 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             notifyMappings(remappings)
 
         return send
+    }
+
+    /**
+     * Fix SSRC and timestamps in an RTCP packet.
+     * For packets in the same direction as media flow; feedback messages handled separately.
+     */
+    fun rewriteRtcp(packet: RtcpPacket): Boolean {
+
+        val remappings = mutableListOf<SendSource>() /* unused */
+        val senderSsrc = packet.senderSsrc
+
+        synchronized(sendSources) {
+            /* Don't activate a source on RTCP. */
+            var rs = receivedSsrcs.get(packet.senderSsrc) ?: return false
+            val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreate = false, remappings) ?: return false
+            ss.rewriteRtcp(packet)
+            logger.debug {
+                "Received RTCP packet. Translated receive SSRC $senderSsrc to send SSRC ${packet.senderSsrc}."
+            }
+            return true
+        }
+    }
+
+    /**
+     * Change the SSRC in an RTCP Feedback packet to the receive-side SSRC.
+     * Return the endpoint identifier of the source owner.
+     * If the SSRC in the packet does not refer to an active source,
+     * then do not modify the packet and return null.
+     */
+    fun unmapRtcpFbSsrc(packet: RtcpFbPacket): String? {
+
+        val mediaSsrc = packet.mediaSourceSsrc
+
+        synchronized(sendSources) {
+            val ss = sendSources.values.find { sendSource ->
+                if (mediaSsrc == sendSource.send1.ssrc) {
+                    packet.mediaSourceSsrc = sendSource.props.ssrc1
+                    return@find true
+                }
+                if (mediaSsrc == sendSource.send2.ssrc) {
+                    packet.mediaSourceSsrc = sendSource.props.ssrc2
+                    return@find true
+                }
+                return@find false
+            }
+
+            if (ss != null) {
+                logger.debug {
+                    "Received RTCP FB packet. " +
+                        "Translated send SSRC $mediaSsrc to receive SSRC ${packet.mediaSourceSsrc}. " +
+                        "Owner = ${ss.props.owner}."
+                }
+                return ss.props.owner
+            } else {
+                logger.debug { "Received RTCP FB packet for SSRC $mediaSsrc. Not active." }
+                return null
+            }
+        }
     }
 
     /**
