@@ -1238,17 +1238,20 @@ public class Conference
             /* If we are rewriting SSRCs to this endpoint, we must ask
             it to convert back the SSRC to the media sender's SSRC. */
             String endpointId = packetInfo.getEndpointId();
-            if(endpointId != null) {
+            if (endpointId != null)
+            {
                 AbstractEndpoint ep = getEndpoint(endpointId);
-                if(ep instanceof Endpoint && ((Endpoint) ep).doesSsrcRewriting()) {
+                if (ep instanceof Endpoint && ((Endpoint) ep).doesSsrcRewriting())
+                {
                     rewriter = true;
                     String owner = ((Endpoint) ep).unmapRtcpFbSsrc((RtcpFbPacket) packet);
-                    if(owner != null)
+                    if (owner != null)
                         targetEndpoint = getEndpoint(owner);
                 }
             }
 
-            if (!rewriter) {
+            if (!rewriter)
+            {
                 // XXX we could make this faster with a map
                 targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
             }
