@@ -1004,7 +1004,7 @@ class Endpoint @JvmOverloads constructor(
             bweStats.getNumber("incomingEstimateExpirations")?.toLong()?.let {
                 incomingBitrateExpirations.addAndGet(it)
             }
-            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
+            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
             totalLayeringChangesReceived.addAndGet(
                 transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
             )
