@@ -88,12 +88,12 @@ import org.jitsi_modified.sctp4j.SctpServerSocket
 import org.jitsi_modified.sctp4j.SctpSocket
 import org.json.simple.JSONObject
 import java.nio.ByteBuffer
+import java.security.SecureRandom
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
@@ -931,7 +931,7 @@ class Endpoint @JvmOverloads constructor(
         synchronized(sendSsrcs) {
             while (true) {
                 val ssrc = if (useRandomSendSsrcs)
-                    ThreadLocalRandom.current().nextLong(0x100000000L)
+                    random.nextLong().and(0xFFFF_FFFFL)
                 else
                     nextSendSsrc++
                 if (sendSsrcs.add(ssrc))
@@ -1252,6 +1252,11 @@ class Endpoint @JvmOverloads constructor(
          * This can be switched off to ease debugging.
          */
         private val useRandomSendSsrcs = true
+
+        /**
+         * Used for generating send SSRCs.
+         */
+        private val random = SecureRandom()
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {
