@@ -124,7 +124,8 @@ public class DataChannelStack
      */
     public DataChannel createDataChannel(int channelType, int priority, long reliability, int sid, String label)
     {
-        synchronized (dataChannels) {
+        synchronized (dataChannels)
+        {
             DataChannel dataChannel = new DataChannel(
                     dataChannelDataSender, logger, channelType, priority, reliability, sid, label);
             dataChannels.put(sid, dataChannel);

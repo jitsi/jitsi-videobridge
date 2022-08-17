@@ -20,6 +20,9 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
 import io.mockk.mockk
+import jakarta.ws.rs.core.Application
+import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
 import org.eclipse.jetty.http.HttpStatus
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.test.JerseyTest
@@ -30,9 +33,6 @@ import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.junit.Test
-import javax.ws.rs.core.Application
-import javax.ws.rs.core.MediaType
-import javax.ws.rs.core.Response
 
 class StatsTest : JerseyTest() {
     private lateinit var statsCollector: StatsCollector

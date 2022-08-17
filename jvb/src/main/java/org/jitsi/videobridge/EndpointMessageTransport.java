@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.eclipse.jetty.websocket.api.*;
+import org.eclipse.jetty.websocket.core.CloseStatus;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -32,7 +33,6 @@ import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import java.util.stream.*;
 
-import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.jitsi.videobridge.VersionConfig.config;
 import static org.jitsi.videobridge.util.MultiStreamCompatibilityKt.endpointIdToSourceName;
 
@@ -153,7 +153,7 @@ public class EndpointMessageTransport
 
         videoTypeMessage.setEndpointId(endpoint.getId());
 
-        /* Forward videoType messages to Octo. */
+        /* Forward videoType messages to Relays. */
         conference.sendMessage(videoTypeMessage, Collections.emptyList(), true);
 
         return null;
@@ -186,7 +186,7 @@ public class EndpointMessageTransport
 
         sourceVideoTypeMessage.setEndpointId(endpoint.getId());
 
-        /* Forward videoType messages to Octo. */
+        /* Forward videoType messages to Relays. */
         conference.sendMessage(sourceVideoTypeMessage, Collections.emptyList(), true);
 
         return null;
@@ -229,7 +229,7 @@ public class EndpointMessageTransport
     private void sendMessage(DataChannel dst, BridgeChannelMessage message)
     {
         dst.sendString(message.toJson());
-        statisticsSupplier.get().totalDataChannelMessagesSent.incrementAndGet();
+        statisticsSupplier.get().dataChannelMessagesSent.inc();
     }
 
     /**
@@ -245,16 +245,16 @@ public class EndpointMessageTransport
             // We'll use the async version of sendString since this may be called
             // from multiple threads.  It's just fire-and-forget though, so we
             // don't wait on the result
-            remote.sendStringByFuture(message.toJson());
+            remote.sendString(message.toJson(), new WriteCallback.Adaptor());
         }
-        statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
+        statisticsSupplier.get().colibriWebSocketMessagesSent.inc();
     }
 
     @Override
     public void onDataChannelMessage(DataChannelMessage dataChannelMessage)
     {
         webSocketLastActive = false;
-        statisticsSupplier.get().totalDataChannelMessagesReceived.incrementAndGet();
+        statisticsSupplier.get().dataChannelMessagesReceived.inc();
 
         if (dataChannelMessage instanceof DataChannelStringMessage)
         {
@@ -351,7 +351,7 @@ public class EndpointMessageTransport
                 Session session = webSocket.getSession();
                 if (session != null)
                 {
-                    session.close(200, "replaced");
+                    session.close(CloseStatus.NORMAL, "replaced");
                 }
             }
 
@@ -419,9 +419,9 @@ public class EndpointMessageTransport
         {
             if (webSocket != null)
             {
-                // 410 Gone indicates that the resource requested is no longer
-                // available and will not be available again.
-                webSocket.getSession().close(410, "replaced");
+                //  1001 indicates that an endpoint is "going away", such as a server
+                //  going down or a browser having navigated away from a page.
+                webSocket.getSession().close(CloseStatus.SHUTDOWN, "endpoint closed");
                 webSocket = null;
                 getLogger().debug(() -> "Endpoint expired, closed colibri web-socket.");
             }
@@ -440,7 +440,7 @@ public class EndpointMessageTransport
             return;
         }
 
-        statisticsSupplier.get().totalColibriWebSocketMessagesReceived.incrementAndGet();
+        statisticsSupplier.get().colibriWebSocketMessagesReceived.inc();
 
         webSocketLastActive = true;
         onMessage(ws, message);
@@ -492,66 +492,11 @@ public class EndpointMessageTransport
         return debugState;
     }
 
-    /**
-     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    @Override
-    public BridgeChannelMessage selectedEndpoint(SelectedEndpointMessage message)
-    {
-        String newSelectedEndpointID = message.getSelectedEndpoint();
-
-        List<String> newSelectedIDs =
-                isBlank(newSelectedEndpointID) ?
-                        Collections.emptyList() :
-                        Collections.singletonList(newSelectedEndpointID);
-
-        selectedEndpoints(new SelectedEndpointsMessage(newSelectedIDs));
-        return null;
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@link SelectedEndpointsMessage}
-     * has been received.
-     *
-     * @param message the message that was received.
-     * @deprecated use receiverVideoConstraints, selecting endpoints will not be supported in the multi-stream mode
-     */
-    @Override
-    @Deprecated
-    public BridgeChannelMessage selectedEndpoints(SelectedEndpointsMessage message)
-    {
-        List<String> newSelectedEndpoints = new ArrayList<>(message.getSelectedEndpoints());
-
-        getLogger().debug(() -> "Selected " + newSelectedEndpoints);
-        endpoint.setSelectedEndpoints(newSelectedEndpoints);
-        return null;
-    }
-
     @Nullable
     @Override
     public BridgeChannelMessage receiverVideoConstraints(@NotNull ReceiverVideoConstraintsMessage message)
     {
         endpoint.setBandwidthAllocationSettings(message);
-        return null;
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a
-     * {@link ReceiverVideoConstraintMessage} has been received
-     *
-     * @param message the message that was received.
-     */
-    @Override
-    public BridgeChannelMessage receiverVideoConstraint(ReceiverVideoConstraintMessage message)
-    {
-        int maxFrameHeight = message.getMaxFrameHeight();
-        getLogger().debug(
-                () -> "Received a maxFrameHeight video constraint from " + endpoint.getId() + ": " + maxFrameHeight);
-
-        endpoint.setMaxFrameHeight(maxFrameHeight);
         return null;
     }
 
@@ -598,10 +543,10 @@ public class EndpointMessageTransport
 
         if (message.isBroadcast())
         {
-            // Broadcast message to all local endpoints + octo.
+            // Broadcast message to all local endpoints and relays.
             List<Endpoint> targets = new LinkedList<>(conference.getLocalEndpoints());
             targets.remove(endpoint);
-            conference.sendMessage(message, targets, /* sendToOcto */ true);
+            conference.sendMessage(message, targets, /* sendToRelays */ true);
         }
         else
         {
@@ -619,7 +564,7 @@ public class EndpointMessageTransport
             }
             else if (targetEndpoint != null)
             {
-                conference.sendMessage(message, Collections.emptyList(), /* sendToOcto */ true);
+                conference.sendMessage(message, Collections.emptyList(), /* sendToRelays */ true);
             }
             else
             {
@@ -632,7 +577,7 @@ public class EndpointMessageTransport
 
     /**
      * Handles an endpoint statistics message from this {@code Endpoint} that should be forwarded to
-     * other endpoints as appropriate, and also to Octo.
+     * other endpoints as appropriate, and also to relays.
      *
      * @param message the message that was received from the endpoint.
      */

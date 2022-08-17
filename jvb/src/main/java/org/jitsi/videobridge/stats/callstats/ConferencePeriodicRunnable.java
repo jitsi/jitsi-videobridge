@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.stats.callstats;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
@@ -121,7 +122,7 @@ class ConferencePeriodicRunnable
         return allEndpointStats;
     }
 
-    private static double getFractionLost(EndpointConnectionStats.LossStatsSnapshot lossStatsSnapshot)
+    private static double getFractionLost(LossTracker.Snapshot lossStatsSnapshot)
     {
         if (lossStatsSnapshot.getPacketsLost() + lossStatsSnapshot.getPacketsReceived() > 0)
         {

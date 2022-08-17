@@ -41,8 +41,8 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
      * Note that we intentionally do not prune this set when an endpoint expires, because if an endpoint expires and
      * is recreated, we need to send an "active" message (the other endpoints in the conference are not aware that the
      * object on the bridge was expired and recreated).
-     * Also note that when an endpoint is moved to another bridge, it will be expired and an OctoEndpoint with the same
-     * ID will be created.
+     * Also note that when an endpoint is moved to another bridge, it will be expired and a RelayedEndpoint with the
+     * same ID will be created.
      */
     private val inactiveEndpointIds = mutableSetOf<String>()
 
@@ -104,11 +104,11 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
             synchronized(inactiveEndpointIds) {
                 val wasActive = !inactiveEndpointIds.contains(endpoint.id)
                 if (wasActive && !active) {
-                    logger.cdebug { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
+                    logger.info { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
                     inactiveEndpointIds += endpoint.id
                     changed = true
                 } else if (!wasActive && active) {
-                    logger.cdebug { "${endpoint.id} has reconnected" }
+                    logger.info { "${endpoint.id} has reconnected" }
                     inactiveEndpointIds -= endpoint.id
                     changed = true
                 }
@@ -125,7 +125,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
 
         if (receiverEpId == null) {
             // We broadcast the message also to the endpoint itself for
-            // debugging purposes, and we also broadcast it through Octo.
+            // debugging purposes, and we also send it to Relays.
             conference.broadcastMessage(msg, true)
         } else {
             conference.getLocalEndpoint(receiverEpId)?.let {

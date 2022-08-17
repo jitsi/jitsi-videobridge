@@ -27,6 +27,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
+import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.shim.IqProcessingException
@@ -47,7 +48,7 @@ import org.jitsi.xmpp.extensions.colibri2.Transport
 import org.jitsi.xmpp.extensions.jingle.ParameterPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
 import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
-import org.jitsi.xmpp.util.IQUtils
+import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
 import org.jivesoftware.smackx.muc.MUCRole
@@ -65,13 +66,18 @@ class Colibri2ConferenceHandler(
     fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
-        var expire = false
+        var expire = conferenceModifyIQ.expire.also {
+            if (it) logger.info("Received request to expire conference.")
+        }
 
         /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
         for (e in conferenceModifyIQ.endpoints) {
             responseBuilder.addEndpoint(handleColibri2Endpoint(e))
         }
         for (r in conferenceModifyIQ.relays) {
+            if (!RelayConfig.config.enabled) {
+                throw IqProcessingException(Condition.feature_not_implemented, "Octo is disable in configuration.")
+            }
             if (!WebsocketServiceConfig.config.enabled) {
                 logger.warn(
                     "Can not use a colibri2 relay, because colibri web sockets are not enabled. See " +
@@ -103,7 +109,7 @@ class Colibri2ConferenceHandler(
         } else {
             logger.error("Error processing conference-modify IQ: $e")
         }
-        Pair(IQUtils.createError(conferenceModifyIQ, e.condition, e.message), false)
+        Pair(createError(conferenceModifyIQ, e.condition, e.message), false)
     }
 
     private fun buildFeedbackSources(): Sources = Sources.getBuilder().apply {

@@ -15,17 +15,13 @@
  */
 package org.jitsi.videobridge
 
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.jitsi.ConfigTest
-import org.jitsi.config.withNewConfig
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
-import kotlin.random.Random
-import org.jitsi.videobridge.octo.singleton as octoRelayServiceProvider
 
 /**
  * This is a high-level test for [Conference] and related functionality.
@@ -37,50 +33,24 @@ class ConferenceTest : ConfigTest() {
 
     init {
         val name = JidCreate.entityBareFrom("roomName@somedomain.com")
-        withNewConfig(newConfigOctoEnabled(), loadDefaults = true) {
-            octoRelayServiceProvider().get()?.start()
-        }
 
         context("Adding local endpoints should work") {
-            with(Conference(videobridge, "id", name, Conference.GID_NOT_SET, null, false, false)) {
+            with(Conference(videobridge, "id", name, null, false, false)) {
                 endpointCount shouldBe 0
                 createLocalEndpoint("abcdabcd", true, false) // TODO cover the case when it's true
                 endpointCount shouldBe 1
                 debugState.shouldBeValidJson()
             }
         }
-        context("Enabling octo should fail when the GID is not set") {
-            with(Conference(videobridge, "id", name, Conference.GID_NOT_SET, null, false, false)) {
-                isOctoEnabled shouldBe false
-                shouldThrow<IllegalStateException> {
-                    tentacle
-                }
-                debugState.shouldBeValidJson()
-            }
-        }
-        context("Enabling octo should work") {
-            with(Conference(videobridge, "id", name, 1234, null, false, false)) {
-                isOctoEnabled shouldBe false
-                tentacle
-                isOctoEnabled shouldBe true
-                tentacle.setRelays(listOf("127.0.0.1:4097"))
-
+        context("Creating relays should work") {
+            with(Conference(videobridge, "id", name, null, false, false)) {
+                hasRelays() shouldBe false
+                createRelay("relay-id", "mesh-id", true, true)
+                hasRelays() shouldBe true
                 debugState.shouldBeValidJson()
             }
         }
     }
 }
 
-private fun newConfigOctoEnabled(port: Int = Random.nextInt(10000, 65535)) = """
-    videobridge {
-        octo {
-            enabled = true
-            bind-address = 127.0.0.1
-            bind-port = $port
-        }
-    }
-""".trimMargin()
-
-fun JSONObject.shouldBeValidJson() {
-    JSONParser().parse(this.toJSONString())
-}
+fun JSONObject.shouldBeValidJson() = JSONParser().parse(this.toJSONString())

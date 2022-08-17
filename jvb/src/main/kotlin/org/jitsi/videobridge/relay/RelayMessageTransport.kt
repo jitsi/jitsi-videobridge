@@ -15,8 +15,10 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.eclipse.jetty.websocket.api.WriteCallback
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
+import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.MultiStreamConfig
@@ -28,8 +30,6 @@ import org.jitsi.videobridge.message.ClientHelloMessage
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
 import org.jitsi.videobridge.message.EndpointMessage
 import org.jitsi.videobridge.message.EndpointStats
-import org.jitsi.videobridge.message.SelectedEndpointMessage
-import org.jitsi.videobridge.message.SelectedEndpointsMessage
 import org.jitsi.videobridge.message.ServerHelloMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.message.VideoTypeMessage
@@ -252,8 +252,8 @@ class RelayMessageTransport(
         // We'll use the async version of sendString since this may be called
         // from multiple threads.  It's just fire-and-forget though, so we
         // don't wait on the result
-        dst.remote?.sendStringByFuture(message.toJson())
-        statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet()
+        dst.remote?.sendString(message.toJson(), WriteCallback.Adaptor())
+        statisticsSupplier.get().colibriWebSocketMessagesSent.inc()
     }
 
     /**
@@ -283,7 +283,7 @@ class RelayMessageTransport(
             // If we already have a web-socket, discard it and use the new one.
             if (ws != webSocket) {
                 logger.info("Replacing an existing websocket.")
-                webSocket?.session?.close(200, "replaced")
+                webSocket?.session?.close(CloseStatus.NORMAL, "replaced")
                 webSocket = ws
                 sendMessage(ws, createServerHello())
             } else {
@@ -334,7 +334,7 @@ class RelayMessageTransport(
             if (webSocket != null) {
                 // 410 Gone indicates that the resource requested is no longer
                 // available and will not be available again.
-                webSocket?.session?.close(410, "replaced")
+                webSocket?.session?.close(CloseStatus.SHUTDOWN, "relay closed")
                 webSocket = null
                 logger.debug { "Relay expired, closed colibri web-socket." }
             }
@@ -360,7 +360,7 @@ class RelayMessageTransport(
             logger.warn("Received text from an unknown web socket.")
             return
         }
-        statisticsSupplier.get().totalColibriWebSocketMessagesReceived.incrementAndGet()
+        statisticsSupplier.get().colibriWebSocketMessagesReceived.inc()
         onMessage(ws, message)
     }
 
@@ -373,21 +373,6 @@ class RelayMessageTransport(
             debugState["sent_counts"] = sentCounts
             return debugState
         }
-
-    /**
-     * Notifies this `Endpoint` that a [SelectedEndpointsMessage]
-     * has been received.
-     *
-     * @param message the message that was received.
-     */
-    override fun selectedEndpoint(message: SelectedEndpointMessage): BridgeChannelMessage? {
-        val newSelectedEndpointID = message.selectedEndpoint
-        val newSelectedIDs: List<String> =
-            if (newSelectedEndpointID == null || newSelectedEndpointID.isBlank()) emptyList()
-            else listOf(newSelectedEndpointID)
-        selectedEndpoints(SelectedEndpointsMessage(newSelectedIDs))
-        return null
-    }
 
     /**
      * Handles an opaque message received on the Relay channel. The message originates from an endpoint with an ID of
@@ -413,13 +398,13 @@ class RelayMessageTransport(
                 return null
             }
 
-            conference.sendMessage(message, listOf(targetEndpoint), false /* sendToOcto */)
+            conference.sendMessage(message, listOf(targetEndpoint), false /* sendToRelays */)
         }
         return null
     }
 
     /**
-     * Handles an endpoint statistics message on the Octo channel that should be forwarded to
+     * Handles an endpoint statistics message on the Relay channel that should be forwarded to
      * local endpoints as appropriate.
      *
      * @param message the message that was received from the endpoint.

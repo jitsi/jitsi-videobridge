@@ -21,6 +21,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.health.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.binders.*;
 import org.jitsi.videobridge.rest.filters.*;
@@ -59,6 +60,10 @@ public class Application extends ResourceConfig
         if (config.isEnabled(RestApis.VERSION))
         {
             register(new org.jitsi.rest.Version(version));
+        }
+        if (config.isEnabled(RestApis.PROMETHEUS))
+        {
+            register(new org.jitsi.rest.prometheus.Prometheus(VideobridgeMetricsContainer.getInstance()));
         }
     }
 }

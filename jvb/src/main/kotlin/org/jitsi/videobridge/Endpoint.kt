@@ -233,6 +233,9 @@ class Endpoint @JvmOverloads constructor(
         isUsingSourceNames
     )
 
+    /** Whether any sources are suspended from being sent to this endpoint because of BWE. */
+    fun hasSuspendedSources() = bitrateController.hasSuspendedSources()
+
     /**
      * The instance which manages the Colibri messaging (over a data channel
      * or web sockets).
@@ -850,16 +853,10 @@ class Endpoint @JvmOverloads constructor(
     /** Whether we are currently oversending to this endpoint. */
     fun isOversending(): Boolean = bitrateController.isOversending()
 
-    @Deprecated("Use the receiver constraints message instead")
-    fun setSelectedEndpoints(selectedEndpoints: List<String>) =
-        bitrateController.setSelectedEndpoints(selectedEndpoints)
-
     /**
      * Returns how many endpoints this Endpoint is currently forwarding video for
      */
     fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
-
-    fun setMaxFrameHeight(maxFrameHeight: Int) = bitrateController.setMaxFrameHeight(maxFrameHeight)
 
     fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
         bitrateController.setBandwidthAllocationSettings(message)
@@ -1029,10 +1026,10 @@ class Endpoint @JvmOverloads constructor(
 
         conference.videobridge.statistics.apply {
             val bweStats = transceiverStats.bandwidthEstimatorStats
-            bweStats.getNumber("incomingEstimateExpirations")?.toInt()?.let {
+            bweStats.getNumber("incomingEstimateExpirations")?.toLong()?.let {
                 incomingBitrateExpirations.addAndGet(it)
             }
-            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
+            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
             totalLayeringChangesReceived.addAndGet(
                 transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
             )
@@ -1084,6 +1081,7 @@ class Endpoint @JvmOverloads constructor(
         super.expire()
 
         try {
+            bitrateController.expire()
             endpointShim?.expire()
             endpointShim = null
             updateStatsOnExpire()

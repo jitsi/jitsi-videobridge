@@ -20,7 +20,7 @@ package org.jitsi.videobridge.api.client.v1
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.features.websocket.WebSockets
+import io.ktor.client.plugins.websocket.WebSockets
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.api.util.XmppWebSocketClient
 import org.jivesoftware.smack.packet.IQ

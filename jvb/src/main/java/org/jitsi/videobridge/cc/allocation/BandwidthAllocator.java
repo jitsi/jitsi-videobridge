@@ -32,6 +32,7 @@ import java.lang.Deprecated;
 import java.lang.SuppressWarnings;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.stream.*;
 
@@ -84,6 +85,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     private long bweBps = -1;
 
     /**
+     * Whether this bandwidth estimator has been expired. Once expired we stop periodic re-allocation.
+     */
+    private boolean expired = false;
+
+    /**
      * Provide the current list of endpoints (in no particular order).
      * TODO: Simplify to avoid the weird (and slow) flow involving `endpointsSupplier` and `sortedEndpointIds`.
      */
@@ -125,7 +131,8 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     /**
      * The last time {@link BandwidthAllocator#update()} was called.
      */
-    private Instant lastUpdateTime = Instant.MIN;
+    @NotNull
+    private Instant lastUpdateTime;
 
     /**
      * The result of the bitrate control algorithm, the last time it ran.
@@ -134,6 +141,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     private BandwidthAllocation allocation = new BandwidthAllocation(Collections.emptySet());
 
     private final DiagnosticContext diagnosticContext;
+
+    /**
+     * The task scheduled to call {@link #update()}.
+     */
+    private ScheduledFuture<?> updateTask = null;
 
     BandwidthAllocator(
             EventHandler eventHandler,
@@ -150,6 +162,9 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
         this.endpointsSupplier = endpointsSupplier;
         eventEmitter.addHandler(eventHandler);
+        // Don't trigger an update immediately, the settings might not have been configured.
+        lastUpdateTime = clock.instant();
+        rescheduleUpdate();
     }
 
     /**
@@ -226,6 +241,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
      */
     synchronized void update()
     {
+        if (expired)
+        {
+            return;
+        }
+
         lastUpdateTime = clock.instant();
 
         // Declare variables for flow branching below
@@ -388,7 +408,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             targetBps += sourceBitrateAllocation.getTargetBitrate();
             idealBps += sourceBitrateAllocation.getIdealBitrate();
         }
-        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps);
+        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps, !suspendedIds.isEmpty());
     }
 
     /**
@@ -461,7 +481,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             targetBps += sourceBitrateAllocation.getTargetBitrate();
             idealBps += sourceBitrateAllocation.getIdealBitrate();
         }
-        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps);
+        return new BandwidthAllocation(allocations, oversending, idealBps, targetBps, !suspendedIds.isEmpty());
     }
 
     /**
@@ -549,16 +569,52 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
     }
 
     /**
-     * Submits a call to `update` in a CPU thread if bandwidth allocation has not been performed recently.
+     * Expire this bandwidth allocator.
      */
-    void maybeUpdate()
+    void expire()
     {
-        if (Duration.between(lastUpdateTime, clock.instant())
-                .compareTo(BitrateControllerConfig.config.maxTimeBetweenCalculations()) > 0)
+        expired = true;
+        ScheduledFuture<?> updateTask = this.updateTask;
+        if (updateTask != null)
         {
-            logger.debug("Forcing an update");
-            TaskPools.CPU_POOL.execute(this::update);
+            updateTask.cancel(false);
         }
+    }
+
+    /**
+     * Submits a call to `update` in a CPU thread if bandwidth allocation has not been performed recently.
+     *
+     * Also, re-schedule the next update in at most {@code maxTimeBetweenCalculations}. This should only be run
+     * in the constructor or in the scheduler thread, otherwise it will schedule multiple tasks.
+     */
+    private void rescheduleUpdate()
+    {
+        if (expired)
+        {
+            return;
+        }
+
+        Duration timeSinceLastUpdate = Duration.between(lastUpdateTime, clock.instant());
+        Duration period = BitrateControllerConfig.config.maxTimeBetweenCalculations();
+        long delayMs;
+        if (timeSinceLastUpdate.compareTo(period) > 0)
+        {
+            logger.debug("Running periodic re-allocation.");
+            TaskPools.CPU_POOL.execute(this::update);
+
+            delayMs = period.toMillis();
+        }
+        else
+        {
+            delayMs = period.minus(timeSinceLastUpdate).toMillis();
+        }
+
+        // Add 5ms to avoid having to re-schedule right away. This increases the average period at which we
+        // re-allocate by an insignificant amount.
+        updateTask = TaskPools.SCHEDULED_POOL.schedule(
+                this::rescheduleUpdate,
+                delayMs + 5,
+                TimeUnit.MILLISECONDS);
     }
 
     public interface EventHandler

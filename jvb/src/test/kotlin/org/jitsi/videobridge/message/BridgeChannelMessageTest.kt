@@ -49,24 +49,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsedColibriClass shouldBe message.type
             }
         }
-        context("parsing and serializing a SelectedEndpointsChangedEvent message") {
-            val parsed = parse(SELECTED_ENDPOINTS_MESSAGE)
-            should("parse to the correct type") {
-                parsed.shouldBeInstanceOf<SelectedEndpointsMessage>()
-            }
-            should("parse the list of endpoints correctly") {
-                parsed as SelectedEndpointsMessage
-                parsed.selectedEndpoints shouldBe listOf("abcdabcd", "12341234")
-            }
-
-            should("serialize and de-serialize correctly") {
-                val selectedEndpoints = listOf("abcdabcd", "12341234")
-                val serialized = SelectedEndpointsMessage(selectedEndpoints).toJson()
-                val parsed2 = parse(serialized)
-                parsed2.shouldBeInstanceOf<SelectedEndpointsMessage>()
-                parsed2.selectedEndpoints shouldBe selectedEndpoints
-            }
-        }
         context("parsing an invalid message") {
             shouldThrow<JsonProcessingException> {
                 parse("{invalid json")

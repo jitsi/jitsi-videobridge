@@ -47,7 +47,7 @@ import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jxmpp.stringprep.XmppStringPrepUtil
 import java.time.Clock
 import kotlin.concurrent.thread
-import org.jitsi.videobridge.octo.singleton as octoRelayService
+import kotlin.system.exitProcess
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 
 fun main(args: Array<String>) {
@@ -101,8 +101,7 @@ fun main(args: Array<String>) {
         xmppConnection, shutdownService, versionService.currentVersion, VersionConfig.config.release, Clock.systemUTC()
     ).apply { start() }
     val healthChecker = videobridge.jvbHealthChecker
-    val octoRelayService = octoRelayService().get()?.apply { start() }
-    val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, octoRelayService, xmppConnection)).apply {
+    val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, xmppConnection)).apply {
         start()
         addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
     }
@@ -171,7 +170,6 @@ fun main(args: Array<String>) {
 
     logger.info("Bridge shutting down")
     healthChecker.stop()
-    octoRelayService?.stop()
     xmppConnection.stop()
     callstats?.let {
         videobridge.removeEventHandler(it.videobridgeEventHandler)
@@ -194,6 +192,8 @@ fun main(args: Array<String>) {
     TaskPools.SCHEDULED_POOL.shutdownNow()
     TaskPools.CPU_POOL.shutdownNow()
     TaskPools.IO_POOL.shutdownNow()
+
+    exitProcess(0)
 }
 
 private fun setupMetaconfigLogger() {

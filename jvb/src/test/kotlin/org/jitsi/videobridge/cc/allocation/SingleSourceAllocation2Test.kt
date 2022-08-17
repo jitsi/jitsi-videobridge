@@ -25,8 +25,8 @@ import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
-import org.jitsi.test.time.FakeClock
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.time.FakeClock
 
 /**
  * Test the logic for selecting the layers to be considered for a source and the "preferred" layer.
@@ -274,17 +274,28 @@ class SingleSourceAllocation2Test : ShouldSpec() {
                     allocation.layers.map { it.layer } shouldBe listOf(l1, l2, l3)
                 }
                 context("With 180p constraints") {
-                    val allocation =
-                        SingleSourceAllocation2(
+                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
+                    // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
+                    // lowest available resolution (which is high). If we are off-stage we only consider the first of
+                    // these layers.
+                    context("On stage") {
+                        val allocation = SingleSourceAllocation2(
                             "A", mediaSource, VideoConstraints(180), true, diagnosticContext, clock
                         )
 
-                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
-                    // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
-                    // lowest available resolution (which is high).
-                    allocation.preferredLayer shouldBe l1
-                    allocation.oversendLayer shouldBe l1
-                    allocation.layers.map { it.layer } shouldBe listOf(l1)
+                        allocation.preferredLayer shouldBe l3
+                        allocation.oversendLayer shouldBe l1
+                        allocation.layers.map { it.layer } shouldBe listOf(l1, l2, l3)
+                    }
+                    context("Off stage") {
+                        val allocation = SingleSourceAllocation2(
+                            "A", mediaSource, VideoConstraints(180), false, diagnosticContext, clock
+                        )
+
+                        allocation.preferredLayer shouldBe l1
+                        allocation.oversendLayer shouldBe null
+                        allocation.layers.map { it.layer } shouldBe listOf(l1)
+                    }
                 }
             }
         }

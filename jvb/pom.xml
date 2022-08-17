@@ -74,7 +74,12 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.websocket</groupId>
-      <artifactId>websocket-server</artifactId>
+      <artifactId>websocket-jetty-server</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.websocket</groupId>
+      <artifactId>websocket-jetty-client</artifactId>
       <version>${jetty.version}</version>
     </dependency>
     <dependency>
@@ -92,15 +97,17 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-media-transform</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>rtp</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>sctp</artifactId>
-      <version>1.0-8-g04269a7</version>
+      <version>1.0-9-g45bf9f2</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
     <!-- we inherit an old version of slf4j-api from tinder, which pcap4j doesn't work with. Adding slf4j-api 1.7.30 (the current stable) as a dep of jvb fixes the problem. -->
@@ -120,6 +127,10 @@
     <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jicoco-metrics</artifactId>
     </dependency>
     <!-- Note that this is not part of jitsi/jitsi, and it has a separate version. -->
     <dependency>
@@ -198,7 +209,7 @@
     <dependency>
       <groupId>io.mockk</groupId>
       <artifactId>mockk</artifactId>
-      <version>1.12.1</version>
+      <version>1.12.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -267,6 +278,12 @@
         <artifactId>junit-platform-engine</artifactId>
         <version>1.8.1</version>
         <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+      <version>2.3.1</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
@@ -456,9 +473,9 @@
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.4.2.2</version>
+        <version>4.7.0.0</version>
         <configuration>
-          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+          <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
           <includeTests>true</includeTests>
         </configuration>
         <dependencies>

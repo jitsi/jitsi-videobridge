@@ -50,7 +50,7 @@ class IceStatistics {
 
     private class Stats {
         /** Histogram of RTTs */
-        val buckets = BucketStats(listOf(10L, 20, 40, 60, 80, 100, 150, 200, 250, 300, 500, 1000).toLongArray())
+        val buckets = BucketStats(listOf(0, 10, 20, 40, 60, 80, 100, 150, 200, 250, 300, 500, 1000, Long.MAX_VALUE))
         var sum = DoubleAdder()
         var count = AtomicInteger()
 

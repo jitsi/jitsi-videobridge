@@ -28,6 +28,8 @@ class BandwidthAllocation @JvmOverloads constructor(
     val oversending: Boolean = false,
     val idealBps: Long = -1,
     val targetBps: Long = -1,
+    /** Whether any of the requested sources were suspended (no layer at all was selected) due to BWE. */
+    val hasSuspendedSources: Boolean = false
 ) {
     val forwardedEndpoints: Set<String> =
         allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
@@ -64,6 +66,8 @@ class BandwidthAllocation @JvmOverloads constructor(
         get() = JSONObject().apply {
             put("idealBps", idealBps)
             put("targetBps", targetBps)
+            put("oversending", oversending.toString())
+            put("has_suspended_sources", hasSuspendedSources.toString())
         }
 }
 

@@ -36,21 +36,18 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Represent a message sent over the "bridge channel" between an endpoint (or "client") and jitsi-videobridge, or
- * between two jitsi-videobridge instances over Octo.
+ * between two jitsi-videobridge instances over a relay connection.
  *
  * The messages are formatted in JSON with a required "colibriClass" field, which indicates the message type. Different
  * message types have different (if any) additional fields.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "colibriClass")
 @JsonSubTypes(
-    JsonSubTypes.Type(value = SelectedEndpointsMessage::class, name = SelectedEndpointsMessage.TYPE),
-    JsonSubTypes.Type(value = SelectedEndpointMessage::class, name = SelectedEndpointMessage.TYPE),
     JsonSubTypes.Type(value = ClientHelloMessage::class, name = ClientHelloMessage.TYPE),
     JsonSubTypes.Type(value = ServerHelloMessage::class, name = ServerHelloMessage.TYPE),
     JsonSubTypes.Type(value = EndpointMessage::class, name = EndpointMessage.TYPE),
     JsonSubTypes.Type(value = EndpointStats::class, name = EndpointStats.TYPE),
     JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
-    JsonSubTypes.Type(value = ReceiverVideoConstraintMessage::class, name = ReceiverVideoConstraintMessage.TYPE),
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
     JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
@@ -108,14 +105,11 @@ open class MessageHandler {
         receivedCounts.computeIfAbsent(message::class.java.simpleName) { AtomicLong() }.incrementAndGet()
 
         return when (message) {
-            is SelectedEndpointsMessage -> selectedEndpoints(message)
-            is SelectedEndpointMessage -> selectedEndpoint(message)
             is ClientHelloMessage -> clientHello(message)
             is ServerHelloMessage -> serverHello(message)
             is EndpointMessage -> endpointMessage(message)
             is EndpointStats -> endpointStats(message)
             is LastNMessage -> lastN(message)
-            is ReceiverVideoConstraintMessage -> receiverVideoConstraint(message)
             is DominantSpeakerMessage -> dominantSpeaker(message)
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
             is ForwardedEndpointsMessage -> forwardedEndpoints(message)
@@ -136,14 +130,11 @@ open class MessageHandler {
         return null
     }
 
-    open fun selectedEndpoints(message: SelectedEndpointsMessage) = unhandledMessageReturnNull(message)
-    open fun selectedEndpoint(message: SelectedEndpointMessage) = unhandledMessageReturnNull(message)
     open fun clientHello(message: ClientHelloMessage) = unhandledMessageReturnNull(message)
     open fun serverHello(message: ServerHelloMessage) = unhandledMessageReturnNull(message)
     open fun endpointMessage(message: EndpointMessage) = unhandledMessageReturnNull(message)
     open fun endpointStats(message: EndpointStats) = unhandledMessageReturnNull(message)
     open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
-    open fun receiverVideoConstraint(message: ReceiverVideoConstraintMessage) = unhandledMessageReturnNull(message)
     open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
     open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
@@ -157,30 +148,6 @@ open class MessageHandler {
     open fun videoType(message: VideoTypeMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
-}
-
-/**
- * A message sent from a client to a bridge, indicating that the list of endpoints selected by the client has changed.
- */
-@Deprecated("Use ReceiverVideoConstraints")
-class SelectedEndpointsMessage(val selectedEndpoints: List<String>) : BridgeChannelMessage(TYPE) {
-
-    companion object {
-        const val TYPE = "SelectedEndpointsChangedEvent"
-    }
-}
-
-/**
- * A message sent from a client to a bridge, indicating that the client's selected endpoint has changed.
- *
- * This format is no longer used in jitsi-meet and is considered deprecated. The semantics are equivalent to
- * [SelectedEndpointsMessage] with a list of one endpoint.
- */
-@Deprecated("Use SelectedEndpointsMessage")
-class SelectedEndpointMessage(val selectedEndpoint: String?) : BridgeChannelMessage(TYPE) {
-    companion object {
-        const val TYPE = "SelectedEndpointChangedEvent"
-    }
 }
 
 /**
@@ -287,39 +254,21 @@ class LastNMessage(val lastN: Int) : BridgeChannelMessage(TYPE) {
 }
 
 /**
- * A message sent from a client to a bridge indicating what the maximum resolution it wishes to receive (for any stream)
- * is.
- *
- * Note that this message is substantially different from its successor
- * [ReceiverVideoConstraintsMessage] and should not be confused with it.
- *
- * Example Json message:
- * {
- *     "colibriClass": "ReceiverVideoConstraint",
- *     "maxFrameHeight": 180
- *
- * }
- */
-@Deprecated("Use ReceiverVideoConstraints")
-class ReceiverVideoConstraintMessage(val maxFrameHeight: Int) : BridgeChannelMessage(TYPE) {
-    companion object {
-        const val TYPE = "ReceiverVideoConstraint"
-    }
-}
-
-/**
  * A message sent from the bridge to a client, indicating that the dominant speaker in the conference changed.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class DominantSpeakerMessage @JvmOverloads constructor(
     val dominantSpeakerEndpoint: String,
-    val previousSpeakers: List<String>? = null
+    val previousSpeakers: List<String>? = null,
+    val silence: Boolean = false
 ) : BridgeChannelMessage(TYPE) {
     /**
      * Construct a message from a list of speakers with the dominant speaker on top. The list must have at least one
      * element.
      */
-    constructor(previousSpeakers: List<String>) : this(previousSpeakers[0], previousSpeakers.drop(1))
+    constructor(previousSpeakers: List<String>, silence: Boolean) : this(
+        previousSpeakers[0], previousSpeakers.drop(1), silence
+    )
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
     }
@@ -382,6 +331,7 @@ class ForwardedSourcesMessage(
  * A message sent from the bridge to a client (sender), indicating constraints for the sender's video streams.
  *
  * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
+ * TODO: update https://github.com/jitsi/jitsi-videobridge/blob/master/doc/constraints.md before removing.
  */
 @Deprecated("", ReplaceWith("SenderSourceConstraints"), DeprecationLevel.WARNING)
 class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
@@ -423,8 +373,8 @@ class SenderSourceConstraintsMessage(
 }
 
 /**
- * A message sent from one bridge to another (via Octo) indicating that the first bridge wishes to receive video streams
- * from the specified endpoint with the specified constraints.
+ * A message sent from one bridge to another (via a relay connection) indicating that the first bridge wishes to
+ * receive video streams from the specified endpoint with the specified constraints.
  */
 class AddReceiverMessage(
     val bridgeId: String,
@@ -447,8 +397,8 @@ class AddReceiverMessage(
 }
 
 /**
- * A message sent from one bridge to another (via Octo) indicating that it no longer wishes to receive video streams
- * from the specified endpoint.
+ * A message sent from one bridge to another (via a relay connection) indicating that it no longer wishes to receive
+ * video streams from the specified endpoint.
  */
 class RemoveReceiverMessage(
     val bridgeId: String,
@@ -489,7 +439,7 @@ class SourceVideoTypeMessage(
     sourceName: String,
     /**
      * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
-     * message was received on (non-null values are needed only for Octo).
+     * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {
@@ -519,7 +469,7 @@ class VideoTypeMessage(
     val videoType: VideoType,
     /**
      * The endpoint ID that the message relates to, or null. When null, the ID is inferred from the channel the
-     * message was received on (non-null values are needed only for Octo).
+     * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
 ) : BridgeChannelMessage(TYPE) {
