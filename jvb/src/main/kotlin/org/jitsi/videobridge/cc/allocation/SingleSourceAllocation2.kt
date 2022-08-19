@@ -202,22 +202,6 @@ internal class SingleSourceAllocation2(
     }
 
     /**
-     * Gets the "preferred" height and frame rate based on the constraints signaled from the receiver.
-     *
-     * For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
-     * temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
-     * consider frame rates at least as high as the preferred. In practice this means we consider
-     * 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
-     */
-    private fun getPreferred(constraints: VideoConstraints): Pair<Int, Double> {
-        return if (constraints.maxHeight > 180) {
-            Pair(config.onstagePreferredHeightPx(), config.onstagePreferredFramerate())
-        } else {
-            noPreferredHeightAndFrameRate
-        }
-    }
-
-    /**
      * Selects from a list of layers the ones which should be considered when allocating bandwidth, as well as the
      * "preferred" and "oversend" layers. Logic specific to screensharing: we prioritize resolution over framerate,
      * prioritize the highest layer over other endpoints (by setting the highest layer as "preferred"), and allow
@@ -284,7 +268,7 @@ internal class SingleSourceAllocation2(
         constraints: VideoConstraints,
         nowMs: Long
     ): Layers {
-        if (constraints.maxHeight <= 0 || !source.hasRtpLayers()) {
+        if (constraints.maxHeight == 0 || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
         val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
@@ -340,16 +324,6 @@ internal class SingleSourceAllocation2(
     companion object {
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator::class.java)
     }
-}
-
-private val noPreferredHeightAndFrameRate = Pair(-1, -1.0)
-
-/** Return the index of the first item in the list which satisfies a predicate, or -1 if none do. */
-private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
-    forEachIndexed { index, item ->
-        if (predicate(item)) return index
-    }
-    return -1
 }
 
 /**

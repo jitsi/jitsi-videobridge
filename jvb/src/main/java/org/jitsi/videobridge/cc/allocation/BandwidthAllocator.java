@@ -503,7 +503,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         {
             return false;
         }
-        return constraints.getMaxHeight() > 0;
+        return !constraints.isDisabled();
     }
 
     private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
