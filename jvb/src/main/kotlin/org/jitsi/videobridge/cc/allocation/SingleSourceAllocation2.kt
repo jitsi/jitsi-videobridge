@@ -220,7 +220,7 @@ internal class SingleSourceAllocation2(
 
         // We select all layers that satisfy the constraints.
         var selectedLayers =
-            if (constraints.maxHeight < 0) {
+            if (!constraints.heightIsLimited()) {
                 activeLayers
             } else {
                 activeLayers.filter { it.layer.height <= constraints.maxHeight }
@@ -301,7 +301,7 @@ internal class SingleSourceAllocation2(
         for (layerSnapshot in layers) {
             val layer = layerSnapshot.layer
             val lessThanPreferredHeight = layer.height < preferredHeight
-            val lessThanOrEqualMaxHeight = layer.height <= constraints.maxHeight
+            val lessThanOrEqualMaxHeight = layer.height <= constraints.maxHeight || !constraints.heightIsLimited()
             // If frame rate is unknown, consider it to be sufficient.
             val atLeastPreferredFps = layer.frameRate < 0 || layer.frameRate >= preferredFps
             if (lessThanPreferredHeight ||

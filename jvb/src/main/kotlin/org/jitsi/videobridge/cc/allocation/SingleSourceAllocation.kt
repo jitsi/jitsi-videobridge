@@ -216,7 +216,7 @@ internal class SingleSourceAllocation(
 
         // We select all layers that satisfy the constraints.
         var selectedLayers =
-            if (constraints.maxHeight < 0) {
+            if (!constraints.heightIsLimited()) {
                 activeLayers
             } else {
                 activeLayers.filter { it.layer.height <= constraints.maxHeight }

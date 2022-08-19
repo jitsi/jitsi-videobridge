@@ -74,7 +74,7 @@ fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, alloc
             VideoConstraints.NOTHING
         } else {
             allocationSettings.getConstraints(endpoint.id).also {
-                if (it.maxHeight > 0) endpointsWithNonZeroConstraints++
+                if (!it.isDisabled()) endpointsWithNonZeroConstraints++
             }
         }
     }
@@ -100,7 +100,7 @@ fun getEffectiveConstraints2(sources: List<MediaSourceDesc>, allocationSettings:
             VideoConstraints.NOTHING
         } else {
             allocationSettings.getConstraints(source.sourceName!!).also {
-                if (it.maxHeight > 0) sourcesWithNonZeroConstraints++
+                if (!it.isDisabled()) sourcesWithNonZeroConstraints++
             }
         }
     }
