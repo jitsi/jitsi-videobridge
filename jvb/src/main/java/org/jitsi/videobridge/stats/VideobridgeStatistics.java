@@ -629,6 +629,8 @@ public class VideobridgeStatistics
             unlockedSetStat("endpoints_with_spurious_remb", RembHandler.Companion.endpointsWithSpuriousRemb());
             unlockedSetStat("healthy",
                     healthy.setAndGet(videobridge.getJvbHealthChecker().getResult() == null));
+            unlockedSetStat("endpoints_disconnected", EndpointConnectionStatusMonitor.endpointsDisconnected.get());
+            unlockedSetStat("endpoints_reconnected", EndpointConnectionStatusMonitor.endpointsReconnected.get());
         }
         finally
         {
