@@ -1053,14 +1053,18 @@ public class Videobridge
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalPacketsReceived = new AtomicLong();
+        public CounterMetric packetsReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "packets_received",
+                "Number of RTP packets received in conferences on this videobridge.");
 
         /**
          * The total number of RTP packets sent in conferences on this
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalPacketsSent = new AtomicLong();
+        public CounterMetric packetsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "packets_sent",
+                "Number of RTP packets sent in conferences on this videobridge.");
 
         /**
          * The total number of bytes received by relays in RTP packets in conferences on
@@ -1081,15 +1085,18 @@ public class Videobridge
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalRelayPacketsReceived = new AtomicLong();
+        public CounterMetric relayPacketsReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "relay_packets_received",
+                "Number of RTP packets received by relays in conferences on this videobridge.");
 
         /**
          * The total number of RTP packets sent by relays in conferences on this
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalRelayPacketsSent = new AtomicLong();
-
+        public CounterMetric relayPacketsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "relay_packets_sent",
+                "Number of RTP packets sent by relays in conferences on this videobridge.");
         /**
          * The total number of endpoints created.
          */
