@@ -648,13 +648,13 @@ public class Conference
 
         videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
         videobridgeStatistics.totalBytesSent.addAndGet(statistics.totalBytesSent.get());
-        videobridgeStatistics.totalPacketsReceived.addAndGet(statistics.totalPacketsReceived.get());
-        videobridgeStatistics.totalPacketsSent.addAndGet(statistics.totalPacketsSent.get());
+        videobridgeStatistics.packetsReceived.addAndGet(statistics.totalPacketsReceived.get());
+        videobridgeStatistics.packetsSent.addAndGet(statistics.totalPacketsSent.get());
 
         videobridgeStatistics.totalRelayBytesReceived.addAndGet(statistics.totalRelayBytesReceived.get());
         videobridgeStatistics.totalRelayBytesSent.addAndGet(statistics.totalRelayBytesSent.get());
-        videobridgeStatistics.totalRelayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
-        videobridgeStatistics.totalRelayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
+        videobridgeStatistics.relayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
+        videobridgeStatistics.relayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
 
         boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
         boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;

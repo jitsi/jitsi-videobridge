@@ -588,15 +588,15 @@ public class VideobridgeStatistics
             unlockedSetStat("dtls_failed_endpoints", jvbStats.dtlsFailedEndpoints.get());
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
             unlockedSetStat(
-                    TOTAL_PACKETS_RECEIVED, jvbStats.totalPacketsReceived.get());
-            unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.totalPacketsSent.get());
+                    TOTAL_PACKETS_RECEIVED, jvbStats.packetsReceived.get());
+            unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.packetsSent.get());
 
             unlockedSetStat("colibri2", true);
 
             unlockedSetStat(TOTAL_BYTES_RECEIVED_OCTO, jvbStats.totalRelayBytesReceived.get());
             unlockedSetStat(TOTAL_BYTES_SENT_OCTO, jvbStats.totalRelayBytesSent.get());
-            unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO, jvbStats.totalRelayPacketsReceived.get());
-            unlockedSetStat(TOTAL_PACKETS_SENT_OCTO, jvbStats.totalRelayPacketsSent.get());
+            unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO, jvbStats.relayPacketsReceived.get());
+            unlockedSetStat(TOTAL_PACKETS_SENT_OCTO, jvbStats.relayPacketsSent.get());
             unlockedSetStat(OCTO_RECEIVE_BITRATE, relayBitrateIncomingBps);
             unlockedSetStat(OCTO_RECEIVE_PACKET_RATE, relayPacketRateIncoming);
             unlockedSetStat(OCTO_SEND_BITRATE, relayBitrateOutgoingBps);
