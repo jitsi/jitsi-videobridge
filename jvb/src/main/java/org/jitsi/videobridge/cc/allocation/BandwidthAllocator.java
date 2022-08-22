@@ -368,7 +368,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             for (int i = 0; i < sourceBitrateAllocations.size(); i++)
             {
                 SingleSourceAllocation sourceBitrateAllocation = sourceBitrateAllocations.get(i);
-                if (sourceBitrateAllocation.getConstraints().getMaxHeight() <= 0)
+                if (sourceBitrateAllocation.getConstraints().isDisabled())
                 {
                     continue;
                 }
@@ -439,7 +439,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
             for (int i = 0; i < sourceBitrateAllocations.size(); i++)
             {
                 SingleSourceAllocation2 sourceBitrateAllocation = sourceBitrateAllocations.get(i);
-                if (sourceBitrateAllocation.getConstraints().getMaxHeight() <= 0)
+                if (sourceBitrateAllocation.getConstraints().isDisabled())
                 {
                     continue;
                 }
@@ -503,7 +503,7 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         {
             return false;
         }
-        return constraints.getMaxHeight() > 0;
+        return !constraints.isDisabled();
     }
 
     private synchronized @NotNull List<SingleSourceAllocation> createAllocations(List<T> conferenceEndpoints)
