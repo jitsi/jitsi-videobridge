@@ -154,6 +154,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             put("bitrate_allocator", bandwidthAllocator.debugState)
             put("packet_handler", packetHandler.debugState)
             put("forwardedEndpoints", forwardedEndpoints.toString())
+            put("forwardedSources", forwardedSources.toString())
             put("oversending", oversendingTimeTracker.state)
             put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
             put("supportsRtx", supportsRtx)
