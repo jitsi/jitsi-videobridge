@@ -1100,24 +1100,32 @@ public class Videobridge
         /**
          * The total number of endpoints created.
          */
-        public AtomicInteger totalEndpoints = new AtomicInteger();
+        public CounterMetric totalEndpoints = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "endpoints",
+                "The total number of endpoints created.");
 
         /**
          * The number of endpoints which had not established an endpoint
          * message transport even after some delay.
          */
-        public AtomicInteger numEndpointsNoMessageTransportAfterDelay = new AtomicInteger();
+        public CounterMetric numEndpointsNoMessageTransportAfterDelay = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("endpoints_no_message_transport_after_delay",
+                "Number of endpoints which had not established a relay message transport even after some delay.");
 
         /**
          * The total number of relays created.
          */
-        public AtomicInteger totalRelays = new AtomicInteger();
+        public CounterMetric totalRelays = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "relays",
+                "The total number of relays created.");
 
         /**
          * The number of relays which had not established a relay
          * message transport even after some delay.
          */
-        public AtomicInteger numRelaysNoMessageTransportAfterDelay = new AtomicInteger();
+        public CounterMetric numRelaysNoMessageTransportAfterDelay = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("relays_no_message_transport_after_delay",
+                "Number of relays which had not established a relay message transport even after some delay.");
 
         /**
          * The total number of times the dominant speaker in any conference

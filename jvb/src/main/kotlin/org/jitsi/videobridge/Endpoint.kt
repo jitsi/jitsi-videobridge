@@ -291,7 +291,7 @@ class Endpoint @JvmOverloads constructor(
         setupIceTransport()
         setupDtlsTransport()
 
-        conference.videobridge.statistics.totalEndpoints.incrementAndGet()
+        conference.videobridge.statistics.totalEndpoints.inc()
 
         logger.info("Created new endpoint isUsingSourceNames=$isUsingSourceNames, iceControlling=$iceControlling")
     }
@@ -674,7 +674,7 @@ class Endpoint @JvmOverloads constructor(
                 if (!isExpired) {
                     if (!messageTransport.isConnected) {
                         logger.error("EndpointMessageTransport still not connected.")
-                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.incrementAndGet()
+                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.inc()
                     }
                 }
             },

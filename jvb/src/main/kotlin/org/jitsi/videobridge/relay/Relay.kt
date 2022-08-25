@@ -225,7 +225,7 @@ class Relay @JvmOverloads constructor(
         setupIceTransport()
         setupDtlsTransport()
 
-        conference.videobridge.statistics.totalRelays.incrementAndGet()
+        conference.videobridge.statistics.totalRelays.inc()
     }
 
     fun getMessageTransport(): RelayMessageTransport = messageTransport
@@ -697,7 +697,7 @@ class Relay @JvmOverloads constructor(
                 if (!expired) {
                     if (!messageTransport.isConnected) {
                         logger.error("RelayMessageTransport still not connected.")
-                        conference.videobridge.statistics.numRelaysNoMessageTransportAfterDelay.incrementAndGet()
+                        conference.videobridge.statistics.numRelaysNoMessageTransportAfterDelay.inc()
                     }
                 }
             },
