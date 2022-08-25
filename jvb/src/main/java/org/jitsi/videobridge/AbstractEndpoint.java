@@ -389,12 +389,13 @@ public abstract class AbstractEndpoint
                             receiverVideoConstraints.put(sourceName, receiverConstraints.getDebugState()));
 
             debugState.put("receiverVideoConstraints", receiverVideoConstraints);
+            debugState.put("maxReceiverVideoConstraintsMap", new HashMap<>(maxReceiverVideoConstraintsMap));
         }
         else
         {
+            debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
             debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
         }
-        debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
 
