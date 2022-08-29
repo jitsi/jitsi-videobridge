@@ -1139,8 +1139,8 @@ public class Videobridge
          * Number of endpoints whose ICE connection was established, but DTLS
          * wasn't (at the time of expiration).
          */
-        public CounterMetric dtlsFailedEndpoints = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "dtls_failed_endpoints",
+        public CounterMetric endpointsDtlsFailed = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "endpoints_dtls_failed",
                 "Number of endpoints whose ICE connection was established, but DTLS wasn't (at time of expiration).");
 
         /**

@@ -659,7 +659,7 @@ public class Conference
         boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
         boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;
 
-        videobridgeStatistics.dtlsFailedEndpoints.addAndGet(statistics.dtlsFailedEndpoints.get());
+        videobridgeStatistics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
 
         if (hasPartiallyFailed)
         {
