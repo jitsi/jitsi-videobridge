@@ -1131,13 +1131,17 @@ public class Videobridge
          * The total number of times the dominant speaker in any conference
          * changed.
          */
-        public LongAdder totalDominantSpeakerChanges = new LongAdder();
+        public CounterMetric dominantSpeakerChanges = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "dominant_speaker_changes",
+                "Number of times the dominant speaker in any conference changed.");
 
         /**
          * Number of endpoints whose ICE connection was established, but DTLS
          * wasn't (at the time of expiration).
          */
-        public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
+        public CounterMetric dtlsFailedEndpoints = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "dtls_failed_endpoints",
+                "Number of endpoints whose ICE connection was established, but DTLS wasn't (at time of expiration).");
 
         /**
          * The stress level for this bridge
@@ -1169,7 +1173,9 @@ public class Videobridge
         /**
          * The total number of times the layering of an incoming video stream changed (updated on endpoint expiration).
          */
-        public AtomicInteger totalLayeringChangesReceived = new AtomicInteger();
+        public CounterMetric layeringChangesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "layering_changes_received",
+                "Number of times the layering of an incoming video stream changed (updated on endpoint expiration).");
 
         /**
          * The total duration, in milliseconds, of video streams (SSRCs) that were received. For example, if an

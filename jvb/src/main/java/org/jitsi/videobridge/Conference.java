@@ -515,7 +515,7 @@ public class Conference
 
             if (dominantSpeakerChanged && !silence)
             {
-                getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
+                getVideobridge().getStatistics().dominantSpeakerChanges.inc();
                 if (getEndpointCount() > 2)
                 {
                     maybeSendKeyframeRequest(recentSpeakers.get(0));
