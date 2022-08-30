@@ -515,7 +515,7 @@ public class Conference
 
             if (dominantSpeakerChanged && !silence)
             {
-                getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
+                getVideobridge().getStatistics().dominantSpeakerChanges.inc();
                 if (getEndpointCount() > 2)
                 {
                     maybeSendKeyframeRequest(recentSpeakers.get(0));
@@ -659,7 +659,7 @@ public class Conference
         boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
         boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;
 
-        videobridgeStatistics.dtlsFailedEndpoints.addAndGet(statistics.dtlsFailedEndpoints.get());
+        videobridgeStatistics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
 
         if (hasPartiallyFailed)
         {

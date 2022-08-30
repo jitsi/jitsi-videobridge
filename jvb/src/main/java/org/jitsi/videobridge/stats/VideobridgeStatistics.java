@@ -536,7 +536,7 @@ public class VideobridgeStatistics
                 jvbStats.numRelaysNoMessageTransportAfterDelay.get()
             );
             unlockedSetStat("total_keyframes_received", jvbStats.keyframesReceived.get());
-            unlockedSetStat("total_layering_changes_received", jvbStats.totalLayeringChangesReceived.get());
+            unlockedSetStat("total_layering_changes_received", jvbStats.layeringChangesReceived.get());
             unlockedSetStat(
                 "total_video_stream_milliseconds_received",
                 jvbStats.totalVideoStreamMillisecondsReceived.get());
@@ -585,7 +585,7 @@ public class VideobridgeStatistics
                             jvbStats.colibriWebSocketMessagesSent.get());
             unlockedSetStat(
                     TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get());
-            unlockedSetStat("dtls_failed_endpoints", jvbStats.dtlsFailedEndpoints.get());
+            unlockedSetStat("dtls_failed_endpoints", jvbStats.endpointsDtlsFailed.get());
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
             unlockedSetStat(
                     TOTAL_PACKETS_RECEIVED, jvbStats.packetsReceived.get());
@@ -601,7 +601,7 @@ public class VideobridgeStatistics
             unlockedSetStat(OCTO_RECEIVE_PACKET_RATE, relayPacketRateIncoming);
             unlockedSetStat(OCTO_SEND_BITRATE, relayBitrateOutgoingBps);
             unlockedSetStat(OCTO_SEND_PACKET_RATE, relayPacketRateOutgoing);
-            unlockedSetStat(TOTAL_DOMINANT_SPEAKER_CHANGES, jvbStats.totalDominantSpeakerChanges.sum());
+            unlockedSetStat(TOTAL_DOMINANT_SPEAKER_CHANGES, jvbStats.dominantSpeakerChanges.get());
             unlockedSetStat("endpoints_with_suspended_sources", endpointsWithSuspendedSources);
 
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));

@@ -865,8 +865,8 @@ class Relay @JvmOverloads constructor(
         conference.videobridge.statistics.apply {
             /* TODO: should these be separate stats from the endpoint stats? */
             keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
-            totalLayeringChangesReceived.addAndGet(
-                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
+            layeringChangesReceived.addAndGet(
+                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
             )
 
             val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
