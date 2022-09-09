@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.colibri2
 
+import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
@@ -35,3 +36,13 @@ fun createConferenceNotFoundError(iq: IQ, conferenceId: String, colibri2: Boolea
     "Conference not found for ID: $conferenceId",
     if (colibri2) Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND) else null
 )
+
+/**
+ * For colibri1 use the ColibriConferenceIQ helper to preserve the presence of StanzaError.Type.CANCEL
+ */
+fun createGracefulShutdownErrorResponse(iq: IQ, colibri2: Boolean): IQ = if (colibri2) createError(
+    iq,
+    StanzaError.Condition.service_unavailable,
+    "In graceful shutdown",
+    Colibri2Error(Colibri2Error.Reason.GRACEFUL_SHUTDOWN)
+) else ColibriConferenceIQ.createGracefulShutdownErrorResponse(iq)
