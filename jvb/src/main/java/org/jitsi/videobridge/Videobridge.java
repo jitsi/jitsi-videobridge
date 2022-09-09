@@ -53,8 +53,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
 
-import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceAlreadyExistsError;
-import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceNotFoundError;
+import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.*;
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
@@ -426,7 +425,7 @@ public class Videobridge
         }
         catch (InGracefulShutdownException e)
         {
-            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq);
+            return createGracefulShutdownErrorResponse(conferenceIq, false);
         }
 
         return conference.getShim().handleColibriConferenceIQ(conferenceIq);
@@ -454,7 +453,7 @@ public class Videobridge
         }
         catch (InGracefulShutdownException e)
         {
-            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceModifyIQ);
+            return createGracefulShutdownErrorResponse(conferenceModifyIQ, true);
         }
         catch (XmppStringprepException e)
         {
@@ -517,7 +516,7 @@ public class Videobridge
         }
         catch (InGracefulShutdownException e)
         {
-            request.getCallback().invoke(ColibriConferenceIQ.createGracefulShutdownErrorResponse(iq));
+            request.getCallback().invoke(createGracefulShutdownErrorResponse(iq, colibri2));
             return;
         }
         catch (XmppStringprepException e)
