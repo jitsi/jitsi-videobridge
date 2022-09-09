@@ -25,9 +25,11 @@ import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
+import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -52,6 +54,7 @@ import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
@@ -222,7 +225,7 @@ class Relay @JvmOverloads constructor(
         setupIceTransport()
         setupDtlsTransport()
 
-        conference.videobridge.statistics.totalRelays.incrementAndGet()
+        conference.videobridge.statistics.totalRelays.inc()
     }
 
     fun getMessageTransport(): RelayMessageTransport = messageTransport
@@ -694,7 +697,7 @@ class Relay @JvmOverloads constructor(
                 if (!expired) {
                     if (!messageTransport.isConnected) {
                         logger.error("RelayMessageTransport still not connected.")
-                        conference.videobridge.statistics.numRelaysNoMessageTransportAfterDelay.incrementAndGet()
+                        conference.videobridge.statistics.numRelaysNoMessageTransportAfterDelay.inc()
                     }
                 }
             },
@@ -777,11 +780,29 @@ class Relay @JvmOverloads constructor(
     /* If we're connected, forward everything that didn't come in over a relay or that came from a different
        relay mesh.
         TODO: worry about bandwidth limits on relay links? */
-    override fun wants(packet: PacketInfo): Boolean =
-        isTransportConnected() && (
-            packet !is RelayedPacketInfo ||
-                packet.meshId != meshId
-            )
+    override fun wants(packet: PacketInfo): Boolean {
+        if (!isTransportConnected()) {
+            return false
+        }
+        if (packet is RelayedPacketInfo && packet.meshId == meshId) {
+            return false
+        }
+
+        return when (packet.packet) {
+            is VideoRtpPacket, is AudioRtpPacket, is RtcpSrPacket,
+            is RtcpFbPliPacket, is RtcpFbFirPacket -> {
+                // We assume that we are only given PLIs/FIRs destined for this
+                // endpoint. This is because Conference has to find the target
+                // endpoint (belonging to this relay) anyway, and we would essentially be
+                // performing the same check twice.
+                true
+            }
+            else -> {
+                logger.warn("Ignoring an unknown packet type:" + packet.packet.javaClass.simpleName)
+                false
+            }
+        }
+    }
 
     override fun send(packet: PacketInfo) {
         packet.endpointId?.let {
@@ -843,9 +864,9 @@ class Relay @JvmOverloads constructor(
 
         conference.videobridge.statistics.apply {
             /* TODO: should these be separate stats from the endpoint stats? */
-            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
-            totalLayeringChangesReceived.addAndGet(
-                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
+            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
+            layeringChangesReceived.addAndGet(
+                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
             )
 
             val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {

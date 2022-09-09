@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import java.util.stream.*;
 
-import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.jitsi.videobridge.VersionConfig.config;
 import static org.jitsi.videobridge.util.MultiStreamCompatibilityKt.endpointIdToSourceName;
 
@@ -230,7 +229,7 @@ public class EndpointMessageTransport
     private void sendMessage(DataChannel dst, BridgeChannelMessage message)
     {
         dst.sendString(message.toJson());
-        statisticsSupplier.get().totalDataChannelMessagesSent.incrementAndGet();
+        statisticsSupplier.get().dataChannelMessagesSent.inc();
     }
 
     /**
@@ -248,14 +247,14 @@ public class EndpointMessageTransport
             // don't wait on the result
             remote.sendString(message.toJson(), new WriteCallback.Adaptor());
         }
-        statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet();
+        statisticsSupplier.get().colibriWebSocketMessagesSent.inc();
     }
 
     @Override
     public void onDataChannelMessage(DataChannelMessage dataChannelMessage)
     {
         webSocketLastActive = false;
-        statisticsSupplier.get().totalDataChannelMessagesReceived.incrementAndGet();
+        statisticsSupplier.get().dataChannelMessagesReceived.inc();
 
         if (dataChannelMessage instanceof DataChannelStringMessage)
         {
@@ -441,7 +440,7 @@ public class EndpointMessageTransport
             return;
         }
 
-        statisticsSupplier.get().totalColibriWebSocketMessagesReceived.incrementAndGet();
+        statisticsSupplier.get().colibriWebSocketMessagesReceived.inc();
 
         webSocketLastActive = true;
         onMessage(ws, message);

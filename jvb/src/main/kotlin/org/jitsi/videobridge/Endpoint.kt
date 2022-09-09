@@ -339,7 +339,7 @@ class Endpoint @JvmOverloads constructor(
         setupIceTransport()
         setupDtlsTransport()
 
-        conference.videobridge.statistics.totalEndpoints.incrementAndGet()
+        conference.videobridge.statistics.totalEndpoints.inc()
 
         logger.info("Created new endpoint isUsingSourceNames=$isUsingSourceNames, iceControlling=$iceControlling")
     }
@@ -729,7 +729,7 @@ class Endpoint @JvmOverloads constructor(
                 if (!isExpired) {
                     if (!messageTransport.isConnected) {
                         logger.error("EndpointMessageTransport still not connected.")
-                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.incrementAndGet()
+                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.inc()
                     }
                 }
             },
@@ -1116,12 +1116,12 @@ class Endpoint @JvmOverloads constructor(
 
         conference.videobridge.statistics.apply {
             val bweStats = transceiverStats.bandwidthEstimatorStats
-            bweStats.getNumber("incomingEstimateExpirations")?.toInt()?.let {
+            bweStats.getNumber("incomingEstimateExpirations")?.toLong()?.let {
                 incomingBitrateExpirations.addAndGet(it)
             }
-            totalKeyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes)
-            totalLayeringChangesReceived.addAndGet(
-                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges
+            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
+            layeringChangesReceived.addAndGet(
+                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
             )
 
             val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
@@ -1170,6 +1170,7 @@ class Endpoint @JvmOverloads constructor(
         super.expire()
 
         try {
+            bitrateController.expire()
             endpointShim?.expire()
             endpointShim = null
             updateStatsOnExpire()

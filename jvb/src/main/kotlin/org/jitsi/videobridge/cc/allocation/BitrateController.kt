@@ -125,6 +125,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             }
         }
 
+    fun expire() = bandwidthAllocator.expire()
+
     /**
      * Return the number of endpoints whose streams are currently being forwarded.
      */
@@ -144,12 +146,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         }
         return packetHandler.accept(packetInfo)
     }
-    fun accept(rtcpSrPacket: RtcpSrPacket): Boolean {
-        // TODO: It is not clear why this is here, and why it isn't in the other accept() method.
-        bandwidthAllocator.maybeUpdate()
-
-        return packetHandler.accept(rtcpSrPacket)
-    }
+    fun accept(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.accept(rtcpSrPacket)
     fun transformRtcp(rtcpSrPacket: RtcpSrPacket?): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
 
@@ -158,6 +155,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             put("bitrate_allocator", bandwidthAllocator.debugState)
             put("packet_handler", packetHandler.debugState)
             put("forwardedEndpoints", forwardedEndpoints.toString())
+            put("forwardedSources", forwardedSources.toString())
             put("oversending", oversendingTimeTracker.state)
             put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
             put("supportsRtx", supportsRtx)

@@ -53,8 +53,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
 
-import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceAlreadyExistsError;
-import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceNotFoundError;
+import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.*;
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
 
 /**
@@ -426,7 +425,7 @@ public class Videobridge
         }
         catch (InGracefulShutdownException e)
         {
-            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIq);
+            return createGracefulShutdownErrorResponse(conferenceIq, false);
         }
 
         return conference.getShim().handleColibriConferenceIQ(conferenceIq);
@@ -454,7 +453,7 @@ public class Videobridge
         }
         catch (InGracefulShutdownException e)
         {
-            return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceModifyIQ);
+            return createGracefulShutdownErrorResponse(conferenceModifyIQ, true);
         }
         catch (XmppStringprepException e)
         {
@@ -517,7 +516,7 @@ public class Videobridge
         }
         catch (InGracefulShutdownException e)
         {
-            request.getCallback().invoke(ColibriConferenceIQ.createGracefulShutdownErrorResponse(iq));
+            request.getCallback().invoke(createGracefulShutdownErrorResponse(iq, colibri2));
             return;
         }
         catch (XmppStringprepException e)
@@ -942,7 +941,9 @@ public class Videobridge
          * (and which would otherwise result in video suspension).
          * (see {@link AimdRateControl#incomingBitrateExpirations}).
          */
-        public AtomicInteger incomingBitrateExpirations = new AtomicInteger(0);
+        public CounterMetric incomingBitrateExpirations = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "incoming_bitrate_expirations",
+                "Number of times our AIMDs have expired the incoming bitrate.");
 
         /**
          * The cumulative/total number of conferences in which ALL of the endpoints failed ICE.
@@ -1001,51 +1002,36 @@ public class Videobridge
         public AtomicLong totalLossDegradedParticipantMs = new AtomicLong();
 
         /**
-         * The total number of times an ICE Agent failed to establish
-         * connectivity.
-         */
-        public AtomicInteger totalIceFailed = new AtomicInteger();
-
-        /**
-         * The total number of times an ICE Agent succeeded.
-         */
-        public AtomicInteger totalIceSucceeded = new AtomicInteger();
-
-        /**
-         * The total number of times an ICE Agent succeeded and the selected
-         * candidate was a TCP candidate.
-         */
-        public AtomicInteger totalIceSucceededTcp = new AtomicInteger();
-
-        /**
-         * The total number of times an ICE Agent succeeded and the selected
-         * candidate pair included a relayed candidate.
-         */
-        public AtomicInteger totalIceSucceededRelayed = new AtomicInteger();
-
-        /**
          * The total number of messages received from the data channels of
          * the endpoints of this conference.
          */
-        public AtomicLong totalDataChannelMessagesReceived = new AtomicLong();
+        public CounterMetric dataChannelMessagesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "data_channel_messages_received",
+                "Number of messages received from the data channels of the endpoints of this conference.");
 
         /**
          * The total number of messages sent via the data channels of the
          * endpoints of this conference.
          */
-        public AtomicLong totalDataChannelMessagesSent = new AtomicLong();
+        public CounterMetric dataChannelMessagesSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "data_channel_messages_sent",
+                "Number of messages sent via the data channels of the endpoints of this conference.");
 
         /**
          * The total number of messages received from the data channels of
          * the endpoints of this conference.
          */
-        public AtomicLong totalColibriWebSocketMessagesReceived = new AtomicLong();
+        public CounterMetric colibriWebSocketMessagesReceived = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("colibri_web_socket_messages_received",
+                        "Number of messages received from the data channels of the endpoints of this conference.");
 
         /**
          * The total number of messages sent via the data channels of the
          * endpoints of this conference.
          */
-        public AtomicLong totalColibriWebSocketMessagesSent = new AtomicLong();
+        public CounterMetric colibriWebSocketMessagesSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "colibri_web_socket_messages_sent",
+                "Number of messages sent via the data channels of the endpoints of this conference.");
 
         /**
          * The total number of bytes received in RTP packets in conferences on
@@ -1066,14 +1052,18 @@ public class Videobridge
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalPacketsReceived = new AtomicLong();
+        public CounterMetric packetsReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "packets_received",
+                "Number of RTP packets received in conferences on this videobridge.");
 
         /**
          * The total number of RTP packets sent in conferences on this
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalPacketsSent = new AtomicLong();
+        public CounterMetric packetsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "packets_sent",
+                "Number of RTP packets sent in conferences on this videobridge.");
 
         /**
          * The total number of bytes received by relays in RTP packets in conferences on
@@ -1094,48 +1084,63 @@ public class Videobridge
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalRelayPacketsReceived = new AtomicLong();
+        public CounterMetric relayPacketsReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "relay_packets_received",
+                "Number of RTP packets received by relays in conferences on this videobridge.");
 
         /**
          * The total number of RTP packets sent by relays in conferences on this
          * videobridge. Note that this is only updated when conferences
          * expire.
          */
-        public AtomicLong totalRelayPacketsSent = new AtomicLong();
-
+        public CounterMetric relayPacketsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "relay_packets_sent",
+                "Number of RTP packets sent by relays in conferences on this videobridge.");
         /**
          * The total number of endpoints created.
          */
-        public AtomicInteger totalEndpoints = new AtomicInteger();
+        public CounterMetric totalEndpoints = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "endpoints",
+                "The total number of endpoints created.");
 
         /**
          * The number of endpoints which had not established an endpoint
          * message transport even after some delay.
          */
-        public AtomicInteger numEndpointsNoMessageTransportAfterDelay = new AtomicInteger();
+        public CounterMetric numEndpointsNoMessageTransportAfterDelay = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("endpoints_no_message_transport_after_delay",
+                "Number of endpoints which had not established a relay message transport even after some delay.");
 
         /**
          * The total number of relays created.
          */
-        public AtomicInteger totalRelays = new AtomicInteger();
+        public CounterMetric totalRelays = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "relays",
+                "The total number of relays created.");
 
         /**
          * The number of relays which had not established a relay
          * message transport even after some delay.
          */
-        public AtomicInteger numRelaysNoMessageTransportAfterDelay = new AtomicInteger();
+        public CounterMetric numRelaysNoMessageTransportAfterDelay = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("relays_no_message_transport_after_delay",
+                "Number of relays which had not established a relay message transport even after some delay.");
 
         /**
          * The total number of times the dominant speaker in any conference
          * changed.
          */
-        public LongAdder totalDominantSpeakerChanges = new LongAdder();
+        public CounterMetric dominantSpeakerChanges = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "dominant_speaker_changes",
+                "Number of times the dominant speaker in any conference changed.");
 
         /**
          * Number of endpoints whose ICE connection was established, but DTLS
          * wasn't (at the time of expiration).
          */
-        public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
+        public CounterMetric endpointsDtlsFailed = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "endpoints_dtls_failed",
+                "Number of endpoints whose ICE connection was established, but DTLS wasn't (at time of expiration).");
 
         /**
          * The stress level for this bridge
@@ -1150,18 +1155,26 @@ public class Videobridge
                 "", "");
 
         /** Number of preemptive keyframe requests that were sent. */
-        public AtomicInteger preemptiveKeyframeRequestsSent = new AtomicInteger();
+        public CounterMetric preemptiveKeyframeRequestsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "preemptive_keyframe_requests_sent",
+                "Number of preemptive keyframe requests that were sent.");
 
         /** Number of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
-        public AtomicInteger preemptiveKeyframeRequestsSuppressed = new AtomicInteger();
+        public CounterMetric preemptiveKeyframeRequestsSuppressed = VideobridgeMetricsContainer.getInstance()
+                .registerCounter("preemptive_keyframe_requests_suppressed",
+                "Number of preemptive keyframe requests that were not sent because no endpoints were in stage view.");
 
         /** The total number of keyframes that were received (updated on endpoint expiration). */
-        public AtomicInteger totalKeyframesReceived = new AtomicInteger();
+        public CounterMetric keyframesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "keyframes_received",
+                "Number of keyframes that were received (updated on endpoint expiration).");
 
         /**
          * The total number of times the layering of an incoming video stream changed (updated on endpoint expiration).
          */
-        public AtomicInteger totalLayeringChangesReceived = new AtomicInteger();
+        public CounterMetric layeringChangesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "layering_changes_received",
+                "Number of times the layering of an incoming video stream changed (updated on endpoint expiration).");
 
         /**
          * The total duration, in milliseconds, of video streams (SSRCs) that were received. For example, if an

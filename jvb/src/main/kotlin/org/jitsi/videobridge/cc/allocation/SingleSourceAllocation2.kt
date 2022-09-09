@@ -202,22 +202,6 @@ internal class SingleSourceAllocation2(
     }
 
     /**
-     * Gets the "preferred" height and frame rate based on the constraints signaled from the receiver.
-     *
-     * For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
-     * temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
-     * consider frame rates at least as high as the preferred. In practice this means we consider
-     * 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
-     */
-    private fun getPreferred(constraints: VideoConstraints): Pair<Int, Double> {
-        return if (constraints.maxHeight > 180) {
-            Pair(config.onstagePreferredHeightPx(), config.onstagePreferredFramerate())
-        } else {
-            noPreferredHeightAndFrameRate
-        }
-    }
-
-    /**
      * Selects from a list of layers the ones which should be considered when allocating bandwidth, as well as the
      * "preferred" and "oversend" layers. Logic specific to screensharing: we prioritize resolution over framerate,
      * prioritize the highest layer over other endpoints (by setting the highest layer as "preferred"), and allow
@@ -236,26 +220,31 @@ internal class SingleSourceAllocation2(
 
         // We select all layers that satisfy the constraints.
         var selectedLayers =
-            if (constraints.maxHeight < 0) {
+            if (!constraints.heightIsLimited()) {
                 activeLayers
             } else {
                 activeLayers.filter { it.layer.height <= constraints.maxHeight }
             }
         // If no layers satisfy the constraints, we use the layers with the lowest resolution.
         if (selectedLayers.isEmpty()) {
-            val minHeight = activeLayers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
+            val minHeight = activeLayers.minOfOrNull { it.layer.height } ?: return Layers.noLayers
             selectedLayers = activeLayers.filter { it.layer.height == minHeight }
 
             // This recognizes the structure used with VP9 (multiple encodings with the same resolution and unknown frame
-            // rate). In this case, we only want the low quality layer.
-            if (selectedLayers.isNotEmpty() && selectedLayers[0].layer.frameRate < 0) {
+            // rate). In this case, we only want the low quality layer. Unless we're on stage, in which case we should
+            // consider all layers.
+            if (!onStage && selectedLayers.isNotEmpty() && selectedLayers[0].layer.frameRate < 0) {
                 selectedLayers = listOf(selectedLayers[0])
             }
         }
 
         val oversendIdx = if (onStage && config.allowOversendOnStage()) {
-            val maxHeight = selectedLayers.map { it.layer.height }.maxOrNull() ?: return Layers.noLayers
-            selectedLayers.firstIndexWhich { it.layer.height == maxHeight }
+            val maxHeight = selectedLayers.maxOfOrNull { it.layer.height } ?: return Layers.noLayers
+            // Of all layers with the highest resolution select the one with lowest bitrate. In case of VP9 the layers
+            // are not necessarily ordered by bitrate.
+            val lowestBitrateLayer = selectedLayers.filter { it.layer.height == maxHeight }.minByOrNull { it.bitrate }
+                ?: return Layers.noLayers
+            selectedLayers.indexOf(lowestBitrateLayer)
         } else {
             -1
         }
@@ -279,7 +268,7 @@ internal class SingleSourceAllocation2(
         constraints: VideoConstraints,
         nowMs: Long
     ): Layers {
-        if (constraints.maxHeight <= 0 || !source.hasRtpLayers()) {
+        if (constraints.maxHeight == 0 || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
         val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
@@ -312,7 +301,7 @@ internal class SingleSourceAllocation2(
         for (layerSnapshot in layers) {
             val layer = layerSnapshot.layer
             val lessThanPreferredHeight = layer.height < preferredHeight
-            val lessThanOrEqualMaxHeight = layer.height <= constraints.maxHeight
+            val lessThanOrEqualMaxHeight = layer.height <= constraints.maxHeight || !constraints.heightIsLimited()
             // If frame rate is unknown, consider it to be sufficient.
             val atLeastPreferredFps = layer.frameRate < 0 || layer.frameRate >= preferredFps
             if (lessThanPreferredHeight ||
@@ -335,16 +324,6 @@ internal class SingleSourceAllocation2(
     companion object {
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator::class.java)
     }
-}
-
-private val noPreferredHeightAndFrameRate = Pair(-1, -1.0)
-
-/** Return the index of the first item in the list which satisfies a predicate, or -1 if none do. */
-private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
-    forEachIndexed { index, item ->
-        if (predicate(item)) return index
-    }
-    return -1
 }
 
 /**

@@ -22,6 +22,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.EndpointConnectionStatusConfig.Companion.config
 import org.jitsi.videobridge.message.EndpointConnectionStatusMessage
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.ScheduledExecutorService
@@ -106,10 +107,12 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
                 if (wasActive && !active) {
                     logger.info { "${endpoint.id} is considered disconnected.  No activity for $noActivityTime" }
                     inactiveEndpointIds += endpoint.id
+                    endpointsDisconnected.inc()
                     changed = true
                 } else if (!wasActive && active) {
                     logger.info { "${endpoint.id} has reconnected" }
                     inactiveEndpointIds -= endpoint.id
+                    endpointsReconnected.inc()
                     changed = true
                 }
             }
@@ -148,5 +151,18 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    companion object {
+        @JvmField
+        val endpointsDisconnected = VideobridgeMetricsContainer.instance.registerCounter(
+            "endpoints_disconnected",
+            "Endpoints detected as temporarily inactive/disconnected due to inactivity."
+        )
+        @JvmField
+        val endpointsReconnected = VideobridgeMetricsContainer.instance.registerCounter(
+            "endpoints_reconnected",
+            "Endpoints reconnected after being detected as temporarily inactive/disconnected due to inactivity."
+        )
     }
 }

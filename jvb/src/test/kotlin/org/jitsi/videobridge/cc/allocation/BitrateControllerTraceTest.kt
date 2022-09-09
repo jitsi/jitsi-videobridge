@@ -52,7 +52,7 @@ class BitrateControllerTraceTest : ShouldSpec() {
 
     init {
         val bweEvents = javaClass.getResource("/bwe-events.csv") ?: fail("Can not read bwe-events.csv")
-        val parsedLines = bweEvents.readText().split("\n").drop(1).dropLast(1).map { ParsedLine(it) }.toList()
+        val parsedLines = bweEvents.readText().lines().drop(1).dropLast(1).map { ParsedLine(it) }.toList()
 
         context("Number of allocation changes") {
 
@@ -84,7 +84,7 @@ class BitrateControllerTraceTest : ShouldSpec() {
     class Endpoint(
         override val id: String,
         override var videoType: VideoType = VideoType.CAMERA,
-        override val mediaSources: Array<MediaSourceDesc> = emptyArray(),
+        override val mediaSources: Array<MediaSourceDesc> = emptyArray()
     ) : MediaSourceContainer {
         val layer7 = MockRtpLayerDesc(tid = 0, eid = 0, height = 180, frameRate = 7.5, 0.bps)
         val layer30 = MockRtpLayerDesc(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = 0.bps)

@@ -35,6 +35,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.ice.IceConfig
 import org.jitsi.videobridge.ice.TransportUtils
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceCandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceRtcpmuxPacketExtension
@@ -344,11 +345,21 @@ class IceTransport @JvmOverloads constructor(
             transition.completed() -> {
                 if (iceConnected.compareAndSet(false, true)) {
                     eventHandler?.connected()
+                    if (iceComponent.selectedPair.remoteCandidate.transport.isTcpType()) {
+                        iceSucceededTcp.inc()
+                    }
+                    if (iceComponent.selectedPair.remoteCandidate.type == CandidateType.RELAYED_CANDIDATE ||
+                        iceComponent.selectedPair.localCandidate.type == CandidateType.RELAYED_CANDIDATE
+                    ) {
+                        iceSucceededRelayed.inc()
+                    }
+                    iceSucceeded.inc()
                 }
             }
             transition.failed() -> {
                 if (iceFailed.compareAndSet(false, true)) {
                     eventHandler?.failed()
+                    Companion.iceFailed.inc()
                 }
             }
         }
@@ -385,6 +396,41 @@ class IceTransport @JvmOverloads constructor(
             }
             Harvesters.singlePortHarvesters?.forEach(iceAgent::addCandidateHarvester)
         }
+
+        /**
+         * The total number of times an ICE Agent failed to establish
+         * connectivity.
+         */
+        val iceFailed = VideobridgeMetricsContainer.instance.registerCounter(
+            "ice_failed",
+            "Number of times an ICE Agent failed to establish connectivity."
+        )
+
+        /**
+         * The total number of times an ICE Agent succeeded.
+         */
+        val iceSucceeded = VideobridgeMetricsContainer.instance.registerCounter(
+            "ice_succeeded",
+            "Number of times an ICE Agent succeeded."
+        )
+
+        /**
+         * The total number of times an ICE Agent succeeded and the selected
+         * candidate was a TCP candidate.
+         */
+        val iceSucceededTcp = VideobridgeMetricsContainer.instance.registerCounter(
+            "ice_succeeded_tcp",
+            "Number of times an ICE Agent succeeded and the selected candidate was a TCP candidate."
+        )
+
+        /**
+         * The total number of times an ICE Agent succeeded and the selected
+         * candidate pair included a relayed candidate.
+         */
+        val iceSucceededRelayed = VideobridgeMetricsContainer.instance.registerCounter(
+            "ice_succeeded_relayed",
+            "Number of times an ICE Agent succeeded and the selected pair included a relayed candidate."
+        )
     }
 
     private class PacketStats {

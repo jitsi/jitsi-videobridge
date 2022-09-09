@@ -253,7 +253,7 @@ class RelayMessageTransport(
         // from multiple threads.  It's just fire-and-forget though, so we
         // don't wait on the result
         dst.remote?.sendString(message.toJson(), WriteCallback.Adaptor())
-        statisticsSupplier.get().totalColibriWebSocketMessagesSent.incrementAndGet()
+        statisticsSupplier.get().colibriWebSocketMessagesSent.inc()
     }
 
     /**
@@ -360,7 +360,7 @@ class RelayMessageTransport(
             logger.warn("Received text from an unknown web socket.")
             return
         }
-        statisticsSupplier.get().totalColibriWebSocketMessagesReceived.incrementAndGet()
+        statisticsSupplier.get().colibriWebSocketMessagesReceived.inc()
         onMessage(ws, message)
     }
 
