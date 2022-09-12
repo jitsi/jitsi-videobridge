@@ -61,23 +61,14 @@ private fun RtpPacket.setTl0Index(tl0Index: Int) {
 }
 
 /**
- * Truncate to 8 unsigned bits.
- */
-private fun Int.fixByte(): Int {
-    val s = this.rem(256)
-    /* Adjust if dividend was negative. */
-    return if (s < 0) (s + 256) else s
-}
-
-/**
  * Addition clipped to 8 unsigned bits.
  */
-private infix fun Int.bytePlus(x: Int) = this.plus(x).fixByte()
+private infix fun Int.bytePlus(x: Int) = this.plus(x) and 0xff
 
 /**
  * Subtraction clipped to 8 unsigned bits.
  */
-private infix fun Int.byteMinus(x: Int) = this.minus(x).fixByte()
+private infix fun Int.byteMinus(x: Int) = this.minus(x) and 0xff
 
 /**
  * Align common fields from different source types.
