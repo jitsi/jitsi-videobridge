@@ -159,7 +159,7 @@ class RelayMessageTransport(
             return null
         }
 
-        ep.addReceiverV2(relay.id, sourceName, message.videoConstraints)
+        ep.addReceiver(relay.id, sourceName, message.videoConstraints)
         return null
     }
 

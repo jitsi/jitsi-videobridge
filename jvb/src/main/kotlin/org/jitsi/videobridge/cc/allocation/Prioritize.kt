@@ -20,7 +20,7 @@ import org.jitsi.videobridge.calculateLastN
 import org.jitsi.videobridge.jvbLastNSingleton
 import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion.singleton as conferenceSizeLimits
 
-fun prioritize2(
+fun prioritize(
     conferenceSources: MutableList<MediaSourceDesc>,
     selectedSourceNames: List<String> = emptyList()
 ): List<MediaSourceDesc> {
@@ -38,7 +38,7 @@ fun prioritize2(
 /**
  * Return the "effective" constraints for the given media sources, i.e. the constraints adjusted for LastN.
  */
-fun getEffectiveConstraints2(sources: List<MediaSourceDesc>, allocationSettings: AllocationSettings):
+fun getEffectiveConstraints(sources: List<MediaSourceDesc>, allocationSettings: AllocationSettings):
     Map<String, VideoConstraints> {
 
     // FIXME figure out before merge - is using source count instead of endpoints

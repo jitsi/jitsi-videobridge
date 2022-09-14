@@ -542,14 +542,9 @@ class Endpoint @JvmOverloads constructor(
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
-    fun effectiveVideoConstraintsChanged(
-        oldEffectiveConstraints: Map<String, VideoConstraints>,
-        newEffectiveConstraints: Map<String, VideoConstraints>
-    ) = effectiveVideoConstraintsChangedV2(oldEffectiveConstraints, newEffectiveConstraints)
-
     @Deprecated("", ReplaceWith("effectiveVideoConstraintsChangedV2"), DeprecationLevel.WARNING)
 
-    private fun effectiveVideoConstraintsChangedV2(
+    fun effectiveVideoConstraintsChanged(
         oldEffectiveConstraints: Map<String, VideoConstraints>,
         newEffectiveConstraints: Map<String, VideoConstraints>
     ) {
@@ -563,7 +558,7 @@ class Endpoint @JvmOverloads constructor(
 
         // Added or updated
         newEffectiveConstraints.forEach { (sourceName, effectiveConstraints) ->
-            conference.findSourceOwner(sourceName)?.addReceiverV2(id, sourceName, effectiveConstraints)
+            conference.findSourceOwner(sourceName)?.addReceiver(id, sourceName, effectiveConstraints)
         }
     }
 

@@ -46,7 +46,7 @@ class BitrateControllerTraceTest : ShouldSpec() {
     private val D = Endpoint("D")
     private val E = Endpoint("E")
     private val F = Endpoint("F")
-    private val bc = BitrateControllerWrapper2(listOf(A, B, C, D, E, F), clock = clock).apply {
+    private val bc = BitrateControllerWrapper(listOf(A, B, C, D, E, F), clock = clock).apply {
         bc.endpointOrderingChanged()
     }
 

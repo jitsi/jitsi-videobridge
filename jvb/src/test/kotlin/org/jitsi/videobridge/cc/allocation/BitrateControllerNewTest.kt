@@ -55,11 +55,11 @@ class BitrateControllerNewTest : ShouldSpec() {
 
     private val logger = createLogger()
     private val clock = FakeClock()
-    private val bc = BitrateControllerWrapper2(createEndpoints2("A", "B", "C", "D"), clock = clock)
-    private val A = bc.endpoints.find { it.id == "A" }!! as TestEndpoint2
-    private val B = bc.endpoints.find { it.id == "B" }!! as TestEndpoint2
-    private val C = bc.endpoints.find { it.id == "C" }!! as TestEndpoint2
-    private val D = bc.endpoints.find { it.id == "D" }!! as TestEndpoint2
+    private val bc = BitrateControllerWrapper(createEndpoints("A", "B", "C", "D"), clock = clock)
+    private val A = bc.endpoints.find { it.id == "A" }!! as TestEndpoint
+    private val B = bc.endpoints.find { it.id == "B" }!! as TestEndpoint
+    private val C = bc.endpoints.find { it.id == "C" }!! as TestEndpoint
+    private val D = bc.endpoints.find { it.id == "D" }!! as TestEndpoint
 
     override suspend fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
         // We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
@@ -92,7 +92,7 @@ class BitrateControllerNewTest : ShouldSpec() {
                 }
             }
             TaskPools.SCHEDULED_POOL = executor
-            val bc = BitrateControllerWrapper2(createEndpoints2(), clock = clock)
+            val bc = BitrateControllerWrapper(createEndpoints(), clock = clock)
             val delayMs = TimeUnit.MILLISECONDS.convert(captureDelay.captured, captureDelayTimeunit.captured)
 
             delayMs.shouldBeWithinPercentageOf(
@@ -109,17 +109,17 @@ class BitrateControllerNewTest : ShouldSpec() {
         context("Prioritization") {
             context("Without selection") {
                 val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
-                val ordered = prioritize2(sources)
+                val ordered = prioritize(sources)
                 ordered.map { it.sourceName } shouldBe listOf("s6", "s5", "s4", "s3", "s2", "s1")
             }
             context("With one selected") {
                 val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
-                val ordered = prioritize2(sources, listOf("s2"))
+                val ordered = prioritize(sources, listOf("s2"))
                 ordered.map { it.sourceName } shouldBe listOf("s2", "s6", "s5", "s4", "s3", "s1")
             }
             context("With multiple selected") {
                 val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
-                val ordered = prioritize2(sources, listOf("s2", "s1", "s5"))
+                val ordered = prioritize(sources, listOf("s2", "s1", "s5"))
                 ordered.map { it.sourceName } shouldBe listOf("s2", "s1", "s5", "s6", "s4", "s3")
             }
         }
@@ -1350,7 +1350,7 @@ class BitrateControllerNewTest : ShouldSpec() {
     }
 }
 
-class BitrateControllerWrapper2(initialEndpoints: List<MediaSourceContainer>, val clock: FakeClock = FakeClock()) {
+class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val clock: FakeClock = FakeClock()) {
     var endpoints: List<MediaSourceContainer> = initialEndpoints
     val logger = createLogger()
 
@@ -1411,7 +1411,7 @@ class BitrateControllerWrapper2(initialEndpoints: List<MediaSourceContainer>, va
         clock
     )
 
-    fun setEndpointOrdering(vararg endpoints: TestEndpoint2) {
+    fun setEndpointOrdering(vararg endpoints: TestEndpoint) {
         logger.info("Set endpoints ${endpoints.map{ it.id }.joinToString(",")}")
         this.endpoints = endpoints.toList()
         bc.endpointOrderingChanged()
@@ -1451,16 +1451,16 @@ class BitrateControllerWrapper2(initialEndpoints: List<MediaSourceContainer>, va
     }
 }
 
-class TestEndpoint2(
+class TestEndpoint(
     override val id: String,
     override val mediaSources: Array<MediaSourceDesc> = emptyArray(),
     override val videoType: VideoType = VideoType.CAMERA,
     override val mediaSource: MediaSourceDesc? = null,
 ) : MediaSourceContainer
 
-fun createEndpoints2(vararg ids: String): MutableList<TestEndpoint2> {
+fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
     return MutableList(ids.size) { i ->
-        TestEndpoint2(
+        TestEndpoint(
             ids[i],
             arrayOf(
                 createSourceDesc(

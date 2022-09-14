@@ -35,7 +35,7 @@ import java.time.Clock
  * @author George Politis
  * @author Pawel Domas
  */
-internal class SingleSourceAllocation2(
+internal class SingleSourceAllocation(
     val endpointId: String,
     val mediaSource: MediaSourceDesc,
     /** The constraints to use while allocating bandwidth to this media source. */
@@ -44,7 +44,7 @@ internal class SingleSourceAllocation2(
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
-    val logger: Logger = LoggerImpl(SingleSourceAllocation2::class.qualifiedName)
+    val logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
 ) {
     /**
      * The immutable list of layers to be considered when allocating bandwidth.

@@ -62,19 +62,19 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
 
         context("With lastN=0") {
             val allocationSettings = AllocationSettings(lastN = 0, defaultConstraints = defaultConstraints)
-            getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints
+            getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints
         }
         context("With lastN=1") {
             context("And no other constraints") {
                 val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = defaultConstraints)
-                getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     // The default defaultConstraints are 180
                     put("s1", VideoConstraints(180))
                 }
             }
             context("And different defaultConstraints") {
                 val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = VideoConstraints(360))
-                getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     put("s1", VideoConstraints(360))
                 }
             }
@@ -83,7 +83,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
                     lastN = 1,
                     defaultConstraints = VideoConstraints.NOTHING,
                 )
-                getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints
+                getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints
             }
             context("And non-zero constraints for a source with video enabled") {
                 val allocationSettings = AllocationSettings(
@@ -92,7 +92,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
                     videoConstraints = mapOf("s1" to VideoConstraints(720))
 
                 )
-                getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     put("s1", VideoConstraints(720))
                 }
             }
@@ -102,7 +102,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
                     defaultConstraints = VideoConstraints.NOTHING,
                     videoConstraints = mapOf("s4" to VideoConstraints(720))
                 )
-                getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     put("s4", VideoConstraints(720))
                 }
             }
@@ -112,7 +112,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
 
                 context("With default settings") {
                     val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = defaultConstraints)
-                    getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                    getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("s4", VideoConstraints(180))
                     }
                 }
@@ -122,7 +122,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
                         defaultConstraints = VideoConstraints.NOTHING,
                         videoConstraints = mapOf("s5" to VideoConstraints(180))
                     )
-                    getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                    getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("s5", VideoConstraints(180))
                     }
                 }
@@ -132,7 +132,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
                         defaultConstraints = VideoConstraints.NOTHING,
                         videoConstraints = mapOf("s2" to VideoConstraints(180))
                     )
-                    getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                    getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("s2", VideoConstraints(180))
                     }
                 }
@@ -142,7 +142,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
                         defaultConstraints = VideoConstraints.NOTHING,
                         videoConstraints = mapOf("s2" to VideoConstraints(180), "s3" to VideoConstraints(180))
                     )
-                    getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                    getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("s2", VideoConstraints(180))
                     }
                 }
@@ -151,7 +151,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
         context("With lastN=3") {
             context("And default settings") {
                 val allocationSettings = AllocationSettings(lastN = 3, defaultConstraints = defaultConstraints)
-                getEffectiveConstraints2(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     put("s1", VideoConstraints(180))
                     put("s2", VideoConstraints(180))
                     put("s3", VideoConstraints(180))
@@ -163,7 +163,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
 
                 context("And default settings") {
                     val allocationSettings = AllocationSettings(lastN = 3, defaultConstraints = defaultConstraints)
-                    getEffectiveConstraints2(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                    getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("s4", VideoConstraints(180))
                         put("s5", VideoConstraints(180))
                         put("s6", VideoConstraints(180))
@@ -179,7 +179,7 @@ class EffectiveConstraintsNewTest : ShouldSpec() {
                             "s3" to VideoConstraints(180)
                         )
                     )
-                    getEffectiveConstraints2(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
+                    getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                         put("s6", VideoConstraints(180))
                         put("s2", VideoConstraints(180))
                         put("s3", VideoConstraints(180))
