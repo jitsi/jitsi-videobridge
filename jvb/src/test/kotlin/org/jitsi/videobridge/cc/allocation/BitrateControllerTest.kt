@@ -1377,6 +1377,8 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
 
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
 
+            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) { }
+
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
                 newEffectiveConstraints: Map<String, VideoConstraints>
@@ -1404,6 +1406,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         DiagnosticContext(),
         logger,
         false, // TODO merge this test with BitrateControllerNewTest and use this flag
+        false,
         clock
     )
 

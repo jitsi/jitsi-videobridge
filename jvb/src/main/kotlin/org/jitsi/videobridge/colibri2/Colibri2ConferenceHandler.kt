@@ -172,7 +172,8 @@ class Colibri2ConferenceHandler(
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
             val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
-            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames).apply {
+            val ssrcRewriting = c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
+            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames, ssrcRewriting).apply {
                 c2endpoint.statsId?.let {
                     statsId = it
                 }
@@ -263,6 +264,14 @@ class Colibri2ConferenceHandler(
                 MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
             }
             endpoint.mediaSources = newMediaSources.toTypedArray()
+
+            val audioSources: ArrayList<AudioSourceDesc> = ArrayList()
+            sources.mediaSources.filter { it.type == MediaType.AUDIO }.forEach {
+                it.sources.forEach { s ->
+                    audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id))
+                }
+            }
+            endpoint.audioSources = audioSources
         }
 
         c2endpoint.forceMute?.let {

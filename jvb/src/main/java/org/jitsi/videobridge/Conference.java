@@ -19,6 +19,7 @@ import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.Packet;
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.dsi.*;
@@ -683,13 +684,12 @@ public class Conference
 
     /**
      * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with a specific SSRC and with a specific <tt>MediaType</tt>.
+     * stream with a specific SSRC.
      *
      * @param receiveSSRC the SSRC of an RTP stream received by this
      * <tt>Conference</tt> whose sending <tt>Endpoint</tt> is to be found
      * @return <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with the specified <tt>ssrc</tt> and with the specified
-     * <tt>mediaType</tt>; otherwise, <tt>null</tt>
+     * stream with the specified <tt>ssrc</tt>; otherwise, <tt>null</tt>
      */
     AbstractEndpoint findEndpointByReceiveSSRC(long receiveSSRC)
     {
@@ -744,10 +744,11 @@ public class Conference
      * transport will be initialized to serve as a controlling ICE agent;
      * otherwise, {@code false}
      * @param sourceNames whether this endpoint signaled the source names support.
+     * @param doSsrcRewriting whether this endpoint signaled SSRC rewriting support.
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public Endpoint createLocalEndpoint(String id, boolean iceControlling, boolean sourceNames)
+    public Endpoint createLocalEndpoint(String id, boolean iceControlling, boolean sourceNames, boolean doSsrcRewriting)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -755,7 +756,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames);
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames, doSsrcRewriting);
         videobridge.localEndpointCreated();
 
         subscribeToEndpointEvents(endpoint);
@@ -1225,12 +1226,33 @@ public class Conference
         }
         else if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
         {
+            AbstractEndpoint targetEndpoint = null;
+            boolean rewriter = false;
+
             long mediaSsrc = (packet instanceof RtcpFbPliPacket)
                 ? ((RtcpFbPliPacket) packet).getMediaSourceSsrc()
                 : ((RtcpFbFirPacket) packet).getMediaSenderSsrc();
 
-            // XXX we could make this faster with a map
-            AbstractEndpoint targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
+            /* If we are rewriting SSRCs to this endpoint, we must ask
+            it to convert back the SSRC to the media sender's SSRC. */
+            String endpointId = packetInfo.getEndpointId();
+            if (endpointId != null)
+            {
+                AbstractEndpoint ep = getEndpoint(endpointId);
+                if (ep instanceof Endpoint && ((Endpoint) ep).doesSsrcRewriting())
+                {
+                    rewriter = true;
+                    String owner = ((Endpoint) ep).unmapRtcpFbSsrc((RtcpFbPacket) packet);
+                    if (owner != null)
+                        targetEndpoint = getEndpoint(owner);
+                }
+            }
+
+            if (!rewriter)
+            {
+                // XXX we could make this faster with a map
+                targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
+            }
 
             PotentialPacketHandler pph = null;
             if (targetEndpoint instanceof Endpoint)

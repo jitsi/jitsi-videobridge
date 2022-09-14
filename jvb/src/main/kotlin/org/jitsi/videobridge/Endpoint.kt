@@ -26,6 +26,7 @@ import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
@@ -42,6 +43,7 @@ import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpPacket
@@ -64,6 +66,7 @@ import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
+import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
@@ -85,6 +88,7 @@ import org.jitsi_modified.sctp4j.SctpServerSocket
 import org.jitsi_modified.sctp4j.SctpSocket
 import org.json.simple.JSONObject
 import java.nio.ByteBuffer
+import java.security.SecureRandom
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -107,8 +111,12 @@ class Endpoint @JvmOverloads constructor(
      */
     iceControlling: Boolean,
     private val isUsingSourceNames: Boolean,
+    private val doSsrcRewriting: Boolean,
     private val clock: Clock = Clock.systemUTC()
-) : AbstractEndpoint(conference, id, parentLogger), PotentialPacketHandler, EncodingsManager.EncodingsUpdateListener {
+) : AbstractEndpoint(conference, id, parentLogger),
+    PotentialPacketHandler,
+    EncodingsManager.EncodingsUpdateListener,
+    SsrcRewriter {
     /**
      * The time at which this endpoint was created
      */
@@ -197,8 +205,22 @@ class Endpoint @JvmOverloads constructor(
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) =
                 sendForwardedEndpointsMessage(forwardedEndpoints)
 
-            override fun forwardedSourcesChanged(forwardedSources: Set<String>) =
+            override fun forwardedSourcesChanged(forwardedSources: Set<String>) {
                 sendForwardedSourcesMessage(forwardedSources)
+            }
+
+            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
+                sourceList.take(maxVideoSsrcs).let {
+                    val newSources = it.mapNotNull { s -> s.sourceName }.toSet()
+                    /* safe unlocked access of activeSources.
+                     * BitrateController will not overlap calls to this method. */
+                    if (activeSources != newSources) {
+                        activeSources = newSources
+                        sendForwardedSourcesMessage(newSources)
+                        videoSsrcs.activate(it)
+                    }
+                }
+            }
 
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
@@ -211,7 +233,8 @@ class Endpoint @JvmOverloads constructor(
         Supplier { getOrderedEndpoints() },
         diagnosticContext,
         logger,
-        isUsingSourceNames
+        isUsingSourceNames,
+        doSsrcRewriting
     )
 
     /** Whether any sources are suspended from being sent to this endpoint because of BWE. */
@@ -286,6 +309,31 @@ class Endpoint @JvmOverloads constructor(
         recurringRunnableExecutor.registerRecurringRunnable(it)
     }
 
+    /**
+     * Manages remapping of video SSRCs when enabled.
+     */
+    private val videoSsrcs = VideoSsrcCache(maxVideoSsrcs, this, logger)
+
+    /**
+     * Manages remapping of audio SSRCs when enabled.
+     */
+    private val audioSsrcs = AudioSsrcCache(maxAudioSsrcs, this, logger)
+
+    /**
+     * Last advertised forwarded-sources in remapping mode.
+     */
+    private var activeSources: Set<String> = emptySet()
+
+    /**
+     * Track allocated send SSRCs to avoid collisions.
+     */
+    private val sendSsrcs = mutableSetOf<Long>()
+
+    /**
+     * Next allocated send SSRC, when allocating serially (off by default).
+     */
+    private var nextSendSsrc = 777000001L
+
     init {
         conference.encodingsManager.subscribe(this)
         setupIceTransport()
@@ -313,6 +361,11 @@ class Endpoint @JvmOverloads constructor(
 
     override val mediaSource: MediaSourceDesc?
         get() = mediaSources.firstOrNull()
+
+    /**
+     *  Keep track of this endpoint's audio sources.
+     */
+    var audioSources: ArrayList<AudioSourceDesc> = ArrayList()
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -466,13 +519,15 @@ class Endpoint @JvmOverloads constructor(
     fun lastNEndpointsChanged() = bitrateController.endpointOrderingChanged()
 
     /**
-     * Sends a specific msg to this endpoint over its bridge channel
+     * {@inheritDoc}
      */
-    fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
+    override fun sendMessage(msg: BridgeChannelMessage) = messageTransport.sendMessage(msg)
 
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() {
         sendAllVideoConstraints()
+        videoSsrcs.sendAllMappings()
+        audioSsrcs.sendAllMappings()
     }
 
     private fun sendAllVideoConstraints() {
@@ -817,6 +872,10 @@ class Endpoint @JvmOverloads constructor(
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
+    fun doesSsrcRewriting(): Boolean = doSsrcRewriting
+
+    fun unmapRtcpFbSsrc(packet: RtcpFbPacket) = videoSsrcs.unmapRtcpFbSsrc(packet)
+
     override fun getSsrcs() = HashSet(transceiver.receiveSsrcs)
 
     override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
@@ -837,20 +896,76 @@ class Endpoint @JvmOverloads constructor(
         bitrateController.setBandwidthAllocationSettings(message)
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
+        conference.getEndpointBySsrc(ssrc)?.let { ep ->
+            ep.mediaSources.forEach { s ->
+                if (s.findRtpEncodingDesc(ssrc) != null) {
+                    return s
+                }
+            }
+        }
+        logger.error { "No properties found for SSRC $ssrc." }
+        return null
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
+        conference.getEndpointBySsrc(ssrc)?.let { ep ->
+            if (ep !is Endpoint)
+                return null
+            return ep.audioSources.find { s -> s.ssrc == ssrc }
+        }
+        logger.error { "No properties found for SSRC $ssrc." }
+        return null
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    override fun getNextSendSsrc(): Long {
+        synchronized(sendSsrcs) {
+            while (true) {
+                val ssrc = if (useRandomSendSsrcs)
+                    random.nextLong().and(0xFFFF_FFFFL)
+                else
+                    nextSendSsrc++
+                if (sendSsrcs.add(ssrc))
+                    return ssrc
+            }
+        }
+    }
+
     override fun send(packetInfo: PacketInfo) {
         when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> {
                 if (bitrateController.transformRtp(packetInfo)) {
                     // The original packet was transformed in place.
+                    if (doSsrcRewriting) {
+                        val start = packet !is ParsedVideoPacket || (packet.isKeyframe && packet.isStartOfFrame)
+                        if (!videoSsrcs.rewriteRtp(packet, start)) {
+                            return
+                        }
+                    }
                     transceiver.sendPacket(packetInfo)
                 } else {
                     logger.warn("Dropping a packet which was supposed to be accepted:$packet")
                 }
                 return
             }
+            is AudioRtpPacket -> if (doSsrcRewriting) audioSsrcs.rewriteRtp(packet)
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
                 bitrateController.transformRtcp(packet)
+                if (doSsrcRewriting) {
+                    // Just check both tables instead of looking up the type first.
+                    if (!videoSsrcs.rewriteRtcp(packet) && !audioSsrcs.rewriteRtcp(packet))
+                        return
+                }
                 logger.trace {
                     "relaying an sr from ssrc=${packet.senderSsrc}, timestamp=${packet.senderInfo.rtpTimestamp}"
                 }
@@ -1125,6 +1240,24 @@ class Endpoint @JvmOverloads constructor(
         private val statsFilterThreshold: Int by config {
             "videobridge.stats-filter-threshold".from(JitsiConfig.newConfig)
         }
+
+        private val maxVideoSsrcs: Int by config {
+            "videobridge.ssrc-limit.video".from(JitsiConfig.newConfig)
+        }
+
+        private val maxAudioSsrcs: Int by config {
+            "videobridge.ssrc-limit.audio".from(JitsiConfig.newConfig)
+        }
+
+        /**
+         * This can be switched off to ease debugging.
+         */
+        private val useRandomSendSsrcs = true
+
+        /**
+         * Used for generating send SSRCs.
+         */
+        private val random = SecureRandom()
     }
 
     private inner class TransceiverEventHandlerImpl : TransceiverEventHandler {

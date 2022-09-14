@@ -37,7 +37,7 @@ class ConferenceTest : ConfigTest() {
         context("Adding local endpoints should work") {
             with(Conference(videobridge, "id", name, null, false, false)) {
                 endpointCount shouldBe 0
-                createLocalEndpoint("abcdabcd", true, false) // TODO cover the case when it's true
+                createLocalEndpoint("abcdabcd", true, false, false) // TODO cover the case when they're true
                 endpointCount shouldBe 1
                 debugState.shouldBeValidJson()
             }

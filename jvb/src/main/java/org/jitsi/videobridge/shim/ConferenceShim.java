@@ -236,7 +236,8 @@ public class ConferenceShim
         conference.createLocalEndpoint(
                 endpointId,
                 iceControlling,
-                false /* no multi-stream in colibri V1 */
+                false, /* no multi-stream in colibri V1 */
+                false /* no ssrc rewriting */
         );
     }
 

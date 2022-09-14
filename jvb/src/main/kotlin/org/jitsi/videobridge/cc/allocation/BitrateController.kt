@@ -51,6 +51,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
     private val useSourceNames: Boolean,
+    private val doSsrcRewriting: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) {
     val eventEmitter = SyncEventEmitter<EventHandler>()
@@ -282,6 +283,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     interface EventHandler {
         fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>)
         fun forwardedSourcesChanged(forwardedSources: Set<String>)
+        fun sourceListChanged(sourceList: List<MediaSourceDesc>)
         fun effectiveVideoConstraintsChanged(
             oldEffectiveConstraints: Map<String, VideoConstraints>,
             newEffectiveConstraints: Map<String, VideoConstraints>
@@ -300,11 +302,14 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             packetHandler.allocationChanged(allocation)
 
             if (MultiStreamConfig.config.enabled && useSourceNames) {
-                // TODO as per George's comment above: should this message be sent on message transport connect?
-                val newForwardedSources = allocation.forwardedSources
-                if (forwardedSources != newForwardedSources) {
-                    forwardedSources = newForwardedSources
-                    eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
+                // If rewriting SSRCs, all active sources will be notified separately.
+                if (!doSsrcRewriting) {
+                    // TODO as per George's comment above: should this message be sent on message transport connect?
+                    val newForwardedSources = allocation.forwardedSources
+                    if (forwardedSources != newForwardedSources) {
+                        forwardedSources = newForwardedSources
+                        eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
+                    }
                 }
             } else {
                 // TODO(george) bring back sending this message on message transport  connect
@@ -328,6 +333,15 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             // Forward to the outer EventHandler.
             eventEmitter.fireEvent {
                 effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
+            }
+        }
+
+        override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
+            if (doSsrcRewriting) {
+                // Forward to the outer EventHandler.
+                eventEmitter.fireEvent {
+                    sourceListChanged(sourceList)
+                }
             }
         }
     }

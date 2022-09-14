@@ -272,6 +272,11 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
 
             // Compute the bandwidth allocation.
             newAllocation = allocate2(sortedSources);
+
+            eventEmitter.fireEvent(handler -> {
+                handler.sourceListChanged(sortedSources);
+                return Unit.INSTANCE;
+            });
         }
         else
         {
@@ -623,5 +628,6 @@ public class BandwidthAllocator<T extends MediaSourceContainer>
         default void effectiveVideoConstraintsChanged(
                 @NotNull Map<String, VideoConstraints> oldEffectiveConstraints,
                 @NotNull Map<String, VideoConstraints> newEffectiveConstraints) {}
+        default void sourceListChanged(@NotNull List<MediaSourceDesc> sourceList) {}
     }
 }
