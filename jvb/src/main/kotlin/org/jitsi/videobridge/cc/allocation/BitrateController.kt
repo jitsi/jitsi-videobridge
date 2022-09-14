@@ -26,7 +26,6 @@ import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
-import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
@@ -178,14 +177,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     /**
-     * Query whether this endpoint is on stage or selected, as of the most recent
-     * video constraints.
-     */
-    fun isOnStageOrSelected(endpoint: T) =
-        allocationSettings.onStageEndpoints.contains(endpoint.id) ||
-            allocationSettings.selectedEndpoints.contains(endpoint.id)
-
-    /**
      * Query whether this source is on stage or selected, as of the most recent
      * video constraints
      */
@@ -194,24 +185,10 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             allocationSettings.selectedSources.contains(source.sourceName)
 
     /**
-     * Query whether this allocator is forwarding a source from a given endpoint, as of its
-     * most recent allocation decision.
-     */
-    fun isForwarding(endpoint: T) = bandwidthAllocator.isForwarding(endpoint.id)
-
-    /**
-     * Query whether this allocator has non-zero effective constraints for a given endpoint.
-     */
-    fun hasNonZeroEffectiveConstraints(endpoint: T) =
-        !MultiStreamConfig.config.enabled &&
-            bandwidthAllocator.hasNonZeroEffectiveConstraints(endpoint.id)
-
-    /**
      * Query whether this allocator has non-zero effective constraints for a given source
      */
     fun hasNonZeroEffectiveConstraints(source: MediaSourceDesc) =
-        MultiStreamConfig.config.enabled &&
-            bandwidthAllocator.hasNonZeroEffectiveConstraints(source.sourceName)
+        bandwidthAllocator.hasNonZeroEffectiveConstraints(source.sourceName)
 
     /**
      * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being
@@ -301,7 +278,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)
 
-            if (MultiStreamConfig.config.enabled && useSourceNames) {
+            if (useSourceNames) {
                 // If rewriting SSRCs, all active sources will be notified separately.
                 if (!doSsrcRewriting) {
                     // TODO as per George's comment above: should this message be sent on message transport connect?

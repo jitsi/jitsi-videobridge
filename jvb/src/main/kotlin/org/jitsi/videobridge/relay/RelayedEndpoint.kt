@@ -41,7 +41,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
-import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.util.TaskPools
@@ -160,13 +159,8 @@ class RelayedEndpoint(
     }
 
     fun relayMessageTransportConnected() {
-        if (MultiStreamConfig.config.enabled) {
-            maxReceiverVideoConstraintsMap.forEach {
-                    (sourceName, constraints) ->
-                sendVideoConstraintsV2(sourceName, constraints)
-            }
-        } else {
-            sendVideoConstraints(maxReceiverVideoConstraints)
+        maxReceiverVideoConstraintsMap.forEach { (sourceName, constraints) ->
+            sendVideoConstraintsV2(sourceName, constraints)
         }
     }
 
@@ -177,9 +171,7 @@ class RelayedEndpoint(
     override var mediaSources: Array<MediaSourceDesc>
         get() = _mediaSources.getMediaSources()
         set(value) {
-            if (MultiStreamConfig.config.enabled) {
-                applyVideoTypeCache(value)
-            }
+            applyVideoTypeCache(value)
             val changed = _mediaSources.setMediaSources(value)
             val mergedMediaSources = _mediaSources.getMediaSources()
             val signaledMediaSources = if (value === mergedMediaSources) value.copy() else value

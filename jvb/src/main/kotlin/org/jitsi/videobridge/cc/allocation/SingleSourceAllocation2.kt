@@ -44,7 +44,7 @@ internal class SingleSourceAllocation2(
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
-    val logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
+    val logger: Logger = LoggerImpl(SingleSourceAllocation2::class.qualifiedName)
 ) {
     /**
      * The immutable list of layers to be considered when allocating bandwidth.
@@ -333,4 +333,20 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
     var lastIndex = -1
     forEachIndexed { i, e -> if (predicate(e)) lastIndex = i }
     return lastIndex
+}
+
+/**
+ * Gets the "preferred" height and frame rate based on the constraints signaled from the receiver.
+ *
+ * For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
+ * temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
+ * consider frame rates at least as high as the preferred. In practice this means we consider
+ * 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
+ */
+private fun getPreferred(constraints: VideoConstraints): VideoConstraints {
+    return if (constraints.maxHeight > 180 || !constraints.heightIsLimited()) {
+        VideoConstraints(config.onstagePreferredHeightPx(), config.onstagePreferredFramerate())
+    } else {
+        VideoConstraints.UNLIMITED
+    }
 }

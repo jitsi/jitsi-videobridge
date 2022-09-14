@@ -20,14 +20,12 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
-import java.io.*;
 import java.time.*;
 import java.util.*;
 
@@ -60,11 +58,6 @@ public abstract class AbstractEndpoint
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
      */
     private final Conference conference;
-
-    /**
-     * The map of receiver endpoint id -> video constraints.
-     */
-    private final ReceiverConstraintsMap receiverVideoConstraintsMap = new ReceiverConstraintsMap();
 
     /**
      * The map of source name -> ReceiverConstraintsMap.
@@ -248,6 +241,8 @@ public abstract class AbstractEndpoint
      *
      * @return the (unique) identifier/ID of this instance
      */
+    @NotNull
+    @Override
     public final String getId()
     {
         return id;
@@ -380,47 +375,18 @@ public abstract class AbstractEndpoint
     {
         JSONObject debugState = new JSONObject();
 
-        if (MultiStreamConfig.config.getEnabled())
-        {
-            JSONObject receiverVideoConstraints = new JSONObject();
+        JSONObject receiverVideoConstraints = new JSONObject();
 
-            receiverVideoConstraintsMapV2.forEach(
-                    (sourceName, receiverConstraints) ->
-                            receiverVideoConstraints.put(sourceName, receiverConstraints.getDebugState()));
+        receiverVideoConstraintsMapV2.forEach(
+                (sourceName, receiverConstraints) ->
+                        receiverVideoConstraints.put(sourceName, receiverConstraints.getDebugState()));
 
-            debugState.put("receiverVideoConstraints", receiverVideoConstraints);
-            debugState.put("maxReceiverVideoConstraintsMap", new HashMap<>(maxReceiverVideoConstraintsMap));
-        }
-        else
-        {
-            debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
-            debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
-        }
+        debugState.put("receiverVideoConstraints", receiverVideoConstraints);
+        debugState.put("maxReceiverVideoConstraintsMap", new HashMap<>(maxReceiverVideoConstraintsMap));
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
 
         return debugState;
-    }
-
-    /**
-     * Computes and sets the {@link #maxReceiverVideoConstraints} from the
-     * specified video constraints.
-     *
-     * @param newMaxHeight the maximum height resulting from the current set of constraints.
-     *                     (Currently we only support constraining the height, and not frame rate.)
-     */
-    private void receiverVideoConstraintsChanged(int newMaxHeight)
-    {
-        VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraints;
-
-
-        VideoConstraints newReceiverMaxVideoConstraints = new VideoConstraints(newMaxHeight, -1.0);
-
-        if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
-        {
-            maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
-            sendVideoConstraints(newReceiverMaxVideoConstraints);
-        }
     }
 
     /**
@@ -488,28 +454,6 @@ public abstract class AbstractEndpoint
     sendVideoConstraintsV2(@NotNull String sourceName, @NotNull VideoConstraints maxVideoConstraints);
 
     /**
-     * Notifies this instance that a specified received wants to receive
-     * the specified video constraints from the endpoint attached to this
-     * instance (the sender).
-     *
-     * The receiver can be either another endpoint, or a remote bridge.
-     *
-     * @param receiverId the id that specifies the receiver endpoint
-     * @param newVideoConstraints the video constraints that the receiver
-     * wishes to receive.
-     */
-    public void addReceiver(String receiverId, VideoConstraints newVideoConstraints)
-    {
-        VideoConstraints oldVideoConstraints = receiverVideoConstraintsMap.put(receiverId, newVideoConstraints);
-        if (oldVideoConstraints == null || !oldVideoConstraints.equals(newVideoConstraints))
-        {
-            logger.debug(
-                () -> "Changed receiver constraints: " + receiverId + ": " + newVideoConstraints.getMaxHeight());
-            receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
-        }
-    }
-
-    /**
      * Notifies this instance that a specified received wants to receive the specified video constraints from the media
      * source with the given source name.
      *
@@ -553,27 +497,16 @@ public abstract class AbstractEndpoint
      */
     public void removeReceiver(String receiverId)
     {
-        if (MultiStreamConfig.config.getEnabled())
+        for (Map.Entry<String, ReceiverConstraintsMap> sourceConstraintsEntry
+                : receiverVideoConstraintsMapV2.entrySet())
         {
-            for (Map.Entry<String, ReceiverConstraintsMap> sourceConstraintsEntry
-                    : receiverVideoConstraintsMapV2.entrySet())
-            {
-                String sourceName = sourceConstraintsEntry.getKey();
-                ReceiverConstraintsMap sourceConstraints = sourceConstraintsEntry.getValue();
+            String sourceName = sourceConstraintsEntry.getKey();
+            ReceiverConstraintsMap sourceConstraints = sourceConstraintsEntry.getValue();
 
-                if (sourceConstraints.remove(receiverId) != null)
-                {
-                    logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
-                    receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
-                }
-            }
-        }
-        else
-        {
-            if (receiverVideoConstraintsMap.remove(receiverId) != null)
+            if (sourceConstraints.remove(receiverId) != null)
             {
-                logger.debug(() -> "Removed receiver " + receiverId);
-                receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
+                logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
+                receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
             }
         }
     }

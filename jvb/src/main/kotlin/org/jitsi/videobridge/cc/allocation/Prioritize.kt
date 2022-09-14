@@ -20,27 +20,6 @@ import org.jitsi.videobridge.calculateLastN
 import org.jitsi.videobridge.jvbLastNSingleton
 import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion.singleton as conferenceSizeLimits
 
-/**
- * @param selectedEndpointIds the IDs of the selected endpoints, in order of selection.
- * @param conferenceEndpoints the conference endpoints in no particular order.
- *
- * @return the endpoints from `conferenceEndpoints` ordered by selection first, and then speech activity.
- */
-@Deprecated("", ReplaceWith("prioritize2"), DeprecationLevel.WARNING)
-fun <T : MediaSourceContainer> prioritize(
-    conferenceEndpoints: MutableList<T>,
-    selectedEndpointIds: List<String> = emptyList()
-): List<T> {
-    // Bump selected endpoints to the top of the list.
-    selectedEndpointIds.asReversed().forEach { selectedEndpointId ->
-        conferenceEndpoints.find { it.id == selectedEndpointId }?.let { selectedEndpoint ->
-            conferenceEndpoints.remove(selectedEndpoint)
-            conferenceEndpoints.add(0, selectedEndpoint)
-        }
-    }
-    return conferenceEndpoints
-}
-
 fun prioritize2(
     conferenceSources: MutableList<MediaSourceDesc>,
     selectedSourceNames: List<String> = emptyList()
@@ -54,30 +33,6 @@ fun prioritize2(
         }
     }
     return conferenceSources
-}
-
-/**
- * Return the "effective" constraints for the given endpoints, i.e. the constraints adjusted for LastN.
- */
-fun <T : MediaSourceContainer> getEffectiveConstraints(endpoints: List<T>, allocationSettings: AllocationSettings):
-    Map<String, VideoConstraints> {
-
-    // Add 1 for the receiver endpoint, which is not in the list.
-    val effectiveLastN = effectiveLastN(allocationSettings.lastN, endpoints.size + 1)
-
-    // Keep track of the number of endpoints with non-zero constraints. Once [effectiveLastN] of them have been
-    // added, all other endpoints have effectiveConstraints 0, because they would never be forwarded by the
-    // algorithm.
-    var endpointsWithNonZeroConstraints = 0
-    return endpoints.associate { endpoint ->
-        endpoint.id to if (endpointsWithNonZeroConstraints >= effectiveLastN) {
-            VideoConstraints.NOTHING
-        } else {
-            allocationSettings.getConstraints(endpoint.id).also {
-                if (!it.isDisabled()) endpointsWithNonZeroConstraints++
-            }
-        }
-    }
 }
 
 /**

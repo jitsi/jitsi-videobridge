@@ -29,9 +29,11 @@ import org.jitsi.config.setNewConfig
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingDesc
+import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.mbps
@@ -43,6 +45,7 @@ import org.jitsi.utils.time.FakeClock
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.TaskPools
+import java.time.Instant
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
@@ -1499,3 +1502,64 @@ fun createSourceDesc(
     sourceName = sourceName,
     owner = owner
 )
+
+val bitrateLd = 150.kbps
+val bitrateSd = 500.kbps
+val bitrateHd = 2000.kbps
+
+val ld7_5
+    get() = MockRtpLayerDesc(tid = 0, eid = 0, height = 180, frameRate = 7.5, bitrate = bitrateLd * 0.33)
+val ld15
+    get() = MockRtpLayerDesc(tid = 1, eid = 0, height = 180, frameRate = 15.0, bitrate = bitrateLd * 0.66)
+val ld30
+    get() = MockRtpLayerDesc(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = bitrateLd)
+
+val sd7_5
+    get() = MockRtpLayerDesc(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = bitrateSd * 0.33)
+val sd15
+    get() = MockRtpLayerDesc(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = bitrateSd * 0.66)
+val sd30
+    get() = MockRtpLayerDesc(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = bitrateSd)
+
+val hd7_5
+    get() = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = bitrateHd * 0.33)
+val hd15
+    get() = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = bitrateHd * 0.66)
+val hd30
+    get() = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = bitrateHd)
+
+val noVideo: RtpLayerDesc? = null
+
+/**
+ * An [RtpLayerDesc] whose bitrate can be set externally. We inherit directly from [RtpLayerDesc], because mocking with
+ * mockk absolutely kills the performance.
+ */
+class MockRtpLayerDesc(
+    tid: Int,
+    eid: Int,
+    height: Int,
+    frameRate: Double,
+    /**
+     * Note: this mock impl does not model the dependency layers, so the cumulative bitrate should be provided.
+     */
+    var bitrate: Bandwidth,
+    sid: Int = -1
+) : RtpLayerDesc(eid, tid, sid, height, frameRate) {
+
+    override fun getBitrate(nowMs: Long): Bandwidth = bitrate
+    override fun hasZeroBitrate(nowMs: Long): Boolean = bitrate == 0.bps
+}
+
+typealias History<T> = MutableList<Event<T>>
+data class Event<T>(
+    val bwe: Bandwidth,
+    val event: T,
+    val time: Instant = Instant.MIN
+) {
+    override fun toString(): String = "\n[time=${time.toEpochMilli()} bwe=$bwe] $event"
+    override fun equals(other: Any?): Boolean {
+        if (other !is Event<*>) return false
+        // Ignore this.time
+        return bwe == other.bwe && event == other.event
+    }
+}

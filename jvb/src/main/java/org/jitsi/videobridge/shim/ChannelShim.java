@@ -280,21 +280,18 @@ public class ChannelShim
     public void setSources(@NotNull List<SourcePacketExtension> sources)
         throws IqProcessingException
     {
-        if (MultiStreamConfig.config.getEnabled())
+        for (SourcePacketExtension s : sources)
         {
-            for (SourcePacketExtension s: sources)
-            {
-                if ((s.hasSSRC() || s.hasRid()) // Enforce sourceName only if it's not an empty source [1]
+            if ((s.hasSSRC() || s.hasRid()) // Enforce sourceName only if it's not an empty source [1]
                     // TODO use Kotlin "isNullOrEmpty" once ported to Kotlin
                     && (s.getName() == null || s.getName().trim().isEmpty()))
-                {
-                    throw new IqProcessingException(
+            {
+                throw new IqProcessingException(
                         StanzaError.Condition.bad_request,
                         "The name attribute is required for " + s);
-                }
-                // [1]: An empty source can be used to signal "remove all sources":
-                // https://github.com/jitsi/jitsi-xmpp-extensions/blob/b208e4bc96de30adae14f86515934293cd203138/src/main/java/org/jitsi/xmpp/extensions/colibri/ColibriBuilder.java#L157
             }
+            // [1]: An empty source can be used to signal "remove all sources":
+            // https://github.com/jitsi/jitsi-xmpp-extensions/blob/b208e4bc96de30adae14f86515934293cd203138/src/main/java/org/jitsi/xmpp/extensions/colibri/ColibriBuilder.java#L157
         }
 
         this.sources = sources;

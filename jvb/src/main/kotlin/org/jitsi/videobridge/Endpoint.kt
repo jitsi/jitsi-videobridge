@@ -347,9 +347,7 @@ class Endpoint @JvmOverloads constructor(
     override var mediaSources: Array<MediaSourceDesc>
         get() = transceiver.getMediaSources()
         set(value) {
-            if (MultiStreamConfig.config.enabled) {
-                applyVideoTypeCache(value)
-            }
+            applyVideoTypeCache(value)
             val wasEmpty = transceiver.getMediaSources().isEmpty()
             if (transceiver.setMediaSources(value)) {
                 eventEmitter.fireEvent { sourcesChanged() }
@@ -531,12 +529,8 @@ class Endpoint @JvmOverloads constructor(
     }
 
     private fun sendAllVideoConstraints() {
-        if (MultiStreamConfig.config.enabled) {
-            maxReceiverVideoConstraintsMap.forEach { (sourceName, constraints) ->
-                sendVideoConstraintsV2(sourceName, constraints)
-            }
-        } else {
-            sendVideoConstraints(maxReceiverVideoConstraints)
+        maxReceiverVideoConstraintsMap.forEach { (sourceName, constraints) ->
+            sendVideoConstraintsV2(sourceName, constraints)
         }
     }
 
@@ -551,32 +545,9 @@ class Endpoint @JvmOverloads constructor(
     fun effectiveVideoConstraintsChanged(
         oldEffectiveConstraints: Map<String, VideoConstraints>,
         newEffectiveConstraints: Map<String, VideoConstraints>
-    ) {
-        if (MultiStreamConfig.config.enabled) {
-            effectiveVideoConstraintsChangedV2(oldEffectiveConstraints, newEffectiveConstraints)
-        } else {
-            effectiveVideoConstraintsChangedV1(oldEffectiveConstraints, newEffectiveConstraints)
-        }
-    }
+    ) = effectiveVideoConstraintsChangedV2(oldEffectiveConstraints, newEffectiveConstraints)
 
     @Deprecated("", ReplaceWith("effectiveVideoConstraintsChangedV2"), DeprecationLevel.WARNING)
-    private fun effectiveVideoConstraintsChangedV1(
-        oldEffectiveConstraints: Map<String, VideoConstraints>,
-        newEffectiveConstraints: Map<String, VideoConstraints>
-    ) {
-        val removedEndpoints = oldEffectiveConstraints.keys.filterNot { it in newEffectiveConstraints.keys }
-
-        // Sources that "this" endpoint no longer receives.
-        for (removedEpId in removedEndpoints) {
-            // Remove ourself as a receiver from that endpoint
-            conference.getEndpoint(removedEpId)?.removeReceiver(id)
-        }
-
-        // Added or updated
-        newEffectiveConstraints.forEach { (epId, effectiveConstraints) ->
-            conference.getEndpoint(epId)?.addReceiver(id, effectiveConstraints)
-        }
-    }
 
     private fun effectiveVideoConstraintsChangedV2(
         oldEffectiveConstraints: Map<String, VideoConstraints>,
@@ -763,7 +734,7 @@ class Endpoint @JvmOverloads constructor(
      */
     @Deprecated("", ReplaceWith("sendForwardedSourcesMessage"), DeprecationLevel.WARNING)
     fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
-        if (MultiStreamConfig.config.enabled && isUsingSourceNames) {
+        if (isUsingSourceNames) {
             return
         }
 
@@ -784,7 +755,7 @@ class Endpoint @JvmOverloads constructor(
      * @param forwardedSources the collection of forwarded media sources (by name).
      */
     fun sendForwardedSourcesMessage(forwardedSources: Collection<String>) {
-        if (!MultiStreamConfig.config.enabled || !isUsingSourceNames) {
+        if (!isUsingSourceNames) {
             return
         }
 
@@ -1066,19 +1037,14 @@ class Endpoint @JvmOverloads constructor(
             buildString {
                 append("wantsStatsFrom(${ep.id}): isRecentSpeaker=${conference.speechActivity.isRecentSpeaker(ep)} ")
                 append("isRankedSpeaker=${conference.isRankedSpeaker(ep)} ")
-                if (MultiStreamConfig.config.enabled) {
-                    if (ep.mediaSources.isEmpty()) {
-                        append("(no media sources)")
-                    }
-                    ep.mediaSources.forEach { source ->
-                        val name = source.sourceName
-                        append("isOnStageOrSelected($name)=${bitrateController.isOnStageOrSelected(source)} ")
-                        append("hasNonZeroEffectiveConstraints($name)=")
-                        append("${bitrateController.hasNonZeroEffectiveConstraints(source)} ")
-                    }
-                } else {
-                    append("isOnStageOrSelected=${bitrateController.isOnStageOrSelected(ep)} ")
-                    append("hasNonZeroEffectiveConstraints=${bitrateController.hasNonZeroEffectiveConstraints(ep)}")
+                if (ep.mediaSources.isEmpty()) {
+                    append("(no media sources)")
+                }
+                ep.mediaSources.forEach { source ->
+                    val name = source.sourceName
+                    append("isOnStageOrSelected($name)=${bitrateController.isOnStageOrSelected(source)} ")
+                    append("hasNonZeroEffectiveConstraints($name)=")
+                    append("${bitrateController.hasNonZeroEffectiveConstraints(source)} ")
                 }
             }
         }
@@ -1086,13 +1052,9 @@ class Endpoint @JvmOverloads constructor(
         if (conference.speechActivity.isRecentSpeaker(ep) || conference.isRankedSpeaker(ep)) {
             return true
         }
-        return if (MultiStreamConfig.config.enabled) {
-            ep.mediaSources.any { source ->
-                bitrateController.isOnStageOrSelected(source) ||
-                    bitrateController.hasNonZeroEffectiveConstraints(source)
-            }
-        } else {
-            bitrateController.isOnStageOrSelected(ep) || bitrateController.hasNonZeroEffectiveConstraints(ep)
+        return ep.mediaSources.any { source ->
+            bitrateController.isOnStageOrSelected(source) ||
+                bitrateController.hasNonZeroEffectiveConstraints(source)
         }
     }
 

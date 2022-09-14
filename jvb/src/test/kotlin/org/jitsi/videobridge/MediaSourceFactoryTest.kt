@@ -20,7 +20,6 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import org.jitsi.config.setNewConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
 import org.jitsi.xmpp.extensions.colibri.SourcePacketExtension
 
@@ -32,27 +31,13 @@ class MediaSourceFactoryTest : ShouldSpec() {
 
     init {
         context("MediaSourceFactory") {
-            context("when multi-stream support is enabled") {
-                setNewConfig(configWithMultiStreamEnabled, true)
+            context("should throw an exception if there's no source name in the packet extension") {
+                val videoSource: SourcePacketExtension = createSource(1)
 
-                context("should throw an exception if there's no source name in the packet extension") {
-                    val videoSource: SourcePacketExtension = createSource(1)
-
-                    val exception = shouldThrow<IllegalArgumentException> {
-                        MediaSourceFactory.createMediaSources(listOf(videoSource), emptyList())
-                    }
-                    exception.message shouldBe "The 'name' is missing in the source description"
-                }
-            }
-
-            context("when multi-stream support is disabled") {
-                setNewConfig(configWithMultiStreamDisabled, true)
-
-                context("should NOT throw an exception if there's no source name in the packet extension") {
-                    val videoSource: SourcePacketExtension = createSource(1)
-
+                val exception = shouldThrow<IllegalArgumentException> {
                     MediaSourceFactory.createMediaSources(listOf(videoSource), emptyList())
                 }
+                exception.message shouldBe "The 'name' is missing in the source description"
             }
         }
     }

@@ -17,7 +17,6 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.videobridge.MultiStreamConfig
 import org.json.simple.JSONObject
 
 /**
@@ -36,10 +35,7 @@ class BandwidthAllocation @JvmOverloads constructor(
         allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     val forwardedSources: Set<String> =
-        if (MultiStreamConfig.config.enabled)
-            allocations.filter { it.isForwarded() }.map { it.mediaSource?.sourceName!! }.toSet()
-        else
-            emptySet()
+        allocations.filter { it.isForwarded() }.map { it.mediaSource?.sourceName!! }.toSet()
 
     /**
      * Whether the two allocations have the same endpoints and same layers.
