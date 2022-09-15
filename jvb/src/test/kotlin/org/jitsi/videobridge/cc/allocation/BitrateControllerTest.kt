@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2021 - Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.jitsi.videobridge.cc.allocation
 
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainInOrder
-import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.longs.shouldBeWithinPercentageOf
 import io.kotest.matchers.shouldBe
+import io.mockk.CapturingSlot
+import io.mockk.every
+import io.mockk.mockk
 import org.jitsi.config.setNewConfig
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -40,29 +42,28 @@ import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
-import org.jitsi.videobridge.configWithMultiStreamDisabled
+import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.util.TaskPools
 import java.time.Instant
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 
-// This tests the old flow which runs with multi stream flag disabled.
-// TODO remove the old flow and unify BitrateControllerTest and BitrateControllerNewTest
 class BitrateControllerTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
 
     private val logger = createLogger()
     private val clock = FakeClock()
     private val bc = BitrateControllerWrapper(createEndpoints("A", "B", "C", "D"), clock = clock)
-    private val A: TestEndpoint = bc.endpoints.find { it.id == "A" }!! as TestEndpoint
-    private val B: TestEndpoint = bc.endpoints.find { it.id == "B" }!! as TestEndpoint
-    private val C: TestEndpoint = bc.endpoints.find { it.id == "C" }!! as TestEndpoint
-    private val D: TestEndpoint = bc.endpoints.find { it.id == "D" }!! as TestEndpoint
+    private val A = bc.endpoints.find { it.id == "A" }!! as TestEndpoint
+    private val B = bc.endpoints.find { it.id == "B" }!! as TestEndpoint
+    private val C = bc.endpoints.find { it.id == "C" }!! as TestEndpoint
+    private val D = bc.endpoints.find { it.id == "D" }!! as TestEndpoint
 
-    /**
-     * We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
-     * because these tests are designed to test the decisions themselves and not necessarily when they are made.
-     */
     override suspend fun beforeSpec(spec: Spec) = super.beforeSpec(spec).also {
+        // We disable the threshold, causing [BandwidthAllocator] to make a new decision every time BWE changes. This is
+        // because these tests are designed to test the decisions themselves and not necessarily when they are made.
         setNewConfig(
             """
             videobridge.cc {
@@ -70,8 +71,6 @@ class BitrateControllerTest : ShouldSpec() {
               // Effectively disable periodic updates.
               max-time-between-calculations = 1 hour 
             }
-            // Also disable multi stream support,
-            $configWithMultiStreamDisabled
             """.trimIndent(),
             true
         )
@@ -83,21 +82,45 @@ class BitrateControllerTest : ShouldSpec() {
     }
 
     init {
+        context("Expire") {
+            val captureDelay = CapturingSlot<Long>()
+            val captureDelayTimeunit = CapturingSlot<TimeUnit>()
+            val captureCancel = CapturingSlot<Boolean>()
+            val executor: ScheduledExecutorService = mockk {
+                every { schedule(any(), capture(captureDelay), capture(captureDelayTimeunit)) } returns mockk {
+                    every { cancel(capture(captureCancel)) } returns true
+                }
+            }
+            TaskPools.SCHEDULED_POOL = executor
+            val bc = BitrateControllerWrapper(createEndpoints(), clock = clock)
+            val delayMs = TimeUnit.MILLISECONDS.convert(captureDelay.captured, captureDelayTimeunit.captured)
+
+            delayMs.shouldBeWithinPercentageOf(
+                BitrateControllerConfig.config.maxTimeBetweenCalculations().toMillis(),
+                10.0
+            )
+
+            captureCancel.isCaptured shouldBe false
+            bc.bc.expire()
+            captureCancel.isCaptured shouldBe true
+
+            TaskPools.resetScheduledPool()
+        }
         context("Prioritization") {
             context("Without selection") {
-                val endpoints = createEndpoints("F", "E", "D", "C", "B", "A")
-                val ordered = prioritize(endpoints)
-                ordered.map { it.id } shouldBe listOf("F", "E", "D", "C", "B", "A")
+                val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
+                val ordered = prioritize(sources)
+                ordered.map { it.sourceName } shouldBe listOf("s6", "s5", "s4", "s3", "s2", "s1")
             }
             context("With one selected") {
-                val endpoints = createEndpoints("F", "E", "D", "C", "B", "A")
-                val ordered = prioritize(endpoints, listOf("B"))
-                ordered.map { it.id } shouldBe listOf("B", "F", "E", "D", "C", "A")
+                val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
+                val ordered = prioritize(sources, listOf("s2"))
+                ordered.map { it.sourceName } shouldBe listOf("s2", "s6", "s5", "s4", "s3", "s1")
             }
             context("With multiple selected") {
-                val endpoints = createEndpoints("F", "E", "D", "C", "B", "A")
-                val ordered = prioritize(endpoints, listOf("B", "A", "E"))
-                ordered.map { it.id } shouldBe listOf("B", "A", "E", "F", "D", "C")
+                val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
+                val ordered = prioritize(sources, listOf("s2", "s1", "s5"))
+                ordered.map { it.sourceName } shouldBe listOf("s2", "s1", "s5", "s6", "s4", "s3")
             }
         }
 
@@ -108,14 +131,14 @@ class BitrateControllerTest : ShouldSpec() {
                         listOf(true, false).forEach { screensharing ->
                             context("With ${if (screensharing) "screensharing" else "camera"}") {
                                 if (screensharing) {
-                                    A.videoType = VideoType.DESKTOP
+                                    A.mediaSources[0].videoType = VideoType.DESKTOP
                                 }
                                 bc.setEndpointOrdering(A, B, C, D)
-                                bc.setStageView("A")
+                                bc.setStageView("A-v0")
 
                                 bc.bc.allocationSettings.lastN shouldBe -1
-                                bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
-                                bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
+                                bc.bc.allocationSettings.selectedSources shouldBe emptyList()
+                                bc.bc.allocationSettings.onStageSources shouldBe listOf("A-v0")
 
                                 runBweLoop()
 
@@ -125,11 +148,11 @@ class BitrateControllerTest : ShouldSpec() {
                     }
                     context("and a non-dominant speaker is on stage") {
                         bc.setEndpointOrdering(B, A, C, D)
-                        bc.setStageView("A")
+                        bc.setStageView("A-v0")
 
                         bc.bc.allocationSettings.lastN shouldBe -1
-                        bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
-                        bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
+                        bc.bc.allocationSettings.selectedSources shouldBe emptyList()
+                        bc.bc.allocationSettings.onStageSources shouldBe listOf("A-v0")
                         runBweLoop()
 
                         verifyStageView()
@@ -141,8 +164,8 @@ class BitrateControllerTest : ShouldSpec() {
                     bc.setStageView("A", lastN = 0)
 
                     bc.bc.allocationSettings.lastN shouldBe 0
-                    bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
-                    bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
+                    bc.bc.allocationSettings.selectedSources shouldBe emptyList()
+                    bc.bc.allocationSettings.onStageSources shouldBe listOf("A")
 
                     runBweLoop()
 
@@ -152,11 +175,11 @@ class BitrateControllerTest : ShouldSpec() {
                     // LastN=1 is used when the client goes in "audio-only" mode, but someone starts a screenshare.
                     context("and the dominant speaker is on-stage") {
                         bc.setEndpointOrdering(A, B, C, D)
-                        bc.setStageView("A", lastN = 1)
+                        bc.setStageView("A-v0", lastN = 1)
 
                         bc.bc.allocationSettings.lastN shouldBe 1
-                        bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
-                        bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
+                        bc.bc.allocationSettings.selectedSources shouldBe emptyList()
+                        bc.bc.allocationSettings.onStageSources shouldBe listOf("A-v0")
 
                         runBweLoop()
 
@@ -164,11 +187,11 @@ class BitrateControllerTest : ShouldSpec() {
                     }
                     context("and a non-dominant speaker is on stage") {
                         bc.setEndpointOrdering(B, A, C, D)
-                        bc.setStageView("A", lastN = 1)
+                        bc.setStageView("A-v0", lastN = 1)
 
                         bc.bc.allocationSettings.lastN shouldBe 1
-                        bc.bc.allocationSettings.selectedEndpoints shouldBe emptyList()
-                        bc.bc.allocationSettings.onStageEndpoints shouldBe listOf("A")
+                        bc.bc.allocationSettings.selectedSources shouldBe emptyList()
+                        bc.bc.allocationSettings.onStageSources shouldBe listOf("A-v0")
 
                         runBweLoop()
 
@@ -178,12 +201,11 @@ class BitrateControllerTest : ShouldSpec() {
             }
             context("Tile view") {
                 bc.setEndpointOrdering(A, B, C, D)
-                bc.setTileView("A", "B", "C", "D")
+                bc.setTileView("A-v0", "B-v0", "C-v0", "D-v0")
 
                 bc.bc.allocationSettings.lastN shouldBe -1
-                // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView,
-                // and in tile view we do not use selected endpoints.
-                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B", "C", "D")
+                bc.bc.allocationSettings.selectedSources shouldBe
+                    listOf("A-v0", "B-v0", "C-v0", "D-v0")
 
                 context("When LastN is not set") {
                     runBweLoop()
@@ -191,13 +213,13 @@ class BitrateControllerTest : ShouldSpec() {
                     verifyTileView()
                 }
                 context("When LastN=0") {
-                    bc.setTileView("A", "B", "C", "D", lastN = 0)
+                    bc.setTileView("A-v0", "B-v0", "C-v0", "D-v0", lastN = 0)
                     runBweLoop()
 
                     verifyLastN0()
                 }
                 context("When LastN=1") {
-                    bc.setTileView("A", "B", "C", "D", lastN = 1)
+                    bc.setTileView("A-v0", "B-v0", "C-v0", "D-v0", lastN = 1)
                     runBweLoop()
 
                     verifyTileViewLastN1()
@@ -205,12 +227,13 @@ class BitrateControllerTest : ShouldSpec() {
             }
             context("Tile view 360p") {
                 bc.setEndpointOrdering(A, B, C, D)
-                bc.setTileView("A", "B", "C", "D", maxFrameHeight = 360)
+                bc.setTileView("A-v0", "B-v0", "C-v0", "D-v0", maxFrameHeight = 360)
 
                 bc.bc.allocationSettings.lastN shouldBe -1
                 // The legacy API (currently used by jitsi-meet) uses "selected count > 0" to infer TileView,
                 // and in tile view we do not use selected endpoints.
-                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B", "C", "D")
+                bc.bc.allocationSettings.selectedSources shouldBe
+                    listOf("A-v0", "B-v0", "C-v0", "D-v0")
 
                 context("When LastN is not set") {
                     runBweLoop()
@@ -218,115 +241,115 @@ class BitrateControllerTest : ShouldSpec() {
                     verifyTileView360p()
                 }
                 context("When LastN=0") {
-                    bc.setTileView("A", "B", "C", "D", lastN = 0, maxFrameHeight = 360)
+                    bc.setTileView("A-v0", "B-v0", "C-v0", "D-v0", lastN = 0, maxFrameHeight = 360)
                     runBweLoop()
 
                     verifyLastN0()
                 }
                 context("When LastN=1") {
-                    bc.setTileView("A", "B", "C", "D", lastN = 1, maxFrameHeight = 360)
+                    bc.setTileView("A-v0", "B-v0", "C-v0", "D-v0", lastN = 1, maxFrameHeight = 360)
                     runBweLoop()
 
                     verifyTileViewLastN1(360)
                 }
             }
-            context("Selected endpoints should override the dominant speaker (with new signaling)") {
+            context("Selected sources should override the dominant speaker (with new signaling)") {
                 // A is dominant speaker, A and B are selected. With LastN=2 we should always forward the selected
-                // endpoints regardless of who is speaking.
+                // sources regardless of who is speaking.
                 // The exact flow of this scenario was taken from a (non-jitsi-meet) client.
                 bc.setEndpointOrdering(A, B, C, D)
                 bc.bc.setBandwidthAllocationSettings(
                     ReceiverVideoConstraintsMessage(
-                        selectedEndpoints = listOf("A", "B"),
-                        constraints = mapOf("A" to VideoConstraints(720), "B" to VideoConstraints(720))
+                        selectedSources = listOf("A-v0", "B-v0"),
+                        constraints = mapOf("A-v0" to VideoConstraints(720), "B-v0" to VideoConstraints(720))
                     )
                 )
 
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints(720),
-                    "B" to VideoConstraints(720),
-                    "C" to VideoConstraints(180),
-                    "D" to VideoConstraints(180)
+                    "A-v0" to VideoConstraints(720),
+                    "B-v0" to VideoConstraints(720),
+                    "C-v0" to VideoConstraints(180),
+                    "D-v0" to VideoConstraints(180)
                 )
 
                 bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = 2))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints(720),
-                    "B" to VideoConstraints(720),
-                    "C" to VideoConstraints(0),
-                    "D" to VideoConstraints(0)
+                    "A-v0" to VideoConstraints(720),
+                    "B-v0" to VideoConstraints(720),
+                    "C-v0" to VideoConstraints(0),
+                    "D-v0" to VideoConstraints(0)
                 )
 
                 bc.bc.allocationSettings.lastN shouldBe 2
-                bc.bc.allocationSettings.selectedEndpoints shouldBe listOf("A", "B")
+                bc.bc.allocationSettings.selectedSources shouldBe listOf("A-v0", "B-v0")
 
                 clock.elapse(20.secs)
                 bc.bwe = 10.mbps
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 // B becomes dominant speaker.
                 bc.setEndpointOrdering(B, A, C, D)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 bc.bc.setBandwidthAllocationSettings(
                     ReceiverVideoConstraintsMessage(
-                        constraints = mapOf("A" to VideoConstraints(360), "B" to VideoConstraints(360))
+                        constraints = mapOf("A-v0" to VideoConstraints(360), "B-v0" to VideoConstraints(360))
                     )
                 )
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints(360),
-                    "B" to VideoConstraints(360),
-                    "C" to VideoConstraints(0),
-                    "D" to VideoConstraints(0)
+                    "A-v0" to VideoConstraints(360),
+                    "B-v0" to VideoConstraints(360),
+                    "C-v0" to VideoConstraints(0),
+                    "D-v0" to VideoConstraints(0)
                 )
 
                 clock.elapse(2.secs)
                 // This should change nothing, the selection didn't change.
                 bc.bc.setBandwidthAllocationSettings(
-                    ReceiverVideoConstraintsMessage(selectedEndpoints = listOf("A", "B"))
+                    ReceiverVideoConstraintsMessage(selectedSources = listOf("A-v0", "B-v0"))
                 )
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = -1))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints(360),
-                    "B" to VideoConstraints(360),
-                    "C" to VideoConstraints(180),
-                    "D" to VideoConstraints(180)
+                    "A-v0" to VideoConstraints(360),
+                    "B-v0" to VideoConstraints(360),
+                    "C-v0" to VideoConstraints(180),
+                    "D-v0" to VideoConstraints(180)
                 )
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B", "C", "D"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0", "C-v0", "D-v0"))
 
                 bc.bc.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage(lastN = 2))
                 bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-                    "A" to VideoConstraints(360),
-                    "B" to VideoConstraints(360),
-                    "C" to VideoConstraints(0),
-                    "D" to VideoConstraints(0)
+                    "A-v0" to VideoConstraints(360),
+                    "B-v0" to VideoConstraints(360),
+                    "C-v0" to VideoConstraints(0),
+                    "D-v0" to VideoConstraints(0)
                 )
                 clock.elapse(2.secs)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 // D is now dominant speaker, but it should not override the selected endpoints.
                 bc.setEndpointOrdering(D, B, A, C)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 bc.bwe = 10.mbps
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 bc.bwe = 0.mbps
                 clock.elapse(2.secs)
                 bc.bwe = 10.mbps
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
 
                 clock.elapse(2.secs)
                 // C is now dominant speaker, but it should not override the selected endpoints.
                 bc.setEndpointOrdering(C, D, A, B)
-                bc.forwardedEndpointsHistory.last().event.shouldBe(setOf("A", "B"))
+                bc.forwardedSourcesHistory.last().event.shouldBe(setOf("A-v0", "B-v0"))
             }
         }
     }
@@ -336,7 +359,7 @@ class BitrateControllerTest : ShouldSpec() {
             bc.bwe = bwe.bps
             clock.elapse(100.ms)
         }
-        logger.info("Forwarded endpoints history: ${bc.forwardedEndpointsHistory}")
+        logger.info("Forwarded sources history: ${bc.forwardedSourcesHistory}")
         logger.info("Effective constraints history: ${bc.effectiveConstraintsHistory}")
         logger.info("Allocation history: ${bc.allocationHistory}")
     }
@@ -344,19 +367,18 @@ class BitrateControllerTest : ShouldSpec() {
     private fun verifyStageViewScreensharing() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints(720),
-            "B" to VideoConstraints(180),
-            "C" to VideoConstraints(180),
-            "D" to VideoConstraints(180)
+            "A-v0" to VideoConstraints(720),
+            "B-v0" to VideoConstraints(180),
+            "C-v0" to VideoConstraints(180),
+            "D-v0" to VideoConstraints(180)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -535,19 +557,20 @@ class BitrateControllerTest : ShouldSpec() {
     private fun verifyStageViewCamera() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
+        // TODO add forwarded sources history here
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints(720),
-            "B" to VideoConstraints(180),
-            "C" to VideoConstraints(180),
-            "D" to VideoConstraints(180)
+            "A-v0" to VideoConstraints(720),
+            "B-v0" to VideoConstraints(180),
+            "C-v0" to VideoConstraints(180),
+            "D-v0" to VideoConstraints(180)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -781,13 +804,13 @@ class BitrateControllerTest : ShouldSpec() {
 
     private fun verifyLastN0() {
         // No video forwarded even with high BWE.
-        bc.forwardedEndpointsHistory.size shouldBe 0
+        bc.forwardedSourcesHistory.size shouldBe 0
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints(0),
-            "B" to VideoConstraints(0),
-            "C" to VideoConstraints(0),
-            "D" to VideoConstraints(0)
+            "A-v0" to VideoConstraints(0),
+            "B-v0" to VideoConstraints(0),
+            "C-v0" to VideoConstraints(0),
+            "D-v0" to VideoConstraints(0)
         )
 
         // TODO: The history contains 3 identical elements, which is probably a bug.
@@ -806,17 +829,17 @@ class BitrateControllerTest : ShouldSpec() {
     private fun verifyStageViewLastN1() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
 
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A")
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0")
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints(720),
-            "B" to VideoConstraints(0),
-            "C" to VideoConstraints(0),
-            "D" to VideoConstraints(0)
+            "A-v0" to VideoConstraints(720),
+            "B-v0" to VideoConstraints(0),
+            "C-v0" to VideoConstraints(0),
+            "D-v0" to VideoConstraints(0)
         )
 
         // At this stage the purpose of this is just to document current behavior.
@@ -885,12 +908,12 @@ class BitrateControllerTest : ShouldSpec() {
     private fun verifyTileView() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
 
         bc.allocationHistory.shouldMatchInOrder(
@@ -1043,12 +1066,12 @@ class BitrateControllerTest : ShouldSpec() {
     private fun verifyTileView360p() {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A"),
-            setOf("A", "B"),
-            setOf("A", "B", "C"),
-            setOf("A", "B", "C", "D")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0"),
+            setOf("A-v0", "B-v0"),
+            setOf("A-v0", "B-v0", "C-v0"),
+            setOf("A-v0", "B-v0", "C-v0", "D-v0")
         )
 
         bc.allocationHistory.shouldMatchInOrder(
@@ -1246,16 +1269,16 @@ class BitrateControllerTest : ShouldSpec() {
     private fun verifyTileViewLastN1(maxFrameHeight: Int = 180) {
         // At this stage the purpose of this is just to document current behavior.
         // TODO: The results with bwe==-1 are wrong.
-        bc.forwardedEndpointsHistory.removeIf { it.bwe < 0.bps }
-        bc.forwardedEndpointsHistory.map { it.event }.shouldContainInOrder(
-            setOf("A")
+        bc.forwardedSourcesHistory.removeIf { it.bwe < 0.bps }
+        bc.forwardedSourcesHistory.map { it.event }.shouldContainInOrder(
+            setOf("A-v0")
         )
 
         bc.effectiveConstraintsHistory.last().event shouldBe mapOf(
-            "A" to VideoConstraints(maxFrameHeight),
-            "B" to VideoConstraints(0),
-            "C" to VideoConstraints(0),
-            "D" to VideoConstraints(0)
+            "A-v0" to VideoConstraints(maxFrameHeight),
+            "B-v0" to VideoConstraints(0),
+            "C-v0" to VideoConstraints(0),
+            "D-v0" to VideoConstraints(0)
         )
 
         val expectedAllocationHistory = mutableListOf(
@@ -1327,29 +1350,6 @@ class BitrateControllerTest : ShouldSpec() {
     }
 }
 
-fun List<Event<BandwidthAllocation>>.shouldMatchInOrder(vararg events: Event<BandwidthAllocation>) {
-    size shouldBe events.size
-    events.forEachIndexed { i, it ->
-        this[i].bwe shouldBe it.bwe
-        withClue("bwe=${it.bwe}") {
-            this[i].event.shouldMatch(it.event)
-        }
-        // Ignore this.time
-    }
-}
-
-fun BandwidthAllocation.shouldMatch(other: BandwidthAllocation) {
-    allocations.size shouldBe other.allocations.size
-    allocations.forEach { thisSingleAllocation ->
-        withClue("Allocation for ${thisSingleAllocation.endpointId}") {
-            val otherSingleAllocation = other.allocations.find { it.endpointId == thisSingleAllocation.endpointId }
-            otherSingleAllocation.shouldNotBeNull()
-            thisSingleAllocation.targetLayer?.height shouldBe otherSingleAllocation.targetLayer?.height
-            thisSingleAllocation.targetLayer?.frameRate shouldBe otherSingleAllocation.targetLayer?.frameRate
-        }
-    }
-}
-
 class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val clock: FakeClock = FakeClock()) {
     var endpoints: List<MediaSourceContainer> = initialEndpoints
     val logger = createLogger()
@@ -1363,21 +1363,22 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
 
     // Save the output.
     val effectiveConstraintsHistory: History<Map<String, VideoConstraints>> = mutableListOf()
-    val forwardedEndpointsHistory: History<Set<String>> = mutableListOf()
+    val forwardedSourcesHistory: History<Set<String>> = mutableListOf()
     val allocationHistory: History<BandwidthAllocation> = mutableListOf()
 
     val bc = BitrateController(
         object : BitrateController.EventHandler {
-            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) {
-                Event(bwe, forwardedEndpoints, clock.instant()).apply {
-                    logger.info("Forwarded endpoints changed: $this")
-                    forwardedEndpointsHistory.add(this)
+            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
+
+            override fun forwardedSourcesChanged(forwardedSources: Set<String>) {
+                Event(bwe, forwardedSources, clock.instant()).apply {
+                    logger.info("Forwarded sources changed: $this")
+                    forwardedSourcesHistory.add(this)
                 }
             }
 
-            override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
-
-            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) { }
+            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
+            }
 
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: Map<String, VideoConstraints>,
@@ -1405,7 +1406,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         Supplier { endpoints },
         DiagnosticContext(),
         logger,
-        false, // TODO merge this test with BitrateControllerNewTest and use this flag
+        true, // TODO merge BitrateControllerNewTest with old and use this flag
         false,
         clock
     )
@@ -1416,35 +1417,26 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         bc.endpointOrderingChanged()
     }
 
-    fun setStageView(onStageEndpoint: String, maxFrameHeight: Int = 720, lastN: Int? = null) {
+    fun setStageView(onStageSource: String, lastN: Int? = null) {
         bc.setBandwidthAllocationSettings(
             ReceiverVideoConstraintsMessage(
                 lastN = lastN,
-                onStageEndpoints = listOf(onStageEndpoint),
-                constraints = mapOf(onStageEndpoint to VideoConstraints(720))
-            )
-        )
-    }
-
-    fun setSelectedEndpoints(vararg selectedEndpoints: String, maxFrameHeight: Int? = null) {
-        bc.setBandwidthAllocationSettings(
-            ReceiverVideoConstraintsMessage(
-                selectedEndpoints = listOf(*selectedEndpoints),
-                defaultConstraints = maxFrameHeight?.let { VideoConstraints(it) }
+                onStageSources = listOf(onStageSource),
+                constraints = mapOf(onStageSource to VideoConstraints(720))
             )
         )
     }
 
     fun setTileView(
-        vararg selectedEndpoints: String,
+        vararg selectedSources: String,
         maxFrameHeight: Int = 180,
         lastN: Int? = null
     ) {
         bc.setBandwidthAllocationSettings(
             ReceiverVideoConstraintsMessage(
                 lastN = lastN,
-                selectedEndpoints = listOf(*selectedEndpoints),
-                constraints = selectedEndpoints.map { it to VideoConstraints(maxFrameHeight) }.toMap()
+                selectedSources = listOf(*selectedSources),
+                constraints = selectedSources.map { it to VideoConstraints(maxFrameHeight) }.toMap()
             )
         )
     }
@@ -1459,46 +1451,56 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
     }
 }
 
-typealias History<T> = MutableList<Event<T>>
-data class Event<T>(
-    val bwe: Bandwidth,
-    val event: T,
-    val time: Instant = Instant.MIN
-) {
-    override fun toString(): String = "\n[time=${time.toEpochMilli()} bwe=$bwe] $event"
-    override fun equals(other: Any?): Boolean {
-        if (other !is Event<*>) return false
-        // Ignore this.time
-        return bwe == other.bwe && event == other.event
-    }
-}
-
 class TestEndpoint(
     override val id: String,
-    override val mediaSource: MediaSourceDesc? = null,
-    override var videoType: VideoType = VideoType.CAMERA,
     override val mediaSources: Array<MediaSourceDesc> = emptyArray(),
+    override val videoType: VideoType = VideoType.CAMERA,
+    override val mediaSource: MediaSourceDesc? = null,
 ) : MediaSourceContainer
 
 fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
     return MutableList(ids.size) { i ->
         TestEndpoint(
             ids[i],
-            createSource(
-                3 * i + 1,
-                3 * i + 2,
-                3 * i + 3
+            arrayOf(
+                createSourceDesc(
+                    3 * i + 1,
+                    3 * i + 2,
+                    3 * i + 3,
+                    ids[i] + "-v0",
+                    ids[i]
+                )
             )
         )
     }
 }
 
-fun createSource(ssrc1: Int, ssrc2: Int, ssrc3: Int): MediaSourceDesc = MediaSourceDesc(
+fun createSources(vararg ids: String): MutableList<MediaSourceDesc> {
+    return MutableList(ids.size) { i ->
+        createSourceDesc(
+            3 * i + 1,
+            3 * i + 2,
+            3 * i + 3,
+            ids[i],
+            null
+        )
+    }
+}
+
+fun createSourceDesc(
+    ssrc1: Int,
+    ssrc2: Int,
+    ssrc3: Int,
+    sourceName: String,
+    owner: String?
+): MediaSourceDesc = MediaSourceDesc(
     arrayOf(
         RtpEncodingDesc(ssrc1.toLong(), arrayOf(ld7_5, ld15, ld30)),
         RtpEncodingDesc(ssrc2.toLong(), arrayOf(sd7_5, sd15, sd30)),
         RtpEncodingDesc(ssrc3.toLong(), arrayOf(hd7_5, hd15, hd30))
-    )
+    ),
+    sourceName = sourceName,
+    owner = owner
 )
 
 val bitrateLd = 150.kbps
@@ -1546,4 +1548,18 @@ class MockRtpLayerDesc(
 
     override fun getBitrate(nowMs: Long): Bandwidth = bitrate
     override fun hasZeroBitrate(nowMs: Long): Boolean = bitrate == 0.bps
+}
+
+typealias History<T> = MutableList<Event<T>>
+data class Event<T>(
+    val bwe: Bandwidth,
+    val event: T,
+    val time: Instant = Instant.MIN
+) {
+    override fun toString(): String = "\n[time=${time.toEpochMilli()} bwe=$bwe] $event"
+    override fun equals(other: Any?): Boolean {
+        if (other !is Event<*>) return false
+        // Ignore this.time
+        return bwe == other.bwe && event == other.event
+    }
 }

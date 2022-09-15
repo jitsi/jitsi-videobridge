@@ -129,44 +129,17 @@ public class EndpointMessageTransport
     @Override
     public BridgeChannelMessage videoType(VideoTypeMessage videoTypeMessage)
     {
-        if (MultiStreamConfig.config.getEnabled())
-        {
-            sourceVideoType(
+        return sourceVideoType(
                 new SourceVideoTypeMessage(
-                    videoTypeMessage.getVideoType(),
-                    endpointIdToSourceName(endpoint.getId()),
-                    videoTypeMessage.getEndpointId())
-            );
-
-            return null;
-        }
-
-        endpoint.setVideoType(videoTypeMessage.getVideoType());
-
-        Conference conference = endpoint.getConference();
-
-        if (conference == null || conference.isExpired())
-        {
-            getLogger().warn("Unable to forward VideoTypeMessage, conference is null or expired");
-            return null;
-        }
-
-        videoTypeMessage.setEndpointId(endpoint.getId());
-
-        /* Forward videoType messages to Relays. */
-        conference.sendMessage(videoTypeMessage, Collections.emptyList(), true);
-
-        return null;
+                        videoTypeMessage.getVideoType(),
+                        endpointIdToSourceName(endpoint.getId()),
+                        videoTypeMessage.getEndpointId())
+        );
     }
 
     @Override
     public BridgeChannelMessage sourceVideoType(SourceVideoTypeMessage sourceVideoTypeMessage)
     {
-        if (!MultiStreamConfig.config.getEnabled())
-        {
-            return null;
-        }
-
         String sourceName = sourceVideoTypeMessage.getSourceName();
 
         if (getLogger().isDebugEnabled())
