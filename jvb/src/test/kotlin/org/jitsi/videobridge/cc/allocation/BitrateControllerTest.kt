@@ -50,7 +50,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 
-class BitrateControllerNewTest : ShouldSpec() {
+class BitrateControllerTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
 
     private val logger = createLogger()

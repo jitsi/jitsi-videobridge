@@ -37,7 +37,7 @@ fun testSource(
 }
 
 @Suppress("NAME_SHADOWING")
-class EffectiveConstraintsNewTest : ShouldSpec() {
+class EffectiveConstraintsTest : ShouldSpec() {
     override fun isolationMode() = IsolationMode.InstancePerLeaf
 
     init {
