@@ -120,12 +120,6 @@ class Colibri2ConferenceHandler(
                     SourcePacketExtension().apply {
                         ssrc = conference.localAudioSsrc
                         name = "jvb-a0"
-                        addParameter(
-                            ParameterPacketExtension().apply {
-                                name = "msid"
-                                value = "mixedmslabel mixedlabelaudio0"
-                            }
-                        )
                     }
                 )
                 .build()
@@ -138,12 +132,6 @@ class Colibri2ConferenceHandler(
                     SourcePacketExtension().apply {
                         ssrc = conference.localVideoSsrc
                         name = "jvb-v0"
-                        addParameter(
-                            ParameterPacketExtension().apply {
-                                name = "msid"
-                                value = "mixedmslabel mixedlabelvideo0"
-                            }
-                        )
                     }
                 )
                 .build()
