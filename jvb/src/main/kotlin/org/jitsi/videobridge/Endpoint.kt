@@ -1117,6 +1117,10 @@ class Endpoint @JvmOverloads constructor(
             put("acceptAudio", acceptAudio)
             put("acceptVideo", acceptVideo)
             put("messageTransport", messageTransport.debugState)
+            if (doSsrcRewriting) {
+                put("audioSsrcs", audioSsrcs.getDebugState())
+                put("videoSsrcs", videoSsrcs.getDebugState())
+            }
         }
     }
 

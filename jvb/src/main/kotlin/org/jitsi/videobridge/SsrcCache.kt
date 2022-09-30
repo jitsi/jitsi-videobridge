@@ -36,6 +36,7 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.json.simple.JSONObject
 
 /**
  * Get tl0PicIdx field for codecs that have it.
@@ -320,6 +321,11 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      */
     protected abstract val allowCreateOnPacket: Boolean
 
+    /**
+     * Number of times an SSRC has changed its mapping. (Does not count initial mappings.)
+     */
+    private var remapCount = 0
+
     companion object {
         /**
          * Print packet fields relevant to rewriting mode.
@@ -370,6 +376,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
                 if (props.ssrc2 != -1L) {
                     receivedSsrcs.get(props.ssrc2)?.hasDeltas = false
                 }
+                ++remapCount
             } else {
                 val ssrc1 = ep.getNextSendSsrc()
                 val ssrc2 = ep.getNextSendSsrc()
@@ -521,6 +528,20 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             } else {
                 logger.debug { "Received RTCP FB packet for SSRC $mediaSsrc. Not active." }
                 return null
+            }
+        }
+    }
+
+    /**
+     * Returns JSON statistics useful for debugging.
+     */
+    fun getDebugState(): JSONObject {
+        synchronized(sendSources) {
+            return JSONObject().apply {
+                put("max", this@SsrcCache.size)
+                put("received", receivedSsrcs.size)
+                put("sent", sendSources.size)
+                put("remappings", remapCount)
             }
         }
     }
