@@ -138,11 +138,6 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-metrics</artifactId>
     </dependency>
-    <!-- Note that this is not part of jitsi/jitsi, and it has a separate version. -->
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-stats</artifactId>
-    </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-xmpp-extensions</artifactId>

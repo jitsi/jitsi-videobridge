@@ -6,8 +6,5 @@ jvb/resources/jvb.sh	usr/share/jitsi-videobridge
 resources/graceful_shutdown.sh	usr/share/jitsi-videobridge
 resources/collect-dump-logs.sh	usr/share/jitsi-videobridge
 
-# callstats-java-sdk
-config/callstats-java-sdk.properties	etc/jitsi/videobridge
-
 jitsi-videobridge			etc/logrotate.d
 config/20-jvb-udp-buffers.conf		etc/sysctl.d

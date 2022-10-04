@@ -227,7 +227,6 @@ public class Videobridge
             @Nullable EntityBareJid name,
             String meetingId,
             boolean isRtcStatsEnabled,
-            boolean isCallStatsEnabled,
             boolean checkForMeetingIdCollision)
     {
         Conference conference = null;
@@ -244,7 +243,7 @@ public class Videobridge
 
                 if (!conferencesById.containsKey(id))
                 {
-                    conference = new Conference(this, id, name, meetingId, isRtcStatsEnabled, isCallStatsEnabled);
+                    conference = new Conference(this, id, name, meetingId, isRtcStatsEnabled);
                     conferencesById.put(id, conference);
                     statistics.currentConferences.inc();
 
@@ -292,12 +291,10 @@ public class Videobridge
             @Nullable EntityBareJid name,
             String meetingId,
             boolean isRtcStatsEnabled,
-            boolean isCallStatsEnabled,
             boolean checkForMeetingIdCollision)
     {
         final Conference conference
-                = doCreateConference(
-                        name, meetingId, isRtcStatsEnabled, isCallStatsEnabled, checkForMeetingIdCollision);
+                = doCreateConference(name, meetingId, isRtcStatsEnabled, checkForMeetingIdCollision);
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " meetingId=" + meetingId);
 
@@ -545,7 +542,6 @@ public class Videobridge
                     conferenceIq.getName(),
                     conferenceIq.getMeetingId(),
                     conferenceIq.isRtcStatsEnabled(),
-                    conferenceIq.isCallStatsEnabled(),
                     false);
         }
         else
@@ -587,7 +583,6 @@ public class Videobridge
                     conferenceName == null ? null : JidCreate.entityBareFrom(conferenceName),
                     meetingId,
                     conferenceModifyIQ.isRtcstatsEnabled(),
-                    conferenceModifyIQ.isCallstatsEnabled(),
                     true);
             }
             else
@@ -1201,6 +1196,7 @@ public class Videobridge
                 "Current number of conferences."
         );
     }
+
 
     public interface EventHandler
     {
