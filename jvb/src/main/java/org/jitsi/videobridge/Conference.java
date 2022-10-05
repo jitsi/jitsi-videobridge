@@ -73,11 +73,6 @@ public class Conference
     private final boolean isRtcStatsEnabled;
 
     /**
-     * A boolean that indicates whether or not to report to CallStats for this call.
-     */
-    private final boolean isCallStatsEnabled;
-
-    /**
      * A read-only cache of the endpoints in this conference. Note that it
      * contains only the {@link Endpoint} instances (and not {@link RelayedEndpoint}s).
      * This is because the cache was introduced for performance reasons only
@@ -204,13 +199,11 @@ public class Conference
                       String id,
                       @Nullable EntityBareJid conferenceName,
                       @Nullable String meetingId,
-                      boolean isRtcStatsEnabled,
-                      boolean isCallStatsEnabled)
+                      boolean isRtcStatsEnabled)
     {
         this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         this.isRtcStatsEnabled = isRtcStatsEnabled;
-        this.isCallStatsEnabled = isCallStatsEnabled;
         Map<String, String> context = new HashMap<>(Map.of("confId", id));
         if (conferenceName != null)
         {
@@ -916,11 +909,6 @@ public class Conference
     public final String getID()
     {
         return id;
-    }
-
-    public final boolean isCallStatsEnabled()
-    {
-        return isCallStatsEnabled;
     }
 
     /**

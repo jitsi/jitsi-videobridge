@@ -42,7 +42,7 @@ class StatsManagerConfig private constructor() {
      * stats transport configs from old and new config together).
      *
      * These are now obsolete and only maintained for backward compatibility. Transports should be configured in the
-     * modules that define them. See e.g. the implementations in [CallstatsService] and [XmppConnection].
+     * modules that define them. See e.g. the implementation and [XmppConnection].
      */
     val transportConfigs: List<StatsTransportConfig> by config {
         "org.jitsi.videobridge."
@@ -79,7 +79,6 @@ class StatsManagerConfig private constructor() {
             } ?: this@StatsManagerConfig.interval
             when (transportType) {
                 "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)
-                "callstats.io" -> StatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
                 else -> null
             }
         }
@@ -93,7 +92,6 @@ class StatsManagerConfig private constructor() {
         }
         return when (getString("type")) {
             "muc" -> StatsTransportConfig.MucStatsTransportConfig(interval)
-            "callstatsio" -> StatsTransportConfig.CallStatsIoStatsTransportConfig(interval)
             else -> null
         }
     }
@@ -111,5 +109,4 @@ sealed class StatsTransportConfig(
     val interval: Duration
 ) {
     class MucStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval)
-    class CallStatsIoStatsTransportConfig(interval: Duration) : StatsTransportConfig(interval)
 }

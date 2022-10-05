@@ -29,7 +29,6 @@ import org.jitsi.rest.enableCors
 import org.jitsi.rest.isEnabled
 import org.jitsi.rest.servletContextHandler
 import org.jitsi.shutdown.ShutdownServiceImpl
-import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.ice.Harvesters
@@ -37,8 +36,6 @@ import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.VideobridgeStatistics
-import org.jitsi.videobridge.stats.callstats.CallstatsConfig
-import org.jitsi.videobridge.stats.callstats.CallstatsService
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
@@ -106,21 +103,6 @@ fun main(args: Array<String>) {
         addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
     }
 
-    val callstats = if (CallstatsConfig.config.enabled) {
-        CallstatsService(videobridge.version).apply {
-            start {
-                statsTransport?.let { statsTransport ->
-                    statsCollector.addTransport(statsTransport, CallstatsConfig.config.interval.toMillis())
-                } ?: throw IllegalStateException("Stats transport is null after the service is started")
-
-                videobridge.addEventHandler(videobridgeEventHandler)
-            }
-        }
-    } else {
-        logger.info("Not starting CallstatsService, disabled in configuration.")
-        null
-    }
-
     val publicServerConfig = JettyBundleActivatorConfig(
         "org.jitsi.videobridge.rest",
         "videobridge.http-servers.public"
@@ -171,13 +153,6 @@ fun main(args: Array<String>) {
     logger.info("Bridge shutting down")
     healthChecker.stop()
     xmppConnection.stop()
-    callstats?.let {
-        videobridge.removeEventHandler(it.videobridgeEventHandler)
-        it.statsTransport?.let { statsTransport ->
-            statsCollector.removeTransport(statsTransport)
-        }
-        it.stop()
-    }
     statsCollector.stop()
 
     try {
@@ -217,7 +192,6 @@ private fun setSystemPropertyDefaults() {
 
 private fun getSystemPropertyDefaults(): Map<String, String> {
     val defaults = mutableMapOf<String, String>()
-    Utils.getCallStatsJavaSDKSystemPropertyDefaults(defaults)
 
     // Make legacy ice4j properties system properties.
     val cfg = JitsiConfig.SipCommunicatorProps
