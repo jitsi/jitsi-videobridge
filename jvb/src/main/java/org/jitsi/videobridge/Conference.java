@@ -44,6 +44,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.regex.*;
 import java.util.stream.*;
 
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
@@ -186,6 +187,11 @@ public class Conference
     private final String meetingId;
 
     /**
+     * A regex pattern to trim UUIDs to just their first 8 hex characters.
+     */
+    private final static Pattern uuidTrimmer = Pattern.compile("(\\p{XDigit}{8})[\\p{XDigit}-]*");
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID.
@@ -209,6 +215,12 @@ public class Conference
         {
             context.put("conf_name", conferenceName.toString());
         }
+        if (meetingId != null)
+        {
+            /* We usually generate meeting IDs as a UUID - include just their first octet. */
+            context.put("meeting_id", uuidTrimmer.matcher(meetingId).replaceAll("$1"));
+        }
+
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
