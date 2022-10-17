@@ -20,7 +20,6 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.ConfigTest
 import org.jitsi.config.withLegacyConfig
 import org.jitsi.config.withNewConfig
-import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.rest.RestConfig.Companion.config
 
 class RestConfigTest : ConfigTest() {

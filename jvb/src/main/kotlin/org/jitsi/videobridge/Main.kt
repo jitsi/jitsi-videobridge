@@ -19,7 +19,6 @@ package org.jitsi.videobridge
 import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
-import org.jitsi.cmd.CmdLine
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
