@@ -47,25 +47,8 @@ import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 
-fun main(args: Array<String>) {
+fun main() {
     val logger = LoggerImpl("org.jitsi.videobridge.Main")
-
-    // We only support command line arguments for backward compatibility. The --apis options is the last one supported,
-    // and it is only used to enable/disable the REST API (XMPP is only controlled through the config files).
-    // TODO: fully remove support for --apis
-    CmdLine().apply {
-        parse(args)
-        getOptionValue("--apis")?.let {
-            logger.warn(
-                "A deprecated command line argument (--apis) is present. Please use the config file to control the " +
-                    "REST API instead (see rest.md). Support for --apis will be removed in a future version."
-            )
-            System.setProperty(
-                Videobridge.REST_API_PNAME,
-                it.contains(Videobridge.REST_API).toString()
-            )
-        }
-    }
 
     setupMetaconfigLogger()
 

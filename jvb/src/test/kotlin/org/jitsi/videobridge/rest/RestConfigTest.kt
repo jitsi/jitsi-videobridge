@@ -101,7 +101,7 @@ class RestConfigTest : ConfigTest() {
         context("Enable/disable with the old way") {
             // The old way to enable REST is via command line argument, which is now simulated with a new config
             context("When colibri is enabled") {
-                withNewConfig("${Videobridge.REST_API_PNAME}=true") {
+                withNewConfig("videobridge.apis.rest.enabled=true") {
                     config.isEnabled(RestApis.COLIBRI) shouldBe true
 
                     context("When shutdown is enabled") {
