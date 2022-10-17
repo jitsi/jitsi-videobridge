@@ -115,17 +115,13 @@ case "$1" in
 }" >> $HOCON_CONFIG
         fi
 
-        APIS_VALUE=$(grep -v '^\s*#' $CONFIG | grep -oPe '--apis=\K(\w*,*\w*)' || true)
-        if [[ $APIS_VALUE == *"xmpp"* ]]; then
-            APIS_NEW_VALUE=${APIS_VALUE/xmpp/}
-            if [ -z "$APIS_NEW_VALUE" ]; then
-                APIS_NEW_VALUE=","
+        # The REST API is disabled by default. It it was previously enabled via --apis, enable it in jvb.conf
+        if grep -v '^\s*#' /etc/jitsi/videobridge/config | grep -- '--apis=' | grep -i rest >/dev/null 2>&1 ;then
+            if ! hocon -f $HOCON_CONFIG get "videobridge.apis.rest.enabled" > /dev/null 2>&1 ;then
+                hocon -f $HOCON_CONFIG set "videobridge.apis.rest.enabled" "true"
             fi
-            sed -i '/^\s*#/ !s/--apis='"$APIS_VALUE"'/--apis='"$APIS_NEW_VALUE"'/g' $CONFIG
-        fi
-        if [ -z "$APIS_VALUE" ]; then
-            # no apis setting, component is turned on by default, so let's disable it
-            sed -i '/^\s*#/ !s/JVB_OPTS="/JVB_OPTS="--apis=, /g' $CONFIG
+            # Remove it from /etc/jitsi/videobridge/config to prevent it perpetually updating jvb.conf
+            sed -i 's/.*--apis.*//' $CONFIG
         fi
 
         # we don't want to start the daemon as root
