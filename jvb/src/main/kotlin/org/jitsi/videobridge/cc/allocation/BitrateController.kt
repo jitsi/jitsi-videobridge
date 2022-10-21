@@ -39,9 +39,8 @@ import java.util.function.Supplier
  * 1. Decide how to allocate the available bandwidth between the available streams.
  * 2. Implement the allocation via a packet handling interface.
  *
- * Historically both were implemented in a single class, but they are now split between [BandwidthAllocator] (for
- * the allocation) and [BitrateControllerPacketHandler] (for packet handling). This class was introduced as a
- * lightweight shim in order to preserve the previous API.
+ * Historically both were implemented in a single class, but they are now split between [BandwidthAllocator] and
+ * [PacketHandler]. This class was introduced as a lightweight shim in order to preserve the previous API.
  *
  */
 class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
@@ -85,8 +84,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      */
     private var supportsRtx = false
 
-    private val packetHandler: BitrateControllerPacketHandler =
-        BitrateControllerPacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
+    private val packetHandler: PacketHandler = PacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
     private val bandwidthAllocator: BandwidthAllocator<T> =
         BandwidthAllocator(
             bitrateAllocatorEventHandler,
