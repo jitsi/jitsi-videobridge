@@ -42,7 +42,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     private val endpointsSupplier: Supplier<List<T>>,
     /**
      * Whether bandwidth allocation should be constrained to the available bandwidth (when `true`), or assume
-     * infinite bandwidth (when `false`.
+     * infinite bandwidth (when `false`).
      */
     private val trustBwe: Supplier<Boolean>,
     parentLogger: Logger,
@@ -77,7 +77,9 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
      * TODO Update this description when the endpoint ID signaling is removed from the JVB.
      */
     private var effectiveConstraints = emptyMap<String, VideoConstraints>()
-    private val eventEmitter: EventEmitter<EventHandler> = SyncEventEmitter()
+    private val eventEmitter: EventEmitter<EventHandler> = SyncEventEmitter<EventHandler>().apply {
+        addHandler(eventHandler)
+    }
 
     /**
      * The allocations settings signalled by the receiver.
@@ -87,8 +89,10 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 
     /**
      * The last time [BandwidthAllocator.update] was called.
+     * Initialized as initialization time to prevent triggering an update immediately, because the settings might not
+     * have been configured yet.
      */
-    private var lastUpdateTime: Instant
+    private var lastUpdateTime: Instant = clock.instant()
 
     /**
      * The result of the bitrate control algorithm, the last time it ran.
@@ -102,9 +106,6 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     private var updateTask: ScheduledFuture<*>? = null
 
     init {
-        eventEmitter.addHandler(eventHandler)
-        // Don't trigger an update immediately, the settings might not have been configured.
-        lastUpdateTime = clock.instant()
         rescheduleUpdate()
     }
 
@@ -270,7 +271,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         if (suspendedIds.isNotEmpty()) {
             logger.info("Sources suspended due to insufficient bandwidth (bwe=$availableBandwidth bps): $suspendedIds")
         }
-        val allocations: MutableSet<SingleAllocation> = HashSet()
+        val allocations = mutableSetOf<SingleAllocation>()
         var targetBps: Long = 0
         var idealBps: Long = 0
         for (sourceBitrateAllocation: SingleSourceAllocation in sourceBitrateAllocations) {
@@ -279,14 +280,6 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             idealBps += sourceBitrateAllocation.idealBitrate
         }
         return BandwidthAllocation(allocations, oversending, idealBps, targetBps, suspendedIds)
-    }
-
-    /**
-     * Query whether this allocator is forwarding a source from a given endpoint, as of its
-     * most recent allocation decision.
-     */
-    fun isForwarding(endpointId: String): Boolean {
-        return allocation.isForwarding(endpointId)
     }
 
     /**
@@ -339,7 +332,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         }
         val timeSinceLastUpdate = Duration.between(lastUpdateTime, clock.instant())
         val period = BitrateControllerConfig.config.maxTimeBetweenCalculations()
-        val delayMs: Long = if (timeSinceLastUpdate > period) {
+        val delayMs = if (timeSinceLastUpdate > period) {
             logger.debug("Running periodic re-allocation.")
             TaskPools.CPU_POOL.execute { this.update() }
             period.toMillis()

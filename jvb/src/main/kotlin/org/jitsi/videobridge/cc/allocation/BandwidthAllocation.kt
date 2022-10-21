@@ -52,11 +52,6 @@ class BandwidthAllocation @JvmOverloads constructor(
                 }
             }
 
-    /**
-     * Whether this allocation is forwarding a source from an endpoint with this ID.
-     */
-    fun isForwarding(epId: String): Boolean = forwardedEndpoints.contains(epId)
-
     override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
 
     val debugState: JSONObject

@@ -22,7 +22,6 @@ import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.utils.ArrayUtils
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
