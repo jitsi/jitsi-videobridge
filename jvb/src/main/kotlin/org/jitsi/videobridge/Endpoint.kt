@@ -210,7 +210,7 @@ class Endpoint @JvmOverloads constructor(
             }
 
             override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
-                sourceList.take(maxVideoSsrcs).let {
+                sourceList.take(SsrcLimitConfig.config.maxVideoSsrcs).let {
                     val newSources = it.mapNotNull { s -> s.sourceName }.toSet()
                     /* safe unlocked access of activeSources.
                      * BitrateController will not overlap calls to this method. */
@@ -312,12 +312,12 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Manages remapping of video SSRCs when enabled.
      */
-    private val videoSsrcs = VideoSsrcCache(maxVideoSsrcs, this, logger)
+    private val videoSsrcs = VideoSsrcCache(SsrcLimitConfig.config.maxVideoSsrcs, this, logger)
 
     /**
      * Manages remapping of audio SSRCs when enabled.
      */
-    private val audioSsrcs = AudioSsrcCache(maxAudioSsrcs, this, logger)
+    private val audioSsrcs = AudioSsrcCache(SsrcLimitConfig.config.maxAudioSsrcs, this, logger)
 
     /**
      * Last advertised forwarded-sources in remapping mode.
@@ -1194,14 +1194,6 @@ class Endpoint @JvmOverloads constructor(
 
         private val statsFilterThreshold: Int by config {
             "videobridge.stats-filter-threshold".from(JitsiConfig.newConfig)
-        }
-
-        private val maxVideoSsrcs: Int by config {
-            "videobridge.ssrc-limit.video".from(JitsiConfig.newConfig)
-        }
-
-        private val maxAudioSsrcs: Int by config {
-            "videobridge.ssrc-limit.audio".from(JitsiConfig.newConfig)
         }
 
         /**
