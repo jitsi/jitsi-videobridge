@@ -147,12 +147,9 @@ internal class PacketHandler(
             return null
         }
         synchronized(adaptiveSourceProjectionMap) {
-            var adaptiveSourceProjection = adaptiveSourceProjectionMap[source.primarySSRC]
-            if (adaptiveSourceProjection != null) {
-                return adaptiveSourceProjection
-            }
-            val rtpEncodings = source.rtpEncodings
-            if (ArrayUtils.isNullOrEmpty(rtpEncodings)) {
+            adaptiveSourceProjectionMap[source.primarySSRC]?.let { return it }
+
+            if (source.rtpEncodings.isEmpty()) {
                 return null
             }
 
@@ -164,7 +161,7 @@ internal class PacketHandler(
             // creating local final variables and pass that to the lambda function
             // in order to avoid that.
             val targetSSRC = source.primarySSRC
-            adaptiveSourceProjection = AdaptiveSourceProjection(
+            val adaptiveSourceProjection = AdaptiveSourceProjection(
                 diagnosticContext,
                 source,
                 {
@@ -176,8 +173,8 @@ internal class PacketHandler(
             logger.debug { "new source projection for $source" }
 
             // Route all encodings to the specified bitrate controller.
-            for (rtpEncoding in rtpEncodings) {
-                adaptiveSourceProjectionMap[rtpEncoding.primarySSRC] = adaptiveSourceProjection
+            source.rtpEncodings.forEach {
+                adaptiveSourceProjectionMap[it.primarySSRC] = adaptiveSourceProjection
             }
             return adaptiveSourceProjection
         }
