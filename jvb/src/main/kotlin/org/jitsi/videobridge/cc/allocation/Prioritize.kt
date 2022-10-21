@@ -40,7 +40,7 @@ fun prioritize(
  * Return the "effective" constraints for the given media sources, i.e. the constraints adjusted for LastN.
  */
 fun getEffectiveConstraints(sources: List<MediaSourceDesc>, allocationSettings: AllocationSettings):
-    Map<String, VideoConstraints> {
+    EffectiveConstraintsMap {
 
     // FIXME figure out before merge - is using source count instead of endpoints
     // Add 1 for the receiver endpoint, which is not in the list.
@@ -51,8 +51,8 @@ fun getEffectiveConstraints(sources: List<MediaSourceDesc>, allocationSettings: 
     // algorithm.
     var sourcesWithNonZeroConstraints = 0
 
-    return sources.associate { source ->
-        (source.sourceName)!! to if (sourcesWithNonZeroConstraints >= effectiveLastN) {
+    return sources.associateWith { source ->
+        if (sourcesWithNonZeroConstraints >= effectiveLastN) {
             VideoConstraints.NOTHING
         } else {
             allocationSettings.getConstraints(source.sourceName!!).also {

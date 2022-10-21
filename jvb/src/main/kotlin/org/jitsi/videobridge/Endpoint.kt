@@ -56,6 +56,7 @@ import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.cc.BandwidthProbing
 import org.jitsi.videobridge.cc.allocation.BandwidthAllocation
 import org.jitsi.videobridge.cc.allocation.BitrateController
+import org.jitsi.videobridge.cc.allocation.EffectiveConstraintsMap
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
@@ -209,22 +210,9 @@ class Endpoint @JvmOverloads constructor(
                 sendForwardedSourcesMessage(forwardedSources)
             }
 
-            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
-                sourceList.take(SsrcLimitConfig.config.maxVideoSsrcs).let {
-                    val newSources = it.mapNotNull { s -> s.sourceName }.toSet()
-                    /* safe unlocked access of activeSources.
-                     * BitrateController will not overlap calls to this method. */
-                    if (activeSources != newSources) {
-                        activeSources = newSources
-                        sendForwardedSourcesMessage(newSources)
-                        videoSsrcs.activate(it)
-                    }
-                }
-            }
-
             override fun effectiveVideoConstraintsChanged(
-                oldEffectiveConstraints: Map<String, VideoConstraints>,
-                newEffectiveConstraints: Map<String, VideoConstraints>
+                oldEffectiveConstraints: EffectiveConstraintsMap,
+                newEffectiveConstraints: EffectiveConstraintsMap,
             ) = this@Endpoint.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
 
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) =
@@ -234,7 +222,6 @@ class Endpoint @JvmOverloads constructor(
         diagnosticContext,
         logger,
         isUsingSourceNames,
-        doSsrcRewriting
     )
 
     /** Whether any sources are suspended from being sent to this endpoint because of BWE. */
@@ -542,21 +529,35 @@ class Endpoint @JvmOverloads constructor(
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
-    fun effectiveVideoConstraintsChanged(
-        oldEffectiveConstraints: Map<String, VideoConstraints>,
-        newEffectiveConstraints: Map<String, VideoConstraints>
+    private fun effectiveVideoConstraintsChanged(
+        oldEffectiveConstraints: EffectiveConstraintsMap,
+        newEffectiveConstraints: EffectiveConstraintsMap
     ) {
         val removedSources = oldEffectiveConstraints.keys.filterNot { it in newEffectiveConstraints.keys }
 
         // Sources that "this" endpoint no longer receives.
-        for (removedSourceName in removedSources) {
+        removedSources.mapNotNull { it.sourceName }.forEach { removedSourceName ->
             // Remove ourself as a receiver from that endpoint
             conference.findSourceOwner(removedSourceName)?.removeSourceReceiver(removedSourceName, id)
         }
 
         // Added or updated
-        newEffectiveConstraints.forEach { (sourceName, effectiveConstraints) ->
-            conference.findSourceOwner(sourceName)?.addReceiver(id, sourceName, effectiveConstraints)
+        newEffectiveConstraints.forEach { (source, effectiveConstraints) ->
+            val name = source.sourceName
+            if (name == null) {
+                logger.warn("Source with not name: $source")
+                return@forEach
+            }
+            conference.findSourceOwner(name)?.addReceiver(id, name, effectiveConstraints)
+        }
+
+        val newActiveSources = newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
+        val newActiveSourceNames = newActiveSources.mapNotNull { it.sourceName }.toSet()
+        /* safe unlocked access of activeSources.
+        * BitrateController will not overlap calls to this method. */
+        if (activeSources != newActiveSourceNames) {
+            activeSources = newActiveSourceNames
+            videoSsrcs.activate(newActiveSources)
         }
     }
 
