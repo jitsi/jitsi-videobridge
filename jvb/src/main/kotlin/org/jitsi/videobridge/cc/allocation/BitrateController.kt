@@ -26,6 +26,7 @@ import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.secs
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
@@ -39,9 +40,8 @@ import java.util.function.Supplier
  * 1. Decide how to allocate the available bandwidth between the available streams.
  * 2. Implement the allocation via a packet handling interface.
  *
- * Historically both were implemented in a single class, but they are now split between [BandwidthAllocator] (for
- * the allocation) and [BitrateControllerPacketHandler] (for packet handling). This class was introduced as a
- * lightweight shim in order to preserve the previous API.
+ * Historically both were implemented in a single class, but they are now split between [BandwidthAllocator] and
+ * [PacketHandler]. This class was introduced as a lightweight shim in order to preserve the previous API.
  *
  */
 class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
@@ -85,8 +85,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      */
     private var supportsRtx = false
 
-    private val packetHandler: BitrateControllerPacketHandler =
-        BitrateControllerPacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
+    private val packetHandler: PacketHandler = PacketHandler(clock, parentLogger, diagnosticContext, eventEmitter)
     private val bandwidthAllocator: BandwidthAllocator<T> =
         BandwidthAllocator(
             bitrateAllocatorEventHandler,
@@ -112,7 +111,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * TODO: Is this comment still accurate?
      */
     private val trustBwe: Boolean
-        get() = config.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10000
+        get() = config.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10.secs
 
     // Proxy to the allocator
     fun endpointOrderingChanged() = bandwidthAllocator.update()
@@ -146,7 +145,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         return packetHandler.accept(packetInfo)
     }
     fun accept(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.accept(rtcpSrPacket)
-    fun transformRtcp(rtcpSrPacket: RtcpSrPacket?): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
+    fun transformRtcp(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
 
     val debugState: JSONObject

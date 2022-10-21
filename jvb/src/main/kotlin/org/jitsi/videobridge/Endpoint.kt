@@ -542,8 +542,6 @@ class Endpoint @JvmOverloads constructor(
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
-    @Deprecated("", ReplaceWith("effectiveVideoConstraintsChangedV2"), DeprecationLevel.WARNING)
-
     fun effectiveVideoConstraintsChanged(
         oldEffectiveConstraints: Map<String, VideoConstraints>,
         newEffectiveConstraints: Map<String, VideoConstraints>
