@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.videobridge.SsrcLimitConfig
 import org.jitsi.videobridge.calculateLastN
 import org.jitsi.videobridge.jvbLastNSingleton
 import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion.singleton as conferenceSizeLimits
@@ -66,6 +67,11 @@ fun getEffectiveConstraints(sources: List<MediaSourceDesc>, allocationSettings: 
  */
 private fun effectiveLastN(lastN: Int, conferenceSize: Int): Int {
     val adjustedLastN =
-        calculateLastN(lastN, jvbLastNSingleton.jvbLastN, conferenceSizeLimits.getLastNLimit(conferenceSize))
+        calculateLastN(
+            lastN,
+            jvbLastNSingleton.jvbLastN,
+            conferenceSizeLimits.getLastNLimit(conferenceSize),
+            SsrcLimitConfig.config.maxVideoSsrcs
+        )
     return if (adjustedLastN < 0) Int.MAX_VALUE else adjustedLastN
 }
