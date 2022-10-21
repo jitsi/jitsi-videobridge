@@ -16,6 +16,8 @@ import org.jitsi.videobridge.cc.AdaptiveSourceProjection
 import org.jitsi.videobridge.cc.RewriteException
 import org.json.simple.JSONObject
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -40,7 +42,7 @@ internal class PacketHandler(
      *
      * NOTE This is only meant to be as a temporary hack and ideally should be fixed.
      */
-    private var firstMediaMs: Long = -1
+    private var firstMedia: Instant? = null
 
     private val numDroppedPacketsUnknownSsrc = AtomicInteger(0)
     private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
@@ -60,8 +62,8 @@ internal class PacketHandler(
     ): Boolean {
         val videoPacket = packetInfo.packetAs<VideoRtpPacket>()
 
-        if (firstMediaMs == -1L) {
-            firstMediaMs = clock.instant().toEpochMilli()
+        if (firstMedia == null) {
+            firstMedia = clock.instant()
         }
 
         val adaptiveSourceProjection = adaptiveSourceProjectionMap[videoPacket.ssrc] ?: return false
@@ -166,7 +168,7 @@ internal class PacketHandler(
         }
     }
 
-    fun timeSinceFirstMedia(): Long = if (firstMediaMs == -1L) -1 else clock.instant().toEpochMilli() - firstMediaMs
+    fun timeSinceFirstMedia(): Duration = firstMedia?.let { Duration.between(it, clock.instant()) } ?: Duration.ZERO
 
     fun addPayloadType(payloadType: PayloadType) { payloadTypes[payloadType.pt] = payloadType }
 

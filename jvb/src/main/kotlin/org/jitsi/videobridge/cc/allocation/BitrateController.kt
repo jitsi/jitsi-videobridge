@@ -26,6 +26,7 @@ import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.secs
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
@@ -110,7 +111,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * TODO: Is this comment still accurate?
      */
     private val trustBwe: Boolean
-        get() = config.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10000
+        get() = config.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10.secs
 
     // Proxy to the allocator
     fun endpointOrderingChanged() = bandwidthAllocator.update()
