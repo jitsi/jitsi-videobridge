@@ -161,7 +161,7 @@ class BitrateControllerPacketHandler
         return ssrc == adaptiveSourceProjection.getTargetSsrc();
     }
 
-    boolean transformRtcp(RtcpSrPacket rtcpSrPacket)
+    boolean transformRtcp(@NotNull RtcpSrPacket rtcpSrPacket)
     {
         long ssrc = rtcpSrPacket.getSenderSsrc();
 
