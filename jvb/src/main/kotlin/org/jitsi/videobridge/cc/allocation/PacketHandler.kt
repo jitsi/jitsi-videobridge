@@ -153,19 +153,11 @@ internal class PacketHandler(
                 return null
             }
 
-            // XXX the lambda keeps a reference to the sourceBitrateAllocation
-            // (a short lived object under normal circumstances) which keeps
-            // a reference to the Endpoint object that it refers to. That
-            // can cause excessive object retention (i.e. the endpoint is expired
-            // but a reference persists in the adaptiveSourceProjectionMap). We're
-            // creating local final variables and pass that to the lambda function
-            // in order to avoid that.
-            val targetSSRC = source.primarySSRC
             val adaptiveSourceProjection = AdaptiveSourceProjection(
                 diagnosticContext,
                 source,
                 {
-                    eventEmitter.fireEvent { keyframeNeeded(endpointID, targetSSRC) }
+                    eventEmitter.fireEvent { keyframeNeeded(endpointID, source.primarySSRC) }
                 },
                 payloadTypes,
                 logger
