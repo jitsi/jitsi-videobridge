@@ -174,7 +174,7 @@ class RelayedEndpoint(
             applyVideoTypeCache(value)
             val changed = _mediaSources.setMediaSources(value)
             val mergedMediaSources = _mediaSources.getMediaSources()
-            val signaledMediaSources = if (value === mergedMediaSources) value.copy() else value
+            val signaledMediaSources = value.copy()
             if (changed) {
                 val setMediaSourcesEvent = SetMediaSourcesEvent(mediaSources, signaledMediaSources)
 
