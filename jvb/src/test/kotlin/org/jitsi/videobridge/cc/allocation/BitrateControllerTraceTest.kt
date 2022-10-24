@@ -90,7 +90,11 @@ class BitrateControllerTraceTest : ShouldSpec() {
         val layer30 = MockRtpLayerDesc(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = 0.bps)
 
         override val mediaSource: MediaSourceDesc =
-            MediaSourceDesc(arrayOf(RtpEncodingDesc(1L, arrayOf(layer7, layer30))))
+            MediaSourceDesc(
+                arrayOf(RtpEncodingDesc(1L, arrayOf(layer7, layer30))),
+                sourceName = "$id-$videoType",
+                owner = id
+            )
     }
 }
 

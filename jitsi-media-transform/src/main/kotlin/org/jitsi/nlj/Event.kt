@@ -25,5 +25,3 @@ class SetMediaSourcesEvent(
 ) : Event
 
 class SetLocalSsrcEvent(val mediaType: MediaType, val ssrc: Long) : Event
-
-class BandwidthEstimationChangedEvent(val bandwidthBps: Long) : Event

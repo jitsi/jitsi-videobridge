@@ -28,7 +28,7 @@ fun prioritize(
     // Bump selected sources to the top of the list.
     selectedSourceNames.asReversed().forEach { selectedSourceName ->
         // Note the usage of sourceName!! which is expected to be always defined in the multi-stream mode
-        conferenceSources.find { it.sourceName!! == selectedSourceName }?.let { selectedSource ->
+        conferenceSources.find { it.sourceName == selectedSourceName }?.let { selectedSource ->
             conferenceSources.remove(selectedSource)
             conferenceSources.add(0, selectedSource)
         }
@@ -55,7 +55,7 @@ fun getEffectiveConstraints(sources: List<MediaSourceDesc>, allocationSettings: 
         if (sourcesWithNonZeroConstraints >= effectiveLastN) {
             VideoConstraints.NOTHING
         } else {
-            allocationSettings.getConstraints(source.sourceName!!).also {
+            allocationSettings.getConstraints(source.sourceName).also {
                 if (!it.isDisabled()) sourcesWithNonZeroConstraints++
             }
         }

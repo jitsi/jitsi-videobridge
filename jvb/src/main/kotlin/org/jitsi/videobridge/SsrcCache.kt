@@ -85,13 +85,11 @@ class SourceDesc private constructor(
     constructor(s: AudioSourceDesc) : this(
         s.sourceName ?: "anon", s.owner ?: "unknown", VideoType.DISABLED, s.ssrc, -1
     )
-    constructor(s: MediaSourceDesc) : this(
-        s.sourceName ?: "anon", s.owner ?: "unknown", s.videoType, s.primarySSRC, getRtx(s)
-    )
+    constructor(s: MediaSourceDesc) : this(s.sourceName, s.owner, s.videoType, s.primarySSRC, getRtx(s))
     companion object {
         fun getRtx(s: MediaSourceDesc): Long {
             /* Ignoring any additional entries for now. */
-            return s.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX)
+            return if (s.rtpEncodings.isEmpty()) -1 else s.rtpEncodings[0].getSecondarySsrc(SsrcAssociationType.RTX)
         }
     }
 
@@ -606,13 +604,8 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
     /**
      * {@inheritDoc}
      */
-    override fun findSourceProps(ssrc: Long): SourceDesc? {
-        val p = ep.findVideoSourceProps(ssrc)
-        if (p == null || p.sourceName == null || p.owner == null)
-            return null
-        else
-            return SourceDesc(p)
-    }
+    override fun findSourceProps(ssrc: Long): SourceDesc? =
+        ep.findVideoSourceProps(ssrc)?.let { SourceDesc(it) }
 
     /**
      * {@inheritDoc}

@@ -266,7 +266,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         // The sources which are in lastN, and are sending video, but were suspended due to bwe.
         val suspendedIds = sourceBitrateAllocations
             .filter { it.isSuspended }
-            .mapNotNull { it.mediaSource.sourceName }.toList()
+            .map { it.mediaSource.sourceName }.toList()
         if (suspendedIds.isNotEmpty()) {
             logger.info("Sources suspended due to insufficient bandwidth (bwe=$availableBandwidth bps): $suspendedIds")
         }
@@ -294,7 +294,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         conferenceMediaSources: List<MediaSourceDesc>
     ): List<SingleSourceAllocation> = conferenceMediaSources.map { source ->
         SingleSourceAllocation(
-            source.owner!!,
+            source.owner,
             source,
             // Note that we use the effective constraints and not the receiver's constraints
             // directly. This means we never even try to allocate bitrate to sources "outside

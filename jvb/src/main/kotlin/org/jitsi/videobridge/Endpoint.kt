@@ -536,19 +536,14 @@ class Endpoint @JvmOverloads constructor(
         val removedSources = oldEffectiveConstraints.keys.filterNot { it in newEffectiveConstraints.keys }
 
         // Sources that "this" endpoint no longer receives.
-        removedSources.mapNotNull { it.sourceName }.forEach { removedSourceName ->
+        removedSources.map { it.sourceName }.forEach { removedSourceName ->
             // Remove ourself as a receiver from that endpoint
             conference.findSourceOwner(removedSourceName)?.removeSourceReceiver(removedSourceName, id)
         }
 
         // Added or updated
         newEffectiveConstraints.forEach { (source, effectiveConstraints) ->
-            val name = source.sourceName
-            if (name == null) {
-                logger.warn("Source with not name: $source")
-                return@forEach
-            }
-            conference.findSourceOwner(name)?.addReceiver(id, name, effectiveConstraints)
+            conference.findSourceOwner(source.sourceName)?.addReceiver(id, source.sourceName, effectiveConstraints)
         }
 
         if (doSsrcRewriting) {

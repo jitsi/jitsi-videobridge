@@ -57,6 +57,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
                         RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.CAMERA
                 )
 
@@ -90,6 +92,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     val mediaSource = MediaSourceDesc(
                         // No simulcast.
                         arrayOf(RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))),
+                        sourceName = sourceName,
+                        owner = owner,
                         videoType = VideoType.CAMERA
                     )
 
@@ -130,6 +134,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
                         RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.CAMERA
                 )
 
@@ -154,6 +160,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
                         RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -192,6 +200,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
                         RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -220,6 +230,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
                         RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -260,6 +272,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         RtpEncodingDesc(1L, arrayOf(l2)),
                         RtpEncodingDesc(1L, arrayOf(l3))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -301,3 +315,6 @@ class SingleSourceAllocationTest : ShouldSpec() {
         }
     }
 }
+
+private val sourceName = "sourceName"
+private val owner = "owner"
