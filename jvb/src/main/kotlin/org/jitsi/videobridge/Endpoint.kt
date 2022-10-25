@@ -551,13 +551,15 @@ class Endpoint @JvmOverloads constructor(
             conference.findSourceOwner(name)?.addReceiver(id, name, effectiveConstraints)
         }
 
-        val newActiveSources = newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
-        val newActiveSourceNames = newActiveSources.mapNotNull { it.sourceName }.toSet()
-        /* safe unlocked access of activeSources.
-        * BitrateController will not overlap calls to this method. */
-        if (activeSources != newActiveSourceNames) {
-            activeSources = newActiveSourceNames
-            videoSsrcs.activate(newActiveSources)
+        if (doSsrcRewriting) {
+            val newActiveSources =
+                newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
+            val newActiveSourceNames = newActiveSources.mapNotNull { it.sourceName }.toSet()
+            /* safe unlocked access of activeSources. BitrateController will not overlap calls to this method. */
+            if (activeSources != newActiveSourceNames) {
+                activeSources = newActiveSourceNames
+                videoSsrcs.activate(newActiveSources)
+            }
         }
     }
 
