@@ -17,7 +17,6 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.util.bps
@@ -314,8 +313,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
  */
 interface MediaSourceContainer {
     val id: String
-    @Deprecated("", ReplaceWith("MediaSourceDesc.getVideoType"), DeprecationLevel.WARNING)
-    val videoType: VideoType
     val mediaSources: Array<MediaSourceDesc>
 }
 
