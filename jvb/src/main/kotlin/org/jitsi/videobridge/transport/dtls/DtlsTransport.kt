@@ -141,14 +141,6 @@ class DtlsTransport(parentLogger: Logger) {
         }
 
         dtlsStack.remoteFingerprints = remoteFingerprints
-        val hasSha1Hash = remoteFingerprints.keys.any { it.equals("sha-1", ignoreCase = true) }
-        if (dtlsStack.role == null && hasSha1Hash) {
-            // hack(george) Jigasi sends a sha-1 dtls fingerprint without a
-            // setup attribute and it assumes a server role for the bridge.
-
-            logger.info("Assume that the remote side is Jigasi, we'll act as server")
-            dtlsStack.actAsServer()
-        }
     }
 
     /**
