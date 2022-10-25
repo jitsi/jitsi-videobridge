@@ -284,8 +284,8 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     /**
      * Query whether the allocator has non-zero effective constraints for the given endpoint or source.
      */
-    fun hasNonZeroEffectiveConstraints(endpointId: String?): Boolean {
-        val constraints = effectiveConstraints.entries.find { it.key.sourceName == endpointId }?.value ?: return false
+    internal fun hasNonZeroEffectiveConstraints(source: MediaSourceDesc): Boolean {
+        val constraints = effectiveConstraints[source] ?: return false
         return !constraints.isDisabled()
     }
 

@@ -186,7 +186,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * Query whether this allocator has non-zero effective constraints for a given source
      */
     fun hasNonZeroEffectiveConstraints(source: MediaSourceDesc) =
-        bandwidthAllocator.hasNonZeroEffectiveConstraints(source.sourceName)
+        bandwidthAllocator.hasNonZeroEffectiveConstraints(source)
 
     /**
      * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being
