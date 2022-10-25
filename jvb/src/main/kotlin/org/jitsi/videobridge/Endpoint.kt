@@ -344,9 +344,6 @@ class Endpoint @JvmOverloads constructor(
             }
         }
 
-    override val mediaSource: MediaSourceDesc?
-        get() = mediaSources.firstOrNull()
-
     /**
      *  Keep track of this endpoint's audio sources.
      */
@@ -560,7 +557,7 @@ class Endpoint @JvmOverloads constructor(
 
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
-        if (mediaSource == null) {
+        if (mediaSources.isEmpty()) {
             logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no streams." }
         } else {
             val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(maxVideoConstraints.maxHeight)

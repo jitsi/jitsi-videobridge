@@ -211,7 +211,10 @@ public abstract class AbstractEndpoint
      * it hasn't advertised any video sources.
      */
     @Nullable
-    public abstract MediaSourceDesc getMediaSource();
+    protected MediaSourceDesc getMediaSource()
+    {
+        return Arrays.stream(getMediaSources()).findFirst().orElse(null);
+    }
 
     protected MediaSourceDesc findMediaSourceDesc(@NotNull String sourceName)
     {

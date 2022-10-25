@@ -166,8 +166,6 @@ class RelayedEndpoint(
 
     private val _mediaSources = MediaSources()
 
-    override val mediaSource: MediaSourceDesc?
-        get() = mediaSources.getOrNull(0)
     override var mediaSources: Array<MediaSourceDesc>
         get() = _mediaSources.getMediaSources()
         set(value) {

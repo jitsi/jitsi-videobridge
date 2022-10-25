@@ -1450,8 +1450,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
 class TestEndpoint(
     override val id: String,
     override val mediaSources: Array<MediaSourceDesc> = emptyArray(),
-    override val videoType: VideoType = VideoType.CAMERA,
-    override val mediaSource: MediaSourceDesc? = null,
+    override val videoType: VideoType = VideoType.CAMERA
 ) : MediaSourceContainer
 
 fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {

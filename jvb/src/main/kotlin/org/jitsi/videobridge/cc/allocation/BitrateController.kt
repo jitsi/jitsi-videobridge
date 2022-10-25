@@ -316,8 +316,6 @@ interface MediaSourceContainer {
     val id: String
     @Deprecated("", ReplaceWith("MediaSourceDesc.getVideoType"), DeprecationLevel.WARNING)
     val videoType: VideoType
-    @Deprecated("", ReplaceWith("mediaSources"), DeprecationLevel.WARNING)
-    val mediaSource: MediaSourceDesc?
     val mediaSources: Array<MediaSourceDesc>
 }
 
