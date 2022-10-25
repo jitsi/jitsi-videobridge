@@ -50,7 +50,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
     private val useSourceNames: Boolean,
-    private val doSsrcRewriting: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) {
     val eventEmitter = SyncEventEmitter<EventHandler>()
@@ -187,7 +186,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * Query whether this allocator has non-zero effective constraints for a given source
      */
     fun hasNonZeroEffectiveConstraints(source: MediaSourceDesc) =
-        bandwidthAllocator.hasNonZeroEffectiveConstraints(source.sourceName)
+        bandwidthAllocator.hasNonZeroEffectiveConstraints(source)
 
     /**
      * Get the target and ideal bitrate of the current [BandwidthAllocation], as well as the list of SSRCs being
@@ -259,10 +258,9 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     interface EventHandler {
         fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>)
         fun forwardedSourcesChanged(forwardedSources: Set<String>)
-        fun sourceListChanged(sourceList: List<MediaSourceDesc>)
         fun effectiveVideoConstraintsChanged(
-            oldEffectiveConstraints: Map<String, VideoConstraints>,
-            newEffectiveConstraints: Map<String, VideoConstraints>
+            oldEffectiveConstraints: EffectiveConstraintsMap,
+            newEffectiveConstraints: EffectiveConstraintsMap,
         )
         fun keyframeNeeded(endpointId: String?, ssrc: Long)
         /**
@@ -278,14 +276,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             packetHandler.allocationChanged(allocation)
 
             if (useSourceNames) {
-                // If rewriting SSRCs, all active sources will be notified separately.
-                if (!doSsrcRewriting) {
-                    // TODO as per George's comment above: should this message be sent on message transport connect?
-                    val newForwardedSources = allocation.forwardedSources
-                    if (forwardedSources != newForwardedSources) {
-                        forwardedSources = newForwardedSources
-                        eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
-                    }
+                // TODO as per George's comment above: should this message be sent on message transport connect?
+                val newForwardedSources = allocation.forwardedSources
+                if (forwardedSources != newForwardedSources) {
+                    forwardedSources = newForwardedSources
+                    eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
                 }
             } else {
                 // TODO(george) bring back sending this message on message transport  connect
@@ -303,21 +298,12 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         }
 
         override fun effectiveVideoConstraintsChanged(
-            oldEffectiveConstraints: Map<String, VideoConstraints>,
-            newEffectiveConstraints: Map<String, VideoConstraints>
+            oldEffectiveConstraints: EffectiveConstraintsMap,
+            newEffectiveConstraints: EffectiveConstraintsMap
         ) {
             // Forward to the outer EventHandler.
             eventEmitter.fireEvent {
                 effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
-            }
-        }
-
-        override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
-            if (doSsrcRewriting) {
-                // Forward to the outer EventHandler.
-                eventEmitter.fireEvent {
-                    sourceListChanged(sourceList)
-                }
             }
         }
     }

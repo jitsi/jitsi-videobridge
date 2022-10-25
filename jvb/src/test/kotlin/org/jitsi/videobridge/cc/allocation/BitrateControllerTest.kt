@@ -1377,14 +1377,11 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
                 }
             }
 
-            override fun sourceListChanged(sourceList: List<MediaSourceDesc>) {
-            }
-
             override fun effectiveVideoConstraintsChanged(
-                oldEffectiveConstraints: Map<String, VideoConstraints>,
-                newEffectiveConstraints: Map<String, VideoConstraints>
+                oldEffectiveConstraints: EffectiveConstraintsMap,
+                newEffectiveConstraints: EffectiveConstraintsMap
             ) {
-                Event(bwe, newEffectiveConstraints, clock.instant()).apply {
+                Event(bwe, newEffectiveConstraints.mapKeys { it.key.sourceName!! }, clock.instant()).apply {
                     logger.info("Effective constraints changed: $this")
                     effectiveConstraintsHistory.add(this)
                 }
@@ -1407,7 +1404,6 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         DiagnosticContext(),
         logger,
         true, // TODO merge BitrateControllerNewTest with old and use this flag
-        false,
         clock
     )
 

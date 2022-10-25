@@ -52,12 +52,12 @@ class EffectiveConstraintsTest : ShouldSpec() {
 
         val sources = listOf(s1, s2, s3, s4, s5, s6)
         val zeroEffectiveConstraints = mutableMapOf(
-            "s1" to VideoConstraints.NOTHING,
-            "s2" to VideoConstraints.NOTHING,
-            "s3" to VideoConstraints.NOTHING,
-            "s4" to VideoConstraints.NOTHING,
-            "s5" to VideoConstraints.NOTHING,
-            "s6" to VideoConstraints.NOTHING
+            s1 to VideoConstraints.NOTHING,
+            s2 to VideoConstraints.NOTHING,
+            s3 to VideoConstraints.NOTHING,
+            s4 to VideoConstraints.NOTHING,
+            s5 to VideoConstraints.NOTHING,
+            s6 to VideoConstraints.NOTHING
         )
 
         context("With lastN=0") {
@@ -69,13 +69,13 @@ class EffectiveConstraintsTest : ShouldSpec() {
                 val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = defaultConstraints)
                 getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
                     // The default defaultConstraints are 180
-                    put("s1", VideoConstraints(180))
+                    put(s1, VideoConstraints(180))
                 }
             }
             context("And different defaultConstraints") {
                 val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = VideoConstraints(360))
                 getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                    put("s1", VideoConstraints(360))
+                    put(s1, VideoConstraints(360))
                 }
             }
             context("And all constraints 0") {
@@ -93,7 +93,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
 
                 )
                 getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                    put("s1", VideoConstraints(720))
+                    put(s1, VideoConstraints(720))
                 }
             }
             context("And non-zero constraints for a source with video DISABLED") {
@@ -103,7 +103,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
                     videoConstraints = mapOf("s4" to VideoConstraints(720))
                 )
                 getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                    put("s4", VideoConstraints(720))
+                    put(s4, VideoConstraints(720))
                 }
             }
             context("When the top sources have the video DISABLED") {
@@ -113,7 +113,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
                 context("With default settings") {
                     val allocationSettings = AllocationSettings(lastN = 1, defaultConstraints = defaultConstraints)
                     getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                        put("s4", VideoConstraints(180))
+                        put(s4, VideoConstraints(180))
                     }
                 }
                 context("With default constraints 0 and non-zero constraints for a source with video DISABLED") {
@@ -123,7 +123,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
                         videoConstraints = mapOf("s5" to VideoConstraints(180))
                     )
                     getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                        put("s5", VideoConstraints(180))
+                        put(s5, VideoConstraints(180))
                     }
                 }
                 context("With default constraints 0 and non-zero constraints for a source with video enabled") {
@@ -133,7 +133,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
                         videoConstraints = mapOf("s2" to VideoConstraints(180))
                     )
                     getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                        put("s2", VideoConstraints(180))
+                        put(s2, VideoConstraints(180))
                     }
                 }
                 context("With default constraints 0 and non-zero constraints for sources low on the list") {
@@ -143,7 +143,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
                         videoConstraints = mapOf("s2" to VideoConstraints(180), "s3" to VideoConstraints(180))
                     )
                     getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                        put("s2", VideoConstraints(180))
+                        put(s2, VideoConstraints(180))
                     }
                 }
             }
@@ -152,9 +152,9 @@ class EffectiveConstraintsTest : ShouldSpec() {
             context("And default settings") {
                 val allocationSettings = AllocationSettings(lastN = 3, defaultConstraints = defaultConstraints)
                 getEffectiveConstraints(sources, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                    put("s1", VideoConstraints(180))
-                    put("s2", VideoConstraints(180))
-                    put("s3", VideoConstraints(180))
+                    put(s1, VideoConstraints(180))
+                    put(s2, VideoConstraints(180))
+                    put(s3, VideoConstraints(180))
                 }
             }
             context("When the top sources have video DISABLED") {
@@ -164,9 +164,9 @@ class EffectiveConstraintsTest : ShouldSpec() {
                 context("And default settings") {
                     val allocationSettings = AllocationSettings(lastN = 3, defaultConstraints = defaultConstraints)
                     getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                        put("s4", VideoConstraints(180))
-                        put("s5", VideoConstraints(180))
-                        put("s6", VideoConstraints(180))
+                        put(s4, VideoConstraints(180))
+                        put(s5, VideoConstraints(180))
+                        put(s6, VideoConstraints(180))
                     }
                 }
                 context("And non-zero constraints for sources down the list") {
@@ -180,9 +180,9 @@ class EffectiveConstraintsTest : ShouldSpec() {
                         )
                     )
                     getEffectiveConstraints(endpoints, allocationSettings) shouldBe zeroEffectiveConstraints.apply {
-                        put("s6", VideoConstraints(180))
-                        put("s2", VideoConstraints(180))
-                        put("s3", VideoConstraints(180))
+                        put(s6, VideoConstraints(180))
+                        put(s2, VideoConstraints(180))
+                        put(s3, VideoConstraints(180))
                     }
                 }
             }

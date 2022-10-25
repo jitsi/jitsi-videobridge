@@ -76,7 +76,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
      *
      * TODO Update this description when the endpoint ID signaling is removed from the JVB.
      */
-    private var effectiveConstraints = emptyMap<String, VideoConstraints>()
+    private var effectiveConstraints: EffectiveConstraintsMap = emptyMap()
     private val eventEmitter: EventEmitter<EventHandler> = SyncEventEmitter<EventHandler>().apply {
         addHandler(eventHandler)
     }
@@ -185,7 +185,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 
         logger.trace {
             "Allocating: sortedSources=${sortedSources.map { it.sourceName }}, " +
-                " effectiveConstraints=${newEffectiveConstraints.prettyPrint()}"
+                " effectiveConstraints=$newEffectiveConstraints"
         }
 
         // Compute the bandwidth allocation.
@@ -193,7 +193,6 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         val allocationChanged = !allocation.isTheSameAs(newAllocation)
         val effectiveConstraintsChanged = effectiveConstraints != oldEffectiveConstraints
 
-        eventEmitter.fireEvent { sourceListChanged(sortedSources) }
         if (allocationChanged) {
             eventEmitter.fireEvent { allocationChanged(newAllocation) }
         }
@@ -285,8 +284,8 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     /**
      * Query whether the allocator has non-zero effective constraints for the given endpoint or source.
      */
-    fun hasNonZeroEffectiveConstraints(endpointId: String?): Boolean {
-        val constraints = effectiveConstraints[endpointId] ?: return false
+    internal fun hasNonZeroEffectiveConstraints(source: MediaSourceDesc): Boolean {
+        val constraints = effectiveConstraints[source] ?: return false
         return !constraints.isDisabled()
     }
 
@@ -304,7 +303,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             // video at all instead of going to the second endpoint in the list.
             // I think this is not desired behavior. However, it is required for the "effective
             // constraints" to work as designed.
-            effectiveConstraints[source.sourceName]!!,
+            effectiveConstraints[source]!!,
             allocationSettings.onStageSources.contains(source.sourceName),
             diagnosticContext,
             clock,
@@ -352,11 +351,9 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     interface EventHandler {
         fun allocationChanged(allocation: BandwidthAllocation)
         fun effectiveVideoConstraintsChanged(
-            oldEffectiveConstraints: Map<String, VideoConstraints>,
-            newEffectiveConstraints: Map<String, VideoConstraints>
+            oldEffectiveConstraints: EffectiveConstraintsMap,
+            newEffectiveConstraints: EffectiveConstraintsMap
         )
-
-        fun sourceListChanged(sourceList: List<MediaSourceDesc>)
     }
 }
 
@@ -388,3 +385,5 @@ private fun bweChangeIsLargerThanThreshold(previousBwe: Long, currentBwe: Long):
     // low bandwidth estimate, at the risk of clogging the receiver's pipe.
     // TODO: do we still need this? Do we ever ever see BWE drop by <%15?
 }
+
+typealias EffectiveConstraintsMap = Map<MediaSourceDesc, VideoConstraints>
