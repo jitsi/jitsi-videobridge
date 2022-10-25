@@ -143,7 +143,7 @@ public abstract class AbstractEndpoint
         return videoType;
     }
 
-    public void setVideoType(String sourceName, VideoType videoType)
+    public void setVideoType(@NotNull String sourceName, VideoType videoType)
     {
         MediaSourceDesc mediaSourceDesc = findMediaSourceDesc(sourceName);
 
@@ -213,7 +213,7 @@ public abstract class AbstractEndpoint
     @Nullable
     public abstract MediaSourceDesc getMediaSource();
 
-    protected MediaSourceDesc findMediaSourceDesc(String sourceName)
+    protected MediaSourceDesc findMediaSourceDesc(@NotNull String sourceName)
     {
         for (MediaSourceDesc desc : getMediaSources())
         {
