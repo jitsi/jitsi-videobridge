@@ -22,7 +22,6 @@ import org.jitsi.metrics.*;
 import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
-import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.utils.stats.*;
@@ -129,8 +128,6 @@ public class Videobridge
     @Nullable private final String releaseId;
 
     @NotNull private final ShutdownManager shutdownManager;
-
-    private final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
     static
     {
@@ -280,12 +277,6 @@ public class Videobridge
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " meetingId=" + meetingId);
 
-        eventEmitter.fireEvent(handler ->
-        {
-            handler.conferenceCreated(conference);
-            return Unit.INSTANCE;
-        });
-
         return conference;
     }
 
@@ -317,11 +308,6 @@ public class Videobridge
                     }
                 }
                 conference.expire();
-                eventEmitter.fireEvent(handler ->
-                {
-                    handler.conferenceExpired(conference);
-                    return Unit.INSTANCE;
-                });
             }
         }
     }
@@ -860,16 +846,6 @@ public class Videobridge
         return releaseId;
     }
 
-    public void addEventHandler(EventHandler eventHandler)
-    {
-        eventEmitter.addHandler(eventHandler);
-    }
-
-    public void removeEventHandler(EventHandler eventHandler)
-    {
-        eventEmitter.removeHandler(eventHandler);
-    }
-
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
     {
         @Override
@@ -1179,12 +1155,6 @@ public class Videobridge
         );
     }
 
-
-    public interface EventHandler
-    {
-        void conferenceCreated(@NotNull Conference conference);
-        void conferenceExpired(@NotNull Conference conference);
-    }
     private static class ConferenceNotFoundException extends Exception {}
     private static class ConferenceAlreadyExistsException extends Exception {}
     private static class InGracefulShutdownException extends Exception {}
