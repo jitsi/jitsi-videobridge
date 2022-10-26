@@ -68,10 +68,12 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
             context("when some of the message-specific fields are missing/invalid") {
                 shouldThrow<JsonProcessingException> {
-                    parse("""{"colibriClass": "SelectedEndpointsChangedEvent" }""")
+                    // Missing dominantSpeakerEndpoint field
+                    parse("""{"colibriClass": "DominantSpeakerEndpointChangeEvent" }""")
                 }
                 shouldThrow<JsonProcessingException> {
-                    parse("""{"colibriClass": "SelectedEndpointsChangedEvent", "selectedEndpoints": 5 }""")
+                    // dominantSpeakerEndpoint has the wrong type
+                    parse("""{"colibriClass": "DominantSpeakerEndpointChangeEvent", "dominantSpeakerEndpoint": [5] }""")
                 }
             }
         }
@@ -474,13 +476,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
     }
 
     companion object {
-        const val SELECTED_ENDPOINTS_MESSAGE = """
-            {
-              "colibriClass": "SelectedEndpointsChangedEvent",
-              "selectedEndpoints": [ "abcdabcd", "12341234" ]
-            }
-        """
-
         const val ENDPOINT_MESSAGE = """
             {
               "colibriClass": "EndpointMessage",
