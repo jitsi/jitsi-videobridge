@@ -526,13 +526,11 @@ class Relay @JvmOverloads constructor(
         conference.endpoints.forEach { e ->
             if (e is Endpoint || (e is RelayedEndpoint && e.relay.meshId != meshId)) {
                 e.mediaSources.forEach { msd: MediaSourceDesc ->
-                    val sourceName = msd.sourceName!! // Source names are mandatory/enforced in multi stream mode
-                    val videoType = msd.videoType
                     // Do not send the initial value for CAMERA, because it's the default
-                    if (VideoType.CAMERA != videoType) {
+                    if (msd.videoType != VideoType.CAMERA) {
                         val videoTypeMsg = SourceVideoTypeMessage(
-                            videoType,
-                            sourceName,
+                            msd.videoType,
+                            msd.sourceName,
                             e.id
                         )
                         sendMessage(videoTypeMsg)

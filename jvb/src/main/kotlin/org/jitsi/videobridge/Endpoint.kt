@@ -344,9 +344,6 @@ class Endpoint @JvmOverloads constructor(
             }
         }
 
-    override val mediaSource: MediaSourceDesc?
-        get() = mediaSources.firstOrNull()
-
     /**
      *  Keep track of this endpoint's audio sources.
      */
@@ -536,19 +533,14 @@ class Endpoint @JvmOverloads constructor(
         val removedSources = oldEffectiveConstraints.keys.filterNot { it in newEffectiveConstraints.keys }
 
         // Sources that "this" endpoint no longer receives.
-        removedSources.mapNotNull { it.sourceName }.forEach { removedSourceName ->
+        removedSources.map { it.sourceName }.forEach { removedSourceName ->
             // Remove ourself as a receiver from that endpoint
             conference.findSourceOwner(removedSourceName)?.removeSourceReceiver(removedSourceName, id)
         }
 
         // Added or updated
         newEffectiveConstraints.forEach { (source, effectiveConstraints) ->
-            val name = source.sourceName
-            if (name == null) {
-                logger.warn("Source with not name: $source")
-                return@forEach
-            }
-            conference.findSourceOwner(name)?.addReceiver(id, name, effectiveConstraints)
+            conference.findSourceOwner(source.sourceName)?.addReceiver(id, source.sourceName, effectiveConstraints)
         }
 
         if (doSsrcRewriting) {
@@ -565,7 +557,7 @@ class Endpoint @JvmOverloads constructor(
 
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
-        if (mediaSource == null) {
+        if (mediaSources.isEmpty()) {
             logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no streams." }
         } else {
             val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(maxVideoConstraints.maxHeight)

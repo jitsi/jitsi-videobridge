@@ -35,7 +35,7 @@ class BandwidthAllocation @JvmOverloads constructor(
         allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     val forwardedSources: Set<String> =
-        allocations.filter { it.isForwarded() }.map { it.mediaSource?.sourceName!! }.toSet()
+        allocations.filter { it.isForwarded() }.mapNotNull { it.mediaSource?.sourceName }.toSet()
 
     /**
      * Whether the two allocations have the same endpoints and same layers.
@@ -84,7 +84,7 @@ data class SingleAllocation(
     constructor(endpoint: MediaSourceContainer, targetLayer: RtpLayerDesc? = null, idealLayer: RtpLayerDesc? = null) :
         this(
             endpoint.id,
-            if (endpoint.mediaSource != null) endpoint.mediaSource else endpoint.mediaSources.firstOrNull(),
+            endpoint.mediaSources.firstOrNull(),
             targetLayer,
             idealLayer
         )

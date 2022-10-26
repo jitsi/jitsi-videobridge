@@ -217,7 +217,7 @@ public class ConferenceSpeechActivity
         {
             Map<Boolean, List<AbstractEndpoint>> byVideoAvailable
                     = endpointsBySpeechActivity.stream()
-                        .collect(Collectors.groupingBy(ep -> ep.getVideoType() != VideoType.NONE));
+                        .collect(Collectors.groupingBy(AbstractEndpoint::hasVideoAvailable));
 
             List<AbstractEndpoint> newEndpointsInLastNOrder = new ArrayList<>(endpointsBySpeechActivity.size());
             newEndpointsInLastNOrder.addAll(byVideoAvailable.getOrDefault(true, Collections.emptyList()));

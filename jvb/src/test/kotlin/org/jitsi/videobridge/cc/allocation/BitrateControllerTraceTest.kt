@@ -20,8 +20,6 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeLessThan
 import org.jitsi.nlj.MediaSourceDesc
-import org.jitsi.nlj.RtpEncodingDesc
-import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.util.bps
 import org.jitsi.utils.time.FakeClock
 import java.time.Instant
@@ -83,14 +81,10 @@ class BitrateControllerTraceTest : ShouldSpec() {
 
     class Endpoint(
         override val id: String,
-        override var videoType: VideoType = VideoType.CAMERA,
         override val mediaSources: Array<MediaSourceDesc> = emptyArray()
     ) : MediaSourceContainer {
         val layer7 = MockRtpLayerDesc(tid = 0, eid = 0, height = 180, frameRate = 7.5, 0.bps)
         val layer30 = MockRtpLayerDesc(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = 0.bps)
-
-        override val mediaSource: MediaSourceDesc =
-            MediaSourceDesc(arrayOf(RtpEncodingDesc(1L, arrayOf(layer7, layer30))))
     }
 }
 

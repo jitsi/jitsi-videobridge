@@ -808,8 +808,6 @@ public class MediaSourceFactory
             height *= 2;
         }
 
-        // TODO once multi stream, becomes the default, make a change to MediaStreamDesc, so that owner and name are
-        // not optional (there's no good reason for that). Then the error will be thrown automatically by Kotlin.
         if (name == null)
         {
             throw new IllegalArgumentException("The 'name' is missing in the source description");
@@ -819,8 +817,6 @@ public class MediaSourceFactory
             throw new IllegalArgumentException("The 'owner' is missing in the source description");
         }
 
-        MediaSourceDesc source = new MediaSourceDesc(encodings, owner, name);
-
-        return source;
+        return new MediaSourceDesc(encodings, owner, name);
     }
 }

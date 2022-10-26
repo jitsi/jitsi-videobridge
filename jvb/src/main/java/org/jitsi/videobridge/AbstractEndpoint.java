@@ -95,15 +95,6 @@ public abstract class AbstractEndpoint
 
     protected final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
-    /**
-     * The latest {@link VideoType} signaled by the endpoint (defaulting to {@code CAMERA} if nothing has been
-     * signaled).
-     *
-     * Deprecated: the video type has been moved to {@link MediaSourceDesc}.
-     */
-    @Deprecated
-    private VideoType videoType = VideoType.CAMERA;
-
     protected Map<String, VideoType> videoTypeCache = new HashMap<>();
 
     /**
@@ -121,29 +112,24 @@ public abstract class AbstractEndpoint
         this.id = Objects.requireNonNull(id, "id");
     }
 
-    /**
-     * Return the {@link VideoType} that the endpoint has advertised as available. This reflects the type of stream
-     * even when the stream is suspended (e.g. due to no receivers being subscribed to it).
-     *
-     * In other words, CAMERA or SCREENSHARE means that the endpoint has an available stream, which may be suspended.
-     * NONE means that the endpoint has signaled that it has no available streams.
-     *
-     * Note that when the endpoint has not advertised any video sources, the video type is necessarily {@code NONE}.
-     *
-     * Deprecated: use {@link MediaSourceDesc#getVideoType()} instead.
-     */
-    @NotNull
-    @Deprecated
-    public VideoType getVideoType()
+    public boolean hasVideoAvailable()
     {
-        if (getMediaSource() == null)
+        for (MediaSourceDesc source : getMediaSources())
         {
-            return VideoType.NONE;
+            if (source.getVideoType() != VideoType.NONE)
+            {
+                return true;
+            }
         }
-        return videoType;
+        if (videoTypeCache.values().stream().anyMatch(t -> t != VideoType.NONE))
+        {
+            // Video type cached for a source that hasn't been signaled yet.
+            return true;
+        }
+        return false;
     }
 
-    public void setVideoType(String sourceName, VideoType videoType)
+    public void setVideoType(@NotNull String sourceName, VideoType videoType)
     {
         MediaSourceDesc mediaSourceDesc = findMediaSourceDesc(sourceName);
 
@@ -169,18 +155,8 @@ public abstract class AbstractEndpoint
             if (videoType != null)
             {
                 mediaSourceDesc.setVideoType(videoType);
+                videoTypeCache.remove(mediaSourceDesc.getSourceName());
             }
-        }
-    }
-
-    // Use setVideoType(String sourceName, VideoType videoType) instead.
-    @Deprecated
-    public void setVideoType(VideoType videoType)
-    {
-        if (this.videoType != videoType)
-        {
-            this.videoType = videoType;
-            conference.getSpeechActivity().endpointVideoAvailabilityChanged();
         }
     }
 
@@ -211,9 +187,12 @@ public abstract class AbstractEndpoint
      * it hasn't advertised any video sources.
      */
     @Nullable
-    public abstract MediaSourceDesc getMediaSource();
+    protected MediaSourceDesc getMediaSource()
+    {
+        return Arrays.stream(getMediaSources()).findFirst().orElse(null);
+    }
 
-    protected MediaSourceDesc findMediaSourceDesc(String sourceName)
+    protected MediaSourceDesc findMediaSourceDesc(@NotNull String sourceName)
     {
         for (MediaSourceDesc desc : getMediaSources())
         {

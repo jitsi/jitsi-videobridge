@@ -1381,7 +1381,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
                 oldEffectiveConstraints: EffectiveConstraintsMap,
                 newEffectiveConstraints: EffectiveConstraintsMap
             ) {
-                Event(bwe, newEffectiveConstraints.mapKeys { it.key.sourceName!! }, clock.instant()).apply {
+                Event(bwe, newEffectiveConstraints.mapKeys { it.key.sourceName }, clock.instant()).apply {
                     logger.info("Effective constraints changed: $this")
                     effectiveConstraintsHistory.add(this)
                 }
@@ -1449,9 +1449,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
 
 class TestEndpoint(
     override val id: String,
-    override val mediaSources: Array<MediaSourceDesc> = emptyArray(),
-    override val videoType: VideoType = VideoType.CAMERA,
-    override val mediaSource: MediaSourceDesc? = null,
+    override val mediaSources: Array<MediaSourceDesc> = emptyArray()
 ) : MediaSourceContainer
 
 fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
@@ -1478,7 +1476,7 @@ fun createSources(vararg ids: String): MutableList<MediaSourceDesc> {
             3 * i + 2,
             3 * i + 3,
             ids[i],
-            null
+            ids[i]
         )
     }
 }
@@ -1488,7 +1486,7 @@ fun createSourceDesc(
     ssrc2: Int,
     ssrc3: Int,
     sourceName: String,
-    owner: String?
+    owner: String
 ): MediaSourceDesc = MediaSourceDesc(
     arrayOf(
         RtpEncodingDesc(ssrc1.toLong(), arrayOf(ld7_5, ld15, ld30)),

@@ -22,8 +22,6 @@ import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import org.jitsi.nlj.VideoType.CAMERA
-import org.jitsi.nlj.VideoType.NONE
 
 class SpeechActivityTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -83,17 +81,17 @@ class SpeechActivityTest : ShouldSpec() {
 
             conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, b, c, d)
 
-            every { a.videoType } returns NONE
+            every { a.hasVideoAvailable() } returns false
             conferenceSpeechActivity.updateLastNEndpoints()
             conferenceSpeechActivity.dominantEndpoint shouldBe a
             conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(b, c, d, a)
 
-            every { a.videoType } returns CAMERA
+            every { a.hasVideoAvailable() } returns true
             conferenceSpeechActivity.updateLastNEndpoints()
             conferenceSpeechActivity.dominantEndpoint shouldBe a
             conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, b, c, d)
 
-            every { b.videoType } returns NONE
+            every { b.hasVideoAvailable() } returns false
             conferenceSpeechActivity.updateLastNEndpoints()
             conferenceSpeechActivity.dominantEndpoint shouldBe a
             conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, c, d, b)
@@ -102,15 +100,15 @@ class SpeechActivityTest : ShouldSpec() {
             conferenceSpeechActivity.dominantEndpoint shouldBe b
             conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(a, c, d, b)
 
-            every { b.videoType } returns CAMERA
+            every { b.hasVideoAvailable() } returns true
             conferenceSpeechActivity.updateLastNEndpoints()
             conferenceSpeechActivity.dominantEndpoint shouldBe b
             conferenceSpeechActivity.orderedEndpoints shouldContainExactly listOf(b, a, c, d)
 
-            every { a.videoType } returns NONE
-            every { b.videoType } returns NONE
-            every { c.videoType } returns NONE
-            every { d.videoType } returns NONE
+            every { a.hasVideoAvailable() } returns false
+            every { b.hasVideoAvailable() } returns false
+            every { c.hasVideoAvailable() } returns false
+            every { d.hasVideoAvailable() } returns false
             conferenceSpeechActivity.updateLastNEndpoints()
             conferenceSpeechActivity.activeSpeakerChanged(a.id)
             conferenceSpeechActivity.dominantEndpoint shouldBe a
@@ -121,7 +119,7 @@ class SpeechActivityTest : ShouldSpec() {
     companion object {
         fun mockEndpoint(endpointId: String) = mockk<AbstractEndpoint>().apply {
             every { id } returns endpointId
-            every { videoType } returns CAMERA
+            every { hasVideoAvailable() } returns true
         }
     }
 }
