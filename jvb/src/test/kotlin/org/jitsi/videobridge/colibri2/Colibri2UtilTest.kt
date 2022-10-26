@@ -27,7 +27,7 @@ class Colibri2UtilTest : ShouldSpec({
     IqProviderUtils.registerProviders()
     val iq = ConferenceModifyIQ.builder("id").setMeetingId("m").build()
     context("createConferenceAlreadyExistsError") {
-        val error = createConferenceAlreadyExistsError(iq, "i", colibri2 = true)
+        val error = createConferenceAlreadyExistsError(iq, "i")
 
         val parsedIq = parseIQ(error.toXML().toString())
         val colibri2ErrorExtension =
@@ -37,7 +37,7 @@ class Colibri2UtilTest : ShouldSpec({
     }
 
     context("createConferenceNotFoundError") {
-        val error = createConferenceNotFoundError(iq, "i", colibri2 = true)
+        val error = createConferenceNotFoundError(iq, "i")
 
         val parsedIq = parseIQ(error.toXML().toString())
         val colibri2ErrorExtension =

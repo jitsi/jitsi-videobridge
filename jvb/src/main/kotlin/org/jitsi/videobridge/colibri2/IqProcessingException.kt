@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.shim
+package org.jitsi.videobridge.colibri2
 
 import org.jivesoftware.smack.packet.StanzaError
 import java.lang.Exception

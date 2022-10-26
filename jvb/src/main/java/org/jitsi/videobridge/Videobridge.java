@@ -81,8 +81,10 @@ public class Videobridge
     public static final Random RANDOM = new Random();
 
     /**
-     * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
-     * local IDs.
+     * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their local IDs.
+     *
+     * TODO: The only remaining use of this ID is for the colibri WebSocket conference identifier. This should be
+     * replaced with meetingId.
      */
     private final Map<String, Conference> conferencesById = new HashMap<>();
 
@@ -197,16 +199,11 @@ public class Videobridge
     /**
      * Generate conference IDs until one is found that isn't in use and create a new {@link Conference}
      * object using that ID
-     *
-     * @param checkForMeetingIdCollision whether to throw an exception if a conference with the given meetingId exists.
-     * With colibri1 we allow more than one conference with the same meetingId because there's no mechanism to
-     * immediately expire a conference.
      */
     private @NotNull Conference doCreateConference(
             @Nullable EntityBareJid name,
             String meetingId,
-            boolean isRtcStatsEnabled,
-            boolean checkForMeetingIdCollision)
+            boolean isRtcStatsEnabled)
     {
         Conference conference = null;
         do
@@ -215,7 +212,7 @@ public class Videobridge
 
             synchronized (conferencesById)
             {
-                if (checkForMeetingIdCollision && meetingId != null && conferencesByMeetingId.containsKey(meetingId))
+                if (meetingId != null && conferencesByMeetingId.containsKey(meetingId))
                 {
                     throw new IllegalStateException("Already have a meeting with meetingId " + meetingId);
                 }
@@ -260,20 +257,18 @@ public class Videobridge
      * adds the new instance to the list of existing <tt>Conference</tt>
      * instances.
      *
+     * @param gid  the "global" id of the conference (or
+     *             {@link Conference#GID_NOT_SET} if it is not specified.
      * @param name world readable name of the conference to create.
-     * @param gid the "global" id of the conference (or
-     * {@link Conference#GID_NOT_SET} if it is not specified.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     private @NotNull Conference createConference(
             @Nullable EntityBareJid name,
             String meetingId,
-            boolean isRtcStatsEnabled,
-            boolean checkForMeetingIdCollision)
+            boolean isRtcStatsEnabled)
     {
-        final Conference conference
-                = doCreateConference(name, meetingId, isRtcStatsEnabled, checkForMeetingIdCollision);
+        final Conference conference = doCreateConference(name, meetingId, isRtcStatsEnabled);
 
         logger.info(() -> "create_conf, id=" + conference.getID() + " meetingId=" + meetingId);
 
@@ -350,7 +345,7 @@ public class Videobridge
     /**
      * Gets an existing {@link Conference} with a specific meeting ID.
      */
-    public Conference getConferenceByMeetingId(String meetingId)
+    public Conference getConferenceByMeetingId(@NotNull String meetingId)
     {
         /* Note that conferenceByMeetingId is synchronized on conferencesById. */
         synchronized (conferencesById)
@@ -373,30 +368,6 @@ public class Videobridge
     }
 
     /**
-     * Handles a COLIBRI request synchronously.
-     * @param conferenceIq The COLIBRI request.
-     * @return The response in the form of an {@link IQ}. It is either an error or a {@link ColibriConferenceIQ}.
-     */
-    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIq)
-    {
-        Conference conference;
-        try
-        {
-            conference = getOrCreateConference(conferenceIq);
-        }
-        catch (ConferenceNotFoundException e)
-        {
-            return createConferenceNotFoundError(conferenceIq, conferenceIq.getID(), false);
-        }
-        catch (InGracefulShutdownException e)
-        {
-            return createGracefulShutdownErrorResponse(conferenceIq, false);
-        }
-
-        return conference.getShim().handleColibriConferenceIQ(conferenceIq);
-    }
-
-    /**
      * Handles a COLIBRI2 request synchronously.
      * @param conferenceModifyIQ The COLIBRI request.
      * @return The response in the form of an {@link IQ}. It is either an error or a {@link ConferenceModifiedIQ}.
@@ -410,15 +381,15 @@ public class Videobridge
         }
         catch (ConferenceNotFoundException e)
         {
-            return createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
+            return createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId());
         }
         catch (ConferenceAlreadyExistsException e)
         {
-            return createConferenceAlreadyExistsError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId(), true);
+            return createConferenceAlreadyExistsError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId());
         }
         catch (InGracefulShutdownException e)
         {
-            return createGracefulShutdownErrorResponse(conferenceModifyIQ, true);
+            return createGracefulShutdownErrorResponse(conferenceModifyIQ);
         }
         catch (XmppStringprepException e)
         {
@@ -436,52 +407,27 @@ public class Videobridge
      */
     private void handleColibriRequest(XmppConnection.ColibriRequest request)
     {
-        IQ iq = request.getRequest();
-        String id = null;
+        ConferenceModifyIQ iq = request.getRequest();
+        String id = request.getRequest().getMeetingId();
         Conference conference;
-
-        boolean colibri2;
-        if (iq instanceof ConferenceModifyIQ)
-        {
-            colibri2 = true;
-        }
-        else if (iq instanceof ColibriConferenceIQ)
-        {
-            colibri2 = false;
-        }
-        else
-        {
-            throw new IllegalArgumentException("Bad IQ type " + iq.getClass().toString() + " in handleColibriRequest");
-        }
 
         try
         {
-            if (colibri2)
-            {
-                ConferenceModifyIQ conferenceModifyIq = (ConferenceModifyIQ) iq;
-                id = conferenceModifyIq.getMeetingId();
-                conference = getOrCreateConference(conferenceModifyIq);
-            }
-            else
-            {
-                ColibriConferenceIQ conferenceIq = (ColibriConferenceIQ) iq;
-                id = conferenceIq.getID();
-                conference = getOrCreateConference(conferenceIq);
-            }
+            conference = getOrCreateConference(request.getRequest());
         }
         catch (ConferenceNotFoundException e)
         {
-            request.getCallback().invoke(createConferenceNotFoundError(iq, id, colibri2));
+            request.getCallback().invoke(createConferenceNotFoundError(iq, id));
             return;
         }
         catch (ConferenceAlreadyExistsException e)
         {
-            request.getCallback().invoke(createConferenceAlreadyExistsError(iq, id, colibri2));
+            request.getCallback().invoke(createConferenceAlreadyExistsError(iq, id));
             return;
         }
         catch (InGracefulShutdownException e)
         {
-            request.getCallback().invoke(createGracefulShutdownErrorResponse(iq, colibri2));
+            request.getCallback().invoke(createGracefulShutdownErrorResponse(iq));
             return;
         }
         catch (XmppStringprepException e)
@@ -493,34 +439,6 @@ public class Videobridge
 
         // It is now the responsibility of Conference to send a response.
         conference.enqueueColibriRequest(request);
-    }
-
-    private @NotNull Conference getOrCreateConference(ColibriConferenceIQ conferenceIq)
-            throws ConferenceNotFoundException, InGracefulShutdownException
-    {
-        String conferenceId = conferenceIq.getID();
-        if (conferenceId == null && isInGracefulShutdown())
-        {
-            throw new InGracefulShutdownException();
-        }
-
-        if (conferenceId == null)
-        {
-            return createConference(
-                    conferenceIq.getName(),
-                    conferenceIq.getMeetingId(),
-                    conferenceIq.isRtcStatsEnabled(),
-                    false);
-        }
-        else
-        {
-            Conference conference = getConference(conferenceId);
-            if (conference == null)
-            {
-                throw new ConferenceNotFoundException();
-            }
-            return conference;
-        }
     }
 
     private @NotNull Conference getOrCreateConference(ConferenceModifyIQ conferenceModifyIQ)
@@ -550,8 +468,8 @@ public class Videobridge
                 return createConference(
                     conferenceName == null ? null : JidCreate.entityBareFrom(conferenceName),
                     meetingId,
-                    conferenceModifyIQ.isRtcstatsEnabled(),
-                    true);
+                    conferenceModifyIQ.isRtcstatsEnabled()
+                );
             }
             else
             {
@@ -648,12 +566,6 @@ public class Videobridge
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
-
-        // <conference>
-        ProviderManager.addIQProvider(
-                ColibriConferenceIQ.ELEMENT,
-                ColibriConferenceIQ.NAMESPACE,
-                new ColibriConferenceIqProvider());
 
         // <force-shutdown>
         ForcefulShutdownIqProvider.registerIQProvider();
@@ -849,7 +761,7 @@ public class Videobridge
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
     {
         @Override
-        public void colibriConferenceIqReceived(@NotNull XmppConnection.ColibriRequest request)
+        public void colibriRequestReceived(@NotNull XmppConnection.ColibriRequest request)
         {
             handleColibriRequest(request);
         }

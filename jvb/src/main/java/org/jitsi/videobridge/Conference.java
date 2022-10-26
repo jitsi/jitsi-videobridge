@@ -31,10 +31,8 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.colibri2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.relay.*;
-import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
@@ -152,12 +150,6 @@ public class Conference
     private final long creationTime = System.currentTimeMillis();
 
     /**
-     * The shim which handles Colibri-related logic for this conference (translates colibri v1 signaling into the
-     * native videobridge APIs).
-     */
-    @NotNull private final ConferenceShim shim;
-
-    /**
      * The shim which handles Colibri v2 related logic for this conference (translates colibri v2 signaling into the
      * native videobridge APIs).
      */
@@ -224,7 +216,6 @@ public class Conference
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
-        this.shim = new ConferenceShim(this, logger);
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
         colibriQueue = new PacketQueue<>(
                 Integer.MAX_VALUE,
@@ -235,24 +226,9 @@ public class Conference
                     try
                     {
                         long start = System.currentTimeMillis();
-                        IQ requestIQ = request.getRequest();
-                        IQ response;
-                        boolean expire = false;
-                        if (requestIQ instanceof ColibriConferenceIQ)
-                        {
-                            response = shim.handleColibriConferenceIQ((ColibriConferenceIQ)requestIQ);
-                        }
-                        else if (requestIQ instanceof ConferenceModifyIQ)
-                        {
-                            Pair<IQ, Boolean> p =
-                                colibri2Handler.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
-                            response = p.getFirst();
-                            expire = p.getSecond();
-                        }
-                        else
-                        {
-                            throw new IllegalStateException("Bad IQ " + request.getClass() + " passed to colibriIQ");
-                        }
+                        Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
+                        IQ response = p.getFirst();
+                        boolean expire = p.getSecond();
                         long end = System.currentTimeMillis();
                         long processingDelay = end - start;
                         long totalDelay = end - request.getReceiveTime();
@@ -446,33 +422,6 @@ public class Conference
             videobridge.expireConference(this);
         }
         return p.getFirst();
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ</tt> to the values of the respective
-     * properties of this instance. Thus, the specified <tt>iq</tt> may be
-     * thought of as a description of this instance.
-     * <p>
-     * <b>Note</b>: The copying of the values is shallow i.e. the
-     * <tt>Content</tt>s of this instance are not described in the specified
-     * <tt>iq</tt>.
-     * </p>
-     *
-     * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
-     * properties of this instance on
-     */
-    public void describeShallow(ColibriConferenceIQ iq)
-    {
-        iq.setID(getID());
-        if (conferenceName == null)
-        {
-            iq.setName(null);
-        }
-        else
-        {
-            iq.setName(conferenceName);
-        }
     }
 
     /**
@@ -1129,14 +1078,6 @@ public class Conference
         // Allow a conference to have no endpoints in the first 20 seconds.
         return getEndpointCount() == 0
                 && (System.currentTimeMillis() - creationTime > 20000);
-    }
-
-    /**
-     * @return this {@link Conference}'s Colibri shim.
-     */
-    public ConferenceShim getShim()
-    {
-        return shim;
     }
 
     /**

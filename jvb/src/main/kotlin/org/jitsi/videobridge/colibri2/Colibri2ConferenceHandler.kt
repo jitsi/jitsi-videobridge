@@ -30,7 +30,6 @@ import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
-import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
@@ -58,7 +57,7 @@ class Colibri2ConferenceHandler(
     private val logger = createChildLogger(parentLogger)
 
     /**
-     * @return A pair with an IQ to be sent as a response, and a boolean incicating if the conference needs to be
+     * @return A pair with an IQ to be sent as a response, and a boolean indicating if the conference needs to be
      * expired.
      */
     fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
@@ -210,14 +209,12 @@ class Colibri2ConferenceHandler(
             /* No need to put media in conference-modified. */
         }
 
-        endpoint.updateAcceptedMediaTypes(
-            acceptAudio = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
-                it.mediaType == MediaType.AUDIO
-            },
-            acceptVideo = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
-                it.mediaType == MediaType.VIDEO
-            }
-        )
+        endpoint.acceptAudio = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+            it.mediaType == MediaType.AUDIO
+        }
+        endpoint.acceptVideo = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+            it.mediaType == MediaType.VIDEO
+        }
 
         c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
         if (c2endpoint.create) {

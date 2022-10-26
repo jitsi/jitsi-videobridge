@@ -72,7 +72,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
 
     private fun monitorEndpointActivity(endpoint: Endpoint) {
         val now = clock.instant()
-        val mostRecentChannelCreatedTime = endpoint.getMostRecentChannelCreatedTime()
+        val mostRecentChannelCreatedTime = endpoint.creationTime
         val lastActivity = endpoint.lastIncomingActivity
 
         val active: Boolean
