@@ -83,8 +83,8 @@ public class Videobridge
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their local IDs.
      *
-     * TODO: The only remaining use of this ID is for the colibri WebSocket conference identifier. This should be
-     * replaced with meetingId.
+     * TODO: The only remaining uses of this ID are for the HTTP debug interface and the colibri WebSocket conference
+     * identifier. This should be replaced with meetingId (while making sure jvb-rtcstats-push doesn't break).
      */
     private final Map<String, Conference> conferencesById = new HashMap<>();
 
