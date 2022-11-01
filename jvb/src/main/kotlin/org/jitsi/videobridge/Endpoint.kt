@@ -71,8 +71,6 @@ import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
-import org.jitsi.videobridge.shim.ChannelShim
-import org.jitsi.videobridge.shim.EndpointShim
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -80,7 +78,6 @@ import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
 import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
-import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
@@ -121,7 +118,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * The time at which this endpoint was created
      */
-    private val creationTime = clock.instant()
+    val creationTime = clock.instant()
 
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
@@ -150,17 +147,11 @@ class Endpoint @JvmOverloads constructor(
     private var sctpSocket: Optional<SctpServerSocket> = Optional.empty()
 
     /**
-     * The colibri1 shim for this endpoint, if used. It needs to be notified when this endpoint expires.
-     */
-    var endpointShim: EndpointShim? = null
-
-    /**
      * Whether this endpoint should accept audio packets. We set this according
      * to whether the endpoint has an audio Colibri channel whose direction
      * allows sending.
      */
     var acceptAudio = false
-        private set
 
     /**
      * Whether this endpoint should accept video packets. We set this according
@@ -168,7 +159,6 @@ class Endpoint @JvmOverloads constructor(
      * allows sending.
      */
     var acceptVideo = false
-        private set
 
     /**
      * The queue we put outgoing SRTP packets onto so they can be sent
@@ -801,18 +791,6 @@ class Endpoint @JvmOverloads constructor(
         return iceUdpTransportPacketExtension
     }
 
-    override fun describe(channelBundle: ColibriConferenceIQ.ChannelBundle) {
-        channelBundle.transport = describeTransport()
-    }
-
-    /**
-     * Update accepted media types based on [ChannelShim] permission to receive media
-     */
-    fun updateAcceptedMediaTypes(acceptAudio: Boolean, acceptVideo: Boolean) {
-        this.acceptAudio = acceptAudio
-        this.acceptVideo = acceptVideo
-    }
-
     /**
      * Handle incoming RTP packets which have been fully processed by the
      * transceiver's incoming pipeline.
@@ -820,13 +798,6 @@ class Endpoint @JvmOverloads constructor(
     fun handleIncomingPacket(packetInfo: PacketInfo) {
         packetInfo.endpointId = id
         conference.handleIncomingPacket(packetInfo)
-    }
-
-    /**
-     * Return the timestamp of the most recently created [ChannelShim] on this endpoint
-     */
-    fun getMostRecentChannelCreatedTime(): Instant {
-        return endpointShim?.getMostRecentChannelCreatedTime() ?: creationTime
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
@@ -934,21 +905,13 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Previously, an endpoint expired when all of its channels did.  Channels
-     * now only exist in their 'shim' form for backwards compatibility, so to
-     * find out whether or not the endpoint expired, we'll check the activity
-     * timestamps from the transceiver and use the largest of the expire times
-     * set in the channel shims.
+     * To find out whether the endpoint should be expired, we check the activity timestamps from the transceiver.
      */
     override fun shouldExpire(): Boolean {
         if (iceTransport.hasFailed()) {
             logger.warn("Allowing to expire because ICE failed.")
             return true
         }
-
-        // Use a default expire timeout of 60 seconds when colibri1 is not used
-        val maxExpireTimeFromChannelShims = endpointShim?.maxExpireTimeFromChannelShims
-            ?: Duration.ofSeconds(60)
 
         val lastActivity = lastIncomingActivity
         val now = clock.instant()
@@ -966,8 +929,10 @@ class Endpoint @JvmOverloads constructor(
             // eventually fail (which is handled above).
             return false
         }
-        if (Duration.between(lastActivity, now) > maxExpireTimeFromChannelShims) {
-            logger.info("Allowing to expire because of no activity in over $maxExpireTimeFromChannelShims")
+
+        val expireTimeout = VideobridgeExpireThreadConfig.config.inactivityTimeout
+        if (Duration.between(lastActivity, now) > expireTimeout) {
+            logger.info("Allowing to expire because of no activity in over $expireTimeout")
             return true
         }
         return false
@@ -976,8 +941,6 @@ class Endpoint @JvmOverloads constructor(
     fun setLastN(lastN: Int) {
         bitrateController.lastN = lastN
     }
-
-    fun getLastN(): Int = bitrateController.lastN
 
     /**
      * Returns true if this endpoint's transport is 'fully' connected (both ICE and DTLS), false otherwise
@@ -1125,8 +1088,6 @@ class Endpoint @JvmOverloads constructor(
 
         try {
             bitrateController.expire()
-            endpointShim?.expire()
-            endpointShim = null
             updateStatsOnExpire()
             transceiver.stop()
             logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }

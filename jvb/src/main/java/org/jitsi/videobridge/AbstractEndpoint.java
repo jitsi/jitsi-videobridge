@@ -23,7 +23,6 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
-import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
 import java.time.*;
@@ -301,11 +300,6 @@ public abstract class AbstractEndpoint
      * Return true if this endpoint should expire (based on whatever logic is
      * appropriate for that endpoint implementation.
      *
-     * NOTE(brian): Currently the bridge will automatically expire an endpoint
-     * if all of its channel shims are removed. Maybe we should instead have
-     * this logic always be called before expiring instead? But that would mean
-     * that expiration in the case of channel removal would take longer.
-     *
      * @return true if this endpoint should expire, false otherwise
      */
     public abstract boolean shouldExpire();
@@ -334,16 +328,6 @@ public abstract class AbstractEndpoint
      * a particular SSRC).
      */
     public abstract void requestKeyframe();
-
-    /**
-     * Describes this endpoint's transport in the given channel bundle XML
-     * element.
-     *
-     * @param channelBundle the channel bundle element to describe in.
-     */
-    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
-    {
-    }
 
     /**
      * Gets a JSON representation of the parts of this object's state that

@@ -21,7 +21,6 @@ import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.Companion.config
-import org.jitsi.xmpp.extensions.colibri.ColibriConferenceIQ
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
@@ -58,8 +57,6 @@ class XmppConnection : IQListener {
         if (running.compareAndSet(false, true)) {
             mucClientManager.apply {
                 registerIQ(HealthCheckIQ())
-                // Colibri IQs are handled async.
-                registerIQ(ColibriConferenceIQ(), false)
                 registerIQ(Version())
                 registerIQ(ForcefulShutdownIQ())
                 registerIQ(GracefulShutdownIQ())
@@ -189,9 +186,9 @@ class XmppConnection : IQListener {
             is Version -> measureDelay(versionDelayStats, { iq.toXML() }) {
                 handler.versionIqReceived(iq)
             }
-            is ColibriConferenceIQ, is ConferenceModifyIQ -> {
+            is ConferenceModifyIQ -> {
                 // Colibri IQs are handled async.
-                handler.colibriConferenceIqReceived(
+                handler.colibriRequestReceived(
                     ColibriRequest(iq, colibriDelayStats, colibriProcessingDelayStats) { response ->
                         response.setResponseTo(iq)
                         logger.debug { "SENT: ${response.toXML()}" }
@@ -231,7 +228,7 @@ class XmppConnection : IQListener {
     }
 
     interface EventHandler {
-        fun colibriConferenceIqReceived(request: ColibriRequest)
+        fun colibriRequestReceived(request: ColibriRequest)
         fun versionIqReceived(iq: Version): IQ
         fun healthCheckIqReceived(iq: HealthCheckIQ): IQ
     }
@@ -240,7 +237,7 @@ class XmppConnection : IQListener {
         /**
          * The IQ which was received.
          */
-        val request: IQ,
+        val request: ConferenceModifyIQ,
         /**
          * The [DelayStats] instance which is to be updated with the total time it took to handle the request
          * (including queueing delay).
@@ -260,7 +257,6 @@ class XmppConnection : IQListener {
 
     companion object {
         private val FEATURES = arrayOf(
-            ColibriConferenceIQ.NAMESPACE,
             HealthCheckIQ.NAMESPACE,
             "urn:xmpp:jingle:apps:dtls:0",
             "urn:xmpp:jingle:transports:ice-udp:1",
