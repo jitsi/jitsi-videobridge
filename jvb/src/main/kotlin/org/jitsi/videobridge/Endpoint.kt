@@ -110,6 +110,10 @@ class Endpoint @JvmOverloads constructor(
     iceControlling: Boolean,
     private val isUsingSourceNames: Boolean,
     private val doSsrcRewriting: Boolean,
+    /**
+     * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
+     */
+    val visitor: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -119,25 +123,6 @@ class Endpoint @JvmOverloads constructor(
      * The time at which this endpoint was created
      */
     val creationTime = clock.instant()
-
-    /**
-     * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
-     */
-    var visitor = false
-        set(value) {
-            val oldValue = field
-            field = value
-            if (oldValue == value) {
-                return
-            }
-            /* Keep stats of number of visitors, even if it changes. */
-            if (value) {
-                conference.videobridge.statistics.visitorEndpoints.incrementAndGet()
-            } else {
-                conference.videobridge.statistics.visitorEndpoints.decrementAndGet()
-            }
-            /* TODO: do we need to take any other actions when this transitions, e.g. for EndpointStatusMonitor? */
-        }
 
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
@@ -336,6 +321,9 @@ class Endpoint @JvmOverloads constructor(
         setupDtlsTransport()
 
         conference.videobridge.statistics.totalEndpoints.inc()
+        if (visitor) {
+            conference.videobridge.statistics.totalVisitors.inc()
+        }
 
         logger.info("Created new endpoint isUsingSourceNames=$isUsingSourceNames, iceControlling=$iceControlling")
     }

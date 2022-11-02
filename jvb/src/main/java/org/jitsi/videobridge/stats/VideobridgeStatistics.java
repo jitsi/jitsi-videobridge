@@ -526,7 +526,7 @@ public class VideobridgeStatistics
                     TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
                    jvbStats.totalLossDegradedParticipantMs.get() / 1000);
             unlockedSetStat(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get());
-            unlockedSetStat("total_visitors", jvbStats.visitorEndpoints.get());
+            unlockedSetStat("total_visitors", jvbStats.totalVisitors.get());
             unlockedSetStat(
                 EPS_NO_MSG_TRANSPORT_AFTER_DELAY,
                 jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
@@ -555,6 +555,7 @@ public class VideobridgeStatistics
             unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);
             unlockedSetStat(P2P_CONFERENCES, p2pConferences);
             unlockedSetStat("endpoints", endpoints);
+            unlockedSetStat("visitors", jvbStats.currentVisitors.get());
             unlockedSetStat(PARTICIPANTS, endpoints);
             unlockedSetStat("local_endpoints", localEndpoints);
             unlockedSetStat(RECEIVE_ONLY_ENDPOINTS, receiveOnlyEndpoints);

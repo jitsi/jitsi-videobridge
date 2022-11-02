@@ -160,7 +160,13 @@ class Colibri2ConferenceHandler(
             )
             val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
             val ssrcRewriting = sourceNames && c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
-            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames, ssrcRewriting).apply {
+            conference.createLocalEndpoint(
+                c2endpoint.id,
+                transport.iceControlling,
+                sourceNames,
+                ssrcRewriting,
+                c2endpoint.mucRole == MUCRole.visitor
+            ).apply {
                 c2endpoint.statsId?.let {
                     statsId = it
                 }
@@ -193,12 +199,6 @@ class Colibri2ConferenceHandler(
                 Condition.bad_request,
                 "Unknown endpoint ${c2endpoint.id}"
             )
-        }
-
-        if (c2endpoint.mucRole == MUCRole.visitor) {
-            endpoint.visitor = true
-        } else if (c2endpoint.mucRole != null) {
-            endpoint.visitor = false
         }
 
         for (media in c2endpoint.media) {
