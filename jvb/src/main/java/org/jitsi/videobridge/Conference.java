@@ -19,6 +19,7 @@ import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.Packet;
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
 import org.jitsi.utils.dsi.*;
@@ -30,10 +31,8 @@ import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.colibri2.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.relay.*;
-import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
@@ -43,6 +42,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.regex.*;
 import java.util.stream.*;
 
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
@@ -70,11 +70,6 @@ public class Conference
      * A boolean that indicates whether or not to include RTCStats for this call.
      */
     private final boolean isRtcStatsEnabled;
-
-    /**
-     * A boolean that indicates whether or not to report to CallStats for this call.
-     */
-    private final boolean isCallStatsEnabled;
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
@@ -155,12 +150,6 @@ public class Conference
     private final long creationTime = System.currentTimeMillis();
 
     /**
-     * The shim which handles Colibri-related logic for this conference (translates colibri v1 signaling into the
-     * native videobridge APIs).
-     */
-    @NotNull private final ConferenceShim shim;
-
-    /**
      * The shim which handles Colibri v2 related logic for this conference (translates colibri v2 signaling into the
      * native videobridge APIs).
      */
@@ -190,6 +179,11 @@ public class Conference
     private final String meetingId;
 
     /**
+     * A regex pattern to trim UUIDs to just their first 8 hex characters.
+     */
+    private final static Pattern uuidTrimmer = Pattern.compile("(\\p{XDigit}{8})[\\p{XDigit}-]*");
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID.
@@ -203,22 +197,25 @@ public class Conference
                       String id,
                       @Nullable EntityBareJid conferenceName,
                       @Nullable String meetingId,
-                      boolean isRtcStatsEnabled,
-                      boolean isCallStatsEnabled)
+                      boolean isRtcStatsEnabled)
     {
         this.meetingId = meetingId;
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         this.isRtcStatsEnabled = isRtcStatsEnabled;
-        this.isCallStatsEnabled = isCallStatsEnabled;
         Map<String, String> context = new HashMap<>(Map.of("confId", id));
         if (conferenceName != null)
         {
             context.put("conf_name", conferenceName.toString());
         }
+        if (meetingId != null)
+        {
+            /* We usually generate meeting IDs as a UUID - include just their first octet. */
+            context.put("meeting_id", uuidTrimmer.matcher(meetingId).replaceAll("$1"));
+        }
+
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
-        this.shim = new ConferenceShim(this, logger);
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
         colibriQueue = new PacketQueue<>(
                 Integer.MAX_VALUE,
@@ -229,24 +226,9 @@ public class Conference
                     try
                     {
                         long start = System.currentTimeMillis();
-                        IQ requestIQ = request.getRequest();
-                        IQ response;
-                        boolean expire = false;
-                        if (requestIQ instanceof ColibriConferenceIQ)
-                        {
-                            response = shim.handleColibriConferenceIQ((ColibriConferenceIQ)requestIQ);
-                        }
-                        else if (requestIQ instanceof ConferenceModifyIQ)
-                        {
-                            Pair<IQ, Boolean> p =
-                                colibri2Handler.handleConferenceModifyIQ((ConferenceModifyIQ)requestIQ);
-                            response = p.getFirst();
-                            expire = p.getSecond();
-                        }
-                        else
-                        {
-                            throw new IllegalStateException("Bad IQ " + request.getClass() + " passed to colibriIQ");
-                        }
+                        Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
+                        IQ response = p.getFirst();
+                        boolean expire = p.getSecond();
                         long end = System.currentTimeMillis();
                         long processingDelay = end - start;
                         long totalDelay = end - request.getReceiveTime();
@@ -443,33 +425,6 @@ public class Conference
     }
 
     /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ</tt> to the values of the respective
-     * properties of this instance. Thus, the specified <tt>iq</tt> may be
-     * thought of as a description of this instance.
-     * <p>
-     * <b>Note</b>: The copying of the values is shallow i.e. the
-     * <tt>Content</tt>s of this instance are not described in the specified
-     * <tt>iq</tt>.
-     * </p>
-     *
-     * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
-     * properties of this instance on
-     */
-    public void describeShallow(ColibriConferenceIQ iq)
-    {
-        iq.setID(getID());
-        if (conferenceName == null)
-        {
-            iq.setName(null);
-        }
-        else
-        {
-            iq.setName(conferenceName);
-        }
-    }
-
-    /**
      * Runs {@link #lastNEndpointsChanged()} in an IO pool thread.
      */
     private void lastNEndpointsChangedAsync()
@@ -515,7 +470,7 @@ public class Conference
 
             if (dominantSpeakerChanged && !silence)
             {
-                getVideobridge().getStatistics().totalDominantSpeakerChanges.increment();
+                getVideobridge().getStatistics().dominantSpeakerChanges.inc();
                 if (getEndpointCount() > 2)
                 {
                     maybeSendKeyframeRequest(recentSpeakers.get(0));
@@ -648,18 +603,18 @@ public class Conference
 
         videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
         videobridgeStatistics.totalBytesSent.addAndGet(statistics.totalBytesSent.get());
-        videobridgeStatistics.totalPacketsReceived.addAndGet(statistics.totalPacketsReceived.get());
-        videobridgeStatistics.totalPacketsSent.addAndGet(statistics.totalPacketsSent.get());
+        videobridgeStatistics.packetsReceived.addAndGet(statistics.totalPacketsReceived.get());
+        videobridgeStatistics.packetsSent.addAndGet(statistics.totalPacketsSent.get());
 
         videobridgeStatistics.totalRelayBytesReceived.addAndGet(statistics.totalRelayBytesReceived.get());
         videobridgeStatistics.totalRelayBytesSent.addAndGet(statistics.totalRelayBytesSent.get());
-        videobridgeStatistics.totalRelayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
-        videobridgeStatistics.totalRelayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
+        videobridgeStatistics.relayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
+        videobridgeStatistics.relayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
 
         boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
         boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;
 
-        videobridgeStatistics.dtlsFailedEndpoints.addAndGet(statistics.dtlsFailedEndpoints.get());
+        videobridgeStatistics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
 
         if (hasPartiallyFailed)
         {
@@ -683,13 +638,12 @@ public class Conference
 
     /**
      * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with a specific SSRC and with a specific <tt>MediaType</tt>.
+     * stream with a specific SSRC.
      *
      * @param receiveSSRC the SSRC of an RTP stream received by this
      * <tt>Conference</tt> whose sending <tt>Endpoint</tt> is to be found
      * @return <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with the specified <tt>ssrc</tt> and with the specified
-     * <tt>mediaType</tt>; otherwise, <tt>null</tt>
+     * stream with the specified <tt>ssrc</tt>; otherwise, <tt>null</tt>
      */
     AbstractEndpoint findEndpointByReceiveSSRC(long receiveSSRC)
     {
@@ -744,10 +698,11 @@ public class Conference
      * transport will be initialized to serve as a controlling ICE agent;
      * otherwise, {@code false}
      * @param sourceNames whether this endpoint signaled the source names support.
+     * @param doSsrcRewriting whether this endpoint signaled SSRC rewriting support.
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public Endpoint createLocalEndpoint(String id, boolean iceControlling, boolean sourceNames)
+    public Endpoint createLocalEndpoint(String id, boolean iceControlling, boolean sourceNames, boolean doSsrcRewriting)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -755,7 +710,7 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames);
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames, doSsrcRewriting);
         videobridge.localEndpointCreated();
 
         subscribeToEndpointEvents(endpoint);
@@ -915,11 +870,6 @@ public class Conference
     public final String getID()
     {
         return id;
-    }
-
-    public final boolean isCallStatsEnabled()
-    {
-        return isCallStatsEnabled;
     }
 
     /**
@@ -1131,14 +1081,6 @@ public class Conference
     }
 
     /**
-     * @return this {@link Conference}'s Colibri shim.
-     */
-    public ConferenceShim getShim()
-    {
-        return shim;
-    }
-
-    /**
      * Determine whether a given endpointId is currently a ranked speaker, if
      * speaker ranking is currently enabled.
      */
@@ -1225,12 +1167,33 @@ public class Conference
         }
         else if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
         {
+            AbstractEndpoint targetEndpoint = null;
+            boolean rewriter = false;
+
             long mediaSsrc = (packet instanceof RtcpFbPliPacket)
                 ? ((RtcpFbPliPacket) packet).getMediaSourceSsrc()
                 : ((RtcpFbFirPacket) packet).getMediaSenderSsrc();
 
-            // XXX we could make this faster with a map
-            AbstractEndpoint targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
+            /* If we are rewriting SSRCs to this endpoint, we must ask
+            it to convert back the SSRC to the media sender's SSRC. */
+            String endpointId = packetInfo.getEndpointId();
+            if (endpointId != null)
+            {
+                AbstractEndpoint ep = getEndpoint(endpointId);
+                if (ep instanceof Endpoint && ((Endpoint) ep).doesSsrcRewriting())
+                {
+                    rewriter = true;
+                    String owner = ((Endpoint) ep).unmapRtcpFbSsrc((RtcpFbPacket) packet);
+                    if (owner != null)
+                        targetEndpoint = getEndpoint(owner);
+                }
+            }
+
+            if (!rewriter)
+            {
+                // XXX we could make this faster with a map
+                targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
+            }
 
             PotentialPacketHandler pph = null;
             if (targetEndpoint instanceof Endpoint)

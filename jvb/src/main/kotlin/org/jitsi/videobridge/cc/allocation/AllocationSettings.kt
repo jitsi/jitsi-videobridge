@@ -17,7 +17,6 @@
 package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.utils.OrderedJsonObject
-import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.endpointIdToSourceName
@@ -37,13 +36,8 @@ data class AllocationSettings @JvmOverloads constructor(
     val defaultConstraints: VideoConstraints
 ) {
     fun toJson() = OrderedJsonObject().apply {
-        if (MultiStreamConfig.config.enabled) {
-            put("on_stage_sources", onStageSources)
-            put("selected_sources", selectedSources)
-        } else {
-            put("on_stage_endpoints", onStageEndpoints)
-            put("selected_endpoints", selectedEndpoints)
-        }
+        put("on_stage_sources", onStageSources)
+        put("selected_sources", selectedSources)
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
         put("default_constraints", defaultConstraints)
@@ -83,25 +77,13 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
 
     private var allocationSettings = create()
 
-    private fun create(): AllocationSettings {
-        if (MultiStreamConfig.config.enabled) {
-            return AllocationSettings(
-                onStageSources = onStageSources,
-                selectedSources = selectedSources,
-                videoConstraints = videoConstraints,
-                defaultConstraints = defaultConstraints,
-                lastN = lastN
-            )
-        } else {
-            return AllocationSettings(
-                onStageEndpoints = onStageEndpoints,
-                selectedEndpoints = selectedEndpoints,
-                videoConstraints = videoConstraints,
-                defaultConstraints = defaultConstraints,
-                lastN = lastN
-            )
-        }
-    }
+    private fun create(): AllocationSettings = AllocationSettings(
+        onStageSources = onStageSources,
+        selectedSources = selectedSources,
+        videoConstraints = videoConstraints,
+        defaultConstraints = defaultConstraints,
+        lastN = lastN
+    )
 
     fun get() = allocationSettings
 
@@ -114,46 +96,31 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
                 changed = true
             }
         }
-        if (MultiStreamConfig.config.enabled) {
-            if (useSourceNames) {
-                message.selectedSources?.let {
-                    if (selectedSources != it) {
-                        selectedSources = it
-                        changed = true
-                    }
+        if (useSourceNames) {
+            message.selectedSources?.let {
+                if (selectedSources != it) {
+                    selectedSources = it
+                    changed = true
                 }
-                message.onStageSources?.let {
-                    if (onStageSources != it) {
-                        onStageSources = it
-                        changed = true
-                    }
-                }
-            } else {
-                message.selectedEndpoints?.let {
-                    val newSelectedSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
-                    if (selectedSources != newSelectedSources) {
-                        selectedSources = newSelectedSources
-                        changed = true
-                    }
-                }
-                message.onStageEndpoints?.let {
-                    val newOnStageSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
-                    if (onStageSources != newOnStageSources) {
-                        onStageSources = newOnStageSources
-                        changed = true
-                    }
+            }
+            message.onStageSources?.let {
+                if (onStageSources != it) {
+                    onStageSources = it
+                    changed = true
                 }
             }
         } else {
             message.selectedEndpoints?.let {
-                if (selectedEndpoints != it) {
-                    selectedEndpoints = it
+                val newSelectedSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
+                if (selectedSources != newSelectedSources) {
+                    selectedSources = newSelectedSources
                     changed = true
                 }
             }
             message.onStageEndpoints?.let {
-                if (onStageEndpoints != it) {
-                    onStageEndpoints = it
+                val newOnStageSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
+                if (onStageSources != newOnStageSources) {
+                    onStageSources = newOnStageSources
                     changed = true
                 }
             }
@@ -168,7 +135,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
             var newConstraints = it
 
             // Convert endpoint IDs to source names
-            if (MultiStreamConfig.config.enabled && !useSourceNames) {
+            if (!useSourceNames) {
                 newConstraints = HashMap(it.size)
                 it.entries.stream().forEach {
                         entry ->

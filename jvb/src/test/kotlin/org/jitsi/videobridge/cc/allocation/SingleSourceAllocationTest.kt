@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2021 - present 8x8, Inc.
+ * Copyright @ 2021 - Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +29,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.time.FakeClock
 
 /**
- * Test the logic for selecting the layers to be considered for an endpoint and the "preferred" layer.
+ * Test the logic for selecting the layers to be considered for a source and the "preferred" layer.
  */
 class SingleSourceAllocationTest : ShouldSpec() {
     private val clock = FakeClock()
@@ -49,21 +50,23 @@ class SingleSourceAllocationTest : ShouldSpec() {
     init {
         context("Camera") {
             context("When all layers are active") {
-                val endpoint = TestEndpoint(
-                    "id",
-                    MediaSourceDesc(
-                        arrayOf(
-                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
-                        )
+                val endpointId = "A"
+                val mediaSource = MediaSourceDesc(
+                    arrayOf(
+                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.CAMERA
                 )
 
                 context("Without constraints") {
                     val allocation =
-                        SingleSourceAllocation(endpoint, VideoConstraints(720), false, diagnosticContext, clock)
+                        SingleSourceAllocation(
+                            endpointId, mediaSource, VideoConstraints(720), false, diagnosticContext, clock
+                        )
 
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                     // "preferred FPS") layers for higher resolutions.
@@ -73,7 +76,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With constraints") {
                     val allocation =
-                        SingleSourceAllocation(endpoint, VideoConstraints(360), false, diagnosticContext, clock)
+                        SingleSourceAllocation(
+                            endpointId, mediaSource, VideoConstraints(360), false, diagnosticContext, clock
+                        )
 
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                     // "preferred FPS") layers for higher resolutions.
@@ -83,17 +88,20 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With constraints unmet by any layer") {
                     // Single high-res stream with 3 temporal layers.
-                    val endpoint = TestEndpoint(
-                        "id",
-                        MediaSourceDesc(
-                            // No simulcast.
-                            arrayOf(RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30)))
-                        )
+                    val endpointId = "A"
+                    val mediaSource = MediaSourceDesc(
+                        // No simulcast.
+                        arrayOf(RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))),
+                        sourceName = sourceName,
+                        owner = owner,
+                        videoType = VideoType.CAMERA
                     )
 
                     context("Non-zero constraints") {
                         val allocation =
-                            SingleSourceAllocation(endpoint, VideoConstraints(360), false, diagnosticContext, clock)
+                            SingleSourceAllocation(
+                                endpointId, mediaSource, VideoConstraints(360), false, diagnosticContext, clock
+                            )
 
                         // The receiver set 360p constraints, but we only have a 720p stream.
                         allocation.preferredLayer shouldBe hd30
@@ -102,7 +110,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     }
                     context("Zero constraints") {
                         val allocation =
-                            SingleSourceAllocation(endpoint, VideoConstraints(0), false, diagnosticContext, clock)
+                            SingleSourceAllocation(
+                                endpointId, mediaSource, VideoConstraints(0), false, diagnosticContext, clock
+                            )
 
                         // The receiver set a maxHeight=0 constraint.
                         allocation.preferredLayer shouldBe null
@@ -117,20 +127,22 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val hd7_5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
                 val hd15 = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
                 val hd30 = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
-                val endpoint = TestEndpoint(
-                    "id",
-                    MediaSourceDesc(
-                        arrayOf(
-                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
-                        )
+                val endpointId = "A"
+                val mediaSource = MediaSourceDesc(
+                    arrayOf(
+                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.CAMERA
                 )
 
                 val allocation =
-                    SingleSourceAllocation(endpoint, VideoConstraints(720), false, diagnosticContext, clock)
+                    SingleSourceAllocation(
+                        endpointId, mediaSource, VideoConstraints(720), false, diagnosticContext, clock
+                    )
 
                 // We include all resolutions up to the preferred resolution, and only high-FPS (at least
                 // "preferred FPS") layers for higher resolutions.
@@ -141,21 +153,23 @@ class SingleSourceAllocationTest : ShouldSpec() {
         }
         context("Screensharing") {
             context("When all layers are active") {
-                val endpoint = TestEndpoint(
-                    "id",
-                    MediaSourceDesc(
-                        arrayOf(
-                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
-                        )
+                val endpointId = "A"
+                val mediaSource = MediaSourceDesc(
+                    arrayOf(
+                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                        SingleSourceAllocation(
+                            endpointId, mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                        )
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints.
@@ -166,7 +180,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With 360p constraints") {
                     val allocation =
-                        SingleSourceAllocation(endpoint, VideoConstraints(360), true, diagnosticContext, clock)
+                        SingleSourceAllocation(
+                            endpointId, mediaSource, VideoConstraints(360), true, diagnosticContext, clock
+                        )
 
                     allocation.preferredLayer shouldBe sd30
                     allocation.oversendLayer shouldBe sd7_5
@@ -178,20 +194,21 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val hd7_5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
                 val hd15 = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
                 val hd30 = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
-                val endpoint = TestEndpoint(
-                    "id",
-                    MediaSourceDesc(
-                        arrayOf(
-                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
-                        )
+                val mediaSource = MediaSourceDesc(
+                    arrayOf(
+                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
                 val allocation =
-                    SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                    SingleSourceAllocation(
+                        "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                    )
 
                 // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                 // endpoints.
@@ -207,21 +224,22 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val sd7_5 = MockRtpLayerDesc(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = 0.bps)
                 val sd15 = MockRtpLayerDesc(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = 0.bps)
                 val sd30 = MockRtpLayerDesc(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = 0.bps)
-                val endpoint = TestEndpoint(
-                    "id",
-                    MediaSourceDesc(
-                        arrayOf(
-                            RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                            RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                            RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
-                        )
+                val mediaSource = MediaSourceDesc(
+                    arrayOf(
+                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                        SingleSourceAllocation(
+                            "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                        )
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints.
@@ -231,7 +249,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 }
                 context("With 180p constraints") {
                     val allocation =
-                        SingleSourceAllocation(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
+                        SingleSourceAllocation(
+                            "A", mediaSource, VideoConstraints(180), true, diagnosticContext, clock
+                        )
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
@@ -246,21 +266,22 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val l2 = MockRtpLayerDesc(tid = 0, eid = 0, sid = 1, height = 720, frameRate = -1.0, bitrate = 370.kbps)
                 val l3 = MockRtpLayerDesc(tid = 0, eid = 0, sid = 2, height = 720, frameRate = -1.0, bitrate = 750.kbps)
 
-                val endpoint = TestEndpoint(
-                    "id",
-                    MediaSourceDesc(
-                        arrayOf(
-                            RtpEncodingDesc(1L, arrayOf(l1)),
-                            RtpEncodingDesc(1L, arrayOf(l2)),
-                            RtpEncodingDesc(1L, arrayOf(l3))
-                        )
+                val mediaSource = MediaSourceDesc(
+                    arrayOf(
+                        RtpEncodingDesc(1L, arrayOf(l1)),
+                        RtpEncodingDesc(1L, arrayOf(l2)),
+                        RtpEncodingDesc(1L, arrayOf(l3))
                     ),
+                    sourceName = sourceName,
+                    owner = owner,
                     videoType = VideoType.DESKTOP
                 )
 
                 context("With no constraints") {
                     val allocation =
-                        SingleSourceAllocation(endpoint, VideoConstraints(720), true, diagnosticContext, clock)
+                        SingleSourceAllocation(
+                            "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                        )
 
                     allocation.preferredLayer shouldBe l3
                     allocation.oversendLayer shouldBe l1
@@ -272,16 +293,18 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // lowest available resolution (which is high). If we are off-stage we only consider the first of
                     // these layers.
                     context("On stage") {
-                        val allocation =
-                            SingleSourceAllocation(endpoint, VideoConstraints(180), true, diagnosticContext, clock)
+                        val allocation = SingleSourceAllocation(
+                            "A", mediaSource, VideoConstraints(180), true, diagnosticContext, clock
+                        )
 
                         allocation.preferredLayer shouldBe l3
                         allocation.oversendLayer shouldBe l1
                         allocation.layers.map { it.layer } shouldBe listOf(l1, l2, l3)
                     }
                     context("Off stage") {
-                        val allocation =
-                            SingleSourceAllocation(endpoint, VideoConstraints(180), false, diagnosticContext, clock)
+                        val allocation = SingleSourceAllocation(
+                            "A", mediaSource, VideoConstraints(180), false, diagnosticContext, clock
+                        )
 
                         allocation.preferredLayer shouldBe l1
                         allocation.oversendLayer shouldBe null
@@ -292,3 +315,6 @@ class SingleSourceAllocationTest : ShouldSpec() {
         }
     }
 }
+
+private val sourceName = "sourceName"
+private val owner = "owner"

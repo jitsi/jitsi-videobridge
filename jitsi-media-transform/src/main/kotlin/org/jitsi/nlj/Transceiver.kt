@@ -219,7 +219,7 @@ class Transceiver(
         logger.cdebug { "$id setting media sources: ${mediaSources.joinToString()}" }
         val ret = this.mediaSources.setMediaSources(mediaSources)
         val mergedMediaSources = this.mediaSources.getMediaSources()
-        val signaledMediaSources = if (mediaSources === mergedMediaSources) mediaSources.copy() else mediaSources
+        val signaledMediaSources = mediaSources.copy()
         rtpReceiver.handleEvent(SetMediaSourcesEvent(mergedMediaSources, signaledMediaSources))
         return ret
     }

@@ -21,7 +21,6 @@ import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
-import org.jitsi.videobridge.MultiStreamConfig
 import org.jitsi.videobridge.VersionConfig
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.message.AddReceiverMessage
@@ -151,60 +150,25 @@ class RelayMessageTransport(
      * @return
      */
     override fun addReceiver(message: AddReceiverMessage): BridgeChannelMessage? {
-        if (MultiStreamConfig.config.enabled) {
-            val sourceName = message.sourceName ?: run {
-                logger.error("Received AddReceiverMessage for with sourceName = null")
-                return null
-            }
-            val ep = relay.conference.findSourceOwner(sourceName) ?: run {
-                logger.warn("Received AddReceiverMessage for unknown or non-local: $sourceName")
-                return null
-            }
-
-            ep.addReceiverV2(relay.id, sourceName, message.videoConstraints)
-        } else {
-            val epId = message.endpointId
-            val ep = relay.conference.getLocalEndpoint(epId) ?: run {
-                logger.warn("Received AddReceiverMessage for unknown or non-local epId $epId")
-                return null
-            }
-
-            ep.addReceiver(relay.id, message.videoConstraints)
+        val sourceName = message.sourceName ?: run {
+            logger.error("Received AddReceiverMessage for with sourceName = null")
+            return null
         }
+        val ep = relay.conference.findSourceOwner(sourceName) ?: run {
+            logger.warn("Received AddReceiverMessage for unknown or non-local: $sourceName")
+            return null
+        }
+
+        ep.addReceiver(relay.id, sourceName, message.videoConstraints)
         return null
     }
 
     override fun videoType(message: VideoTypeMessage): BridgeChannelMessage? {
-        val epId = message.endpointId
-        if (epId == null) {
-            logger.warn("Received VideoTypeMessage over relay channel with no endpoint ID")
-            return null
-        }
-
-        if (MultiStreamConfig.config.enabled) {
-            logger.error("Relay: unexpected video type message while in the multi-stream mode, eId=$epId")
-            return null
-        }
-
-        val ep = relay.getEndpoint(epId)
-
-        if (ep == null) {
-            logger.warn("Received VideoTypeMessage for unknown epId $epId")
-            return null
-        }
-
-        ep.setVideoType(message.videoType)
-
-        relay.conference.sendMessageFromRelay(message, false, relay.meshId)
-
+        logger.error("Relay: unexpected video type message: ${message.toJson()}")
         return null
     }
 
     override fun sourceVideoType(message: SourceVideoTypeMessage): BridgeChannelMessage? {
-        if (!MultiStreamConfig.config.enabled) {
-            return null
-        }
-
         val epId = message.endpointId
         if (epId == null) {
             logger.warn("Received SourceVideoTypeMessage over relay channel with no endpoint ID")

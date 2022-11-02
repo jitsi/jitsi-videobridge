@@ -15,7 +15,10 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
@@ -67,8 +70,8 @@ class BitrateControllerPerfTest : StringSpec() {
             override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
             override fun effectiveVideoConstraintsChanged(
-                oldEffectiveConstraints: Map<String, VideoConstraints>,
-                newEffectiveConstraints: Map<String, VideoConstraints>
+                oldEffectiveConstraints: EffectiveConstraintsMap,
+                newEffectiveConstraints: EffectiveConstraintsMap
             ) { }
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) { }
             override fun allocationChanged(allocation: BandwidthAllocation) { }
@@ -146,3 +149,26 @@ class BitrateControllerPerfTest : StringSpec() {
 }
 
 const val NUM_SPEAKER_CHANGES = 1_000_000
+
+fun BandwidthAllocation.shouldMatch(other: BandwidthAllocation) {
+    allocations.size shouldBe other.allocations.size
+    allocations.forEach { thisSingleAllocation ->
+        withClue("Allocation for ${thisSingleAllocation.endpointId}") {
+            val otherSingleAllocation = other.allocations.find { it.endpointId == thisSingleAllocation.endpointId }
+            otherSingleAllocation.shouldNotBeNull()
+            thisSingleAllocation.targetLayer?.height shouldBe otherSingleAllocation.targetLayer?.height
+            thisSingleAllocation.targetLayer?.frameRate shouldBe otherSingleAllocation.targetLayer?.frameRate
+        }
+    }
+}
+
+fun List<Event<BandwidthAllocation>>.shouldMatchInOrder(vararg events: Event<BandwidthAllocation>) {
+    size shouldBe events.size
+    events.forEachIndexed { i, it ->
+        this[i].bwe shouldBe it.bwe
+        withClue("bwe=${it.bwe}") {
+            this[i].event.shouldMatch(it.event)
+        }
+        // Ignore this.time
+    }
+}

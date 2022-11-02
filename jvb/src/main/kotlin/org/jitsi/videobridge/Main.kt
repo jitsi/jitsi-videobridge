@@ -19,7 +19,6 @@ package org.jitsi.videobridge
 import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
-import org.jitsi.cmd.CmdLine
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
@@ -29,7 +28,6 @@ import org.jitsi.rest.enableCors
 import org.jitsi.rest.isEnabled
 import org.jitsi.rest.servletContextHandler
 import org.jitsi.shutdown.ShutdownServiceImpl
-import org.jitsi.stats.media.Utils
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.ice.Harvesters
@@ -37,8 +35,6 @@ import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsCollector
 import org.jitsi.videobridge.stats.VideobridgeStatistics
-import org.jitsi.videobridge.stats.callstats.CallstatsConfig
-import org.jitsi.videobridge.stats.callstats.CallstatsService
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
@@ -50,25 +46,8 @@ import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 
-fun main(args: Array<String>) {
+fun main() {
     val logger = LoggerImpl("org.jitsi.videobridge.Main")
-
-    // We only support command line arguments for backward compatibility. The --apis options is the last one supported,
-    // and it is only used to enable/disable the REST API (XMPP is only controlled through the config files).
-    // TODO: fully remove support for --apis
-    CmdLine().apply {
-        parse(args)
-        getOptionValue("--apis")?.let {
-            logger.warn(
-                "A deprecated command line argument (--apis) is present. Please use the config file to control the " +
-                    "REST API instead (see rest.md). Support for --apis will be removed in a future version."
-            )
-            System.setProperty(
-                Videobridge.REST_API_PNAME,
-                it.contains(Videobridge.REST_API).toString()
-            )
-        }
-    }
 
     setupMetaconfigLogger()
 
@@ -104,21 +83,6 @@ fun main(args: Array<String>) {
     val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, xmppConnection)).apply {
         start()
         addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
-    }
-
-    val callstats = if (CallstatsConfig.config.enabled) {
-        CallstatsService(videobridge.version).apply {
-            start {
-                statsTransport?.let { statsTransport ->
-                    statsCollector.addTransport(statsTransport, CallstatsConfig.config.interval.toMillis())
-                } ?: throw IllegalStateException("Stats transport is null after the service is started")
-
-                videobridge.addEventHandler(videobridgeEventHandler)
-            }
-        }
-    } else {
-        logger.info("Not starting CallstatsService, disabled in configuration.")
-        null
     }
 
     val publicServerConfig = JettyBundleActivatorConfig(
@@ -171,13 +135,6 @@ fun main(args: Array<String>) {
     logger.info("Bridge shutting down")
     healthChecker.stop()
     xmppConnection.stop()
-    callstats?.let {
-        videobridge.removeEventHandler(it.videobridgeEventHandler)
-        it.statsTransport?.let { statsTransport ->
-            statsCollector.removeTransport(statsTransport)
-        }
-        it.stop()
-    }
     statsCollector.stop()
 
     try {
@@ -217,7 +174,6 @@ private fun setSystemPropertyDefaults() {
 
 private fun getSystemPropertyDefaults(): Map<String, String> {
     val defaults = mutableMapOf<String, String>()
-    Utils.getCallStatsJavaSDKSystemPropertyDefaults(defaults)
 
     // Make legacy ice4j properties system properties.
     val cfg = JitsiConfig.SipCommunicatorProps

@@ -20,7 +20,6 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.config.withNewConfig
@@ -30,10 +29,7 @@ import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.videobridge.shutdown.ShutdownConfig
 import org.jitsi.videobridge.shutdown.ShutdownState
 import org.jitsi.videobridge.util.TaskPools
-import org.jivesoftware.smack.packet.ErrorIQ
-import org.jivesoftware.smack.packet.StanzaError
 import org.json.simple.parser.JSONParser
-import org.jxmpp.jid.impl.JidCreate
 
 class VideobridgeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
@@ -68,12 +64,6 @@ class VideobridgeTest : ShouldSpec() {
                         }
                         should("not have started the shutdown yet") {
                             verify(exactly = 0) { shutdownService.beginShutdown() }
-                        }
-                        should("respond with an error if a new conference create is received via XMPP") {
-                            val confCreateIq = ColibriUtilities.createConferenceIq(JidCreate.from("focusJid"))
-                            val resp = videobridge.handleColibriConferenceIQ(confCreateIq)
-                            resp.shouldBeInstanceOf<ErrorIQ>()
-                            resp.error.condition shouldBe StanzaError.Condition.service_unavailable
                         }
                         context("When the number of participants drops below the threshold") {
                             repeat(10) { videobridge.localEndpointExpired() }

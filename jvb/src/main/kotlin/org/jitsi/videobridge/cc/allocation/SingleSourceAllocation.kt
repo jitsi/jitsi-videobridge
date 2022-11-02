@@ -1,5 +1,6 @@
 /*
- * Copyright @ 2020 - present 8x8, Inc.
+ * Copyright @ 2021 - present 8x8, Inc.
+ * Copyright @ 2021 - Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +16,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.VideoType
@@ -31,12 +33,14 @@ import java.time.Clock
  * algorithm, as opposed to [SingleAllocation] which is the end result.
  *
  * @author George Politis
+ * @author Pawel Domas
  */
 internal class SingleSourceAllocation(
-    val endpoint: MediaSourceContainer,
-    /** The constraints to use while allocating bandwidth to this endpoint. */
+    val endpointId: String,
+    val mediaSource: MediaSourceDesc,
+    /** The constraints to use while allocating bandwidth to this media source. */
     val constraints: VideoConstraints,
-    /** Whether the endpoint is on stage. */
+    /** Whether the source is on stage. */
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
@@ -45,7 +49,7 @@ internal class SingleSourceAllocation(
     /**
      * The immutable list of layers to be considered when allocating bandwidth.
      */
-    val layers: Layers = selectLayers(endpoint, onStage, constraints, clock.instant().toEpochMilli())
+    val layers: Layers = selectLayers(mediaSource, onStage, constraints, clock.instant().toEpochMilli())
 
     /**
      * The index (into [layers] of the current target layer). It can be improved in the `improve()` step, if there is
@@ -56,7 +60,7 @@ internal class SingleSourceAllocation(
     init {
         if (timeSeriesLogger.isTraceEnabled) {
             val ratesTimeSeriesPoint = diagnosticContext.makeTimeSeriesPoint("layers_considered")
-                .addField("remote_endpoint_id", endpoint.id)
+                .addField("remote_endpoint_id", endpointId)
             for ((l, bitrate) in layers.layers) {
                 ratesTimeSeriesPoint.addField(
                     "${indexString(l.index)}_${l.height}p_${l.frameRate}fps_bps",
@@ -182,35 +186,19 @@ internal class SingleSourceAllocation(
      */
     val result: SingleAllocation
         get() = SingleAllocation(
-            endpoint.id,
-            endpoint.mediaSource,
+            endpointId,
+            mediaSource,
             targetLayer?.layer,
             layers.idealLayer?.layer
         )
 
     override fun toString(): String {
         return (
-            "[id=" + endpoint.id +
+            "[id=" + endpointId +
                 " constraints=" + constraints +
                 " ratedPreferredIdx=" + layers.preferredIndex +
                 " ratedTargetIdx=" + targetIdx
             )
-    }
-
-    /**
-     * Gets the "preferred" height and frame rate based on the constraints signaled from the receiver.
-     *
-     * For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
-     * temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
-     * consider frame rates at least as high as the preferred. In practice this means we consider
-     * 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
-     */
-    private fun getPreferred(constraints: VideoConstraints): Pair<Int, Double> {
-        return if (constraints.maxHeight > 180) {
-            Pair(config.onstagePreferredHeightPx(), config.onstagePreferredFramerate())
-        } else {
-            noPreferredHeightAndFrameRate
-        }
     }
 
     /**
@@ -232,7 +220,7 @@ internal class SingleSourceAllocation(
 
         // We select all layers that satisfy the constraints.
         var selectedLayers =
-            if (constraints.maxHeight < 0) {
+            if (!constraints.heightIsLimited()) {
                 activeLayers
             } else {
                 activeLayers.filter { it.layer.height <= constraints.maxHeight }
@@ -274,19 +262,18 @@ internal class SingleSourceAllocation(
      */
     private fun selectLayers(
         /** The endpoint which is the source of the stream(s). */
-        endpoint: MediaSourceContainer,
+        source: MediaSourceDesc,
         onStage: Boolean,
-        /** The constraints that the receiver specified for [endpoint]. */
+        /** The constraints that the receiver specified for [source]. */
         constraints: VideoConstraints,
         nowMs: Long
     ): Layers {
-        val source = endpoint.mediaSource
-        if (constraints.maxHeight <= 0 || source == null || !source.hasRtpLayers()) {
+        if (constraints.maxHeight == 0 || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
         val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
 
-        return when (endpoint.videoType) {
+        return when (source.videoType) {
             VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
             VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(layers, constraints, onStage)
             else -> Layers.noLayers
@@ -314,7 +301,7 @@ internal class SingleSourceAllocation(
         for (layerSnapshot in layers) {
             val layer = layerSnapshot.layer
             val lessThanPreferredHeight = layer.height < preferredHeight
-            val lessThanOrEqualMaxHeight = layer.height <= constraints.maxHeight
+            val lessThanOrEqualMaxHeight = layer.height <= constraints.maxHeight || !constraints.heightIsLimited()
             // If frame rate is unknown, consider it to be sufficient.
             val atLeastPreferredFps = layer.frameRate < 0 || layer.frameRate >= preferredFps
             if (lessThanPreferredHeight ||
@@ -339,16 +326,6 @@ internal class SingleSourceAllocation(
     }
 }
 
-private val noPreferredHeightAndFrameRate = Pair(-1, -1.0)
-
-/** Return the index of the first item in the list which satisfies a predicate, or -1 if none do. */
-private fun <T> List<T>.firstIndexWhich(predicate: (T) -> Boolean): Int {
-    forEachIndexed { index, item ->
-        if (predicate(item)) return index
-    }
-    return -1
-}
-
 /**
  * Returns the index of the last element of this list which satisfies the given predicate, or -1 if no elements do.
  */
@@ -356,4 +333,20 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
     var lastIndex = -1
     forEachIndexed { i, e -> if (predicate(e)) lastIndex = i }
     return lastIndex
+}
+
+/**
+ * Gets the "preferred" height and frame rate based on the constraints signaled from the receiver.
+ *
+ * For participants with sufficient maxHeight we favor frame rate over resolution. We consider all
+ * temporal layers for resolutions lower than the preferred, but for resolutions >= preferred, we only
+ * consider frame rates at least as high as the preferred. In practice this means we consider
+ * 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
+ */
+private fun getPreferred(constraints: VideoConstraints): VideoConstraints {
+    return if (constraints.maxHeight > 180 || !constraints.heightIsLimited()) {
+        VideoConstraints(config.onstagePreferredHeightPx(), config.onstagePreferredFramerate())
+    } else {
+        VideoConstraints.UNLIMITED
+    }
 }

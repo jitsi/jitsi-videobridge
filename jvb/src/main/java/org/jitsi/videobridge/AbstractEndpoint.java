@@ -20,14 +20,11 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.event.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.cc.allocation.*;
-import org.jitsi.xmpp.extensions.colibri.*;
 import org.json.simple.*;
 
-import java.io.*;
 import java.time.*;
 import java.util.*;
 
@@ -62,14 +59,9 @@ public abstract class AbstractEndpoint
     private final Conference conference;
 
     /**
-     * The map of receiver endpoint id -> video constraints.
-     */
-    private final ReceiverConstraintsMap receiverVideoConstraintsMap = new ReceiverConstraintsMap();
-
-    /**
      * The map of source name -> ReceiverConstraintsMap.
      */
-    private final Map<String, ReceiverConstraintsMap> receiverVideoConstraintsMapV2 = new HashMap<>();
+    private final Map<String, ReceiverConstraintsMap> receiverVideoConstraints = new HashMap<>();
 
     /**
      * The statistic Id of this <tt>Endpoint</tt>.
@@ -102,15 +94,6 @@ public abstract class AbstractEndpoint
 
     protected final EventEmitter<EventHandler> eventEmitter = new SyncEventEmitter<>();
 
-    /**
-     * The latest {@link VideoType} signaled by the endpoint (defaulting to {@code CAMERA} if nothing has been
-     * signaled).
-     *
-     * Deprecated: the video type has been moved to {@link MediaSourceDesc}.
-     */
-    @Deprecated
-    private VideoType videoType = VideoType.CAMERA;
-
     protected Map<String, VideoType> videoTypeCache = new HashMap<>();
 
     /**
@@ -128,29 +111,24 @@ public abstract class AbstractEndpoint
         this.id = Objects.requireNonNull(id, "id");
     }
 
-    /**
-     * Return the {@link VideoType} that the endpoint has advertised as available. This reflects the type of stream
-     * even when the stream is suspended (e.g. due to no receivers being subscribed to it).
-     *
-     * In other words, CAMERA or SCREENSHARE means that the endpoint has an available stream, which may be suspended.
-     * NONE means that the endpoint has signaled that it has no available streams.
-     *
-     * Note that when the endpoint has not advertised any video sources, the video type is necessarily {@code NONE}.
-     *
-     * Deprecated: use {@link MediaSourceDesc#getVideoType()} instead.
-     */
-    @NotNull
-    @Deprecated
-    public VideoType getVideoType()
+    public boolean hasVideoAvailable()
     {
-        if (getMediaSource() == null)
+        for (MediaSourceDesc source : getMediaSources())
         {
-            return VideoType.NONE;
+            if (source.getVideoType() != VideoType.NONE)
+            {
+                return true;
+            }
         }
-        return videoType;
+        if (videoTypeCache.values().stream().anyMatch(t -> t != VideoType.NONE))
+        {
+            // Video type cached for a source that hasn't been signaled yet.
+            return true;
+        }
+        return false;
     }
 
-    public void setVideoType(String sourceName, VideoType videoType)
+    public void setVideoType(@NotNull String sourceName, VideoType videoType)
     {
         MediaSourceDesc mediaSourceDesc = findMediaSourceDesc(sourceName);
 
@@ -176,18 +154,8 @@ public abstract class AbstractEndpoint
             if (videoType != null)
             {
                 mediaSourceDesc.setVideoType(videoType);
+                videoTypeCache.remove(mediaSourceDesc.getSourceName());
             }
-        }
-    }
-
-    // Use setVideoType(String sourceName, VideoType videoType) instead.
-    @Deprecated
-    public void setVideoType(VideoType videoType)
-    {
-        if (this.videoType != videoType)
-        {
-            this.videoType = videoType;
-            conference.getSpeechActivity().endpointVideoAvailabilityChanged();
         }
     }
 
@@ -218,9 +186,12 @@ public abstract class AbstractEndpoint
      * it hasn't advertised any video sources.
      */
     @Nullable
-    public abstract MediaSourceDesc getMediaSource();
+    protected MediaSourceDesc getMediaSource()
+    {
+        return Arrays.stream(getMediaSources()).findFirst().orElse(null);
+    }
 
-    protected MediaSourceDesc findMediaSourceDesc(String sourceName)
+    protected MediaSourceDesc findMediaSourceDesc(@NotNull String sourceName)
     {
         for (MediaSourceDesc desc : getMediaSources())
         {
@@ -248,6 +219,8 @@ public abstract class AbstractEndpoint
      *
      * @return the (unique) identifier/ID of this instance
      */
+    @NotNull
+    @Override
     public final String getId()
     {
         return id;
@@ -327,11 +300,6 @@ public abstract class AbstractEndpoint
      * Return true if this endpoint should expire (based on whatever logic is
      * appropriate for that endpoint implementation.
      *
-     * NOTE(brian): Currently the bridge will automatically expire an endpoint
-     * if all of its channel shims are removed. Maybe we should instead have
-     * this logic always be called before expiring instead? But that would mean
-     * that expiration in the case of channel removal would take longer.
-     *
      * @return true if this endpoint should expire, false otherwise
      */
     public abstract boolean shouldExpire();
@@ -362,16 +330,6 @@ public abstract class AbstractEndpoint
     public abstract void requestKeyframe();
 
     /**
-     * Describes this endpoint's transport in the given channel bundle XML
-     * element.
-     *
-     * @param channelBundle the channel bundle element to describe in.
-     */
-    public void describe(ColibriConferenceIQ.ChannelBundle channelBundle)
-    {
-    }
-
-    /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
@@ -380,46 +338,18 @@ public abstract class AbstractEndpoint
     {
         JSONObject debugState = new JSONObject();
 
-        if (MultiStreamConfig.config.getEnabled())
-        {
-            JSONObject receiverVideoConstraints = new JSONObject();
+        JSONObject receiverVideoConstraints = new JSONObject();
 
-            receiverVideoConstraintsMapV2.forEach(
-                    (sourceName, receiverConstraints) ->
-                            receiverVideoConstraints.put(sourceName, receiverConstraints.getDebugState()));
+        this.receiverVideoConstraints.forEach(
+                (sourceName, receiverConstraints) ->
+                        receiverVideoConstraints.put(sourceName, receiverConstraints.getDebugState()));
 
-            debugState.put("receiverVideoConstraints", receiverVideoConstraints);
-        }
-        else
-        {
-            debugState.put("receiverVideoConstraints", receiverVideoConstraintsMap.getDebugState());
-        }
-        debugState.put("maxReceiverVideoConstraints", maxReceiverVideoConstraints);
+        debugState.put("receiverVideoConstraints", receiverVideoConstraints);
+        debugState.put("maxReceiverVideoConstraintsMap", new HashMap<>(maxReceiverVideoConstraintsMap));
         debugState.put("expired", expired);
         debugState.put("statsId", statsId);
 
         return debugState;
-    }
-
-    /**
-     * Computes and sets the {@link #maxReceiverVideoConstraints} from the
-     * specified video constraints.
-     *
-     * @param newMaxHeight the maximum height resulting from the current set of constraints.
-     *                     (Currently we only support constraining the height, and not frame rate.)
-     */
-    private void receiverVideoConstraintsChanged(int newMaxHeight)
-    {
-        VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraints;
-
-
-        VideoConstraints newReceiverMaxVideoConstraints = new VideoConstraints(newMaxHeight, -1.0);
-
-        if (!newReceiverMaxVideoConstraints.equals(oldReceiverMaxVideoConstraints))
-        {
-            maxReceiverVideoConstraints = newReceiverMaxVideoConstraints;
-            sendVideoConstraints(newReceiverMaxVideoConstraints);
-        }
     }
 
     /**
@@ -430,7 +360,7 @@ public abstract class AbstractEndpoint
      * @param newMaxHeight the maximum height resulting from the current set of constraints.
      *                     (Currently we only support constraining the height, and not frame rate.)
      */
-    private void receiverVideoConstraintsChangedV2(String sourceName, int newMaxHeight)
+    private void receiverVideoConstraintsChanged(String sourceName, int newMaxHeight)
     {
         VideoConstraints oldReceiverMaxVideoConstraints = this.maxReceiverVideoConstraintsMap.get(sourceName);
 
@@ -487,28 +417,6 @@ public abstract class AbstractEndpoint
     sendVideoConstraintsV2(@NotNull String sourceName, @NotNull VideoConstraints maxVideoConstraints);
 
     /**
-     * Notifies this instance that a specified received wants to receive
-     * the specified video constraints from the endpoint attached to this
-     * instance (the sender).
-     *
-     * The receiver can be either another endpoint, or a remote bridge.
-     *
-     * @param receiverId the id that specifies the receiver endpoint
-     * @param newVideoConstraints the video constraints that the receiver
-     * wishes to receive.
-     */
-    public void addReceiver(String receiverId, VideoConstraints newVideoConstraints)
-    {
-        VideoConstraints oldVideoConstraints = receiverVideoConstraintsMap.put(receiverId, newVideoConstraints);
-        if (oldVideoConstraints == null || !oldVideoConstraints.equals(newVideoConstraints))
-        {
-            logger.debug(
-                () -> "Changed receiver constraints: " + receiverId + ": " + newVideoConstraints.getMaxHeight());
-            receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
-        }
-    }
-
-    /**
      * Notifies this instance that a specified received wants to receive the specified video constraints from the media
      * source with the given source name.
      *
@@ -518,18 +426,18 @@ public abstract class AbstractEndpoint
      * @param sourceName the name of the media source for which the constraints are to be applied.
      * @param newVideoConstraints the video constraints that the receiver wishes to receive.
      */
-    public void addReceiverV2(
+    public void addReceiver(
         @NotNull String receiverId,
         @NotNull String sourceName,
         @NotNull VideoConstraints newVideoConstraints
     )
     {
-        ReceiverConstraintsMap sourceConstraints = receiverVideoConstraintsMapV2.get(sourceName);
+        ReceiverConstraintsMap sourceConstraints = receiverVideoConstraints.get(sourceName);
 
         if (sourceConstraints == null)
         {
             sourceConstraints = new ReceiverConstraintsMap();
-            receiverVideoConstraintsMapV2.put(sourceName, sourceConstraints);
+            receiverVideoConstraints.put(sourceName, sourceConstraints);
         }
 
         VideoConstraints oldVideoConstraints = sourceConstraints.put(receiverId, newVideoConstraints);
@@ -539,7 +447,7 @@ public abstract class AbstractEndpoint
             logger.debug(
                 () -> "Changed receiver constraints: " + receiverId + "->" + sourceName + ": " +
                         newVideoConstraints.getMaxHeight());
-            receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
+            receiverVideoConstraintsChanged(sourceName, sourceConstraints.getMaxHeight());
         }
     }
 
@@ -552,27 +460,16 @@ public abstract class AbstractEndpoint
      */
     public void removeReceiver(String receiverId)
     {
-        if (MultiStreamConfig.config.getEnabled())
+        for (Map.Entry<String, ReceiverConstraintsMap> sourceConstraintsEntry
+                : receiverVideoConstraints.entrySet())
         {
-            for (Map.Entry<String, ReceiverConstraintsMap> sourceConstraintsEntry
-                    : receiverVideoConstraintsMapV2.entrySet())
-            {
-                String sourceName = sourceConstraintsEntry.getKey();
-                ReceiverConstraintsMap sourceConstraints = sourceConstraintsEntry.getValue();
+            String sourceName = sourceConstraintsEntry.getKey();
+            ReceiverConstraintsMap sourceConstraints = sourceConstraintsEntry.getValue();
 
-                if (sourceConstraints.remove(receiverId) != null)
-                {
-                    logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
-                    receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
-                }
-            }
-        }
-        else
-        {
-            if (receiverVideoConstraintsMap.remove(receiverId) != null)
+            if (sourceConstraints.remove(receiverId) != null)
             {
-                logger.debug(() -> "Removed receiver " + receiverId);
-                receiverVideoConstraintsChanged(receiverVideoConstraintsMap.getMaxHeight());
+                logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
+                receiverVideoConstraintsChanged(sourceName, sourceConstraints.getMaxHeight());
             }
         }
     }
@@ -586,14 +483,14 @@ public abstract class AbstractEndpoint
      */
     public void removeSourceReceiver(String receiverId, String sourceName)
     {
-        ReceiverConstraintsMap sourceConstraints = receiverVideoConstraintsMapV2.get(sourceName);
+        ReceiverConstraintsMap sourceConstraints = receiverVideoConstraints.get(sourceName);
 
         if (sourceConstraints != null)
         {
             if (sourceConstraints.remove(receiverId) != null)
             {
                 logger.debug(() -> "Removed receiver " + receiverId + " for " + sourceName);
-                receiverVideoConstraintsChangedV2(sourceName, sourceConstraints.getMaxHeight());
+                receiverVideoConstraintsChanged(sourceName, sourceConstraints.getMaxHeight());
             }
         }
     }

@@ -17,7 +17,6 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.videobridge.MultiStreamConfig
 import org.json.simple.JSONObject
 
 /**
@@ -29,16 +28,14 @@ class BandwidthAllocation @JvmOverloads constructor(
     val idealBps: Long = -1,
     val targetBps: Long = -1,
     /** Whether any of the requested sources were suspended (no layer at all was selected) due to BWE. */
-    val hasSuspendedSources: Boolean = false
+    private val suspendedSources: List<String> = emptyList()
 ) {
+    val hasSuspendedSources: Boolean = suspendedSources.isNotEmpty()
     val forwardedEndpoints: Set<String> =
         allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     val forwardedSources: Set<String> =
-        if (MultiStreamConfig.config.enabled)
-            allocations.filter { it.isForwarded() }.map { it.mediaSource?.sourceName!! }.toSet()
-        else
-            emptySet()
+        allocations.filter { it.isForwarded() }.mapNotNull { it.mediaSource?.sourceName }.toSet()
 
     /**
      * Whether the two allocations have the same endpoints and same layers.
@@ -55,19 +52,15 @@ class BandwidthAllocation @JvmOverloads constructor(
                 }
             }
 
-    /**
-     * Whether this allocation is forwarding a source from an endpoint with this ID.
-     */
-    fun isForwarding(epId: String): Boolean = forwardedEndpoints.contains(epId)
-
     override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
 
     val debugState: JSONObject
         get() = JSONObject().apply {
             put("idealBps", idealBps)
             put("targetBps", targetBps)
-            put("oversending", oversending.toString())
-            put("has_suspended_sources", hasSuspendedSources.toString())
+            put("oversending", oversending)
+            put("has_suspended_sources", hasSuspendedSources)
+            put("suspended_sources", suspendedSources)
         }
 }
 
@@ -91,7 +84,7 @@ data class SingleAllocation(
     constructor(endpoint: MediaSourceContainer, targetLayer: RtpLayerDesc? = null, idealLayer: RtpLayerDesc? = null) :
         this(
             endpoint.id,
-            if (endpoint.mediaSource != null) endpoint.mediaSource else endpoint.mediaSources.firstOrNull(),
+            endpoint.mediaSources.firstOrNull(),
             targetLayer,
             idealLayer
         )

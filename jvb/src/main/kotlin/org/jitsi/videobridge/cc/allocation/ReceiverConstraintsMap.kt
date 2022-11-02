@@ -32,7 +32,8 @@ class ReceiverConstraintsMap {
         synchronized(lock) {
             return map.put(key, value).also { removed ->
                 maxHeight = when {
-                    value.maxHeight >= maxHeight -> value.maxHeight
+                    value.maxHeight == -1 -> value.maxHeight
+                    maxHeight != -1 && value.maxHeight >= maxHeight -> value.maxHeight
                     value.maxHeight < maxHeight && removed?.maxHeight == maxHeight -> findNextMax(maxHeight)
                     else -> maxHeight
                 }
@@ -61,7 +62,7 @@ class ReceiverConstraintsMap {
         map.values.forEach { constraints ->
             if (constraints.maxHeight == oldMaxHeight) {
                 return oldMaxHeight
-            } else if (constraints.maxHeight > maxSeen) {
+            } else if (maxSeen >= 0 && (constraints.maxHeight > maxSeen || constraints.maxHeight == -1)) {
                 maxSeen = constraints.maxHeight
             }
         }

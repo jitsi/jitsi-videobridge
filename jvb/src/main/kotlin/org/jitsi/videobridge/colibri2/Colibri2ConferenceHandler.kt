@@ -30,7 +30,6 @@ import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.sctp.SctpManager
-import org.jitsi.videobridge.shim.IqProcessingException
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
@@ -45,7 +44,6 @@ import org.jitsi.xmpp.extensions.colibri2.MediaSource
 import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
-import org.jitsi.xmpp.extensions.jingle.ParameterPacketExtension
 import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
 import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
 import org.jitsi.xmpp.util.createError
@@ -60,7 +58,7 @@ class Colibri2ConferenceHandler(
     private val logger = createChildLogger(parentLogger)
 
     /**
-     * @return A pair with an IQ to be sent as a response, and a boolean incicating if the conference needs to be
+     * @return A pair with an IQ to be sent as a response, and a boolean indicating if the conference needs to be
      * expired.
      */
     fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
@@ -121,12 +119,6 @@ class Colibri2ConferenceHandler(
                     SourcePacketExtension().apply {
                         ssrc = conference.localAudioSsrc
                         name = "jvb-a0"
-                        addParameter(
-                            ParameterPacketExtension().apply {
-                                name = "msid"
-                                value = "mixedmslabel mixedlabelaudio0"
-                            }
-                        )
                     }
                 )
                 .build()
@@ -139,12 +131,6 @@ class Colibri2ConferenceHandler(
                     SourcePacketExtension().apply {
                         ssrc = conference.localVideoSsrc
                         name = "jvb-v0"
-                        addParameter(
-                            ParameterPacketExtension().apply {
-                                name = "msid"
-                                value = "mixedmslabel mixedlabelvideo0"
-                            }
-                        )
                     }
                 )
                 .build()
@@ -173,7 +159,8 @@ class Colibri2ConferenceHandler(
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
             val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
-            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames).apply {
+            val ssrcRewriting = sourceNames && c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
+            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames, ssrcRewriting).apply {
                 c2endpoint.statsId?.let {
                     statsId = it
                 }
@@ -229,14 +216,12 @@ class Colibri2ConferenceHandler(
             /* No need to put media in conference-modified. */
         }
 
-        endpoint.updateAcceptedMediaTypes(
-            acceptAudio = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
-                it.mediaType == MediaType.AUDIO
-            },
-            acceptVideo = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
-                it.mediaType == MediaType.VIDEO
-            }
-        )
+        endpoint.acceptAudio = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+            it.mediaType == MediaType.AUDIO
+        }
+        endpoint.acceptVideo = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {
+            it.mediaType == MediaType.VIDEO
+        }
 
         c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
         if (c2endpoint.create) {
@@ -277,6 +262,14 @@ class Colibri2ConferenceHandler(
                 MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
             }
             endpoint.mediaSources = newMediaSources.toTypedArray()
+
+            val audioSources: ArrayList<AudioSourceDesc> = ArrayList()
+            sources.mediaSources.filter { it.type == MediaType.AUDIO }.forEach {
+                it.sources.forEach { s ->
+                    audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id))
+                }
+            }
+            endpoint.audioSources = audioSources
         }
 
         c2endpoint.forceMute?.let {

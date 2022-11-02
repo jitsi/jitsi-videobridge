@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2021 - present 8x8, Inc.
+ * Copyright @ 2021-Present 8x8, Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge
+package org.jitsi.videobridge.colibri2
 
-import org.jitsi.config.JitsiConfig
-import org.jitsi.metaconfig.config
-import org.jitsi.metaconfig.from
+import org.jivesoftware.smack.packet.StanzaError
+import java.lang.Exception
 
-class MultiStreamConfig private constructor() {
-    val enabled: Boolean by config("videobridge.multi-stream.enabled".from(JitsiConfig.newConfig))
-
-    companion object {
-        @JvmField
-        val config = MultiStreamConfig()
-    }
+internal class IqProcessingException(
+    val condition: StanzaError.Condition,
+    message: String
+) : Exception(message) {
+    override fun toString() = "$condition $message"
 }

@@ -20,7 +20,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
 class MediaSourcesTest : ShouldSpec() {
-    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+    override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
     init {
         val mediaSources = MediaSources()
 
@@ -88,9 +88,7 @@ class MediaSourcesTest : ShouldSpec() {
     companion object {
         fun createSource(vararg ssrcs: Long): MediaSourceDesc {
             val encodings = Array(ssrcs.size) { i -> RtpEncodingDesc(ssrcs[i], i) }
-            val source = MediaSourceDesc(encodings)
-
-            return source
+            return MediaSourceDesc(encodings, sourceName = ssrcs.joinToString(","), owner = ssrcs.joinToString(","))
         }
     }
 }

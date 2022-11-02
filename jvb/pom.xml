@@ -17,6 +17,7 @@
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
+    <slf4j.version>1.7.32</slf4j.version>
   </properties>
 
   <profiles>
@@ -114,7 +115,12 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.32</version>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-jdk14</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -131,11 +137,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-metrics</artifactId>
-    </dependency>
-    <!-- Note that this is not part of jitsi/jitsi, and it has a separate version. -->
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-stats</artifactId>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

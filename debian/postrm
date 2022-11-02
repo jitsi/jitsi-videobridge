@@ -15,7 +15,7 @@ case "$1" in
 
         # and then remove the user
         if getent passwd jvb > /dev/null ; then
-            deluser jvb
+            deluser jvb || true
         fi
 
         # clear logs
@@ -31,7 +31,7 @@ case "$1" in
         rm -rf /usr/share/jitsi-videobridge/.sip-communicator
 
         # make sure we remove keys we used ('jitsi-videobridge/jvb-hostname')
-        db_unregister jitsi-videobridge/jvb-hostname
+        db_unregister jitsi-videobridge/jvb-hostname || true
     ;;
 
     remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

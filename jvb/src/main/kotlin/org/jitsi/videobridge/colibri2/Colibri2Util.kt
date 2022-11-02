@@ -20,18 +20,23 @@ import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
 
-fun createConferenceAlreadyExistsError(iq: IQ, conferenceId: String, colibri2: Boolean) = createError(
+fun createConferenceAlreadyExistsError(iq: IQ, conferenceId: String) = createError(
     iq,
-    // Jicofo's colibri1 impl requires a bad_request
-    if (colibri2) StanzaError.Condition.conflict else StanzaError.Condition.bad_request,
+    StanzaError.Condition.conflict,
     "Conference already exists for ID: $conferenceId",
-    if (colibri2) Colibri2Error(Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS) else null
+    Colibri2Error(Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS)
 )
 
-fun createConferenceNotFoundError(iq: IQ, conferenceId: String, colibri2: Boolean) = createError(
+fun createConferenceNotFoundError(iq: IQ, conferenceId: String) = createError(
     iq,
-    // Jicofo's colibri1 impl requires a bad_request
-    if (colibri2) StanzaError.Condition.item_not_found else StanzaError.Condition.bad_request,
+    StanzaError.Condition.item_not_found,
     "Conference not found for ID: $conferenceId",
-    if (colibri2) Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND) else null
+    Colibri2Error(Colibri2Error.Reason.CONFERENCE_NOT_FOUND)
+)
+
+fun createGracefulShutdownErrorResponse(iq: IQ): IQ = createError(
+    iq,
+    StanzaError.Condition.service_unavailable,
+    "In graceful shutdown",
+    Colibri2Error(Colibri2Error.Reason.GRACEFUL_SHUTDOWN)
 )

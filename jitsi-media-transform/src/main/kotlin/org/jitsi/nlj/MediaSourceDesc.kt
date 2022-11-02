@@ -49,11 +49,11 @@ class MediaSourceDesc
      * A string which identifies the owner of this source (e.g. the endpoint
      * which is the sender of the source).
      */
-    val owner: String? = null,
+    val owner: String,
     /**
      * A string which identifies this source.
      */
-    val sourceName: String? = null,
+    val sourceName: String,
     /**
      * The {@link VideoType} signaled for this media source (defaulting to {@code CAMERA} if nothing has been signaled).
      */
@@ -165,10 +165,8 @@ class MediaSourceDesc
         Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() }, this.owner, this.sourceName, this.videoType
     )
 
-    override fun toString(): String = buildString {
-        append("MediaSourceDesc ").append(hashCode()).append(" has encodings:\n  ")
-        append(rtpEncodings.joinToString(separator = "\n  "))
-    }
+    override fun toString(): String = "MediaSourceDesc[name=$sourceName owner=$owner, videoType=$videoType, " +
+        "encodings=${rtpEncodings.joinToString(",")}]"
 
     /**
      * Checks whether the given SSRC matches this source's [primarySSRC].
