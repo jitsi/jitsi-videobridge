@@ -49,6 +49,7 @@ import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
 import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
+import org.jivesoftware.smackx.muc.MUCRole
 
 class Colibri2ConferenceHandler(
     private val conference: Conference,
@@ -159,7 +160,13 @@ class Colibri2ConferenceHandler(
             )
             val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
             val ssrcRewriting = sourceNames && c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
-            conference.createLocalEndpoint(c2endpoint.id, transport.iceControlling, sourceNames, ssrcRewriting).apply {
+            conference.createLocalEndpoint(
+                c2endpoint.id,
+                transport.iceControlling,
+                sourceNames,
+                ssrcRewriting,
+                c2endpoint.mucRole == MUCRole.visitor
+            ).apply {
                 c2endpoint.statsId?.let {
                     statsId = it
                 }
@@ -232,6 +239,13 @@ class Colibri2ConferenceHandler(
         }
 
         c2endpoint.sources?.let { sources ->
+            if (endpoint.visitor && sources.mediaSources.isNotEmpty()) {
+                throw IqProcessingException(
+                    Condition.bad_request,
+                    "Attempt to set sources for visitor endpoint ${c2endpoint.id}"
+                )
+            }
+
             sources.mediaSources.forEach { mediaSource ->
                 mediaSource.sources.forEach {
                     endpoint.addReceiveSsrc(it.ssrc, mediaSource.type)

@@ -702,7 +702,12 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
-    public Endpoint createLocalEndpoint(String id, boolean iceControlling, boolean sourceNames, boolean doSsrcRewriting)
+    public Endpoint createLocalEndpoint(
+            String id,
+            boolean iceControlling,
+            boolean sourceNames,
+            boolean doSsrcRewriting,
+            boolean visitor)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -710,8 +715,8 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames, doSsrcRewriting);
-        videobridge.localEndpointCreated();
+        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames, doSsrcRewriting, visitor);
+        videobridge.localEndpointCreated(visitor);
 
         subscribeToEndpointEvents(endpoint);
 
@@ -961,7 +966,7 @@ public class Conference
             // The removed endpoint was a local Endpoint as opposed to a RelayedEndpoint.
             updateEndpointsCache();
             endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
-            videobridge.localEndpointExpired();
+            videobridge.localEndpointExpired(((Endpoint) removedEndpoint).getVisitor());
         }
 
         relaysById.forEach((i, relay) -> relay.endpointExpired(id));

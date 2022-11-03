@@ -23,6 +23,7 @@ import io.kotest.inspectors.forAny
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -39,11 +40,17 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val executor = FakeScheduledExecutorService()
     val localEp1: Endpoint = mockk {
         every { id } returns "1"
+        every { visitor } returns false
     }
     val localEp2: Endpoint = mockk {
         every { id } returns "2"
+        every { visitor } returns false
     }
-    val eps = listOf(localEp1, localEp2)
+    val localEp3: Endpoint = mockk {
+        every { id } returns "3"
+        every { visitor } returns true
+    }
+    val eps = listOf(localEp1, localEp2, localEp3)
 
     val broadcastMessage = slot<EndpointConnectionStatusMessage>()
     val broadcastSendToRelays = slot<Boolean>()
@@ -102,7 +109,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 }
                 clock.elapse(1.mins)
                 executor.runOne()
-                should("fire broadcast events for the local endpoints") {
+                should("fire broadcast events for the non-visitor local endpoints") {
                     sendMessageCalls.shouldBeEmpty()
                     broadcastCalls shouldHaveSize 2
                     broadcastCalls.forAny { (msg, sendToRelays) ->
@@ -115,6 +122,9 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                         sendToRelays shouldBe true
                         msg.endpoint shouldBe "2"
                         msg.active shouldBe "false"
+                    }
+                    broadcastCalls.forAll { (msg, sendToOcto) ->
+                        msg.endpoint shouldNotBe "3"
                     }
                 }
                 context("and then become active") {
@@ -137,6 +147,9 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                             msg.endpoint shouldBe "2"
                             msg.active shouldBe "true"
                         }
+                        broadcastCalls.forAll { (msg, sendToOcto) ->
+                            msg.endpoint shouldNotBe "3"
+                        }
                     }
                 }
             }
@@ -157,7 +170,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
             context("but not within maxInactivityLimit") {
                 clock.elapse(1.mins)
                 executor.runOne()
-                should("fire inactive events") {
+                should("fire inactive events for non-visitor endpoints") {
                     sendMessageCalls.shouldBeEmpty()
                     broadcastCalls shouldHaveSize 2
                     broadcastCalls.forAny { (msg, sendToRelays) ->
@@ -169,6 +182,9 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                         sendToRelays shouldBe true
                         msg.endpoint shouldBe "2"
                         msg.active shouldBe "false"
+                    }
+                    broadcastCalls.forAll { (msg, sendToOcto) ->
+                        msg.endpoint shouldNotBe "3"
                     }
                 }
                 context("but then one becomes active") {
@@ -188,7 +204,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                 context("and then a new ep joins") {
                     every { conference.getLocalEndpoint("4") } returns mockk() { every { id } returns "4" }
                     monitor.endpointConnected("4")
-                    should("update the new endpoint of the other endpoints' statuses") {
+                    should("update the new endpoint of the other non-visitor endpoints' statuses") {
                         sendMessageCalls shouldHaveSize 2
                         sendMessageCalls.forAll { (_, destEps, sendToRelays) ->
                             destEps shouldHaveSize 1
@@ -202,6 +218,9 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                         sendMessageCalls.forAny { (msg, _, _) ->
                             msg.endpoint shouldBe "2"
                             msg.active shouldBe "false"
+                        }
+                        sendMessageCalls.forAll { (msg, _, _) ->
+                            msg.endpoint shouldNotBe "3"
                         }
                     }
                 }

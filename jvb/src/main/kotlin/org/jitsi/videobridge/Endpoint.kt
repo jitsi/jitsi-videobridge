@@ -110,6 +110,10 @@ class Endpoint @JvmOverloads constructor(
     iceControlling: Boolean,
     private val isUsingSourceNames: Boolean,
     private val doSsrcRewriting: Boolean,
+    /**
+     * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
+     */
+    val visitor: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -317,6 +321,9 @@ class Endpoint @JvmOverloads constructor(
         setupDtlsTransport()
 
         conference.videobridge.statistics.totalEndpoints.inc()
+        if (visitor) {
+            conference.videobridge.statistics.totalVisitors.inc()
+        }
 
         logger.info("Created new endpoint isUsingSourceNames=$isUsingSourceNames, iceControlling=$iceControlling")
     }
@@ -796,6 +803,12 @@ class Endpoint @JvmOverloads constructor(
      * transceiver's incoming pipeline.
      */
     fun handleIncomingPacket(packetInfo: PacketInfo) {
+        if (visitor) {
+            /* Never forward RTP/RTCP from a visitor. */
+            ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
+            return
+        }
+
         packetInfo.endpointId = id
         conference.handleIncomingPacket(packetInfo)
     }
@@ -1072,6 +1085,7 @@ class Endpoint @JvmOverloads constructor(
             put("transceiver", transceiver.getNodeStats().toJson())
             put("acceptAudio", acceptAudio)
             put("acceptVideo", acceptVideo)
+            put("visitor", visitor)
             put("messageTransport", messageTransport.debugState)
             if (doSsrcRewriting) {
                 put("audioSsrcs", audioSsrcs.getDebugState())

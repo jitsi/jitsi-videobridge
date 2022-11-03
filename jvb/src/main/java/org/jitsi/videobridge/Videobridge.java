@@ -235,14 +235,23 @@ public class Videobridge
         return conference;
     }
 
-    void localEndpointCreated()
+    void localEndpointCreated(boolean visitor)
     {
         statistics.currentLocalEndpoints.inc();
+        if (visitor)
+        {
+            statistics.currentVisitors.inc();
+        }
     }
 
-    void localEndpointExpired()
+    void localEndpointExpired(boolean visitor)
     {
         long remainingEndpoints = statistics.currentLocalEndpoints.decAndGet();
+        if (visitor)
+        {
+            statistics.currentVisitors.dec();
+        }
+
         if (remainingEndpoints < 0)
         {
             logger.warn("Invalid endpoint count " + remainingEndpoints + ". Disabling endpoint-count based shutdown!");
@@ -969,6 +978,13 @@ public class Videobridge
                 "The total number of endpoints created.");
 
         /**
+         * The total number of visitor endpoints.
+         */
+        public CounterMetric totalVisitors = VideobridgeMetricsContainer.getInstance().registerCounter(
+                "visitors",
+                "The total number of visitor endpoints created.");
+
+        /**
          * The number of endpoints which had not established an endpoint
          * message transport even after some delay.
          */
@@ -1056,6 +1072,14 @@ public class Videobridge
         public LongGaugeMetric currentLocalEndpoints = VideobridgeMetricsContainer.getInstance().registerLongGauge(
                 "local_endpoints",
                 "Number of local endpoints that exist currently."
+        );
+
+        /**
+         * Number of visitor endpoints that exist currently.
+         */
+        public LongGaugeMetric currentVisitors = VideobridgeMetricsContainer.getInstance().registerLongGauge(
+                "current_visitors",
+                "Number of visitor endpoints."
         );
 
         /**
