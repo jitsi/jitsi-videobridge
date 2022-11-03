@@ -238,11 +238,20 @@ public class Videobridge
     void localEndpointCreated(boolean visitor)
     {
         statistics.currentLocalEndpoints.inc();
+        if (visitor)
+        {
+            statistics.currentVisitors.inc();
+        }
     }
 
     void localEndpointExpired(boolean visitor)
     {
         long remainingEndpoints = statistics.currentLocalEndpoints.decAndGet();
+        if (visitor)
+        {
+            statistics.currentVisitors.dec();
+        }
+
         if (remainingEndpoints < 0)
         {
             logger.warn("Invalid endpoint count " + remainingEndpoints + ". Disabling endpoint-count based shutdown!");
