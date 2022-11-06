@@ -19,6 +19,7 @@ package org.jitsi.videobridge.transport.dtls
 import org.jitsi.nlj.dtls.DtlsClient
 import org.jitsi.nlj.dtls.DtlsServer
 import org.jitsi.nlj.dtls.DtlsStack
+import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
@@ -159,6 +160,7 @@ class DtlsTransport(parentLogger: Logger) {
         }
         fingerprintPE.fingerprint = dtlsStack.localFingerprint
         fingerprintPE.hash = dtlsStack.localFingerprintHashFunction
+        fingerprintPE.cryptex = SrtpConfig.cryptex
     }
 
     /**

@@ -30,6 +30,7 @@ import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -130,6 +131,8 @@ class Endpoint @JvmOverloads constructor(
     /* TODO: do we ever want to support useUniquePort for an Endpoint? */
     private val iceTransport = IceTransport(id, iceControlling, false, logger)
     private val dtlsTransport = DtlsTransport(logger)
+
+    private var cryptex: Boolean = false
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {
         put("endpoint_id", id)
@@ -417,7 +420,7 @@ class Endpoint @JvmOverloads constructor(
                 keyingMaterial: ByteArray
             ) {
                 logger.info("DTLS handshake complete")
-                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
+                transceiver.setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial, cryptex)
                 // TODO(brian): the old code would work even if the sctp connection was created after
                 //  the handshake had completed, but this won't (since this is a one-time event).  do
                 //  we need to worry about that case?
@@ -768,6 +771,9 @@ class Endpoint @JvmOverloads constructor(
                 remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
             } else {
                 logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
+            }
+            if (SrtpConfig.cryptex) {
+                cryptex = cryptex || fingerprintExtension.cryptex
             }
         }
         dtlsTransport.setRemoteFingerprints(remoteFingerprints)

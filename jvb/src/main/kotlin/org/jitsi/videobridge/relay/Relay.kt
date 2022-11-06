@@ -30,6 +30,7 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -145,6 +146,8 @@ class Relay @JvmOverloads constructor(
 
     private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger, clock)
     private val dtlsTransport = DtlsTransport(logger)
+
+    private var cryptex = false
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {
         put("relay_id", id)
@@ -357,6 +360,7 @@ class Relay @JvmOverloads constructor(
             srtpProfileInfo,
             keyingMaterial,
             tlsRole,
+            cryptex,
             logger
         )
         this.srtpTransformers = srtpTransformers
@@ -383,6 +387,10 @@ class Relay @JvmOverloads constructor(
                 remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
             } else {
                 logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
+            }
+
+            if (SrtpConfig.cryptex) {
+                cryptex = cryptex || fingerprintExtension.cryptex
             }
         }
         dtlsTransport.setRemoteFingerprints(remoteFingerprints)
