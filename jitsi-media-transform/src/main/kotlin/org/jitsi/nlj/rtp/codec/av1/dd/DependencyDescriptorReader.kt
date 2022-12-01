@@ -147,7 +147,7 @@ class DependencyDescriptorReader(
     ) {
         val templateIndex =
             (frameDependencyTemplateId + DependencyDescriptor.kMaxTemplates - structure.structureId) %
-                DependencyDescriptor.kMaxTemplates
+                    DependencyDescriptor.kMaxTemplates
 
         check(templateIndex < structure.templates.size) { "template index $templateIndex overflow" }
 
