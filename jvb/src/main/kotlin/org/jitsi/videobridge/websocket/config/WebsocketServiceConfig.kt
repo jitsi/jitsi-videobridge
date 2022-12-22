@@ -42,6 +42,15 @@ class WebsocketServiceConfig private constructor() {
         }
     }
 
+    private val relayDomainProp: String? by optionalconfig {
+        onlyIf("Websockets are enabled", ::enabled) {
+            "videobridge.websockets.relay-domain".from(JitsiConfig.newConfig)
+        }
+    }
+
+    val relayDomain: String
+        get() = relayDomainProp ?: domain
+
     /**
      * Whether the "wss" or "ws" protocol should be used for websockets
      */

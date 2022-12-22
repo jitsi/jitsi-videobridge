@@ -39,7 +39,7 @@ class ColibriWebSocketService(
             val protocol = if (useTls) "wss" else "ws"
             baseUrl = "$protocol://${config.domain}/$COLIBRI_WS_ENDPOINT/${config.serverId}"
             relayUrl = if (RelayConfig.config.enabled) {
-                "$protocol://${config.domain}/$COLIBRI_RELAY_WS_ENDPOINT/${config.serverId}"
+                "$protocol://${config.relayDomain}/$COLIBRI_RELAY_WS_ENDPOINT/${config.serverId}"
             } else {
                 null
             }
