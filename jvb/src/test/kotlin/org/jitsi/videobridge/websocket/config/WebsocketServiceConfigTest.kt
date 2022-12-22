@@ -31,6 +31,9 @@ class WebsocketServiceConfigTest : ConfigTest() {
                     shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
                         config.domain
                     }
+                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
+                        config.relayDomain
+                    }
                 }
                 context("accessing useTls should throw") {
                     shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
@@ -40,11 +43,14 @@ class WebsocketServiceConfigTest : ConfigTest() {
             }
         }
         context("when websockets are enabled") {
-            context("accessing domain") {
+            context("accessing domain and relay-domain") {
                 withNewConfig(newConfigWebsocketsEnabledDomain) {
-                    should("get the right value") {
-                        config.domain shouldBe "new_domain"
-                    }
+                    config.domain shouldBe "new_domain"
+                    config.relayDomain shouldBe "new_domain"
+                }
+                withNewConfig(newConfigWebsocketsEnabledDomainAndRelayDomain) {
+                    config.domain shouldBe "new_domain"
+                    config.relayDomain shouldBe "relay_domain"
                 }
             }
             context("accessing useTls") {
@@ -72,6 +78,10 @@ private val newConfigWebsocketsEnabled = """
 
 private val newConfigWebsocketsEnabledDomain = newConfigWebsocketsEnabled + "\n" + """
     videobridge.websockets.domain = "new_domain"
+""".trimIndent()
+
+private val newConfigWebsocketsEnabledDomainAndRelayDomain = newConfigWebsocketsEnabledDomain + "\n" + """
+    videobridge.websockets.relay-domain = "relay_domain"
 """.trimIndent()
 
 private val newConfigWebsocketsEnableduseTls = newConfigWebsocketsEnabled + "\n" + """
