@@ -36,3 +36,18 @@ JVB_CONFIG_FILE="$JVB_CONFIG_DIR_LOCATION/$JVB_JVB_CONFIG_DIR_NAME/jvb.conf"
 
 mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.MainKt -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=$JVB_CONFIG_DIR_LOCATION -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=$JVB_CONFIG_DIR_NAME -Dconfig.file=$JVB_CONFIG_.FILE"
 ```
+
+# Configuration
+Application level configuration comes from a config file, usually installed in `/etc/jitsi/videobridge/jvb.conf`. The
+values in that file override the defaults defined in
+[reference.conf](https://github.com/jitsi/ice4j/blob/master/src/main/resources/reference.conf).
+
+## Debian
+On debian systems the `/etc/jitsi/videobridge/config` file can be used to set configuration for the Java virtual machine.
+Notable examples:
+```commandline
+# Increase the java heap to 8GB
+VIDEOBRIDGE_MAX_MEMORY=8192m
+# Change the garbage collector (defaults to G1GC)
+VIDEOBRIDGE_GC_TYPE=G1GC
+```
