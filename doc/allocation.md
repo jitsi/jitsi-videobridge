@@ -59,7 +59,7 @@ and encodes a single high-resolution stream. Given enough bandwidth, the stream 
 signaled low constraints.
 
 ## Implementation
-The bandwidth allocation algorithm is implemented in [BandwidthAllocator](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/java/org/jitsi/videobridge/cc/allocation/BandwidthAllocator.java).
+The bandwidth allocation algorithm is implemented in [BandwidthAllocator](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/kotlin/org/jitsi/videobridge/cc/allocation/BandwidthAllocator.kt)
 
 It consists of 3 phases:
 ### 1. Prioritize
@@ -92,8 +92,8 @@ A) The ones with resolution and frame rate higher than the constraints
 
 B) The ones which are inactive (the sending endpoint is currently not transmitting them)
 
-C) Layers with high resolution but insufficient frame rate, that is at least the [preferred resolution](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L40),
-and frame rate less than the [preferred frame rate](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L41).
+C) Layers with high resolution but insufficient frame rate, that is at least the [preferred resolution](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L41),
+and frame rate less than the [preferred frame rate](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L42).
 For example, with the defaults of preferred resolution 360p and preferred frame rate 30 fps, the following layers will
 not be considered: 360p/7.5fps, 360p/15fps, 720p/7.5fps, 720p/15fps.
 
@@ -114,7 +114,7 @@ This section describes the signaling between the client and the bridge that affe
 The receiver's video constraint message is used to signal the preference of the client in regard to which media streams
 it wants to receive. Usually only a portion of all available videos is displayed on the client. Each video is identified
 by a source name and each endpoint can send multiple videos. The default format used in jitsi-meet follows a pattern
-where the first part is the endpoint ID followed by '-v' and the zero based index of the video source (see the example
+where the first part is the endpoint ID followed by '-v' and the zero-based index of the video source (see the example
 below).
 
 ```json
@@ -136,7 +136,7 @@ changed.
 
 The `defaultConstraints` are used for sources not explicitly included in `constraints` (including new sources).
 
-The initial values are `lastN: -1` (unlimited), `strategy: StaveView`, `defaultConstraints: {maxHeight: 180}`
+The initial values are `lastN: -1` (unlimited), `defaultConstraints: {maxHeight: 180}`
 ([configurable](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L38)),
 and the rest empty.
 
@@ -291,7 +291,7 @@ remember to do that yourself.
 <iq xmlns='jabber:client' to='jvbbrewery@internal-muc.meet.jitsi/jvb1' id='VFLJ9-10' type='get'>
    <conference-modify xmlns='jitsi:colibri2' meeting-id='62a5bc4c-c79c-4eab-a071-6740eb549296'>
        <endpoint xmlns='jitsi:colibri2' id='fefbee3e' create='true' >
-           <capability name='source-names'/> <---- SOURCE NAME CAPABILITY
+           <capability name='source-names'/> <!--- SOURCE NAME CAPABILITY -->
            <media type='audio'>
                ...
            </media>
