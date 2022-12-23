@@ -101,7 +101,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-metaconfig</artifactId>
-                <version>1.0-9-g5e1b624</version>
+                <version>1.0-11-g8cf950e</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
