@@ -1,0 +1,72 @@
+videobridge {
+    ice {
+        udp {
+            port = 10000
+        }
+        advertise-private-candidates = true
+    }
+    apis {
+        xmpp-client {
+            configs {
+
+                shard0 {
+                    HOSTNAME = "localhost"
+                    PORT = "5222"
+                    DOMAIN = "auth.meet.jitsi"
+                    USERNAME = "jvb"
+                    PASSWORD = "1d94cb1ad2a8eb6a2ffde0f89dee15b2"
+                    MUC_JIDS = "jvbbrewery@internal-muc.meet.jitsi"
+                    MUC_NICKNAME = "bcae248fa1a4"
+                    DISABLE_CERTIFICATE_VERIFICATION = true
+                }
+}
+        }
+        rest {
+            enabled = false
+        }
+    }
+    rest {
+        shutdown {
+            enabled = false
+        }
+    }
+    stats {
+        enabled = true
+    }
+    websockets {
+        enabled = true
+        domain = "localhost:9090"
+        tls = false
+        server-id = "127.0.0.1"
+    }
+    multi-stream {
+        enabled = false
+    }
+    http-servers {
+        private {
+          host = 0.0.0.0
+        }
+        public {
+            host = 0.0.0.0
+            port = 9090
+        }
+    }
+
+    }
+
+ice4j {
+    harvest {
+        mapping {
+            stun {
+addresses = [ "meet-jit-si-turnrelay.jitsi.net:443" ]
+}
+            static-mappings = [
+{
+                    local-address = "127.0.0.1"
+                    public-address = ""
+                    name = "ip-0"
+                },
+]
+        }
+    }
+}

@@ -133,6 +133,13 @@
             <version>2.3.1</version>
             <scope>test</scope>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jcodec/jcodec -->
+        <dependency>
+            <groupId>org.jcodec</groupId>
+            <artifactId>jcodec</artifactId>
+            <version>0.2.5</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
