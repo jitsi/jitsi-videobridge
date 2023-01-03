@@ -17,5 +17,3 @@ The REST API allows querying Videobridge whether it deems itself in a healthy st
     </td>
   </tr>
 </table>
-
-To enable the REST API, start Videobridge with the command line argument <code>--apis=rest</code> (or <code>--apis=rest,xmpp</code> to enable the XMPP API as well).
