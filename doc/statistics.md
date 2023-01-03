@@ -32,7 +32,7 @@ curl 0:8080/metrics -H 'Accept: application/json'
 # XMPP MUC
 The statistics can also be published periodically via XMPP (which allows jicofo to monitor a set of bridges and perform
 load balancing, or allows an application to monitor the MUC and collect metrics from multiple bridges). In this case the
-key-vlue pairs are represented in XML format with a `stats` element like this:
+key-value pairs are represented in XML format with a `stats` element like this:
 ```xml
 <stats xmlns=' http://jitsi.org/protocol/colibri'>
 	<stat value='value' name='key'/>
