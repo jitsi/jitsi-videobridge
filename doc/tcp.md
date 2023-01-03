@@ -16,7 +16,7 @@ ICE/TCP is configured in the `videobridge.ice.tcp` section in `jvb.conf`.
 
 By default TCP support is disabled. When enabled, the default is to
 use port 443 with fallback to port 4443. A fallback would occur in
-case something else, like a web server is already listening on 
+case something else, like a web server, is already listening on
 port 443. Note, however, that the very point of using TCP is to
 simulate HTTP traffic in a number of environments where it is the
 only allowed form of communication, so you may want to make sure that 

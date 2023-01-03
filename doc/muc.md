@@ -1,5 +1,5 @@
 # Intro
-When the XMPP API is enabled jitsi-videobridge uses an XMPP client connection and advertisers presence in a Multi-User
+When the XMPP API is enabled jitsi-videobridge uses an XMPP client connection and advertises presence in a Multi-User
 Chat (MUC) room.
 
 With this mode a jitsi-videobridge instance can connect to a set of XMPP servers, and new servers 
@@ -17,7 +17,7 @@ We recommend using a separate XMPP domain, not accessible by anonymous users.
 See the [jitsi-meet-prosody postinst
 script](https://github.com/jitsi/jitsi-meet/blob/master/debian/jitsi-meet-prosody.postinst)
 for a full example. It is also possible to use a completely separate XMPP server accessible only to jitsi-videobridge
-and jicofo (not publically accessible at all).
+and jicofo (not publicly accessible at all).
 
 # Jicofo configuration
 To make use of the MUC mode in the bridge, jicofo needs to be configured to
