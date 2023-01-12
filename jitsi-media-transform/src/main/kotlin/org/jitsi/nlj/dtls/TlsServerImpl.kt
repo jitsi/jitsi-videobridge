@@ -101,8 +101,7 @@ class TlsServerImpl(
 
     override fun getCipherSuites(): IntArray {
         return intArrayOf(
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
         )
     }
 
@@ -132,15 +131,7 @@ class TlsServerImpl(
     override fun getCertificateRequest(): CertificateRequest {
         val signatureAlgorithms = Vector<SignatureAndHashAlgorithm>(1)
         signatureAlgorithms.add(SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa))
-        signatureAlgorithms.add(SignatureAndHashAlgorithm(HashAlgorithm.sha1, SignatureAlgorithm.rsa))
         return when (context.clientVersion) {
-            ProtocolVersion.DTLSv10 -> {
-                CertificateRequest(
-                    shortArrayOf(ClientCertificateType.rsa_sign),
-                    null,
-                    null
-                )
-            }
             ProtocolVersion.DTLSv12 -> {
                 CertificateRequest(
                     shortArrayOf(ClientCertificateType.ecdsa_sign),
