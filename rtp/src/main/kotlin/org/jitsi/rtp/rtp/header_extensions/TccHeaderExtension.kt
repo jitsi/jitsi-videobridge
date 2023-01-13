@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2023 present Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,18 +34,18 @@ class TccHeaderExtension {
         const val DATA_SIZE_BYTES = 2
 
         fun getSequenceNumber(ext: RtpPacket.HeaderExtension): Int =
-            getSequenceNumber(ext.currExtBuffer, ext.currExtOffset)
+            getSequenceNumber(ext.currExtBuffer, ext.currExtOffset, ext.getHeaderSize())
         fun setSequenceNumber(ext: RtpPacket.HeaderExtension, tccSeqNum: Int) {
-            setSequenceNumber(ext.currExtBuffer, ext.currExtOffset, tccSeqNum)
+            setSequenceNumber(ext.currExtBuffer, ext.currExtOffset, tccSeqNum, ext.getHeaderSize())
         }
 
         /**
          * [offset] into [buf] is the start of this entire extension (not the data section)
          */
-        fun getSequenceNumber(buf: ByteArray, offset: Int): Int =
-            buf.getShortAsInt(offset + RtpPacket.HEADER_EXT_HEADER_SIZE)
-        fun setSequenceNumber(buf: ByteArray, offset: Int, seqNum: Int) {
-            buf.putShort(offset + RtpPacket.HEADER_EXT_HEADER_SIZE, seqNum.toShort())
+        fun getSequenceNumber(buf: ByteArray, offset: Int, headerExtensionHeaderSize: Int): Int =
+            buf.getShortAsInt(offset + headerExtensionHeaderSize)
+        fun setSequenceNumber(buf: ByteArray, offset: Int, seqNum: Int, headerExtensionHeaderSize: Int) {
+            buf.putShort(offset + headerExtensionHeaderSize, seqNum.toShort())
         }
     }
 }

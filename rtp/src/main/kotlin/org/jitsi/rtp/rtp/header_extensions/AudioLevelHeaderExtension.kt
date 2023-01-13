@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2023 Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,16 +35,18 @@ class AudioLevelHeaderExtension {
     companion object {
         private const val AUDIO_LEVEL_MASK = 0x7F.toByte()
 
-        fun getAudioLevel(ext: RtpPacket.HeaderExtension): Int = getAudioLevel(ext.currExtBuffer, ext.currExtOffset)
+        fun getAudioLevel(ext: RtpPacket.HeaderExtension): Int =
+            getAudioLevel(ext.currExtBuffer, ext.currExtOffset, ext.getHeaderSize())
 
         /**
          * [offset] into [buf] is the start of this entire extension (not the data section)
          */
-        fun getAudioLevel(buf: ByteArray, offset: Int): Int =
-            (buf[offset + RtpPacket.HEADER_EXT_HEADER_SIZE] and AUDIO_LEVEL_MASK).toPositiveInt()
+        fun getAudioLevel(buf: ByteArray, offset: Int, headerExtensionHeaderSize: Int): Int =
+            (buf[offset + headerExtensionHeaderSize] and AUDIO_LEVEL_MASK).toPositiveInt()
 
-        fun getVad(ext: RtpPacket.HeaderExtension): Boolean = getVad(ext.currExtBuffer, ext.currExtOffset)
-        fun getVad(buf: ByteArray, offset: Int): Boolean =
-            (buf[offset + RtpPacket.HEADER_EXT_HEADER_SIZE].toInt() and 0x80) != 0
+        fun getVad(ext: RtpPacket.HeaderExtension): Boolean =
+            getVad(ext.currExtBuffer, ext.currExtOffset, ext.getHeaderSize())
+        fun getVad(buf: ByteArray, offset: Int, headerExtensionHeaderSize: Int): Boolean =
+            (buf[offset + headerExtensionHeaderSize].toInt() and 0x80) != 0
     }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2023 Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +18,7 @@
 package org.jitsi.rtp.rtp.header_extensions
 
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
+import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getShortAsInt
 import kotlin.experimental.and
 import kotlin.experimental.or
@@ -26,13 +28,19 @@ class HeaderExtensionHelpers {
         const val MINIMUM_EXT_SIZE_BYTES = 2
         // The size of a one-byte header extension header
         const val EXT_HEADER_SIZE_BYTES = 1
+        const val TWO_BYTE_EXT_HEADER_SIZE_BYTES = 2
         // The size of the header extension block header
         const val TOP_LEVEL_EXT_HEADER_SIZE_BYTES = 4
 
-        fun getId(buf: ByteArray, offset: Int): Int =
-            (buf.get(offset).toInt() ushr 4) and 0x0F
+        fun getId(buf: ByteArray, offset: Int, twoByte: Boolean): Int =
+            if (twoByte) {
+                buf.getByteAsInt(offset)
+            } else {
+                (buf.get(offset).toInt() ushr 4) and 0x0F
+            }
 
-        fun setId(id: Int, buf: ByteArray, offset: Int) {
+        fun setId(id: Int, buf: ByteArray, offset: Int, twoByte: Boolean) {
+            assert(!twoByte) { "One byte header is expected" }
             // Clear the old extension ID
             buf[offset] = buf[offset] and 0x0F
             buf[offset] = buf[offset] or (id shl 4).toByte()
@@ -42,16 +50,23 @@ class HeaderExtensionHelpers {
          * Return the entire size, in bytes, of the extension in [buf] whose header
          * starts at [offset]
          */
-        fun getEntireLengthBytes(buf: ByteArray, offset: Int): Int =
-            getDataLengthBytes(buf, offset) + EXT_HEADER_SIZE_BYTES
+        fun getEntireLengthBytes(buf: ByteArray, offset: Int, twoByte: Boolean): Int =
+            getDataLengthBytes(buf, offset, twoByte) + getHeaderSizeBytes(twoByte)
+
+        private fun getHeaderSizeBytes(twoByte: Boolean) =
+            if (twoByte) TWO_BYTE_EXT_HEADER_SIZE_BYTES else EXT_HEADER_SIZE_BYTES
 
         /**
          * Return the data size, in bytes, of the extension in [buf] whose header
          * starts at [offset].  The data field contains the amount of bytes of
-         * data minus 1, so we add to get the real length.
+         * data minus 1, so we add to get the real length in case of one byte header.
          */
-        fun getDataLengthBytes(buf: ByteArray, offset: Int): Int =
-            ((buf.get(offset) and 0x0F.toByte())).toPositiveInt() + 1
+        fun getDataLengthBytes(buf: ByteArray, offset: Int, twoByte: Boolean): Int =
+            if (twoByte) {
+                buf.getByteAsInt(offset + 1)
+            } else {
+                ((buf.get(offset) and 0x0F.toByte())).toPositiveInt() + 1
+            }
 
         /**
          * Return the length of the entire header extensions block, including

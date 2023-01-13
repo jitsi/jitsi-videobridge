@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2021 - present 8x8, Inc.
+ * Copyright @ 2023 present Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,27 +31,40 @@ import java.nio.charset.StandardCharsets
  */
 class SdesHeaderExtension {
     companion object {
-        const val DATA_OFFSET = 1
 
-        fun getTextValue(ext: RtpPacket.HeaderExtension): String =
-            getTextValue(ext.currExtBuffer, ext.currExtOffset)
-        fun setTextValue(ext: RtpPacket.HeaderExtension, sdesValue: String) =
-            setTextValue(ext.currExtBuffer, ext.currExtOffset, sdesValue)
+        fun getTextValue(ext: RtpPacket.HeaderExtension): String = getTextValue(
+            ext.currExtBuffer, ext.currExtOffset, ext.isTwoByteHeaderExtension, ext.getHeaderSize()
+        )
+        fun setTextValue(ext: RtpPacket.HeaderExtension, sdesValue: String) = setTextValue(
+            ext.currExtBuffer, ext.currExtOffset, ext.isTwoByteHeaderExtension, ext.getHeaderSize(),
+            sdesValue
+        )
 
-        private fun getTextValue(buf: ByteArray, offset: Int): String {
-            val dataLength = getDataLengthBytes(buf, offset)
+        private fun getTextValue(
+            buf: ByteArray,
+            offset: Int,
+            isTwoByteHeaderExtension: Boolean,
+            headerSize: Int
+        ): String {
+            val dataLength = getDataLengthBytes(buf, offset, isTwoByteHeaderExtension)
             /* RFC 7941 says the value in RTP is UTF-8. But we use this for MID and RID values
             * which are define for SDP in RFC 5888 and RFC 4566 as ASCII only. Thus we don't
             * support UTF-8 to keep things simpler. */
-            return String(buf, offset + SdesHeaderExtension.DATA_OFFSET, dataLength, StandardCharsets.US_ASCII)
+            return String(buf, offset + headerSize, dataLength, StandardCharsets.US_ASCII)
         }
 
-        private fun setTextValue(buf: ByteArray, offset: Int, sdesValue: String) {
-            val dataLength = getDataLengthBytes(buf, offset)
+        private fun setTextValue(
+            buf: ByteArray,
+            offset: Int,
+            isTwoByteHeaderExtension: Boolean,
+            headerSize: Int,
+            sdesValue: String
+        ) {
+            val dataLength = getDataLengthBytes(buf, offset, isTwoByteHeaderExtension)
             assert(dataLength == sdesValue.length) { "buffer size doesn't match SDES value length" }
             System.arraycopy(
                 sdesValue.toByteArray(StandardCharsets.US_ASCII), 0, buf,
-                offset + SdesHeaderExtension.DATA_OFFSET, sdesValue.length
+                offset + headerSize, sdesValue.length
             )
         }
     }

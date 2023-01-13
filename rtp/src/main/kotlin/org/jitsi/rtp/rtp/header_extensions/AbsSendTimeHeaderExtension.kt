@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2023 Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,23 +41,24 @@ class AbsSendTimeHeaderExtension {
         private const val b = 1_000_000_000
 
         fun setTime(ext: RtpPacket.HeaderExtension, timestampNanos: Long) =
-            setTime(ext.currExtBuffer, ext.currExtOffset, timestampNanos)
+            setTime(ext.currExtBuffer, ext.currExtOffset, timestampNanos, ext.getHeaderSize())
 
-        fun setTime(buf: ByteArray, offset: Int, timestampNanos: Long) {
+        fun setTime(buf: ByteArray, offset: Int, timestampNanos: Long, headerExtensionHeaderSize: Int) {
             val fraction = ((timestampNanos % b) * (1 shl 18) / b)
             val seconds = ((timestampNanos / b) % 64) // 6 bits only
 
             val timestamp = ((seconds shl 18) or fraction) and 0x00FFFFFF
 
-            buf.put3Bytes(offset + RtpPacket.HEADER_EXT_HEADER_SIZE, timestamp.toInt())
+            buf.put3Bytes(offset + headerExtensionHeaderSize, timestamp.toInt())
         }
 
         /**
          * Gets the timestamp converted to nanoseconds.
          */
-        fun getTime(ext: RtpPacket.HeaderExtension): Instant = getTime(ext.currExtBuffer, ext.currExtOffset)
-        fun getTime(buf: ByteArray, baseOffset: Int): Instant {
-            val offset = baseOffset + RtpPacket.HEADER_EXT_HEADER_SIZE
+        fun getTime(ext: RtpPacket.HeaderExtension): Instant =
+            getTime(ext.currExtBuffer, ext.currExtOffset, ext.getHeaderSize())
+        fun getTime(buf: ByteArray, baseOffset: Int, headerExtensionHeaderSize: Int): Instant {
+            val offset = baseOffset + headerExtensionHeaderSize
             val seconds = buf.getBitsAsInt(offset, 0, 6)
             val fraction =
                 (buf.getBitsAsInt(offset, 6, 2) + buf.getShortAsInt(offset + 1)).toDouble() / 0x03ffff

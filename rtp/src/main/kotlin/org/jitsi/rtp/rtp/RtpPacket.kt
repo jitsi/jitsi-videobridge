@@ -1,5 +1,6 @@
 /*
  * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2023 Vowel, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +25,7 @@ import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.getByteAsInt
+import org.jitsi.rtp.util.getShortAsInt
 import org.jitsi.rtp.util.isPadding
 import kotlin.experimental.or
 /**
@@ -125,6 +127,17 @@ open class RtpPacket(
     val csrcs: List<Long>
         get() = RtpHeader.getCsrcs(buffer, offset)
 
+    val exentionBlockOffset: Int
+        get() = offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4
+
+    val isTwoByteHeaderExtension: Boolean
+        get() {
+            if (hasEncodedExtensions) {
+                return buffer.getShortAsInt(exentionBlockOffset) == 0x1000
+            } else {
+                return false
+            }
+        }
     /**
      * The length of the entire RTP header, including any extensions, in bytes
      */
@@ -411,6 +424,9 @@ open class RtpPacket(
 
         abstract val currExtBuffer: ByteArray
 
+        abstract val isTwoByteHeaderExtension: Boolean
+        fun getHeaderSize() = if (isTwoByteHeaderExtension) 2 else 1
+
         fun setOffsetLength(nextHeaderExtOffset: Int, nextHeaderExtLength: Int) {
             currExtOffset = nextHeaderExtOffset
             currExtLength = nextHeaderExtLength
@@ -421,25 +437,27 @@ open class RtpPacket(
                 if (currExtLength <= 0) {
                     return -1
                 }
-                return HeaderExtensionHelpers.getId(currExtBuffer, currExtOffset)
+                return HeaderExtensionHelpers.getId(currExtBuffer, currExtOffset, isTwoByteHeaderExtension)
             }
             set(newId) {
                 if (currExtLength <= 0) {
                     throw IllegalStateException("Can't set ID on header extension with no length")
                 }
-                HeaderExtensionHelpers.setId(newId, currExtBuffer, currExtOffset)
+                HeaderExtensionHelpers.setId(newId, currExtBuffer, currExtOffset, isTwoByteHeaderExtension)
             }
 
         val dataLengthBytes: Int
-            get() = HeaderExtensionHelpers.getDataLengthBytes(currExtBuffer, currExtOffset)
+            get() = HeaderExtensionHelpers.getDataLengthBytes(currExtBuffer, currExtOffset, isTwoByteHeaderExtension)
 
         val totalLengthBytes: Int
-            get() = 1 + dataLengthBytes
+            get() = getHeaderSize() + dataLengthBytes
     }
 
     inner class EncodedHeaderExtension : HeaderExtension() {
         override val currExtBuffer: ByteArray
             get() = this@RtpPacket.buffer
+        override val isTwoByteHeaderExtension: Boolean
+            get() = this@RtpPacket.isTwoByteHeaderExtension
     }
 
     @SuppressFBWarnings(
@@ -447,15 +465,25 @@ open class RtpPacket(
         justification = "We intentionally expose the internal buffer."
     )
     class PendingHeaderExtension(id: Int, extDataLength: Int) : HeaderExtension() {
-        override val currExtBuffer = ByteArray(extDataLength + 1)
+        override val currExtBuffer = ByteArray(extDataLength + getHeaderSize())
 
+        override val isTwoByteHeaderExtension: Boolean = false
         init {
-            currExtLength = extDataLength + 1
+            if (extDataLength > 16) {
+                throw IllegalArgumentException("Wrong data length for expected one-byte pending header extension")
+            }
+            currExtLength = extDataLength + getHeaderSize()
             currExtBuffer[0] = ((id and 0x0F) shl 4).toByte() or ((extDataLength - 1) and 0x0F).toByte()
         }
 
         constructor(other: HeaderExtension) : this(other.id, other.dataLengthBytes) {
-            System.arraycopy(other.currExtBuffer, other.currExtOffset + 1, currExtBuffer, 1, dataLengthBytes)
+            System.arraycopy(
+                other.currExtBuffer,
+                other.currExtOffset + other.getHeaderSize(),
+                currExtBuffer,
+                1,
+                dataLengthBytes
+            )
         }
     }
 
@@ -505,7 +533,7 @@ open class RtpPacket(
             if (remainingLength < HeaderExtensionHelpers.MINIMUM_EXT_SIZE_BYTES) {
                 return -1
             }
-            val extLen = HeaderExtensionHelpers.getEntireLengthBytes(buffer, nextOffset)
+            val extLen = HeaderExtensionHelpers.getEntireLengthBytes(buffer, nextOffset, isTwoByteHeaderExtension)
             return if (extLen > remainingLength) -1 else extLen
         }
 
@@ -538,11 +566,6 @@ open class RtpPacket(
     }
 
     companion object {
-        /**
-         * The size of the header for individual extensions.  Currently we only
-         * support 1 byte header extensions
-         */
-        const val HEADER_EXT_HEADER_SIZE = 1
 
         /**
          * How much space to leave in the beginning of new RTP packets. Having space in the beginning allows us to
