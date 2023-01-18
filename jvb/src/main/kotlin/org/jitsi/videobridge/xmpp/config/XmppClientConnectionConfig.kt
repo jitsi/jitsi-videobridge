@@ -52,11 +52,11 @@ class XmppClientConnectionConfig private constructor() {
      * The interval at which presence updates (with updates stats/status) are published. Allow to be overridden by
      * legacy-style "stats-transports" config.
      */
-    val presenceInterval: Duration = StatsManagerConfig.config.transportConfigs.stream()
-        .filter { tc -> tc is StatsTransportConfig.MucStatsTransportConfig }
+    val presenceInterval: Duration = StatsManagerConfig.config.transportConfigs
+        .filterIsInstance<StatsTransportConfig.MucStatsTransportConfig>()
         .map(StatsTransportConfig::interval)
-        .findFirst()
-        .orElse(presenceIntervalProperty)
+        .firstOrNull()
+        ?: presenceIntervalProperty
 
     /**
      * Whether to filter the statistics.
