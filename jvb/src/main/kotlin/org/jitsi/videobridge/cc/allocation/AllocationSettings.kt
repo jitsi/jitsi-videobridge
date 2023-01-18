@@ -137,7 +137,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
             // Convert endpoint IDs to source names
             if (!useSourceNames) {
                 newConstraints = HashMap(it.size)
-                it.entries.stream().forEach {
+                it.entries.forEach {
                         entry ->
                     newConstraints[endpointIdToSourceName(entry.key)] = entry.value
                 }
