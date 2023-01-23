@@ -25,12 +25,14 @@ import org.jitsi.metaconfig.ConfigException
 class DtlsConfigTest : ShouldSpec() {
     init {
         context("Valid cipher suites") {
-            withNewConfig("""
+            withNewConfig(
+                """
                 jmt.dtls.cipher-suites = [
                    TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                    TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
                 ]
-            """.trimIndent()) {
+                """.trimIndent()
+            ) {
                 DtlsConfig.config.ciphersSuites shouldBe listOf(
                     CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                     CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
@@ -45,7 +47,7 @@ class DtlsConfigTest : ShouldSpec() {
                     TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                     invalid
                 ]
-            """.trimIndent()
+                    """.trimIndent()
                 ) {
                     shouldThrow<ConfigException> { DtlsConfig.config.ciphersSuites }
                 }
