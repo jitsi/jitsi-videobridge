@@ -20,7 +20,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
-import org.bouncycastle.tls.CipherSuite
 import org.bouncycastle.tls.ClientCertificateType
 import org.bouncycastle.tls.DefaultTlsServer
 import org.bouncycastle.tls.ExporterLabel
