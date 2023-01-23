@@ -33,7 +33,7 @@ class DtlsConfigTest : ShouldSpec() {
                 ]
                 """.trimIndent()
             ) {
-                DtlsConfig.config.ciphersSuites shouldBe listOf(
+                DtlsConfig.config.cipherSuites shouldBe listOf(
                     CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                     CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
                 )
@@ -49,18 +49,18 @@ class DtlsConfigTest : ShouldSpec() {
                 ]
                     """.trimIndent()
                 ) {
-                    shouldThrow<ConfigException> { DtlsConfig.config.ciphersSuites }
+                    shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
                 }
             }
 
             context("Empty") {
                 withNewConfig("jmt.dtls.cipher-suites = []") {
-                    shouldThrow<ConfigException> { DtlsConfig.config.ciphersSuites }
+                    shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
                 }
             }
             context("Wrong type") {
                 withNewConfig("jmt.dtls.cipher-suites = 42") {
-                    shouldThrow<ConfigException> { DtlsConfig.config.ciphersSuites }
+                    shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
                 }
             }
         }

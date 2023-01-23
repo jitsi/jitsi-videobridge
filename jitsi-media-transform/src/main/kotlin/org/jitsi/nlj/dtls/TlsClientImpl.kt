@@ -129,7 +129,7 @@ class TlsClientImpl(
             DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
     }
 
-    override fun getCipherSuites() = DtlsConfig.config.ciphersSuites.toIntArray()
+    override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
 
     override fun getHandshakeTimeoutMillis(): Int = DtlsUtils.config.handshakeTimeout.toMillis().toInt()
 

@@ -26,7 +26,7 @@ class DtlsConfig {
         "jmt.dtls.handshake-timeout".from(JitsiConfig.newConfig)
     }
 
-    val ciphersSuites: List<Int> by config {
+    val cipherSuites: List<Int> by config {
         "jmt.dtls.cipher-suites".from(JitsiConfig.newConfig).convertFrom<List<String>> { list ->
             val ciphers = list.map { it.toBcCipherSuite() }
             if (ciphers.isEmpty()) {
