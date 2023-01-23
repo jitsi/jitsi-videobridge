@@ -41,4 +41,8 @@ class DtlsConfig {
     }
 }
 
-private fun String.toBcCipherSuite(): Int = CipherSuite::class.java.getDeclaredField(this).getInt(null)
+private fun String.toBcCipherSuite(): Int = try {
+    CipherSuite::class.java.getDeclaredField(this).getInt(null)
+} catch (e: Exception) {
+    throw ConfigException.UnableToRetrieve.ConditionNotMet("Value is not a valid BouncyCastle cipher suite name: $this")
+}
