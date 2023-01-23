@@ -20,30 +20,48 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.bouncycastle.tls.CipherSuite
 import org.jitsi.config.withNewConfig
+import org.jitsi.metaconfig.ConfigException
 
 class DtlsConfigTest : ShouldSpec() {
     init {
         context("Valid cipher suites") {
-            withNewConfig("""
+            withNewConfig(
+                """
                 jmt.dtls.cipher-suites = [
                    TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                    TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
                 ]
-            """.trimIndent()) {
-                DtlsConfig.config.ciphersSuites shouldBe listOf(
+                """.trimIndent()
+            ) {
+                DtlsConfig.config.cipherSuites shouldBe listOf(
                     CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                     CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
                 )
             }
         }
         context("Invalid cipher suites") {
-            withNewConfig("""
+            context("Invalid name") {
+                withNewConfig(
+                    """
                 jmt.dtls.cipher-suites = [
                     TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                     invalid
                 ]
-            """.trimIndent()) {
-                shouldThrow<Exception> { DtlsConfig.config.ciphersSuites }
+                    """.trimIndent()
+                ) {
+                    shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
+                }
+            }
+
+            context("Empty") {
+                withNewConfig("jmt.dtls.cipher-suites = []") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
+                }
+            }
+            context("Wrong type") {
+                withNewConfig("jmt.dtls.cipher-suites = 42") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
+                }
             }
         }
     }
