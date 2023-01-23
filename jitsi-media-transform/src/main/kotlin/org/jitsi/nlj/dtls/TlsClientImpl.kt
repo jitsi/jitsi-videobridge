@@ -19,7 +19,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
-import org.bouncycastle.tls.CipherSuite
 import org.bouncycastle.tls.DefaultTlsClient
 import org.bouncycastle.tls.ExporterLabel
 import org.bouncycastle.tls.ExtensionType
@@ -130,18 +129,7 @@ class TlsClientImpl(
             DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
     }
 
-    override fun getCipherSuites(): IntArray {
-        return intArrayOf(
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-            CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-            CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-            CipherSuite.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-            CipherSuite.TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
-            CipherSuite.TLS_DHE_RSA_WITH_AES_256_GCM_SHA384
-        )
-    }
+    override fun getCipherSuites() = DtlsConfig.config.ciphersSuites.toIntArray()
 
     override fun getHandshakeTimeoutMillis(): Int = DtlsUtils.config.handshakeTimeout.toMillis().toInt()
 
