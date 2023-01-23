@@ -17,6 +17,7 @@ package org.jitsi.nlj.dtls
 
 import org.bouncycastle.tls.CipherSuite
 import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
 import java.time.Duration
 
@@ -26,8 +27,12 @@ class DtlsConfig {
     }
 
     val ciphersSuites: List<Int> by config {
-        "jmt.dtls.cipher-suites".from(JitsiConfig.newConfig).convertFrom<List<String>> {list ->
-            list.map { it.toBcCipherSuite() }
+        "jmt.dtls.cipher-suites".from(JitsiConfig.newConfig).convertFrom<List<String>> { list ->
+            val ciphers = list.map { it.toBcCipherSuite() }
+            if (ciphers.isEmpty()) {
+                throw ConfigException.UnableToRetrieve.ConditionNotMet("cipher-suites must not be empty")
+            }
+            ciphers
         }
     }
 

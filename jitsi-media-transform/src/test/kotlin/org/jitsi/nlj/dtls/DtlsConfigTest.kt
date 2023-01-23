@@ -20,6 +20,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.bouncycastle.tls.CipherSuite
 import org.jitsi.config.withNewConfig
+import org.jitsi.metaconfig.ConfigException
 
 class DtlsConfigTest : ShouldSpec() {
     init {
@@ -37,13 +38,28 @@ class DtlsConfigTest : ShouldSpec() {
             }
         }
         context("Invalid cipher suites") {
-            withNewConfig("""
+            context("Invalid name") {
+                withNewConfig(
+                    """
                 jmt.dtls.cipher-suites = [
                     TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
                     invalid
                 ]
-            """.trimIndent()) {
-                shouldThrow<Exception> { DtlsConfig.config.ciphersSuites }
+            """.trimIndent()
+                ) {
+                    shouldThrow<ConfigException> { DtlsConfig.config.ciphersSuites }
+                }
+            }
+
+            context("Empty") {
+                withNewConfig("jmt.dtls.cipher-suites = []") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.ciphersSuites }
+                }
+            }
+            context("Wrong type") {
+                withNewConfig("jmt.dtls.cipher-suites = 42") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.ciphersSuites }
+                }
             }
         }
     }
