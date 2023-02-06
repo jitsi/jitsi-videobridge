@@ -47,8 +47,11 @@ fun prioritize(
             disabledSources.add(source)
         }
     }
+    // The enabled selected sources are sorted according to the order in which they are selected and prioritized
+    // over non-selected.
     enabledSelectedSources.sortBy { selectedSourceNames.indexOf(it.sourceName) }
     enabledSelectedSources.addAll(enabledNonSelectedSources)
+    // All disabled sources are sorted last, regardless of whether they are selected.
     enabledSelectedSources.addAll(disabledSources)
 
     return enabledSelectedSources
