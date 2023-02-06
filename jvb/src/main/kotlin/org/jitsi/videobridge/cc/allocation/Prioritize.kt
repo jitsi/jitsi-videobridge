@@ -22,18 +22,36 @@ import org.jitsi.videobridge.jvbLastNSingleton
 import org.jitsi.videobridge.load_management.ConferenceSizeLastNLimits.Companion.singleton as conferenceSizeLimits
 
 fun prioritize(
+    /**
+     * All available sources ordered by their endpoint's speech activity and video availability. Note that when an
+     * endpoint has multiple sources and one of them is disabled it will still sort high because the endpoint has
+     * video availability.
+     */
     conferenceSources: MutableList<MediaSourceDesc>,
     selectedSourceNames: List<String> = emptyList()
 ): List<MediaSourceDesc> {
-    // Bump selected sources to the top of the list.
-    selectedSourceNames.asReversed().forEach { selectedSourceName ->
-        // Note the usage of sourceName!! which is expected to be always defined in the multi-stream mode
-        conferenceSources.find { it.sourceName == selectedSourceName }?.let { selectedSource ->
-            conferenceSources.remove(selectedSource)
-            conferenceSources.add(0, selectedSource)
+    val enabledSelectedSources = mutableListOf<MediaSourceDesc>()
+    val enabledNonSelectedSources = mutableListOf<MediaSourceDesc>()
+    val disabledSources = mutableListOf<MediaSourceDesc>()
+
+    // conferenceSources can be large, while selectedSourceNames is usually small, so do a single pass over
+    // conferenceSources.
+    conferenceSources.forEach { source ->
+        if (source.videoType.isEnabled()) {
+            if (selectedSourceNames.contains(source.sourceName)) {
+                enabledSelectedSources.add(source)
+            } else {
+                enabledNonSelectedSources.add(source)
+            }
+        } else {
+            disabledSources.add(source)
         }
     }
-    return conferenceSources
+    enabledSelectedSources.sortBy { selectedSourceNames.indexOf(it.sourceName) }
+    enabledSelectedSources.addAll(enabledNonSelectedSources)
+    enabledSelectedSources.addAll(disabledSources)
+
+    return enabledSelectedSources
 }
 
 /**
