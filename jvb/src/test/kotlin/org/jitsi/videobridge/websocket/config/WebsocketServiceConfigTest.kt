@@ -43,8 +43,8 @@ class WebsocketServiceConfigTest : ConfigTest() {
     videobridge.websockets.relay-domain = "relay_domain"
                     """.trimIndent()
                 ) {
-                    config.domains shouldBe setOf("new_domain")
-                    config.relayDomains shouldBe setOf("relay_domain")
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain")
                 }
                 withNewConfig(
                     """
@@ -53,8 +53,8 @@ class WebsocketServiceConfigTest : ConfigTest() {
     videobridge.websockets.relay-domain = "relay_domain"
                     """.trimIndent()
                 ) {
-                    config.domains shouldBe setOf("new_domain")
-                    config.relayDomains shouldBe setOf("relay_domain")
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain")
                 }
                 withNewConfig(
                     """
@@ -62,8 +62,8 @@ class WebsocketServiceConfigTest : ConfigTest() {
     videobridge.websockets.domains = ["new_domain"]
                     """.trimIndent()
                 ) {
-                    config.domains shouldBe setOf("new_domain")
-                    config.relayDomains shouldBe setOf("new_domain")
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("new_domain")
                 }
                 withNewConfig(
                     """
@@ -72,8 +72,8 @@ class WebsocketServiceConfigTest : ConfigTest() {
     videobridge.websockets.relay-domain = "relay_domain"
                     """.trimIndent()
                 ) {
-                    config.domains shouldBe setOf("new_domain")
-                    config.relayDomains shouldBe setOf("relay_domain")
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain")
                 }
                 withNewConfig(
                     """
@@ -82,8 +82,8 @@ class WebsocketServiceConfigTest : ConfigTest() {
     videobridge.websockets.relay-domains = ["relay_domain1", "relay_domain2"]
                     """.trimIndent()
                 ) {
-                    config.domains shouldBe setOf("new_domain")
-                    config.relayDomains shouldBe setOf("relay_domain1", "relay_domain2")
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain1", "relay_domain2")
                 }
                 withNewConfig(
                     """
@@ -92,8 +92,8 @@ class WebsocketServiceConfigTest : ConfigTest() {
     videobridge.websockets.domains = ["new_domain2"]
                     """.trimIndent()
                 ) {
-                    config.domains shouldBe setOf("new_domain1", "new_domain2")
-                    config.relayDomains shouldBe setOf("new_domain1", "new_domain2")
+                    config.domains shouldBe listOf("new_domain1", "new_domain2")
+                    config.relayDomains shouldBe listOf("new_domain1", "new_domain2")
                 }
             }
             context("accessing useTls") {
