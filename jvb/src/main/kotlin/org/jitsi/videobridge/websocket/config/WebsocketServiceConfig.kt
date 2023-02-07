@@ -45,8 +45,14 @@ class WebsocketServiceConfig private constructor() {
      * The list of domains to advertise (advertise a separate URL for each domain).
      * Constructed at get() time to allow underlying config changes.
      */
-    val domains: Set<String>
-        get() = domainsProp.toMutableSet().apply { domainProp?.let { add(it) } }
+    val domains: List<String>
+        get() = domainsProp.toMutableList().apply {
+            domainProp?.let {
+                if (!contains(it)) {
+                    add(0, it)
+                }
+            }
+        }
 
     private val relayDomainProp: String? by optionalconfig {
         "videobridge.websockets.relay-domain".from(JitsiConfig.newConfig)
@@ -60,13 +66,17 @@ class WebsocketServiceConfig private constructor() {
      * The list of domains to advertise (advertise a separate URL for each domain) for relays.
      * Constructed at get() time to allow underlying config changes.
      */
-    val relayDomains: Set<String>
+    val relayDomains: List<String>
         get() {
             val relayDomainProp = relayDomainProp
             return if (relayDomainProp != null) {
-                relayDomainsProp.toSet() + relayDomainProp
+                relayDomainsProp.toMutableList().apply {
+                    if (!contains(relayDomainProp)) {
+                        add(0, relayDomainProp)
+                    }
+                }
             } else if (relayDomainsProp.isNotEmpty()) {
-                relayDomainsProp.toSet()
+                relayDomainsProp.toList()
             } else {
                 domains
             }
