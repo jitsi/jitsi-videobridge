@@ -67,7 +67,6 @@
     <modules>
         <module>rtp</module>
         <module>jitsi-media-transform</module>
-        <module>jvb-api</module>
         <module>jvb</module>
     </modules>
 
