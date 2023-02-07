@@ -20,7 +20,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
-import org.bouncycastle.tls.CipherSuite
 import org.bouncycastle.tls.ClientCertificateType
 import org.bouncycastle.tls.DefaultTlsServer
 import org.bouncycastle.tls.ExporterLabel
@@ -99,12 +98,7 @@ class TlsServerImpl(
             DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
     }
 
-    override fun getCipherSuites(): IntArray {
-        return intArrayOf(
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
-        )
-    }
+    override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
 
     override fun getRSAEncryptionCredentials(): TlsCredentialedDecryptor {
         return BcDefaultTlsCredentialedDecryptor(
@@ -132,15 +126,7 @@ class TlsServerImpl(
     override fun getCertificateRequest(): CertificateRequest {
         val signatureAlgorithms = Vector<SignatureAndHashAlgorithm>(1)
         signatureAlgorithms.add(SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa))
-        signatureAlgorithms.add(SignatureAndHashAlgorithm(HashAlgorithm.sha1, SignatureAlgorithm.rsa))
         return when (context.clientVersion) {
-            ProtocolVersion.DTLSv10 -> {
-                CertificateRequest(
-                    shortArrayOf(ClientCertificateType.rsa_sign),
-                    null,
-                    null
-                )
-            }
             ProtocolVersion.DTLSv12 -> {
                 CertificateRequest(
                     shortArrayOf(ClientCertificateType.ecdsa_sign),

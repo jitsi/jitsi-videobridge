@@ -19,7 +19,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
-import org.bouncycastle.tls.CipherSuite
 import org.bouncycastle.tls.DefaultTlsClient
 import org.bouncycastle.tls.ExporterLabel
 import org.bouncycastle.tls.ExtensionType
@@ -130,12 +129,7 @@ class TlsClientImpl(
             DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
     }
 
-    override fun getCipherSuites(): IntArray {
-        return intArrayOf(
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-            CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
-        )
-    }
+    override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
 
     override fun getHandshakeTimeoutMillis(): Int = DtlsUtils.config.handshakeTimeout.toMillis().toInt()
 
@@ -174,7 +168,7 @@ class TlsClientImpl(
     }
 
     override fun getSupportedVersions(): Array<ProtocolVersion> =
-        ProtocolVersion.DTLSv12.downTo(ProtocolVersion.DTLSv10)
+        arrayOf<ProtocolVersion>(ProtocolVersion.DTLSv12)
 
     override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) =
         logger.notifyAlertRaised(alertLevel, alertDescription, message, cause)

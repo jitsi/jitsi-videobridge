@@ -20,8 +20,10 @@ import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
 import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
+import org.jitsi.nlj.dtls.DtlsConfig
 import org.jitsi.rest.JettyBundleActivatorConfig
 import org.jitsi.rest.createServer
 import org.jitsi.rest.enableCors
@@ -73,6 +75,16 @@ fun main() {
 
     XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.config.jidCacheSize)
     PacketQueue.setEnableStatisticsDefault(true)
+
+    // Trigger an exception early in case the DTLS cipher suites are misconfigured
+    try {
+        DtlsConfig.config.cipherSuites
+    } catch (ce: ConfigException) {
+        logger.error("Dtls configuration error: $ce")
+        // According to https://freedesktop.org/software/systemd/man/systemd.exec…html#Process%20Exit%20Code
+        // 78 means "configuration error"
+        exitProcess(78)
+    }
 
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()

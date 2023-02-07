@@ -1,9 +1,5 @@
-// ktlint-disable filename
-
-import io.kotest.core.Tag
-
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2022 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +14,15 @@ import io.kotest.core.Tag
  * limitations under the License.
  */
 
-/**
- * [LongTest] denotes a test that is useful, but is too long to be executed
- * during a normal test run.
- */
-object LongTest : Tag()
+package org.jitsi.nlj
+
+import io.kotest.core.config.AbstractProjectConfig
+import org.jitsi.metaconfig.MetaconfigSettings
+
+class KotestProjectConfig : AbstractProjectConfig() {
+    override fun beforeAll() = super.beforeAll().also {
+        // The only purpose of config caching is performance. We always want caching disabled in tests (so we can
+        // freely modify the config without affecting other tests executing afterwards).
+        MetaconfigSettings.cacheEnabled = false
+    }
+}
