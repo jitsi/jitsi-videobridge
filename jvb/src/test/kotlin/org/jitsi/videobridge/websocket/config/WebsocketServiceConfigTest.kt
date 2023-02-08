@@ -27,14 +27,6 @@ class WebsocketServiceConfigTest : ConfigTest() {
     init {
         context("when websockets are disabled") {
             withNewConfig("videobridge.websockets.enabled = false") {
-                context("accessing domain should throw") {
-                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                        config.domain
-                    }
-                    shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
-                        config.relayDomain
-                    }
-                }
                 context("accessing useTls should throw") {
                     shouldThrow<ConfigException.UnableToRetrieve.ConditionNotMet> {
                         config.useTls
@@ -44,13 +36,64 @@ class WebsocketServiceConfigTest : ConfigTest() {
         }
         context("when websockets are enabled") {
             context("accessing domain and relay-domain") {
-                withNewConfig(newConfigWebsocketsEnabledDomain) {
-                    config.domain shouldBe "new_domain"
-                    config.relayDomain shouldBe "new_domain"
+                withNewConfig(
+                    """
+    videobridge.websockets.enabled = true
+    videobridge.websockets.domain = "new_domain"
+    videobridge.websockets.relay-domain = "relay_domain"
+                    """.trimIndent()
+                ) {
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain")
                 }
-                withNewConfig(newConfigWebsocketsEnabledDomainAndRelayDomain) {
-                    config.domain shouldBe "new_domain"
-                    config.relayDomain shouldBe "relay_domain"
+                withNewConfig(
+                    """
+    videobridge.websockets.enabled = true
+    videobridge.websockets.domain = "new_domain"
+    videobridge.websockets.relay-domain = "relay_domain"
+                    """.trimIndent()
+                ) {
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain")
+                }
+                withNewConfig(
+                    """
+    videobridge.websockets.enabled = true
+    videobridge.websockets.domains = ["new_domain"]
+                    """.trimIndent()
+                ) {
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("new_domain")
+                }
+                withNewConfig(
+                    """
+    videobridge.websockets.enabled = true
+    videobridge.websockets.domains = ["new_domain"]
+    videobridge.websockets.relay-domain = "relay_domain"
+                    """.trimIndent()
+                ) {
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain")
+                }
+                withNewConfig(
+                    """
+    videobridge.websockets.enabled = true
+    videobridge.websockets.domains = ["new_domain"]
+    videobridge.websockets.relay-domains = ["relay_domain1", "relay_domain2"]
+                    """.trimIndent()
+                ) {
+                    config.domains shouldBe listOf("new_domain")
+                    config.relayDomains shouldBe listOf("relay_domain1", "relay_domain2")
+                }
+                withNewConfig(
+                    """
+    videobridge.websockets.enabled = true
+    videobridge.websockets.domain = "new_domain1"
+    videobridge.websockets.domains = ["new_domain2"]
+                    """.trimIndent()
+                ) {
+                    config.domains shouldBe listOf("new_domain1", "new_domain2")
+                    config.relayDomains shouldBe listOf("new_domain1", "new_domain2")
                 }
             }
             context("accessing useTls") {
@@ -78,10 +121,6 @@ private val newConfigWebsocketsEnabled = """
 
 private val newConfigWebsocketsEnabledDomain = newConfigWebsocketsEnabled + "\n" + """
     videobridge.websockets.domain = "new_domain"
-""".trimIndent()
-
-private val newConfigWebsocketsEnabledDomainAndRelayDomain = newConfigWebsocketsEnabledDomain + "\n" + """
-    videobridge.websockets.relay-domain = "relay_domain"
 """.trimIndent()
 
 private val newConfigWebsocketsEnableduseTls = newConfigWebsocketsEnabled + "\n" + """

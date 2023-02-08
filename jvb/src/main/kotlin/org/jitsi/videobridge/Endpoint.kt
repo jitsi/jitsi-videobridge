@@ -783,11 +783,11 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
         colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
-            colibriWebsocketService.getColibriWebSocketUrl(
+            colibriWebsocketService.getColibriWebSocketUrls(
                 conference.id,
                 id,
                 iceTransport.icePassword
-            )?.let { wsUrl ->
+            ).forEach { wsUrl ->
                 val wsPacketExtension = WebSocketPacketExtension(wsUrl)
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
             }

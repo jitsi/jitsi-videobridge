@@ -32,24 +32,55 @@ class WebsocketServiceConfig private constructor() {
         "videobridge.websockets.enabled".from(JitsiConfig.newConfig)
     }
 
-    /**
-     * The domain name used in URLs advertised for COLIBRI WebSockets.
-     */
-    val domain: String by config {
-        onlyIf("Websockets are enabled", ::enabled) {
-            "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(JitsiConfig.legacyConfig)
-            "videobridge.websockets.domain".from(JitsiConfig.newConfig)
-        }
+    private val domainProp: String? by optionalconfig {
+        "org.jitsi.videobridge.rest.COLIBRI_WS_DOMAIN".from(JitsiConfig.legacyConfig)
+        "videobridge.websockets.domain".from(JitsiConfig.newConfig)
     }
+
+    private val domainsProp: List<String> by config {
+        "videobridge.websockets.domains".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * The list of domains to advertise (advertise a separate URL for each domain).
+     * Constructed at get() time to allow underlying config changes.
+     */
+    val domains: List<String>
+        get() = domainsProp.toMutableList().apply {
+            domainProp?.let {
+                if (!contains(it)) {
+                    add(0, it)
+                }
+            }
+        }
 
     private val relayDomainProp: String? by optionalconfig {
-        onlyIf("Websockets are enabled", ::enabled) {
-            "videobridge.websockets.relay-domain".from(JitsiConfig.newConfig)
-        }
+        "videobridge.websockets.relay-domain".from(JitsiConfig.newConfig)
     }
 
-    val relayDomain: String
-        get() = relayDomainProp ?: domain
+    private val relayDomainsProp: List<String> by config {
+        "videobridge.websockets.relay-domains".from(JitsiConfig.newConfig)
+    }
+
+    /**
+     * The list of domains to advertise (advertise a separate URL for each domain) for relays.
+     * Constructed at get() time to allow underlying config changes.
+     */
+    val relayDomains: List<String>
+        get() {
+            val relayDomainProp = relayDomainProp
+            return if (relayDomainProp != null) {
+                relayDomainsProp.toMutableList().apply {
+                    if (!contains(relayDomainProp)) {
+                        add(0, relayDomainProp)
+                    }
+                }
+            } else if (relayDomainsProp.isNotEmpty()) {
+                relayDomainsProp.toList()
+            } else {
+                domains
+            }
+        }
 
     /**
      * Whether the "wss" or "ws" protocol should be used for websockets

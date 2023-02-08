@@ -400,25 +400,33 @@ class Relay @JvmOverloads constructor(
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
-        val wsPacketExtension = WebSocketPacketExtension()
 
         /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
          *  disabled for relay.
          */
         if (messageTransport.isActive) {
-            wsPacketExtension.active = true
+            iceUdpTransportPacketExtension.addChildExtension(
+                WebSocketPacketExtension().apply { active = true }
+            )
         } else {
             colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
-                colibriWebsocketService.getColibriRelayWebSocketUrl(
+                val urls = colibriWebsocketService.getColibriRelayWebSocketUrls(
                     conference.id,
                     id,
                     iceTransport.icePassword
-                )?.let { wsUrl ->
-                    wsPacketExtension.url = wsUrl
+                )
+                if (urls.isEmpty()) {
+                    logger.warn("No colibri relay URLs configured")
+                }
+                urls.forEach {
+                    iceUdpTransportPacketExtension.addChildExtension(
+                        WebSocketPacketExtension().apply {
+                            url = it
+                        }
+                    )
                 }
             }
         }
-        iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
 
         logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
 
