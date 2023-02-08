@@ -59,6 +59,25 @@ class ReceiverConstraintsMapTest : ShouldSpec({
             constraints.remove("a")
             constraints.maxHeight shouldBe 100
         }
+        should("track max height correctly when existing keys are updated") {
+            constraints.put("b", vc(1)) // constraints only contains one item
+            constraints.maxHeight shouldBe 1
+
+            constraints.put("b", vc(2)) // constraints only contains one item
+            constraints.maxHeight shouldBe 2
+
+            constraints.put("b", vc(1)) // constraints only contains one item
+            constraints.maxHeight shouldBe 1
+
+            constraints.put("b", vc(-1)) // constraints only contains one item
+            constraints.maxHeight shouldBe -1
+
+            constraints.put("b", vc(1))
+            constraints.maxHeight shouldBe 1 // Failed, as the maxHeight is still -1
+
+            constraints.put("b", vc(2))
+            constraints.maxHeight shouldBe 2 // Failed, as the maxHeight is still -1
+        }
     }
 })
 
