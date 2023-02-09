@@ -36,6 +36,8 @@ import jakarta.inject.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import jakarta.ws.rs.core.MediaType;
+import org.json.simple.JSONObject;
+
 import java.net.*;
 
 /**
@@ -319,8 +321,13 @@ public class Debug
         OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
 
         // Append the health status.
-        Exception result = healthCheckService.getResult();
-        debugState.put("health", result == null ? "OK" : result.getMessage());
+        Result result = healthCheckService.getResult();
+        JSONObject health = new JSONObject();
+        health.put("success", result.getSuccess());
+        health.put("hardFailure", result.getHardFailure());
+        health.put("responseCode", result.getResponseCode());
+        health.put("message", result.getMessage());
+        debugState.put("health", health);
 
         return debugState.toJSONString();
     }
