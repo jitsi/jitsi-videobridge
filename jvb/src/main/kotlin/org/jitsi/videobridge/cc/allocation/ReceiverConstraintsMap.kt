@@ -34,7 +34,8 @@ class ReceiverConstraintsMap {
                 maxHeight = when {
                     value.maxHeight == -1 -> value.maxHeight
                     maxHeight != -1 && value.maxHeight >= maxHeight -> value.maxHeight
-                    value.maxHeight < maxHeight && removed?.maxHeight == maxHeight -> findNextMax(maxHeight)
+                    (maxHeight == -1 || value.maxHeight < maxHeight) && removed?.maxHeight == maxHeight ->
+                        findNextMax(maxHeight)
                     else -> maxHeight
                 }
             }
