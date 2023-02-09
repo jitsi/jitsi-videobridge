@@ -293,17 +293,13 @@ open class RtpPacket(
 
     private fun pickParserForEncodedHeaders(
         pendingHeaderExtensions: List<PendingHeaderExtension>
-    ): HeaderExtensionParser? {
-        if (pendingHeaderExtensions.isEmpty()) {
-            return null
-        } else {
-            pendingHeaderExtensions.forEach {
-                if (it.id >= 15 || it.dataLengthBytes == 0 || it.dataLengthBytes > 16) {
-                    return TwoByteHeaderExtensionParser
-                }
+    ): HeaderExtensionParser {
+        pendingHeaderExtensions.forEach {
+            if (it.id >= 15 || it.dataLengthBytes == 0 || it.dataLengthBytes > 16) {
+                return TwoByteHeaderExtensionParser
             }
-            return OneByteHeaderExtensionParser
         }
+        return OneByteHeaderExtensionParser
     }
 
     fun encodeHeaderExtensions() {
@@ -335,7 +331,7 @@ open class RtpPacket(
             0
         } else {
             val rawHeaderLength = RtpHeader.EXT_HEADER_SIZE_BYTES +
-                pendingHeaderExtensions.sumOf { h -> newParser!!.extHeaderSizeBytes + h.dataLengthBytes }
+                pendingHeaderExtensions.sumOf { h -> newParser.extHeaderSizeBytes + h.dataLengthBytes }
             rawHeaderLength + RtpUtils.getNumPaddingBytes(rawHeaderLength)
         }
 
@@ -373,7 +369,7 @@ open class RtpPacket(
         if (pendingHeaderExtensions.isNotEmpty()) {
             var off = newOffset + baseHeaderLength
             // Write the header extension
-            newBuffer.putShort(off, newParser!!.headerExtensionLabel.toShort())
+            newBuffer.putShort(off, newParser.headerExtensionLabel.toShort())
             newBuffer.putShort(off + 2, ((newExtHeaderLength - RtpHeader.EXT_HEADER_SIZE_BYTES) / 4).toShort())
             off += 4
             // Write pending header extension elements
