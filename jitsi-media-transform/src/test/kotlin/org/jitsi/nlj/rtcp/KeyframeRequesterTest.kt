@@ -30,6 +30,7 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.util.ExtmapAllowMixedChangedHandler
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpExtensionHandler
 import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
@@ -53,6 +54,11 @@ class KeyframeRequesterTest : ShouldSpec() {
             // no-op
         }
         override fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler) {
+            // no-op
+        }
+
+        override val extmapAllowMixed: Boolean = false
+        override fun onExtmapAllowMixedChanged(handler: ExtmapAllowMixedChangedHandler) {
             // no-op
         }
 

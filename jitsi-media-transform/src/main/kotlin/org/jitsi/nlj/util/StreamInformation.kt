@@ -39,6 +39,8 @@ typealias RtpExtensionHandler = (Int?) -> Unit
 
 typealias RtpPayloadTypesChangedHandler = (Map<Byte, PayloadType>) -> Unit
 
+typealias ExtmapAllowMixedChangedHandler = (Boolean) -> Unit
+
 /**
  * Makes information about stream metadata (RTP extensions, payload types,
  * etc.) available and allows interested parties to add handlers for when certain
@@ -50,6 +52,9 @@ interface ReadOnlyStreamInformationStore : NodeStatsProducer {
 
     val rtpPayloadTypes: Map<Byte, PayloadType>
     fun onRtpPayloadTypesChanged(handler: RtpPayloadTypesChangedHandler)
+
+    val extmapAllowMixed: Boolean
+    fun onExtmapAllowMixedChanged(handler: ExtmapAllowMixedChangedHandler)
 
     fun getLocalPrimarySsrc(secondarySsrc: Long): Long?
     fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long?
@@ -82,6 +87,8 @@ interface StreamInformationStore : ReadOnlyStreamInformationStore {
     fun addRtpPayloadType(payloadType: PayloadType)
     fun clearRtpPayloadTypes()
 
+    fun setExtmapAllowMixed(extmapAllowMixed: Boolean)
+
     fun addSsrcAssociation(ssrcAssociation: SsrcAssociation)
 
     fun addReceiveSsrc(ssrc: Long, mediaType: MediaType)
@@ -95,6 +102,8 @@ class StreamInformationStoreImpl : StreamInformationStore {
     private val _rtpExtensions: MutableList<RtpExtension> = CopyOnWriteArrayList()
     override val rtpExtensions: List<RtpExtension>
         get() = _rtpExtensions
+    private val extmapAllowMixedHandlers =
+        mutableListOf<ExtmapAllowMixedChangedHandler>()
 
     private val payloadTypesLock = Any()
     private val payloadTypeHandlers = mutableListOf<RtpPayloadTypesChangedHandler>()
@@ -143,6 +152,25 @@ class StreamInformationStoreImpl : StreamInformationStore {
         synchronized(extensionsLock) {
             extensionHandlers.getOrPut(rtpExtensionType, { mutableListOf() }).add(handler)
             _rtpExtensions.find { it.type == rtpExtensionType }?.let { handler(it.id.toInt()) }
+        }
+    }
+
+    override var extmapAllowMixed: Boolean = false
+        private set
+
+    override fun setExtmapAllowMixed(allow: Boolean) {
+        synchronized(extensionsLock) {
+            val changed = (extmapAllowMixed != allow)
+            extmapAllowMixed = allow
+            if (changed) {
+                extmapAllowMixedHandlers.forEach { it(allow) }
+            }
+        }
+    }
+
+    override fun onExtmapAllowMixedChanged(handler: ExtmapAllowMixedChangedHandler) {
+        synchronized(extensionsLock) {
+            extmapAllowMixedHandlers.add(handler)
         }
     }
 

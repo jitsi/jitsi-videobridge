@@ -394,6 +394,11 @@ public abstract class AbstractEndpoint
     public abstract void addRtpExtension(RtpExtension rtpExtension);
 
     /**
+     * Sets extmap-allow-mixed for this endpoint
+     */
+    public abstract void setExtmapAllowMixed(Boolean allow);
+
+    /**
      * Notifies this instance that the max video constraints that the bridge
      * needs to receive from this endpoint has changed. Each implementation
      * handles this notification differently.

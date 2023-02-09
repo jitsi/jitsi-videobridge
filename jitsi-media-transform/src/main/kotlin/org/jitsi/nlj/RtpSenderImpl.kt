@@ -145,7 +145,7 @@ class RtpSenderImpl(
             node(absSendTime)
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
-            node(HeaderExtEncoder())
+            node(HeaderExtEncoder(streamInformationStore, logger))
             node(toggleablePcapWriter.newObserverNode())
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())

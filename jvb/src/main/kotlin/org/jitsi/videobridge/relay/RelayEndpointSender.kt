@@ -104,6 +104,8 @@ class RelayEndpointSender(
     fun addPayloadType(payloadType: PayloadType) = streamInformationStore.addRtpPayloadType(payloadType)
     fun addRtpExtension(rtpExtension: RtpExtension) = streamInformationStore.addRtpExtensionMapping(rtpExtension)
 
+    fun setExtmapAllowMixed(allow: Boolean) = streamInformationStore.setExtmapAllowMixed(allow)
+
     fun setSrtpInformation(srtpTransformers: SrtpTransformers) {
         rtpSender.setSrtpTransformers(srtpTransformers)
     }
