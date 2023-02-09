@@ -171,6 +171,7 @@ class StreamInformationStoreImpl : StreamInformationStore {
     override fun onExtmapAllowMixedChanged(handler: ExtmapAllowMixedChangedHandler) {
         synchronized(extensionsLock) {
             extmapAllowMixedHandlers.add(handler)
+            handler(extmapAllowMixed)
         }
     }
 
