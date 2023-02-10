@@ -21,11 +21,14 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionHelpers
+import org.jitsi.rtp.rtp.header_extensions.HeaderExtensionParser
+import org.jitsi.rtp.rtp.header_extensions.OneByteHeaderExtensionParser
+import org.jitsi.rtp.rtp.header_extensions.TwoByteHeaderExtensionParser
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.isPadding
-import kotlin.experimental.or
+
 /**
  *
  * https://tools.ietf.org/html/rfc3550#section-5.1
@@ -125,6 +128,9 @@ open class RtpPacket(
     val csrcs: List<Long>
         get() = RtpHeader.getCsrcs(buffer, offset)
 
+    val extensionsProfileType: Int
+        get() = RtpHeader.getExtensionsProfileType(buffer, offset)
+
     /**
      * The length of the entire RTP header, including any extensions, in bytes
      */
@@ -161,6 +167,12 @@ open class RtpPacket(
             }
         }
 
+    /**
+     * The parser to use for header extensions, depending on the type of header extensions in this packet.
+     */
+    private val headerExtensionParser
+        get() = HeaderExtensionHelpers.getHeaderExtensionParser(extensionsProfileType)
+
     private val _encodedHeaderExtensions: EncodedHeaderExtensions = EncodedHeaderExtensions()
     private val encodedHeaderExtensions: EncodedHeaderExtensions
         get() {
@@ -175,7 +187,7 @@ open class RtpPacket(
         get() = "type=RtpPacket len=$payloadLength " +
             "hashCode=${buffer.hashCodeOfSegment(payloadOffset, payloadOffset + payloadLength)}"
 
-    private var pendingHeaderExtensions: MutableList<HeaderExtension>? = null
+    private var pendingHeaderExtensions: MutableList<PendingHeaderExtension>? = null
 
     private fun getEncodedHeaderExtension(extensionId: Int): HeaderExtension? {
         if (!hasEncodedExtensions) return null
@@ -221,7 +233,10 @@ open class RtpPacket(
         if (pendingHeaderExtensions != null) {
             return
         }
-        pendingHeaderExtensions = ArrayList<HeaderExtension>().also { l ->
+        check(!hasEncodedExtensions || headerExtensionParser != null) {
+            "Cannot modify header extensions for header extension type ${Integer.toHexString(extensionsProfileType)}"
+        }
+        pendingHeaderExtensions = ArrayList<PendingHeaderExtension>().also { l ->
             encodedHeaderExtensions.forEach {
                 if (removeIf == null || !removeIf(it)) {
                     l.add(PendingHeaderExtension(it))
@@ -258,8 +273,11 @@ open class RtpPacket(
      *
      */
     fun addHeaderExtension(id: Int, extDataLength: Int): HeaderExtension {
-        if (id !in 1..15 || extDataLength !in 1..16) {
-            throw IllegalArgumentException("id=$id len=$extDataLength)")
+        require(id in 1..255) {
+            "Invalid header extension ID $id"
+        }
+        require(extDataLength in 0..255) {
+            "Invalid header extension length $extDataLength"
         }
 
         val newHeader = PendingHeaderExtension(id, extDataLength)
@@ -273,8 +291,21 @@ open class RtpPacket(
         return newHeader
     }
 
+    private fun pickParserForEncodedHeaders(
+        pendingHeaderExtensions: List<PendingHeaderExtension>
+    ): HeaderExtensionParser {
+        pendingHeaderExtensions.forEach {
+            if (it.id >= 15 || it.dataLengthBytes == 0 || it.dataLengthBytes > 16) {
+                return TwoByteHeaderExtensionParser
+            }
+        }
+        return OneByteHeaderExtensionParser
+    }
+
     fun encodeHeaderExtensions() {
         val pendingHeaderExtensions = this.pendingHeaderExtensions ?: return
+
+        val newParser = pickParserForEncodedHeaders(pendingHeaderExtensions)
 
         // The byte[] of an RtpPacket has the following structure:
         // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -300,7 +331,7 @@ open class RtpPacket(
             0
         } else {
             val rawHeaderLength = RtpHeader.EXT_HEADER_SIZE_BYTES +
-                pendingHeaderExtensions.sumOf { h -> h.totalLengthBytes }
+                pendingHeaderExtensions.sumOf { h -> newParser.extHeaderSizeBytes + h.dataLengthBytes }
             rawHeaderLength + RtpUtils.getNumPaddingBytes(rawHeaderLength)
         }
 
@@ -338,13 +369,13 @@ open class RtpPacket(
         if (pendingHeaderExtensions.isNotEmpty()) {
             var off = newOffset + baseHeaderLength
             // Write the header extension
-            newBuffer.putShort(off, 0xBEDE.toShort())
+            newBuffer.putShort(off, newParser.headerExtensionLabel.toShort())
             newBuffer.putShort(off + 2, ((newExtHeaderLength - RtpHeader.EXT_HEADER_SIZE_BYTES) / 4).toShort())
             off += 4
             // Write pending header extension elements
             pendingHeaderExtensions.forEach { h ->
-                System.arraycopy(h.currExtBuffer, h.currExtOffset, newBuffer, off, h.currExtLength)
-                off += h.currExtLength
+                val len = h.writeToBuffer(newBuffer, off, newParser)
+                off += len
             }
             // Write padding
             while (off < newOffset + newHeaderLength) {
@@ -390,72 +421,80 @@ open class RtpPacket(
     }
 
     /**
-     * Represents an RTP header extension with the RFC5285 one-byte header:
-     *
-     * 0
-     * 0 1 2 3 4 5 6 7
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |  ID   |  len  | data...   |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     *
-     * Note that this class requires its offset to be set manually by an outside entity, and that
-     * it ALWAYS uses the CURRENT buffer set in [RtpPacket] (though it maintains its own
-     * offset and length, which are specific to the current header extension).
-     *
+     * Represents an RTP header extension.
      */
-    abstract class HeaderExtension {
-        var currExtOffset: Int = 0
-            protected set
-        var currExtLength: Int = 0
-            protected set
+    interface HeaderExtension {
+        val buffer: ByteArray
+        val dataOffset: Int
 
-        abstract val currExtBuffer: ByteArray
+        var id: Int
+
+        val dataLengthBytes: Int
+
+        val totalLengthBytes: Int
+    }
+
+    inner class EncodedHeaderExtension : HeaderExtension {
+        private var currExtOffset: Int = 0
+        private var currExtLength: Int = 0
+
+        override val dataLengthBytes: Int
+            get() = headerExtensionParser!!.getDataLengthBytes(buffer, currExtOffset)
+
+        override val buffer: ByteArray
+            get() = this@RtpPacket.buffer
+
+        override var id: Int
+            get() {
+                if (currExtLength <= 0) {
+                    return -1
+                }
+                return headerExtensionParser!!.getId(buffer, currExtOffset)
+            }
+            set(newId) {
+                if (currExtLength < headerExtensionParser!!.minimumExtSizeBytes) {
+                    throw IllegalStateException("Can't set ID: Header extension too short")
+                }
+                headerExtensionParser!!.writeIdAndLength(newId, dataLengthBytes, buffer, currExtOffset)
+            }
+
+        override val dataOffset: Int
+            get() = headerExtensionParser!!.extHeaderSizeBytes + currExtOffset
+
+        override val totalLengthBytes: Int
+            get() = headerExtensionParser!!.extHeaderSizeBytes + dataLengthBytes
 
         fun setOffsetLength(nextHeaderExtOffset: Int, nextHeaderExtLength: Int) {
             currExtOffset = nextHeaderExtOffset
             currExtLength = nextHeaderExtLength
         }
-
-        var id: Int
-            get() {
-                if (currExtLength <= 0) {
-                    return -1
-                }
-                return HeaderExtensionHelpers.getId(currExtBuffer, currExtOffset)
-            }
-            set(newId) {
-                if (currExtLength <= 0) {
-                    throw IllegalStateException("Can't set ID on header extension with no length")
-                }
-                HeaderExtensionHelpers.setId(newId, currExtBuffer, currExtOffset)
-            }
-
-        val dataLengthBytes: Int
-            get() = HeaderExtensionHelpers.getDataLengthBytes(currExtBuffer, currExtOffset)
-
-        val totalLengthBytes: Int
-            get() = 1 + dataLengthBytes
-    }
-
-    inner class EncodedHeaderExtension : HeaderExtension() {
-        override val currExtBuffer: ByteArray
-            get() = this@RtpPacket.buffer
     }
 
     @SuppressFBWarnings(
         value = ["EI_EXPOSE_REP"],
         justification = "We intentionally expose the internal buffer."
     )
-    class PendingHeaderExtension(id: Int, extDataLength: Int) : HeaderExtension() {
-        override val currExtBuffer = ByteArray(extDataLength + 1)
+    inner class PendingHeaderExtension(override var id: Int, override val dataLengthBytes: Int) : HeaderExtension {
+        override val buffer = ByteArray(dataLengthBytes)
+        override val dataOffset = 0
 
-        init {
-            currExtLength = extDataLength + 1
-            currExtBuffer[0] = ((id and 0x0F) shl 4).toByte() or ((extDataLength - 1) and 0x0F).toByte()
-        }
+        override val totalLengthBytes: Int
+            get() = dataLengthBytes + headerExtensionParser!!.extHeaderSizeBytes
 
         constructor(other: HeaderExtension) : this(other.id, other.dataLengthBytes) {
-            System.arraycopy(other.currExtBuffer, other.currExtOffset + 1, currExtBuffer, 1, dataLengthBytes)
+            System.arraycopy(other.buffer, other.dataOffset, buffer, 0, dataLengthBytes)
+        }
+
+        fun writeToBuffer(buffer: ByteArray, offset: Int, parser: HeaderExtensionParser): Int {
+            parser.writeIdAndLength(id, dataLengthBytes, buffer, offset)
+            System.arraycopy(
+                this.buffer,
+                dataOffset,
+                buffer,
+                offset + parser.extHeaderSizeBytes,
+                dataLengthBytes
+            )
+            return parser.extHeaderSizeBytes + dataLengthBytes
         }
     }
 
@@ -470,11 +509,14 @@ open class RtpPacket(
          */
         private var remainingLength = 0
 
-        val currHeaderExtension: HeaderExtension = EncodedHeaderExtension()
+        private val currHeaderExtension = EncodedHeaderExtension()
 
         override fun hasNext(): Boolean {
+            if (headerExtensionParser == null) {
+                return false
+            }
             // Consume any padding
-            while (remainingLength > 0 && buffer.get(nextOffset).isPadding()) {
+            while (remainingLength > 0 && buffer[nextOffset].isPadding()) {
                 nextOffset++
                 remainingLength--
             }
@@ -502,11 +544,13 @@ open class RtpPacket(
          * an extension, or the parsed length is larger than [remainingLength], return -1
          */
         private fun getNextExtLength(): Int {
-            if (remainingLength < HeaderExtensionHelpers.MINIMUM_EXT_SIZE_BYTES) {
-                return -1
-            }
-            val extLen = HeaderExtensionHelpers.getEntireLengthBytes(buffer, nextOffset)
-            return if (extLen > remainingLength) -1 else extLen
+            headerExtensionParser?.let { parser ->
+                if (remainingLength < parser.minimumExtSizeBytes) {
+                    return -1
+                }
+                val extLen = parser.getEntireLengthBytes(buffer, nextOffset)
+                return if (extLen > remainingLength) -1 else extLen
+            } ?: run { return -1 }
         }
 
         /**
@@ -514,7 +558,8 @@ open class RtpPacket(
          */
         internal fun reset() {
             val extLength =
-                if (hasEncodedExtensions) {
+                // This treats unknown header extension types as no extensions, which is what we want.
+                if (headerExtensionParser != null) {
                     val extensionBlockLength = HeaderExtensionHelpers.getExtensionsTotalLength(
                         buffer, offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4
                     )

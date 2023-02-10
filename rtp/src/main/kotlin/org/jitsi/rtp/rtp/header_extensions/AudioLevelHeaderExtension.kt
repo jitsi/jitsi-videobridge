@@ -34,16 +34,13 @@ class AudioLevelHeaderExtension {
     companion object {
         private const val AUDIO_LEVEL_MASK = 0x7F.toByte()
 
-        fun getAudioLevel(ext: RtpPacket.HeaderExtension): Int = getAudioLevel(ext.currExtBuffer, ext.currExtOffset)
+        fun getAudioLevel(ext: RtpPacket.HeaderExtension): Int = getAudioLevel(ext.buffer, ext.dataOffset)
 
-        /**
-         * [offset] into [buf] is the start of this entire extension (not the data section)
-         */
-        fun getAudioLevel(buf: ByteArray, offset: Int): Int =
-            (buf[offset + RtpPacket.HEADER_EXT_HEADER_SIZE] and AUDIO_LEVEL_MASK).toPositiveInt()
+        private fun getAudioLevel(buf: ByteArray, offset: Int): Int =
+            (buf[offset] and AUDIO_LEVEL_MASK).toPositiveInt()
 
-        fun getVad(ext: RtpPacket.HeaderExtension): Boolean = getVad(ext.currExtBuffer, ext.currExtOffset)
-        fun getVad(buf: ByteArray, offset: Int): Boolean =
-            (buf[offset + RtpPacket.HEADER_EXT_HEADER_SIZE].toInt() and 0x80) != 0
+        fun getVad(ext: RtpPacket.HeaderExtension): Boolean = getVad(ext.buffer, ext.dataOffset)
+        private fun getVad(buf: ByteArray, offset: Int): Boolean =
+            (buf[offset].toInt() and 0x80) != 0
     }
 }

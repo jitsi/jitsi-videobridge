@@ -136,6 +136,8 @@ class RelayedEndpoint(
     override fun addRtpExtension(rtpExtension: RtpExtension) =
         streamInformationStore.addRtpExtensionMapping(rtpExtension)
 
+    override fun setExtmapAllowMixed(allow: Boolean) = streamInformationStore.setExtmapAllowMixed(allow)
+
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         relay.sendMessage(
             AddReceiverMessage(
