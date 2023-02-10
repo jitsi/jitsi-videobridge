@@ -39,15 +39,16 @@ class HeaderExtEncoder(
 
         rtpPacket.encodeHeaderExtensions()
 
-        val profileType = rtpPacket.extensionsProfileType
+        if (rtpPacket.hasExtensions) {
+            val profileType = rtpPacket.extensionsProfileType
 
-        if (!extmapAllowMixed && profileType != OneByteHeaderExtensionParser.headerExtensionLabel) {
-            logger.warn(
-                "Sending header extension profile type ${Integer.toHexString(profileType)} " +
-                    "when extmap-allow-mixed is not enabled"
-            )
+            if (!extmapAllowMixed && profileType != OneByteHeaderExtensionParser.headerExtensionLabel) {
+                logger.warn(
+                    "Sending header extension profile type ${Integer.toHexString(profileType)} " +
+                        "when extmap-allow-mixed is not enabled"
+                )
+            }
         }
-
         return packetInfo
     }
 
