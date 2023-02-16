@@ -42,13 +42,17 @@ class RtpParser(
             return null
         }
 
-        packetInfo.packet = when (payloadType.mediaType) {
+        val rtpPacket = when (payloadType.mediaType) {
             MediaType.AUDIO -> when (payloadType.encoding) {
                 RED -> packet.toOtherType(::RedAudioRtpPacket)
                 else -> packet.toOtherType(::AudioRtpPacket)
             }
             MediaType.VIDEO -> packet.toOtherType(::VideoRtpPacket)
             else -> throw Exception("Unrecognized media type: '${payloadType.mediaType}'")
+        }
+        packetInfo.packet = rtpPacket
+        if (rtpPacket.extensionsProfileType == 0xC0DE || rtpPacket.extensionsProfileType == 0xC2DE) {
+            packetInfo.originalHadCryptex = true
         }
 
         packetInfo.resetPayloadVerification()

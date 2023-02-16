@@ -217,11 +217,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         // header extensions to make this lookup more efficient, at which time we could move
                         // audioLevelReader back to where it was (in the audio path) and add a new node here which would
                         // check for different discard conditions (i.e. checking the audio level for silence)
-                        node(audioLevelReader)
+                        node(audioLevelReader.preDecryptNode)
                         node(videoMuteNode)
                         node(srtpDecryptWrapper)
                         node(tccGenerator)
                         node(remoteBandwidthEstimator)
+                        // This reads audio levels from packets that use cryptex. TODO: should it go in the Audio path?
+                        node(audioLevelReader.postDecryptNode)
                         node(toggleablePcapWriter.newObserverNode())
                         node(statsTracker)
                         node(PaddingTermination(logger))

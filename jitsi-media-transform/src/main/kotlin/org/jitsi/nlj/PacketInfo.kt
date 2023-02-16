@@ -98,6 +98,9 @@ open class PacketInfo @JvmOverloads constructor(
             }
         }
 
+    /** Whether the packet originally had cryptex RTP header extensions. */
+    var originalHadCryptex: Boolean = false
+
     /**
      * Whether this packet has been recognized to contain only shouldDiscard.
      */
@@ -150,6 +153,7 @@ open class PacketInfo @JvmOverloads constructor(
             PacketInfo(packet.clone(), originalLength, timeline)
         }
         clone.receivedTime = receivedTime
+        clone.originalHadCryptex = originalHadCryptex
         clone.shouldDiscard = shouldDiscard
         clone.endpointId = endpointId
         clone.layeringChanged = layeringChanged
