@@ -34,9 +34,5 @@ class SrtpConfig {
         val factoryClass: String? by optionalconfig {
             "jmt.srtp.factory-class".from(JitsiConfig.newConfig)
         }
-
-        val cryptex: Boolean by config {
-            "jmt.srtp.cryptex".from(JitsiConfig.newConfig)
-        }
     }
 }

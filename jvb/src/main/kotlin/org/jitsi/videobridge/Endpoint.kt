@@ -30,7 +30,6 @@ import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -130,9 +129,9 @@ class Endpoint @JvmOverloads constructor(
 
     /* TODO: do we ever want to support useUniquePort for an Endpoint? */
     private val iceTransport = IceTransport(id, iceControlling, false, logger)
-    private val dtlsTransport = DtlsTransport(logger)
+    private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.endpoint }
 
-    private var cryptex: Boolean = false
+    private var cryptex: Boolean = CryptexConfig.endpoint
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {
         put("endpoint_id", id)
@@ -774,7 +773,7 @@ class Endpoint @JvmOverloads constructor(
             } else {
                 logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
             }
-            if (SrtpConfig.cryptex) {
+            if (CryptexConfig.endpoint) {
                 cryptex = cryptex || fingerprintExtension.cryptex
             }
         }
