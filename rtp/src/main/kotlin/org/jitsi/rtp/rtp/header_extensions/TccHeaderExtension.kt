@@ -33,18 +33,15 @@ class TccHeaderExtension {
         const val DATA_SIZE_BYTES = 2
 
         fun getSequenceNumber(ext: RtpPacket.HeaderExtension): Int =
-            getSequenceNumber(ext.currExtBuffer, ext.currExtOffset)
+            getSequenceNumber(ext.buffer, ext.dataOffset)
         fun setSequenceNumber(ext: RtpPacket.HeaderExtension, tccSeqNum: Int) {
-            setSequenceNumber(ext.currExtBuffer, ext.currExtOffset, tccSeqNum)
+            setSequenceNumber(ext.buffer, ext.dataOffset, tccSeqNum)
         }
 
-        /**
-         * [offset] into [buf] is the start of this entire extension (not the data section)
-         */
-        fun getSequenceNumber(buf: ByteArray, offset: Int): Int =
-            buf.getShortAsInt(offset + RtpPacket.HEADER_EXT_HEADER_SIZE)
-        fun setSequenceNumber(buf: ByteArray, offset: Int, seqNum: Int) {
-            buf.putShort(offset + RtpPacket.HEADER_EXT_HEADER_SIZE, seqNum.toShort())
+        private fun getSequenceNumber(buf: ByteArray, offset: Int): Int =
+            buf.getShortAsInt(offset)
+        private fun setSequenceNumber(buf: ByteArray, offset: Int, seqNum: Int) {
+            buf.putShort(offset, seqNum.toShort())
         }
     }
 }

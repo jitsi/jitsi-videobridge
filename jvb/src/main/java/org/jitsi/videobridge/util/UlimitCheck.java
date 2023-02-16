@@ -39,7 +39,7 @@ public class UlimitCheck
      * @param command the command to execute.
      * @return the output of the command or {@code null}.
      */
-    public static String getOutputFromCommand(String command)
+    private static String getOutputFromCommand(String command)
     {
         ProcessBuilder pb = new ProcessBuilder("bash", "-c", command);
         pb.redirectErrorStream(true);
@@ -61,21 +61,15 @@ public class UlimitCheck
         }
     }
 
-    /**
-     * Executes a command in {@code bash} and returns the output parsed as an
-     * {@link Integer}, or {@code null} if it is not parsable as an integer.
-     * @param command the command to execute.
-     * @return the output of the command or {@code null}.
-     */
-    public static Integer getIntFromCommand(String command)
+    private static int parseInt(String s)
     {
         try
         {
-            return Integer.parseInt(getOutputFromCommand(command));
+            return Integer.parseInt(s);
         }
         catch (NumberFormatException n)
         {
-            return null;
+            return Integer.MAX_VALUE;
         }
     }
 
@@ -87,10 +81,10 @@ public class UlimitCheck
     public static void printUlimits()
     {
 
-        Integer fileLimit = getIntFromCommand("ulimit -n");
-        Integer fileLimitHard = getIntFromCommand("ulimit -Hn");
-        Integer threadLimit = getIntFromCommand("ulimit -u");
-        Integer threadLimitHard = getIntFromCommand("ulimit -Hu");
+        String fileLimit = getOutputFromCommand("ulimit -n");
+        String fileLimitHard = getOutputFromCommand("ulimit -Hn");
+        String threadLimit = getOutputFromCommand("ulimit -u");
+        String threadLimitHard = getOutputFromCommand("ulimit -Hu");
 
         StringBuilder sb
             = new StringBuilder("Running with open files limit ")
@@ -99,10 +93,9 @@ public class UlimitCheck
                 .append(", thread limit ").append(threadLimit)
                 .append(" (hard ").append(threadLimitHard).append(").");
 
-        // At the time of this writing these constants correspond to somewhere
-        // around 250 simultaneous participants.
-        boolean warn = fileLimit == null || fileLimit <= 4096 ||
-            threadLimit == null || threadLimit <= 8192;
+        // These are not precise limits, they are based on numbers observed on a moderately loaded 8-core machine in
+        // production (Nov 2022).
+        boolean warn = parseInt(fileLimit) <= 4096 || parseInt(threadLimit) <= 2048;
 
         if (warn)
         {

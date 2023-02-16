@@ -24,5 +24,7 @@ enum class VideoType {
     // lack of the actual source and the source being temporarily disabled. With the support for multiple sources per
     // endpoint DISABLED means a source is turned off. Lack of a MediaSourceDesc is equivalent to NONE.
     @Deprecated("Use DISABLED instead", ReplaceWith("DISABLED"))
-    NONE
+    NONE;
+
+    fun isEnabled() = this != NONE && this != DISABLED
 }

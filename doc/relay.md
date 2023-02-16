@@ -5,11 +5,9 @@ Relays (aka secure octo) use ICE and DTLS/SRTP between each pair of bridges, so 
 network is not required. It uses and requires colibri websockets for the
 bridge-bridge connections (endpoints can still use SCTP).
 
-Relays are only usable with version 2 of the colibri protocol.
-
 ## Jitsi Videobridge configuration
 
-### Relay configuratioon
+### Relay configuration
 Relays can be configured with the following properties in `/etc/jitsi/videobridge/jvb.conf` (also see
 [reference.conf](https://github.com/jitsi/jitsi-videobridge/blob/master/jvb/src/main/resources/reference.conf#L132)).
 ```
@@ -29,8 +27,6 @@ Relays require colibri websockets for the bridge-to-bridge connections, which ca
 endpoints also need to be proxied.
 
 ## Jicofo configuration
-The latest versions of jicofo support only colibri v2/secure-octo.
-
 Octo needs to be enabled, and a suitable bridge selection strategy needs to be configured in `/etc/jitsi/jicofo/jicofo.conf`:
 
 ```
@@ -54,6 +50,7 @@ verify that Octo works before setting up the region configuration for the client
 
 *Important note*: Jicofo will not mix bridges with different versions in the same conference. Even with
 `SplitBridgeSelectionStrategy` if the bridges have different versions only bridges with the same version will be used.
+To prevent this behavior (for testing purposes only) set `jicofo.ocfo.allow-mixed-versions=true` in `jicofo.conf`.
 
 ## Debugging
 Jicofo's debug interface can be used for troubleshooting.
@@ -70,7 +67,7 @@ curl "http://localhost:8888/debug" | jq .focus_manager
 
 To list the full state of a conference (get actual conference ID with the command above, escaping the '@' sign):
 ```commandline
-curl "http://localhost:8888/debug/test\@conference.example.com" | jq .
+curl "http://localhost:8888/debug/conference/test\@conference.example.com" | jq .
 ```
 
 Look under `colibri_session_manager` for the different bridge sessions.

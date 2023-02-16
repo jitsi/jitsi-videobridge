@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.function.Predicate
 import kotlin.properties.Delegates
-import kotlin.streams.toList
 
 /**
  * An abstract base class for all [Node] subclasses.  This class
@@ -515,7 +514,7 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
         }
     }
 
-    override fun getChildren(): Collection<Node> = transformPaths.stream().map(ConditionalPacketPath::path).toList()
+    override fun getChildren(): Collection<Node> = transformPaths.map { it.path }
 
     override fun getNodeStats(): NodeStatsBlock {
         val superStats = super.getNodeStats()

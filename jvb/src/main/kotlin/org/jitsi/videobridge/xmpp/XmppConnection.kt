@@ -118,15 +118,32 @@ class XmppConnection : IQListener {
         if (!config.isComplete) {
             logger.info("Not adding a MucClient, configuration incomplete.")
             return false
-        } else {
-            mucClientManager.addMucClient(config)
         }
 
-        // We consider the case where a client with the given ID already
-        // exists as success. Note however, that the existing client's
-        // configuration was NOT modified.
+        mucClientManager.getMucClient(config.id)?.let { existingMucClient ->
+            if (!existingMucClient.config.matches(config)) {
+                logger.warn(
+                    "Config for ${config.id} has changed, removing the old MucClient. Existing " +
+                        "config=${existingMucClient.config}, new config=$config"
+                )
+                mucClientManager.removeMucClient(config.id)
+            } else {
+                logger.info(
+                    "Ignoring request to add a MucClient that matches an existing one. Existing " +
+                        "config=${existingMucClient.config}, new config=$config"
+                )
+            }
+        }
+
+        mucClientManager.addMucClient(config)
         return true
     }
+
+    private fun MucClientConfiguration.matches(other: MucClientConfiguration) =
+        hostname == other.hostname &&
+            port == other.port &&
+            domain == other.domain &&
+            username == other.username
 
     /**
      * Returns ids of [MucClient] that have been added.

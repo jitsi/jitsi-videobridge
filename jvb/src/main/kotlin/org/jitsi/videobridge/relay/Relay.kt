@@ -140,6 +140,11 @@ class Relay @JvmOverloads constructor(
     private val rtpExtensions: MutableList<RtpExtension> = ArrayList()
 
     /**
+     * A cache of extmap-allow-mixed
+     */
+    private var extmapAllowMixed = false
+
+    /**
      * The indicator which determines whether [expire] has been called on this [Relay].
      */
     private var expired = false
@@ -408,25 +413,33 @@ class Relay @JvmOverloads constructor(
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
-        val wsPacketExtension = WebSocketPacketExtension()
 
         /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
          *  disabled for relay.
          */
         if (messageTransport.isActive) {
-            wsPacketExtension.active = true
+            iceUdpTransportPacketExtension.addChildExtension(
+                WebSocketPacketExtension().apply { active = true }
+            )
         } else {
             colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
-                colibriWebsocketService.getColibriRelayWebSocketUrl(
+                val urls = colibriWebsocketService.getColibriRelayWebSocketUrls(
                     conference.id,
                     id,
                     iceTransport.icePassword
-                )?.let { wsUrl ->
-                    wsPacketExtension.url = wsUrl
+                )
+                if (urls.isEmpty()) {
+                    logger.warn("No colibri relay URLs configured")
+                }
+                urls.forEach {
+                    iceUdpTransportPacketExtension.addChildExtension(
+                        WebSocketPacketExtension().apply {
+                            url = it
+                        }
+                    )
                 }
             }
         }
-        iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
 
         logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
 
@@ -585,6 +598,7 @@ class Relay @JvmOverloads constructor(
         srtpTransformers?.let { ep.setSrtpInformation(it) }
         payloadTypes.forEach { payloadType -> ep.addPayloadType(payloadType) }
         rtpExtensions.forEach { rtpExtension -> ep.addRtpExtension(rtpExtension) }
+        ep.setExtmapAllowMixed(extmapAllowMixed)
 
         setEndpointMediaSources(ep, audioSources, videoSources)
 
@@ -645,6 +659,7 @@ class Relay @JvmOverloads constructor(
             srtpTransformers?.let { s.setSrtpInformation(it) }
             payloadTypes.forEach { payloadType -> s.addPayloadType(payloadType) }
             rtpExtensions.forEach { rtpExtension -> s.addRtpExtension(rtpExtension) }
+            s.setExtmapAllowMixed(extmapAllowMixed)
             s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP))
 
             senders[endpointId] = s
@@ -675,6 +690,16 @@ class Relay @JvmOverloads constructor(
             relayedEndpoints.values.forEach { ep -> ep.addRtpExtension(rtpExtension) }
         }
         senders.values.forEach { s -> s.addRtpExtension(rtpExtension) }
+    }
+
+    fun setExtmapAllowMixed(allow: Boolean) {
+        transceiver.setExtmapAllowMixed(allow)
+        extmapAllowMixed = allow
+
+        synchronized(endpointsLock) {
+            relayedEndpoints.values.forEach { ep -> ep.setExtmapAllowMixed(allow) }
+        }
+        senders.values.forEach { s -> s.setExtmapAllowMixed(allow) }
     }
 
     private fun setEndpointMediaSources(

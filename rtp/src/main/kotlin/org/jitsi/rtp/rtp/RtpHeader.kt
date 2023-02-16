@@ -138,12 +138,14 @@ class RtpHeader {
             setCsrcCount(buf, baseOffset, csrcs.size)
         }
 
+        private fun getFixedHeaderAndCcLength(buf: ByteArray, baseOffset: Int) =
+            FIXED_HEADER_SIZE_BYTES + getCsrcCount(buf, baseOffset) * 4
+
         /**
          * The length of the entire RTP header, including any extensions, in bytes
          */
         fun getTotalLength(buf: ByteArray, baseOffset: Int): Int {
-            val length =
-                FIXED_HEADER_SIZE_BYTES + getCsrcCount(buf, baseOffset) * 4
+            val length = getFixedHeaderAndCcLength(buf, baseOffset)
 
             val extLength = if (hasExtensions(buf, baseOffset)) {
                 // Length points to where the ext header would start
@@ -154,5 +156,17 @@ class RtpHeader {
             }
             return length + extLength
         }
+
+        /**
+         * The "defined by profile" header extension field.  Only valid if hasExtensions is true, otherwise
+         * returns an invalid value (-1)
+         */
+        fun getExtensionsProfileType(buf: ByteArray, baseOffset: Int): Int =
+            if (hasExtensions(buf, baseOffset)) {
+                val extHeaderOffset = getFixedHeaderAndCcLength(buf, baseOffset)
+                HeaderExtensionHelpers.getExtensionsProfileType(buf, baseOffset + extHeaderOffset)
+            } else {
+                -1
+            }
     }
 }

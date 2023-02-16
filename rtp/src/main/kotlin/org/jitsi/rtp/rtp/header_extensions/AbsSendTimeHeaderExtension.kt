@@ -40,26 +40,28 @@ class AbsSendTimeHeaderExtension {
         private const val b = 1_000_000_000
 
         fun setTime(ext: RtpPacket.HeaderExtension, timestampNanos: Long) =
-            setTime(ext.currExtBuffer, ext.currExtOffset, timestampNanos)
+            setTime(ext.buffer, ext.dataOffset, timestampNanos)
 
-        fun setTime(buf: ByteArray, offset: Int, timestampNanos: Long) {
+        private fun setTime(buf: ByteArray, offset: Int, timestampNanos: Long) {
             val fraction = ((timestampNanos % b) * (1 shl 18) / b)
             val seconds = ((timestampNanos / b) % 64) // 6 bits only
 
             val timestamp = ((seconds shl 18) or fraction) and 0x00FFFFFF
 
-            buf.put3Bytes(offset + RtpPacket.HEADER_EXT_HEADER_SIZE, timestamp.toInt())
+            buf.put3Bytes(offset, timestamp.toInt())
         }
 
         /**
          * Gets the timestamp converted to nanoseconds.
          */
-        fun getTime(ext: RtpPacket.HeaderExtension): Instant = getTime(ext.currExtBuffer, ext.currExtOffset)
-        fun getTime(buf: ByteArray, baseOffset: Int): Instant {
-            val offset = baseOffset + RtpPacket.HEADER_EXT_HEADER_SIZE
-            val seconds = buf.getBitsAsInt(offset, 0, 6)
-            val fraction =
-                (buf.getBitsAsInt(offset, 6, 2) + buf.getShortAsInt(offset + 1)).toDouble() / 0x03ffff
+        fun getTime(ext: RtpPacket.HeaderExtension): Instant = getTime(ext.buffer, ext.dataOffset)
+
+        private fun getTime(buf: ByteArray, dataOffset: Int): Instant {
+            val seconds = buf.getBitsAsInt(dataOffset, 0, 6)
+            val fraction = (
+                buf.getBitsAsInt(dataOffset, 6, 2) +
+                    buf.getShortAsInt(dataOffset + 1)
+                ).toDouble() / 0x03ffff
 
             val instantMillis = Instant.ofEpochSecond(seconds.toLong())
             return instantMillis.plusNanos((fraction * b).toLong())

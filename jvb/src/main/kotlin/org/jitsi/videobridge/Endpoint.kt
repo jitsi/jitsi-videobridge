@@ -442,6 +442,8 @@ class Endpoint @JvmOverloads constructor(
 
     override fun addRtpExtension(rtpExtension: RtpExtension) = transceiver.addRtpExtension(rtpExtension)
 
+    override fun setExtmapAllowMixed(allow: Boolean) = transceiver.setExtmapAllowMixed(allow)
+
     fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) {
         logger.cdebug { "Adding receive ssrc $ssrc of type $mediaType" }
         transceiver.addReceiveSsrc(ssrc, mediaType)
@@ -789,11 +791,11 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
         colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
-            colibriWebsocketService.getColibriWebSocketUrl(
+            colibriWebsocketService.getColibriWebSocketUrls(
                 conference.id,
                 id,
                 iceTransport.icePassword
-            )?.let { wsUrl ->
+            ).forEach { wsUrl ->
                 val wsPacketExtension = WebSocketPacketExtension(wsUrl)
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)
             }

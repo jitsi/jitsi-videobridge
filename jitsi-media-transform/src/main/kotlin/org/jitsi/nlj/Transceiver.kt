@@ -255,6 +255,10 @@ class Transceiver(
 //        rtpExtensions.clear()
     }
 
+    fun setExtmapAllowMixed(allow: Boolean) {
+        streamInformationStore.setExtmapAllowMixed(allow)
+    }
+
     // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
     // code care about one or the other, but currently there is no issue treating them the same.
     fun addSsrcAssociation(ssrcAssociation: SsrcAssociation) {

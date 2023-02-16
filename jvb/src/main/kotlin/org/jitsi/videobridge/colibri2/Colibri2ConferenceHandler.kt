@@ -213,6 +213,8 @@ class Colibri2ConferenceHandler(
                     ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
             }
 
+            endpoint.setExtmapAllowMixed(media.extmapAllowMixed != null)
+
             /* No need to put media in conference-modified. */
         }
 
@@ -373,6 +375,8 @@ class Colibri2ConferenceHandler(
                 rtpHdrExt.toRtpExtension()?.let { relay.addRtpExtension(it) }
                     ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
             }
+
+            relay.setExtmapAllowMixed(media.extmapAllowMixed != null)
 
             /* No need to put media in conference-modified. */
         }

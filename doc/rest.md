@@ -15,7 +15,8 @@ Configuration
 ==============
 
 The following configuration properties can be added to the jitsi-videobridge configuration file (whichever file is 
-passed to `-Dconfig.file` when running the bridge) to control the behavior of the HTTP interfaces
+passed to `-Dconfig.file` when running the bridge, usually `/etc/jitsi/videobridge/jvb.conf`) to control the behavior
+of the HTTP interfaces.
 
 For the _private_ interface, use the following block and values:
 
