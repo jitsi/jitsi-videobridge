@@ -82,6 +82,8 @@ class EventTimeline(
 @SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 open class PacketInfo @JvmOverloads constructor(
     var packet: Packet,
+    /** The original length of the packet, i.e. before decryption.  Stays unchanged even if the packet is updated. */
+    val originalLength: Int = packet.length,
     val timeline: EventTimeline = EventTimeline()
 ) {
     /**
@@ -141,11 +143,11 @@ open class PacketInfo @JvmOverloads constructor(
      */
     fun clone(): PacketInfo {
         val clone = if (ENABLE_TIMELINE) {
-            PacketInfo(packet.clone(), timeline.clone())
+            PacketInfo(packet.clone(), originalLength, timeline.clone())
         } else {
             // If the timeline isn't enabled, we can just share the same one.
             // (This would change if we allowed enabling the timeline at runtime)
-            PacketInfo(packet.clone(), timeline)
+            PacketInfo(packet.clone(), originalLength, timeline)
         }
         clone.receivedTime = receivedTime
         clone.shouldDiscard = shouldDiscard
