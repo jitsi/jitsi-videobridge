@@ -774,7 +774,7 @@ class Endpoint @JvmOverloads constructor(
                 logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
             }
             if (CryptexConfig.endpoint) {
-                cryptex = cryptex || fingerprintExtension.cryptex
+                cryptex = cryptex && fingerprintExtension.cryptex
             }
         }
         dtlsTransport.setRemoteFingerprints(remoteFingerprints)

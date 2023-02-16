@@ -395,7 +395,7 @@ class Relay @JvmOverloads constructor(
             }
 
             if (CryptexConfig.relay) {
-                cryptex = cryptex || fingerprintExtension.cryptex
+                cryptex = cryptex && fingerprintExtension.cryptex
             }
         }
         dtlsTransport.setRemoteFingerprints(remoteFingerprints)
