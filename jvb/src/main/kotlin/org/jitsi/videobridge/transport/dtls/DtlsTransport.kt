@@ -162,7 +162,9 @@ class DtlsTransport(parentLogger: Logger) {
         }
         fingerprintPE.fingerprint = dtlsStack.localFingerprint
         fingerprintPE.hash = dtlsStack.localFingerprintHashFunction
-        fingerprintPE.cryptex = cryptex
+        if (cryptex) {
+            fingerprintPE.cryptex = true
+        }
     }
 
     /**
