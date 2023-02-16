@@ -210,8 +210,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     path = pipeline {
                         node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
                         node(RtpParser(streamInformationStore, logger))
-                        node(tccGenerator)
-                        node(remoteBandwidthEstimator)
                         // TODO: temporarily putting the audioLevelReader node here such that we can determine whether
                         // or not a packet should be discarded before doing SRTP. audioLevelReader has been moved here
                         // (instead of introducing a different class to read audio levels) to avoid parsing the RTP
@@ -222,6 +220,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(audioLevelReader)
                         node(videoMuteNode)
                         node(srtpDecryptWrapper)
+                        node(tccGenerator)
+                        node(remoteBandwidthEstimator)
                         node(toggleablePcapWriter.newObserverNode())
                         node(statsTracker)
                         node(PaddingTermination(logger))
