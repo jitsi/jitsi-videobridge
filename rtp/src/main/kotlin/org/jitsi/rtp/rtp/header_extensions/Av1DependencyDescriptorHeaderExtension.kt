@@ -95,8 +95,8 @@ class Av1DependencyDescriptorHeaderExtension {
         /* Frame dependency definition */
         val templateIndex = (frameDependencyTemplateId + 64 - template.templateIdOffset) % 64
         check(templateIndex < template.templateCount) {
-            val maxTemplate = (template.templateCount - 1 + 64 - template.templateIdOffset) % 64
-            "Invalid template index $templateIndex. " +
+            val maxTemplate = (template.templateIdOffset + template.templateCount - 1) % 64
+            "Invalid template index $frameDependencyTemplateId. " +
                 "Should be in range ${template.templateIdOffset} .. $maxTemplate. " +
                 "Missed a keyframe?"
         }
