@@ -33,7 +33,9 @@ data class AllocationSettings @JvmOverloads constructor(
     val selectedSources: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1,
-    val defaultConstraints: VideoConstraints
+    val defaultConstraints: VideoConstraints,
+    /** A non-negative value is assumed as the available bandwidth in bps. A negative value is ignored. */
+    val assumedBandwidthBps: Long = -1
 ) {
     fun toJson() = OrderedJsonObject().apply {
         put("on_stage_sources", onStageSources)
@@ -41,6 +43,7 @@ data class AllocationSettings @JvmOverloads constructor(
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
         put("default_constraints", defaultConstraints)
+        put("assumed_bandwidth_bps", assumedBandwidthBps)
     }
 
     override fun toString(): String = toJson().toJSONString()
@@ -70,6 +73,8 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
 
     private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 
+    private var assumedBandwidthBps: Long = -1
+
     @Deprecated("", ReplaceWith("onStageSources"), DeprecationLevel.WARNING)
     private var onStageEndpoints: List<String> = emptyList()
 
@@ -82,7 +87,8 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
         selectedSources = selectedSources,
         videoConstraints = videoConstraints,
         defaultConstraints = defaultConstraints,
-        lastN = lastN
+        lastN = lastN,
+        assumedBandwidthBps = assumedBandwidthBps
     )
 
     fun get() = allocationSettings
@@ -147,6 +153,10 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
                 this.videoConstraints = newConstraints
                 changed = true
             }
+        }
+        message.assumedBandwidthBps?.let {
+            this.assumedBandwidthBps = it
+            changed = true
         }
 
         if (changed) {

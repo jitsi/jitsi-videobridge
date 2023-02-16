@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.allocation
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.MediaSourceDesc
+import org.jitsi.nlj.util.bps
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
@@ -237,7 +238,10 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         if (sourceBitrateAllocations.isEmpty()) {
             return BandwidthAllocation(emptySet())
         }
-        var remainingBandwidth = availableBandwidth
+        var remainingBandwidth = if (allocationSettings.assumedBandwidthBps >= 0) {
+            logger.warn("Allocating with assumed bandwidth ${allocationSettings.assumedBandwidthBps.bps}.")
+            allocationSettings.assumedBandwidthBps
+        } else availableBandwidth
         var oldRemainingBandwidth: Long = -1
         var oversending = false
         while (oldRemainingBandwidth != remainingBandwidth) {
