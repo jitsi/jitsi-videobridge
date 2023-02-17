@@ -269,18 +269,25 @@ class Transceiver(
         streamInformationStore.addSsrcAssociation(ssrcAssociation)
     }
 
-    fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsRole: TlsRole, keyingMaterial: ByteArray) {
+    fun setSrtpInformation(
+        chosenSrtpProtectionProfile: Int,
+        tlsRole: TlsRole,
+        keyingMaterial: ByteArray,
+        cryptex: Boolean
+    ) {
         val srtpProfileInfo =
             SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
         logger.cdebug {
             "Transceiver $id creating transformers with:\n" +
                 "profile info:\n$srtpProfileInfo\n" +
-                "tls role: $tlsRole"
+                "tls role: $tlsRole\n" +
+                "cryptex: $cryptex"
         }
         srtpTransformers = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,
             tlsRole,
+            cryptex,
             logger
         ).also { setSrtpInformationInternal(it, true) }
     }

@@ -106,7 +106,7 @@ class RemoteBandwidthEstimator(
                     AbsSendTimeHeaderExtension.getTime(ext),
                     packetInfo.receivedTime,
                     rtpPacket.sequenceNumber,
-                    rtpPacket.length.bytes
+                    packetInfo.originalLength.bytes
                 )
                 /* With receiver-side bwe we need to treat each received packet as separate feedback */
                 bwe.feedbackComplete(now)

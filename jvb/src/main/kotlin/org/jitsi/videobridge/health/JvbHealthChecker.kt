@@ -19,6 +19,7 @@ package org.jitsi.videobridge.health
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
 import org.jitsi.health.HealthCheckService
 import org.jitsi.health.HealthChecker
+import org.jitsi.health.Result
 import org.jitsi.videobridge.health.config.HealthConfig.Companion.config
 import org.jitsi.videobridge.ice.Harvesters
 
@@ -34,16 +35,19 @@ class JvbHealthChecker : HealthCheckService {
     fun start() = healthChecker.start()
     fun stop() = healthChecker.stop()
 
-    private fun check() {
+    private fun check(): Result {
         if (MappingCandidateHarvesters.stunDiscoveryFailed) {
-            throw Exception("Address discovery through STUN failed")
+            return Result(success = false, message = "Address discovery through STUN failed")
         }
         if (!Harvesters.isHealthy()) {
-            throw Exception("Failed to bind single-port")
+            return Result(success = false, message = "Failed to bind single-port")
         }
 
         // TODO: check if XmppConnection is configured and connected.
+
+        return Result(success = true)
     }
 
-    override fun getResult(): Exception? = healthChecker.result
+    override val result: Result
+        get() = healthChecker.result
 }
