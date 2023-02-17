@@ -120,6 +120,7 @@ class SrtpUtil {
             srtpProfileInformation: SrtpProfileInformation,
             keyingMaterial: ByteArray,
             tlsRole: TlsRole,
+            cryptex: Boolean,
             parentLogger: Logger
         ): SrtpTransformers {
             val clientWriteSrtpMasterKey = ByteArray(srtpProfileInformation.cipherKeyLength)
@@ -166,6 +167,8 @@ class SrtpUtil {
                send-side SRTP replay protection. */
             /* TODO: disable this only in cases where we actually need to use retransmitPlain? */
             srtpPolicy.isSendReplayEnabled = false
+
+            srtpPolicy.isCryptexEnabled = cryptex
 
             val clientSrtpContextFactory = SrtpContextFactory(
                 tlsRole == TlsRole.CLIENT,

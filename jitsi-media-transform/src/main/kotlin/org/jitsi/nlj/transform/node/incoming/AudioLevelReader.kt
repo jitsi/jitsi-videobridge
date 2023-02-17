@@ -32,7 +32,13 @@ import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
  */
 class AudioLevelReader(
     streamInformationStore: ReadOnlyStreamInformationStore
-) : ObserverNode("Audio level reader") {
+) {
+    /**
+     *  Process packets without cryptex pre-SRTP to allow the "skip decryption" optimization if they are to be dropped.
+     */
+    val preDecryptNode = AudioLevelReaderNode("Audio level reader (pre-srtp)") { !it.originalHadCryptex }
+    val postDecryptNode = AudioLevelReaderNode("Audio level reader (post-srtp)") { it.originalHadCryptex }
+
     private var audioLevelExtId: Int? = null
     var audioLevelListener: AudioLevelListener? = null
     var forwardedSilencePackets: Int = 0
@@ -49,48 +55,56 @@ class AudioLevelReader(
         }
     }
 
-    override fun observe(packetInfo: PacketInfo) {
-        val audioRtpPacket = packetInfo.packet as? AudioRtpPacket ?: return
+    inner class AudioLevelReaderNode(
+        name: String,
+        val shouldProcess: (PacketInfo) -> Boolean
+    ) : ObserverNode(name) {
 
-        audioLevelExtId?.let { audioLevelId ->
-            audioRtpPacket.getHeaderExtension(audioLevelId)?.let { ext ->
-                stats.audioLevel()
+        override fun observe(packetInfo: PacketInfo) {
+            if (!shouldProcess(packetInfo)) return
 
-                val level = AudioLevelHeaderExtension.getAudioLevel(ext)
-                val silence = level == MUTED_LEVEL
+            val audioRtpPacket = packetInfo.packet as? AudioRtpPacket ?: return
 
-                if (!silence) stats.nonSilence(AudioLevelHeaderExtension.getVad(ext))
-                if (silence && forwardedSilencePackets > forwardedSilencePacketsLimit) {
-                    packetInfo.shouldDiscard = true
-                    stats.discardedSilence()
-                } else if (this.forceMute) {
-                    packetInfo.shouldDiscard = true
-                    stats.discardedForceMute()
-                } else {
-                    forwardedSilencePackets = if (silence) forwardedSilencePackets + 1 else 0
-                    audioLevelListener?.let { listener ->
-                        if (listener.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())) {
-                            packetInfo.shouldDiscard = true
-                            stats.discardedRanking()
+            audioLevelExtId?.let { audioLevelId ->
+                audioRtpPacket.getHeaderExtension(audioLevelId)?.let { ext ->
+                    stats.audioLevel()
+
+                    val level = AudioLevelHeaderExtension.getAudioLevel(ext)
+                    val silence = level == MUTED_LEVEL
+
+                    if (!silence) stats.nonSilence(AudioLevelHeaderExtension.getVad(ext))
+                    if (silence && forwardedSilencePackets > forwardedSilencePacketsLimit) {
+                        packetInfo.shouldDiscard = true
+                        stats.discardedSilence()
+                    } else if (this@AudioLevelReader.forceMute) {
+                        packetInfo.shouldDiscard = true
+                        stats.discardedForceMute()
+                    } else {
+                        forwardedSilencePackets = if (silence) forwardedSilencePackets + 1 else 0
+                        audioLevelListener?.let { listener ->
+                            if (listener.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())) {
+                                packetInfo.shouldDiscard = true
+                                stats.discardedRanking()
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
-        addString("audio_level_ext_id", audioLevelExtId.toString())
-        addNumber("num_audio_levels", stats.numAudioLevels)
-        addNumber("num_silence_packets_discarded", stats.numDiscardedSilence)
-        addNumber("num_force_mute_discarded", stats.numDiscardedForceMute)
-        addNumber("num_ranking_discarded", stats.numDiscardedRanking)
-        addNumber("num_non_silence", stats.numNonSilence)
-        addNumber("num_non_silence_with_vad", stats.numNonSilenceWithVad)
-        addBoolean("force_mute", forceMute)
-    }
+        override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+            addString("audio_level_ext_id", audioLevelExtId.toString())
+            addNumber("num_audio_levels", stats.numAudioLevels)
+            addNumber("num_silence_packets_discarded", stats.numDiscardedSilence)
+            addNumber("num_force_mute_discarded", stats.numDiscardedForceMute)
+            addNumber("num_ranking_discarded", stats.numDiscardedRanking)
+            addNumber("num_non_silence", stats.numNonSilence)
+            addNumber("num_non_silence_with_vad", stats.numNonSilenceWithVad)
+            addBoolean("force_mute", forceMute)
+        }
 
-    override fun trace(f: () -> Unit) = f.invoke()
+        override fun trace(f: () -> Unit) = f.invoke()
+    }
 
     companion object {
         const val MUTED_LEVEL = 127

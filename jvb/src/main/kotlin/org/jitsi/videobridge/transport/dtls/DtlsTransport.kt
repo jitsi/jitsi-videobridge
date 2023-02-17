@@ -56,6 +56,9 @@ class DtlsTransport(parentLogger: Logger) {
 
     private val stats = Stats()
 
+    /** Whether to advertise cryptex to peers. */
+    var cryptex = false
+
     /**
      * The DTLS stack instance
      */
@@ -159,6 +162,9 @@ class DtlsTransport(parentLogger: Logger) {
         }
         fingerprintPE.fingerprint = dtlsStack.localFingerprint
         fingerprintPE.hash = dtlsStack.localFingerprintHashFunction
+        if (cryptex) {
+            fingerprintPE.cryptex = true
+        }
     }
 
     /**

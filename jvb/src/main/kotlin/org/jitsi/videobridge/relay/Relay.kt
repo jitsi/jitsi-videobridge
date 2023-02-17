@@ -66,6 +66,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.CryptexConfig
 import org.jitsi.videobridge.EncodingsManager
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.PotentialPacketHandler
@@ -149,7 +150,9 @@ class Relay @JvmOverloads constructor(
     private var expired = false
 
     private val iceTransport = IceTransport(id, iceControlling, useUniquePort, logger, clock)
-    private val dtlsTransport = DtlsTransport(logger)
+    private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.relay }
+
+    private var cryptex = CryptexConfig.relay
 
     private val diagnosticContext = conference.newDiagnosticContext().apply {
         put("relay_id", id)
@@ -362,6 +365,7 @@ class Relay @JvmOverloads constructor(
             srtpProfileInfo,
             keyingMaterial,
             tlsRole,
+            cryptex,
             logger
         )
         this.srtpTransformers = srtpTransformers
@@ -388,6 +392,10 @@ class Relay @JvmOverloads constructor(
                 remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
             } else {
                 logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
+            }
+
+            if (CryptexConfig.relay) {
+                cryptex = cryptex && fingerprintExtension.cryptex
             }
         }
         dtlsTransport.setRemoteFingerprints(remoteFingerprints)
