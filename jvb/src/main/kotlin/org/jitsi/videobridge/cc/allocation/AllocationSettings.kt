@@ -16,7 +16,11 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.util.bps
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.endpointIdToSourceName
@@ -33,7 +37,9 @@ data class AllocationSettings @JvmOverloads constructor(
     val selectedSources: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
     val lastN: Int = -1,
-    val defaultConstraints: VideoConstraints
+    val defaultConstraints: VideoConstraints,
+    /** A non-negative value is assumed as the available bandwidth in bps. A negative value is ignored. */
+    val assumedBandwidthBps: Long = -1
 ) {
     fun toJson() = OrderedJsonObject().apply {
         put("on_stage_sources", onStageSources)
@@ -41,6 +47,7 @@ data class AllocationSettings @JvmOverloads constructor(
         put("video_constraints", videoConstraints)
         put("last_n", lastN)
         put("default_constraints", defaultConstraints)
+        put("assumed_bandwidth_bps", assumedBandwidthBps)
     }
 
     override fun toString(): String = toJson().toJSONString()
@@ -52,7 +59,12 @@ data class AllocationSettings @JvmOverloads constructor(
  * Maintains an [AllocationSettings] instance and allows fields to be set individually, with an indication of whether
  * the overall state changed.
  */
-internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
+internal class AllocationSettingsWrapper(
+    private val useSourceNames: Boolean,
+    parentLogger: Logger = LoggerImpl(AllocationSettingsWrapper::class.java.name)
+) {
+    private val logger = createChildLogger(parentLogger)
+
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
      */
@@ -70,6 +82,8 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
 
     private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 
+    private var assumedBandwidthBps: Long = -1
+
     @Deprecated("", ReplaceWith("onStageSources"), DeprecationLevel.WARNING)
     private var onStageEndpoints: List<String> = emptyList()
 
@@ -82,7 +96,8 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
         selectedSources = selectedSources,
         videoConstraints = videoConstraints,
         defaultConstraints = defaultConstraints,
-        lastN = lastN
+        lastN = lastN,
+        assumedBandwidthBps = assumedBandwidthBps
     )
 
     fun get() = allocationSettings
@@ -111,6 +126,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
             }
         } else {
             message.selectedEndpoints?.let {
+                logger.warn("Setting deprecated selectedEndpoints=$it")
                 val newSelectedSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
                 if (selectedSources != newSelectedSources) {
                     selectedSources = newSelectedSources
@@ -118,6 +134,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
                 }
             }
             message.onStageEndpoints?.let {
+                logger.warn("Setting deprecated onStateEndpoints=$it")
                 val newOnStageSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
                 if (onStageSources != newOnStageSources) {
                     onStageSources = newOnStageSources
@@ -147,6 +164,11 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
                 this.videoConstraints = newConstraints
                 changed = true
             }
+        }
+        message.assumedBandwidthBps?.let {
+            logger.warn("Setting assumed bandwidth ${it.bps}")
+            this.assumedBandwidthBps = it
+            changed = true
         }
 
         if (changed) {

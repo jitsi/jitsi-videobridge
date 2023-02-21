@@ -482,7 +482,8 @@ class ReceiverVideoConstraintsMessage(
     val onStageEndpoints: List<String>? = null,
     val onStageSources: List<String>? = null,
     val defaultConstraints: VideoConstraints? = null,
-    val constraints: Map<String, VideoConstraints>? = null
+    val constraints: Map<String, VideoConstraints>? = null,
+    val assumedBandwidthBps: Long? = null
 ) : BridgeChannelMessage(TYPE) {
     companion object {
         const val TYPE = "ReceiverVideoConstraints"
