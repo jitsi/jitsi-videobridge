@@ -19,7 +19,8 @@ package org.jitsi.videobridge.cc.allocation
 import org.jitsi.nlj.util.bps
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
-import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.endpointIdToSourceName
@@ -59,10 +60,10 @@ data class AllocationSettings @JvmOverloads constructor(
  * the overall state changed.
  */
 internal class AllocationSettingsWrapper(
-    parentLogger: Logger,
-    private val useSourceNames: Boolean
+    private val useSourceNames: Boolean,
+    parentLogger: Logger = LoggerImpl(AllocationSettingsWrapper::class.java.name)
 ) {
-    private val logger = parentLogger.createChildLogger(AllocationSettingsWrapper::class.java.name)
+    private val logger = createChildLogger(parentLogger)
 
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
