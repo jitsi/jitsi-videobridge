@@ -96,7 +96,14 @@ enum class RtpExtensionType(val uri: String) {
     /**
      * The URN which identifies the RTP Header Extension for Video Orientation.
      */
-    VIDEO_ORIENTATION("urn:3gpp:video-orientation");
+    VIDEO_ORIENTATION("urn:3gpp:video-orientation"),
+
+    /**
+     * The URN which identifies the AV1 Dependency Descriptor RTP Header Extension
+     */
+    AV1_DEPENDENCY_DESCRIPTOR(
+        "https://aomediacodec.github.io/av1-rtp-spec/#dependency-descriptor-rtp-header-extension"
+    );
 
     companion object {
         private val uriMap = RtpExtensionType.values().associateBy(RtpExtensionType::uri)
