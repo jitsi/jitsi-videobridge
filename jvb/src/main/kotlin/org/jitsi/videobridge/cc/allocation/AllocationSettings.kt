@@ -16,7 +16,10 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.util.bps
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.endpointIdToSourceName
@@ -55,7 +58,12 @@ data class AllocationSettings @JvmOverloads constructor(
  * Maintains an [AllocationSettings] instance and allows fields to be set individually, with an indication of whether
  * the overall state changed.
  */
-internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
+internal class AllocationSettingsWrapper(
+    parentLogger: Logger,
+    private val useSourceNames: Boolean
+) {
+    private val logger = parentLogger.createChildLogger(AllocationSettingsWrapper::class.java.name)
+
     /**
      * The last selected endpoints set signaled by the receiving endpoint.
      */
@@ -117,6 +125,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
             }
         } else {
             message.selectedEndpoints?.let {
+                logger.warn("Setting deprecated selectedEndpoints=$it")
                 val newSelectedSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
                 if (selectedSources != newSelectedSources) {
                     selectedSources = newSelectedSources
@@ -124,6 +133,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
                 }
             }
             message.onStageEndpoints?.let {
+                logger.warn("Setting deprecated onStateEndpoints=$it")
                 val newOnStageSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
                 if (onStageSources != newOnStageSources) {
                     onStageSources = newOnStageSources
@@ -155,6 +165,7 @@ internal class AllocationSettingsWrapper(private val useSourceNames: Boolean) {
             }
         }
         message.assumedBandwidthBps?.let {
+            logger.warn("Setting assumed bandwidth ${it.bps}")
             this.assumedBandwidthBps = it
             changed = true
         }
