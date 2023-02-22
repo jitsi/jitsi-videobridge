@@ -220,7 +220,7 @@ class Av1DependencyDescriptorReader(
             customFdiffs = readFrameFdiffs()
         }
         if (customChainsFlag) {
-            readFrameChains()
+            customChains = readFrameChains()
         }
     }
 
