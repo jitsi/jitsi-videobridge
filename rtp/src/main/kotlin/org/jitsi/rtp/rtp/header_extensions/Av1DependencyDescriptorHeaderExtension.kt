@@ -133,7 +133,7 @@ class Av1DependencyDescriptorReader(
      * template dependency structure.  The returned object will not be a complete representation of the
      */
     fun parseStateless(): Av1DependencyDescriptorStatelessSubset {
-        reader.reset()
+        reset()
         readMandatoryDescriptorFields()
 
         if (length > 3) {
@@ -160,7 +160,7 @@ class Av1DependencyDescriptorReader(
     /** Parse the dependency descriptor in the context of [dep], the currently-applicable template dependency
      * structure.*/
     fun parse(dep: Av1TemplateDependencyStructure?): Av1DependencyDescriptorHeaderExtension {
-        reader.reset()
+        reset()
         readMandatoryDescriptorFields()
         if (length > 3) {
             readExtendedDescriptorFields(dep)
@@ -183,6 +183,8 @@ class Av1DependencyDescriptorReader(
             templateDependencyStructure!!
         )
     }
+
+    private fun reset() = reader.reset()
 
     private fun readMandatoryDescriptorFields() {
         startOfFrame = reader.bitAsBoolean()
@@ -226,13 +228,25 @@ class Av1DependencyDescriptorReader(
 
     /* Data for template dependency structure */
     private var templateIdOffset: Int = 0
-    private var templateInfo = mutableListOf<TemplateFrameInfo>()
-    private var decodeTargetInfo = mutableListOf<DecodeTargetInfo>()
-    private var maxRenderResolutions = mutableListOf<Resolution>()
+    private val templateInfo = mutableListOf<TemplateFrameInfo>()
+    private val decodeTargetInfo = mutableListOf<DecodeTargetInfo>()
+    private val maxRenderResolutions = mutableListOf<Resolution>()
 
     private var dtCnt = 0
 
+    private fun resetDependencyStructureInfo() {
+        /* These fields are assembled incrementally when parsing a dependency structure; reset them
+         * in case we're running a parser more than once.
+         */
+        templateCnt = 0
+        templateInfo.clear()
+        decodeTargetInfo.clear()
+        maxRenderResolutions.clear()
+    }
+
     private fun readTemplateDependencyStructure(): Av1TemplateDependencyStructure {
+        resetDependencyStructureInfo()
+
         templateIdOffset = reader.bits(6)
 
         val dtCntMinusOne = reader.bits(5)

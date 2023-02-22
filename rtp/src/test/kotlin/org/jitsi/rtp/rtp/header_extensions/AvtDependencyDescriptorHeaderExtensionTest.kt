@@ -1,5 +1,6 @@
 package org.jitsi.rtp.rtp.header_extensions
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -30,14 +31,24 @@ class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
     init {
         context("AVT Dependency Descriptors") {
             context("a descriptor with a single-layer dependency structure") {
-                val ld1r = Av1DependencyDescriptorReader(longDesc1, 0, longDesc1.size, null)
-                val ld1 = ld1r.parse()
-                should("be parsed properly)") {
+                val ld1r = Av1DependencyDescriptorReader(longDesc1, 0, longDesc1.size)
+                val ld1 = ld1r.parse(null)
+                should("be parsed properly") {
                     ld1.startOfFrame shouldBe true
                     ld1.endOfFrame shouldBe false
                     ld1.frameNumber shouldBe 0x0001
 
                     val structure = ld1.newTemplateDependencyStructure
+                    structure shouldNotBe null
+                    structure!!.decodeTargetCount shouldBe 1
+                }
+                should("be parseable statelessly") {
+                    val ld1s = ld1r.parseStateless()
+                    ld1s.startOfFrame shouldBe true
+                    ld1s.endOfFrame shouldBe false
+                    ld1s.frameNumber shouldBe 0x0001
+
+                    val structure = ld1s.newTemplateDependencyStructure
                     structure shouldNotBe null
                     structure!!.decodeTargetCount shouldBe 1
                 }
@@ -48,12 +59,13 @@ class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor with a scalable dependency structure") {
-                val ldsr = Av1DependencyDescriptorReader(longDescScalable, 0, longDescScalable.size, null)
-                val lds = ldsr.parse()
+                val ldsr = Av1DependencyDescriptorReader(longDescScalable, 0, longDescScalable.size)
+                val lds = ldsr.parse(null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
                     lds.endOfFrame shouldBe true
                     lds.frameNumber shouldBe 0x0134
+                    lds.activeDecodeTargetsBitmask shouldBe 0x1ff
 
                     val structure = lds.newTemplateDependencyStructure
                     structure shouldNotBe null
@@ -66,15 +78,10 @@ class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor following the dependency structure, specifying decode targets") {
-                val ldsr = Av1DependencyDescriptorReader(longDescScalable, 0, longDescScalable.size, null)
-                val lds = ldsr.parse()
-                val mdsr = Av1DependencyDescriptorReader(
-                    midDescScalable,
-                    0,
-                    midDescScalable.size,
-                    lds.newTemplateDependencyStructure
-                )
-                val mds = mdsr.parse()
+                val ldsr = Av1DependencyDescriptorReader(longDescScalable, 0, longDescScalable.size)
+                val lds = ldsr.parse(null)
+                val mdsr = Av1DependencyDescriptorReader(midDescScalable, 0, midDescScalable.size)
+                val mds = mdsr.parse(lds.newTemplateDependencyStructure)
 
                 should("be parsed properly") {
                     mds.startOfFrame shouldBe true
@@ -88,6 +95,23 @@ class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val mdsi = mds.frameInfo
                     mdsi.spatialId shouldBe 0
                     mdsi.temporalId shouldBe 1
+                }
+            }
+            context("a descriptor without a dependency structure") {
+                val mdsr = Av1DependencyDescriptorReader(midDescScalable, 0, midDescScalable.size)
+                should("be parseable as the stateless subset") {
+                    val mds = mdsr.parseStateless()
+
+                    mds.startOfFrame shouldBe true
+                    mds.endOfFrame shouldBe true
+                    mds.frameNumber shouldBe 0x0146
+
+                    mds.newTemplateDependencyStructure shouldBe null
+                }
+                should("fail to parse if the dependency structure is not present") {
+                    shouldThrow<Av1DependencyException> {
+                        mdsr.parse(null)
+                    }
                 }
             }
         }
