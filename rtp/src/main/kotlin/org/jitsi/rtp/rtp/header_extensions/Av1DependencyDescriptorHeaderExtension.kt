@@ -19,23 +19,41 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
 
 /**
- * The AV1 Dependency Descriptor header extension, as defined in https://aomediacodec.github.io/av1-rtp-spec/#appendix
+ * The subset of the fields of an AV1 Dependency Descriptor that can be parsed statelessly.
  */
-class Av1DependencyDescriptorHeaderExtension(
+open class Av1DependencyDescriptorStatelessSubset(
     val startOfFrame: Boolean,
     val endOfFrame: Boolean,
     val frameDependencyTemplateId: Int,
     val frameNumber: Int,
 
+    val newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
+)
+
+/**
+ * The AV1 Dependency Descriptor header extension, as defined in https://aomediacodec.github.io/av1-rtp-spec/#appendix
+ */
+class Av1DependencyDescriptorHeaderExtension(
+    startOfFrame: Boolean,
+    endOfFrame: Boolean,
+    frameDependencyTemplateId: Int,
+    frameNumber: Int,
+
+    newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
+
+    val activeDecodeTargetsBitmask: Int?,
+
     val customDtis: List<DTI>?,
     val customFdiffs: List<Int>?,
     val customChains: List<Int>?,
 
-    val newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
-
-    val activeDecodeTargetsBitmask: Int?,
-
     val structure: Av1TemplateDependencyStructure
+) : Av1DependencyDescriptorStatelessSubset(
+    startOfFrame,
+    endOfFrame,
+    frameDependencyTemplateId,
+    frameNumber,
+    newTemplateDependencyStructure
 ) {
     val frameInfo: FrameInfo
         get() {
@@ -91,7 +109,6 @@ class Av1DependencyDescriptorReader(
     buffer: ByteArray,
     offset: Int,
     val length: Int,
-    val dep: Av1TemplateDependencyStructure?
 ) {
     private var startOfFrame = false
     private var endOfFrame = false
@@ -109,13 +126,44 @@ class Av1DependencyDescriptorReader(
 
     private val reader = BitReader(buffer, offset, length)
 
-    constructor(ext: RtpPacket.HeaderExtension, dep: Av1TemplateDependencyStructure?) :
-        this(ext.buffer, ext.dataOffset, ext.dataLengthBytes, dep)
+    constructor(ext: RtpPacket.HeaderExtension) :
+        this(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
 
-    fun parse(): Av1DependencyDescriptorHeaderExtension {
+    /** Parse those parts of the dependency descriptor that can be parsed statelessly, i.e. without an external
+     * template dependency structure.  The returned object will not be a complete representation of the
+     */
+    fun parseStateless(): Av1DependencyDescriptorStatelessSubset {
+        reader.reset()
+        readMandatoryDescriptorFields()
+
+        if (length > 3) {
+            val templateDependencyStructurePresent = reader.bitAsBoolean()
+
+            /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
+             * none of these fields are parseable statelessly.
+             */
+            reader.skipbits(4)
+
+            if (templateDependencyStructurePresent) {
+                localTemplateDependencyStructure = readTemplateDependencyStructure()
+            }
+        }
+        return Av1DependencyDescriptorStatelessSubset(
+            startOfFrame,
+            endOfFrame,
+            frameDependencyTemplateId,
+            frameNumber,
+            localTemplateDependencyStructure,
+        )
+    }
+
+    /** Parse the dependency descriptor in the context of [dep], the currently-applicable template dependency
+     * structure.*/
+    fun parse(dep: Av1TemplateDependencyStructure?): Av1DependencyDescriptorHeaderExtension {
+        reader.reset()
         readMandatoryDescriptorFields()
         if (length > 3) {
-            readExtendedDescriptorFields()
+            readExtendedDescriptorFields(dep)
         } else {
             if (dep == null) {
                 throw Av1DependencyException("No external dependency structure specified for non-first packet")
@@ -127,11 +175,11 @@ class Av1DependencyDescriptorReader(
             endOfFrame,
             frameDependencyTemplateId,
             frameNumber,
+            localTemplateDependencyStructure,
+            activeDecodeTargetsBitmask,
             customDtis,
             customFdiffs,
             customChains,
-            localTemplateDependencyStructure,
-            activeDecodeTargetsBitmask,
             templateDependencyStructure!!
         )
     }
@@ -143,7 +191,7 @@ class Av1DependencyDescriptorReader(
         frameNumber = reader.bits(16)
     }
 
-    private fun readExtendedDescriptorFields() {
+    private fun readExtendedDescriptorFields(dep: Av1TemplateDependencyStructure?) {
         val templateDependencyStructurePresent = reader.bitAsBoolean()
         val activeDecodeTargetsPresent = reader.bitAsBoolean()
         val customDtisFlag = reader.bitAsBoolean()
