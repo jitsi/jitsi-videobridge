@@ -1,5 +1,6 @@
 package org.jitsi.rtp.rtp.header_extensions
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
@@ -7,6 +8,10 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import jakarta.xml.bind.DatatypeConverter.parseHexBinary
 
+@SuppressFBWarnings(
+    value = ["NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"],
+    justification = "Use of pointer after shouldNotBeNull test."
+)
 class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
 

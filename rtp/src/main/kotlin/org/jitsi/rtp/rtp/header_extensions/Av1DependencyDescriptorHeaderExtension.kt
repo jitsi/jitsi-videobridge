@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp.rtp.header_extensions
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
 
@@ -275,6 +276,10 @@ class Av1DependencyDescriptorReader(
     private var templateCnt = 0
     private var maxSpatialId = 0
 
+    @SuppressFBWarnings(
+        value = ["SF_SWITCH_NO_DEFAULT"],
+        justification = "Artifact of generated Kotlin code."
+    )
     private fun readTemplateLayers() {
         var temporalId = 0
         var spatialId = 0
