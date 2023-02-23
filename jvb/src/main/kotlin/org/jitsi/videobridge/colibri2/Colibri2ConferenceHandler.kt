@@ -99,6 +99,10 @@ class Colibri2ConferenceHandler(
         }
 
         Pair(responseBuilder.build(), expire)
+    } catch (e: UnknownEndpointException) {
+        logger.warn("Unknown Endpoint during processing conference-modify IQ: $e")
+        val error = createEndpointNotFoundError(conferenceModifyIQ, e.endpointId)
+        Pair(error, false)
     } catch (e: IqProcessingException) {
         // Item not found conditions are assumed to be less critical, as they often happen in case a request
         // arrives late for an expired endpoint.
@@ -194,10 +198,10 @@ class Colibri2ConferenceHandler(
                 }
             }
         } else {
-            conference.getLocalEndpoint(c2endpoint.id) ?: throw IqProcessingException(
-                // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
-                Condition.bad_request,
-                "Unknown endpoint ${c2endpoint.id}"
+            conference.getLocalEndpoint(c2endpoint.id) ?: throw UnknownEndpointException(
+                Condition.item_not_found,
+                "Unknown endpoint ${c2endpoint.id}",
+                c2endpoint.id
             )
         }
 

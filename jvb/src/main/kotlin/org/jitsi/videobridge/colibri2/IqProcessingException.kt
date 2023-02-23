@@ -18,7 +18,7 @@ package org.jitsi.videobridge.colibri2
 import org.jivesoftware.smack.packet.StanzaError
 import java.lang.Exception
 
-internal class IqProcessingException(
+internal open class IqProcessingException(
     val condition: StanzaError.Condition,
     message: String
 ) : Exception(message) {

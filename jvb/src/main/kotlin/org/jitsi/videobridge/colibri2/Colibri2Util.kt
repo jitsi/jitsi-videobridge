@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.colibri2
 
+import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
@@ -39,4 +40,14 @@ fun createGracefulShutdownErrorResponse(iq: IQ): IQ = createError(
     StanzaError.Condition.service_unavailable,
     "In graceful shutdown",
     Colibri2Error(Colibri2Error.Reason.GRACEFUL_SHUTDOWN)
+)
+
+fun createEndpointNotFoundError(iq: IQ, endpointId: String) = createError(
+    iq,
+    StanzaError.Condition.item_not_found,
+    "Endpoint not found for ID: $endpointId",
+    listOf(
+        Colibri2Error(Colibri2Error.Reason.UNKNOWN_ENDPOINT),
+        Colibri2Endpoint.getBuilder().setId(endpointId).build()
+    )
 )
