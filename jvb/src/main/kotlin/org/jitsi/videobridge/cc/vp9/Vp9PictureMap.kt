@@ -165,7 +165,7 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
 ) {
     var numCached = 0
     var firstIndex = -1
-    var indexTracker = PictureIdIndexTracker()
+    val indexTracker = PictureIdIndexTracker()
 
     /**
      * Gets a picture with a given VP9 picture ID from the cache.
