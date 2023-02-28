@@ -38,8 +38,6 @@ class Av1DDParser(
 ) : VideoCodecParser(sources) {
     private val logger = createChildLogger(parentLogger)
 
-    private var numSpatialLayers = -1
-
     /** History of AV1 templates and decode targets. */
     private val ddStateHistory = HashMap<Long, TemplateHistory>()
 
