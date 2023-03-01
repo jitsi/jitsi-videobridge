@@ -20,32 +20,20 @@ import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.sum
 
 /**
  * Keeps track of its subjective quality index,
  * its last stable bitrate and other useful things for adaptivity/routing.
  *
- * Note: this class and [getBitrate] are only open to allow to be overridden for testing. We found that mocking has
- * severe overhead and is not suitable for performance tests.
- *
  * @author George Politis
  */
-open class RtpLayerDesc
+abstract class RtpLayerDesc
 @JvmOverloads
 constructor(
     /**
      * The index of this instance's encoding in the source encoding array.
      */
     val eid: Int,
-    /**
-     * The temporal layer ID of this instance, or negative for unknown.
-     */
-    val tid: Int,
-    /**
-     * The spatial layer ID of this instance, or negative for unknown.
-     */
-    val sid: Int,
     /**
      * The max height of the bitstream that this instance represents. The actual
      * height may be less due to bad network or system load.
@@ -59,67 +47,25 @@ constructor(
      * system load.
      */
     val frameRate: Double,
-    /**
-     * The [RtpLayerDesc]s on which this layer definitely depends.
-     */
-    private val dependencyLayers: Array<RtpLayerDesc> = emptyArray(),
-    /**
-     * The [RtpLayerDesc]s on which this layer possibly depends.
-     * (The intended use case is K-SVC mode.)
-     */
-    private val softDependencyLayers: Array<RtpLayerDesc> = emptyArray()
 ) {
-    init {
-        require(tid < 8) { "Invalid temporal ID $tid" }
-        require(sid < 8) { "Invalid spatial ID $sid" }
-    }
-
-    /**
-     * Clone an existing layer desc, inheriting its statistics,
-     * modifying only specific values.
-     */
-    fun copy(
-        eid: Int = this.eid,
-        tid: Int = this.tid,
-        sid: Int = this.sid,
-        height: Int = this.height,
-        frameRate: Double = this.frameRate,
-        dependencyLayers: Array<RtpLayerDesc> = this.dependencyLayers,
-        softDependencyLayers: Array<RtpLayerDesc> = this.softDependencyLayers
-    ) = RtpLayerDesc(eid, tid, sid, height, frameRate, dependencyLayers, softDependencyLayers).also {
-        it.inheritFrom(this)
-    }
-
-    /**
-     * Whether softDependencyLayers are to be used.
-     */
-    var useSoftDependencies = true
+    abstract fun copy(height: Int = this.height): RtpLayerDesc
 
     /**
      * The [BitrateTracker] instance used to calculate the receiving bitrate of this RTP layer.
      */
-    private var bitrateTracker = BitrateCalculator.createBitrateTracker()
+    protected var bitrateTracker = BitrateCalculator.createBitrateTracker()
 
     /**
      * @return the "id" of this layer within this encoding. This is a server-side id and should
      * not be confused with any encoding id defined in the client (such as the
      * rid).
      */
-    val layerId = getIndex(0, sid, tid)
+    abstract val layerId: Int
 
     /**
      * A local index of this track.
      */
-    val index = getIndex(eid, sid, tid)
-
-    /**
-     * {@inheritDoc}
-     */
-    override fun toString(): String {
-        return "subjective_quality=" + index +
-            ",temporal_id=" + tid +
-            ",spatial_id=" + sid
-    }
+    abstract val index: Int
 
     /**
      * Inherit a [BitrateTracker] object
@@ -131,9 +77,8 @@ constructor(
     /**
      * Inherit another layer description's [BitrateTracker] object.
      */
-    internal fun inheritFrom(other: RtpLayerDesc) {
+    internal open fun inheritFrom(other: RtpLayerDesc) {
         inheritStatistics(other.bitrateTracker)
-        useSoftDependencies = other.useSoftDependencies
     }
 
     /**
@@ -152,12 +97,10 @@ constructor(
     /**
      * Gets the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.
      *
-     * This is left open for use in testing.
-     *
      * @param nowMs
      * @return the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.
      */
-    open fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs).values.sum()
+    abstract fun getBitrate(nowMs: Long): Bandwidth
 
     /**
      * Expose [getBitrate] as a [Double] in order to make it accessible from java (since [Bandwidth] is an inline
@@ -166,64 +109,20 @@ constructor(
     fun getBitrateBps(nowMs: Long): Double = getBitrate(nowMs).bps
 
     /**
-     * Recursively adds the bitrate (in bps) of this [RTPLayerDesc] and
-     * its dependencies in the map passed in as an argument.
-     *
-     * This is necessary to ensure we don't double-count layers in cases
-     * of multiple dependencies.
-     *
-     * @param nowMs
-     */
-    private fun calcBitrate(nowMs: Long, rates: MutableMap<Int, Bandwidth> = HashMap()): MutableMap<Int, Bandwidth> {
-        if (rates.containsKey(index)) {
-            return rates
-        }
-        rates[index] = bitrateTracker.getRate(nowMs)
-
-        dependencyLayers.forEach { it.calcBitrate(nowMs, rates) }
-
-        if (useSoftDependencies) {
-            softDependencyLayers.forEach { it.calcBitrate(nowMs, rates) }
-        }
-
-        return rates
-    }
-
-    /**
-     * Returns true if this layer, alone, has a zero bitrate.
-     */
-    private fun layerHasZeroBitrate(nowMs: Long) = bitrateTracker.getAccumulatedSize(nowMs).bits == 0L
-
-    /**
      * Recursively checks this layer and its dependencies to see if the bitrate is zero.
      * Note that unlike [calcBitrate] this does not avoid double-visiting layers; the overhead
      * of the hash table is usually more than the cost of any double-visits.
-     *
-     * This is left open for use in testing.
      */
-    open fun hasZeroBitrate(nowMs: Long): Boolean {
-        if (!layerHasZeroBitrate(nowMs)) {
-            return false
-        }
-        if (dependencyLayers.any { !it.layerHasZeroBitrate(nowMs) }) {
-            return false
-        }
-        if (useSoftDependencies && softDependencyLayers.any { !it.layerHasZeroBitrate(nowMs) }) {
-            return false
-        }
-        return true
-    }
+    abstract fun hasZeroBitrate(nowMs: Long): Boolean
 
     /**
      * Extracts a [NodeStatsBlock] from an [RtpLayerDesc].
      */
-    fun getNodeStats() = NodeStatsBlock(layerId.toString()).apply {
+    open fun getNodeStats() = NodeStatsBlock(layerId.toString()).apply {
         addNumber("frameRate", frameRate)
         addNumber("height", height)
         addNumber("index", index)
         addNumber("bitrate_bps", getBitrate(System.currentTimeMillis()).bps)
-        addNumber("tid", tid)
-        addNumber("sid", sid)
     }
 
     companion object {

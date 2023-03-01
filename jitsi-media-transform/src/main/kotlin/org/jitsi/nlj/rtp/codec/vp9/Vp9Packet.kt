@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtp.codec.vp9
 
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.nlj.codec.vpx.VpxRtpLayerDesc
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.utils.logging2.createLogger
@@ -294,12 +295,12 @@ class Vp9Packet private constructor(
                 tlCounts[t] += tlCounts[t - 1]
             }
 
-            val layers = ArrayList<RtpLayerDesc>()
+            val layers = ArrayList<VpxRtpLayerDesc>()
 
             for (s in 0 until numSpatial) {
                 for (t in 0 until numTemporal) {
-                    val dependencies = ArrayList<RtpLayerDesc>()
-                    val softDependencies = ArrayList<RtpLayerDesc>()
+                    val dependencies = ArrayList<VpxRtpLayerDesc>()
+                    val softDependencies = ArrayList<VpxRtpLayerDesc>()
                     if (s > 0) {
                         /* Because of K-SVC, spatial layer dependencies are soft */
                         layers.find { it.sid == s - 1 && it.tid == t }?.let { softDependencies.add(it) }
@@ -307,7 +308,7 @@ class Vp9Packet private constructor(
                     if (t > 0) {
                         layers.find { it.sid == s && it.tid == t - 1 }?.let { dependencies.add(it) }
                     }
-                    val layerDesc = RtpLayerDesc(
+                    val layerDesc = VpxRtpLayerDesc(
                         eid = eid,
                         tid = t,
                         sid = s,
@@ -317,8 +318,8 @@ class Vp9Packet private constructor(
                         } else {
                             RtpLayerDesc.NO_FRAME_RATE
                         },
-                        dependencyLayers = dependencies.toArray(arrayOf<RtpLayerDesc>()),
-                        softDependencyLayers = softDependencies.toArray(arrayOf<RtpLayerDesc>())
+                        dependencyLayers = dependencies.toArray(arrayOf<VpxRtpLayerDesc>()),
+                        softDependencyLayers = softDependencies.toArray(arrayOf<VpxRtpLayerDesc>())
                     )
                     layers.add(layerDesc)
                 }

@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtp.codec.vp9
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.codec.vpx.VpxRtpLayerDesc
 import org.jitsi.nlj.findRtpLayerDesc
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
 import org.jitsi.nlj.util.StateChangeLogger
@@ -75,7 +76,10 @@ class Vp9Parser(
              * when calculating layers' bitrates.  These values are small enough this is probably
              * fine, but revisit this if it turns out to be a problem.
              */
-            findRtpLayerDesc(vp9Packet)?.useSoftDependencies = vp9Packet.usesInterLayerDependency
+            val layer = findRtpLayerDesc(vp9Packet)
+            if (layer is VpxRtpLayerDesc) {
+                layer.useSoftDependencies = vp9Packet.usesInterLayerDependency
+            }
         }
 
         pictureIdState.setState(vp9Packet.hasPictureId, vp9Packet) {

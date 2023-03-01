@@ -86,16 +86,6 @@ class Av1DDParser(
                 }
             }
         }
-        if (av1Packet.frameInfo != null && av1Packet.frameInfo.spatialId > 0) {
-            /* Check if this layer is using K-SVC. */
-            /* Note: In K-SVC mode, this entirely ignores the bitrate of lower-layer keyframes
-             * when calculating layers' bitrates.  These values are small enough this is probably
-             * fine, but revisit this if it turns out to be a problem.
-             */
-            val usesInterLayerDependency =
-                av1Packet.frameInfo.fdiff.size > 1 && av1Packet.frameInfo.fdiff.contains(1)
-            findRtpLayerDesc(av1Packet)?.useSoftDependencies = usesInterLayerDependency
-        }
     }
 
     companion object {

@@ -17,7 +17,10 @@
 package org.jitsi.nlj
 
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.beInstanceOf
+import org.jitsi.nlj.codec.vpx.VpxRtpLayerDesc
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bps
@@ -56,6 +59,9 @@ class MediaSourceDescTest : ShouldSpec() {
                 e.layers.size shouldBe 3
                 for (j in e.layers.indices) {
                     val l = e.layers[j]
+                    l should beInstanceOf<VpxRtpLayerDesc>()
+                    l as VpxRtpLayerDesc
+
                     l.eid shouldBe i
                     l.tid shouldBe j
                     l.sid shouldBe -1
@@ -130,13 +136,12 @@ private fun createRTPLayerDescs(
     encodingIdx: Int,
     height: Int
 ): Array<RtpLayerDesc> {
-    val rtpLayers = arrayOfNulls<RtpLayerDesc>(spatialLen * temporalLen)
+    val rtpLayers = arrayOfNulls<VpxRtpLayerDesc>(spatialLen * temporalLen)
     for (spatialIdx in 0 until spatialLen) {
         var frameRate = 30.toDouble() / (1 shl temporalLen - 1)
         for (temporalIdx in 0 until temporalLen) {
             val idx: Int = idx(spatialIdx, temporalIdx, temporalLen)
-            var dependencies: Array<RtpLayerDesc>
-            dependencies = if (spatialIdx > 0 && temporalIdx > 0) {
+            val dependencies: Array<VpxRtpLayerDesc> = if (spatialIdx > 0 && temporalIdx > 0) {
                 // this layer depends on spatialIdx-1 and temporalIdx-1.
                 arrayOf(
                     rtpLayers[
@@ -178,7 +183,7 @@ private fun createRTPLayerDescs(
             }
             val temporalId = if (temporalLen > 1) temporalIdx else -1
             val spatialId = if (spatialLen > 1) spatialIdx else -1
-            rtpLayers[idx] = RtpLayerDesc(
+            rtpLayers[idx] = VpxRtpLayerDesc(
                 encodingIdx,
                 temporalId, spatialId, height, frameRate, dependencies
             )

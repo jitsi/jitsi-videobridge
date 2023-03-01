@@ -1529,7 +1529,7 @@ val noVideo: RtpLayerDesc? = null
  * mockk absolutely kills the performance.
  */
 class MockRtpLayerDesc(
-    tid: Int,
+    val tid: Int,
     eid: Int,
     height: Int,
     frameRate: Double,
@@ -1537,8 +1537,14 @@ class MockRtpLayerDesc(
      * Note: this mock impl does not model the dependency layers, so the cumulative bitrate should be provided.
      */
     var bitrate: Bandwidth,
-    sid: Int = -1
-) : RtpLayerDesc(eid, tid, sid, height, frameRate) {
+    val sid: Int = -1
+) : RtpLayerDesc(eid, height, frameRate) {
+    override fun copy(height: Int): RtpLayerDesc {
+        TODO("Not yet implemented")
+    }
+
+    override val layerId = getIndex(0, sid, tid)
+    override val index = getIndex(eid, sid, tid)
 
     override fun getBitrate(nowMs: Long): Bandwidth = bitrate
     override fun hasZeroBitrate(nowMs: Long): Boolean = bitrate == 0.bps
