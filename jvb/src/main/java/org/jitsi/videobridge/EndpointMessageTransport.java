@@ -367,7 +367,7 @@ public class EndpointMessageTransport
             {
                 webSocket = null;
                 webSocketLastActive = false;
-                getLogger().debug(() -> "Web socket closed, statusCode " + statusCode + " ( " + reason + ").");
+                getLogger().info(() -> "Websocket closed, statusCode " + statusCode + " ( " + reason + ").");
             }
         }
 
