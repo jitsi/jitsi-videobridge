@@ -125,6 +125,8 @@ constructor(
         addNumber("bitrate_bps", getBitrate(System.currentTimeMillis()).bps)
     }
 
+    abstract fun indexString(): String
+
     companion object {
         /**
          * The index value that is used to represent that forwarding is suspended.

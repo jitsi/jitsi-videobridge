@@ -63,7 +63,7 @@ internal class SingleSourceAllocation(
                 .addField("remote_endpoint_id", endpointId)
             for ((l, bitrate) in layers.layers) {
                 ratesTimeSeriesPoint.addField(
-                    "${indexString(l.index)}_${l.height}p_${l.frameRate}fps_bps",
+                    "${l.indexString()}_${l.height}p_${l.frameRate}fps_bps",
                     bitrate
                 )
             }
