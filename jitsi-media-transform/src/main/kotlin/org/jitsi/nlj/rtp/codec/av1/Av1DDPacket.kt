@@ -110,6 +110,23 @@ class Av1DDPacket : ParsedVideoPacket {
         eid: Int = 0,
         baseFrameRate: Double = 30.0
     ): RtpEncodingDesc? {
-        TODO("Not implemented")
+        require(descriptor != null) {
+            "Can't get scalability structure from packet without a descriptor"
+        }
+        val activeDecodeTargetsBitmask = descriptor.activeDecodeTargetsBitmask
+        require(activeDecodeTargetsBitmask != null) {
+            "Can't get scalability structure from packet that doesn't specify decode targets"
+        }
+        val layers = ArrayList<Av1DDRtpLayerDesc>()
+        // TODO: figure out frame rates from the template structure
+        descriptor.structure.decodeTargetInfo.forEachIndexed { i, dt ->
+            if (((1 shl i) and activeDecodeTargetsBitmask) == 0) {
+                return@forEachIndexed
+            }
+            val height = descriptor.structure.maxRenderResolutions.getOrNull(dt.spatialId)?.height ?: -1
+            val frameRate = baseFrameRate // TODO: figure out frame rates from the template structure
+            layers.add(Av1DDRtpLayerDesc(eid, i, height, frameRate))
+        }
+        return RtpEncodingDesc(ssrc, layers.toArray(arrayOf()), eid)
     }
 }
