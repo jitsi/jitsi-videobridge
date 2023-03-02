@@ -17,7 +17,7 @@ package org.jitsi.nlj
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import org.jitsi.nlj.codec.vpx.VpxRtpLayerDesc
+import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
 
 class RtpLayerDescTest : FunSpec({
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.codec.vpx
+package org.jitsi.nlj.rtp.codec.vpx
 
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.stats.NodeStatsBlock

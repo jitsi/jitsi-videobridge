@@ -18,8 +18,8 @@ package org.jitsi.nlj.rtp.codec.vp9
 
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.nlj.codec.vpx.VpxRtpLayerDesc
 import org.jitsi.nlj.rtp.ParsedVideoPacket
+import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.logging2.cwarn

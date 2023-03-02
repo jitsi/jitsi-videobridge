@@ -7,7 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.nlj.RtpEncodingDesc
-import org.jitsi.nlj.codec.vpx.VpxRtpLayerDesc
+import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
 import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
 import javax.xml.bind.DatatypeConverter
 
