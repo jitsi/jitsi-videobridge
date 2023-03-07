@@ -52,8 +52,8 @@ class Av1DDParser(
             val decodeTargets = it.descriptor?.activeDecodeTargetsBitmask
             // a new template structure implies a non-null decodeTargets, so only have to check the latter
             if (decodeTargets != null) {
-                val changed = it.descriptor?.structure.templateIdOffset != priorTemplate?.structure?.templateIdOffset ||
-                    it.descriptor?.activeDecodeTargetsBitmask != priorTemplate?.activeDecodeTargets
+                val changed = it.descriptor.structure.templateIdOffset != priorTemplate?.structure?.templateIdOffset ||
+                    it.descriptor.activeDecodeTargetsBitmask != priorTemplate.activeDecodeTargets
                 history.insert(
                     packet.sequenceNumber,
                     Av1DdInfo(it.descriptor.structure, decodeTargets, changed)
@@ -76,7 +76,7 @@ class Av1DDParser(
             packetInfo.layeringChanged = true
 
             findSourceDescAndRtpEncodingDesc(av1Packet)?.let { (src, enc) ->
-                av1Packet.getScalabilityStructure(eid = enc.eid)?.let {
+                av1Packet.getScalabilityStructure(eid = enc.eid).let {
                     src.setEncodingLayers(it.layers, av1Packet.ssrc)
                 }
                 for (otherEnc in src.rtpEncodings) {
