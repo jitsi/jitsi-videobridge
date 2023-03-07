@@ -24,3 +24,7 @@ internal open class IqProcessingException(
 ) : Exception(message) {
     override fun toString() = "$condition $message"
 }
+
+internal class UnknownEndpointException(val endpointId: String) : IqProcessingException(
+    StanzaError.Condition.item_not_found, "Unknown endpoint $endpointId"
+)

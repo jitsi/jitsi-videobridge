@@ -198,11 +198,7 @@ class Colibri2ConferenceHandler(
                 }
             }
         } else {
-            conference.getLocalEndpoint(c2endpoint.id) ?: throw UnknownEndpointException(
-                Condition.item_not_found,
-                "Unknown endpoint ${c2endpoint.id}",
-                c2endpoint.id
-            )
+            conference.getLocalEndpoint(c2endpoint.id) ?: throw UnknownEndpointException(c2endpoint.id)
         }
 
         for (media in c2endpoint.media) {
