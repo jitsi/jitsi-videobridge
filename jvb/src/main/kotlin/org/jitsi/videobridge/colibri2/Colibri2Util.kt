@@ -51,3 +51,10 @@ fun createEndpointNotFoundError(iq: IQ, endpointId: String) = createError(
         Colibri2Endpoint.getBuilder().setId(endpointId).build()
     )
 )
+
+fun createFeatureNotImplementedError(iq: IQ, message: String?) = createError(
+    iq,
+    StanzaError.Condition.feature_not_implemented,
+    message ?: "",
+    Colibri2Error(Colibri2Error.Reason.FEATURE_NOT_IMPLEMENTED),
+)

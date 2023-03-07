@@ -62,6 +62,7 @@ class Colibri2ConferenceHandler(
      * expired.
      */
     fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
+        validateRequest(conferenceModifyIQ)
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
         var expire = conferenceModifyIQ.expire.also {
@@ -103,6 +104,9 @@ class Colibri2ConferenceHandler(
         logger.warn("Unknown Endpoint during processing conference-modify IQ: $e")
         val error = createEndpointNotFoundError(conferenceModifyIQ, e.endpointId)
         Pair(error, false)
+    } catch (e: FeatureNotImplementedException) {
+        logger.warn("Unsupported request (${e.message}): ${conferenceModifyIQ.toXML()}")
+        Pair(createFeatureNotImplementedError(conferenceModifyIQ, e.message), false)
     } catch (e: IqProcessingException) {
         // Item not found conditions are assumed to be less critical, as they often happen in case a request
         // arrives late for an expired endpoint.
@@ -427,5 +431,32 @@ class Colibri2ConferenceHandler(
             }
         }
         return Pair(audioSources, videoSources)
+    }
+
+    /**
+     * Check if the request satisfies the additional restrictions that jitsi-videobridge imposes on colibri2 requests
+     * and throw [FeatureNotImplementedException] if it doesn't.
+     *
+     * Mostly, we don't support requests that contain arbitrary multiple [Colibri2Endpoint]s or [Colibri2Relay]s. We do
+     * support them when they expire a set of endpoints, or solely update the "force-mute" state of a set of endpoints,
+     * because in these cases it's reasonable to ignore errors when endpoints expired.
+     */
+    @kotlin.jvm.Throws(FeatureNotImplementedException::class)
+    private fun validateRequest(iq: ConferenceModifyIQ) {
+        if (iq.endpoints.size > 0 && iq.relays.size > 0) {
+            throw FeatureNotImplementedException("Using both 'relay' and 'endpoint' in a request")
+        }
+
+        if (iq.endpoints.size > 1) {
+            if (iq.endpoints.any { it.create || it.media.size > 0 || it.transport != null || it.sources != null }) {
+                throw FeatureNotImplementedException(
+                    "Creating or updating media, sources or transport for more than one endpoint in a request."
+                )
+            }
+        }
+
+        if (iq.relays.size > 1) {
+            throw FeatureNotImplementedException("Updating more than one 'relay' in a request.")
+        }
     }
 }
