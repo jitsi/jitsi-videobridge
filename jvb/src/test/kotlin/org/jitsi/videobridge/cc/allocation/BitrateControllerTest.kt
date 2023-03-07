@@ -1548,6 +1548,7 @@ class MockRtpLayerDesc(
 
     override fun getBitrate(nowMs: Long): Bandwidth = bitrate
     override fun hasZeroBitrate(nowMs: Long): Boolean = bitrate == 0.bps
+    override fun indexString() = indexString(index)
 }
 
 typealias History<T> = MutableList<Event<T>>

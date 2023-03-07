@@ -160,7 +160,8 @@ public class AdaptiveSourceProjection
         // suspended so that it can raise the needsKeyframe flag and also allow
         // it to compute a sequence number delta when the target becomes > -1.
 
-        if (videoRtpPacket.getQualityIndex() < 0)
+        Collection<Integer> qualityIndices = videoRtpPacket.getQualityIndices();
+        if (qualityIndices.isEmpty())
         {
             logger.warn(
                 "Dropping an RTP packet, because egress was unable to find " +
@@ -170,7 +171,7 @@ public class AdaptiveSourceProjection
 
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(
-            packetInfo, videoRtpPacket.getQualityIndex(), targetIndexCopy);
+            packetInfo, qualityIndices, targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.

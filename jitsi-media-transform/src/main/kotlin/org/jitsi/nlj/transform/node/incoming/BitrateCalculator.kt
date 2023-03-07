@@ -22,7 +22,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
-import org.jitsi.nlj.findRtpLayerDesc
+import org.jitsi.nlj.findRtpLayerDescs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
@@ -55,8 +55,8 @@ class VideoBitrateCalculator(
         super.observe(packetInfo)
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
-        mediaSourceDescs.findRtpLayerDesc(videoRtpPacket)?.let {
-            val now = clock.millis()
+        val now = clock.millis()
+        mediaSourceDescs.findRtpLayerDescs(videoRtpPacket).forEach {
             if (it.updateBitrate(videoRtpPacket.length.bytes, now)) {
                 /* When a layer is started when it was previously inactive,
                  * we want to recalculate bandwidth allocation.

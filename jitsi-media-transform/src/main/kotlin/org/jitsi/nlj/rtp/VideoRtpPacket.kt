@@ -26,7 +26,8 @@ open class VideoRtpPacket protected constructor(
     buffer: ByteArray,
     offset: Int,
     length: Int,
-    qualityIndex: Int?
+    /** The indices of this packet relative to its source's RtpLayers. */
+    qualityIndices: Collection<Int>
 ) : RtpPacket(buffer, offset, length) {
 
     constructor(
@@ -35,20 +36,26 @@ open class VideoRtpPacket protected constructor(
         length: Int
     ) : this(
         buffer, offset, length,
-        qualityIndex = null
+        qualityIndices = listOf()
     )
 
-    /** The index of this packet relative to its source's RtpLayers. */
-    var qualityIndex: Int = qualityIndex ?: -1
+    constructor(
+        buffer: ByteArray,
+        offset: Int,
+        length: Int,
+        qualityIndex: Int
+    ) : this(buffer, offset, length, listOf(qualityIndex))
 
-    open val layerId = 0
+    var qualityIndices: Collection<Int> = qualityIndices.toList()
+
+    open val layerIds: Collection<Int> = listOf()
 
     override fun clone(): VideoRtpPacket {
         return VideoRtpPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
-            qualityIndex = qualityIndex
+            qualityIndices = qualityIndices
         )
     }
 }

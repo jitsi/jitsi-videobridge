@@ -33,7 +33,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.times
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
@@ -81,7 +80,7 @@ class Vp9AdaptiveSourceProjectionContext(
     @Synchronized
     override fun accept(
         packetInfo: PacketInfo,
-        incomingIndex: Int,
+        incomingIndices: Collection<Int>,
         targetIndex: Int
     ): Boolean {
         val packet = packetInfo.packet
@@ -89,6 +88,11 @@ class Vp9AdaptiveSourceProjectionContext(
             logger.warn("Packet is not Vp9 packet")
             return false
         }
+        if (incomingIndices.size != 1) {
+            logger.warn("Zero, or more than one, incoming indices for a VP9 packet: ${incomingIndices.size}")
+            return false
+        }
+        val incomingIndex = incomingIndices.first()
 
         /* If insertPacketInMap returns null, this is a very old picture, more than Vp9PictureMap.PICTURE_MAP_SIZE old,
            or something is wrong with the stream. */

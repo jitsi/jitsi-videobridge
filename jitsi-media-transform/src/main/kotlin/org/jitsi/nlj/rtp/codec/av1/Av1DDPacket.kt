@@ -17,7 +17,6 @@
 package org.jitsi.nlj.rtp.codec.av1
 
 import org.jitsi.nlj.RtpEncodingDesc
-import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
@@ -25,6 +24,7 @@ import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorStatelessSubset
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
+import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 
 /** A video packet carrying an AV1 Dependency Descriptor.  Note that this may or may not be an actual AV1 packet;
@@ -39,11 +39,11 @@ class Av1DDPacket : ParsedVideoPacket {
         buffer: ByteArray,
         offset: Int,
         length: Int,
-        encodingIndex: Int?,
+        encodingIndices: Collection<Int>,
         descriptor: Av1DependencyDescriptorHeaderExtension?,
         statelessDescriptor: Av1DependencyDescriptorStatelessSubset,
         frameInfo: FrameInfo?
-    ) : super(buffer, offset, length, encodingIndex) {
+    ) : super(buffer, offset, length, encodingIndices) {
         this.descriptor = descriptor
         this.statelessDescriptor = statelessDescriptor
         this.frameInfo = frameInfo
@@ -53,7 +53,7 @@ class Av1DDPacket : ParsedVideoPacket {
         packet: RtpPacket,
         av1DDHeaderExtensionId: Int,
         templateDependencyStructure: Av1TemplateDependencyStructure?
-    ) : super(packet.buffer, packet.offset, packet.length, null) {
+    ) : super(packet.buffer, packet.offset, packet.length, listOf()) {
         val ddExt = packet.getHeaderExtension(av1DDHeaderExtensionId)
         requireNotNull(ddExt) {
             "Packet did not have Dependency Descriptor"
@@ -88,8 +88,10 @@ class Av1DDPacket : ParsedVideoPacket {
     override val isEndOfFrame: Boolean
         get() = statelessDescriptor.endOfFrame
 
-    override val layerId: Int
-        get() = frameInfo?.let { RtpLayerDesc.getIndex(0, it.spatialId, it.temporalId) } ?: run { super.layerId }
+    override val layerIds: Collection<Int>
+        get() = frameInfo?.let {
+            it.dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _), -> i }
+        } ?: run { super.layerIds }
 
     override fun clone(): Av1DDPacket {
         /* TODO: when descriptor becomes mutable (i.e. we can write to the active decode targets bitmask), clone
@@ -99,7 +101,7 @@ class Av1DDPacket : ParsedVideoPacket {
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
-            encodingIndex = qualityIndex,
+            encodingIndices = qualityIndices,
             descriptor = descriptor,
             statelessDescriptor = statelessDescriptor,
             frameInfo = frameInfo
@@ -109,7 +111,7 @@ class Av1DDPacket : ParsedVideoPacket {
     fun getScalabilityStructure(
         eid: Int = 0,
         baseFrameRate: Double = 30.0
-    ): RtpEncodingDesc? {
+    ): RtpEncodingDesc {
         require(descriptor != null) {
             "Can't get scalability structure from packet without a descriptor"
         }

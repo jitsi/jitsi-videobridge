@@ -75,9 +75,10 @@ class Vp9Parser(
              * when calculating layers' bitrates.  These values are small enough this is probably
              * fine, but revisit this if it turns out to be a problem.
              */
-            val layer = findRtpLayerDesc(vp9Packet)
-            if (layer is VpxRtpLayerDesc) {
-                layer.useSoftDependencies = vp9Packet.usesInterLayerDependency
+            findRtpLayerDescs(vp9Packet).forEach {
+                if (it is VpxRtpLayerDesc) {
+                    it.useSoftDependencies = vp9Packet.usesInterLayerDependency
+                }
             }
         }
 

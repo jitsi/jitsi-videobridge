@@ -24,6 +24,8 @@ import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
+import java.util.*;
+
 /**
  * A generic implementation of an adaptive source projection context that can be
  * used with non-SVC codecs or when simulcast is not enabled/used or when
@@ -131,13 +133,13 @@ class GenericAdaptiveSourceProjectionContext
      * thread) accessing this method at a time.
      *
      * @param packetInfo the RTP packet to determine whether to accept or not.
-     * @param incomingIndex the quality index of the
+     * @param incomingIndices the quality index of the
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean
-    accept(@NotNull PacketInfo packetInfo, int incomingIndex, int targetIndex)
+    accept(@NotNull PacketInfo packetInfo, Collection<Integer> incomingIndices, int targetIndex)
     {
         VideoRtpPacket rtpPacket = packetInfo.packetAs();
         if (targetIndex == RtpLayerDesc.SUSPENDED_INDEX)

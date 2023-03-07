@@ -74,7 +74,7 @@ class Vp9AdaptiveSourceProjectionTest {
         Assert.assertTrue(
             context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
             )
         )
         context.rewriteRtp(packetInfo)
@@ -104,7 +104,7 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet = packetInfo.packetAs<Vp9Packet>()
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
             )
             if (!packet.hasLayerIndices) {
                 expectedTl0PicIdx = -1
@@ -187,7 +187,7 @@ class Vp9AdaptiveSourceProjectionTest {
             }
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
             )
             val oldestValidSeq: Int =
                 RtpUtils.applySequenceNumberDelta(
@@ -502,14 +502,14 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertFalse(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
         }
         Assert.assertTrue(
             context.accept(
                 firstPacketInfo,
-                getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex)), targetIndex
             )
         )
         context.rewriteRtp(firstPacketInfo)
@@ -519,7 +519,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
             context.rewriteRtp(packetInfo)
@@ -545,14 +545,14 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertFalse(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
         }
         Assert.assertFalse(
             context.accept(
                 firstPacketInfo,
-                getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex)), targetIndex
             )
         )
         for (i in 0..9) {
@@ -561,7 +561,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertFalse(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
         }
@@ -572,7 +572,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
             context.rewriteRtp(packetInfo)
@@ -599,7 +599,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
             context.rewriteRtp(packetInfo)
@@ -610,7 +610,7 @@ class Vp9AdaptiveSourceProjectionTest {
         Assert.assertTrue(
             context.accept(
                 firstPacketInfo,
-                getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex),
+                setOf(getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex)),
                 targetIndex
             )
         )
@@ -623,7 +623,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
             context.rewriteRtp(packetInfo)
@@ -651,7 +651,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo1,
-                    getIndex(1, packet1.spatialLayerIndex, packet1.temporalLayerIndex), targetIndex
+                    setOf(getIndex(1, packet1.spatialLayerIndex, packet1.temporalLayerIndex)), targetIndex
                 )
             )
             val packetInfo2 = generator2.nextPacket()
@@ -659,7 +659,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertFalse(
                 context.accept(
                     packetInfo2,
-                    getIndex(0, packet2.spatialLayerIndex, packet2.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet2.spatialLayerIndex, packet2.temporalLayerIndex)), targetIndex
                 )
             )
             context.rewriteRtp(packetInfo1)
@@ -701,9 +701,11 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo1,
-                    getIndex(
-                        0,
-                        packet1.spatialLayerIndex, packet1.temporalLayerIndex
+                    setOf(
+                        getIndex(
+                            0,
+                            packet1.spatialLayerIndex, packet1.temporalLayerIndex
+                        )
                     ),
                     targetIndex
                 )
@@ -718,9 +720,11 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertFalse(
                 context.accept(
                     packetInfo2,
-                    getIndex(
-                        1,
-                        packet2.spatialLayerIndex, packet2.temporalLayerIndex
+                    setOf(
+                        getIndex(
+                            1,
+                            packet2.spatialLayerIndex, packet2.temporalLayerIndex
+                        )
                     ),
                     targetIndex
                 )
@@ -749,7 +753,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo1,
-                    getIndex(0, packet1.spatialLayerIndex, packet1.temporalLayerIndex),
+                    setOf(getIndex(0, packet1.spatialLayerIndex, packet1.temporalLayerIndex)),
                     targetIndex
                 )
             )
@@ -763,7 +767,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertFalse(
                 context.accept(
                     packetInfo2,
-                    getIndex(1, packet2.spatialLayerIndex, packet2.temporalLayerIndex),
+                    setOf(getIndex(1, packet2.spatialLayerIndex, packet2.temporalLayerIndex)),
                     targetIndex
                 )
             )
@@ -794,7 +798,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 i == 0,
                 context.accept(
                     packetInfo1,
-                    getIndex(0, packet1.spatialLayerIndex, packet1.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet1.spatialLayerIndex, packet1.temporalLayerIndex)), targetIndex
                 )
             )
             Assert.assertEquals(i == 0, context.rewriteRtcp(srPacket1))
@@ -812,7 +816,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo2,
-                    getIndex(1, packet2.spatialLayerIndex, packet2.temporalLayerIndex), targetIndex
+                    setOf(getIndex(1, packet2.spatialLayerIndex, packet2.temporalLayerIndex)), targetIndex
                 )
             )
             context.rewriteRtp(packetInfo2)
@@ -861,7 +865,7 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet = packetInfo.packetAs<Vp9Packet>()
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
             )
             if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
@@ -917,7 +921,7 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet = packetInfo.packetAs<Vp9Packet>()
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
             )
             if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
@@ -957,7 +961,7 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertTrue(
                 context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
             )
             context.rewriteRtp(packetInfo)
@@ -976,7 +980,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
                 if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
                     expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
@@ -1052,7 +1056,7 @@ class Vp9AdaptiveSourceProjectionTest {
             packet = packetInfo.packetAs()
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
             )
             if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
@@ -1091,7 +1095,7 @@ class Vp9AdaptiveSourceProjectionTest {
                     packet = packetInfo.packetAs()
                     val accepted = context.accept(
                         packetInfo,
-                        getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                        setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                     )
                     Assert.assertTrue(accepted)
                     context.rewriteRtp(packetInfo)
@@ -1108,7 +1112,8 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), RtpLayerDesc.SUSPENDED_INDEX
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)),
+                    RtpLayerDesc.SUSPENDED_INDEX
                 )
                 Assert.assertFalse(accepted)
                 if (packet.isEndOfPicture) {
@@ -1123,7 +1128,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
                 Assert.assertFalse(accepted)
                 if (packet.isEndOfPicture) {
@@ -1139,7 +1144,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
                 Assert.assertFalse(accepted)
                 if (packet.isEndOfPicture) {
@@ -1153,7 +1158,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex), targetIndex
+                    setOf(getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex)), targetIndex
                 )
                 if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
                     expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)

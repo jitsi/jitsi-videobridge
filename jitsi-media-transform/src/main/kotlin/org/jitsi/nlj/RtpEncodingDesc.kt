@@ -164,6 +164,6 @@ constructor(
     }
 }
 
-fun VideoRtpPacket.getEncodingId(): Long {
-    return RtpEncodingDesc.calcEncodingId(ssrc, this.layerId)
+fun VideoRtpPacket.getEncodingIds(): Collection<Long> {
+    return this.layerIds.map { RtpEncodingDesc.calcEncodingId(ssrc, it) }
 }

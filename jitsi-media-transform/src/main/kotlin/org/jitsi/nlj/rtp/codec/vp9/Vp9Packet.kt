@@ -40,10 +40,10 @@ class Vp9Packet private constructor(
     isKeyframe: Boolean?,
     isStartOfFrame: Boolean?,
     isEndOfFrame: Boolean?,
-    encodingIndex: Int?,
+    encodingIndices: Collection<Int>,
     pictureId: Int?,
     TL0PICIDX: Int?
-) : ParsedVideoPacket(buffer, offset, length, encodingIndex) {
+) : ParsedVideoPacket(buffer, offset, length, encodingIndices) {
 
     constructor(
         buffer: ByteArray,
@@ -54,7 +54,7 @@ class Vp9Packet private constructor(
         isKeyframe = null,
         isStartOfFrame = null,
         isEndOfFrame = null,
-        encodingIndex = null,
+        encodingIndices = listOf(),
         pictureId = null,
         TL0PICIDX = null
     )
@@ -68,8 +68,10 @@ class Vp9Packet private constructor(
     override val isEndOfFrame: Boolean =
         isEndOfFrame ?: DePacketizer.VP9PayloadDescriptor.isEndOfFrame(buffer, payloadOffset, payloadLength)
 
-    override val layerId: Int
-        get() = if (hasLayerIndices) RtpLayerDesc.getIndex(0, spatialLayerIndex, temporalLayerIndex) else super.layerId
+    override val layerIds: Collection<Int>
+        get() = if (hasLayerIndices)
+            listOf(RtpLayerDesc.getIndex(0, spatialLayerIndex, temporalLayerIndex))
+        else super.layerIds
 
     /** End of VP9 picture is the marker bit. Note frame/picture distinction. */
     /* TODO: not sure this should be the override from [ParsedVideoPacket] */
@@ -190,7 +192,7 @@ class Vp9Packet private constructor(
             isKeyframe = isKeyframe,
             isStartOfFrame = isStartOfFrame,
             isEndOfFrame = isEndOfFrame,
-            encodingIndex = qualityIndex,
+            encodingIndices = qualityIndices,
             pictureId = pictureId,
             TL0PICIDX = TL0PICIDX
         )
