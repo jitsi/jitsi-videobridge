@@ -48,7 +48,7 @@ open class VideoRtpPacket protected constructor(
 
     var qualityIndices: Collection<Int> = qualityIndices.toList()
 
-    open val layerIds: Collection<Int> = emptyList()
+    open val layerIds: Collection<Int> = listOf(0)
 
     override fun clone(): VideoRtpPacket {
         return VideoRtpPacket(
