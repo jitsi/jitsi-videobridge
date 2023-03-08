@@ -71,7 +71,6 @@ class Colibri2ConferenceHandler(
             if (it) logger.info("Received request to expire conference.")
         }
 
-        /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
         for (e in conferenceModifyIQ.endpoints) {
             responseBuilder.addEndpoint(handleColibri2Endpoint(e, ignoreUnknownEndpoints))
         }
