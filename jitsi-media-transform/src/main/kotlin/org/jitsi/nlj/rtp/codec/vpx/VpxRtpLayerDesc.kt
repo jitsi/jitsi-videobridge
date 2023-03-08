@@ -75,13 +75,13 @@ constructor(
     override fun copy(
         height: Int,
     ) = VpxRtpLayerDesc(
-        this.eid,
-        this.tid,
-        this.sid,
-        height,
-        this.frameRate,
-        this.dependencyLayers,
-        this.softDependencyLayers
+        eid = this.eid,
+        tid = this.tid,
+        sid = this.sid,
+        height = height,
+        frameRate = this.frameRate,
+        dependencyLayers = this.dependencyLayers,
+        softDependencyLayers = this.softDependencyLayers
     ).also {
         it.inheritFrom(this)
     }
