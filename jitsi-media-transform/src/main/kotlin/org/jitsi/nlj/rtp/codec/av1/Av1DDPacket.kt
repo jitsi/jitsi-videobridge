@@ -53,7 +53,7 @@ class Av1DDPacket : ParsedVideoPacket {
         packet: RtpPacket,
         av1DDHeaderExtensionId: Int,
         templateDependencyStructure: Av1TemplateDependencyStructure?
-    ) : super(packet.buffer, packet.offset, packet.length, listOf()) {
+    ) : super(packet.buffer, packet.offset, packet.length, emptyList()) {
         val ddExt = packet.getHeaderExtension(av1DDHeaderExtensionId)
         requireNotNull(ddExt) {
             "Packet did not have Dependency Descriptor"

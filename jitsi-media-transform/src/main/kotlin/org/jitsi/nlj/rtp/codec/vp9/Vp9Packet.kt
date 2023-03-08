@@ -54,7 +54,7 @@ class Vp9Packet private constructor(
         isKeyframe = null,
         isStartOfFrame = null,
         isEndOfFrame = null,
-        encodingIndices = listOf(),
+        encodingIndices = emptyList(),
         pictureId = null,
         TL0PICIDX = null
     )

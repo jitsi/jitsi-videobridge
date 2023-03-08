@@ -139,7 +139,7 @@ class MediaSourceDesc
     @Synchronized
     fun findRtpLayerDescs(videoRtpPacket: VideoRtpPacket): Collection<RtpLayerDesc> {
         if (ArrayUtils.isNullOrEmpty(rtpEncodings)) {
-            return listOf()
+            return emptyList()
         }
         return videoRtpPacket.getEncodingIds().mapNotNull { layersById[it] }
     }

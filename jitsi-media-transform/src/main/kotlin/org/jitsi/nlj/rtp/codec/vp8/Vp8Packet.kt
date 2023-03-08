@@ -52,7 +52,7 @@ class Vp8Packet private constructor(
         buffer, offset, length,
         isKeyframe = null,
         isStartOfFrame = null,
-        encodingIndices = listOf(),
+        encodingIndices = emptyList(),
         height = null,
         pictureId = null,
         TL0PICIDX = null

@@ -36,7 +36,7 @@ open class VideoRtpPacket protected constructor(
         length: Int
     ) : this(
         buffer, offset, length,
-        qualityIndices = listOf()
+        qualityIndices = emptyList()
     )
 
     constructor(
@@ -48,7 +48,7 @@ open class VideoRtpPacket protected constructor(
 
     var qualityIndices: Collection<Int> = qualityIndices.toList()
 
-    open val layerIds: Collection<Int> = listOf()
+    open val layerIds: Collection<Int> = emptyList()
 
     override fun clone(): VideoRtpPacket {
         return VideoRtpPacket(
