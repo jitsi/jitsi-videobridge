@@ -56,27 +56,26 @@ class Av1DependencyDescriptorHeaderExtension(
     frameNumber,
     newTemplateDependencyStructure
 ) {
-    val frameInfo: FrameInfo
-        get() {
-            val templateIndex = (frameDependencyTemplateId + 64 - structure.templateIdOffset) % 64
-            if (templateIndex >= structure.templateCount) {
-                val maxTemplate = (structure.templateIdOffset + structure.templateCount - 1) % 64
-                throw Av1DependencyException(
-                    "Invalid template index $frameDependencyTemplateId. " +
-                        "Should be in range ${structure.templateIdOffset} .. $maxTemplate. " +
-                        "Missed a keyframe?"
-                )
-            }
-            val templateVal = structure.templateInfo[templateIndex]
-
-            return FrameInfo(
-                spatialId = templateVal.spatialId,
-                temporalId = templateVal.temporalId,
-                dti = customDtis ?: templateVal.dti,
-                fdiff = customFdiffs ?: templateVal.fdiff,
-                chains = customChains ?: templateVal.chains
+    val frameInfo: FrameInfo by lazy {
+        val templateIndex = (frameDependencyTemplateId + 64 - structure.templateIdOffset) % 64
+        if (templateIndex >= structure.templateCount) {
+            val maxTemplate = (structure.templateIdOffset + structure.templateCount - 1) % 64
+            throw Av1DependencyException(
+                "Invalid template index $frameDependencyTemplateId. " +
+                    "Should be in range ${structure.templateIdOffset} .. $maxTemplate. " +
+                    "Missed a keyframe?"
             )
         }
+        val templateVal = structure.templateInfo[templateIndex]
+
+        FrameInfo(
+            spatialId = templateVal.spatialId,
+            temporalId = templateVal.temporalId,
+            dti = customDtis ?: templateVal.dti,
+            fdiff = customFdiffs ?: templateVal.fdiff,
+            chains = customChains ?: templateVal.chains
+        )
+    }
 }
 
 /**
