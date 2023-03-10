@@ -373,7 +373,21 @@ class Colibri2ConferenceHandler(
         if (c2relay.create) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(relay.describeTransport())
-            respBuilder.setTransport(transBuilder.build())
+            c2relay.transport?.sctp?.let {
+                val role = if (it.role == Sctp.Role.CLIENT) {
+                    Sctp.Role.SERVER
+                } else {
+                    Sctp.Role.CLIENT
+                }
+                transBuilder.setSctp(
+                    Sctp.Builder()
+                        .setPort(SctpManager.DEFAULT_SCTP_PORT)
+                        .setRole(role)
+                        .build()
+                )
+
+                respBuilder.setTransport(transBuilder.build())
+            }
         }
 
         for (media: Media in c2relay.media) {
