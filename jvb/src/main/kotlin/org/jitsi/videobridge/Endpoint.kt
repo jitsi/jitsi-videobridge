@@ -32,7 +32,6 @@ import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
@@ -69,7 +68,8 @@ import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
-import org.jitsi.videobridge.sctp.SctpConfig
+import org.jitsi.videobridge.sctp.DataChannelHandler
+import org.jitsi.videobridge.sctp.SctpHandler
 import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
@@ -85,13 +85,11 @@ import org.jitsi_modified.sctp4j.SctpDataCallback
 import org.jitsi_modified.sctp4j.SctpServerSocket
 import org.jitsi_modified.sctp4j.SctpSocket
 import org.json.simple.JSONObject
-import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Optional
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Supplier
@@ -1204,101 +1202,5 @@ class Endpoint @JvmOverloads constructor(
             bitrateController.bandwidthChanged(newValue.bps.toLong())
             bandwidthProbing.bandwidthEstimationChanged(newValue)
         }
-    }
-
-    /**
-     * A node which can be placed in the pipeline to cache Data channel packets
-     * until the DataChannelStack is ready to handle them.
-     */
-    private class DataChannelHandler : ConsumerNode("Data channel handler") {
-        private val dataChannelStackLock = Any()
-        private var dataChannelStack: DataChannelStack? = null
-        private val cachedDataChannelPackets = LinkedBlockingQueue<PacketInfo>()
-
-        public override fun consume(packetInfo: PacketInfo) {
-            synchronized(dataChannelStackLock) {
-                when (val packet = packetInfo.packet) {
-                    is DataChannelPacket -> {
-                        dataChannelStack?.onIncomingDataChannelPacket(
-                            ByteBuffer.wrap(packet.buffer), packet.sid, packet.ppid
-                        ) ?: run {
-                            cachedDataChannelPackets.add(packetInfo)
-                        }
-                    }
-                    else -> Unit
-                }
-            }
-        }
-
-        fun setDataChannelStack(dataChannelStack: DataChannelStack) {
-            // Submit this to the pool since we wait on the lock and process any
-            // cached packets here as well
-
-            // Submit this to the pool since we wait on the lock and process any
-            // cached packets here as well
-            TaskPools.IO_POOL.execute {
-                // We grab the lock here so that we can set the SCTP manager and
-                // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via
-                // #doProcessPackets and processing packets at the same time in
-                // another thread, which would be a problem.
-                synchronized(dataChannelStackLock) {
-                    this.dataChannelStack = dataChannelStack
-                    cachedDataChannelPackets.forEach {
-                        val dcp = it.packet as DataChannelPacket
-                        dataChannelStack.onIncomingDataChannelPacket(
-                            ByteBuffer.wrap(dcp.buffer), dcp.sid, dcp.ppid
-                        )
-                    }
-                }
-            }
-        }
-
-        override fun trace(f: () -> Unit) = f.invoke()
-    }
-
-    /**
-     * A node which can be placed in the pipeline to cache SCTP packets until
-     * the SCTPManager is ready to handle them.
-     */
-    private class SctpHandler : ConsumerNode("SCTP handler") {
-        private val sctpManagerLock = Any()
-        private var sctpManager: SctpManager? = null
-        private val numCachedSctpPackets = AtomicLong(0)
-        private val cachedSctpPackets = LinkedBlockingQueue<PacketInfo>(100)
-
-        override fun consume(packetInfo: PacketInfo) {
-            synchronized(sctpManagerLock) {
-                if (SctpConfig.config.enabled) {
-                    sctpManager?.handleIncomingSctp(packetInfo) ?: run {
-                        numCachedSctpPackets.incrementAndGet()
-                        cachedSctpPackets.add(packetInfo)
-                    }
-                }
-            }
-        }
-
-        override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
-            addNumber("num_cached_packets", numCachedSctpPackets.get())
-        }
-
-        fun setSctpManager(sctpManager: SctpManager) {
-            // Submit this to the pool since we wait on the lock and process any
-            // cached packets here as well
-            TaskPools.IO_POOL.execute {
-                // We grab the lock here so that we can set the SCTP manager and
-                // process any previously-cached packets as an atomic operation.
-                // It also prevents another thread from coming in via
-                // #doProcessPackets and processing packets at the same time in
-                // another thread, which would be a problem.
-                synchronized(sctpManagerLock) {
-                    this.sctpManager = sctpManager
-                    cachedSctpPackets.forEach { sctpManager.handleIncomingSctp(it) }
-                    cachedSctpPackets.clear()
-                }
-            }
-        }
-
-        override fun trace(f: () -> Unit) = f.invoke()
     }
 }
