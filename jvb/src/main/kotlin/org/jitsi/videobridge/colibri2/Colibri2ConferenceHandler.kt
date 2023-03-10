@@ -352,10 +352,22 @@ class Colibri2ConferenceHandler(
             )
         }
 
-        if (c2relay.transport?.sctp != null) throw IqProcessingException(
-            Condition.feature_not_implemented,
-            "SCTP is not supported for relays."
-        )
+        c2relay.transport?.sctp?.let { sctp ->
+            if (!SctpConfig.config.enabled) {
+                throw IqProcessingException(
+                    Condition.feature_not_implemented,
+                    "SCTP support is not configured"
+                )
+            }
+            if (sctp.port != null && sctp.port != SctpManager.DEFAULT_SCTP_PORT) {
+                throw IqProcessingException(
+                    Condition.bad_request,
+                    "Specific SCTP port requested, not supported."
+                )
+            }
+
+            relay.createSctpConnection(sctp)
+        }
 
         c2relay.transport?.iceUdpTransport?.let { relay.setTransportInfo(it) }
         if (c2relay.create) {
