@@ -2,8 +2,8 @@
 
 ### Relays
 Relays (aka secure octo) use ICE and DTLS/SRTP between each pair of bridges, so a secure
-network is not required. It uses and requires colibri websockets for the
-bridge-bridge connections (endpoints can still use SCTP).
+network is not required. It uses and requires either SCTP or colibri websockets for the
+bridge-bridge connections.
 
 ## Jitsi Videobridge configuration
 
