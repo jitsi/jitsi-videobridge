@@ -64,6 +64,13 @@ class TreeCacheTest : ShouldSpec() {
                 treeCache.insert(40, Dummy("C"))
                 treeCache.getValueBefore(13) shouldBe null
             }
+            should("Persist values within the window while expiring values outside it") {
+                treeCache.insert(15, Dummy("C"))
+                treeCache.getValueBefore(8) shouldBe Dummy("A")
+                treeCache.getValueBefore(25) shouldBe Dummy("C")
+                treeCache.getValueBefore(13) shouldBe Dummy("B")
+                treeCache.getValueBefore(8) shouldBe null
+            }
         }
     }
 }
