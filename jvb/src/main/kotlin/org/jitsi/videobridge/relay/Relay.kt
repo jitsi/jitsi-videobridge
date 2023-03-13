@@ -576,29 +576,31 @@ class Relay @JvmOverloads constructor(
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
 
-        /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
-         *  disabled for relay.
-         */
-        if (messageTransport.isActive) {
-            iceUdpTransportPacketExtension.addChildExtension(
-                WebSocketPacketExtension().apply { active = true }
-            )
-        } else {
-            colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
-                val urls = colibriWebsocketService.getColibriRelayWebSocketUrls(
-                    conference.id,
-                    id,
-                    iceTransport.icePassword
+        if (sctpSocket != null) {
+            /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
+            *  disabled for relay.
+            */
+            if (messageTransport.isActive) {
+                iceUdpTransportPacketExtension.addChildExtension(
+                    WebSocketPacketExtension().apply { active = true }
                 )
-                if (urls.isEmpty()) {
-                    logger.warn("No colibri relay URLs configured")
-                }
-                urls.forEach {
-                    iceUdpTransportPacketExtension.addChildExtension(
-                        WebSocketPacketExtension().apply {
-                            url = it
-                        }
+            } else {
+                colibriWebSocketServiceSupplier.get()?.let { colibriWebsocketService ->
+                    val urls = colibriWebsocketService.getColibriRelayWebSocketUrls(
+                        conference.id,
+                        id,
+                        iceTransport.icePassword
                     )
+                    if (urls.isEmpty()) {
+                        logger.warn("No colibri relay URLs configured")
+                    }
+                    urls.forEach {
+                        iceUdpTransportPacketExtension.addChildExtension(
+                            WebSocketPacketExtension().apply {
+                                url = it
+                            }
+                        )
+                    }
                 }
             }
         }
