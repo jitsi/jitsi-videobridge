@@ -225,6 +225,10 @@ class Colibri2ConferenceHandler(
             it.mediaType == MediaType.VIDEO
         }
 
+        c2endpoint.initialLastN?.value?.let {
+            endpoint.setInitialLastN(it)
+        }
+
         c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
         if (c2endpoint.create) {
             val transBuilder = Transport.getBuilder()
@@ -276,10 +280,6 @@ class Colibri2ConferenceHandler(
 
         c2endpoint.forceMute?.let {
             endpoint.updateForceMute(it.audio, it.video)
-        }
-
-        c2endpoint.initialLastN?.value?.let {
-            endpoint.setInitialLastN(it)
         }
 
         return respBuilder.build()

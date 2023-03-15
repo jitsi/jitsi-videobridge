@@ -167,6 +167,12 @@ class Endpoint @JvmOverloads constructor(
     var acceptVideo = false
 
     /**
+     * Whether a [ReceiverVideoConstraintsMessage] has been received from the endpoint. Setting initial-last-n only
+     * has an effect prior to constraints being received on the message transport.
+     */
+    var initialReceiverConstraintsReceived = false
+
+    /**
      * The queue we put outgoing SRTP packets onto so they can be sent
      * out via the [IceTransport] on an IO thread.
      */
@@ -843,6 +849,7 @@ class Endpoint @JvmOverloads constructor(
     fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
 
     fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
+        initialReceiverConstraintsReceived = true
         bitrateController.setBandwidthAllocationSettings(message)
     }
 
@@ -1138,11 +1145,11 @@ class Endpoint @JvmOverloads constructor(
     }
 
     fun setInitialLastN(initialLastN: Int) {
-        if (!_messageTransport.isConnected) {
+        if (initialReceiverConstraintsReceived) {
+            logger.info("Ignoring initialLastN, message transport already connected.")
+        } else {
             logger.info("Setting initialLastN = $initialLastN")
             bitrateController.lastN = initialLastN
-        } else {
-            logger.info("Ignoring initialLastN, message transport already connected.")
         }
     }
 
