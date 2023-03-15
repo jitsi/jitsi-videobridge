@@ -1137,6 +1137,15 @@ class Endpoint @JvmOverloads constructor(
         logger.info("Expired.")
     }
 
+    fun setInitialLastN(initialLastN: Int) {
+        if (!_messageTransport.isConnected) {
+            logger.info("Setting initialLastN = $initialLastN")
+            bitrateController.lastN = initialLastN
+        } else {
+            logger.info("Ignoring initialLastN, message transport already connected.")
+        }
+    }
+
     companion object {
         /**
          * Whether or not the bridge should be the peer which opens the data channel

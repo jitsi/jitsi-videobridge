@@ -278,6 +278,10 @@ class Colibri2ConferenceHandler(
             endpoint.updateForceMute(it.audio, it.video)
         }
 
+        c2endpoint.initialLastN?.value?.let {
+            endpoint.setInitialLastN(it)
+        }
+
         return respBuilder.build()
     }
 
