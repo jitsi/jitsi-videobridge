@@ -73,7 +73,7 @@ class Colibri2ConferenceHandler(
         }
         for (r in conferenceModifyIQ.relays) {
             if (!RelayConfig.config.enabled) {
-                throw IqProcessingException(Condition.feature_not_implemented, "Octo is disable in configuration.")
+                throw IqProcessingException(Condition.feature_not_implemented, "Octo is disabled in configuration.")
             }
             responseBuilder.addRelay(handleColibri2Relay(r))
         }
