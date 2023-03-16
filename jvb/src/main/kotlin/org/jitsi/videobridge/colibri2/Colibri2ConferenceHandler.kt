@@ -225,6 +225,10 @@ class Colibri2ConferenceHandler(
             it.mediaType == MediaType.VIDEO
         }
 
+        c2endpoint.initialLastN?.value?.let {
+            endpoint.setInitialLastN(it)
+        }
+
         c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
         if (c2endpoint.create) {
             val transBuilder = Transport.getBuilder()
