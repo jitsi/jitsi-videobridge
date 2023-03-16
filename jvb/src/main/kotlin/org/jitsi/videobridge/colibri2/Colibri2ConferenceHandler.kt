@@ -74,14 +74,16 @@ class Colibri2ConferenceHandler(
         }
         for (r in conferenceModifyIQ.relays) {
             if (!RelayConfig.config.enabled) {
-                throw IqProcessingException(Condition.feature_not_implemented, "Octo is disable in configuration.")
+                throw IqProcessingException(Condition.feature_not_implemented, "Octo is disabled in configuration.")
             }
-            if (!WebsocketServiceConfig.config.enabled) {
+            if (!WebsocketServiceConfig.config.enabled && !SctpConfig.config.enabled) {
                 logger.warn(
-                    "Can not use a colibri2 relay, because colibri web sockets are not enabled. See " +
-                        "https://github.com/jitsi/jitsi-videobridge/blob/master/doc/octo.md"
+                    "Can not use a colibri2 relay, because neither SCTP nor colibri web sockets are enabled. See " +
+                        "https://github.com/jitsi/jitsi-videobridge/blob/master/doc/relay.md"
                 )
-                throw UnsupportedOperationException("Colibri websockets need to be enabled to use a colibri2 relay.")
+                throw UnsupportedOperationException(
+                    "Colibri websockets or SCTP need to be enabled to use a colibri2 relay."
+                )
             }
             responseBuilder.addRelay(handleColibri2Relay(r))
         }
@@ -356,16 +358,42 @@ class Colibri2ConferenceHandler(
             )
         }
 
-        if (c2relay.transport?.sctp != null) throw IqProcessingException(
-            Condition.feature_not_implemented,
-            "SCTP is not supported for relays."
-        )
+        c2relay.transport?.sctp?.let { sctp ->
+            if (!SctpConfig.config.enabled) {
+                throw IqProcessingException(
+                    Condition.feature_not_implemented,
+                    "SCTP support is not configured"
+                )
+            }
+            if (sctp.port != null && sctp.port != SctpManager.DEFAULT_SCTP_PORT) {
+                throw IqProcessingException(
+                    Condition.bad_request,
+                    "Specific SCTP port requested, not supported."
+                )
+            }
+
+            relay.createSctpConnection(sctp)
+        }
 
         c2relay.transport?.iceUdpTransport?.let { relay.setTransportInfo(it) }
         if (c2relay.create) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(relay.describeTransport())
-            respBuilder.setTransport(transBuilder.build())
+            c2relay.transport?.sctp?.let {
+                val role = if (it.role == Sctp.Role.CLIENT) {
+                    Sctp.Role.SERVER
+                } else {
+                    Sctp.Role.CLIENT
+                }
+                transBuilder.setSctp(
+                    Sctp.Builder()
+                        .setPort(SctpManager.DEFAULT_SCTP_PORT)
+                        .setRole(role)
+                        .build()
+                )
+
+                respBuilder.setTransport(transBuilder.build())
+            }
         }
 
         for (media: Media in c2relay.media) {
