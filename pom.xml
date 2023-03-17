@@ -19,7 +19,7 @@
 
     <groupId>org.jitsi</groupId>
     <artifactId>jvb-parent</artifactId>
-    <version>2.1-SNAPSHOT</version>
+    <version>2.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
@@ -110,7 +110,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-66-g379c87b</version>
+                <version>1.0-71-g8c6cdeb</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

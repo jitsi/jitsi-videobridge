@@ -23,6 +23,10 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.VersionConfig
 import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.datachannel.DataChannel
+import org.jitsi.videobridge.datachannel.DataChannelStack.DataChannelMessageListener
+import org.jitsi.videobridge.datachannel.protocol.DataChannelMessage
+import org.jitsi.videobridge.datachannel.protocol.DataChannelStringMessage
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ClientHelloMessage
@@ -35,6 +39,7 @@ import org.jitsi.videobridge.message.VideoTypeMessage
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.json.simple.JSONObject
+import java.lang.ref.WeakReference
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -43,14 +48,15 @@ import java.util.function.Supplier
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
- * for a [Relay].
+ * for a [Relay]. Supports two underlying transport mechanisms --
+ * WebRTC data channels and {@code WebSocket}s.
  */
 class RelayMessageTransport(
     private val relay: Relay,
     private val statisticsSupplier: Supplier<Videobridge.Statistics>,
     private val eventHandler: EndpointMessageTransportEventHandler,
     parentLogger: Logger
-) : AbstractEndpointMessageTransport(parentLogger), ColibriWebSocket.EventHandler {
+) : AbstractEndpointMessageTransport(parentLogger), ColibriWebSocket.EventHandler, DataChannelMessageListener {
     /**
      * The last connected/accepted web-socket by this instance, if any.
      */
@@ -70,6 +76,16 @@ class RelayMessageTransport(
      * Use to synchronize access to [webSocket]
      */
     private val webSocketSyncRoot = Any()
+
+    /**
+     * Whether the last active transport channel (i.e. the last to receive a
+     * message from the remote endpoint) was the web socket (if `true`),
+     * or the WebRTC data channel (if `false`).
+     */
+    private var webSocketLastActive = false
+
+    private var dataChannel = WeakReference<DataChannel>(null)
+
     private val numOutgoingMessagesDropped = AtomicInteger(0)
 
     /**
@@ -82,7 +98,7 @@ class RelayMessageTransport(
     /**
      * Connect the bridge channel message to the websocket URL specified
      */
-    fun connectTo(url: String) {
+    fun connectToWebsocket(url: String) {
         if (this.url != null && this.url == url) {
             return
         }
@@ -202,9 +218,21 @@ class RelayMessageTransport(
         super.sendMessage(dst, message) // Log message
         if (dst is ColibriWebSocket) {
             sendMessage(dst, message)
+        } else if (dst is DataChannel) {
+            sendMessage(dst, message)
         } else {
             throw IllegalArgumentException("unknown transport:$dst")
         }
+    }
+
+    /**
+     * Sends a string via a particular [DataChannel].
+     * @param dst the data channel to send through.
+     * @param message the message to send.
+     */
+    private fun sendMessage(dst: DataChannel, message: BridgeChannelMessage) {
+        dst.sendString(message.toJson())
+        statisticsSupplier.get().dataChannelMessagesSent.inc()
     }
 
     /**
@@ -220,21 +248,69 @@ class RelayMessageTransport(
         statisticsSupplier.get().colibriWebSocketMessagesSent.inc()
     }
 
+    override fun onDataChannelMessage(dataChannelMessage: DataChannelMessage?) {
+        webSocketLastActive = false
+        statisticsSupplier.get().dataChannelMessagesReceived.inc()
+        if (dataChannelMessage is DataChannelStringMessage) {
+            onMessage(dataChannel.get(), dataChannelMessage.data)
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
     public override fun sendMessage(msg: BridgeChannelMessage) {
-        if (webSocket == null) {
+        val dst = getActiveTransportChannel()
+        if (dst == null) {
             logger.debug("No available transport channel, can't send a message")
             numOutgoingMessagesDropped.incrementAndGet()
         } else {
             sentMessagesCounts.computeIfAbsent(msg.javaClass.simpleName) { AtomicLong() }.incrementAndGet()
-            sendMessage(webSocket, msg)
+            sendMessage(dst, msg)
         }
     }
 
+    /**
+     * @return the active transport channel for this
+     * [RelayMessageTransport] (either the [.webSocket], or
+     * the WebRTC data channel represented by a [DataChannel]).
+     *
+     * The "active" channel is determined based on what channels are available,
+     * and which one was the last to receive data. That is, if only one channel
+     * is available, it will be returned. If two channels are available, the
+     * last one to have received data will be returned. Otherwise, `null`
+     * will be returned.
+     */
+    // TODO(brian): seems like it'd be nice to have the websocket and datachannel
+    // share a common parent class (or, at least, have a class that is returned
+    // here and provides a common API but can wrap either a websocket or
+    // datachannel)
+    private fun getActiveTransportChannel(): Any? {
+        val dataChannel = dataChannel.get()
+        val webSocket = webSocket
+        var dst: Any? = null
+        if (webSocketLastActive) {
+            dst = webSocket
+        }
+
+        // Either the socket was not the last active channel,
+        // or it has been closed.
+        if (dst == null) {
+            if (dataChannel != null && dataChannel.isReady) {
+                dst = dataChannel
+            }
+        }
+
+        // Maybe the WebRTC data channel is the last active, but it is not
+        // currently available. If so, and a web-socket is available -- use it.
+        if (dst == null && webSocket != null) {
+            dst = webSocket
+        }
+        return dst
+    }
+
     override val isConnected: Boolean
-        get() = webSocket != null
+        get() = getActiveTransportChannel() != null
 
     val isActive: Boolean
         get() = outgoingWebsocket != null
@@ -248,6 +324,7 @@ class RelayMessageTransport(
             if (ws != webSocket) {
                 logger.info("Replacing an existing websocket.")
                 webSocket?.session?.close(CloseStatus.NORMAL, "replaced")
+                webSocketLastActive = true
                 webSocket = ws
                 sendMessage(ws, createServerHello())
             } else {
@@ -276,6 +353,7 @@ class RelayMessageTransport(
         synchronized(webSocketSyncRoot) {
             if (ws == webSocket) {
                 webSocket = null
+                webSocketLastActive = false
                 logger.debug { "Web socket closed, statusCode $statusCode ( $reason)." }
             }
         }
@@ -325,7 +403,33 @@ class RelayMessageTransport(
             return
         }
         statisticsSupplier.get().colibriWebSocketMessagesReceived.inc()
+        webSocketLastActive = true
         onMessage(ws, message)
+    }
+
+    /**
+     * Sets the data channel for this endpoint.
+     * @param dataChannel the [DataChannel] to use for this transport
+     */
+    fun setDataChannel(dataChannel: DataChannel) {
+        val prevDataChannel = this.dataChannel.get()
+        if (prevDataChannel == null) {
+            this.dataChannel = WeakReference(dataChannel)
+            // We install the handler first, otherwise the 'ready' might fire after we check it but before we
+            //  install the handler
+            dataChannel.onDataChannelEvents { notifyTransportChannelConnected() }
+            if (dataChannel.isReady) {
+                notifyTransportChannelConnected()
+            }
+            dataChannel.onDataChannelMessage(this)
+        } else if (prevDataChannel === dataChannel) {
+            // TODO: i think we should be able to ensure this doesn't happen,
+            // so throwing for now.  if there's a good
+            // reason for this, we can make this a no-op
+            throw Error("Re-setting the same data channel")
+        } else {
+            throw Error("Overwriting a previous data channel!")
+        }
     }
 
     override val debugState: JSONObject
