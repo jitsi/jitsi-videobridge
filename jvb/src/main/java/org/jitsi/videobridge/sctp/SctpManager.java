@@ -109,9 +109,9 @@ public class SctpManager
      * Create an {@link SctpServerSocket} to be used to wait for incoming SCTP connections
      * @return an {@link SctpServerSocket}
      */
-    public SctpServerSocket createServerSocket()
+    public SctpServerSocket createServerSocket(Logger parentLogger)
     {
-        socket = Sctp4j.createServerSocket(DEFAULT_SCTP_PORT);
+        socket = Sctp4j.createServerSocket(DEFAULT_SCTP_PORT, parentLogger);
         socket.outgoingDataSender = this.dataSender;
         logger.debug(() -> "Created SCTP server socket " + socket.hashCode());
         return (SctpServerSocket)socket;
@@ -121,9 +121,9 @@ public class SctpManager
      * Create an {@link SctpClientSocket} to be used to open an SCTP connection
      * @return an {@link SctpClientSocket}
      */
-    public SctpClientSocket createClientSocket()
+    public SctpClientSocket createClientSocket(Logger parentLogger)
     {
-        socket = Sctp4j.createClientSocket(DEFAULT_SCTP_PORT);
+        socket = Sctp4j.createClientSocket(DEFAULT_SCTP_PORT, parentLogger);
         socket.outgoingDataSender = this.dataSender;
         if (logger.isDebugEnabled())
         {

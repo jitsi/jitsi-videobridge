@@ -448,9 +448,9 @@ class Relay @JvmOverloads constructor(
         this.sctpManager = sctpManager
         sctpHandler.setSctpManager(sctpManager)
         val socket = if (sctpDesc.role == Sctp.Role.CLIENT) {
-            sctpManager.createClientSocket()
+            sctpManager.createClientSocket(logger)
         } else {
-            sctpManager.createServerSocket()
+            sctpManager.createServerSocket(logger)
         }
         socket.eventHandler = object : SctpSocket.SctpSocketEventHandler {
             override fun onReady() {

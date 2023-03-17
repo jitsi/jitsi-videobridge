@@ -610,7 +610,7 @@ class Endpoint @JvmOverloads constructor(
         sctpHandler.setSctpManager(sctpManager!!)
         // NOTE(brian): as far as I know we always act as the 'server' for sctp
         // connections, but if not we can make which type we use dynamic
-        val socket = sctpManager!!.createServerSocket()
+        val socket = sctpManager!!.createServerSocket(logger)
         socket.eventHandler = object : SctpSocket.SctpSocketEventHandler {
             override fun onReady() {
                 logger.info("SCTP connection is ready, creating the Data channel stack")
