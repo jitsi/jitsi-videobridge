@@ -391,9 +391,8 @@ class Colibri2ConferenceHandler(
                         .setRole(role)
                         .build()
                 )
-
-                respBuilder.setTransport(transBuilder.build())
             }
+            respBuilder.setTransport(transBuilder.build())
         }
 
         for (media: Media in c2relay.media) {
