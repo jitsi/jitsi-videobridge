@@ -513,6 +513,11 @@ class Endpoint @JvmOverloads constructor(
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() {
         sendAllVideoConstraints()
+        if (isUsingSourceNames) {
+            sendForwardedSourcesMessage(bitrateController.forwardedSources)
+        } else {
+            sendForwardedEndpointsMessage(bitrateController.forwardedEndpoints)
+        }
         videoSsrcs.sendAllMappings()
         audioSsrcs.sendAllMappings()
     }
