@@ -131,6 +131,7 @@ class Av1DependencyDescriptorReader(
 
     /** Parse those parts of the dependency descriptor that can be parsed statelessly, i.e. without an external
      * template dependency structure.  The returned object will not be a complete representation of the
+     * dependency descriptor, because some fields need the external structure to be parseable.
      */
     fun parseStateless(): Av1DependencyDescriptorStatelessSubset {
         reset()
