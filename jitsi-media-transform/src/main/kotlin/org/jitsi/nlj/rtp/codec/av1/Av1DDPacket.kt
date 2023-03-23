@@ -93,6 +93,9 @@ class Av1DDPacket : ParsedVideoPacket {
             it.dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _), -> i }
         } ?: run { super.layerIds }
 
+    val frameNumber
+        get() = statelessDescriptor.frameNumber
+
     override fun clone(): Av1DDPacket {
         /* TODO: when descriptor becomes mutable (i.e. we can write to the active decode targets bitmask), clone
          *  it here.

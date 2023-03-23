@@ -404,6 +404,30 @@ open class FrameInfo(
 ) {
     val fdiffCnt
         get() = fdiff.size
+
+    override operator fun equals(other: Any?): Boolean {
+        if (other !is FrameInfo) {
+            return false
+        }
+        return other.spatialId == spatialId &&
+            other.temporalId == temporalId &&
+            other.dti == dti &&
+            other.fdiff == fdiff &&
+            other.chains == chains
+    }
+
+    override fun hashCode(): Int {
+        var result = spatialId
+        result = 31 * result + temporalId
+        result = 31 * result + dti.hashCode()
+        result = 31 * result + fdiff.hashCode()
+        result = 31 * result + chains.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "spatialId=$spatialId, temporalId = $temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
+    }
 }
 
 class TemplateFrameInfo(

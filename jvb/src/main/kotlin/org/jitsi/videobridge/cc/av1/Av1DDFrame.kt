@@ -17,6 +17,8 @@ package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
+import org.jitsi.rtp.util.isNewerThan
+import org.jitsi.rtp.util.isOlderThan
 
 class Av1DDFrame internal constructor(
     /**
@@ -131,4 +133,62 @@ class Av1DDFrame internal constructor(
         frameNumber = packet.statelessDescriptor.frameNumber,
         index
     )
+
+    /**
+     * Remember another packet of this frame.
+     * Note: this assumes every packet is received only once, i.e. a filter
+     * like [org.jitsi.nlj.transform.node.incoming.PaddingTermination] is in use.
+     * @param packet The packet to remember.  This should be a packet which
+     * has tested true with [matchesFrame].
+     */
+    fun addPacket(packet: Av1DDPacket) {
+        require(matchesFrame(packet)) { "Non-matching packet added to frame" }
+        val seq = packet.sequenceNumber
+        if (seq isOlderThan earliestKnownSequenceNumber) {
+            earliestKnownSequenceNumber = seq
+        }
+        if (seq isNewerThan latestKnownSequenceNumber) {
+            latestKnownSequenceNumber = seq
+        }
+        if (packet.isStartOfFrame) {
+            seenStartOfFrame = true
+        }
+        if (packet.isEndOfFrame) {
+            seenEndOfFrame = true
+        }
+        if (packet.isMarked) {
+            seenMarker = true
+        }
+    }
+
+    /**
+     * Checks whether the specified RTP packet is part of this frame.
+     *
+     * @param pkt the RTP packet to check whether it's part of this frame.
+     * @return true if the specified RTP packet is part of this frame, false
+     * otherwise.
+     */
+    fun matchesFrame(pkt: Av1DDPacket): Boolean {
+        return ssrc == pkt.ssrc && timestamp == pkt.timestamp &&
+            frameNumber == pkt.frameNumber
+    }
+
+    fun validateConsistency(pkt: Av1DDPacket) {
+        if (frameInfo == pkt.frameInfo) {
+            return
+        }
+
+        throw RuntimeException(
+            buildString {
+                with(pkt) {
+                    append("Packet ssrc $ssrc, seq $sequenceNumber, frame number $frameNumber, timestamp $timestamp ")
+                }
+                append("is not consistent with picture $ssrc, ")
+                append("seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
+                append("frame number $frameNumber, timestamp $timestamp: ")
+
+                append("frame info $frameInfo != packet frame info ${pkt.frameInfo}")
+            }
+        )
+    }
 }
