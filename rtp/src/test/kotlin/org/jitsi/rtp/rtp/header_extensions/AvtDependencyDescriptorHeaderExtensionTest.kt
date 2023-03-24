@@ -62,6 +62,9 @@ class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     ld1i.spatialId shouldBe 0
                     ld1i.temporalId shouldBe 0
                 }
+                should("Calculate its own length properly") {
+                    ld1.encodedLength shouldBe longDesc1.size
+                }
             }
             context("a descriptor with a scalable dependency structure") {
                 val ldsr = Av1DependencyDescriptorReader(longDescScalable, 0, longDescScalable.size)
@@ -80,6 +83,9 @@ class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val ldsi = lds.frameInfo
                     ldsi.spatialId shouldBe 0
                     ldsi.temporalId shouldBe 0
+                }
+                should("Calculate its own length properly") {
+                    lds.encodedLength shouldBe longDescScalable.size
                 }
             }
             context("a descriptor following the dependency structure, specifying decode targets") {
@@ -100,6 +106,9 @@ class AvtDependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val mdsi = mds.frameInfo
                     mdsi.spatialId shouldBe 0
                     mdsi.temporalId shouldBe 1
+                }
+                should("Calculate its own length properly") {
+                    mds.encodedLength shouldBe midDescScalable.size
                 }
             }
             context("a descriptor without a dependency structure") {

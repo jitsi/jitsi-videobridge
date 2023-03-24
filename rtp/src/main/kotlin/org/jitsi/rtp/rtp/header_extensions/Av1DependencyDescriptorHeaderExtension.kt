@@ -61,7 +61,7 @@ class Av1DependencyDescriptorHeaderExtension(
         if (templateIndex >= structure.templateCount) {
             val maxTemplate = (structure.templateIdOffset + structure.templateCount - 1) % 64
             throw Av1DependencyException(
-                "Invalid template index $frameDependencyTemplateId. " +
+                "Invalid template ID $frameDependencyTemplateId. " +
                     "Should be in range ${structure.templateIdOffset} .. $maxTemplate. " +
                     "Missed a keyframe?"
             )
@@ -76,7 +76,56 @@ class Av1DependencyDescriptorHeaderExtension(
             chains = customChains ?: templateVal.chains
         )
     }
+
+    val encodedLength: Int
+        get() = (unpaddedLengthBits + 7) / 8
+
+    private val unpaddedLengthBits: Int
+        get() {
+            var length = 24
+            if (newTemplateDependencyStructure != null ||
+                activeDecodeTargetsBitmask != null ||
+                customDtis != null ||
+                customFdiffs != null ||
+                customChains != null
+            ) {
+                length += 5
+            }
+            if (newTemplateDependencyStructure != null) {
+                length += newTemplateDependencyStructure.unpaddedLengthBits
+            }
+            if (activeDecodeTargetsBitmask != null &&
+                (
+                    newTemplateDependencyStructure == null ||
+                        activeDecodeTargetsBitmask != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
+                    )
+            ) {
+                length += structure.decodeTargetCount
+            }
+            if (customDtis != null) {
+                length += 2 * structure.decodeTargetCount
+            }
+            if (customFdiffs != null) {
+                customFdiffs.forEach {
+                    length += 2 + it.bitsForFdiff()
+                }
+                length += 2
+            }
+            if (customChains != null) {
+                length += 8 * customChains.size
+            }
+
+            return length
+        }
 }
+
+fun Int.bitsForFdiff() =
+    when {
+        this <= 0x10 -> 4
+        this <= 0x100 -> 8
+        this <= 0x1000 -> 12
+        else -> throw IllegalArgumentException("Invalid FDiff value $this")
+    }
 
 /**
  * The template information about a stream described by AV1 dependency descriptors.  This is carried in the
@@ -103,6 +152,45 @@ class Av1TemplateDependencyStructure(
             "Templates have inconsistent chain sizes"
         }
     }
+
+    val unpaddedLengthBits: Int
+        get() {
+            var length = 6 // Template ID offset
+
+            length += 5 // DT Count - 1
+
+            length += templateCount * 2 // templateLayers
+            length += templateCount * decodeTargetCount * 2 // TemplateDTIs
+            templateInfo.forEach {
+                length += it.fdiffCnt * 5 + 1 // TemplateFDiffs
+            }
+            // TemplateChains
+            length += nsBits(decodeTargetCount + 1, chainCount)
+            if (chainCount > 0) {
+                decodeTargetInfo.forEach {
+                    length += nsBits(chainCount, it.protectedBy)
+                }
+                length += templateCount * chainCount * 4
+            }
+            length += 1 // ResolutionsPresent
+            length += maxRenderResolutions.size * 32 // RenderResolutions
+
+            return length
+        }
+}
+
+fun nsBits(n: Int, v: Int): Int {
+    require(n > 0)
+    if (n == 1) return 0
+    var w = 0
+    var x = n
+    while (x != 0) {
+        x = x shr 1
+        w++
+    }
+    val m = (1 shl w) - n
+    if (v < m) return w - 1
+    return w
 }
 
 class Av1DependencyDescriptorReader(
