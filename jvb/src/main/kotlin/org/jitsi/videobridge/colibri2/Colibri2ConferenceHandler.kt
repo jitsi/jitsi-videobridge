@@ -62,15 +62,17 @@ class Colibri2ConferenceHandler(
      * expired.
      */
     fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
+        validateRequest(conferenceModifyIQ)
+
+        val ignoreUnknownEndpoints = shouldIgnoreUnknownEndpoints(conferenceModifyIQ)
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
         var expire = conferenceModifyIQ.expire.also {
             if (it) logger.info("Received request to expire conference.")
         }
 
-        /* TODO: is there any reason we might need to handle Endpoints and Relays in in-message order? */
         for (e in conferenceModifyIQ.endpoints) {
-            responseBuilder.addEndpoint(handleColibri2Endpoint(e))
+            responseBuilder.addEndpoint(handleColibri2Endpoint(e, ignoreUnknownEndpoints))
         }
         for (r in conferenceModifyIQ.relays) {
             if (!RelayConfig.config.enabled) {
@@ -85,7 +87,7 @@ class Colibri2ConferenceHandler(
                     "Colibri websockets or SCTP need to be enabled to use a colibri2 relay."
                 )
             }
-            responseBuilder.addRelay(handleColibri2Relay(r))
+            responseBuilder.addRelay(handleColibri2Relay(r, ignoreUnknownEndpoints))
         }
 
         // Include feedback sources with any "create conference" or "create endpoint" request. This allows async
@@ -101,6 +103,13 @@ class Colibri2ConferenceHandler(
         }
 
         Pair(responseBuilder.build(), expire)
+    } catch (e: UnknownEndpointException) {
+        logger.warn("Unknown Endpoint during processing conference-modify IQ: $e")
+        val error = createEndpointNotFoundError(conferenceModifyIQ, e.endpointId)
+        Pair(error, false)
+    } catch (e: FeatureNotImplementedException) {
+        logger.warn("Unsupported request (${e.message}): ${conferenceModifyIQ.toXML()}")
+        Pair(createFeatureNotImplementedError(conferenceModifyIQ, e.message), false)
     } catch (e: IqProcessingException) {
         // Item not found conditions are assumed to be less critical, as they often happen in case a request
         // arrives late for an expired endpoint.
@@ -144,7 +153,10 @@ class Colibri2ConferenceHandler(
      * the conference-modified.
      */
     @Throws(IqProcessingException::class)
-    private fun handleColibri2Endpoint(c2endpoint: Colibri2Endpoint): Colibri2Endpoint {
+    private fun handleColibri2Endpoint(
+        c2endpoint: Colibri2Endpoint,
+        ignoreUnknownEndpoints: Boolean
+    ): Colibri2Endpoint {
         val respBuilder = Colibri2Endpoint.getBuilder().apply { setId(c2endpoint.id) }
         if (c2endpoint.expire) {
             conference.getLocalEndpoint(c2endpoint.id)?.expire()
@@ -196,11 +208,15 @@ class Colibri2ConferenceHandler(
                 }
             }
         } else {
-            conference.getLocalEndpoint(c2endpoint.id) ?: throw IqProcessingException(
-                // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
-                Condition.bad_request,
-                "Unknown endpoint ${c2endpoint.id}"
-            )
+            conference.getLocalEndpoint(c2endpoint.id)
+        }
+
+        if (endpoint == null) {
+            if (ignoreUnknownEndpoints) {
+                return respBuilder.build()
+            } else {
+                throw UnknownEndpointException(c2endpoint.id)
+            }
         }
 
         for (media in c2endpoint.media) {
@@ -325,7 +341,10 @@ class Colibri2ConferenceHandler(
      * the conference-modified.
      */
     @Throws(IqProcessingException::class)
-    private fun handleColibri2Relay(c2relay: Colibri2Relay): Colibri2Relay {
+    private fun handleColibri2Relay(
+        c2relay: Colibri2Relay,
+        ignoreUnknownRelays: Boolean
+    ): Colibri2Relay {
         val respBuilder = Colibri2Relay.getBuilder()
         respBuilder.setId(c2relay.id)
         if (c2relay.expire) {
@@ -334,7 +353,7 @@ class Colibri2ConferenceHandler(
             return respBuilder.build()
         }
 
-        val relay: Relay
+        val relay: Relay?
         if (c2relay.create) {
             if (conference.getRelay(c2relay.id) != null) {
                 throw IqProcessingException(Condition.conflict, "Relay with ID ${c2relay.id} already exists")
@@ -351,11 +370,16 @@ class Colibri2ConferenceHandler(
                 transport.useUniquePort
             )
         } else {
-            relay = conference.getRelay(c2relay.id) ?: throw IqProcessingException(
+            relay = conference.getRelay(c2relay.id)
+        }
+
+        if (relay == null) {
+            if (ignoreUnknownRelays) {
+                return respBuilder.build()
+            } else {
                 // TODO: this should be Condition.item_not_found but this conflicts with some error codes from the Muc.
-                Condition.bad_request,
-                "Unknown relay ${c2relay.id}"
-            )
+                throw IqProcessingException(Condition.bad_request, "Unknown relay ${c2relay.id}")
+            }
         }
 
         c2relay.transport?.sctp?.let { sctp ->
@@ -459,4 +483,46 @@ class Colibri2ConferenceHandler(
         }
         return Pair(audioSources, videoSources)
     }
+
+    /**
+     * Check if the request satisfies the additional restrictions that jitsi-videobridge imposes on colibri2 requests
+     * and throw [FeatureNotImplementedException] if it doesn't.
+     *
+     * Mostly, we don't support requests that contain arbitrary multiple [Colibri2Endpoint]s or [Colibri2Relay]s. We do
+     * support them when they expire a set of endpoints, or solely update the "force-mute" state of a set of endpoints,
+     * because in these cases it's reasonable to ignore errors when endpoints expired.
+     */
+    @kotlin.jvm.Throws(FeatureNotImplementedException::class)
+    private fun validateRequest(iq: ConferenceModifyIQ) {
+        if (iq.endpoints.size > 0 && iq.relays.size > 0) {
+            throw FeatureNotImplementedException("Using both 'relay' and 'endpoint' in a request")
+        }
+
+        if (iq.endpoints.size > 1) {
+            if (iq.endpoints.any { it.create || it.media.size > 0 || it.transport != null || it.sources != null }) {
+                throw FeatureNotImplementedException(
+                    "Creating or updating media, sources or transport for more than one endpoint in a request."
+                )
+            }
+        }
+
+        if (iq.relays.size > 1) {
+            throw FeatureNotImplementedException("Updating more than one 'relay' in a request.")
+        }
+    }
+}
+
+/**
+ * Return true if "unknown endpoint" and "unknown relay" errors should be ignored when handling [iq]. We ignore errors
+ * if the request simply expires endpoints or a relay (since presumably the entity is already expired), or if it is a
+ * batch update of force-mute state (for the same reason, in order to simplify error handling).
+ */
+private fun shouldIgnoreUnknownEndpoints(iq: ConferenceModifyIQ): Boolean {
+    if (iq.endpoints.any { it.create || it.media.size > 0 || it.transport != null || it.sources != null }) {
+        return false
+    }
+    if (iq.relays.any { !it.expire }) {
+        return false
+    }
+    return true
 }
