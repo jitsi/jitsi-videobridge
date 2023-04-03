@@ -16,6 +16,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.util.bps
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
@@ -167,7 +168,7 @@ internal class AllocationSettingsWrapper(
         message.assumedBandwidthBps?.let {
             config.assumedBandwidthLimit?.let { limit ->
                 val limited = it.coerceAtMost(limit.bps.toLong())
-                logger.warn("Setting assumed bandwidth $limited")
+                logger.warn("Setting assumed bandwidth ${limited.bps} (receiver asked for $it).")
                 this.assumedBandwidthBps = limited
                 changed = true
             } ?: logger.info("Ignoring assumed-bandwidth-bps, not allowed in config.")
