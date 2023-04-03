@@ -166,9 +166,12 @@ internal class AllocationSettingsWrapper(
             }
         }
         message.assumedBandwidthBps?.let {
-            logger.warn("Setting assumed bandwidth ${it.bps}")
-            this.assumedBandwidthBps = it
-            changed = true
+            config.assumedBandwidthLimit?.let { limit ->
+                val limited = it.coerceAtMost(limit.bps.toLong())
+                logger.warn("Setting assumed bandwidth ${limited.bps} (receiver asked for $it).")
+                this.assumedBandwidthBps = limited
+                changed = true
+            } ?: logger.info("Ignoring assumed-bandwidth-bps, not allowed in config.")
         }
 
         if (changed) {
