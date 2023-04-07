@@ -733,18 +733,19 @@ class Relay @JvmOverloads constructor(
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
+    /** Return the newly created endpoint, or null if an endpoint with that ID already existed. */
     fun addRemoteEndpoint(
         id: String,
         statsId: String?,
         audioSources: Collection<AudioSourceDesc>,
         videoSources: Collection<MediaSourceDesc>
-    ) {
+    ): RelayedEndpoint? {
         val ep: RelayedEndpoint
         synchronized(endpointsLock) {
             if (relayedEndpoints.containsKey(id)) {
                 logger.warn("Relay already contains remote endpoint with ID $id")
                 updateRemoteEndpoint(id, audioSources, videoSources)
-                return
+                return null
             }
             ep = RelayedEndpoint(
                 conference,
@@ -765,8 +766,6 @@ class Relay @JvmOverloads constructor(
             ep.ssrcs.forEach { ssrc -> endpointsBySsrc[ssrc] = ep }
         }
 
-        conference.addEndpoints(setOf(ep))
-
         srtpTransformers?.let { ep.setSrtpInformation(it) }
         payloadTypes.forEach { payloadType -> ep.addPayloadType(payloadType) }
         rtpExtensions.forEach { rtpExtension -> ep.addRtpExtension(rtpExtension) }
@@ -775,6 +774,7 @@ class Relay @JvmOverloads constructor(
         setEndpointMediaSources(ep, audioSources, videoSources)
 
         ep.setFeature(Features.TRANSCEIVER_PCAP_DUMP, transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP))
+        return ep
     }
 
     fun updateRemoteEndpoint(

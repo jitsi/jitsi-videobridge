@@ -24,6 +24,7 @@ import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
@@ -436,13 +437,18 @@ class Colibri2ConferenceHandler(
             /* No need to put media in conference-modified. */
         }
 
+        // Calls to conference.addEndpoint re-run bandwidth allocation for the existing endpoints in the conference,
+        // so call it only once.
+        val newEndpoints = mutableSetOf<AbstractEndpoint>()
         c2relay.endpoints?.endpoints?.forEach { endpoint ->
             if (endpoint.expire) {
                 relay.removeRemoteEndpoint(endpoint.id)
             } else {
                 val sources = endpoint.parseSourceDescs()
                 if (endpoint.create) {
-                    relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second)
+                    relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second)?.let {
+                        newEndpoints.add(it)
+                    }
                 } else {
                     relay.updateRemoteEndpoint(endpoint.id, sources.first, sources.second)
                 }
@@ -455,6 +461,7 @@ class Colibri2ConferenceHandler(
                 }
             }
         }
+        conference.addEndpoints(newEndpoints)
 
         /* TODO: handle the rest of the relay's fields: feedback sources. */
         return respBuilder.build()
