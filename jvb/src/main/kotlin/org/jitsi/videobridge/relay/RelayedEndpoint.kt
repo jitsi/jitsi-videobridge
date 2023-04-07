@@ -176,7 +176,7 @@ class RelayedEndpoint(
             val mergedMediaSources = _mediaSources.getMediaSources()
             val signaledMediaSources = value.copy()
             if (changed) {
-                val setMediaSourcesEvent = SetMediaSourcesEvent(mediaSources, signaledMediaSources)
+                val setMediaSourcesEvent = SetMediaSourcesEvent(mergedMediaSources, signaledMediaSources)
 
                 rtpReceiver.handleEvent(setMediaSourcesEvent)
                 mediaSources.forEach {
