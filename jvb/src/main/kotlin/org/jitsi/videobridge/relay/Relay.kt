@@ -733,7 +733,10 @@ class Relay @JvmOverloads constructor(
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
         sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
-    /** Return the newly created endpoint, or null if an endpoint with that ID already existed. */
+    /**
+     * Return the newly created endpoint, or null if an endpoint with that ID already existed. Note that the new
+     * endpoint has to be added to the [Conference] separately.
+     */
     fun addRemoteEndpoint(
         id: String,
         statsId: String?,
