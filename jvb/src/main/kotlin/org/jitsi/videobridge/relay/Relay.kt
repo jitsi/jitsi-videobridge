@@ -301,6 +301,7 @@ class Relay @JvmOverloads constructor(
             put("iceTransport", iceTransport.getDebugState())
             put("dtlsTransport", dtlsTransport.getDebugState())
             put("transceiver", transceiver.getNodeStats().toJson())
+            put("meshId", meshId)
             put("messageTransport", messageTransport.debugState)
             val remoteEndpoints = JSONObject()
             val endpointsBySsrcMap = JSONObject()
