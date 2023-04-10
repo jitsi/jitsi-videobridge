@@ -1076,12 +1076,33 @@ public class Conference
     }
 
     /**
+     * @return {@code true} if this {@link Conference} is in more than one relay mesh.
+     */
+    private boolean inMultipleMeshes()
+    {
+        String meshId = null;
+        for (Relay r : relaysById.values())
+        {
+            if (meshId == null)
+            {
+                meshId = r.getMeshId();
+            }
+            else if (!meshId.equals(r.getMeshId()))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
     public boolean shouldExpire()
     {
         // Allow a conference to have no endpoints in the first 20 seconds.
         return getEndpointCount() == 0
+                && !inMultipleMeshes()
                 && (System.currentTimeMillis() - creationTime > 20000);
     }
 
