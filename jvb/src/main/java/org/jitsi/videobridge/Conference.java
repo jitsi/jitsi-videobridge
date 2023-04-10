@@ -1080,19 +1080,7 @@ public class Conference
      */
     private boolean inMultipleMeshes()
     {
-        String meshId = null;
-        for (Relay r : relaysById.values())
-        {
-            if (meshId == null)
-            {
-                meshId = r.getMeshId();
-            }
-            else if (!meshId.equals(r.getMeshId()))
-            {
-                return true;
-            }
-        }
-        return false;
+        return relaysById.values().stream().map(Relay::getMeshId).collect(Collectors.toSet()).size() > 1;
     }
 
     /**
