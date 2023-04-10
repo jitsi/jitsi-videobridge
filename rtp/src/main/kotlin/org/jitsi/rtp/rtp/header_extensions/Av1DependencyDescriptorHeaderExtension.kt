@@ -25,8 +25,8 @@ import org.jitsi.rtp.util.BitReader
 open class Av1DependencyDescriptorStatelessSubset(
     val startOfFrame: Boolean,
     val endOfFrame: Boolean,
-    val frameDependencyTemplateId: Int,
-    val frameNumber: Int,
+    var frameDependencyTemplateId: Int,
+    var frameNumber: Int,
 
     val newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
 )
@@ -42,7 +42,7 @@ class Av1DependencyDescriptorHeaderExtension(
 
     newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
 
-    val activeDecodeTargetsBitmask: Int?,
+    var activeDecodeTargetsBitmask: Int?,
 
     val customDtis: List<DTI>?,
     val customFdiffs: List<Int>?,
@@ -117,6 +117,24 @@ class Av1DependencyDescriptorHeaderExtension(
 
             return length
         }
+
+    fun clone(): Av1DependencyDescriptorHeaderExtension {
+        val structureCopy = structure.clone()
+        val newStructure = if (newTemplateDependencyStructure == null) null else structureCopy
+        return Av1DependencyDescriptorHeaderExtension(
+            startOfFrame,
+            endOfFrame,
+            frameDependencyTemplateId,
+            frameNumber,
+            newStructure,
+            activeDecodeTargetsBitmask,
+            // These values are not mutable so it's safe to copy them by reference
+            customDtis,
+            customFdiffs,
+            customChains,
+            structureCopy
+        )
+    }
 }
 
 fun Int.bitsForFdiff() =
@@ -177,6 +195,16 @@ class Av1TemplateDependencyStructure(
 
             return length
         }
+
+    fun clone(): Av1TemplateDependencyStructure {
+        return Av1TemplateDependencyStructure(
+            templateIdOffset,
+            // These objects are not mutable so it's safe to copy them by reference
+            templateInfo,
+            decodeTargetInfo,
+            maxRenderResolutions
+        )
+    }
 }
 
 fun nsBits(n: Int, v: Int): Int {
