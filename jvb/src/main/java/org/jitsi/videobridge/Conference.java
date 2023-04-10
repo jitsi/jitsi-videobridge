@@ -1076,12 +1076,21 @@ public class Conference
     }
 
     /**
+     * @return {@code true} if this {@link Conference} is in more than one relay mesh.
+     */
+    private boolean inMultipleMeshes()
+    {
+        return relaysById.values().stream().map(Relay::getMeshId).collect(Collectors.toSet()).size() > 1;
+    }
+
+    /**
      * @return {@code true} if this {@link Conference} is ready to be expired.
      */
     public boolean shouldExpire()
     {
         // Allow a conference to have no endpoints in the first 20 seconds.
         return getEndpointCount() == 0
+                && !inMultipleMeshes()
                 && (System.currentTimeMillis() - creationTime > 20000);
     }
 
