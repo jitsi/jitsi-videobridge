@@ -22,15 +22,16 @@ import kotlin.experimental.and
  * Read individual bits, and unaligned sets of bits, from a [ByteArray], with an incrementing offset.
  */
 /* TODO: put this in jitsi-utils? */
-class BitReader(val buf: ByteArray, val byteOffset: Int = 0, private val byteLength: Int = buf.size) {
+class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val byteLength: Int = buf.size) {
     private var offset = byteOffset * 8
+    private val byteBound = byteOffset + byteLength
 
     /** Read a single bit from the buffer, as a boolean, incrementing the offset. */
     fun bitAsBoolean(): Boolean {
         val byteIdx = offset / 8
         val bitIdx = offset % 8
-        check(byteIdx < byteLength) {
-            "offset $offset invalid in buffer of length $byteLength"
+        check(byteIdx < byteBound) {
+            "offset $offset ($byteIdx/$bitIdx) invalid in buffer of length $byteLength after offset $byteOffset"
         }
         val byte = buf[byteIdx]
         val mask = (1 shl (7 - bitIdx)).toByte()
@@ -94,8 +95,8 @@ class BitReader(val buf: ByteArray, val byteOffset: Int = 0, private val byteLen
         if (v < m) {
             return v
         }
-        val extra_bit = bit()
-        return (v shl 1) - m + extra_bit
+        val extraBit = bit()
+        return (v shl 1) - m + extraBit
     }
 
     /** Reset the reader to the beginning of the buffer */
