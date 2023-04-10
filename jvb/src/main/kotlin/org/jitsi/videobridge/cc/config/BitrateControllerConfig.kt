@@ -19,6 +19,7 @@ package org.jitsi.videobridge.cc.config
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
+import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.util.Bandwidth
 import java.time.Duration
 
@@ -115,6 +116,10 @@ class BitrateControllerConfig private constructor() {
         "videobridge.cc.max-time-between-calculations".from(JitsiConfig.newConfig)
     )
     fun maxTimeBetweenCalculations() = maxTimeBetweenCalculations
+
+    val assumedBandwidthLimit: Bandwidth? by optionalconfig {
+        "videobridge.cc.assumed-bandwidth-limit".from(JitsiConfig.newConfig)
+    }
 
     companion object {
         @JvmField

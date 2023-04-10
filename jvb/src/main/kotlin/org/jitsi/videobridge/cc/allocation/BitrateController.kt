@@ -58,11 +58,13 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * Keep track of the "forwarded" endpoints, i.e. the endpoints for which we are forwarding *some* layer.
      */
     @Deprecated("", ReplaceWith("forwardedSources"), DeprecationLevel.WARNING)
-    private var forwardedEndpoints: Set<String> = emptySet()
+    var forwardedEndpoints: Set<String> = emptySet()
+        private set
     /**
      * Keep track of the "forwarded" sources, i.e. the media sources for which we are forwarding *some* layer.
      */
-    private var forwardedSources: Set<String> = emptySet()
+    var forwardedSources: Set<String> = emptySet()
+        private set
 
     /**
      * Keep track of how much time we spend knowingly oversending (due to enableOnstageVideoSuspend being false)
@@ -275,14 +277,12 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             packetHandler.allocationChanged(allocation)
 
             if (useSourceNames) {
-                // TODO as per George's comment above: should this message be sent on message transport connect?
                 val newForwardedSources = allocation.forwardedSources
                 if (forwardedSources != newForwardedSources) {
                     forwardedSources = newForwardedSources
                     eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
                 }
             } else {
-                // TODO(george) bring back sending this message on message transport  connect
                 val newForwardedEndpoints = allocation.forwardedEndpoints
                 if (forwardedEndpoints != newForwardedEndpoints) {
                     forwardedEndpoints = newForwardedEndpoints
