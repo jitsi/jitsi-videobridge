@@ -18,6 +18,7 @@ package org.jitsi.rtp.rtp.header_extensions
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
+import org.jitsi.rtp.util.BitWriter
 
 /**
  * The subset of the fields of an AV1 Dependency Descriptor that can be parsed statelessly.
@@ -135,6 +136,92 @@ class Av1DependencyDescriptorHeaderExtension(
             structureCopy
         )
     }
+
+    fun write(ext: RtpPacket.HeaderExtension) = write(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
+
+    fun write(buffer: ByteArray, offset: Int, length: Int) {
+        check(length <= encodedLength) {
+            "Cannot write AV1 DD to buffer: buffer length $length must be at least $encodedLength"
+        }
+        val writer = BitWriter(buffer, offset, length)
+
+        writeMandatoryDescriptorFields(writer)
+
+        if (newTemplateDependencyStructure != null ||
+            activeDecodeTargetsBitmask != null ||
+            customDtis != null ||
+            customFdiffs != null ||
+            customChains != null
+        ) {
+            writeOptionalDescriptorFields(writer)
+            writePadding(writer)
+        } else {
+            check(length == 3) {
+                "AV1 DD without optional descriptors must be 3 bytes in length"
+            }
+        }
+    }
+
+    private fun writeMandatoryDescriptorFields(writer: BitWriter) {
+        writer.writeBit(startOfFrame)
+        writer.writeBit(endOfFrame)
+        writer.writeBits(6, frameDependencyTemplateId)
+        writer.writeBits(16, frameNumber)
+    }
+
+    private fun writeOptionalDescriptorFields(writer: BitWriter) {
+        val templateDependencyStructurePresent = newTemplateDependencyStructure != null
+        val activeDecodeTargetsPresent = activeDecodeTargetsBitmask != null &&
+            (
+                newTemplateDependencyStructure == null ||
+                    activeDecodeTargetsBitmask != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
+                )
+
+        val customDtisFlag = customDtis != null
+        val customFdiffsFlag = customFdiffs != null
+        val customChainsFlag = customChains != null
+
+        writer.writeBit(templateDependencyStructurePresent)
+        writer.writeBit(activeDecodeTargetsPresent)
+        writer.writeBit(customDtisFlag)
+        writer.writeBit(customFdiffsFlag)
+        writer.writeBit(customChainsFlag)
+
+        if (activeDecodeTargetsPresent) {
+            newTemplateDependencyStructure!!.write(writer)
+        }
+
+        if (activeDecodeTargetsPresent) {
+            writeActiveDecodeTargets(writer)
+        }
+
+        if (customDtisFlag) {
+            writeFrameDtis(writer)
+        }
+
+        if (customFdiffsFlag) {
+            writeFrameFdiffs(writer)
+        }
+
+        if (customChainsFlag) {
+            writeFrameChains(writer)
+        }
+    }
+
+    private fun writeActiveDecodeTargets(writer: BitWriter) {
+    }
+
+    private fun writeFrameDtis(writer: BitWriter) {
+    }
+
+    private fun writeFrameFdiffs(writer: BitWriter) {
+    }
+
+    private fun writeFrameChains(writer: BitWriter) {
+    }
+
+    private fun writePadding(writer: BitWriter) {
+    }
 }
 
 fun Int.bitsForFdiff() =
@@ -204,6 +291,38 @@ class Av1TemplateDependencyStructure(
             decodeTargetInfo,
             maxRenderResolutions
         )
+    }
+
+    fun write(writer: BitWriter) {
+        writer.writeBits(6, templateIdOffset)
+
+        writer.writeBits(5, decodeTargetCount - 1)
+
+        writeTemplateLayers(writer)
+        writeTemplateDtis(writer)
+        writeTemplateFdiffs(writer)
+        writeTemplateChains(writer)
+        writeDecodeTargetLayers(writer)
+
+        writeRenderResolutions(writer)
+    }
+
+    private fun writeTemplateLayers(writer: BitWriter) {
+    }
+
+    private fun writeTemplateDtis(writer: BitWriter) {
+    }
+
+    private fun writeTemplateFdiffs(writer: BitWriter) {
+    }
+
+    private fun writeTemplateChains(writer: BitWriter) {
+    }
+
+    private fun writeDecodeTargetLayers(writer: BitWriter) {
+    }
+
+    private fun writeRenderResolutions(writer: BitWriter) {
     }
 }
 
