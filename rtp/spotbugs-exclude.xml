@@ -5,8 +5,6 @@
   <Or>
     <!-- Our Packet hierarchy intentionally uses clone() without calling super.clone(). -->
     <Bug pattern="CN_IDIOM_NO_SUPER_CALL"/>
-    <!-- This seems to get triggered by certain kotlin constructs though they look safe -->
-    <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
     <!-- Serialization -->
     <Bug pattern="SE_BAD_FIELD"/>
     <!-- Serialization -->
@@ -14,13 +12,25 @@
     <!-- False positives with lazy vals -->
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-    <!-- False positives with kotlin companions -->
-    <Bug pattern="NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
     <!-- Reference exposure, our implementation deliberately uses this. -->
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Or>
 </Match>
+
+<!-- Kotlin-specific -->
+<Match>
+  <Or>
+    <!-- This seems to get triggered by certain kotlin constructs though they look safe -->
+    <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
+    <!-- False positives with kotlin companions -->
+    <Bug pattern="NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    <!-- False positives with Kotlin smart casts to non-null -->
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+  </Or>
+  <Source name="~.*\.kt" />
+</Match>
+
 
 <Match>
   <Or>

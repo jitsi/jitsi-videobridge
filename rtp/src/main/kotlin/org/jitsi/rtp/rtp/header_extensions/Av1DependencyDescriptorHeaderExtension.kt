@@ -35,6 +35,7 @@ open class Av1DependencyDescriptorStatelessSubset(
 /**
  * The AV1 Dependency Descriptor header extension, as defined in https://aomediacodec.github.io/av1-rtp-spec/#appendix
  */
+@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 class Av1DependencyDescriptorHeaderExtension(
     startOfFrame: Boolean,
     endOfFrame: Boolean,
@@ -250,6 +251,7 @@ fun Int.bitsForFdiff() =
  * first packet of a codec video sequence (i.e. the first packet of a keyframe), and is necessary to interpret
  * dependency descriptors carried in subsequent packets of the sequence.
  */
+@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 class Av1TemplateDependencyStructure(
     val templateIdOffset: Int,
     val templateInfo: List<FrameInfo>,
@@ -730,6 +732,8 @@ open class FrameInfo(
     }
 }
 
+/* The only thing this changes from its parent class is to make the lists mutable, so the parent equals() is fine. */
+@SuppressFBWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
 class TemplateFrameInfo(
     spatialId: Int,
     temporalId: Int,
