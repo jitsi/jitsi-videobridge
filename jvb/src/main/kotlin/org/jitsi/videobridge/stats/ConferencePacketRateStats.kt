@@ -18,7 +18,8 @@ package org.jitsi.videobridge.stats
 import org.json.simple.JSONArray
 import java.util.concurrent.atomic.AtomicLong
 
-class ConferencePacketRateStats {
+class ConferencePacketRateStats private constructor() {
+
     private val stats: Map<Int, AtomicLong> = mutableMapOf<Int, AtomicLong>().apply {
         (0..MAX_SIZE).forEach {
             this[it] = AtomicLong()
@@ -41,6 +42,6 @@ class ConferencePacketRateStats {
         const val MAX_SIZE = 500
 
         @JvmField
-        val INSTANCE = ConferencePacketRateStats()
+        val stats = ConferencePacketRateStats()
     }
 }

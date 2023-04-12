@@ -410,7 +410,7 @@ public class VideobridgeStatistics
             numAudioSenders += conferenceAudioSenders;
             updateBuckets(videoSendersBuckets, conferenceVideoSenders);
             numVideoSenders += conferenceVideoSenders;
-            ConferencePacketRateStats.INSTANCE.addValue(numConferenceEndpoints, conferencePacketRate);
+            ConferencePacketRateStats.stats.addValue(numConferenceEndpoints, conferencePacketRate);
         }
 
         // JITTER_AGGREGATE
