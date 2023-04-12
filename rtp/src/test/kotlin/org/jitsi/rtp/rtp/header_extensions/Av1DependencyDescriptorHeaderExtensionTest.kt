@@ -65,6 +65,11 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 should("Calculate its own length properly") {
                     ld1.encodedLength shouldBe longDesc1.size
                 }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(ld1.encodedLength)
+                    ld1.write(buf, 0, buf.size)
+                    buf shouldBe longDesc1
+                }
             }
             context("a descriptor with a scalable dependency structure") {
                 val ldsr = Av1DependencyDescriptorReader(longDescScalable, 0, longDescScalable.size)
@@ -86,6 +91,11 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
                 should("Calculate its own length properly") {
                     lds.encodedLength shouldBe longDescScalable.size
+                }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(lds.encodedLength)
+                    lds.write(buf, 0, buf.size)
+                    buf shouldBe longDescScalable
                 }
             }
             context("a descriptor following the dependency structure, specifying decode targets") {
@@ -109,6 +119,11 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
                 should("Calculate its own length properly") {
                     mds.encodedLength shouldBe midDescScalable.size
+                }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(mds.encodedLength)
+                    mds.write(buf, 0, buf.size)
+                    buf shouldBe midDescScalable
                 }
             }
             context("a descriptor without a dependency structure") {

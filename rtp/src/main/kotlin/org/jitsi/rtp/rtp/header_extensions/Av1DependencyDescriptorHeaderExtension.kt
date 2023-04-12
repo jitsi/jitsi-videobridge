@@ -187,7 +187,7 @@ class Av1DependencyDescriptorHeaderExtension(
         writer.writeBit(customFdiffsFlag)
         writer.writeBit(customChainsFlag)
 
-        if (activeDecodeTargetsPresent) {
+        if (templateDependencyStructurePresent) {
             newTemplateDependencyStructure!!.write(writer)
         }
 
@@ -209,18 +209,31 @@ class Av1DependencyDescriptorHeaderExtension(
     }
 
     private fun writeActiveDecodeTargets(writer: BitWriter) {
+        writer.writeBits(structure.decodeTargetCount, activeDecodeTargetsBitmask!!)
     }
 
     private fun writeFrameDtis(writer: BitWriter) {
+        customDtis!!.forEach { dti ->
+            writer.writeBits(2, dti.dti)
+        }
     }
 
     private fun writeFrameFdiffs(writer: BitWriter) {
+        customFdiffs!!.forEach { fdiff ->
+            val bits = fdiff.bitsForFdiff()
+            writer.writeBits(2, bits / 4)
+            writer.writeBits(bits, fdiff - 1)
+        }
     }
 
     private fun writeFrameChains(writer: BitWriter) {
+        customChains!!.forEach { chain ->
+            writer.writeBits(8, chain)
+        }
     }
 
     private fun writePadding(writer: BitWriter) {
+        writer.writeBits(writer.remainingBits, 0)
     }
 }
 
@@ -302,27 +315,79 @@ class Av1TemplateDependencyStructure(
         writeTemplateDtis(writer)
         writeTemplateFdiffs(writer)
         writeTemplateChains(writer)
-        writeDecodeTargetLayers(writer)
 
         writeRenderResolutions(writer)
     }
 
     private fun writeTemplateLayers(writer: BitWriter) {
+        check(templateInfo[0].spatialId == 0 && templateInfo[0].temporalId == 0) {
+            "First template must have spatial and temporal IDs 0/0, but found " +
+                "${templateInfo[0].spatialId}/${templateInfo[0].temporalId}"
+        }
+        for (templateNum in 1 until templateInfo.size) {
+            val layerIdc = when {
+                templateInfo[templateNum].spatialId == templateInfo[templateNum - 1].spatialId &&
+                    templateInfo[templateNum].temporalId == templateInfo[templateNum - 1].temporalId ->
+                    0
+                templateInfo[templateNum].spatialId == templateInfo[templateNum - 1].spatialId &&
+                    templateInfo[templateNum].temporalId == templateInfo[templateNum - 1].temporalId + 1 ->
+                    1
+                templateInfo[templateNum].spatialId == templateInfo[templateNum - 1].spatialId + 1 &&
+                    templateInfo[templateNum].temporalId == 0 ->
+                    2
+                else ->
+                    throw IllegalStateException(
+                        "Template $templateNum with spatial and temporal IDs " +
+                            "${templateInfo[templateNum].spatialId}/${templateInfo[templateNum].temporalId} " +
+                            "cannot follow template ${templateNum - 1} with spatial and temporal IDs " +
+                            "${templateInfo[templateNum - 1].spatialId}/${templateInfo[templateNum - 1].temporalId}."
+                    )
+            }
+            writer.writeBits(2, layerIdc)
+        }
+        writer.writeBits(2, 3)
     }
 
     private fun writeTemplateDtis(writer: BitWriter) {
+        templateInfo.forEach { t ->
+            t.dti.forEach { dti ->
+                writer.writeBits(2, dti.dti)
+            }
+        }
     }
 
     private fun writeTemplateFdiffs(writer: BitWriter) {
+        templateInfo.forEach { t ->
+            t.fdiff.forEach { fdiff ->
+                writer.writeBit(true)
+                writer.writeBits(4, fdiff - 1)
+            }
+            writer.writeBit(false)
+        }
     }
 
     private fun writeTemplateChains(writer: BitWriter) {
-    }
-
-    private fun writeDecodeTargetLayers(writer: BitWriter) {
+        writer.writeNs(decodeTargetCount + 1, chainCount)
+        decodeTargetInfo.forEach {
+            writer.writeNs(chainCount, it.protectedBy)
+        }
+        templateInfo.forEach { t ->
+            t.chains.forEach { chain ->
+                writer.writeBits(4, chain)
+            }
+        }
     }
 
     private fun writeRenderResolutions(writer: BitWriter) {
+        if (maxRenderResolutions.isEmpty()) {
+            writer.writeBit(false)
+        } else {
+            writer.writeBit(true)
+            maxRenderResolutions.forEach { r ->
+                writer.writeBits(16, r.width - 1)
+                writer.writeBits(16, r.height - 1)
+            }
+        }
     }
 }
 

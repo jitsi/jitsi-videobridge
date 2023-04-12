@@ -67,4 +67,7 @@ class BitWriter(val buf: ByteArray, val byteOffset: Int = 0, private val byteLen
             writeBits(w, v + m)
         }
     }
+
+    val remainingBits
+        get() = byteBound * 8 - offset
 }
