@@ -100,7 +100,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     mds.frameNumber shouldBe 0x0146
 
                     mds.newTemplateDependencyStructure shouldBe null
-                    mds.activeDecodeTargetsBitmask shouldBe 0x3
+                    mds.activeDecodeTargetsBitmask shouldBe 0x7
                 }
                 should("calculate correct frame info") {
                     val mdsi = mds.frameInfo

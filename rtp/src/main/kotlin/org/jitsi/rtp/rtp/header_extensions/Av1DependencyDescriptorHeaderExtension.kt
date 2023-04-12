@@ -446,7 +446,7 @@ class Av1DependencyDescriptorReader(
             templateDependencyStructure = dep
         }
         if (activeDecodeTargetsPresent) {
-            activeDecodeTargetsBitmask = reader.bits(8)
+            activeDecodeTargetsBitmask = reader.bits(templateDependencyStructure!!.decodeTargetCount)
         } else if (templateDependencyStructurePresent) {
             activeDecodeTargetsBitmask = (1 shl templateDependencyStructure!!.decodeTargetCount) - 1
         }
