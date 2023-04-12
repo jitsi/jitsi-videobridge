@@ -26,9 +26,7 @@ import org.jitsi.videobridge.xmpp.XmppConnection
 import java.time.Duration
 
 class StatsManagerConfig private constructor() {
-    /**
-     * The interval at which the stats are pushed
-     */
+    /** The interval at which the stats are collected. */
     val interval: Duration by config {
         "org.jitsi.videobridge.STATISTICS_INTERVAL".from(JitsiConfig.legacyConfig).convertFrom(Duration::ofMillis)
         "videobridge.stats.interval".from(JitsiConfig.newConfig)
