@@ -34,7 +34,7 @@ public enum DebugFeatures
     ICE_STATS("ice-stats"),
     XMPP_DELAY_STATS("xmpp-delay-stats"),
     TOSSED_PACKET_STATS("tossed-packet-stats"),
-    CONFERENCE_PACKET_RATE_STATS("conference-packet-rate-stats");
+    CONFERENCE_PACKET_STATS("conference-packet-stats");
 
     private final String value;
 

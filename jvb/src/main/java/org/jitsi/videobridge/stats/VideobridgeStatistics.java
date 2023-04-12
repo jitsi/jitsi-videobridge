@@ -275,6 +275,7 @@ public class VideobridgeStatistics
 
         for (Conference conference : videobridge.getConferences())
         {
+            long conferenceBitrate = 0;
             long conferencePacketRate = 0;
             if (conference.isP2p())
             {
@@ -346,6 +347,7 @@ public class VideobridgeStatistics
                         = transceiverStats.getRtpReceiverStats().getPacketStreamStats();
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
+                conferenceBitrate += incomingPacketStreamStats.getBitrateBps();
                 conferencePacketRate += incomingPacketStreamStats.getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
                 {
@@ -362,6 +364,7 @@ public class VideobridgeStatistics
                 PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
                 bitrateUploadBps += outgoingStats.getBitrateBps();
                 packetRateUpload += outgoingStats.getPacketRate();
+                conferenceBitrate += outgoingStats.getBitrateBps();
                 conferencePacketRate += outgoingStats.getPacketRate();
 
                 EndpointConnectionStats.Snapshot endpointConnectionStats
@@ -397,10 +400,12 @@ public class VideobridgeStatistics
             {
                 relayBitrateIncomingBps += relay.getIncomingBitrateBps();
                 relayPacketRateIncoming += relay.getIncomingPacketRate();
+                conferenceBitrate += relay.getIncomingBitrateBps();
                 conferencePacketRate += relay.getIncomingPacketRate();
 
                 relayBitrateOutgoingBps += relay.getOutgoingBitrateBps();
                 relayPacketRateOutgoing += relay.getOutgoingPacketRate();
+                conferenceBitrate += relay.getOutgoingBitrateBps();
                 conferencePacketRate += relay.getOutgoingPacketRate();
 
                 /* TODO: report Relay RTT and loss, like we do for Endpoints? */
@@ -410,7 +415,7 @@ public class VideobridgeStatistics
             numAudioSenders += conferenceAudioSenders;
             updateBuckets(videoSendersBuckets, conferenceVideoSenders);
             numVideoSenders += conferenceVideoSenders;
-            ConferencePacketRateStats.stats.addValue(numConferenceEndpoints, conferencePacketRate);
+            ConferencePacketStats.stats.addValue(numConferenceEndpoints, conferencePacketRate, conferenceBitrate);
         }
 
         // JITTER_AGGREGATE

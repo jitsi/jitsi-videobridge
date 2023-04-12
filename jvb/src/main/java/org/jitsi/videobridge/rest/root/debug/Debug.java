@@ -386,8 +386,8 @@ public class Debug
             case ICE_STATS: {
                 return IceStatistics.Companion.getStats().toJson().toJSONString();
             }
-            case CONFERENCE_PACKET_RATE_STATS: {
-                return ConferencePacketRateStats.stats.toJson().toJSONString();
+            case CONFERENCE_PACKET_STATS: {
+                return ConferencePacketStats.stats.toJson().toJSONString();
             }
             case TOSSED_PACKET_STATS: {
                 return videobridge.getStatistics().tossedPacketsEnergy.toJson().toJSONString();
