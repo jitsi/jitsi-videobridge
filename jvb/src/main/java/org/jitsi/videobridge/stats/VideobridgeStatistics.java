@@ -275,6 +275,7 @@ public class VideobridgeStatistics
 
         for (Conference conference : videobridge.getConferences())
         {
+            long conferencePacketRate = 0;
             if (conference.isP2p())
             {
                 p2pConferences++;
@@ -345,6 +346,7 @@ public class VideobridgeStatistics
                         = transceiverStats.getRtpReceiverStats().getPacketStreamStats();
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps();
                 packetRateDownload += incomingPacketStreamStats.getPacketRate();
+                conferencePacketRate += incomingPacketStreamStats.getPacketRate();
                 for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
                 {
                     double ssrcJitter = ssrcStats.getJitter();
@@ -360,6 +362,7 @@ public class VideobridgeStatistics
                 PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
                 bitrateUploadBps += outgoingStats.getBitrateBps();
                 packetRateUpload += outgoingStats.getPacketRate();
+                conferencePacketRate += outgoingStats.getPacketRate();
 
                 EndpointConnectionStats.Snapshot endpointConnectionStats
                         = transceiverStats.getEndpointConnectionStats();
@@ -394,9 +397,11 @@ public class VideobridgeStatistics
             {
                 relayBitrateIncomingBps += relay.getIncomingBitrateBps();
                 relayPacketRateIncoming += relay.getIncomingPacketRate();
+                conferencePacketRate += relay.getIncomingPacketRate();
 
                 relayBitrateOutgoingBps += relay.getOutgoingBitrateBps();
                 relayPacketRateOutgoing += relay.getOutgoingPacketRate();
+                conferencePacketRate += relay.getOutgoingPacketRate();
 
                 /* TODO: report Relay RTT and loss, like we do for Endpoints? */
             }
@@ -405,6 +410,7 @@ public class VideobridgeStatistics
             numAudioSenders += conferenceAudioSenders;
             updateBuckets(videoSendersBuckets, conferenceVideoSenders);
             numVideoSenders += conferenceVideoSenders;
+            ConferencePacketRateStats.INSTANCE.addValue(numConferenceEndpoints, conferencePacketRate);
         }
 
         // JITTER_AGGREGATE
