@@ -143,6 +143,34 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     }
                 }
             }
+            context("a descriptor without extended fields") {
+                val ld1r = Av1DependencyDescriptorReader(longDesc1, 0, longDesc1.size)
+                val ld1 = ld1r.parse(null)
+                val sd1r = Av1DependencyDescriptorReader(shortDesc1, 0, shortDesc1.size)
+                val sd1 = sd1r.parse(ld1.newTemplateDependencyStructure)
+
+                should("be parsed properly") {
+                    sd1.startOfFrame shouldBe false
+                    sd1.endOfFrame shouldBe true
+                    sd1.frameNumber shouldBe 0x0001
+
+                    sd1.newTemplateDependencyStructure shouldBe null
+                    sd1.activeDecodeTargetsBitmask shouldBe null
+                }
+                should("calculate correct frame info") {
+                    val sd1i = sd1.frameInfo
+                    sd1i.spatialId shouldBe 0
+                    sd1i.temporalId shouldBe 0
+                }
+                should("Calculate its own length properly") {
+                    sd1.encodedLength shouldBe shortDesc1.size
+                }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(sd1.encodedLength)
+                    sd1.write(buf, 0, buf.size)
+                    buf shouldBe shortDesc1
+                }
+            }
         }
     }
 }
