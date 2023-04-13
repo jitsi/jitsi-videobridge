@@ -253,7 +253,7 @@ fun Int.bitsForFdiff() =
  */
 @SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 class Av1TemplateDependencyStructure(
-    val templateIdOffset: Int,
+    var templateIdOffset: Int,
     val templateInfo: List<FrameInfo>,
     val decodeTargetInfo: List<DecodeTargetInfo>,
     val maxRenderResolutions: List<Resolution>,

@@ -34,11 +34,13 @@ class Av1DDPacket : ParsedVideoPacket {
     val descriptor: Av1DependencyDescriptorHeaderExtension?
     val statelessDescriptor: Av1DependencyDescriptorStatelessSubset
     val frameInfo: FrameInfo?
+    val av1DDHeaderExtensionId: Int
 
     private constructor(
         buffer: ByteArray,
         offset: Int,
         length: Int,
+        av1DDHeaderExtensionId: Int,
         encodingIndices: Collection<Int>,
         descriptor: Av1DependencyDescriptorHeaderExtension?,
         statelessDescriptor: Av1DependencyDescriptorStatelessSubset,
@@ -47,6 +49,7 @@ class Av1DDPacket : ParsedVideoPacket {
         this.descriptor = descriptor
         this.statelessDescriptor = statelessDescriptor
         this.frameInfo = frameInfo
+        this.av1DDHeaderExtensionId = av1DDHeaderExtensionId
     }
 
     constructor(
@@ -54,6 +57,7 @@ class Av1DDPacket : ParsedVideoPacket {
         av1DDHeaderExtensionId: Int,
         templateDependencyStructure: Av1TemplateDependencyStructure?
     ) : super(packet.buffer, packet.offset, packet.length, emptyList()) {
+        this.av1DDHeaderExtensionId = av1DDHeaderExtensionId
         val ddExt = packet.getHeaderExtension(av1DDHeaderExtensionId)
         requireNotNull(ddExt) {
             "Packet did not have Dependency Descriptor"
@@ -101,6 +105,7 @@ class Av1DDPacket : ParsedVideoPacket {
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
+            av1DDHeaderExtensionId = av1DDHeaderExtensionId,
             encodingIndices = qualityIndices,
             descriptor = descriptor?.clone(),
             statelessDescriptor = statelessDescriptor,

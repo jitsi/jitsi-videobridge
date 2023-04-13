@@ -160,7 +160,30 @@ internal constructor(
         pkt.timestamp = timestamp
         pkt.sequenceNumber = sequenceNumber
         if (mark && pkt.isEndOfFrame) pkt.isMarked = true
-        // TODO rewrite DD
+
+        val descriptor = pkt.descriptor
+        if (descriptor != null && (
+            frameNumber != pkt.frameNumber || templateId != descriptor.frameDependencyTemplateId ||
+                dti != null
+            )
+        ) {
+            descriptor.frameNumber = frameNumber
+            descriptor.frameDependencyTemplateId = templateId
+            val structure = descriptor.newTemplateDependencyStructure
+            if (structure != null) {
+                structure.templateIdOffset = rewriteTemplateId(structure.templateIdOffset)
+            }
+            if (dti != null && (structure == null || dti != (1 shl structure.decodeTargetCount) - 1)) {
+                descriptor.activeDecodeTargetsBitmask = dti
+            }
+
+            var ext = pkt.getHeaderExtension(pkt.av1DDHeaderExtensionId)
+            if (ext == null || ext.dataLengthBytes != descriptor.encodedLength) {
+                pkt.removeHeaderExtension(pkt.av1DDHeaderExtensionId)
+                ext = pkt.addHeaderExtension(pkt.av1DDHeaderExtensionId, descriptor.encodedLength)
+            }
+            descriptor.write(ext)
+        }
     }
 
     /**
