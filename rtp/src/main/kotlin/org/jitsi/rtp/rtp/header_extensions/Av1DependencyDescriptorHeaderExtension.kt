@@ -256,7 +256,9 @@ class Av1TemplateDependencyStructure(
     val templateIdOffset: Int,
     val templateInfo: List<FrameInfo>,
     val decodeTargetInfo: List<DecodeTargetInfo>,
-    val maxRenderResolutions: List<Resolution>
+    val maxRenderResolutions: List<Resolution>,
+    val maxSpatialId: Int,
+    val maxTemporalId: Int
 ) {
     val templateCount
         get() = templateInfo.size
@@ -270,6 +272,15 @@ class Av1TemplateDependencyStructure(
     init {
         check(templateInfo.all { it.chains.size == chainCount }) {
             "Templates have inconsistent chain sizes"
+        }
+        check(templateInfo.all { it.temporalId <= maxTemporalId }) {
+            "Incorrect maxTemporalId"
+        }
+        check(maxRenderResolutions.isEmpty() || maxRenderResolutions.size == maxSpatialId + 1) {
+            "Non-zero number of render resolutions does not match maxSpatialId"
+        }
+        check(templateInfo.all { it.spatialId <= maxSpatialId }) {
+            "Incorrect maxSpatialId"
         }
     }
 
@@ -304,7 +315,9 @@ class Av1TemplateDependencyStructure(
             // These objects are not mutable so it's safe to copy them by reference
             templateInfo,
             decodeTargetInfo,
-            maxRenderResolutions
+            maxRenderResolutions,
+            maxSpatialId,
+            maxTemporalId
         )
     }
 
@@ -571,12 +584,15 @@ class Av1DependencyDescriptorReader(
             templateIdOffset,
             templateInfo.toList(),
             decodeTargetInfo.toList(),
-            maxRenderResolutions.toList()
+            maxRenderResolutions.toList(),
+            maxSpatialId,
+            maxTemporalId
         )
     }
 
     private var templateCnt = 0
     private var maxSpatialId = 0
+    private var maxTemporalId = 0
 
     @SuppressFBWarnings(
         value = ["SF_SWITCH_NO_DEFAULT"],
@@ -585,7 +601,6 @@ class Av1DependencyDescriptorReader(
     private fun readTemplateLayers() {
         var temporalId = 0
         var spatialId = 0
-        var maxTemporalId = 0
 
         var nextLayerIdc: Int
         do {

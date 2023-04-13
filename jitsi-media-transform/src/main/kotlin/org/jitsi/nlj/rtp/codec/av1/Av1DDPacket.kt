@@ -90,22 +90,19 @@ class Av1DDPacket : ParsedVideoPacket {
 
     override val layerIds: Collection<Int>
         get() = frameInfo?.let {
-            it.dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _), -> i }
+            it.dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _) -> i }
         } ?: run { super.layerIds }
 
     val frameNumber
         get() = statelessDescriptor.frameNumber
 
     override fun clone(): Av1DDPacket {
-        /* TODO: when descriptor becomes mutable (i.e. we can write to the active decode targets bitmask), clone
-         *  it here.
-         */
         return Av1DDPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
             encodingIndices = qualityIndices,
-            descriptor = descriptor,
+            descriptor = descriptor?.clone(),
             statelessDescriptor = statelessDescriptor,
             frameInfo = frameInfo
         )
@@ -118,20 +115,60 @@ class Av1DDPacket : ParsedVideoPacket {
         require(descriptor != null) {
             "Can't get scalability structure from packet without a descriptor"
         }
-        val activeDecodeTargetsBitmask = descriptor.activeDecodeTargetsBitmask
-        require(activeDecodeTargetsBitmask != null) {
-            "Can't get scalability structure from packet that doesn't specify decode targets"
-        }
-        val layers = ArrayList<Av1DDRtpLayerDesc>()
-        // TODO: figure out frame rates from the template structure
-        descriptor.structure.decodeTargetInfo.forEachIndexed { i, dt ->
-            if (((1 shl i) and activeDecodeTargetsBitmask) == 0) {
-                return@forEachIndexed
-            }
-            val height = descriptor.structure.maxRenderResolutions.getOrNull(dt.spatialId)?.height ?: -1
-            val frameRate = baseFrameRate // TODO: figure out frame rates from the template structure
-            layers.add(Av1DDRtpLayerDesc(eid, i, height, frameRate))
-        }
-        return RtpEncodingDesc(ssrc, layers.toArray(arrayOf()), eid)
+        return descriptor.getScalabilityStructure(ssrc, eid, baseFrameRate)
     }
+}
+
+fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
+    ssrc: Long,
+    eid: Int = 0,
+    baseFrameRate: Double = 30.0
+): RtpEncodingDesc {
+    val activeDecodeTargetsBitmask = this.activeDecodeTargetsBitmask
+    require(activeDecodeTargetsBitmask != null) {
+        "Can't get scalability structure from dependency descriptor that doesn't specify decode targets"
+    }
+    val layerCounts = Array(structure.maxSpatialId + 1) {
+        IntArray(structure.maxTemporalId + 1)
+    }
+
+    // Figure out the frame rates per spatial/temporal layer.
+    structure.templateInfo.forEach { t ->
+        if (t.fdiff.none {
+            it > t.spatialId
+        }
+        ) {
+            // This is a template that doesn't reference any previous frames, so is probably a key frame or
+            // part of the same temporal picture with one, i.e. not part of the regular structure.
+            return@forEach
+        }
+        layerCounts[t.spatialId][t.temporalId]++
+    }
+
+    // Sum up counts per spatial layer
+    layerCounts.forEach { a ->
+        var total = 0
+        for (i in a.indices) {
+            val entry = a[i]
+            a[i] += total
+            total += entry
+        }
+    }
+
+    val maxFrameGroup = layerCounts.maxOf { it.maxOrNull()!! }
+
+    val layers = ArrayList<Av1DDRtpLayerDesc>()
+
+    structure.decodeTargetInfo.forEachIndexed { i, dt ->
+        if (((1 shl i) and activeDecodeTargetsBitmask) == 0) {
+            return@forEachIndexed
+        }
+        val height = structure.maxRenderResolutions.getOrNull(dt.spatialId)?.height ?: -1
+
+        // Calculate the fraction of this spatial layer's framerate this DT comprises.
+        val frameRate = baseFrameRate * layerCounts[dt.spatialId][dt.temporalId] / maxFrameGroup
+
+        layers.add(Av1DDRtpLayerDesc(eid, i, height, frameRate))
+    }
+    return RtpEncodingDesc(ssrc, layers.toArray(arrayOf()), eid)
 }
