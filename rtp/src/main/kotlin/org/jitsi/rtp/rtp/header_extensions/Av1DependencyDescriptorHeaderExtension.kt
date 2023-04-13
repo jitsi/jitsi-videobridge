@@ -609,7 +609,7 @@ class Av1DependencyDescriptorReader(
             nextLayerIdc = reader.bits(2)
             if (nextLayerIdc == 1) {
                 temporalId++
-                if (maxTemporalId > temporalId) {
+                if (maxTemporalId < temporalId) {
                     maxTemporalId = temporalId
                 }
             } else if (nextLayerIdc == 2) {

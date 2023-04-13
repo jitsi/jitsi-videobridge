@@ -46,6 +46,8 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val structure = ld1.newTemplateDependencyStructure
                     structure shouldNotBe null
                     structure!!.decodeTargetCount shouldBe 1
+                    structure!!.maxTemporalId shouldBe 0
+                    structure!!.maxSpatialId shouldBe 0
                 }
                 should("be parseable statelessly") {
                     val ld1s = ld1r.parseStateless()
@@ -83,6 +85,8 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val structure = lds.newTemplateDependencyStructure
                     structure shouldNotBe null
                     structure!!.decodeTargetCount shouldBe 9
+                    structure!!.maxTemporalId shouldBe 2
+                    structure!!.maxSpatialId shouldBe 2
                 }
                 should("calculate correct frame info") {
                     val ldsi = lds.frameInfo
