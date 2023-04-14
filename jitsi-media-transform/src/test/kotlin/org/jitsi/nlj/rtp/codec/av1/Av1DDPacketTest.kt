@@ -132,7 +132,32 @@ class Av1DDPacketTest : ShouldSpec() {
                 "9057f7c3f51ba803b0c397e938589750",
             nonScalableKeyframe
         ),
-        scalableKeyframe
+        scalableKeyframe,
+        SampleAv1DDPacket(
+            "scalable following packet changing available DTs",
+            // RTP header
+            "90e519c2d780b1bd2ab2873c" +
+                // Header extension header
+                "bede0004" +
+                // Other header extensions
+                "3202f824" +
+                "511a19" +
+                // AV1 DD
+                "b4c303cd401c" +
+                // Padding
+                "000000" +
+                // AV1 Media payload, truncated.
+                "edbbdd501a87000000027e016704ff02",
+            scalableKeyframe,
+            RtpEncodingDesc(
+                0x2ab2873cL,
+                arrayOf(
+                    Av1DDRtpLayerDesc(0, 0, 180, 7.5),
+                    Av1DDRtpLayerDesc(0, 1, 180, 15.0),
+                    Av1DDRtpLayerDesc(0, 2, 180, 30.0),
+                )
+            )
+        )
     )
 
     init {
