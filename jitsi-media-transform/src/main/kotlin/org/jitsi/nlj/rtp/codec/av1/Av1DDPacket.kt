@@ -116,7 +116,7 @@ class Av1DDPacket : ParsedVideoPacket {
     fun getScalabilityStructure(
         eid: Int = 0,
         baseFrameRate: Double = 30.0
-    ): RtpEncodingDesc {
+    ): RtpEncodingDesc? {
         require(descriptor != null) {
             "Can't get scalability structure from packet without a descriptor"
         }
@@ -128,11 +128,11 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
     ssrc: Long,
     eid: Int = 0,
     baseFrameRate: Double = 30.0
-): RtpEncodingDesc {
+): RtpEncodingDesc? {
     val activeDecodeTargetsBitmask = this.activeDecodeTargetsBitmask
-    require(activeDecodeTargetsBitmask != null) {
-        "Can't get scalability structure from dependency descriptor that doesn't specify decode targets"
-    }
+        ?: // Can't get scalability structure from dependency descriptor that doesn't specify decode targets
+        return null
+
     val layerCounts = Array(structure.maxSpatialId + 1) {
         IntArray(structure.maxTemporalId + 1)
     }

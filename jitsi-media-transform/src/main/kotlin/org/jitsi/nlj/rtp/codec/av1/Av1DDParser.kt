@@ -76,7 +76,7 @@ class Av1DDParser(
             packetInfo.layeringChanged = true
 
             findSourceDescAndRtpEncodingDesc(av1Packet)?.let { (src, enc) ->
-                av1Packet.getScalabilityStructure(eid = enc.eid).let {
+                av1Packet.getScalabilityStructure(eid = enc.eid)?.let {
                     src.setEncodingLayers(it.layers, av1Packet.ssrc)
                 }
                 for (otherEnc in src.rtpEncodings) {
