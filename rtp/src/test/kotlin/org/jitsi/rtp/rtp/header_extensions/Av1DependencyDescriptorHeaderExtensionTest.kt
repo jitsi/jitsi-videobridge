@@ -33,6 +33,12 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
 
     val midDescScalable = parseHexBinary("d10146401c")
 
+    val midDescScalable2 = parseHexBinary("c203ce581d30100000")
+    val longForMid2 = parseHexBinary(
+        "8003ca80081485214eaaaaa8000600004000100002aa80a8000600004000100002a000a8000600004" +
+            "00016d549241b5524906d54923157e001974ca864330e222396eca8655304224390eca87753013f00b3027f016704ff02cf"
+    )
+
     init {
         context("AV1 Dependency Descriptors") {
             context("a descriptor with a single-layer dependency structure") {
@@ -128,6 +134,34 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val buf = ByteArray(mds.encodedLength)
                     mds.write(buf, 0, buf.size)
                     buf shouldBe midDescScalable
+                }
+            }
+            context("another such descriptor") {
+                val ldsr = Av1DependencyDescriptorReader(longForMid2, 0, longForMid2.size)
+                val lds = ldsr.parse(null)
+                val mdsr = Av1DependencyDescriptorReader(midDescScalable2, 0, midDescScalable2.size)
+                val mds = mdsr.parse(lds.newTemplateDependencyStructure)
+
+                should("be parsed properly") {
+                    mds.startOfFrame shouldBe true
+                    mds.endOfFrame shouldBe true
+                    mds.frameNumber shouldBe 0x03ce
+
+                    mds.newTemplateDependencyStructure shouldBe null
+                    mds.activeDecodeTargetsBitmask shouldBe 0x7
+                }
+                should("calculate correct frame info") {
+                    val mdsi = mds.frameInfo
+                    mdsi.spatialId shouldBe 0
+                    mdsi.temporalId shouldBe 1
+                }
+                should("Calculate its own length properly") {
+                    mds.encodedLength shouldBe midDescScalable2.size
+                }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(mds.encodedLength)
+                    mds.write(buf, 0, buf.size)
+                    buf shouldBe midDescScalable2
                 }
             }
             context("a descriptor without a dependency structure") {

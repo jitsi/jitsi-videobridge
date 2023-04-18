@@ -225,6 +225,7 @@ class Av1DependencyDescriptorHeaderExtension(
             writer.writeBits(2, bits / 4)
             writer.writeBits(bits, fdiff - 1)
         }
+        writer.writeBits(2, 0)
     }
 
     private fun writeFrameChains(writer: BitWriter) {
