@@ -1,0 +1,327 @@
+/*
+ * Copyright @ 2019 - present 8x8, Inc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jitsi.videobridge.cc.av1
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
+import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
+import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
+import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
+import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
+import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
+import org.json.simple.JSONObject
+import java.time.Duration
+import java.time.Instant
+
+/**
+ * This class is responsible for dropping AV1 simulcast/svc packets based on
+ * their quality, i.e. packets that correspond to qualities that are above a
+ * given quality target. Instances of this class are thread-safe.
+ */
+internal class Av1DDQualityFilter(parentLogger: Logger) {
+    /**
+     * The [Logger] to be used by this instance to print debug
+     * information.
+     */
+    private val logger: Logger = createChildLogger(parentLogger)
+
+    /**
+     * Holds the arrival time of the most recent keyframe group.
+     * Reading/writing of this field is synchronized on this instance.
+     */
+    private var mostRecentKeyframeGroupArrivalTime: Instant? = null
+
+    /**
+     * A boolean flag that indicates whether a keyframe is needed, due to an
+     * encoding or (in some cases) a spatial layer switch.
+     */
+    var needsKeyframe = false
+        private set
+
+    /**
+     * The encoding ID that this instance tries to achieve. Upon
+     * receipt of a packet, we check whether encoding in the externalTargetIndex
+     * (that's specified as an argument to the
+     * [acceptFrame] method) is set to something different,
+     * in which case we set [needsKeyframe] equal to true and
+     * update.
+     */
+    private var internalTargetEncoding = SUSPENDED_ENCODING_ID
+
+    /**
+     * The spatial layer that this instance tries to achieve.
+     */
+    private var internalTargetSpatialId = SUSPENDED_ENCODING_ID
+
+    /**
+     * The layer index that we're currently forwarding. [SUSPENDED_INDEX]
+     * indicates that we're not forwarding anything. Reading/writing of this
+     * field is synchronized on this instance.
+     */
+    private var currentIndex = SUSPENDED_INDEX
+
+    /**
+     * Determines whether to accept or drop an AV1 frame.
+     *
+     * Note that, at the time of this writing, there's no practical need for a
+     * synchronized keyword because there's only one thread accessing this
+     * method at a time.
+     *
+     * @param frame the AV1 frame.
+     * @param externalTargetIndex the target quality index that the user of this
+     * instance wants to achieve.
+     * @param receivedTime the current time (as an Instant)
+     * @return true to accept the AV1 frame, otherwise false.
+     */
+    @Synchronized
+    fun acceptFrame(
+        frame: Av1DDFrame,
+        externalTargetIndex: Int,
+        receivedTime: Instant?
+    ): AcceptResult {
+        val prevIndex = currentIndex
+        val accept = doAcceptFrame(frame, externalTargetIndex, receivedTime)
+        val mark = /* TODO */ false
+        val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
+        if (isResumption) assert(accept) // Every code path that can turn off SUSPENDED_INDEX also accepts
+        return AcceptResult(accept = accept, isResumption = isResumption, mark = mark)
+    }
+
+    private fun doAcceptFrame(
+        frame: Av1DDFrame,
+        externalTargetIndex: Int,
+        receivedTime: Instant?
+    ): Boolean {
+        val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
+        val currentEncoding = getEidFromIndex(currentIndex)
+
+        if (externalTargetEncoding != internalTargetEncoding) {
+            // The externalEncodingIdTarget has changed since accept last
+            // ran; perhaps we should request a keyframe.
+            internalTargetEncoding = externalTargetEncoding
+            if (externalTargetEncoding != SUSPENDED_ENCODING_ID &&
+                externalTargetEncoding != currentEncoding
+            ) {
+                needsKeyframe = true
+            }
+        }
+        if (externalTargetEncoding == SUSPENDED_ENCODING_ID) {
+            // We stop forwarding immediately. We will need a keyframe in order
+            // to resume.
+            currentIndex = SUSPENDED_INDEX
+            return false
+        }
+        TODO("Not implemented")
+    }
+
+    /**
+     * Returns a boolean that indicates whether we are in layer switching phase
+     * or not.
+     *
+     * @param receivedTime the time the latest frame was received
+     * @return true if we're in layer switching phase, false otherwise.
+     */
+    @Synchronized
+    private fun isOutOfSwitchingPhase(receivedTime: Instant?): Boolean {
+        if (receivedTime == null) {
+            return false
+        }
+        if (mostRecentKeyframeGroupArrivalTime == null) {
+            return true
+        }
+        val delta = Duration.between(mostRecentKeyframeGroupArrivalTime, receivedTime)
+        return delta > MIN_KEY_FRAME_WAIT
+    }
+
+    /**
+     * @return true if it looks like we can re-scale (see implementation of
+     * method for specific details).
+     */
+    @Synchronized
+    private fun isPossibleToSwitch(incomingEncoding: Int): Boolean {
+        val currentEncoding = getEidFromIndex(currentIndex)
+
+        if (incomingEncoding == SUSPENDED_ENCODING_ID) {
+            // We failed to resolve the spatial/quality layer of the packet.
+            return false
+        }
+        return when {
+            incomingEncoding > currentEncoding && currentEncoding < internalTargetEncoding ->
+                // It looks like upscaling is possible
+                true
+            incomingEncoding < currentEncoding && currentEncoding > internalTargetEncoding ->
+                // It looks like downscaling is possible.
+                true
+            else ->
+                false
+        }
+    }
+
+    /**
+     * Determines whether to accept or drop a VP9 keyframe. This method updates
+     * the encoding id.
+     *
+     * Note that, at the time of this writing, there's no practical need for a
+     * synchronized keyword because there's only one thread accessing this
+     * method at a time.
+     *
+     * @param receivedTime the time the frame was received
+     * @return true to accept the VP9 keyframe, otherwise false.
+     */
+    @Synchronized
+    private fun acceptKeyframe(
+        incomingIndex: Int,
+        receivedTime: Instant?
+    ): Boolean {
+        val encodingIdOfKeyframe = getEidFromIndex(incomingIndex)
+        // This branch writes the {@link #currentSpatialLayerId} and it
+        // determines whether or not we should switch to another simulcast
+        // stream.
+        if (encodingIdOfKeyframe < 0) {
+            // something went terribly wrong, normally we should be able to
+            // extract the layer id from a keyframe.
+            logger.error("unable to get layer id from keyframe")
+            return false
+        }
+        // Keyframes have to be sid 0, tid 0, unless something screwy is going on.
+        if (getSidFromIndex(incomingIndex) != 0 || getTidFromIndex(incomingIndex) != 0) {
+            logger.warn("Surprising index ${indexString(incomingIndex)} on keyframe")
+        }
+        logger.debug {
+            "Received a keyframe of encoding: $encodingIdOfKeyframe"
+        }
+
+        // The keyframe request has been fulfilled at this point, regardless of
+        // whether we'll be able to achieve the internalEncodingIdTarget.
+        needsKeyframe = false
+        return if (isOutOfSwitchingPhase(receivedTime)) {
+            // During the switching phase we always project the first
+            // keyframe because it may very well be the only one that we
+            // receive (i.e. the endpoint is sending low quality only). Then
+            // we try to approach the target.
+            mostRecentKeyframeGroupArrivalTime = receivedTime
+            logger.debug {
+                "First keyframe in this kf group " +
+                    "currentEncodingId: $encodingIdOfKeyframe. " +
+                    "Target is $internalTargetEncoding"
+            }
+            if (encodingIdOfKeyframe <= internalTargetEncoding) {
+                val currentEncoding = getEidFromIndex(currentIndex)
+                // If the target is 180p and the first keyframe of a group of
+                // keyframes is a 720p keyframe we don't project it. If we
+                // receive a 720p keyframe, we know that there MUST be a 180p
+                // keyframe shortly after.
+                if (currentEncoding != encodingIdOfKeyframe) {
+                    currentIndex = incomingIndex
+                }
+                true
+            } else {
+                false
+            }
+        } else {
+            // We're within the 300ms window since the reception of the
+            // first key frame of a key frame group, let's check whether an
+            // upscale/downscale is possible.
+            val currentEncoding = getEidFromIndex(currentIndex)
+            when {
+                currentEncoding <= encodingIdOfKeyframe &&
+                    encodingIdOfKeyframe <= internalTargetEncoding -> {
+                    // upscale or current quality case
+                    if (currentEncoding != encodingIdOfKeyframe) {
+                        currentIndex = incomingIndex
+                    }
+                    logger.debug {
+                        "Upscaling to encoding $encodingIdOfKeyframe. " +
+                            "The target is $internalTargetEncoding"
+                    }
+                    true
+                }
+                encodingIdOfKeyframe <= internalTargetEncoding &&
+                    internalTargetEncoding < currentEncoding -> {
+                    // downscale case
+                    currentIndex = incomingIndex
+                    logger.debug {
+                        "Downscaling to encoding $encodingIdOfKeyframe. " +
+                            "The target is $internalTargetEncoding"
+                    }
+                    true
+                }
+                else -> {
+                    false
+                }
+            }
+        }
+    }
+
+    /**
+     * Adds internal state to a diagnostic context time series point.
+     */
+    @SuppressFBWarnings(
+        value = ["IS2_INCONSISTENT_SYNC"],
+        justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
+    )
+    internal fun addDiagnosticContext(pt: DiagnosticContext.TimeSeriesPoint) {
+        pt.addField("qf.currentIndex", indexString(currentIndex))
+            .addField("qf.internalTargetEncoding", internalTargetEncoding)
+            .addField("qf.needsKeyframe", needsKeyframe)
+            .addField(
+                "qf.mostRecentKeyframeGroupArrivalTimeMs",
+                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
+            )
+        /* TODO any other fields necessary */
+    }
+
+    /**
+     * Gets a JSON representation of the parts of this object's state that
+     * are deemed useful for debugging.
+     */
+    @get:SuppressFBWarnings(
+        value = ["IS2_INCONSISTENT_SYNC"],
+        justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
+    )
+    val debugState: JSONObject
+        get() {
+            val debugState = JSONObject()
+            debugState["mostRecentKeyframeGroupArrivalTimeMs"] =
+                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
+            debugState["needsKeyframe"] = needsKeyframe
+            debugState["internalTargetIndex"] = internalTargetEncoding
+            debugState["currentIndex"] = indexString(currentIndex)
+            return debugState
+        }
+
+    data class AcceptResult(
+        val accept: Boolean,
+        val isResumption: Boolean,
+        val mark: Boolean
+    )
+
+    companion object {
+        /**
+         * The default maximum frequency at which the media engine
+         * generates key frame.
+         */
+        private val MIN_KEY_FRAME_WAIT = Duration.ofMillis(300)
+
+        /**
+         * The maximum possible number of VP9 spatial layers.
+         */
+        private const val MAX_VP9_LAYERS = 8
+    }
+}

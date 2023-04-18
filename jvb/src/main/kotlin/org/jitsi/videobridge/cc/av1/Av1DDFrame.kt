@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
+import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.rtp.util.isOlderThan
 
@@ -113,6 +114,11 @@ class Av1DDFrame internal constructor(
         private set
 
     /**
+     * A record of how this frame was projected, or null if not.
+     */
+    var projection: Av1DDFrameProjection? = null
+
+    /**
      * A boolean that records whether this frame was accepted, i.e. should be forwarded to the receiver
      * given the decoding target currently being forwarded.
      */
@@ -162,6 +168,20 @@ class Av1DDFrame internal constructor(
     }
 
     /**
+     * Small utility method that checks whether the [Av1DDFrame] that is
+     * specified as a parameter belongs to the same RTP stream as the frame that
+     * this instance refers to.
+     *
+     * @param av1Frame the [Av1DDFrame] to check whether it belongs to the
+     * same RTP stream as the frame that this instance refers to.
+     * @return true if the [Av1DDFrame] that is specified as a parameter
+     * belongs to the same RTP stream as the frame that this instance refers to,
+     * false otherwise.
+     */
+    fun matchesSSRC(av1Frame: Av1DDFrame): Boolean {
+        return ssrc == av1Frame.ssrc
+    }
+    /**
      * Checks whether the specified RTP packet is part of this frame.
      *
      * @param pkt the RTP packet to check whether it's part of this frame.
@@ -190,5 +210,9 @@ class Av1DDFrame internal constructor(
                 append("frame info $frameInfo != packet frame info ${pkt.frameInfo}")
             }
         )
+    }
+    fun isImmediatelyAfter(otherFrame: Av1DDFrame): Boolean {
+        return frameNumber ==
+            applySequenceNumberDelta(otherFrame.frameNumber, 1)
     }
 }
