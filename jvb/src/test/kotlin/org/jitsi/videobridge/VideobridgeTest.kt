@@ -73,15 +73,15 @@ class VideobridgeTest : ShouldSpec() {
                             verify(exactly = 1) { shutdownService.beginShutdown() }
                         }
                         context("When the graceful shutdown period expires") {
+                            fakeExecutor.clock.elapse(ShutdownConfig.config.gracefulShutdownMaxDuration)
+                            fakeExecutor.run()
                             should("go to SHUTTING_DOWN") {
-                                fakeExecutor.clock.elapse(ShutdownConfig.config.gracefulShutdownMaxDuration)
-                                fakeExecutor.run()
                                 videobridge.shutdownState shouldBe ShutdownState.SHUTTING_DOWN
-                                should("and then shut down after shuttingDownDelay") {
-                                    fakeExecutor.clock.elapse(ShutdownConfig.config.shuttingDownDelay)
-                                    fakeExecutor.run()
-                                    verify(exactly = 1) { shutdownService.beginShutdown() }
-                                }
+                            }
+                            should("and then shut down after shuttingDownDelay") {
+                                fakeExecutor.clock.elapse(ShutdownConfig.config.shuttingDownDelay)
+                                fakeExecutor.run()
+                                verify(exactly = 1) { shutdownService.beginShutdown() }
                             }
                         }
                     }
