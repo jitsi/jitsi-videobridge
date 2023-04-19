@@ -20,7 +20,7 @@ import io.kotest.core.config.AbstractProjectConfig
 import org.jitsi.metaconfig.MetaconfigSettings
 
 class KotestProjectConfig : AbstractProjectConfig() {
-    override fun beforeAll() = super.beforeAll().also {
+    override suspend fun beforeProject() = super.beforeProject().also {
         // The only purpose of config caching is performance. We always want caching disabled in tests (so we can
         // freely modify the config without affecting other tests executing afterwards).
         MetaconfigSettings.cacheEnabled = false
