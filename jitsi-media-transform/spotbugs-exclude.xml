@@ -34,6 +34,8 @@
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
     <!-- False positives with lazy vals -->
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    <!-- False positives with lazy vals -->
+    <Bug pattern="BC_IMPOSSIBLE_INSTANCEOF"/>
     <!-- False positives with Kotlin inlines -->
     <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
 
