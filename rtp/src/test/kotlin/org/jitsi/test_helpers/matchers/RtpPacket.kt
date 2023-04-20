@@ -38,8 +38,10 @@ fun haveSamePayload(expected: RtpPacket) = object : Matcher<RtpPacket> {
 
         return MatcherResult(
             valuePayload.hasSameContentAs(expectedPayload),
-            "\n${valuePayload.toHex()}\nwas supposed to be:\n${expectedPayload.toHex()}",
-            "\n${valuePayload.toHex()}\nshould not have equaled \n${expectedPayload.toHex()}"
+            { "\n${valuePayload.toHex()}\nwas supposed to be:\n${expectedPayload.toHex()}" },
+            {
+                "\n${valuePayload.toHex()}\nshould not have equaled \n${expectedPayload.toHex()}"
+            }
         )
     }
 }

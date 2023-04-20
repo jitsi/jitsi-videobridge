@@ -115,6 +115,14 @@
             <version>${kotest.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Specify this dependency here because kotest needs it, and otherwise an older
+             version will be pulled in -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.mockk</groupId>
             <artifactId>mockk</artifactId>

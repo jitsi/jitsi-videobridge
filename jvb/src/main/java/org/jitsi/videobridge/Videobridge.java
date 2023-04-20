@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
+import org.jitsi.health.Result;
 import org.jitsi.metrics.*;
 import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
@@ -493,31 +494,6 @@ public class Videobridge
     }
 
     /**
-     * Handles <tt>HealthCheckIQ</tt> by performing health check on this
-     * <tt>Videobridge</tt> instance.
-     *
-     * @param healthCheckIQ the <tt>HealthCheckIQ</tt> to be handled.
-     * @return IQ with &quot;result&quot; type if the health check succeeded or
-     * IQ with &quot;error&quot; type if something went wrong.
-     * {@link StanzaError.Condition#internal_server_error} is returned when the
-     * health check fails or {@link StanzaError.Condition#not_authorized} if the
-     * request comes from a JID that is not authorized to do health checks on
-     * this instance.
-     */
-    public IQ handleHealthCheckIQ(HealthCheckIQ healthCheckIQ)
-    {
-        try
-        {
-            return IQ.createResultIQ(healthCheckIQ);
-        }
-        catch (Exception e)
-        {
-            logger.warn("Exception while handling health check IQ request", e);
-            return createError(healthCheckIQ, StanzaError.Condition.internal_server_error, e.getMessage());
-        }
-    }
-
-    /**
      * Handles a shutdown request.
      */
     public void shutdown(boolean graceful)
@@ -799,7 +775,17 @@ public class Videobridge
         @Override
         public IQ healthCheckIqReceived(@NotNull HealthCheckIQ iq)
         {
-            return handleHealthCheckIQ(iq);
+            Result result = jvbHealthChecker.getResult();
+            if (result.getSuccess())
+            {
+                return IQ.createResultIQ(iq);
+            }
+            else
+            {
+                return IQ.createErrorResponse(
+                        iq,
+                        StanzaError.from(StanzaError.Condition.internal_server_error, result.getMessage()).build());
+            }
         }
     }
 

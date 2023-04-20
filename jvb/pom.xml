@@ -217,12 +217,7 @@
       <groupId>org.glassfish.jersey.test-framework</groupId>
       <artifactId>jersey-test-framework-core</artifactId>
       <version>${jersey.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-        </exclusion>
-      </exclusions>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.test-framework.providers</groupId>
@@ -255,6 +250,14 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- Specify this dependency here because kotest needs it, and otherwise an older
+    version will be pulled in -->
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+    </dependency>
     <dependency>
         <groupId>io.kotest</groupId>
         <artifactId>kotest-runner-junit5-jvm</artifactId>
@@ -270,14 +273,6 @@
     <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-test-kotlin</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <!-- Specify this dependency here because kotest needs it, and otherwise an older
-    version will be pulled in -->
-    <dependency>
-        <groupId>org.junit.platform</groupId>
-        <artifactId>junit-platform-engine</artifactId>
-        <version>1.8.1</version>
         <scope>test</scope>
     </dependency>
     <dependency>
