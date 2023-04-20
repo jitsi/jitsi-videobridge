@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
+import org.jitsi.health.Result;
 import org.jitsi.metrics.*;
 import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
@@ -774,7 +775,17 @@ public class Videobridge
         @Override
         public IQ healthCheckIqReceived(@NotNull HealthCheckIQ iq)
         {
-            return IQ.createResultIQ(iq);
+            Result result = jvbHealthChecker.getResult();
+            if (result.getSuccess())
+            {
+                return IQ.createResultIQ(iq);
+            }
+            else
+            {
+                return IQ.createErrorResponse(
+                        iq,
+                        StanzaError.from(StanzaError.Condition.internal_server_error, result.getMessage()).build());
+            }
         }
     }
 
