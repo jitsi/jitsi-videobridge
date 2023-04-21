@@ -577,7 +577,7 @@ class Relay @JvmOverloads constructor(
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
 
-        if (sctpSocket != null) {
+        if (sctpSocket == null) {
             /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
             *  disabled for relay.
             */
