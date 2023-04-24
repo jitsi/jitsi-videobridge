@@ -401,9 +401,11 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Whether this endpoint has any endpoints "on-stage".
+     * Return the list of sources the endpoint has selected as "on stage". We just concatenate with the old
+     * "onStageEndpoints" since even with the old API we have matching source names.
      */
-    fun isInStageView() = bitrateController.allocationSettings.onStageEndpoints.isNotEmpty()
+    fun getOnStageSources() =
+        bitrateController.allocationSettings.onStageEndpoints + bitrateController.allocationSettings.onStageSources
 
     private fun setupDtlsTransport() {
         dtlsTransport.incomingDataHandler = object : DtlsTransport.IncomingDataHandler {
