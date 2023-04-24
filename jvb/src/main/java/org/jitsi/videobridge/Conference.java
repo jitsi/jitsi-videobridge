@@ -493,10 +493,23 @@ public class Conference
         boolean anyEndpointInStageView = false;
         for (Endpoint otherEndpoint : getLocalEndpoints())
         {
-            if (otherEndpoint != dominantSpeaker && otherEndpoint.isInStageView())
+            if (otherEndpoint != dominantSpeaker)
             {
-                anyEndpointInStageView = true;
-                break;
+                // Do not anticipate a switch if all on-stage sources are DESKTOP
+                List<String> onStageSourcesNames = otherEndpoint.getOnStageSources();
+                for (String onStageSourceName : onStageSourcesNames)
+                {
+                    AbstractEndpoint owner = findSourceOwner(onStageSourceName);
+                    if (owner != null)
+                    {
+                        MediaSourceDesc onStageSource = owner.findMediaSourceDesc(onStageSourceName);
+                        if (onStageSource != null && onStageSource.getVideoType() == VideoType.CAMERA)
+                        {
+                            anyEndpointInStageView = true;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
