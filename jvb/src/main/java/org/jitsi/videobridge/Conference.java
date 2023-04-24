@@ -491,24 +491,26 @@ public class Conference
         }
 
         boolean anyEndpointInStageView = false;
+        Set<String> allOnStageSourceNames = new HashSet<>();
         for (Endpoint otherEndpoint : getLocalEndpoints())
         {
             if (otherEndpoint != dominantSpeaker)
             {
+                allOnStageSourceNames.addAll(otherEndpoint.getOnStageSources());
+            }
+        }
+
+        for (String onStageSourceName : allOnStageSourceNames)
+        {
+            AbstractEndpoint owner = findSourceOwner(onStageSourceName);
+            if (owner != null)
+            {
                 // Do not anticipate a switch if all on-stage sources are DESKTOP
-                List<String> onStageSourcesNames = otherEndpoint.getOnStageSources();
-                for (String onStageSourceName : onStageSourcesNames)
+                MediaSourceDesc onStageSource = owner.findMediaSourceDesc(onStageSourceName);
+                if (onStageSource != null && onStageSource.getVideoType() == VideoType.CAMERA)
                 {
-                    AbstractEndpoint owner = findSourceOwner(onStageSourceName);
-                    if (owner != null)
-                    {
-                        MediaSourceDesc onStageSource = owner.findMediaSourceDesc(onStageSourceName);
-                        if (onStageSource != null && onStageSource.getVideoType() == VideoType.CAMERA)
-                        {
-                            anyEndpointInStageView = true;
-                            break;
-                        }
-                    }
+                    anyEndpointInStageView = true;
+                    break;
                 }
             }
         }
