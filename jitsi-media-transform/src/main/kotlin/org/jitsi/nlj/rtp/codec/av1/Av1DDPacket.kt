@@ -100,6 +100,9 @@ class Av1DDPacket : ParsedVideoPacket {
     val frameNumber
         get() = statelessDescriptor.frameNumber
 
+    val activeDecodeTargets
+        get() = descriptor?.activeDecodeTargetsBitmask
+
     override fun clone(): Av1DDPacket {
         return Av1DDPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
@@ -165,7 +168,7 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
     val layers = ArrayList<Av1DDRtpLayerDesc>()
 
     structure.decodeTargetInfo.forEachIndexed { i, dt ->
-        if (((1 shl i) and activeDecodeTargetsBitmask) == 0) {
+        if (!activeDecodeTargetsBitmask.containsDecodeTarget(i)) {
             return@forEachIndexed
         }
         val height = structure.maxRenderResolutions.getOrNull(dt.spatialId)?.height ?: -1
@@ -177,3 +180,7 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
     }
     return RtpEncodingDesc(ssrc, layers.toArray(arrayOf()), eid)
 }
+
+/** Check whether an activeDecodeTargetsBitmask contains a specific decode target. */
+fun Int.containsDecodeTarget(dt: Int) =
+    ((1 shl dt) and this) != 0

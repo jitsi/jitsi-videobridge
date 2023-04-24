@@ -19,9 +19,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
-import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
-import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.SUSPENDED_DT
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -49,7 +49,7 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
 
     /**
      * A boolean flag that indicates whether a keyframe is needed, due to an
-     * encoding or (in some cases) a spatial layer switch.
+     * encoding or (in some cases) a decode target switch.
      */
     var needsKeyframe = false
         private set
@@ -65,9 +65,9 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
     private var internalTargetEncoding = SUSPENDED_ENCODING_ID
 
     /**
-     * The spatial layer that this instance tries to achieve.
+     * The decode target that this instance tries to achieve.
      */
-    private var internalTargetSpatialId = SUSPENDED_ENCODING_ID
+    private var internalTargetDt = SUSPENDED_DT
 
     /**
      * The layer index that we're currently forwarding. [SUSPENDED_INDEX]
@@ -92,11 +92,13 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
     @Synchronized
     fun acceptFrame(
         frame: Av1DDFrame,
+        incomingEncoding: Int,
+        incomingIndices: Collection<Int>,
         externalTargetIndex: Int,
         receivedTime: Instant?
     ): AcceptResult {
         val prevIndex = currentIndex
-        val accept = doAcceptFrame(frame, externalTargetIndex, receivedTime)
+        val accept = doAcceptFrame(frame, incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
         val mark = /* TODO */ false
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
         if (isResumption) assert(accept) // Every code path that can turn off SUSPENDED_INDEX also accepts
@@ -105,6 +107,8 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
 
     private fun doAcceptFrame(
         frame: Av1DDFrame,
+        incomingEncoding: Int,
+        incomingIndices: Collection<Int>,
         externalTargetIndex: Int,
         receivedTime: Instant?
     ): Boolean {
@@ -127,7 +131,43 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
             currentIndex = SUSPENDED_INDEX
             return false
         }
-        TODO("Not implemented")
+        return if (frame.isKeyframe) {
+            logger.debug {
+                "Quality filter got keyframe for stream ${frame.ssrc}"
+            }
+            val accept = acceptKeyframe(incomingEncoding, incomingIndices, receivedTime)
+            if (accept) {
+                // TODO do we need to reset some state here?
+            }
+            accept
+        } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
+            if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
+                // XXX(george) i've noticed some "rogue" base layer keyframes
+                // that trigger this. what happens is the client sends a base
+                // layer key frame, the bridge switches to that layer because
+                // for all it knows it may be the only keyframe sent by the
+                // client engine. then the bridge notices that packets from the
+                // higher quality streams are flowing and execution ends-up
+                // here. it is a mystery why the engine is "leaking" base layer
+                // key frames
+                needsKeyframe = true
+            }
+            if (incomingEncoding != currentEncoding) {
+                // for non-keyframes, we can't route anything but the current encoding
+                return false
+            }
+            // TODO
+            false
+        } else {
+            // In this branch we're not processing a keyframe and the
+            // currentEncoding is in suspended state, which means we need
+            // a keyframe to start streaming again. Reaching this point also
+            // means that we want to forward something (because both
+            // externalEncodingTarget is not suspended) so we set the request keyframe flag.
+
+            // assert needsKeyframe == true;
+            false
+        }
     }
 
     /**
@@ -174,7 +214,7 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
     }
 
     /**
-     * Determines whether to accept or drop a VP9 keyframe. This method updates
+     * Determines whether to accept or drop an AV1 keyframe. This method updates
      * the encoding id.
      *
      * Note that, at the time of this writing, there's no practical need for a
@@ -186,25 +226,29 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
      */
     @Synchronized
     private fun acceptKeyframe(
-        incomingIndex: Int,
+        incomingEncoding: Int,
+        incomingIndices: Collection<Int>,
         receivedTime: Instant?
     ): Boolean {
-        val encodingIdOfKeyframe = getEidFromIndex(incomingIndex)
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
         // stream.
-        if (encodingIdOfKeyframe < 0) {
+        if (incomingEncoding < 0) {
             // something went terribly wrong, normally we should be able to
             // extract the layer id from a keyframe.
             logger.error("unable to get layer id from keyframe")
             return false
         }
-        // Keyframes have to be sid 0, tid 0, unless something screwy is going on.
-        if (getSidFromIndex(incomingIndex) != 0 || getTidFromIndex(incomingIndex) != 0) {
-            logger.warn("Surprising index ${indexString(incomingIndex)} on keyframe")
-        }
         logger.debug {
-            "Received a keyframe of encoding: $encodingIdOfKeyframe"
+            "Received a keyframe of encoding: $incomingEncoding"
+        }
+
+        val currentEncoding = getEidFromIndex(currentIndex)
+
+        val indexIfAccepted = if (currentEncoding == internalTargetEncoding) {
+            getIndex(currentEncoding, internalTargetDt)
+        } else {
+            incomingIndices.maxOrNull()!!
         }
 
         // The keyframe request has been fulfilled at this point, regardless of
@@ -218,17 +262,16 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
             mostRecentKeyframeGroupArrivalTime = receivedTime
             logger.debug {
                 "First keyframe in this kf group " +
-                    "currentEncodingId: $encodingIdOfKeyframe. " +
+                    "currentEncodingId: $incomingEncoding. " +
                     "Target is $internalTargetEncoding"
             }
-            if (encodingIdOfKeyframe <= internalTargetEncoding) {
-                val currentEncoding = getEidFromIndex(currentIndex)
+            if (incomingEncoding <= internalTargetEncoding) {
                 // If the target is 180p and the first keyframe of a group of
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                if (currentEncoding != encodingIdOfKeyframe) {
-                    currentIndex = incomingIndex
+                if (currentEncoding != incomingEncoding) {
+                    currentIndex = indexIfAccepted
                 }
                 true
             } else {
@@ -238,26 +281,25 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
             // We're within the 300ms window since the reception of the
             // first key frame of a key frame group, let's check whether an
             // upscale/downscale is possible.
-            val currentEncoding = getEidFromIndex(currentIndex)
             when {
-                currentEncoding <= encodingIdOfKeyframe &&
-                    encodingIdOfKeyframe <= internalTargetEncoding -> {
+                currentEncoding <= incomingEncoding &&
+                    incomingEncoding <= internalTargetEncoding -> {
                     // upscale or current quality case
-                    if (currentEncoding != encodingIdOfKeyframe) {
-                        currentIndex = incomingIndex
+                    if (currentEncoding != incomingEncoding) {
+                        currentIndex = indexIfAccepted
                     }
                     logger.debug {
-                        "Upscaling to encoding $encodingIdOfKeyframe. " +
+                        "Upscaling to encoding $incomingEncoding. " +
                             "The target is $internalTargetEncoding"
                     }
                     true
                 }
-                encodingIdOfKeyframe <= internalTargetEncoding &&
+                incomingEncoding <= internalTargetEncoding &&
                     internalTargetEncoding < currentEncoding -> {
                     // downscale case
-                    currentIndex = incomingIndex
+                    currentIndex = indexIfAccepted
                     logger.debug {
-                        "Downscaling to encoding $encodingIdOfKeyframe. " +
+                        "Downscaling to encoding $incomingEncoding. " +
                             "The target is $internalTargetEncoding"
                     }
                     true

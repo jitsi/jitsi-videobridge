@@ -48,7 +48,7 @@ class Av1DDRtpLayerDesc(
     override fun copy(height: Int): RtpLayerDesc = Av1DDRtpLayerDesc(eid, dt, height, frameRate)
 
     override val layerId = dt
-    override val index = getIndex(eid, 0, dt)
+    override val index = getIndex(eid, dt)
 
     override fun getBitrate(nowMs: Long) = bitrateTracker.getRate(nowMs)
 
@@ -61,7 +61,43 @@ class Av1DDRtpLayerDesc(
         addNumber("dt", dt)
     }
 
-    override fun indexString(): String =
-        if (index == SUSPENDED_INDEX) "SUSP"
-        else "E${eid}DT$dt"
+    override fun indexString(): String = indexString(index)
+
+    companion object {
+        /**
+         * The index value that is used to represent that forwarding is suspended.
+         */
+        const val SUSPENDED_INDEX = -1
+
+        const val SUSPENDED_DT = -1
+
+        /**
+         * Calculate the "index" of a layer based on its encoding and decode target.
+         * This is a server-side id and should not be confused with any encoding id defined
+         * in the client (such as the rid) or the encodingId.  This is used by the videobridge's
+         * adaptive source projection for filtering.
+         */
+        @JvmStatic
+        fun getIndex(eid: Int, dt: Int): Int {
+            val e = if (eid < 0) 0 else eid
+            val d = if (dt < 0) 0 else dt
+
+            return (e shl 6) or d
+        }
+
+        /**
+         * Get a decode target ID from a layer index.  If the index is [SUSPENDED_INDEX],
+         * the value is unspecified.
+         */
+        @JvmStatic
+        fun getDtFromIndex(index: Int) = index and 0x3f
+
+        /**
+         * Get a string description of a layer index.
+         */
+        @JvmStatic
+        fun indexString(index: Int): String =
+            if (index == SUSPENDED_INDEX) "SUSP"
+            else "E${getEidFromIndex(index)}DT${getDtFromIndex(index)}"
+    }
 }

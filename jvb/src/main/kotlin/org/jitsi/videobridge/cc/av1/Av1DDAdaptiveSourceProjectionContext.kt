@@ -17,8 +17,10 @@ package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
@@ -78,6 +80,15 @@ class Av1DDAdaptiveSourceProjectionContext(
 
         val frame = result.frame
 
+        val incomingEncoding = getEidFromIndex(incomingIndices.first())
+        if (incomingIndices.any { getEidFromIndex(it) != incomingEncoding }) {
+            logger.warn(
+                "Incoming indices have more than one encoding: " +
+                    incomingIndices.map { Av1DDRtpLayerDesc.indexString(it) }
+            )
+            return false
+        }
+
         if (result.isNewFrame) {
             if (packet.isKeyframe && frameIsNewSsrc(frame)) {
                 /* If we're not currently projecting this SSRC, check if we've
@@ -89,7 +100,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = av1QualityFilter
-                .acceptFrame(frame, targetIndex, receivedTime)
+                .acceptFrame(frame, incomingEncoding, incomingIndices, targetIndex, receivedTime)
             frame.isAccepted = acceptResult.accept && frame.index >= lastFrameNumberIndexResumption
             if (frame.isAccepted) {
                 val projection: Av1DDFrameProjection

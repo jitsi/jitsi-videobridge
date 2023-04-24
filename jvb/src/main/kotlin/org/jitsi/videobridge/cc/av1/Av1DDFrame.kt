@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
+import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.isNewerThan
@@ -78,6 +79,22 @@ class Av1DDFrame internal constructor(
      */
     val index: Int,
 
+    /**
+     * The AV1 Template Dependency Structure in effect for this frame, if known
+     */
+    val structure: Av1TemplateDependencyStructure?,
+
+    /**
+     * A new activeDecodeTargets specified for this frame, if any.
+     * TODO: is this always specified in all packets of the frame?
+     */
+    val activeDecodeTargets: Int?,
+
+    /**
+     * A boolean that indicates whether the incoming VP9 frame that this
+     * instance refers to is a keyframe.
+     */
+    var isKeyframe: Boolean,
 ) {
     /**
      * The earliest RTP sequence number seen of the incoming frame that this instance
@@ -137,7 +154,10 @@ class Av1DDFrame internal constructor(
         seenMarker = packet.isMarked,
         frameInfo = packet.frameInfo,
         frameNumber = packet.statelessDescriptor.frameNumber,
-        index
+        index = index,
+        structure = packet.descriptor?.structure,
+        activeDecodeTargets = packet.activeDecodeTargets,
+        isKeyframe = packet.isKeyframe
     )
 
     /**

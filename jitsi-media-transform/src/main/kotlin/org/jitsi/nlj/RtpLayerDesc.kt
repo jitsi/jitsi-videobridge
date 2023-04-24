@@ -171,14 +171,14 @@ constructor(
         fun getEidFromIndex(index: Int) = index shr 6
 
         /**
-         * Get an spatial ID from a layer index.  If the index is [SUSPENDED_INDEX],
+         * Get a spatial ID from a layer index.  If the index is [SUSPENDED_INDEX],
          * the value is unspecified.
          */
         @JvmStatic
         fun getSidFromIndex(index: Int) = (index and 0x38) shr 3
 
         /**
-         * Get an temporal ID from a layer index.  If the index is [SUSPENDED_INDEX],
+         * Get a temporal ID from a layer index.  If the index is [SUSPENDED_INDEX],
          * the value is unspecified.
          */
         @JvmStatic
