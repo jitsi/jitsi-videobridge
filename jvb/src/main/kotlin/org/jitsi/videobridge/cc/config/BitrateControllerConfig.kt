@@ -119,6 +119,7 @@ class BitrateControllerConfig private constructor() {
 
     val assumedBandwidthLimit: Bandwidth? by optionalconfig {
         "videobridge.cc.assumed-bandwidth-limit".from(JitsiConfig.newConfig)
+            .convertFrom<String> { Bandwidth.fromString(it) }
     }
 
     companion object {
