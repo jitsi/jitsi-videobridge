@@ -142,10 +142,7 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
 
     // Figure out the frame rates per spatial/temporal layer.
     structure.templateInfo.forEach { t ->
-        if (t.fdiff.none {
-            it > t.spatialId
-        }
-        ) {
+        if (!t.hasInterPictureDependency()) {
             // This is a template that doesn't reference any previous frames, so is probably a key frame or
             // part of the same temporal picture with one, i.e. not part of the regular structure.
             return@forEach

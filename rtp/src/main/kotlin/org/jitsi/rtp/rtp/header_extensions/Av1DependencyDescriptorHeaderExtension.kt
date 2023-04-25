@@ -405,6 +405,15 @@ class Av1TemplateDependencyStructure(
             }
         }
     }
+
+    /** Return whether, in this structure, it's possible to switch from DT [fromDt] to DT [toDt]
+     * without a keyframe.
+     * Note this makes certain assumptions about the encoding structure.
+     */
+    fun canSwitchWithoutKeyframe(fromDt: Int, toDt: Int): Boolean =
+        templateInfo.any {
+            it.hasInterPictureDependency() && it.dti[fromDt] != DTI.NOT_PRESENT && it.dti[toDt] == DTI.SWITCH
+        }
 }
 
 fun nsBits(n: Int, v: Int): Int {
@@ -746,6 +755,13 @@ open class FrameInfo(
     override fun toString(): String {
         return "spatialId=$spatialId, temporalId = $temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
     }
+
+    /** Whether the frame has a dependency on a frame earlier than this "picture", the other frames of this
+     * temporal moment.  If it doesn't, it's probably part of a keyframe, and not part of the regular structure.
+     * Note this makes assumptions about the scalability structure.
+     */
+    fun hasInterPictureDependency(): Boolean =
+        fdiff.any { it > spatialId }
 }
 
 /* The only thing this changes from its parent class is to make the lists mutable, so the parent equals() is fine. */

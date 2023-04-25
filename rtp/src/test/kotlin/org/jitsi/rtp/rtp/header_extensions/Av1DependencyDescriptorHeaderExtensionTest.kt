@@ -2,6 +2,7 @@ package org.jitsi.rtp.rtp.header_extensions
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -91,13 +92,43 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val structure = lds.newTemplateDependencyStructure
                     structure shouldNotBe null
                     structure!!.decodeTargetCount shouldBe 9
-                    structure!!.maxTemporalId shouldBe 2
-                    structure!!.maxSpatialId shouldBe 2
+                    structure.maxTemporalId shouldBe 2
+                    structure.maxSpatialId shouldBe 2
                 }
                 should("calculate correct frame info") {
                     val ldsi = lds.frameInfo
                     ldsi.spatialId shouldBe 0
                     ldsi.temporalId shouldBe 0
+                }
+                should("calculate correctly whether layer switching needs keyframes") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    for (fromS in 0..2) {
+                        for (fromT in 0..2) {
+                            val fromDT = 3 * fromS + fromT
+                            for (toS in 0..2) {
+                                for (toT in 0..2) {
+                                    val toDT = 3 * toS + toT
+                                    /* With this structure you can switch down spatial layers, or to other temporal
+                                     * layers within the same spatial layer, without a keyframe; but switching up
+                                     * spatial layers needs a keyframe.
+                                     */
+                                    withClue("from DT $fromDT to DT $toDT") {
+                                        if (fromS >= toS) {
+                                            structure.canSwitchWithoutKeyframe(
+                                                fromDt = fromDT,
+                                                toDt = toDT
+                                            ) shouldBe true
+                                        } else {
+                                            structure.canSwitchWithoutKeyframe(
+                                                fromDt = fromDT,
+                                                toDt = toDT
+                                            ) shouldBe false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 should("Calculate its own length properly") {
                     lds.encodedLength shouldBe longDescScalable.size
