@@ -102,6 +102,9 @@ class Av1DDFrameMap(
     }
 
     @Synchronized
+    fun hasFrame(frameNum: Int) = frameHistory[frameNum] != null
+
+    @Synchronized
     fun nextFrame(frame: Av1DDFrame): Av1DDFrame? {
         return frameHistory.findAfter(frame) { true }
     }

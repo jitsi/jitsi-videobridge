@@ -52,7 +52,7 @@ class Av1DDAdaptiveSourceProjectionContext(
      * The [Av1DDQualityFilter] instance that does quality filtering on the
      * incoming pictures, to choose encodings and layers to forward.
      */
-    private val av1QualityFilter = Av1DDQualityFilter(logger)
+    private val av1QualityFilter = Av1DDQualityFilter(av1FrameMaps, logger)
 
     private var lastAv1FrameProjection = Av1DDFrameProjection(
         diagnosticContext,

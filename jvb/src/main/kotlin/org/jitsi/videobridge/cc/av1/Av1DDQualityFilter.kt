@@ -21,7 +21,10 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.SUSPENDED_DT
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
+import org.jitsi.nlj.rtp.codec.av1.containsDecodeTarget
+import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -34,7 +37,10 @@ import java.time.Instant
  * their quality, i.e. packets that correspond to qualities that are above a
  * given quality target. Instances of this class are thread-safe.
  */
-internal class Av1DDQualityFilter(parentLogger: Logger) {
+internal class Av1DDQualityFilter(
+    val av1FrameMap: Map<Long, Av1DDFrameMap>,
+    parentLogger: Logger
+) {
     /**
      * The [Logger] to be used by this instance to print debug
      * information.
@@ -156,8 +162,81 @@ internal class Av1DDQualityFilter(parentLogger: Logger) {
                 // for non-keyframes, we can't route anything but the current encoding
                 return false
             }
-            // TODO
-            false
+
+            /** Logic to forward a non-keyframe:
+             * If the frame does not have FrameInfo, reject and set needsKeyframe (we couldn't decode its templates).
+             * In normal circumstances (when the target index == the current index), or when we're trying to switch
+             * *up* encodings, forward all frames whose DT for the current DT is not NOT_PRESENT.
+             * If we're trying to switch *down* encodings, only forward frames which are REQUIRED or SWITCH for the
+             * current DT.
+             * If we're trying to switch DTs in the current encoding, check the template structure to ensure that
+             * there is at least one template which is SWITCH for the target DT and not NOT_PRESENT for the current DT.
+             * If there is not, request a keyframe.
+             * If the current frame is SWITCH for the target DT, and we've forwarded all the frames on which (by
+             * its fdiffs) it depends, forward it, and change the current DT to the target DT.
+             * Otherwise, forward for the current DT.
+             */
+            /** Logic to forward a non-keyframe:
+             * If the frame does not have FrameInfo, reject and set needsKeyframe (we couldn't decode its templates).
+             * If we're trying to switch DTs in the current encoding, check the template structure to ensure that
+             * there is at least one template which is SWITCH for the target DT and not NOT_PRESENT for the current DT.
+             * If there is not, request a keyframe.
+             * If the current frame is SWITCH for the target DT, and we've forwarded all the frames on which (by
+             * its fdiffs) it depends, forward it, and change the current DT to the target DT.
+             * In normal circumstances (when the target index == the current index), or when we're trying to switch
+             * *up* encodings, forward all frames whose DT for the current DT is not NOT_PRESENT.
+             * If we're trying to switch *down* encodings, only forward frames which are REQUIRED or SWITCH for the
+             * current DT.
+             */
+            val frameInfo = frame.frameInfo ?: run {
+                needsKeyframe = true
+                return@doAcceptFrame false
+            }
+            var currentDt = getDtFromIndex(currentIndex)
+            val externalTargetDt = if (currentEncoding == externalTargetEncoding)
+                getDtFromIndex(externalTargetIndex)
+            else
+                currentDt
+
+            if (
+                frame.activeDecodeTargets != null &&
+                !frame.activeDecodeTargets.containsDecodeTarget(externalTargetDt)
+            ) {
+                /* This shouldn't happen, because we should have set layeringChanged for this packet. */
+                logger.warn {
+                    "External target DT $externalTargetDt not present in current decode targets 0x" +
+                        Integer.toHexString(frame.activeDecodeTargets)
+                }
+                return false
+            }
+
+            if (currentDt != externalTargetDt) {
+                val frameMap = av1FrameMap[frame.ssrc]
+                if (frameInfo.dti[externalTargetDt] == DTI.SWITCH &&
+                    frameMap != null &&
+                    frameInfo.fdiff.all {
+                        frameMap.hasFrame(frame.frameNumber - it)
+                    }
+                ) {
+                    logger.debug { "Switching to DT $externalTargetDt from $currentDt" }
+                    currentDt = externalTargetDt
+                    currentIndex = externalTargetIndex
+                } else {
+                    if (frame.structure?.canSwitchWithoutKeyframe(currentDt, externalTargetDt) != true) {
+                        logger.debug {
+                            "Want to switch to DT $externalTargetDt from $currentDt, requesting keyframe"
+                        }
+                        needsKeyframe = true
+                    }
+                }
+            }
+
+            val currentFrameDti = frameInfo.dti[currentDt]
+            if (currentEncoding > externalTargetEncoding) {
+                (currentFrameDti == DTI.SWITCH || currentFrameDti == DTI.REQUIRED)
+            } else {
+                (currentFrameDti != DTI.NOT_PRESENT)
+            }
         } else {
             // In this branch we're not processing a keyframe and the
             // currentEncoding is in suspended state, which means we need
