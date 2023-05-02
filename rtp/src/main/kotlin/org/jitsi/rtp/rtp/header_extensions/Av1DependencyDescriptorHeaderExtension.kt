@@ -414,6 +414,21 @@ class Av1TemplateDependencyStructure(
         templateInfo.any {
             it.hasInterPictureDependency() && it.dti[fromDt] != DTI.NOT_PRESENT && it.dti[toDt] == DTI.SWITCH
         }
+
+    /** Given that we are sending packets for a given DT, return a decodeTargetBitmask corresponding to all DTs
+     * contained in that DT.
+     */
+    fun getDtBitmaskForDt(dt: Int): Int {
+        var mask = (1 shl decodeTargetCount) - 1
+        templateInfo.forEach { frameInfo ->
+            frameInfo.dti.forEachIndexed { i, dti ->
+                if (frameInfo.dti[dt] == DTI.NOT_PRESENT && dti != DTI.NOT_PRESENT) {
+                    mask = mask and (1 shl i).inv()
+                }
+            }
+        }
+        return mask
+    }
 }
 
 fun nsBits(n: Int, v: Int): Int {

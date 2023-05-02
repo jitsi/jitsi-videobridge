@@ -130,6 +130,18 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                         }
                     }
                 }
+                should("calculate DTI bitmasks corresponding to a given DT") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    structure.getDtBitmaskForDt(0) shouldBe 0b000000001
+                    structure.getDtBitmaskForDt(1) shouldBe 0b000000011
+                    structure.getDtBitmaskForDt(2) shouldBe 0b000000111
+                    structure.getDtBitmaskForDt(3) shouldBe 0b000001001
+                    structure.getDtBitmaskForDt(4) shouldBe 0b000011011
+                    structure.getDtBitmaskForDt(5) shouldBe 0b000111111
+                    structure.getDtBitmaskForDt(6) shouldBe 0b001001001
+                    structure.getDtBitmaskForDt(7) shouldBe 0b011011011
+                    structure.getDtBitmaskForDt(8) shouldBe 0b111111111
+                }
                 should("Calculate its own length properly") {
                     lds.encodedLength shouldBe longDescScalable.size
                 }
