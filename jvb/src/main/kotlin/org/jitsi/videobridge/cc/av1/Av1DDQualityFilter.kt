@@ -105,10 +105,13 @@ internal class Av1DDQualityFilter(
     ): AcceptResult {
         val prevIndex = currentIndex
         val accept = doAcceptFrame(frame, incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
-        val mark = /* TODO */ false
+        val currentDt = getDtFromIndex(currentIndex)
+        val mark = (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
         if (isResumption) assert(accept) // Every code path that can turn off SUSPENDED_INDEX also accepts
-        return AcceptResult(accept = accept, isResumption = isResumption, mark = mark)
+        val newDt = if (prevIndex != currentIndex) currentDt else null
+        if (newDt != null) assert(accept) // Every code path that changes DT also accepts
+        return AcceptResult(accept = accept, isResumption = isResumption, mark = mark, newDt = newDt)
     }
 
     private fun doAcceptFrame(
@@ -430,7 +433,8 @@ internal class Av1DDQualityFilter(
     data class AcceptResult(
         val accept: Boolean,
         val isResumption: Boolean,
-        val mark: Boolean
+        val mark: Boolean,
+        val newDt: Int?
     )
 
     companion object {
