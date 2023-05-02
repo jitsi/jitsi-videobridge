@@ -33,6 +33,7 @@ import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
+import java.time.Duration
 import java.time.Instant
 
 class Av1DDAdaptiveSourceProjectionContext(
@@ -107,7 +108,8 @@ class Av1DDAdaptiveSourceProjectionContext(
                 try {
                     projection = createProjection(
                         frame = frame, initialPacket = packet, isResumption = acceptResult.isResumption,
-                        isReset = result.isReset, mark = acceptResult.mark, receivedTime = receivedTime
+                        isReset = result.isReset, mark = acceptResult.mark, newDt = acceptResult.newDt,
+                        receivedTime = receivedTime
                     )
                 } catch (e: Exception) {
                     logger.warn("Failed to create frame projection", e)
@@ -141,7 +143,7 @@ class Av1DDAdaptiveSourceProjectionContext(
         return accept
     }
 
-    /** Look up a Av1DDFrame for a packet. */
+    /** Look up an Av1DDFrame for a packet. */
     private fun lookupAv1Frame(av1Packet: Av1DDPacket): Av1DDFrame? =
         av1FrameMaps[av1Packet.ssrc]?.findFrame(av1Packet)
 
@@ -188,6 +190,20 @@ class Av1DDAdaptiveSourceProjectionContext(
         lastAv1FrameProjection.av1Frame?.matchesSSRC(frame) != true
 
     /**
+     * Find the previous frame before the given one.
+     */
+    @Synchronized
+    private fun prevFrame(frame: Av1DDFrame) =
+        av1FrameMaps[frame.ssrc]?.prevFrame(frame)
+
+    /**
+     * Find the next frame after the given one.
+     */
+    @Synchronized
+    private fun nextFrame(frame: Av1DDFrame) =
+        av1FrameMaps[frame.ssrc]?.nextFrame(frame)
+
+    /**
      * Create a projection for this frame.
      */
     private fun createProjection(
@@ -196,6 +212,228 @@ class Av1DDAdaptiveSourceProjectionContext(
         mark: Boolean,
         isResumption: Boolean,
         isReset: Boolean,
+        newDt: Int?,
+        receivedTime: Instant?
+    ): Av1DDFrameProjection {
+        if (frameIsNewSsrc(frame)) {
+            return createEncodingSwitchProjection(frame, initialPacket, mark, newDt, receivedTime)
+        } else if (isResumption) {
+            return createResumptionProjection(frame, initialPacket, mark, newDt, receivedTime)
+        } else if (isReset) {
+            return createResetProjection(frame, initialPacket, mark, newDt, receivedTime)
+        }
+
+        return createInEncodingProjection(frame, initialPacket, mark, newDt, receivedTime)
+    }
+
+    /**
+     * Create an projection for the first frame after an encoding switch.
+     */
+    private fun createEncodingSwitchProjection(
+        frame: Av1DDFrame,
+        initialPacket: Av1DDPacket,
+        mark: Boolean,
+        newDt: Int?,
+        receivedTime: Instant?
+    ): Av1DDFrameProjection {
+        // We can only switch on packets that carry a scalability structure, which is the first packet of a keyframe
+        assert(frame.isKeyframe)
+        assert(initialPacket.isStartOfFrame)
+
+        var projectedSeqGap = 1
+
+        if (lastAv1FrameProjection.av1Frame?.seenEndOfFrame == false) {
+            /* Leave a gap to signal to the decoder that the previously routed
+               frame was incomplete. */
+            projectedSeqGap++
+
+            /* Make sure subsequent packets of the previous projection won't
+               overlap the new one.  (This means the gap, above, will never be
+               filled in.)
+             */
+            lastAv1FrameProjection.close()
+        }
+
+        val projectedSeq =
+            RtpUtils.applySequenceNumberDelta(lastAv1FrameProjection.latestProjectedSeqNum, projectedSeqGap)
+
+        // this is a simulcast switch. The typical incremental value =
+        // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
+        val tsDelta: Long = lastAv1FrameProjection.created?.let { created ->
+            receivedTime?.let {
+                3000 * Duration.between(created, receivedTime).dividedBy(33).seconds.coerceAtLeast(1L)
+            }
+        } ?: run {
+            3000
+        }
+        val projectedTs = RtpUtils.applyTimestampDelta(lastAv1FrameProjection.timestamp, tsDelta)
+
+        val frameNumber: Int
+        val templateIdDelta: Int
+        if (lastAv1FrameProjection.av1Frame != null) {
+            frameNumber = RtpUtils.applySequenceNumberDelta(
+                lastAv1FrameProjection.frameNumber,
+                1
+            )
+            val nextTemplateId = lastAv1FrameProjection.getNextTemplateId()
+            templateIdDelta = if (nextTemplateId != null) {
+                check(frame.structure != null)
+                (nextTemplateId - frame.structure.templateIdOffset) % 64
+            } else {
+                0
+            }
+        } else {
+            frameNumber = frame.frameNumber
+            templateIdDelta = 0
+        }
+
+        return Av1DDFrameProjection(
+            diagnosticContext = diagnosticContext,
+            av1Frame = frame,
+            ssrc = lastAv1FrameProjection.ssrc,
+            timestamp = projectedTs,
+            sequenceNumberDelta = RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.sequenceNumber),
+            frameNumber = frameNumber,
+            templateIdDelta = templateIdDelta,
+            dti = newDt?.let { frame.structure?.getDtBitmaskForDt(it) },
+            mark = mark,
+            created = receivedTime
+        )
+    }
+
+    /**
+     * Create a projection for the first frame after a resumption, i.e. when a source is turned back on.
+     */
+    private fun createResumptionProjection(
+        frame: Av1DDFrame,
+        initialPacket: Av1DDPacket,
+        mark: Boolean,
+        newDt: Int?,
+        receivedTime: Instant?
+    ): Av1DDFrameProjection {
+        lastFrameNumberIndexResumption = frame.index
+
+        /* These must be non-null because we don't execute this function unless
+            frameIsNewSsrc has returned false.
+        */
+        val lastFrame = prevFrame(frame)!!
+        val lastProjectedFrame = lastAv1FrameProjection.av1Frame!!
+
+        /* Project timestamps linearly. */
+        val tsDelta = RtpUtils.getTimestampDiff(
+            lastAv1FrameProjection.timestamp,
+            lastProjectedFrame.timestamp
+        )
+        val projectedTs = RtpUtils.applyTimestampDelta(frame.timestamp, tsDelta)
+
+        /* Increment frameNumber by 1 from the last projected frame. */
+        val projectedFrameNumber = RtpUtils.applySequenceNumberDelta(lastAv1FrameProjection.frameNumber, 1)
+
+        /** If this packet has a template structure, rewrite it to follow after the pre-resumption structure.
+         * (We could check to see if the structure is unchanged, but that's an unnecessary optimization.)
+         */
+        val templateIdDelta = if (frame.structure != null) {
+            val nextTemplateId = lastAv1FrameProjection.getNextTemplateId()
+
+            if (nextTemplateId != null) {
+                (nextTemplateId - frame.structure.templateIdOffset) % 64
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+
+        /* Increment sequence numbers based on the last projected frame, but leave a gap
+         * for packet reordering in case this isn't the first packet of the keyframe.
+         */
+        val seqGap = RtpUtils.getSequenceNumberDelta(initialPacket.sequenceNumber, lastFrame.latestKnownSequenceNumber)
+        val newSeq = RtpUtils.applySequenceNumberDelta(lastAv1FrameProjection.latestProjectedSeqNum, seqGap)
+        val seqDelta = RtpUtils.getSequenceNumberDelta(newSeq, initialPacket.sequenceNumber)
+
+        return Av1DDFrameProjection(
+            diagnosticContext = diagnosticContext,
+            av1Frame = frame,
+            ssrc = lastAv1FrameProjection.ssrc,
+            timestamp = projectedTs,
+            sequenceNumberDelta = seqDelta,
+            frameNumber = projectedFrameNumber,
+            templateIdDelta = templateIdDelta,
+            dti = newDt?.let { frame.structure?.getDtBitmaskForDt(it) },
+            mark = mark,
+            created = receivedTime
+        )
+    }
+
+    /**
+     * Create a projection for the first frame after a frame reset, i.e. after a large gap in sequence numbers.
+     */
+    private fun createResetProjection(
+        frame: Av1DDFrame,
+        initialPacket: Av1DDPacket,
+        mark: Boolean,
+        newDt: Int?,
+        receivedTime: Instant?
+    ): Av1DDFrameProjection {
+        /* This must be non-null because we don't execute this function unless
+            frameIsNewSsrc has returned false.
+        */
+        val lastFrame = lastAv1FrameProjection.av1Frame!!
+
+        /* Apply the latest projected frame's projections out, linearly. */
+        val seqDelta = RtpUtils.getSequenceNumberDelta(
+            lastAv1FrameProjection.latestProjectedSeqNum,
+            lastFrame.latestKnownSequenceNumber
+        )
+        val tsDelta = RtpUtils.getTimestampDiff(
+            lastAv1FrameProjection.timestamp,
+            lastFrame.timestamp
+        )
+        val frameNumberDelta = RtpUtils.applySequenceNumberDelta(
+            lastAv1FrameProjection.frameNumber,
+            lastFrame.frameNumber
+        )
+
+        val projectedTs = RtpUtils.applyTimestampDelta(frame.timestamp, tsDelta)
+        val projectedFrameNumber = RtpUtils.applySequenceNumberDelta(frame.frameNumber, frameNumberDelta)
+
+        /** If this packet has a template structure, rewrite it to follow after the pre-reset structure.
+         * (We could check to see if the structure is unchanged, but that's an unnecessary optimization.)
+         */
+        val templateIdDelta = if (frame.structure != null) {
+            val nextTemplateId = lastAv1FrameProjection.getNextTemplateId()
+
+            if (nextTemplateId != null) {
+                (nextTemplateId - frame.structure.templateIdOffset) % 64
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+        return Av1DDFrameProjection(
+            diagnosticContext = diagnosticContext,
+            av1Frame = frame,
+            ssrc = lastAv1FrameProjection.ssrc,
+            timestamp = projectedTs,
+            sequenceNumberDelta = seqDelta,
+            frameNumber = projectedFrameNumber,
+            templateIdDelta = templateIdDelta,
+            dti = newDt?.let { frame.structure?.getDtBitmaskForDt(it) },
+            mark = mark,
+            created = receivedTime
+        )
+    }
+
+    /**
+     * Create a frame projection for the normal case, i.e. as part of the same encoding as the
+     * previously-projected frame.
+     */
+    private fun createInEncodingProjection(
+        frame: Av1DDFrame,
+        initialPacket: Av1DDPacket,
+        mark: Boolean,
+        newDt: Int?,
         receivedTime: Instant?
     ): Av1DDFrameProjection {
         TODO("Not yet implemented")
