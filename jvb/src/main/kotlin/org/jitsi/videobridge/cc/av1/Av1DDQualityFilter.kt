@@ -144,11 +144,7 @@ internal class Av1DDQualityFilter(
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            val accept = acceptKeyframe(incomingEncoding, incomingIndices, receivedTime)
-            if (accept) {
-                // TODO do we need to reset some state here?
-            }
-            accept
+            acceptKeyframe(incomingEncoding, incomingIndices, receivedTime)
         } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
             if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
