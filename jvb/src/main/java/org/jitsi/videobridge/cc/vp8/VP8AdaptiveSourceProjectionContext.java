@@ -18,11 +18,9 @@ package org.jitsi.videobridge.cc.vp8;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.codec.vpx.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
@@ -68,29 +66,18 @@ public class VP8AdaptiveSourceProjectionContext
     private VP8FrameProjection lastVP8FrameProjection;
 
     /**
-     * The VP8 media format. No essential functionality relies on this field,
-     * it's only used as a cache of the {@link PayloadType} instance for VP8 in
-     * case we have to do a context switch (see {@link AdaptiveSourceProjection}),
-     * in order to avoid having to resolve the format.
-     */
-    private final PayloadType payloadType;
-
-    /**
      * Ctor.
      *
-     * @param payloadType the VP8 media format.
      * @param rtpState the RTP state to begin with.
      */
     public VP8AdaptiveSourceProjectionContext(
             @NotNull DiagnosticContext diagnosticContext,
-            @NotNull PayloadType payloadType,
             @NotNull RtpState rtpState,
             @NotNull Logger parentLogger)
     {
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(
             VP8AdaptiveSourceProjectionContext.class.getName());
-        this.payloadType = payloadType;
         this.vp8QualityFilter = new VP8QualityFilter(parentLogger);
 
         lastVP8FrameProjection = new VP8FrameProjection(diagnosticContext,
@@ -679,12 +666,6 @@ public class VP8AdaptiveSourceProjectionContext
             lastVP8FrameProjection.getTimestamp());
     }
 
-    @Override
-    public PayloadType getPayloadType()
-    {
-        return payloadType;
-    }
-
     /**
      * Rewrites the RTP packet that is specified as an argument.
      *
@@ -751,7 +732,6 @@ public class VP8AdaptiveSourceProjectionContext
         debugState.put(
                 "vp8FrameMaps", mapSizes);
         debugState.put("vp8QualityFilter", vp8QualityFilter.getDebugState());
-        debugState.put("payloadType", payloadType.toString());
 
         return debugState;
     }

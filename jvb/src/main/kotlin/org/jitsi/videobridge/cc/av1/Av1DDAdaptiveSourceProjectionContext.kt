@@ -17,7 +17,6 @@ package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
-import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -37,7 +36,6 @@ import java.time.Instant
 
 class Av1DDAdaptiveSourceProjectionContext(
     private val diagnosticContext: DiagnosticContext,
-    private val payloadType: PayloadType,
     rtpState: RtpState,
     parentLogger: Logger
 ) : AdaptiveSourceProjectionContext {
@@ -588,10 +586,6 @@ class Av1DDAdaptiveSourceProjectionContext(
         lastAv1FrameProjection.timestamp
     )
 
-    override fun getPayloadType(): PayloadType {
-        return payloadType
-    }
-
     override fun getDebugState(): JSONObject {
         val debugState = JSONObject()
         debugState["class"] = Av1DDAdaptiveSourceProjectionContext::class.java.simpleName
@@ -605,8 +599,6 @@ class Av1DDAdaptiveSourceProjectionContext(
         }
         debugState["av1FrameMaps"] = mapSizes
         debugState["av1QualityFilter"] = av1QualityFilter.debugState
-
-        debugState["payloadType"] = payloadType.toString()
 
         return debugState
     }

@@ -23,8 +23,6 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyTl0PicIdxDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getExtendedPictureIdDelta
-import org.jitsi.nlj.format.PayloadType
-import org.jitsi.nlj.format.Vp9PayloadType
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -46,17 +44,11 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Random
 import java.util.TreeMap
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArraySet
 import javax.xml.bind.DatatypeConverter
 import kotlin.collections.ArrayList
 
 class Vp9AdaptiveSourceProjectionTest {
     private val logger: Logger = LoggerImpl(javaClass.name)
-    private val payloadType: PayloadType = Vp9PayloadType(
-        96.toByte(),
-        ConcurrentHashMap(), CopyOnWriteArraySet()
-    )
 
     @Test
     fun singlePacketProjectionTest() {
@@ -64,7 +56,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = "singlePacketProjectionTest"
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         val generator = ScalableVp9PacketGenerator(1)
@@ -90,7 +82,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         var expectedSeq = 10001
@@ -169,7 +161,6 @@ class Vp9AdaptiveSourceProjectionTest {
         var orderedCount = initialOrderedCount - 1
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState, logger
         )
         var latestSeq = buffer[0]!!.packetAs<Vp9Packet>().sequenceNumber
@@ -490,7 +481,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = "slightlyDelayedKeyframeTest"
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         val firstPacketInfo = generator.nextPacket()
@@ -533,7 +524,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = "veryDelayedKeyframeTest"
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         val firstPacketInfo = generator.nextPacket()
@@ -586,7 +577,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = "delayedPartialKeyframeTest"
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         val firstPacketInfo = generator.nextPacket()
@@ -639,7 +630,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = "twoStreamsNoSwitchingTest"
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         val targetIndex = getIndex(eid = 1, sid = 0, tid = 2)
@@ -681,7 +672,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = "twoStreamsSwitchingTest"
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         var expectedSeq = 10001
@@ -850,7 +841,7 @@ class Vp9AdaptiveSourceProjectionTest {
         diagnosticContext["test"] = "temporalLayerSwitchingTest"
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
-            diagnosticContext, payloadType,
+            diagnosticContext,
             initialState, logger
         )
         var targetTid = 0
@@ -907,7 +898,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState, logger
         )
         var expectedSeq = 10001
@@ -1035,7 +1025,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState, logger
         )
         var expectedSeq = 10001

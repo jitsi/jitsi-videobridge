@@ -39,8 +39,6 @@ import static org.junit.Assert.*;
 public class VP8AdaptiveSourceProjectionTest
 {
     private final Logger logger = new LoggerImpl(getClass().getName());
-    private final PayloadType payloadType = new Vp8PayloadType((byte)96,
-        new ConcurrentHashMap<>(), new CopyOnWriteArraySet<>());
 
     @Test
     public void singlePacketProjectionTest() throws RewriteException
@@ -52,8 +50,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         Vp8PacketGenerator generator = new Vp8PacketGenerator(1);
 
@@ -84,7 +81,7 @@ public class VP8AdaptiveSourceProjectionTest
         int targetIndex = RtpLayerDesc.getIndex(0, 0, targetTid);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext,
                 initialState, logger);
 
         int expectedSeq = 10001;
@@ -176,7 +173,6 @@ public class VP8AdaptiveSourceProjectionTest
 
         VP8AdaptiveSourceProjectionContext context =
             new VP8AdaptiveSourceProjectionContext(diagnosticContext,
-                payloadType,
                 initialState, logger);
 
         int latestSeq = buffer.get(0).<Vp8Packet>packetAs().getSequenceNumber();
@@ -385,8 +381,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         PacketInfo firstPacketInfo = generator.nextPacket();
         Vp8Packet firstPacket = firstPacketInfo.packetAs();
@@ -426,8 +421,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         PacketInfo firstPacketInfo = generator.nextPacket();
         Vp8Packet firstPacket = firstPacketInfo.packetAs();
@@ -476,8 +470,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         PacketInfo firstPacketInfo = generator.nextPacket();
         Vp8Packet firstPacket = firstPacketInfo.packetAs();
@@ -528,8 +521,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         int targetIndex = RtpLayerDesc.getIndex(1, 0, 2);
 
@@ -574,8 +566,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;
@@ -745,8 +736,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext, payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         int targetTid = 0;
         int decodableTid = 0;
@@ -830,9 +820,7 @@ public class VP8AdaptiveSourceProjectionTest
             new RtpState(1, 10000, 1000000);
 
         VP8AdaptiveSourceProjectionContext context =
-            new VP8AdaptiveSourceProjectionContext(diagnosticContext,
-                payloadType,
-                initialState, logger);
+            new VP8AdaptiveSourceProjectionContext(diagnosticContext, initialState, logger);
 
         int expectedSeq = 10001;
         long expectedTs = 1003000;

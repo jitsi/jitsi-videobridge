@@ -84,12 +84,6 @@ public interface AdaptiveSourceProjectionContext
     RtpState getRtpState();
 
     /**
-     * @return the {@link PayloadType} of the RTP packets that this context
-     * processes.
-     */
-    PayloadType getPayloadType();
-
-    /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */

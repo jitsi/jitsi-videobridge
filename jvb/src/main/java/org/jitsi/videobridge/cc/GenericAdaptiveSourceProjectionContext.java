@@ -71,9 +71,9 @@ class GenericAdaptiveSourceProjectionContext
     private boolean needsKeyframe = true;
 
     /**
-     * Useful to determine whether a packet is a "keyframe".
+     * Useful to determine when we need to change generic projection contexts.
      */
-    private final PayloadType payloadType;
+    private final int payloadType;
 
     /**
      * The maximum sequence number that we have sent.
@@ -111,7 +111,7 @@ class GenericAdaptiveSourceProjectionContext
      * @param rtpState the RTP state (i.e. seqnum, timestamp to start with, etc).
      */
     GenericAdaptiveSourceProjectionContext(
-            @NotNull PayloadType payloadType,
+            int payloadType,
             @NotNull RtpState rtpState,
             @NotNull Logger parentLogger)
     {
@@ -329,8 +329,7 @@ class GenericAdaptiveSourceProjectionContext
                 ssrc, maxDestinationSequenceNumber, maxDestinationTimestamp);
     }
 
-    @Override
-    public PayloadType getPayloadType()
+    public int getPayloadType()
     {
         return payloadType;
     }
