@@ -54,6 +54,20 @@ fun main() {
     Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
         logger.error("An uncaught exception occurred in thread=$thread", exception)
     }
+    val l1 = Any()
+    val l2 = Any()
+    Thread {
+        synchronized(l1) {
+            Thread.sleep(100)
+            synchronized(l2) { logger.info("1") }
+        }
+    }.start()
+    Thread {
+        synchronized(l2) {
+            Thread.sleep(100)
+            synchronized(l1) { logger.info("2") }
+        }
+    }.start()
 
     setupMetaconfigLogger()
 
