@@ -204,6 +204,18 @@ class Av1DDAdaptiveSourceProjectionContext(
         av1FrameMaps[frame.ssrc]?.nextFrame(frame)
 
     /**
+     * Find the previous accepted frame before the given one.
+     */
+    private fun findPrevAcceptedFrame(frame: Av1DDFrame) =
+        av1FrameMaps[frame.ssrc]?.findPrevAcceptedFrame(frame)
+
+    /**
+     * Find the next accepted frame after the given one.
+     */
+    private fun findNextAcceptedFrame(frame: Av1DDFrame) =
+        av1FrameMaps[frame.ssrc]?.findNextAcceptedFrame(frame)
+
+    /**
      * Create a projection for this frame.
      */
     private fun createProjection(
@@ -436,7 +448,91 @@ class Av1DDAdaptiveSourceProjectionContext(
         newDt: Int?,
         receivedTime: Instant?
     ): Av1DDFrameProjection {
-        TODO("Not yet implemented")
+        val prevFrame = findPrevAcceptedFrame(frame)
+        if (prevFrame != null) {
+            return createInEncodingProjection(frame, prevFrame, initialPacket, mark, newDt, receivedTime)
+        }
+
+        /* prev frame has rolled off beginning of frame map, try next frame */
+        val nextFrame = findNextAcceptedFrame(frame)
+        if (nextFrame != null) {
+            return createInEncodingProjection(frame, nextFrame, initialPacket, mark, newDt, receivedTime)
+        }
+
+        /* Neither previous or next is found. Very big frame? Use previous projected.
+           (This must be valid because we don't execute this function unless
+           frameIsNewSsrc has returned false.)
+         */
+        return createInEncodingProjection(
+            frame, lastAv1FrameProjection.av1Frame!!,
+            initialPacket, mark, newDt, receivedTime
+        )
+    }
+
+    /**
+     * Create a frame projection for the normal case, i.e. as part of the same encoding as the
+     * previously-projected frame, based on a specific chosen previously-projected frame.
+     */
+    private fun createInEncodingProjection(
+        frame: Av1DDFrame,
+        refFrame: Av1DDFrame,
+        initialPacket: Av1DDPacket,
+        mark: Boolean,
+        newDt: Int?,
+        receivedTime: Instant?
+    ): Av1DDFrameProjection {
+        val tsGap = RtpUtils.getTimestampDiff(frame.timestamp, refFrame.timestamp)
+        val frameNumGap = RtpUtils.getSequenceNumberDelta(frame.frameNumber, refFrame.frameNumber)
+        var seqGap = 0
+
+        var f1 = refFrame
+        var f2: Av1DDFrame?
+        val refSeq: Int
+        if (frameNumGap > 0) {
+            /* refFrame is earlier than frame in decode order. */
+            do {
+                f2 = nextFrame(f1)
+                checkNotNull(f2) {
+                    "No next frame found after frame with frame number ${f1.frameNumber}, " +
+                        "even though refFrame ${refFrame.frameNumber} is before " +
+                        "frame ${frame.frameNumber}!"
+                }
+                seqGap += seqGap(f1, f2)
+                f1 = f2
+            } while (f2 !== frame)
+            /* refFrame is a projected frame, so it has a projection. */
+            refSeq = refFrame.projection!!.latestProjectedSeqNum
+        } else {
+            /* refFrame is later than frame in decode order. */
+            do {
+                f2 = prevFrame(f1)
+                checkNotNull(f2) {
+                    "No previous frame found before frame with frame number ${f1.frameNumber}, " +
+                        "even though refFrame ${refFrame.frameNumber} is after " +
+                        "frame ${frame.frameNumber}!"
+                }
+                seqGap += -seqGap(f2, f1)
+                f1 = f2
+            } while (f2 !== frame)
+            refSeq = refFrame.projection!!.earliestProjectedSeqNum
+        }
+
+        val projectedSeq = RtpUtils.applySequenceNumberDelta(refSeq, seqGap)
+        val projectedTs = RtpUtils.applyTimestampDelta(refFrame.projection!!.timestamp, tsGap)
+        val projectedFrameNumber = RtpUtils.applySequenceNumberDelta(refFrame.projection!!.frameNumber, frameNumGap)
+
+        return Av1DDFrameProjection(
+            diagnosticContext = diagnosticContext,
+            av1Frame = frame,
+            ssrc = lastAv1FrameProjection.ssrc,
+            timestamp = projectedTs,
+            sequenceNumberDelta = RtpUtils.getSequenceNumberDelta(projectedSeq, initialPacket.sequenceNumber),
+            frameNumber = projectedFrameNumber,
+            templateIdDelta = lastAv1FrameProjection.templateIdDelta,
+            dti = newDt?.let { frame.structure?.getDtBitmaskForDt(it) },
+            mark = mark,
+            created = receivedTime
+        )
     }
 
     override fun needsKeyframe(): Boolean {
