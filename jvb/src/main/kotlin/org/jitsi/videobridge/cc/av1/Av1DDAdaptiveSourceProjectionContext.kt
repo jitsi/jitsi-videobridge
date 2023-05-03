@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
@@ -133,7 +132,7 @@ class Av1DDAdaptiveSourceProjectionContext(
                 .addField("seq", packet.sequenceNumber)
                 .addField("frameNumber", packet.frameNumber)
                 // TODO add relevant fields from AV1 DD for debugging
-                .addField("targetIndex", RtpLayerDesc.indexString(targetIndex))
+                .addField("targetIndex", Av1DDRtpLayerDesc.indexString(targetIndex))
                 .addField("new_frame", result.isNewFrame)
                 .addField("accept", accept)
             av1QualityFilter.addDiagnosticContext(pt)
