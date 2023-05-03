@@ -550,7 +550,7 @@ class Av1DDAdaptiveSourceProjectionContext(
         }
         val av1Packet = packetInfo.packetAs<Av1DDPacket>()
 
-        val av1Frame: Av1DDFrame = lookupAv1Frame(av1Packet)
+        val av1Frame = lookupAv1Frame(av1Packet)
             ?: throw RewriteException("Frame not in tracker (aged off?)")
 
         val av1Projection = av1Frame.projection
