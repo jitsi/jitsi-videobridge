@@ -19,12 +19,14 @@ import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.av1.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.rtp.codec.vp9.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
+import org.jitsi.videobridge.cc.av1.*;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi.videobridge.cc.vp9.*;
 import org.json.simple.*;
@@ -259,6 +261,21 @@ public class AdaptiveSourceProjection
                     (context == null ? "creating new" : "changing to") +
                     " VP9 context for source packet ssrc " + rtpPacket.getSsrc());
                 context = new Vp9AdaptiveSourceProjectionContext(
+                    diagnosticContext, rtpState, parentLogger);
+            }
+
+            return context;
+        }
+        else if (rtpPacket instanceof Av1DDPacket)
+        {
+            if (!(context instanceof Av1DDAdaptiveSourceProjectionContext))
+            {
+                // context switch
+                RtpState rtpState = getRtpState();
+                logger.debug(() -> "adaptive source projection " +
+                    (context == null ? "creating new" : "changing to") +
+                    " AV1 DD context for source packet ssrc " + rtpPacket.getSsrc());
+                context = new Av1DDAdaptiveSourceProjectionContext(
                     diagnosticContext, rtpState, parentLogger);
             }
 
