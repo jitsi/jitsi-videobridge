@@ -101,6 +101,12 @@ class Av1DDFrameMap(
         return PacketInsertionResult(newframe, true)
     }
 
+    /** Insert a frame. Only used for unit testing. */
+    @Synchronized
+    internal fun insertFrame(frame: Av1DDFrame) {
+        frameHistory.insert(frame)
+    }
+
     @Synchronized
     fun hasFrame(frameNum: Int) = frameHistory[frameNum] != null
 
