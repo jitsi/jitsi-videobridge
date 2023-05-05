@@ -44,6 +44,76 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 }
             }
         }
+        context("A temporally scalable stream") {
+            should("be entirely projected when TL2 is requested") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = TemporallyScaledFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex) {
+                        _, result ->
+                    result.accept shouldBe true
+                    result.mark shouldBe true
+                    filter.needsKeyframe shouldBe false
+                }
+            }
+            should("project only the base temporal layer when targeted") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = TemporallyScaledFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 0)
+
+                testGenerator(generator, filter, targetIndex) {
+                        f, result ->
+                    result.accept shouldBe (f.frameInfo!!.temporalId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("project only the intermediate temporal layer when targeted") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = TemporallyScaledFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 1)
+
+                testGenerator(generator, filter, targetIndex) {
+                        f, result ->
+                    result.accept shouldBe (f.frameInfo!!.temporalId <= 1)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to switch the targeted layers, without a keyframe") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = TemporallyScaledFrameGenerator(av1FrameMaps)
+                val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 0)
+
+                testGenerator(generator, filter, targetIndex1, numFrames = 500) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.temporalId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+                val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex2) { _, result ->
+                    result.accept shouldBe true
+                    result.mark shouldBe true
+                    filter.needsKeyframe shouldBe false
+                }
+            }
+        }
     }
 
     private fun testGenerator(
@@ -79,14 +149,14 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
     }
 
     companion object {
-        private val logger = LoggerImpl(getClassForLogging(this::class.java).name)
+        val logger = LoggerImpl(getClassForLogging(this::class.java).name)
     }
 }
 
 private abstract class FrameGenerator : Iterator<Av1DDFrame>
 
-/** Generate a non-scalable series of VP9 frames, with a single keyframe at the start. */
-private class SingleLayerFrameGenerator(val av1FrameMaps: Map<Long, Av1DDFrameMap>) : FrameGenerator() {
+/** Generate a non-scalable series of AV1 frames, with a single keyframe at the start. */
+private class SingleLayerFrameGenerator(val av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : FrameGenerator() {
     private val totalFrames = 1000
     private var frameCount = 0
 
@@ -110,7 +180,7 @@ private class SingleLayerFrameGenerator(val av1FrameMaps: Map<Long, Av1DDFrameMa
             activeDecodeTargets = null,
             isKeyframe = (frameCount == 0)
         )
-        av1FrameMaps[f.ssrc]?.insertFrame(f)
+        av1FrameMaps.getOrPut(f.ssrc) { Av1DDFrameMap(Av1DDQualityFilterTest.logger) }.insertFrame(f)
         frameCount++
         return f
     }
@@ -118,5 +188,50 @@ private class SingleLayerFrameGenerator(val av1FrameMaps: Map<Long, Av1DDFrameMa
     companion object {
         /* DD with structure for single temporal and single spatial layer. */
         private val dd = DatatypeConverter.parseHexBinary("80000180003a410180ef808680")
+    }
+}
+
+/** Generate a temporally-scaled series of AV1 frames, with a single keyframe at the start. */
+private class TemporallyScaledFrameGenerator(val av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : FrameGenerator() {
+    private val totalFrames = 1000
+    private var frameCount = 0
+
+    private val structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+
+    override fun hasNext(): Boolean = frameCount < totalFrames
+
+    override fun next(): Av1DDFrame {
+        val tCycle = frameCount % normalTemplates.size
+        val templateId = if (frameCount < keyframeTemplates.size)
+            keyframeTemplates[tCycle]
+        else
+            normalTemplates[tCycle]
+
+        val f = Av1DDFrame(
+            ssrc = 0,
+            timestamp = frameCount * 3000L,
+            earliestKnownSequenceNumber = frameCount,
+            latestKnownSequenceNumber = frameCount,
+            seenStartOfFrame = true,
+            seenEndOfFrame = true,
+            seenMarker = true,
+            frameInfo = structure.templateInfo[templateId],
+            frameNumber = frameCount, /* Will be less than 0xffff */
+            index = frameCount,
+            structure = structure,
+            activeDecodeTargets = null,
+            isKeyframe = (frameCount == 0)
+        )
+        av1FrameMaps.getOrPut(f.ssrc) { Av1DDFrameMap(Av1DDQualityFilterTest.logger) }.insertFrame(f)
+        frameCount++
+        return f
+    }
+
+    companion object {
+        val keyframeTemplates = arrayOf(0)
+        val normalTemplates = arrayOf(1, 3, 2, 4)
+
+        /* DD with structure for three temporal layers */
+        private val dd = DatatypeConverter.parseHexBinary("800001800214eaa860414d141020842701df010d")
     }
 }

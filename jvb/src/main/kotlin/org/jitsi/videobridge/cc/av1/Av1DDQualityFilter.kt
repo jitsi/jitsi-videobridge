@@ -144,7 +144,7 @@ internal class Av1DDQualityFilter(
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            acceptKeyframe(incomingEncoding, incomingIndices, receivedTime)
+            acceptKeyframe(incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
         } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
             if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
@@ -306,6 +306,7 @@ internal class Av1DDQualityFilter(
     private fun acceptKeyframe(
         incomingEncoding: Int,
         incomingIndices: Collection<Int>,
+        externalTargetIndex: Int,
         receivedTime: Instant?
     ): Boolean {
         // This branch writes the {@link #currentSpatialLayerId} and it
@@ -322,11 +323,13 @@ internal class Av1DDQualityFilter(
         }
 
         val currentEncoding = getEidFromIndex(currentIndex)
+        val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
 
-        val indexIfAccepted = if (currentEncoding == internalTargetEncoding) {
-            getIndex(currentEncoding, internalTargetDt)
-        } else {
-            incomingIndices.maxOrNull()!!
+        val indexIfAccepted = when {
+            incomingEncoding == externalTargetEncoding -> externalTargetIndex
+            incomingEncoding == internalTargetEncoding && internalTargetDt != -1 ->
+                getIndex(currentEncoding, internalTargetDt)
+            else -> incomingIndices.maxOrNull()!!
         }
 
         // The keyframe request has been fulfilled at this point, regardless of
