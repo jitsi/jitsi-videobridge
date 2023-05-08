@@ -60,9 +60,9 @@ public class SctpManager
         if (config.enabled())
         {
             classLogger.info("Initializing Sctp4j");
-            // TODO: We pass DEFAULT_SCTP_PORT as the udp_port parameter to usrsctp_init, which probably doesn't make
-            // sense.
-            Sctp4j.init(DEFAULT_SCTP_PORT);
+            // "If UDP encapsulation is not necessary, the UDP port has to be set to 0"
+            // All our SCTP is encapsulated in DTLS, we don't use direct UDP encapsulation.
+            Sctp4j.init(0);
         }
         else
         {
