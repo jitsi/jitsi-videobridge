@@ -108,7 +108,7 @@ class Av1DDFrameMap(
     }
 
     @Synchronized
-    fun hasFrame(frameNum: Int) = frameHistory[frameNum] != null
+    fun getIndex(frameIndex: Int) = frameHistory.getIndex(frameIndex)
 
     @Synchronized
     fun nextFrame(frame: Av1DDFrame): Av1DDFrame? {
@@ -154,7 +154,7 @@ internal class FrameHistory(size: Int) :
     var indexTracker = Rfc3711IndexTracker()
 
     /**
-     * Gets a frame with a given VP8 picture ID from the cache.
+     * Gets a frame with a given frame number from the cache.
      */
     operator fun get(frameNumber: Int): Av1DDFrame? {
         val index = indexTracker.interpret(frameNumber)
@@ -162,9 +162,9 @@ internal class FrameHistory(size: Int) :
     }
 
     /**
-     * Gets a frame with a given VP8 picture ID index from the cache.
+     * Gets a frame with a given frame number index from the cache.
      */
-    private fun getIndex(index: Int): Av1DDFrame? {
+    fun getIndex(index: Int): Av1DDFrame? {
         if (index <= lastIndex - size) {
             /* We don't want to remember old frames even if they're still
                tracked; their neighboring frames may have been evicted,

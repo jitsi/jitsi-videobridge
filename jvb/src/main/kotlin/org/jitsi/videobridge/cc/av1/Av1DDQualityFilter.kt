@@ -214,7 +214,7 @@ internal class Av1DDQualityFilter(
                 if (frameInfo.dti[externalTargetDt] == DTI.SWITCH &&
                     frameMap != null &&
                     frameInfo.fdiff.all {
-                        frameMap.hasFrame(frame.frameNumber - it)
+                        frameMap.getIndex(frame.index - it)?.isAccepted == true
                     }
                 ) {
                     logger.debug { "Switching to DT $externalTargetDt from $currentDt" }
@@ -351,9 +351,7 @@ internal class Av1DDQualityFilter(
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                if (currentEncoding != incomingEncoding) {
-                    currentIndex = indexIfAccepted
-                }
+                currentIndex = indexIfAccepted
                 true
             } else {
                 false
@@ -366,9 +364,7 @@ internal class Av1DDQualityFilter(
                 currentEncoding <= incomingEncoding &&
                     incomingEncoding <= internalTargetEncoding -> {
                     // upscale or current quality case
-                    if (currentEncoding != incomingEncoding) {
-                        currentIndex = indexIfAccepted
-                    }
+                    currentIndex = indexIfAccepted
                     logger.debug {
                         "Upscaling to encoding $incomingEncoding. " +
                             "The target is $internalTargetEncoding"
