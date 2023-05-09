@@ -144,7 +144,7 @@ internal class Av1DDQualityFilter(
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            acceptKeyframe(incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
+            acceptKeyframe(frame, incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
         } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
             if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
@@ -304,6 +304,7 @@ internal class Av1DDQualityFilter(
      */
     @Synchronized
     private fun acceptKeyframe(
+        frame: Av1DDFrame,
         incomingEncoding: Int,
         incomingIndices: Collection<Int>,
         externalTargetIndex: Int,
@@ -318,6 +319,12 @@ internal class Av1DDQualityFilter(
             logger.error("unable to get layer id from keyframe")
             return false
         }
+        val frameInfo = frame.frameInfo ?: run {
+            // something went terribly wrong, normally we should be able to
+            // extract the frame info from a keyframe.
+            logger.error("unable to get layer id from keyframe")
+            return@acceptKeyframe false
+        }
         logger.debug {
             "Received a keyframe of encoding: $incomingEncoding"
         }
@@ -325,12 +332,14 @@ internal class Av1DDQualityFilter(
         val currentEncoding = getEidFromIndex(currentIndex)
         val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
 
-        val indexIfAccepted = when {
+        val indexIfSwitched = when {
             incomingEncoding == externalTargetEncoding -> externalTargetIndex
             incomingEncoding == internalTargetEncoding && internalTargetDt != -1 ->
                 getIndex(currentEncoding, internalTargetDt)
             else -> incomingIndices.maxOrNull()!!
         }
+        val dtIfSwitched = getDtFromIndex(indexIfSwitched)
+        val dtiIfSwitched = frameInfo.dti[dtIfSwitched]
 
         // The keyframe request has been fulfilled at this point, regardless of
         // whether we'll be able to achieve the internalEncodingIdTarget.
@@ -351,8 +360,8 @@ internal class Av1DDQualityFilter(
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                currentIndex = indexIfAccepted
-                true
+                currentIndex = indexIfSwitched
+                dtiIfSwitched != DTI.NOT_PRESENT
             } else {
                 false
             }
@@ -364,22 +373,22 @@ internal class Av1DDQualityFilter(
                 currentEncoding <= incomingEncoding &&
                     incomingEncoding <= internalTargetEncoding -> {
                     // upscale or current quality case
-                    currentIndex = indexIfAccepted
+                    currentIndex = indexIfSwitched
                     logger.debug {
                         "Upscaling to encoding $incomingEncoding. " +
                             "The target is $internalTargetEncoding"
                     }
-                    true
+                    dtiIfSwitched != DTI.NOT_PRESENT
                 }
                 incomingEncoding <= internalTargetEncoding &&
                     internalTargetEncoding < currentEncoding -> {
                     // downscale case
-                    currentIndex = indexIfAccepted
+                    currentIndex = indexIfSwitched
                     logger.debug {
                         "Downscaling to encoding $incomingEncoding. " +
                             "The target is $internalTargetEncoding"
                     }
-                    true
+                    dtiIfSwitched != DTI.NOT_PRESENT
                 }
                 else -> {
                     false

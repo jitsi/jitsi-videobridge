@@ -40,6 +40,11 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
             "00016d549241b5524906d54923157e001974ca864330e222396eca8655304224390eca87753013f00b3027f016704ff02cf"
     )
 
+    val descS3T3 = parseHexBinary(
+        "c1000180081485214ea000a8000600004000100002a000a8000600004000100002a000a8000600004" +
+            "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434"
+    )
+
     init {
         context("AV1 Dependency Descriptors") {
             context("a descriptor with a single-layer dependency structure") {
@@ -306,6 +311,77 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val buf = ByteArray(lds.encodedLength)
                     lds.write(buf, 0, buf.size)
                     buf shouldBe descL1T3
+                }
+            }
+            context("a descriptor with a simulcast dependency structure") {
+                val ldsr = Av1DependencyDescriptorReader(descS3T3, 0, descS3T3.size)
+                val lds = ldsr.parse(null)
+                should("be parsed properly") {
+                    lds.startOfFrame shouldBe true
+                    lds.endOfFrame shouldBe true
+                    lds.frameNumber shouldBe 0x0001
+                    lds.activeDecodeTargetsBitmask shouldBe 0x1ff
+
+                    val structure = lds.newTemplateDependencyStructure
+                    structure shouldNotBe null
+                    structure!!.decodeTargetCount shouldBe 9
+                    structure.maxTemporalId shouldBe 2
+                    structure.maxSpatialId shouldBe 2
+                }
+                should("calculate correct frame info") {
+                    val ldsi = lds.frameInfo
+                    ldsi.spatialId shouldBe 0
+                    ldsi.temporalId shouldBe 0
+                }
+                should("calculate correctly whether layer switching needs keyframes") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    for (fromS in 0..2) {
+                        for (fromT in 0..2) {
+                            val fromDT = 3 * fromS + fromT
+                            for (toS in 0..2) {
+                                for (toT in 0..2) {
+                                    val toDT = 3 * toS + toT
+                                    /* With this structure you can switch to other temporal
+                                     * layers within the same spatial layer, without a keyframe; but switching
+                                     * spatial layers needs a keyframe.
+                                     */
+                                    withClue("from DT $fromDT to DT $toDT") {
+                                        if (fromS == toS) {
+                                            structure.canSwitchWithoutKeyframe(
+                                                fromDt = fromDT,
+                                                toDt = toDT
+                                            ) shouldBe true
+                                        } else {
+                                            structure.canSwitchWithoutKeyframe(
+                                                fromDt = fromDT,
+                                                toDt = toDT
+                                            ) shouldBe false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                should("calculate DTI bitmasks corresponding to a given DT") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    structure.getDtBitmaskForDt(0) shouldBe 0b000000001
+                    structure.getDtBitmaskForDt(1) shouldBe 0b000000011
+                    structure.getDtBitmaskForDt(2) shouldBe 0b000000111
+                    structure.getDtBitmaskForDt(3) shouldBe 0b000001000
+                    structure.getDtBitmaskForDt(4) shouldBe 0b000011000
+                    structure.getDtBitmaskForDt(5) shouldBe 0b000111000
+                    structure.getDtBitmaskForDt(6) shouldBe 0b001000000
+                    structure.getDtBitmaskForDt(7) shouldBe 0b011000000
+                    structure.getDtBitmaskForDt(8) shouldBe 0b111000000
+                }
+                should("Calculate its own length properly") {
+                    lds.encodedLength shouldBe descS3T3.size
+                }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(lds.encodedLength)
+                    lds.write(buf, 0, buf.size)
+                    buf shouldBe descS3T3
                 }
             }
         }
