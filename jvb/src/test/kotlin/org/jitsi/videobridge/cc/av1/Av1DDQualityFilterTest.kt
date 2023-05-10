@@ -21,6 +21,7 @@ import io.kotest.matchers.shouldBe
 import jakarta.xml.bind.DatatypeConverter
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
+import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
@@ -603,11 +604,15 @@ private open class DDBasedGenerator(
     val keyframeInterval: Int,
     val keyframeTemplates: Array<Int>,
     val normalTemplates: Array<Int>,
-    val ddHex: String
+    ddHex: String
 ) : FrameGenerator() {
     private var frameCount = 0
-    private val dd = DatatypeConverter.parseHexBinary(ddHex)
-    private val structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+    private val structure: Av1TemplateDependencyStructure
+
+    init {
+        val dd = DatatypeConverter.parseHexBinary(ddHex)
+        structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+    }
 
     override fun hasNext(): Boolean = frameCount < totalFrames
 
