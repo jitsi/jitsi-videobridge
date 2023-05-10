@@ -50,6 +50,11 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
             "0016d549241b5524906d54923157e001974ca864330e222396eca8655304224390eca87753013f00b3027f016704ff02cf"
     )
 
+    /* As of Chrome version 111, it doesn't support L3T3_KEY_SHIFT, but it does support L2T2_KEY_SHIFT, so test that. */
+    val descL2T2_KEY_SHIFT = parseHexBinary(
+        "8700ed80e3061eaa82804028280514d14134518010a091889a09409fc059c13fc0b3c0"
+    )
+
     init {
         context("AV1 Dependency Descriptors") {
             context("a descriptor with a single-layer dependency structure") {
@@ -189,7 +194,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                             for (toS in 0..2) {
                                 for (toT in 0..2) {
                                     val toDT = 3 * toS + toT
-                                    /* With this structure you can to other temporal
+                                    /* With this structure you can switch to other temporal
                                      * layers within the same spatial layer, without a keyframe; but switching
                                      * spatial layers needs a keyframe.
                                      */
@@ -230,6 +235,72 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val buf = ByteArray(lds.encodedLength)
                     lds.write(buf, 0, buf.size)
                     buf shouldBe descL3T3_KEY
+                }
+            }
+            context("a descriptor with a K-SVC dependency structure with key shift") {
+                val ldsr = Av1DependencyDescriptorReader(descL2T2_KEY_SHIFT, 0, descL2T2_KEY_SHIFT.size)
+                val lds = ldsr.parse(null)
+                should("be parsed properly") {
+                    lds.startOfFrame shouldBe true
+                    lds.endOfFrame shouldBe false
+                    lds.frameNumber shouldBe 0x00ed
+                    lds.activeDecodeTargetsBitmask shouldBe 0x0f
+
+                    val structure = lds.newTemplateDependencyStructure
+                    structure shouldNotBe null
+                    structure!!.decodeTargetCount shouldBe 4
+                    structure.maxTemporalId shouldBe 1
+                    structure.maxSpatialId shouldBe 1
+                }
+                should("calculate correct frame info") {
+                    val ldsi = lds.frameInfo
+                    ldsi.spatialId shouldBe 0
+                    ldsi.temporalId shouldBe 0
+                }
+                should("calculate correctly whether layer switching needs keyframes") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    for (fromS in 0..1) {
+                        for (fromT in 0..1) {
+                            val fromDT = 2 * fromS + fromT
+                            for (toS in 0..1) {
+                                for (toT in 0..1) {
+                                    val toDT = 2 * toS + toT
+                                    /* With this structure you can switch to other temporal
+                                     * layers within the same spatial layer, without a keyframe; but switching
+                                     * spatial layers needs a keyframe.
+                                     */
+                                    withClue("from DT $fromDT to DT $toDT") {
+                                        if (fromS == toS) {
+                                            structure.canSwitchWithoutKeyframe(
+                                                fromDt = fromDT,
+                                                toDt = toDT
+                                            ) shouldBe true
+                                        } else {
+                                            structure.canSwitchWithoutKeyframe(
+                                                fromDt = fromDT,
+                                                toDt = toDT
+                                            ) shouldBe false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                should("calculate DTI bitmasks corresponding to a given DT") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    structure.getDtBitmaskForDt(0) shouldBe 0b0001
+                    structure.getDtBitmaskForDt(1) shouldBe 0b0011
+                    structure.getDtBitmaskForDt(2) shouldBe 0b0100
+                    structure.getDtBitmaskForDt(3) shouldBe 0b1100
+                }
+                should("Calculate its own length properly") {
+                    lds.encodedLength shouldBe descL2T2_KEY_SHIFT.size
+                }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(lds.encodedLength)
+                    lds.write(buf, 0, buf.size)
+                    buf shouldBe descL2T2_KEY_SHIFT
                 }
             }
             context("a descriptor following the dependency structure, specifying decode targets") {
