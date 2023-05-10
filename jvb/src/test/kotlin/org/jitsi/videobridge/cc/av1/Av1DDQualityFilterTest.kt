@@ -37,8 +37,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val generator = SingleLayerFrameGenerator(av1FrameMaps)
                 val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 0)
 
-                testGenerator(generator, filter, targetIndex) {
-                        _, result ->
+                testGenerator(generator, filter, targetIndex) { _, result ->
                     result.accept shouldBe true
                     result.mark shouldBe true
                     filter.needsKeyframe shouldBe false
@@ -53,8 +52,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val generator = TemporallyScaledFrameGenerator(av1FrameMaps)
                 val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2)
 
-                testGenerator(generator, filter, targetIndex) {
-                        _, result ->
+                testGenerator(generator, filter, targetIndex) { _, result ->
                     result.accept shouldBe true
                     result.mark shouldBe true
                     filter.needsKeyframe shouldBe false
@@ -67,8 +65,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val generator = TemporallyScaledFrameGenerator(av1FrameMaps)
                 val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 0)
 
-                testGenerator(generator, filter, targetIndex) {
-                        f, result ->
+                testGenerator(generator, filter, targetIndex) { f, result ->
                     result.accept shouldBe (f.frameInfo!!.temporalId == 0)
                     if (result.accept) {
                         result.mark shouldBe true
@@ -83,8 +80,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val generator = TemporallyScaledFrameGenerator(av1FrameMaps)
                 val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 1)
 
-                testGenerator(generator, filter, targetIndex) {
-                        f, result ->
+                testGenerator(generator, filter, targetIndex) { f, result ->
                     result.accept shouldBe (f.frameInfo!!.temporalId <= 1)
                     if (result.accept) {
                         result.mark shouldBe true
@@ -216,343 +212,453 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            context("A K-SVC spatially scalable stream") {
-                should("be able to be shaped to SL2/TL2") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+        }
+        context("A K-SVC spatially scalable stream") {
+            should("be able to be shaped to SL2/TL2") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCFrameGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
 
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (
-                            f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency()
-                            )
-                        result.mark shouldBe (f.frameInfo!!.spatialId == 2)
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (
+                        f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency()
+                        )
+                    result.mark shouldBe (f.frameInfo!!.spatialId == 2)
+                    filter.needsKeyframe shouldBe false
+                }
+            }
+            should("be able to be shaped to SL0/TL2") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe (f.frameInfo!!.spatialId == 0)
                         filter.needsKeyframe shouldBe false
                     }
                 }
-                should("be able to be shaped to SL0/TL2") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCFrameGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2)
-
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe (f.frameInfo!!.spatialId == 0)
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to be shaped to SL1/TL2") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCFrameGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
-
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (
-                            f.frameInfo!!.spatialId == 1 || (
-                                f.frameInfo!!.spatialId == 0 && !f.frameInfo!!.hasInterPictureDependency()
-                                )
-                            )
-                        if (result.accept) {
-                            result.mark shouldBe (f.frameInfo!!.spatialId == 1)
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to be shaped to SL2/TL0") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCFrameGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 0)
-
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (
-                            f.frameInfo!!.temporalId == 0 && (
-                                f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency()
-                                )
-                            )
-                        if (result.accept) {
-                            result.mark shouldBe (f.frameInfo!!.spatialId == 2)
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to switch spatial layers") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCFrameGenerator(av1FrameMaps)
-
-                    /* Start by sending spatial layer 0. */
-                    val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 2)
-
-                    testGenerator(generator, filter, targetIndex1, numFrames = 1200) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe (f.frameInfo!!.spatialId == 0)
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-
-                    /* Switch to spatial layer 2.  Need a keyframe. */
-                    val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
-                    var sawKeyframe = false
-                    testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
-                        if (f.isKeyframe) sawKeyframe = true
-                        result.accept shouldBe if (!sawKeyframe)
-                            (f.frameInfo!!.spatialId == 0)
-                        else
-                            (f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency())
-                        if (result.accept) {
-                            result.mark shouldBe if (!sawKeyframe)
-                                (f.frameInfo!!.spatialId == 0)
-                            else
-                                (f.frameInfo!!.spatialId == 2)
-                            filter.needsKeyframe shouldBe (!sawKeyframe)
-                        }
-                    }
-
-                    /* Switch to spatial layer 1.  For K-SVC, dropping down in spatial layers needs a keyframe. */
-                    val targetIndex3 = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
-                    sawKeyframe = false
-                    testGenerator(generator, filter, targetIndex3) { f, result ->
-                        if (f.isKeyframe) sawKeyframe = true
-                        result.accept shouldBe if (!sawKeyframe)
-                            (f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency())
-                        else
-                            (
-                                f.frameInfo!!.spatialId == 1 || (
-                                    f.frameInfo!!.spatialId == 0 && !f.frameInfo!!.hasInterPictureDependency()
-                                    )
-                                )
-                        if (result.accept) {
-                            result.mark shouldBe if (!sawKeyframe)
-                                (f.frameInfo!!.spatialId == 2)
-                            else
-                                (f.frameInfo!!.spatialId == 1)
-                            filter.needsKeyframe shouldBe (!sawKeyframe)
-                        }
-                    }
-                }
             }
-            context("A K-SVC spatially scalable stream with a temporal shift") {
-                should("be able to be shaped to SL1/TL1") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+            should("be able to be shaped to SL1/TL2") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCShiftFrameGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2 * 1 + 1)
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
 
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (
-                            f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency()
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (
+                        f.frameInfo!!.spatialId == 1 || (
+                            f.frameInfo!!.spatialId == 0 && !f.frameInfo!!.hasInterPictureDependency()
                             )
+                        )
+                    if (result.accept) {
                         result.mark shouldBe (f.frameInfo!!.spatialId == 1)
                         filter.needsKeyframe shouldBe false
                     }
                 }
-                should("be able to be shaped to SL0/TL1") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+            }
+            should("be able to be shaped to SL2/TL0") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCShiftFrameGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 1)
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 0)
 
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe (f.frameInfo!!.spatialId == 0)
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to be shaped to SL1/TL0") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCShiftFrameGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2 * 1 + 0)
-
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (
-                            f.frameInfo!!.temporalId == 0 && (
-                                f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency()
-                                )
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (
+                        f.frameInfo!!.temporalId == 0 && (
+                            f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency()
                             )
-                        if (result.accept) {
-                            result.mark shouldBe (f.frameInfo!!.spatialId == 1)
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to switch spatial layers") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = KSVCShiftFrameGenerator(av1FrameMaps)
-
-                    /* Start by sending spatial layer 0. */
-                    val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 1)
-
-                    testGenerator(generator, filter, targetIndex1, numFrames = 1200) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe (f.frameInfo!!.spatialId == 0)
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-
-                    /* Switch to spatial layer 1.  Need a keyframe. */
-                    val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 2 * 1 + 1)
-                    var sawKeyframe = false
-                    testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
-                        if (f.isKeyframe) sawKeyframe = true
-                        result.accept shouldBe if (!sawKeyframe)
-                            (f.frameInfo!!.spatialId == 0)
-                        else
-                            (f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency())
-                        if (result.accept) {
-                            result.mark shouldBe if (!sawKeyframe)
-                                (f.frameInfo!!.spatialId == 0)
-                            else
-                                (f.frameInfo!!.spatialId == 1)
-                            filter.needsKeyframe shouldBe (!sawKeyframe)
-                        }
-                    }
-
-                    /* Switch back to spatial layer 0.  For K-SVC, dropping down in spatial layers needs a keyframe. */
-                    val targetIndex3 = Av1DDRtpLayerDesc.getIndex(0, 1)
-                    sawKeyframe = false
-                    testGenerator(generator, filter, targetIndex3) { f, result ->
-                        if (f.isKeyframe) sawKeyframe = true
-                        result.accept shouldBe if (!sawKeyframe)
-                            (f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency())
-                        else
-                            (f.frameInfo!!.spatialId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe if (!sawKeyframe)
-                                (f.frameInfo!!.spatialId == 1)
-                            else
-                                (f.frameInfo!!.spatialId == 0)
-                            filter.needsKeyframe shouldBe (!sawKeyframe)
-                        }
+                        )
+                    if (result.accept) {
+                        result.mark shouldBe (f.frameInfo!!.spatialId == 2)
+                        filter.needsKeyframe shouldBe false
                     }
                 }
             }
-            context("A single-stream simulcast stream") {
-                should("project all of layer 2 when when SL2/TL2 is requested") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+            should("be able to switch spatial layers") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = SingleStreamSimulcastGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCFrameGenerator(av1FrameMaps)
 
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 2)
-                        if (result.accept) {
-                            result.mark shouldBe true
-                            filter.needsKeyframe shouldBe false
-                        }
+                /* Start by sending spatial layer 0. */
+                val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex1, numFrames = 1200) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe (f.frameInfo!!.spatialId == 0)
+                        filter.needsKeyframe shouldBe false
                     }
                 }
-                should("be able to be shaped to SL0/TL2") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = SingleStreamSimulcastGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2)
-
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe true
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to be shaped to SL1/TL2") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = SingleStreamSimulcastGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
-
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 1)
-                        if (result.accept) {
-                            result.mark shouldBe true
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to be shaped to SL2/TL0") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = SingleStreamSimulcastGenerator(av1FrameMaps)
-                    val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 0)
-
-                    testGenerator(generator, filter, targetIndex) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 2 && f.frameInfo!!.temporalId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe true
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-                }
-                should("be able to switch spatial layers") {
-                    val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
-
-                    val filter = Av1DDQualityFilter(av1FrameMaps, logger)
-                    val generator = SingleStreamSimulcastGenerator(av1FrameMaps)
-
-                    /* Start by sending spatial layer 0. */
-                    val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 2)
-
-                    testGenerator(generator, filter, targetIndex1, numFrames = 1200) { f, result ->
-                        result.accept shouldBe (f.frameInfo!!.spatialId == 0)
-                        if (result.accept) {
-                            result.mark shouldBe true
-                            filter.needsKeyframe shouldBe false
-                        }
-                    }
-
-                    /* Switch to spatial layer 2.  Need a keyframe. */
-                    val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
-                    var sawKeyframe = false
-                    testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
-                        if (f.isKeyframe) sawKeyframe = true
-                        result.accept shouldBe if (!sawKeyframe)
+                /* Switch to spatial layer 2.  Need a keyframe. */
+                val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
+                var sawKeyframe = false
+                testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.frameInfo!!.spatialId == 0)
+                    else
+                        (f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency())
+                    if (result.accept) {
+                        result.mark shouldBe if (!sawKeyframe)
                             (f.frameInfo!!.spatialId == 0)
                         else
                             (f.frameInfo!!.spatialId == 2)
-                        if (result.accept) {
-                            result.mark shouldBe true
-                            filter.needsKeyframe shouldBe (!sawKeyframe)
-                        }
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
+                }
 
-                    /* Switch to spatial layer 1.  Need a keyframe. */
-                    val targetIndex3 = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
-                    sawKeyframe = false
-                    testGenerator(generator, filter, targetIndex3) { f, result ->
-                        if (f.isKeyframe) sawKeyframe = true
-                        result.accept shouldBe if (!sawKeyframe)
+                /* Switch to spatial layer 1.  For K-SVC, dropping down in spatial layers needs a keyframe. */
+                val targetIndex3 = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
+                sawKeyframe = false
+                testGenerator(generator, filter, targetIndex3) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency())
+                    else
+                        (
+                            f.frameInfo!!.spatialId == 1 || (
+                                f.frameInfo!!.spatialId == 0 && !f.frameInfo!!.hasInterPictureDependency()
+                                )
+                            )
+                    if (result.accept) {
+                        result.mark shouldBe if (!sawKeyframe)
                             (f.frameInfo!!.spatialId == 2)
                         else
                             (f.frameInfo!!.spatialId == 1)
-                        if (result.accept) {
-                            result.mark shouldBe true
-                            filter.needsKeyframe shouldBe (!sawKeyframe)
-                        }
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                    }
+                }
+            }
+        }
+        context("A K-SVC spatially scalable stream with a temporal shift") {
+            should("be able to be shaped to SL1/TL1") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCShiftFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2 * 1 + 1)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (
+                        f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency()
+                        )
+                    result.mark shouldBe (f.frameInfo!!.spatialId == 1)
+                    filter.needsKeyframe shouldBe false
+                }
+            }
+            should("be able to be shaped to SL0/TL1") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCShiftFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 1)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe (f.frameInfo!!.spatialId == 0)
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to be shaped to SL1/TL0") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCShiftFrameGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2 * 1 + 0)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (
+                        f.frameInfo!!.temporalId == 0 && (
+                            f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency()
+                            )
+                        )
+                    if (result.accept) {
+                        result.mark shouldBe (f.frameInfo!!.spatialId == 1)
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to switch spatial layers") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = KSVCShiftFrameGenerator(av1FrameMaps)
+
+                /* Start by sending spatial layer 0. */
+                val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 1)
+
+                testGenerator(generator, filter, targetIndex1, numFrames = 1200) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe (f.frameInfo!!.spatialId == 0)
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+
+                /* Switch to spatial layer 1.  Need a keyframe. */
+                val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 2 * 1 + 1)
+                var sawKeyframe = false
+                testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.frameInfo!!.spatialId == 0)
+                    else
+                        (f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency())
+                    if (result.accept) {
+                        result.mark shouldBe if (!sawKeyframe)
+                            (f.frameInfo!!.spatialId == 0)
+                        else
+                            (f.frameInfo!!.spatialId == 1)
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                    }
+                }
+
+                /* Switch back to spatial layer 0.  For K-SVC, dropping down in spatial layers needs a keyframe. */
+                val targetIndex3 = Av1DDRtpLayerDesc.getIndex(0, 1)
+                sawKeyframe = false
+                testGenerator(generator, filter, targetIndex3) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency())
+                    else
+                        (f.frameInfo!!.spatialId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe if (!sawKeyframe)
+                            (f.frameInfo!!.spatialId == 1)
+                        else
+                            (f.frameInfo!!.spatialId == 0)
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                    }
+                }
+            }
+        }
+        context("A single-encoding simulcast stream") {
+            should("project all of layer 2 when when SL2/TL2 is requested") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = SingleEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 2)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to be shaped to SL0/TL2") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = SingleEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to be shaped to SL1/TL2") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = SingleEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 1)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to be shaped to SL2/TL0") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = SingleEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 0)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 2 && f.frameInfo!!.temporalId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to switch spatial layers") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = SingleEncodingSimulcastGenerator(av1FrameMaps)
+
+                /* Start by sending spatial layer 0. */
+                val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex1, numFrames = 1200) { f, result ->
+                    result.accept shouldBe (f.frameInfo!!.spatialId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+
+                /* Switch to spatial layer 2.  Need a keyframe. */
+                val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
+                var sawKeyframe = false
+                testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.frameInfo!!.spatialId == 0)
+                    else
+                        (f.frameInfo!!.spatialId == 2)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                    }
+                }
+
+                /* Switch to spatial layer 1.  Need a keyframe. */
+                val targetIndex3 = Av1DDRtpLayerDesc.getIndex(0, 3 * 1 + 2)
+                sawKeyframe = false
+                testGenerator(generator, filter, targetIndex3) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.frameInfo!!.spatialId == 2)
+                    else
+                        (f.frameInfo!!.spatialId == 1)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                    }
+                }
+            }
+        }
+        context("A multi-encoding simulcast stream") {
+            should("project all of encoding 2 when when Enc 2/TL2 is requested") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = MultiEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(2, 2)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.ssrc == 2L || f.isKeyframe)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to be shaped to Enc 0/TL2") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = MultiEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.ssrc == 0L)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to be shaped to Enc 1/TL2") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = MultiEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(1, 2)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L || (f.isKeyframe && f.ssrc == 0L))
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to be shaped to Enc 2/TL0") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = MultiEncodingSimulcastGenerator(av1FrameMaps)
+                val targetIndex = Av1DDRtpLayerDesc.getIndex(2, 0)
+
+                testGenerator(generator, filter, targetIndex) { f, result ->
+                    result.accept shouldBe ((f.ssrc == 2L || f.isKeyframe) && f.frameInfo!!.temporalId == 0)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+            }
+            should("be able to switch encodings") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = MultiEncodingSimulcastGenerator(av1FrameMaps)
+
+                /* Start by sending encoding 0. */
+                val targetIndex1 = Av1DDRtpLayerDesc.getIndex(0, 2)
+
+                testGenerator(generator, filter, targetIndex1, numFrames = 1200) { f, result ->
+                    result.accept shouldBe (f.ssrc == 0L)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe false
+                    }
+                }
+
+                /* Switch to encoding 2.  Need a keyframe. */
+                val targetIndex2 = Av1DDRtpLayerDesc.getIndex(2, 2)
+                var sawKeyframe = false
+                testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                        (f.ssrc == 0L)
+                    else
+                        (f.ssrc == 2L || f.isKeyframe)
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                    }
+                }
+
+                /* Switch to encoding 1.  Need a keyframe. */
+                val targetIndex3 = Av1DDRtpLayerDesc.getIndex(1, 2)
+                sawKeyframe = false
+                testGenerator(generator, filter, targetIndex3) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe if (!sawKeyframe)
+                    // We don't send discardable frames for the DT while there's a pending encoding downswitch
+                        (f.ssrc == 2L && f.frameInfo!!.temporalId != 2)
+                    else
+                        (f.ssrc == 1L || (f.ssrc == 0L && f.isKeyframe))
+                    if (result.accept) {
+                        result.mark shouldBe true
+                        filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
                 }
             }
@@ -704,7 +810,7 @@ private class KSVCShiftFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>
 )
 
 /** Generate a single-stream temporally-scaled simulcast (S3T3) series of AV1 frames, with periodic keyframes. */
-private class SingleStreamSimulcastGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
+private class SingleEncodingSimulcastGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
     av1FrameMaps,
     144,
     arrayOf(1, 6, 11),
@@ -712,3 +818,57 @@ private class SingleStreamSimulcastGenerator(av1FrameMaps: HashMap<Long, Av1DDFr
     "c1000180081485214ea000a8000600004000100002a000a8000600004000100002a000a8000600004" +
         "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434"
 )
+
+private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : FrameGenerator() {
+    private var frameCount = 0
+
+    override fun hasNext(): Boolean = frameCount < totalFrames
+
+    override fun next(): Av1DDFrame {
+        val pictureCount = frameCount / numEncodings
+        val encoding = frameCount % numEncodings
+        val tCycle = pictureCount % normalTemplates.size
+        val keyCycle = pictureCount % keyframeInterval
+
+        val templateId = if (keyCycle < keyframeTemplates.size)
+            keyframeTemplates[tCycle]
+        else
+            normalTemplates[tCycle]
+
+        val keyframePicture = keyCycle == 0
+
+        val f = Av1DDFrame(
+            ssrc = encoding.toLong(),
+            timestamp = pictureCount * 3000L,
+            earliestKnownSequenceNumber = pictureCount,
+            latestKnownSequenceNumber = pictureCount,
+            seenStartOfFrame = true,
+            seenEndOfFrame = true,
+            seenMarker = true,
+            frameInfo = structure.templateInfo[templateId],
+            frameNumber = pictureCount, /* Will be less than 0xffff */
+            index = pictureCount,
+            structure = structure,
+            activeDecodeTargets = null,
+            isKeyframe = keyframePicture
+        )
+        av1FrameMaps.getOrPut(f.ssrc) { Av1DDFrameMap(Av1DDQualityFilterTest.logger) }.insertFrame(f)
+        frameCount++
+        return f
+    }
+
+    companion object {
+        private const val totalFrames = 10000
+        private const val keyframeInterval = 144
+        private const val numEncodings = 3
+        private val keyframeTemplates = arrayOf(0)
+        private val normalTemplates = arrayOf(1, 3, 2, 4)
+
+        private val structure: Av1TemplateDependencyStructure
+
+        init {
+            val dd = DatatypeConverter.parseHexBinary("800001800214eaa860414d141020842701df010d")
+            structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+        }
+    }
+}
