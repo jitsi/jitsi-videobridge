@@ -447,10 +447,5 @@ internal class Av1DDQualityFilter(
          * generates key frame.
          */
         private val MIN_KEY_FRAME_WAIT = Duration.ofMillis(300)
-
-        /**
-         * The maximum possible number of VP9 spatial layers.
-         */
-        private const val MAX_VP9_LAYERS = 8
     }
 }
