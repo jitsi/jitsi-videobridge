@@ -112,7 +112,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
             }
         }
         context("A spatially scalable stream") {
-            should("be entirely projected when SL2/TL2 is requested") {
+            should("be entirely projected when SL2/TL2 is requested (L3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -125,7 +125,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     filter.needsKeyframe shouldBe false
                 }
             }
-            should("be able to be shaped to SL0/TL2") {
+            should("be able to be shaped to SL0/TL2 (L3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -140,7 +140,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL1/TL2") {
+            should("be able to be shaped to SL1/TL2 (L3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -155,7 +155,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL2/TL0") {
+            should("be able to be shaped to SL2/TL0 (L3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -170,7 +170,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to switch spatial layers") {
+            should("be able to switch spatial layers (L3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -214,7 +214,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
             }
         }
         context("A K-SVC spatially scalable stream") {
-            should("be able to be shaped to SL2/TL2") {
+            should("be able to be shaped to SL2/TL2 (L3T3_KEY)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -229,7 +229,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     filter.needsKeyframe shouldBe false
                 }
             }
-            should("be able to be shaped to SL0/TL2") {
+            should("be able to be shaped to SL0/TL2 (L3T3_KEY)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -244,7 +244,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL1/TL2") {
+            should("be able to be shaped to SL1/TL2 (L3T3_KEY)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -263,7 +263,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL2/TL0") {
+            should("be able to be shaped to SL2/TL0 (L3T3_KEY)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -282,7 +282,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to switch spatial layers") {
+            should("be able to switch spatial layers (L3T3_KEY)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -341,7 +341,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
             }
         }
         context("A K-SVC spatially scalable stream with a temporal shift") {
-            should("be able to be shaped to SL1/TL1") {
+            should("be able to be shaped to SL1/TL1 (L2S2_KEY_SHIFT)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -356,7 +356,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     filter.needsKeyframe shouldBe false
                 }
             }
-            should("be able to be shaped to SL0/TL1") {
+            should("be able to be shaped to SL0/TL1 (L2S2_KEY_SHIFT)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -371,7 +371,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL1/TL0") {
+            should("be able to be shaped to SL1/TL0 (L2S2_KEY_SHIFT)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -390,7 +390,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to switch spatial layers") {
+            should("be able to switch spatial layers (L2S2_KEY_SHIFT)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -445,7 +445,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
             }
         }
         context("A single-encoding simulcast stream") {
-            should("project all of layer 2 when when SL2/TL2 is requested") {
+            should("project all of layer 2 when when SL2/TL2 is requested (S3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -460,7 +460,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL0/TL2") {
+            should("be able to be shaped to SL0/TL2 (S3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -475,7 +475,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL1/TL2") {
+            should("be able to be shaped to SL1/TL2 (S3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -490,7 +490,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to be shaped to SL2/TL0") {
+            should("be able to be shaped to SL2/TL0 (S3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
@@ -505,7 +505,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
             }
-            should("be able to switch spatial layers") {
+            should("be able to switch spatial layers (S3T3)") {
                 val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
 
                 val filter = Av1DDQualityFilter(av1FrameMaps, logger)
