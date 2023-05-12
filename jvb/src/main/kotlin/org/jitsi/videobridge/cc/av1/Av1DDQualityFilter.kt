@@ -106,7 +106,8 @@ internal class Av1DDQualityFilter(
         val prevIndex = currentIndex
         val accept = doAcceptFrame(frame, incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
         val currentDt = getDtFromIndex(currentIndex)
-        val mark = (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
+        val mark = currentDt != SUSPENDED_DT &&
+            (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
         if (isResumption) check(accept) {
             // Every code path that can turn off SUSPENDED_INDEX also accepts
@@ -345,6 +346,7 @@ internal class Av1DDQualityFilter(
         }
         val dtIfSwitched = getDtFromIndex(indexIfSwitched)
         val dtiIfSwitched = frameInfo.dti[dtIfSwitched]
+        val acceptIfSwitched = dtiIfSwitched != DTI.NOT_PRESENT
 
         // The keyframe request has been fulfilled at this point, regardless of
         // whether we'll be able to achieve the internalEncodingIdTarget.
@@ -365,8 +367,10 @@ internal class Av1DDQualityFilter(
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                currentIndex = indexIfSwitched
-                dtiIfSwitched != DTI.NOT_PRESENT
+                if (acceptIfSwitched) {
+                    currentIndex = indexIfSwitched
+                }
+                acceptIfSwitched
             } else {
                 false
             }
@@ -378,22 +382,26 @@ internal class Av1DDQualityFilter(
                 currentEncoding <= incomingEncoding &&
                     incomingEncoding <= internalTargetEncoding -> {
                     // upscale or current quality case
-                    currentIndex = indexIfSwitched
-                    logger.debug {
-                        "Upscaling to encoding $incomingEncoding. " +
-                            "The target is $internalTargetEncoding"
+                    if (acceptIfSwitched) {
+                        currentIndex = indexIfSwitched
+                        logger.debug {
+                            "Upscaling to encoding $incomingEncoding. " +
+                                "The target is $internalTargetEncoding"
+                        }
                     }
-                    dtiIfSwitched != DTI.NOT_PRESENT
+                    acceptIfSwitched
                 }
                 incomingEncoding <= internalTargetEncoding &&
                     internalTargetEncoding < currentEncoding -> {
                     // downscale case
-                    currentIndex = indexIfSwitched
-                    logger.debug {
-                        "Downscaling to encoding $incomingEncoding. " +
-                            "The target is $internalTargetEncoding"
+                    if (acceptIfSwitched) {
+                        currentIndex = indexIfSwitched
+                        logger.debug {
+                            "Downscaling to encoding $incomingEncoding. " +
+                                "The target is $internalTargetEncoding"
+                        }
                     }
-                    dtiIfSwitched != DTI.NOT_PRESENT
+                    acceptIfSwitched
                 }
                 else -> {
                     false
