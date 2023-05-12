@@ -90,7 +90,7 @@ class Av1DDRtpLayerDesc(
          * the value is unspecified.
          */
         @JvmStatic
-        fun getDtFromIndex(index: Int) = index and 0x3f
+        fun getDtFromIndex(index: Int) = if (index == SUSPENDED_INDEX) SUSPENDED_DT else index and 0x3f
 
         /**
          * Get a string description of a layer index.
