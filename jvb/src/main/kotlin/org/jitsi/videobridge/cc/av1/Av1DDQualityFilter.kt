@@ -108,9 +108,14 @@ internal class Av1DDQualityFilter(
         val currentDt = getDtFromIndex(currentIndex)
         val mark = (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
-        if (isResumption) assert(accept) // Every code path that can turn off SUSPENDED_INDEX also accepts
+        if (isResumption) check(accept) {
+            // Every code path that can turn off SUSPENDED_INDEX also accepts
+            "isResumption=$isResumption but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
+        }
         val newDt = if (prevIndex != currentIndex) currentDt else null
-        if (newDt != null) assert(accept) // Every code path that changes DT also accepts
+        if (newDt != null) check(accept) {
+            "newDt=$newDt but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
+        } // Every code path that changes DT also accepts
         return AcceptResult(accept = accept, isResumption = isResumption, mark = mark, newDt = newDt)
     }
 
