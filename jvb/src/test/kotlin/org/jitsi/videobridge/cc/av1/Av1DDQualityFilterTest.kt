@@ -722,6 +722,8 @@ private open class DDBasedGenerator(
 
     override fun hasNext(): Boolean = frameCount < totalFrames
 
+    protected open fun isKeyframe(keyCycle: Int) = keyCycle == 0
+
     override fun next(): Av1DDFrame {
         val tCycle = frameCount % normalTemplates.size
         val keyCycle = frameCount % keyframeInterval
@@ -730,8 +732,6 @@ private open class DDBasedGenerator(
             keyframeTemplates[tCycle]
         else
             normalTemplates[tCycle]
-
-        val keyframePicture = keyCycle == 0
 
         val f = Av1DDFrame(
             ssrc = 0,
@@ -746,7 +746,7 @@ private open class DDBasedGenerator(
             index = frameCount,
             structure = structure,
             activeDecodeTargets = null,
-            isKeyframe = keyframePicture
+            isKeyframe = isKeyframe(keyCycle)
         )
         av1FrameMaps.getOrPut(f.ssrc) { Av1DDFrameMap(Av1DDQualityFilterTest.logger) }.insertFrame(f)
         frameCount++
@@ -817,7 +817,10 @@ private class SingleEncodingSimulcastGenerator(av1FrameMaps: HashMap<Long, Av1DD
     arrayOf(0, 5, 10, 3, 8, 13, 2, 7, 12, 4, 9, 14),
     "c1000180081485214ea000a8000600004000100002a000a8000600004000100002a000a8000600004" +
         "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434"
-)
+) {
+    // All frames of the initial picture get the DD structure attached
+    override fun isKeyframe(keyCycle: Int) = keyCycle < keyframeTemplates.size
+}
 
 private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : FrameGenerator() {
     private var frameCount = 0
