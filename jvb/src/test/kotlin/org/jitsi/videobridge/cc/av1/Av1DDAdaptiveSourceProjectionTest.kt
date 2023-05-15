@@ -137,6 +137,94 @@ class Av1DDAdaptiveSourceProjectionTest {
             it.temporalId == 0
         }
     }
+
+    @Test
+    fun largerFrameTemporalProjectionTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun largerFrameTemporalFilteredTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun hugeFrameTest() {
+        val generator = TemporallyScaledPacketGenerator(200)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun simpleSvcTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun filteredSvcTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun temporalFilteredSvcTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun spatialAndTemporalFilteredSvcTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerSvcTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun largerFilteredSvcTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun largerTemporalFilteredSvcTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerSpatialAndTemporalFilteredSvcTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
 }
 
 private open class Av1PacketGenerator(
