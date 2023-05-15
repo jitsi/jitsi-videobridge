@@ -27,7 +27,7 @@ class BitWriter(val buf: ByteArray, val byteOffset: Int = 0, private val byteLen
     private val byteBound = byteOffset + byteLength
 
     init {
-        Arrays.fill(buf, offset, byteBound, 0)
+        Arrays.fill(buf, byteOffset, byteBound, 0)
     }
 
     fun writeBit(value: Boolean) {
