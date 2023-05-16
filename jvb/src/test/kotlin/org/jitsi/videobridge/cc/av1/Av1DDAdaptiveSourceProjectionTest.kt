@@ -19,6 +19,7 @@ import jakarta.xml.bind.DatatypeConverter.parseHexBinary
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
+import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
@@ -26,6 +27,8 @@ import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.rtp.util.isNewerThan
+import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
@@ -353,6 +356,188 @@ class Av1DDAdaptiveSourceProjectionTest {
             it.spatialId == 0 && it.temporalId == 0
         }
     }
+
+    private class ProjectedPacket constructor(
+        val packet: Av1DDPacket,
+        val origSeq: Int,
+        val extOrigSeq: Int,
+        val nearOldest: Boolean
+    )
+
+    /** Run an out-of-order test on a single stream, randomized order except for the first packet.  */
+    private fun doRunOutOfOrderTest(
+        generator: Av1PacketGenerator,
+        targetIndex: Int,
+        initialOrderedCount: Int,
+        seed: Long,
+        expectAccept: (FrameInfo) -> Boolean
+    ) {
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
+        val initialState = RtpState(1, 10000, 1000000)
+        val expectedInitialTs: Long = RtpUtils.applyTimestampDelta(initialState.maxTimestamp, 3000)
+        val expectedTsOffset: Long = RtpUtils.getTimestampDiff(expectedInitialTs, generator.ts)
+        val reorderSize = 64
+        val buffer = ArrayList<PacketInfo>(reorderSize)
+        for (i in 0 until reorderSize) {
+            buffer.add(generator.nextPacket())
+        }
+        val random = Random(seed)
+        var orderedCount = initialOrderedCount - 1
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState, logger
+        )
+        var latestSeq = buffer[0].packetAs<Av1DDPacket>().sequenceNumber
+        val projectedPackets = TreeMap<Int, ProjectedPacket?>()
+        val origSeqIdxTracker = Rfc3711IndexTracker()
+        val newSeqIdxTracker = Rfc3711IndexTracker()
+        val frameNumsDropped = HashSet<Int>()
+        val droppedFrameNumsIndexTracker = Rfc3711IndexTracker()
+        for (i in 0..99999) {
+            val packetInfo = buffer[0]
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val origSeq = packet.sequenceNumber
+            val origTs = packet.timestamp
+            if (latestSeq isOlderThan origSeq) {
+                latestSeq = origSeq
+            }
+            val frameInfo = packet.frameInfo
+            val packetIndices = frameInfo!!.dti.withIndex()
+                .filter { (_, dti) -> dti != DTI.NOT_PRESENT }
+                .map { (i, _) -> getIndex(0, i) }
+
+            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            val oldestValidSeq: Int =
+                RtpUtils.applySequenceNumberDelta(
+                    latestSeq,
+                    -((Av1DDFrameMap.FRAME_MAP_SIZE - 1) * generator.packetsPerFrame)
+                )
+            if (origSeq isOlderThan oldestValidSeq && !accepted) {
+                /* This is fine; packets that are too old get ignored. */
+                /* Note we don't want assertFalse(accepted) here because slightly-too-old packets
+                 * that are part of an existing accepted frame will be accepted.
+                 */
+                frameNumsDropped.add(droppedFrameNumsIndexTracker.update(packet.frameNumber))
+            } else if (expectAccept(frameInfo)
+            ) {
+                Assert.assertTrue(accepted)
+
+                /* There's an edge condition in frame projection where a packet
+                   of a frame can be projected, then the frame can be forgotten
+                   for being too old, then a later packet of the frame (which is
+                   just barely not too old) can be projected, at which point it
+                   can potentially get assigned different sequence number
+                   values.
+
+                   This is an unlikely enough case in real life that it's not worth
+                   worrying about; but the incredibly aggressive packet randomizer
+                   used by the unit tests can trigger it, so explicitly allow it.
+                 */
+                val nearOldest: Boolean =
+                    RtpUtils.getSequenceNumberDelta(origSeq, oldestValidSeq) < generator.packetsPerFrame
+                context.rewriteRtp(packetInfo)
+                Assert.assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.timestamp)
+                val newSeq = packet.sequenceNumber
+                val extNewSeq = newSeqIdxTracker.update(newSeq)
+                val extOrigSeq = origSeqIdxTracker.update(origSeq)
+                Assert.assertFalse(projectedPackets.containsKey(extNewSeq))
+                projectedPackets[extNewSeq] = ProjectedPacket(packet, origSeq, extOrigSeq, nearOldest)
+            } else {
+                Assert.assertFalse(accepted)
+            }
+            if (orderedCount > 0) {
+                buffer.removeAt(0)
+                buffer.add(generator.nextPacket())
+                orderedCount--
+            } else {
+                buffer[0] = generator.nextPacket()
+                buffer.shuffle(random)
+            }
+        }
+        val frameNumsSeen = HashSet<Int>()
+
+        /* Add packets that weren't added yet, or that were dropped for being too old, to frameNumsSeen. */
+        frameNumsSeen.addAll(frameNumsDropped)
+        buffer.forEach {
+            frameNumsSeen.add(droppedFrameNumsIndexTracker.update(it.packetAs<Av1DDPacket>().frameNumber))
+        }
+
+        val frameNumTracker = Rfc3711IndexTracker()
+        val iter = projectedPackets.keys.iterator()
+        var prevPacket = projectedPackets[iter.next()]
+        frameNumsSeen.add(frameNumTracker.update(prevPacket!!.packet.frameNumber))
+        while (iter.hasNext()) {
+            val packet = projectedPackets[iter.next()]
+            Assert.assertTrue(packet!!.origSeq isNewerThan prevPacket!!.origSeq)
+            val frameNumIdx = frameNumTracker.update(packet.packet.frameNumber)
+            frameNumsSeen.add(frameNumIdx)
+            Assert.assertTrue(
+                RtpUtils.getSequenceNumberDelta(
+                    prevPacket.packet.frameNumber,
+                    packet.packet.frameNumber
+                ) <= 0
+            )
+            packet.packet.frameInfo?.fdiff?.forEach {
+                Assert.assertTrue(frameNumsSeen.contains(frameNumIdx - it))
+            }
+            prevPacket = packet
+        }
+
+        /* Overall, we should not have expanded sequence numbers. */
+        val firstPacket = projectedPackets.firstEntry().value
+        val lastPacket = projectedPackets.lastEntry().value
+        val origDelta = lastPacket!!.extOrigSeq - firstPacket!!.extOrigSeq
+        val projDelta = projectedPackets.lastKey() - projectedPackets.firstKey()
+        Assert.assertTrue(projDelta <= origDelta)
+    }
+
+    /** Run multiple instances of out-of-order test on a single stream, with different
+     * random seeds.  */
+    private fun runOutOfOrderTest(
+        generator: Av1PacketGenerator,
+        targetIndex: Int,
+        initialOrderedCount: Int = 1,
+        expectAccept: (FrameInfo) -> Boolean
+    ) {
+        /* Seeds that have triggered problems in the past for this or VP8/VP9, plus a random one. */
+        val seeds = longArrayOf(1576267371838L, 1578347926155L, 1579620018479L, System.currentTimeMillis())
+        for (seed in seeds) {
+            try {
+                doRunOutOfOrderTest(generator, targetIndex, initialOrderedCount, seed, expectAccept)
+            } catch (e: Throwable) {
+                logger.error(
+                    "Exception thrown in randomized test, seed = $seed", e
+                )
+                throw e
+            }
+            generator.reset()
+        }
+    }
+
+    @Test
+    fun simpleOutOfOrderNonScalableTest() {
+        val generator = NonScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            true
+        }
+    }
+
+    @Test
+    fun simpleOutOfOrderTemporalProjectionTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun filteredOutOfOrderTemporalProjectionTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
 }
 
 private open class Av1PacketGenerator(
@@ -368,7 +553,8 @@ private open class Av1PacketGenerator(
     private var frameOfPicture = 0
 
     private var seq = 0
-    private var ts: Long = 0L
+    var ts: Long = 0L
+        private set
     var ssrc: Long = 0xcafebabeL
     private var frameNumber = 0
     private var keyframePicture = false
