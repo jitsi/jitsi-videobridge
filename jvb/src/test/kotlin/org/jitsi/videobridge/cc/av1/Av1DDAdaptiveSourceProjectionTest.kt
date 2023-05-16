@@ -225,6 +225,134 @@ class Av1DDAdaptiveSourceProjectionTest {
             it.spatialId == 0 && it.temporalId == 0
         }
     }
+
+    @Test
+    fun simpleKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            it.spatialId == 2 || !it.hasInterPictureDependency()
+        }
+    }
+
+    @Test
+    fun filteredKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun temporalFilteredKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0 && (it.spatialId == 2 || !it.hasInterPictureDependency())
+        }
+    }
+
+    @Test
+    fun spatialAndTemporalFilteredKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            it.spatialId == 2 || !it.hasInterPictureDependency()
+        }
+    }
+
+    @Test
+    fun largerFilteredKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun largerTemporalFilteredKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0 && (it.spatialId == 2 || !it.hasInterPictureDependency())
+        }
+    }
+
+    @Test
+    fun largerSpatialAndTemporalFilteredKSvcTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun simpleSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun filteredSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun temporalFilteredSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0 && it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun spatialAndTemporalFilteredSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun largerFilteredSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun largerTemporalFilteredSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0 && it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun largerSpatialAndTemporalFilteredSingleEncodingSimulcastTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runInOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
 }
 
 private open class Av1PacketGenerator(
@@ -328,13 +456,6 @@ private open class Av1PacketGenerator(
             } else {
                 frameOfPicture++
             }
-            frameNumber = RtpUtils.applySequenceNumberDelta(frameNumber, 1)
-        } else {
-            packetOfFrame++
-        }
-
-        if (endOfPicture) {
-            ts = RtpUtils.applyTimestampDelta(ts, 3000)
             templateIdx++
             if (keyframeRequested) {
                 keyframePicture = true
@@ -344,6 +465,14 @@ private open class Av1PacketGenerator(
                     keyframePicture = false
                 }
             }
+            frameNumber = RtpUtils.applySequenceNumberDelta(frameNumber, 1)
+        } else {
+            packetOfFrame++
+        }
+
+        if (endOfPicture) {
+            ts = RtpUtils.applyTimestampDelta(ts, 3000)
+
             keyframeRequested = false
             if (templateIdx >= normalTemplates.size) {
                 templateIdx = 0
@@ -392,7 +521,6 @@ private class NonScalableAv1PacketGenerator(
         "80000180003a410180ef808680"
     )
 
-/** Generate a temporally-scaled series of AV1 frames, with a single keyframe at the start. */
 private class TemporallyScaledPacketGenerator(packetsPerFrame: Int) : Av1PacketGenerator(
     packetsPerFrame,
     arrayOf(0),
@@ -412,4 +540,29 @@ private class ScalableAv1PacketGenerator(
         "d0013481e81485214eafffaaaa863cf0430c10c302afc0aaa0063c00430010c002a000a800060000" +
             "40001d954926e082b04a0941b820ac1282503157f974000ca864330e222222eca8655304224230ec" +
             "a87753013f00b3027f016704ff02cf"
+    )
+
+private class KeyScalableAv1PacketGenerator(
+    packetsPerFrame: Int
+) :
+    Av1PacketGenerator(
+        packetsPerFrame,
+        arrayOf(0, 5, 10),
+        arrayOf(1, 6, 11, 3, 8, 13, 2, 7, 12, 4, 9, 14),
+        3,
+        "8f008581e81485214eaaaaa8000600004000100002aa80a8000600004000100002a000a80006000040" +
+            "0016d549241b5524906d54923157e001974ca864330e222396eca8655304224390eca87753013f00b3027f016704ff02cf"
+    )
+
+private class SingleEncodingSimulcastAv1PacketGenerator(
+    packetsPerFrame: Int
+) :
+    Av1PacketGenerator(
+        packetsPerFrame,
+        arrayOf(1, 6, 11),
+        arrayOf(0, 5, 10, 3, 8, 13, 2, 7, 12, 4, 9, 14),
+        3,
+        "c1000180081485214ea000a8000600004000100002a000a8000600004000100002a000a8000600004" +
+            "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434",
+        allKeyframesGetStructure = true
     )
