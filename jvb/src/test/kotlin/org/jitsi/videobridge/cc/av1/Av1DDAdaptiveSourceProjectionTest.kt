@@ -478,6 +478,26 @@ class Av1DDAdaptiveSourceProjectionTest {
                     packet.packet.frameNumber
                 ) <= 0
             )
+            if (packet.packet.isStartOfFrame) {
+                Assert.assertTrue(
+                    RtpUtils.getSequenceNumberDelta(
+                        prevPacket.packet.frameNumber,
+                        packet.packet.frameNumber
+                    ) < 0
+                )
+                if (prevPacket.packet.sequenceNumber ==
+                    RtpUtils.applySequenceNumberDelta(packet.packet.sequenceNumber, - 1)
+                ) {
+                    Assert.assertTrue(prevPacket.packet.isEndOfFrame)
+                }
+            } else {
+                if (prevPacket.packet.sequenceNumber ==
+                    RtpUtils.applySequenceNumberDelta(packet.packet.sequenceNumber, - 1)
+                ) {
+                    Assert.assertEquals(prevPacket.packet.frameNumber, packet.packet.frameNumber)
+                    Assert.assertEquals(prevPacket.packet.timestamp, packet.packet.timestamp)
+                }
+            }
             packet.packet.frameInfo?.fdiff?.forEach {
                 Assert.assertTrue(frameNumsSeen.contains(frameNumIdx - it))
             }
@@ -536,6 +556,222 @@ class Av1DDAdaptiveSourceProjectionTest {
         val generator = TemporallyScaledPacketGenerator(1)
         runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
             it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerFrameOutOfOrderTemporalProjectionTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun largerFrameOutOfOrderTemporalFilteredTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun hugeFrameOutOfOrderTest() {
+        val generator = TemporallyScaledPacketGenerator(200)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun simpleSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun filteredSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun temporalFilteredOutOfOrderSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun spatialAndTemporalFilteredSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun largerFilteredSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun largerTemporalFilteredSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerSpatialAndTemporalFilteredSvcOutOfOrderTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun simpleKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            it.spatialId == 2 || !it.hasInterPictureDependency()
+        }
+    }
+
+    @Test
+    fun filteredKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun temporalFilteredKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0 && (it.spatialId == 2 || !it.hasInterPictureDependency())
+        }
+    }
+
+    @Test
+    fun spatialAndTemporalFilteredKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2)) {
+            it.spatialId == 2 || !it.hasInterPictureDependency()
+        }
+    }
+
+    @Test
+    fun largerFilteredKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2)) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun largerTemporalFilteredKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2)) {
+            it.temporalId == 0 && (it.spatialId == 2 || !it.hasInterPictureDependency())
+        }
+    }
+
+    @Test
+    fun largerSpatialAndTemporalFilteredKSvcOutOfOrderTest() {
+        val generator = KeyScalableAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun simpleSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2), 3) {
+            it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun filteredSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2), 3) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun temporalFilteredSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2), 3) {
+            it.temporalId == 0 && it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun spatialAndTemporalFilteredSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(1)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0), 3) {
+            it.spatialId == 0 && it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largerSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2 + 2), 7) {
+            it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun largerFilteredSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 2), 7) {
+            it.spatialId == 0
+        }
+    }
+
+    @Test
+    fun largerTemporalFilteredSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 3 * 2), 7) {
+            it.temporalId == 0 && it.spatialId == 2
+        }
+    }
+
+    @Test
+    fun largerSpatialAndTemporalFilteredSingleEncodingSimulcastOutOfOrderTest() {
+        val generator = SingleEncodingSimulcastAv1PacketGenerator(3)
+        runOutOfOrderTest(generator, getIndex(eid = 0, dt = 0), 7) {
+            it.spatialId == 0 && it.temporalId == 0
         }
     }
 }
