@@ -24,7 +24,6 @@ import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorStatelessSubset
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
-import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 
 /** A video packet carrying an AV1 Dependency Descriptor.  Note that this may or may not be an actual AV1 packet;
@@ -93,9 +92,8 @@ class Av1DDPacket : ParsedVideoPacket {
         get() = statelessDescriptor.endOfFrame
 
     override val layerIds: Collection<Int>
-        get() = frameInfo?.let {
-            it.dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _) -> i }
-        } ?: run { super.layerIds }
+        get() = frameInfo?.dtisPresent
+            ?: run { super.layerIds }
 
     val frameNumber
         get() = statelessDescriptor.frameNumber

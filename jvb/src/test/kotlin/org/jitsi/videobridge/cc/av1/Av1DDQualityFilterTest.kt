@@ -22,7 +22,6 @@ import jakarta.xml.bind.DatatypeConverter
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
-import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
 import java.time.Instant
@@ -681,9 +680,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
             ms = if (f.timestamp != lastTs) { f.timestamp / 90 } else { ms + 1 }
             lastTs = f.timestamp
 
-            val packetIndices = f.frameInfo!!.dti.withIndex()
-                .filter { (_, dti) -> dti != DTI.NOT_PRESENT }
-                .map { (i, _) -> Av1DDRtpLayerDesc.getIndex(f.ssrc.toInt(), i) }
+            val packetIndices = f.frameInfo!!.dtisPresent.map { Av1DDRtpLayerDesc.getIndex(f.ssrc.toInt(), it) }
 
             val result = filter.acceptFrame(
                 frame = f,

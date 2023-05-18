@@ -24,7 +24,6 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
-import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
@@ -55,9 +54,7 @@ class Av1DDAdaptiveSourceProjectionTest {
         val generator = ScalableAv1PacketGenerator(1)
         val packetInfo = generator.nextPacket()
         val packet = packetInfo.packetAs<Av1DDPacket>()
-        val packetIndices = packet.frameInfo!!.dti.withIndex()
-            .filter { (_, dti) -> dti != DTI.NOT_PRESENT }
-            .map { (i, _) -> getIndex(0, i) }
+        val packetIndices = packet.layerIds.map { getIndex(0, it) }
         val targetIndex = getIndex(eid = 0, dt = 0)
         Assert.assertTrue(
             context.accept(packetInfo, packetIndices, targetIndex)
@@ -88,10 +85,9 @@ class Av1DDAdaptiveSourceProjectionTest {
         for (i in 0..99999) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Av1DDPacket>()
-            val frameInfo = packet.frameInfo
-            val packetIndices = frameInfo!!.dti.withIndex()
-                .filter { (_, dti) -> dti != DTI.NOT_PRESENT }
-                .map { (i, _) -> getIndex(0, i) }
+            val frameInfo = packet.frameInfo!!
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+
             val accepted = context.accept(
                 packetInfo,
                 packetIndices, targetIndex
@@ -402,10 +398,8 @@ class Av1DDAdaptiveSourceProjectionTest {
             if (latestSeq isOlderThan origSeq) {
                 latestSeq = origSeq
             }
-            val frameInfo = packet.frameInfo
-            val packetIndices = frameInfo!!.dti.withIndex()
-                .filter { (_, dti) -> dti != DTI.NOT_PRESENT }
-                .map { (i, _) -> getIndex(0, i) }
+            val frameInfo = packet.frameInfo!!
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
 
             val accepted = context.accept(packetInfo, packetIndices, targetIndex)
             val oldestValidSeq: Int =

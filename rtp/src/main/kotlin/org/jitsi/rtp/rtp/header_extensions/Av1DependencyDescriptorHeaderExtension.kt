@@ -777,6 +777,9 @@ open class FrameInfo(
      */
     fun hasInterPictureDependency(): Boolean =
         fdiff.any { it > spatialId }
+
+    val dtisPresent: List<Int>
+        get() = dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _) -> i }
 }
 
 /* The only thing this changes from its parent class is to make the lists mutable, so the parent equals() is fine. */
