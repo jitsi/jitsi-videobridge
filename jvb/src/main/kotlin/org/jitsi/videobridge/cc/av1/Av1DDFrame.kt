@@ -16,11 +16,15 @@
 package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
+import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
+import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.rtp.util.isOlderThan
+import org.jitsi.utils.logging2.Logger
 
 class Av1DDFrame internal constructor(
     /**
@@ -67,7 +71,7 @@ class Av1DDFrame internal constructor(
     /**
      * AV1 FrameInfo for the frame
      */
-    val frameInfo: FrameInfo?,
+    frameInfo: FrameInfo?,
 
     /**
      * The AV1 DD Frame Number of this frame.
@@ -82,7 +86,7 @@ class Av1DDFrame internal constructor(
     /**
      * The AV1 Template Dependency Structure in effect for this frame, if known
      */
-    val structure: Av1TemplateDependencyStructure?,
+    structure: Av1TemplateDependencyStructure?,
 
     /**
      * A new activeDecodeTargets specified for this frame, if any.
@@ -95,7 +99,24 @@ class Av1DDFrame internal constructor(
      * instance refers to is a keyframe.
      */
     var isKeyframe: Boolean,
+
+    /**
+     * The raw dependency descriptor included in the packet.  Stored if it could not be parsed initially.
+     */
+    val rawDependencyDescriptor: RtpPacket.HeaderExtension?
 ) {
+    /**
+     * AV1 FrameInfo for the frame
+     */
+    var frameInfo = frameInfo
+        private set
+
+    /**
+     * The AV1 Template Dependency Structure in effect for this frame, if known
+     */
+    var structure = structure
+        private set
+
     /**
      * The earliest RTP sequence number seen of the incoming frame that this instance
      * refers to (RFC3550).
@@ -157,7 +178,10 @@ class Av1DDFrame internal constructor(
         index = index,
         structure = packet.descriptor?.structure,
         activeDecodeTargets = packet.activeDecodeTargets,
-        isKeyframe = packet.isKeyframe
+        isKeyframe = packet.isKeyframe,
+        rawDependencyDescriptor = if (packet.frameInfo == null) {
+            packet.getHeaderExtension(packet.av1DDHeaderExtensionId)?.clone()
+        } else null
     )
 
     /**
@@ -184,6 +208,26 @@ class Av1DDFrame internal constructor(
         }
         if (packet.isMarked) {
             seenMarker = true
+        }
+    }
+
+    fun updateParse(templateDependencyStructure: Av1TemplateDependencyStructure, logger: Logger) {
+        if (rawDependencyDescriptor == null) {
+            return
+        }
+        val parser = Av1DependencyDescriptorReader(rawDependencyDescriptor)
+        val descriptor = try {
+            parser.parse(templateDependencyStructure)
+        } catch (e: Av1DependencyException) {
+            logger.warn("Could not parse AV1 Dependency Descriptor: ${e.message}", e)
+            return
+        }
+        structure = descriptor.structure
+        frameInfo = try {
+            descriptor.frameInfo
+        } catch (e: Av1DependencyException) {
+            logger.warn("Could not extract frame info from AV1 Dependency Descriptor: ${e.message}", e)
+            null
         }
     }
 

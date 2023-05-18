@@ -768,6 +768,89 @@ class Av1DDAdaptiveSourceProjectionTest {
             it.spatialId == 0 && it.temporalId == 0
         }
     }
+
+    @Test
+    fun slightlyDelayedKeyframeTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "slightlyDelayedKeyframeTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState, logger
+        )
+        val firstPacketInfo = generator.nextPacket()
+        val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
+        val targetIndex = getIndex(eid = 0, dt = 2)
+        for (i in 0..2) {
+            val packetInfo = generator.nextPacket()
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+
+            Assert.assertFalse(
+                context.accept(packetInfo, packetIndices, targetIndex)
+            )
+        }
+        val firstPacketIndices = firstPacket.layerIds.map { getIndex(0, it) }
+        Assert.assertTrue(
+            context.accept(firstPacketInfo, firstPacketIndices, targetIndex)
+        )
+        context.rewriteRtp(firstPacketInfo)
+        for (i in 0..9995) {
+            val packetInfo = generator.nextPacket()
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+            Assert.assertTrue(
+                context.accept(packetInfo, packetIndices, targetIndex)
+            )
+            context.rewriteRtp(packetInfo)
+        }
+    }
+
+    @Test
+    fun veryDelayedKeyframeTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "veryDelayedKeyframeTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState, logger
+        )
+        val firstPacketInfo = generator.nextPacket()
+        val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
+        val targetIndex = getIndex(eid = 0, dt = 2)
+        for (i in 0..3) {
+            val packetInfo = generator.nextPacket(missedStructure = true)
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+            Assert.assertFalse(
+                context.accept(packetInfo, packetIndices, targetIndex)
+            )
+        }
+        val firstPacketIndices = firstPacket.layerIds.map { getIndex(0, it) }
+        Assert.assertFalse(
+            context.accept(firstPacketInfo, firstPacketIndices, targetIndex)
+        )
+        for (i in 0..9) {
+            val packetInfo = generator.nextPacket()
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+            Assert.assertFalse(
+                context.accept(packetInfo, packetIndices, targetIndex)
+            )
+        }
+        generator.requestKeyframe()
+        for (i in 0..9995) {
+            val packetInfo = generator.nextPacket()
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+            Assert.assertTrue(
+                context.accept(packetInfo, packetIndices, targetIndex)
+            )
+            context.rewriteRtp(packetInfo)
+        }
+    }
 }
 
 private open class Av1PacketGenerator(
@@ -908,7 +991,12 @@ private open class Av1PacketGenerator(
     }
 
     fun requestKeyframe() {
-        keyframeRequested = true
+        if (packetOfFrame == 0) {
+            keyframePicture = true
+            templateIdx = 0
+        } else {
+            keyframeRequested = true
+        }
     }
 
     init {

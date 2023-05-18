@@ -743,7 +743,8 @@ private open class DDBasedGenerator(
             index = frameCount,
             structure = structure,
             activeDecodeTargets = null,
-            isKeyframe = isKeyframe(keyCycle)
+            isKeyframe = isKeyframe(keyCycle),
+            rawDependencyDescriptor = null
         )
         av1FrameMaps.getOrPut(f.ssrc) { Av1DDFrameMap(Av1DDQualityFilterTest.logger) }.insertFrame(f)
         frameCount++
@@ -850,7 +851,8 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
             index = pictureCount,
             structure = structure,
             activeDecodeTargets = null,
-            isKeyframe = keyframePicture
+            isKeyframe = keyframePicture,
+            rawDependencyDescriptor = null
         )
         av1FrameMaps.getOrPut(f.ssrc) { Av1DDFrameMap(Av1DDQualityFilterTest.logger) }.insertFrame(f)
         frameCount++

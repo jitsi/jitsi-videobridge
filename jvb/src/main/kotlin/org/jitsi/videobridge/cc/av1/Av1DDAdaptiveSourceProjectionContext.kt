@@ -19,7 +19,9 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.utils.logging.DiagnosticContext
@@ -93,8 +95,11 @@ class Av1DDAdaptiveSourceProjectionContext(
                  * already decided to drop a subsequent required frame of this SSRC for the DT.
                  * If we have, we can't turn on the encoding starting from this
                  * packet, so treat this frame as though it weren't a keyframe.
+                 * Note that this may mean re-analyzing the packets with a now-available template dependency structure.
                  */
-                // TODO
+                if (haveSubsequentNonAcceptedRequired(frame, incomingEncoding, incomingIndices, targetIndex)) {
+                    frame.isKeyframe = false
+                }
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = av1QualityFilter
@@ -149,6 +154,31 @@ class Av1DDAdaptiveSourceProjectionContext(
      */
     private fun insertPacketInMap(av1Packet: Av1DDPacket) =
         av1FrameMaps.getOrPut(av1Packet.ssrc) { Av1DDFrameMap(logger) }.insertPacket(av1Packet)
+
+    private fun haveSubsequentNonAcceptedRequired(
+        frame: Av1DDFrame,
+        incomingEncoding: Int,
+        incomingIndices: Collection<Int>,
+        targetIndex: Int
+    ): Boolean {
+        val map = av1FrameMaps[frame.ssrc] ?: run { return false }
+        val structure = frame.structure
+        val dtsToCheck = if (incomingEncoding == getEidFromIndex(targetIndex)) {
+            setOf(getDtFromIndex(targetIndex))
+        } else {
+            incomingIndices.map { getDtFromIndex(it) }
+        }
+        return map.nextFrameWith(frame) {
+            if (it.isAccepted) return@nextFrameWith false
+            if (structure != null && it.frameInfo == null) {
+                it.updateParse(structure, logger)
+            }
+            return@nextFrameWith dtsToCheck.any { dt ->
+                val dti = it.frameInfo?.dti?.get(dt)
+                dti == DTI.SWITCH || dti == DTI.REQUIRED
+            }
+        } != null
+    }
 
     /**
      * Calculate the projected sequence number gap between two frames (of the same encoding),
@@ -286,8 +316,9 @@ class Av1DDAdaptiveSourceProjectionContext(
             )
             val nextTemplateId = lastAv1FrameProjection.getNextTemplateId()
             templateIdDelta = if (nextTemplateId != null) {
-                check(frame.structure != null)
-                (nextTemplateId - frame.structure.templateIdOffset) % 64
+                val structure = frame.structure
+                check(structure != null)
+                (nextTemplateId - structure.templateIdOffset) % 64
             } else {
                 0
             }
@@ -345,7 +376,9 @@ class Av1DDAdaptiveSourceProjectionContext(
             val nextTemplateId = lastAv1FrameProjection.getNextTemplateId()
 
             if (nextTemplateId != null) {
-                (nextTemplateId - frame.structure.templateIdOffset) % 64
+                val structure = frame.structure
+                check(structure != null)
+                (nextTemplateId - structure.templateIdOffset) % 64
             } else {
                 0
             }
@@ -413,7 +446,9 @@ class Av1DDAdaptiveSourceProjectionContext(
             val nextTemplateId = lastAv1FrameProjection.getNextTemplateId()
 
             if (nextTemplateId != null) {
-                (nextTemplateId - frame.structure.templateIdOffset) % 64
+                val structure = frame.structure
+                check(structure != null)
+                (nextTemplateId - structure.templateIdOffset) % 64
             } else {
                 0
             }

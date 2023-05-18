@@ -237,10 +237,7 @@ internal constructor(
      * Get the next template ID that would come after the template IDs in this projection's structure
      */
     fun getNextTemplateId(): Int? {
-        if (av1Frame?.structure == null) {
-            return null
-        }
-        return rewriteTemplateId(av1Frame.structure.templateIdOffset + av1Frame.structure.templateCount)
+        return av1Frame?.structure?.let { rewriteTemplateId(it.templateIdOffset + it.templateCount) }
     }
 
     companion object {
