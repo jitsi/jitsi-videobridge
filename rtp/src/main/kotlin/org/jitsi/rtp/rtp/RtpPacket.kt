@@ -436,6 +436,7 @@ open class RtpPacket(
         fun clone(): HeaderExtension = StandaloneHeaderExtension(this)
     }
 
+    @SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
     class StandaloneHeaderExtension(ext: HeaderExtension) : HeaderExtension {
         override val buffer: ByteArray = ByteArray(ext.dataLengthBytes).also {
             System.arraycopy(ext.buffer, ext.dataOffset, it, 0, ext.dataLengthBytes)
@@ -448,6 +449,7 @@ open class RtpPacket(
             get() = buffer.size
     }
 
+    @SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
     inner class EncodedHeaderExtension : HeaderExtension {
         private var currExtOffset: Int = 0
         private var currExtLength: Int = 0
@@ -485,7 +487,7 @@ open class RtpPacket(
     }
 
     @SuppressFBWarnings(
-        value = ["EI_EXPOSE_REP"],
+        value = ["EI_EXPOSE_REP", "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE"],
         justification = "We intentionally expose the internal buffer."
     )
     inner class PendingHeaderExtension(override var id: Int, override val dataLengthBytes: Int) : HeaderExtension {
