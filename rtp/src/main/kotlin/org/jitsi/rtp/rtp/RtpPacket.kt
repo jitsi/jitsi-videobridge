@@ -432,6 +432,20 @@ open class RtpPacket(
         val dataLengthBytes: Int
 
         val totalLengthBytes: Int
+
+        fun clone(): HeaderExtension = StandaloneHeaderExtension(this)
+    }
+
+    class StandaloneHeaderExtension(ext: HeaderExtension) : HeaderExtension {
+        override val buffer: ByteArray = ByteArray(ext.dataLengthBytes).also {
+            System.arraycopy(ext.buffer, ext.dataOffset, it, 0, ext.dataLengthBytes)
+        }
+        override val dataOffset = 0
+        override var id = ext.id
+        override val dataLengthBytes: Int
+            get() = buffer.size
+        override val totalLengthBytes: Int
+            get() = buffer.size
     }
 
     inner class EncodedHeaderExtension : HeaderExtension {
