@@ -24,9 +24,12 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.logging2.LoggerImpl
 import javax.xml.bind.DatatypeConverter
 
 class Av1DDPacketTest : ShouldSpec() {
+    val logger = LoggerImpl(javaClass.name)
+
     private data class SampleAv1DDPacket(
         val description: String,
         val data: ByteArray,
@@ -168,14 +171,14 @@ class Av1DDPacketTest : ShouldSpec() {
                         val structure = if (t.structureSource != null) {
                             val sourceR =
                                 RtpPacket(t.structureSource.data, 0, t.structureSource.data.size)
-                            val sourceP = Av1DDPacket(sourceR, AV1_DD_HEADER_EXTENSION_ID, null)
+                            val sourceP = Av1DDPacket(sourceR, AV1_DD_HEADER_EXTENSION_ID, null, logger)
                             sourceP.descriptor?.structure
                         } else {
                             null
                         }
 
                         val r = RtpPacket(t.data, 0, t.data.size)
-                        val p = Av1DDPacket(r, AV1_DD_HEADER_EXTENSION_ID, structure)
+                        val p = Av1DDPacket(r, AV1_DD_HEADER_EXTENSION_ID, structure, logger)
 
                         if (t.scalabilityStructure != null) {
                             val tss = t.scalabilityStructure

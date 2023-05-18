@@ -778,6 +778,8 @@ private open class Av1PacketGenerator(
     templateDdHex: String,
     val allKeyframesGetStructure: Boolean = false
 ) {
+    private val logger: Logger = LoggerImpl(javaClass.name)
+
     var packetOfFrame = 0
         private set
     private var frameOfPicture = 0
@@ -821,7 +823,7 @@ private open class Av1PacketGenerator(
         octetCount = 0
     }
 
-    fun nextPacket(): PacketInfo {
+    fun nextPacket(missedStructure: Boolean = false): PacketInfo {
         val startOfFrame = packetOfFrame == 0
         val endOfFrame = packetOfFrame == packetsPerFrame - 1
         val startOfPicture = startOfFrame && frameOfPicture == 0
@@ -856,7 +858,12 @@ private open class Av1PacketGenerator(
         dd.write(ext)
         rtpPacket.encodeHeaderExtensions()
 
-        val av1Packet = Av1DDPacket(rtpPacket, AV1_DD_HEADER_EXTENSION_ID, structure)
+        val av1Packet = Av1DDPacket(
+            rtpPacket,
+            AV1_DD_HEADER_EXTENSION_ID,
+            if (missedStructure) null else structure,
+            logger
+        )
 
         val info = PacketInfo(av1Packet)
         info.receivedTime = receivedTime

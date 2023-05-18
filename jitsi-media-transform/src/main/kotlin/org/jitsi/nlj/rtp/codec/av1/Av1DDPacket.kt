@@ -25,6 +25,7 @@ import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorStatelessSubse
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
+import org.jitsi.utils.logging2.Logger
 
 /** A video packet carrying an AV1 Dependency Descriptor.  Note that this may or may not be an actual AV1 packet;
  * other video codecs can also carry the AV1 DD.
@@ -54,7 +55,8 @@ class Av1DDPacket : ParsedVideoPacket {
     constructor(
         packet: RtpPacket,
         av1DDHeaderExtensionId: Int,
-        templateDependencyStructure: Av1TemplateDependencyStructure?
+        templateDependencyStructure: Av1TemplateDependencyStructure?,
+        logger: Logger
     ) : super(packet.buffer, packet.offset, packet.length, emptyList()) {
         this.av1DDHeaderExtensionId = av1DDHeaderExtensionId
         val ddExt = packet.getHeaderExtension(av1DDHeaderExtensionId)
@@ -65,16 +67,14 @@ class Av1DDPacket : ParsedVideoPacket {
         descriptor = try {
             parser.parse(templateDependencyStructure)
         } catch (e: Av1DependencyException) {
-            // TODO: log this, without creating a logger for each packet
-            // TODO: have some way of recovering if we get the correct template structure later?
+            logger.warn("Could not parse AV1 Dependency Descriptor: ${e.message}", e)
             null
         }
         statelessDescriptor = descriptor ?: parser.parseStateless()
         frameInfo = try {
             descriptor?.frameInfo
         } catch (e: Av1DependencyException) {
-            // TODO: log this, without creating a logger for each packet
-            // TODO: have some way of recovering if we get the correct template structure later?
+            logger.warn("Could not extract frame info from AV1 Dependency Descriptor: ${e.message}", e)
             null
         }
     }
