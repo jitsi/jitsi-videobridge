@@ -57,7 +57,7 @@ class RelayedEndpoint(
     parentLogger: Logger,
     diagnosticContext: DiagnosticContext
 ) : AbstractEndpoint(conference, id, parentLogger), Relay.IncomingRelayPacketHandler {
-    var audioSources: Array<AudioSourceDesc> = arrayOf()
+    var audioSources: List<AudioSourceDesc> = listOf()
         set(value) {
             field = value
             value.forEach {
