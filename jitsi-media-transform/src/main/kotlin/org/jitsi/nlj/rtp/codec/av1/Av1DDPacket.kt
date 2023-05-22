@@ -31,7 +31,7 @@ import org.jitsi.utils.logging2.Logger
  * other video codecs can also carry the AV1 DD.
  */
 class Av1DDPacket : ParsedVideoPacket {
-    val descriptor: Av1DependencyDescriptorHeaderExtension?
+    var descriptor: Av1DependencyDescriptorHeaderExtension?
     val statelessDescriptor: Av1DependencyDescriptorStatelessSubset
     val frameInfo: FrameInfo?
     val av1DDHeaderExtensionId: Int
@@ -118,6 +118,7 @@ class Av1DDPacket : ParsedVideoPacket {
         eid: Int = 0,
         baseFrameRate: Double = 30.0
     ): RtpEncodingDesc? {
+        val descriptor = this.descriptor
         require(descriptor != null) {
             "Can't get scalability structure from packet without a descriptor"
         }

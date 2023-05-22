@@ -182,6 +182,7 @@ internal constructor(
                 pkt.removeHeaderExtension(pkt.av1DDHeaderExtensionId)
                 ext = pkt.addHeaderExtension(pkt.av1DDHeaderExtensionId, descriptor.encodedLength)
             }
+            pkt.descriptor = descriptor
             descriptor.write(ext)
         }
     }

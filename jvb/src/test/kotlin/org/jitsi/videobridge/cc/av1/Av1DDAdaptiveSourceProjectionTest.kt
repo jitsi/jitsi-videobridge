@@ -851,6 +851,173 @@ class Av1DDAdaptiveSourceProjectionTest {
             context.rewriteRtp(packetInfo)
         }
     }
+
+    @Test
+    fun twoStreamsNoSwitchingTest() {
+        val generator1 = TemporallyScaledPacketGenerator(3)
+        val generator2 = TemporallyScaledPacketGenerator(3)
+        generator2.ssrc = 0xdeadbeefL
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "twoStreamsNoSwitchingTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(diagnosticContext, initialState, logger)
+        val targetIndex = getIndex(eid = 1, dt = 2)
+        var expectedSeq = 10001
+        var expectedTs: Long = 1003000
+        for (i in 0..9999) {
+            val packetInfo1 = generator1.nextPacket()
+            val packet1 = packetInfo1.packetAs<Av1DDPacket>()
+            val packet1Indices = packet1.layerIds.map { getIndex(1, it) }
+
+            Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
+            val packetInfo2 = generator2.nextPacket()
+            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
+            val packet2Indices = packet2.layerIds.map { getIndex(0, it) }
+            Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
+            context.rewriteRtp(packetInfo1)
+            Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
+            Assert.assertEquals(expectedTs, packet1.timestamp)
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+            if (packet1.isEndOfFrame) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+            }
+        }
+    }
+
+    @Test
+    fun twoStreamsSwitchingTest() {
+        val generator1 = TemporallyScaledPacketGenerator(3)
+        val generator2 = TemporallyScaledPacketGenerator(3)
+        generator2.ssrc = 0xdeadbeefL
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "twoStreamsSwitchingTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(diagnosticContext, initialState, logger)
+        var expectedSeq = 10001
+        var expectedTs: Long = 1003000
+        var expectedFrameNumber = 0
+        var expectedTemplateOffset = 0
+        var targetIndex = getIndex(eid = 0, dt = 2)
+
+        /* Start by wanting encoding 0 */
+        for (i in 0..899) {
+            // val srPacket1 = generator1.srPacket
+            val packetInfo1 = generator1.nextPacket()
+            val packet1 = packetInfo1.packetAs<Av1DDPacket>()
+            val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
+            if (i == 0) {
+                expectedTemplateOffset = packet1.descriptor!!.structure.templateIdOffset
+            }
+            Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
+            context.rewriteRtp(packetInfo1)
+            // Assert.assertTrue(context.rewriteRtcp(srPacket1))
+            // Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
+            // Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
+            // val srPacket2 = generator2.srPacket
+            val packetInfo2 = generator2.nextPacket()
+            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
+            val packet2Indices = packet2.layerIds.map { getIndex(1, it) }
+            Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
+            // Assert.assertFalse(context.rewriteRtcp(srPacket2))
+            Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
+            Assert.assertEquals(expectedTs, packet1.timestamp)
+            Assert.assertEquals(expectedFrameNumber, packet1.frameNumber)
+            Assert.assertEquals(expectedTemplateOffset, packet1.descriptor?.structure?.templateIdOffset)
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+            if (packet1.isEndOfFrame) {
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+            }
+            if (packet1.isMarked) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+            }
+        }
+
+        /* Switch to wanting encoding 1, but don't send a keyframe. We should stay at the first encoding. */
+        targetIndex = getIndex(eid = 1, dt = 2)
+        for (i in 0..89) {
+            // val srPacket1 = generator1.srPacket
+            val packetInfo1 = generator1.nextPacket()
+            val packet1 = packetInfo1.packetAs<Av1DDPacket>()
+            val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
+            Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
+            context.rewriteRtp(packetInfo1)
+            // Assert.assertTrue(context.rewriteRtcp(srPacket1))
+            // Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
+            // Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
+            // val srPacket2 = generator2.srPacket
+            val packetInfo2 = generator2.nextPacket()
+            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
+            val packet2Indices = packet2.layerIds.map { getIndex(1, it) }
+            Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
+            // Assert.assertFalse(context.rewriteRtcp(srPacket2))
+            Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
+            Assert.assertEquals(expectedTs, packet1.timestamp)
+            Assert.assertEquals(expectedFrameNumber, packet1.frameNumber)
+            Assert.assertEquals(expectedTemplateOffset, packet1.descriptor?.structure?.templateIdOffset)
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+            if (packet1.isEndOfFrame) {
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+            }
+            if (packet1.isMarked) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+            }
+        }
+        generator1.requestKeyframe()
+        generator2.requestKeyframe()
+
+        /* After a keyframe we should accept spatial layer 1 */
+        for (i in 0..8999) {
+            // val srPacket1 = generator1.srPacket
+            val packetInfo1 = generator1.nextPacket()
+            val packet1 = packetInfo1.packetAs<Av1DDPacket>()
+            val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
+
+            /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
+            Assert.assertEquals(i == 0, context.accept(packetInfo1, packet1Indices, targetIndex))
+            // Assert.assertEquals(i == 0, context.rewriteRtcp(srPacket1))
+            if (i == 0) {
+                context.rewriteRtp(packetInfo1)
+                // Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
+                // ssert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
+                expectedTemplateOffset += packet1.descriptor!!.structure.templateCount
+            }
+            // val srPacket2 = generator2.srPacket
+            val packetInfo2 = generator2.nextPacket()
+            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
+            val packet2Indices = packet1.layerIds.map { getIndex(1, it) }
+            Assert.assertTrue(context.accept(packetInfo2, packet2Indices, targetIndex))
+            val expectedTemplateId = packet2.descriptor!!.frameDependencyTemplateId + expectedTemplateOffset
+            context.rewriteRtp(packetInfo2)
+            // Assert.assertTrue(context.rewriteRtcp(srPacket2))
+            // Assert.assertEquals(packet2.ssrc, srPacket2.senderSsrc)
+            // Assert.assertEquals(packet2.timestamp, srPacket2.senderInfo.rtpTimestamp)
+            if (i == 0) {
+                /* We leave a 1-packet gap for the layer 0 keyframe. */
+                expectedSeq += 2
+                /* ts will advance by an extra 3000 samples for the extra frame. */
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                /* frame number will advance by 1 for the extra keyframe. */
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+            }
+            Assert.assertEquals(expectedSeq, packet2.sequenceNumber)
+            Assert.assertEquals(expectedTs, packet2.timestamp)
+            Assert.assertEquals(expectedFrameNumber, packet2.frameNumber)
+            Assert.assertEquals(expectedTemplateId, packet2.descriptor?.frameDependencyTemplateId)
+            if (packet2.descriptor?.newTemplateDependencyStructure != null) {
+                Assert.assertEquals(
+                    expectedTemplateOffset,
+                    packet2.descriptor?.newTemplateDependencyStructure?.templateIdOffset
+                )
+            }
+            expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+            if (packet2.isEndOfFrame) {
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+            }
+            if (packet2.isMarked) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+            }
+        }
+    }
 }
 
 private open class Av1PacketGenerator(

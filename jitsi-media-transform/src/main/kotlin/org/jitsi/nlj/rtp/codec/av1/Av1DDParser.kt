@@ -49,14 +49,15 @@ class Av1DDParser(
         val priorTemplate = history.get(packet.sequenceNumber)
 
         return Av1DDPacket(packet, av1DdExtId, priorTemplate?.structure, logger).also {
-            val decodeTargets = it.descriptor?.activeDecodeTargetsBitmask
+            val descriptor = it.descriptor
+            val decodeTargets = descriptor?.activeDecodeTargetsBitmask
             // a new template structure implies a non-null decodeTargets, so only have to check the latter
             if (decodeTargets != null) {
-                val changed = it.descriptor.structure.templateIdOffset != priorTemplate?.structure?.templateIdOffset ||
-                    it.descriptor.activeDecodeTargetsBitmask != priorTemplate.activeDecodeTargets
+                val changed = descriptor.structure.templateIdOffset != priorTemplate?.structure?.templateIdOffset ||
+                    descriptor.activeDecodeTargetsBitmask != priorTemplate.activeDecodeTargets
                 history.insert(
                     packet.sequenceNumber,
-                    Av1DdInfo(it.descriptor.structure, decodeTargets, changed)
+                    Av1DdInfo(descriptor.structure, decodeTargets, changed)
                 )
             }
         }
