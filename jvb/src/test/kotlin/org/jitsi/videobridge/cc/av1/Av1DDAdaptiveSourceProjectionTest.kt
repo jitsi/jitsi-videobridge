@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.av1
 
 import jakarta.xml.bind.DatatypeConverter.parseHexBinary
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
 import org.jitsi.nlj.util.Rfc3711IndexTracker
@@ -357,7 +358,6 @@ class Av1DDAdaptiveSourceProjectionTest {
         val packet: Av1DDPacket,
         val origSeq: Int,
         val extOrigSeq: Int,
-        val nearOldest: Boolean
     )
 
     /** Run an out-of-order test on a single stream, randomized order except for the first packet.  */
@@ -417,26 +417,13 @@ class Av1DDAdaptiveSourceProjectionTest {
             ) {
                 Assert.assertTrue(accepted)
 
-                /* There's an edge condition in frame projection where a packet
-                   of a frame can be projected, then the frame can be forgotten
-                   for being too old, then a later packet of the frame (which is
-                   just barely not too old) can be projected, at which point it
-                   can potentially get assigned different sequence number
-                   values.
-
-                   This is an unlikely enough case in real life that it's not worth
-                   worrying about; but the incredibly aggressive packet randomizer
-                   used by the unit tests can trigger it, so explicitly allow it.
-                 */
-                val nearOldest: Boolean =
-                    RtpUtils.getSequenceNumberDelta(origSeq, oldestValidSeq) < generator.packetsPerFrame
                 context.rewriteRtp(packetInfo)
                 Assert.assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.timestamp)
                 val newSeq = packet.sequenceNumber
                 val extNewSeq = newSeqIdxTracker.update(newSeq)
                 val extOrigSeq = origSeqIdxTracker.update(origSeq)
                 Assert.assertFalse(projectedPackets.containsKey(extNewSeq))
-                projectedPackets[extNewSeq] = ProjectedPacket(packet, origSeq, extOrigSeq, nearOldest)
+                projectedPackets[extNewSeq] = ProjectedPacket(packet, origSeq, extOrigSeq)
             } else {
                 Assert.assertFalse(accepted)
             }
@@ -1044,9 +1031,6 @@ class Av1DDAdaptiveSourceProjectionTest {
                 if (decodableTid < packet.frameInfo!!.temporalId) {
                     decodableTid = packet.frameInfo!!.temporalId
                 }
-                if (packet.isStartOfFrame) {
-                    Assert.assertTrue(packet.frameInfo!!.temporalId <= targetTid)
-                }
             } else {
                 if (decodableTid > packet.frameInfo!!.temporalId - 1) {
                     decodableTid = packet.frameInfo!!.temporalId - 1
@@ -1070,6 +1054,312 @@ class Av1DDAdaptiveSourceProjectionTest {
                     targetIndex = getIndex(0, targetTid)
                 }
             }
+        }
+    }
+
+    private fun runLargeDropoutTest(
+        generator: Av1PacketGenerator,
+        targetIndex: Int,
+        expectAccept: (FrameInfo) -> Boolean
+    ) {
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState, logger
+        )
+        var expectedSeq = 10001
+        var expectedTs: Long = 1003000
+        var expectedFrameNumber = 0
+        for (i in 0..999) {
+            val packetInfo = generator.nextPacket()
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+
+            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            val frameInfo = packet.frameInfo!!
+            val endOfPicture = packet.isMarked
+            if (expectAccept(frameInfo)) {
+                Assert.assertTrue(accepted)
+                context.rewriteRtp(packetInfo)
+                Assert.assertEquals(expectedSeq, packet.sequenceNumber)
+                Assert.assertEquals(expectedTs, packet.timestamp)
+                Assert.assertEquals(expectedFrameNumber, packet.frameNumber)
+                expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+            } else {
+                Assert.assertFalse(accepted)
+            }
+            if (packet.isEndOfFrame) {
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+            }
+            if (endOfPicture) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+            }
+        }
+        for (gap in 64..65536 step { it * 2 }) {
+            for (i in 0 until gap) {
+                generator.nextPacket()
+            }
+            var packetInfo: PacketInfo
+            var packet: Av1DDPacket
+            var frameInfo: FrameInfo
+            do {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                frameInfo = packet.frameInfo!!
+            } while (!expectAccept(frameInfo))
+            var packetIndices = packet.layerIds.map { getIndex(0, it) }
+            var endOfPicture = packet.isMarked
+            Assert.assertTrue(context.accept(packetInfo, packetIndices, targetIndex))
+            context.rewriteRtp(packetInfo)
+
+            /* Allow any values after a gap. */
+            expectedSeq = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, 1)
+            expectedTs = packet.timestamp
+            expectedFrameNumber = packet.frameNumber
+            if (packet.isEndOfFrame) {
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+            }
+            if (endOfPicture) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+            }
+            for (i in 0..999) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                packetIndices = packet.layerIds.map { getIndex(0, it) }
+                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                endOfPicture = packet.isMarked
+                frameInfo = packet.frameInfo!!
+                if (expectAccept(frameInfo)) {
+                    Assert.assertTrue(accepted)
+                    context.rewriteRtp(packetInfo)
+                    Assert.assertEquals(expectedSeq, packet.sequenceNumber)
+                    Assert.assertEquals(expectedTs, packet.timestamp)
+                    Assert.assertEquals(expectedFrameNumber, packet.frameNumber)
+                    expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                } else {
+                    Assert.assertFalse(accepted)
+                }
+                if (packet.isEndOfFrame) {
+                    expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+                }
+                if (endOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun largeDropoutTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        runLargeDropoutTest(generator, getIndex(eid = 0, dt = 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun filteredDropoutTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        runLargeDropoutTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largeFrameDropoutTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runLargeDropoutTest(generator, getIndex(eid = 0, dt = 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun largeFrameFilteredDropoutTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runLargeDropoutTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
+
+    private fun runSourceSuspensionTest(
+        generator: Av1PacketGenerator,
+        targetIndex: Int,
+        expectAccept: (FrameInfo) -> Boolean
+    ) {
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState, logger
+        )
+        var expectedSeq = 10001
+        var expectedTs: Long = 1003000
+        var expectedFrameNumber = 0
+
+        var packetInfo: PacketInfo
+        var packet: Av1DDPacket
+        var packetIndices: Collection<Int>
+        var frameInfo: FrameInfo
+
+        var lastPacketAccepted = false
+        var lastFrameAccepted = -1
+
+        for (i in 0..999) {
+            packetInfo = generator.nextPacket()
+            packet = packetInfo.packetAs()
+            frameInfo = packet.frameInfo!!
+            packetIndices = packet.layerIds.map { getIndex(0, it) }
+            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            val endOfPicture = packet.isMarked
+            if (expectAccept(frameInfo)) {
+                Assert.assertTrue(accepted)
+                context.rewriteRtp(packetInfo)
+                Assert.assertEquals(expectedSeq, packet.sequenceNumber)
+                Assert.assertEquals(expectedTs, packet.timestamp)
+                Assert.assertEquals(expectedFrameNumber, packet.frameNumber)
+                expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                lastPacketAccepted = true
+                lastFrameAccepted = packet.frameNumber
+            } else {
+                Assert.assertFalse(accepted)
+                lastPacketAccepted = false
+            }
+            if (packet.isEndOfFrame) {
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+            }
+            if (endOfPicture) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+            }
+        }
+        for (suspended in 64..65536 step { it * 2 }) {
+            /* If the last frame was accepted, finish the current frame if this generator is creating multi-packet
+                frames. */
+            if (lastPacketAccepted) {
+                while (generator.packetOfFrame != 0) {
+                    packetInfo = generator.nextPacket()
+                    packet = packetInfo.packetAs()
+                    packetIndices = packet.layerIds.map { getIndex(0, it) }
+
+                    val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                    val endOfPicture = packet.isMarked
+                    Assert.assertTrue(accepted)
+                    context.rewriteRtp(packetInfo)
+                    expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                    if (packet.isEndOfFrame) {
+                        expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+                    }
+                    if (endOfPicture) {
+                        expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                    }
+                }
+            }
+            /* Turn the source off for a time. */
+            for (i in 0 until suspended) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                packetIndices = packet.layerIds.map { getIndex(0, it) }
+
+                val accepted = context.accept(packetInfo, packetIndices, RtpLayerDesc.SUSPENDED_INDEX)
+                Assert.assertFalse(accepted)
+                val endOfPicture = packet.isMarked
+                if (endOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+
+            /* Switch back to wanting [targetIndex], but don't send a keyframe for a while.
+             * Should still be dropped. */
+            for (i in 0 until 30) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                packetIndices = packet.layerIds.map { getIndex(0, it) }
+
+                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                val endOfPicture = packet.isMarked
+                Assert.assertFalse(accepted)
+                if (endOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+
+            /* Request a keyframe.  Will be sent as of the next frame. */
+            generator.requestKeyframe()
+            /* If this generator is creating multi-packet frames, finish the previous frame. */
+            while (generator.packetOfFrame != 0) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                packetIndices = packet.layerIds.map { getIndex(0, it) }
+                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                val endOfPicture = packet.isMarked
+                Assert.assertFalse(accepted)
+                if (endOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+            expectedFrameNumber = RtpUtils.applySequenceNumberDelta(lastFrameAccepted, 1)
+
+            for (i in 0..999) {
+                packetInfo = generator.nextPacket()
+                packet = packetInfo.packetAs()
+                frameInfo = packet.frameInfo!!
+                packetIndices = packet.layerIds.map { getIndex(0, it) }
+                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                val endOfPicture = packet.isMarked
+                if (expectAccept(frameInfo)) {
+                    Assert.assertTrue(accepted)
+                    context.rewriteRtp(packetInfo)
+                    Assert.assertEquals(expectedSeq, packet.sequenceNumber)
+                    Assert.assertEquals(expectedTs, packet.timestamp)
+                    Assert.assertEquals(expectedFrameNumber, packet.frameNumber)
+                    expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+                    lastPacketAccepted = true
+                    lastFrameAccepted = packet.frameNumber
+                } else {
+                    Assert.assertFalse(accepted)
+                    lastPacketAccepted = false
+                }
+                if (packet.isEndOfFrame) {
+                    expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+                }
+                if (endOfPicture) {
+                    expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun sourceSuspensionTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        runSourceSuspensionTest(generator, getIndex(eid = 0, dt = 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun filteredSourceSuspensionTest() {
+        val generator = TemporallyScaledPacketGenerator(1)
+        runSourceSuspensionTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
+        }
+    }
+
+    @Test
+    fun largeFrameSourceSuspensionTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runSourceSuspensionTest(generator, getIndex(eid = 0, dt = 2)) {
+            true
+        }
+    }
+
+    @Test
+    fun largeFrameFilteredSourceSuspensionTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        runSourceSuspensionTest(generator, getIndex(eid = 0, dt = 0)) {
+            it.temporalId == 0
         }
     }
 }
@@ -1298,3 +1588,6 @@ private class SingleEncodingSimulcastAv1PacketGenerator(
             "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434",
         allKeyframesGetStructure = true
     )
+
+private infix fun IntRange.step(next: (Int) -> Int) =
+    generateSequence(first, next).takeWhile { if (first < last) it <= last else it >= last }

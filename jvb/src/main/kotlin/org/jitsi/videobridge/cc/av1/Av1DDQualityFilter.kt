@@ -114,7 +114,7 @@ internal class Av1DDQualityFilter(
             "isResumption=$isResumption but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
         }
         val newDt = if (prevIndex != currentIndex) currentDt else null
-        if (newDt != null) check(accept) {
+        if (newDt != null && newDt != SUSPENDED_DT) check(accept) {
             "newDt=$newDt but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
         } // Every code path that changes DT also accepts
         return AcceptResult(accept = accept, isResumption = isResumption, mark = mark, newDt = newDt)
