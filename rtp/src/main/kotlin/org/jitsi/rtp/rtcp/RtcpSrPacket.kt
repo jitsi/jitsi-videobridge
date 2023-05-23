@@ -80,6 +80,12 @@ data class SenderInfoBuilder(
     var sendersPacketCount: Long = -1,
     var sendersOctetCount: Long = -1
 ) {
+    fun setNtpFromJavaTime(javaTime: Long) {
+        val wallSecs = javaTime / 1000
+        val wallMs = javaTime % 1000
+        ntpTimestampMsw = wallSecs + JAVA_TO_NTP_EPOCH_OFFSET_SECS
+        ntpTimestampLsw = wallMs * (1L shl 32) / 1000
+    }
 
     fun writeTo(buf: ByteArray, offset: Int) {
         SenderInfoParser.setNtpTimestampMsw(buf, offset, ntpTimestampMsw)
@@ -87,6 +93,10 @@ data class SenderInfoBuilder(
         SenderInfoParser.setRtpTimestamp(buf, offset, rtpTimestamp)
         SenderInfoParser.setSendersPacketCount(buf, offset, sendersPacketCount)
         SenderInfoParser.setSendersOctetCount(buf, offset, sendersOctetCount)
+    }
+
+    companion object {
+        const val JAVA_TO_NTP_EPOCH_OFFSET_SECS = 2208988800L
     }
 }
 

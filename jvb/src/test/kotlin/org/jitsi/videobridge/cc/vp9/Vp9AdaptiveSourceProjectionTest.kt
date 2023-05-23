@@ -27,7 +27,6 @@ import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
-import org.jitsi.rtp.rtcp.SenderInfoBuilder
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
@@ -1481,7 +1480,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 val srPacketBuilder = RtcpSrPacketBuilder()
                 srPacketBuilder.rtcpHeader.senderSsrc = ssrc
                 val siBuilder = srPacketBuilder.senderInfo
-                setSIBuilderNtp(srPacketBuilder.senderInfo, receivedTime.toEpochMilli())
+                siBuilder.setNtpFromJavaTime(receivedTime.toEpochMilli())
                 siBuilder.rtpTimestamp = ts
                 siBuilder.sendersOctetCount = packetCount.toLong()
                 siBuilder.sendersOctetCount = octetCount.toLong()
@@ -1508,14 +1507,6 @@ class Vp9AdaptiveSourceProjectionTest {
                     // Dummy payload data
                     "000000"
             )
-            /* TODO: move this to jitsi-rtp */
-            fun setSIBuilderNtp(siBuilder: SenderInfoBuilder, wallTime: Long) {
-                val JAVA_TO_NTP_EPOCH_OFFSET_SECS = 2208988800L
-                val wallSecs = wallTime / 1000
-                val wallMs = wallTime % 1000
-                siBuilder.ntpTimestampMsw = wallSecs + JAVA_TO_NTP_EPOCH_OFFSET_SECS
-                siBuilder.ntpTimestampLsw = wallMs * (1L shl 32) / 1000
-            }
         }
     }
 }
