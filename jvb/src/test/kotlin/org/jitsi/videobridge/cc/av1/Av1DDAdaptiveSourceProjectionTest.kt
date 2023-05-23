@@ -21,6 +21,8 @@ import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
 import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
@@ -888,7 +890,7 @@ class Av1DDAdaptiveSourceProjectionTest {
 
         /* Start by wanting encoding 0 */
         for (i in 0..899) {
-            // val srPacket1 = generator1.srPacket
+            val srPacket1 = generator1.srPacket
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Av1DDPacket>()
             val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
@@ -897,15 +899,15 @@ class Av1DDAdaptiveSourceProjectionTest {
             }
             Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
             context.rewriteRtp(packetInfo1)
-            // Assert.assertTrue(context.rewriteRtcp(srPacket1))
-            // Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
-            // Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
-            // val srPacket2 = generator2.srPacket
+            Assert.assertTrue(context.rewriteRtcp(srPacket1))
+            Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
+            Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
+            val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
             val packet2 = packetInfo2.packetAs<Av1DDPacket>()
             val packet2Indices = packet2.layerIds.map { getIndex(1, it) }
             Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
-            // Assert.assertFalse(context.rewriteRtcp(srPacket2))
+            Assert.assertFalse(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
             Assert.assertEquals(expectedFrameNumber, packet1.frameNumber)
@@ -922,21 +924,21 @@ class Av1DDAdaptiveSourceProjectionTest {
         /* Switch to wanting encoding 1, but don't send a keyframe. We should stay at the first encoding. */
         targetIndex = getIndex(eid = 1, dt = 2)
         for (i in 0..89) {
-            // val srPacket1 = generator1.srPacket
+            val srPacket1 = generator1.srPacket
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Av1DDPacket>()
             val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
             Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
             context.rewriteRtp(packetInfo1)
-            // Assert.assertTrue(context.rewriteRtcp(srPacket1))
-            // Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
-            // Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
-            // val srPacket2 = generator2.srPacket
+            Assert.assertTrue(context.rewriteRtcp(srPacket1))
+            Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
+            Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
+            val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
             val packet2 = packetInfo2.packetAs<Av1DDPacket>()
             val packet2Indices = packet2.layerIds.map { getIndex(1, it) }
             Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
-            // Assert.assertFalse(context.rewriteRtcp(srPacket2))
+            Assert.assertFalse(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
             Assert.assertEquals(expectedFrameNumber, packet1.frameNumber)
@@ -954,30 +956,30 @@ class Av1DDAdaptiveSourceProjectionTest {
 
         /* After a keyframe we should accept spatial layer 1 */
         for (i in 0..8999) {
-            // val srPacket1 = generator1.srPacket
+            val srPacket1 = generator1.srPacket
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Av1DDPacket>()
             val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
 
             /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
             Assert.assertEquals(i == 0, context.accept(packetInfo1, packet1Indices, targetIndex))
-            // Assert.assertEquals(i == 0, context.rewriteRtcp(srPacket1))
+            Assert.assertEquals(i == 0, context.rewriteRtcp(srPacket1))
             if (i == 0) {
                 context.rewriteRtp(packetInfo1)
-                // Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
-                // ssert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
+                Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
+                Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
                 expectedTemplateOffset += packet1.descriptor!!.structure.templateCount
             }
-            // val srPacket2 = generator2.srPacket
+            val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
             val packet2 = packetInfo2.packetAs<Av1DDPacket>()
             val packet2Indices = packet1.layerIds.map { getIndex(1, it) }
             Assert.assertTrue(context.accept(packetInfo2, packet2Indices, targetIndex))
             val expectedTemplateId = packet2.descriptor!!.frameDependencyTemplateId + expectedTemplateOffset
             context.rewriteRtp(packetInfo2)
-            // Assert.assertTrue(context.rewriteRtcp(srPacket2))
-            // Assert.assertEquals(packet2.ssrc, srPacket2.senderSsrc)
-            // Assert.assertEquals(packet2.timestamp, srPacket2.senderInfo.rtpTimestamp)
+            Assert.assertTrue(context.rewriteRtcp(srPacket2))
+            Assert.assertEquals(packet2.ssrc, srPacket2.senderSsrc)
+            Assert.assertEquals(packet2.timestamp, srPacket2.senderInfo.rtpTimestamp)
             if (i == 0) {
                 /* We leave a 1-packet gap for the layer 0 keyframe. */
                 expectedSeq += 2
@@ -1509,6 +1511,18 @@ private open class Av1PacketGenerator(
             keyframeRequested = true
         }
     }
+
+    val srPacket: RtcpSrPacket
+        get() {
+            val srPacketBuilder = RtcpSrPacketBuilder()
+            srPacketBuilder.rtcpHeader.senderSsrc = ssrc
+            val siBuilder = srPacketBuilder.senderInfo
+            siBuilder.setNtpFromJavaTime(receivedTime.toEpochMilli())
+            siBuilder.rtpTimestamp = ts
+            siBuilder.sendersOctetCount = packetCount.toLong()
+            siBuilder.sendersOctetCount = octetCount.toLong()
+            return srPacketBuilder.build()
+        }
 
     init {
         reset()
