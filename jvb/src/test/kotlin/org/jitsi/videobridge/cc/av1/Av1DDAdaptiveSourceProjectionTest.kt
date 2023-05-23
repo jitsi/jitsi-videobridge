@@ -1018,6 +1018,60 @@ class Av1DDAdaptiveSourceProjectionTest {
             }
         }
     }
+
+    @Test
+    fun temporalLayerSwitchingTest() {
+        val generator = TemporallyScaledPacketGenerator(3)
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "temporalLayerSwitchingTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState, logger
+        )
+        var targetTid = 0
+        var decodableTid = 0
+        var targetIndex = getIndex(0, targetTid)
+        var expectedSeq = 10001
+        var expectedTs: Long = 1003000
+        var expectedFrameNumber = 0
+        for (i in 0..9999) {
+            val packetInfo = generator.nextPacket()
+            val packet = packetInfo.packetAs<Av1DDPacket>()
+            val packetIndices = packet.layerIds.map { getIndex(0, it) }
+            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            if (accepted) {
+                if (decodableTid < packet.frameInfo!!.temporalId) {
+                    decodableTid = packet.frameInfo!!.temporalId
+                }
+                if (packet.isStartOfFrame) {
+                    Assert.assertTrue(packet.frameInfo!!.temporalId <= targetTid)
+                }
+            } else {
+                if (decodableTid > packet.frameInfo!!.temporalId - 1) {
+                    decodableTid = packet.frameInfo!!.temporalId - 1
+                }
+            }
+            if (packet.frameInfo!!.temporalId <= decodableTid) {
+                Assert.assertTrue(accepted)
+                context.rewriteRtp(packetInfo)
+                Assert.assertEquals(expectedSeq, packet.sequenceNumber)
+                Assert.assertEquals(expectedTs, packet.timestamp)
+                Assert.assertEquals(expectedFrameNumber, packet.frameNumber)
+                expectedSeq = RtpUtils.applySequenceNumberDelta(expectedSeq, 1)
+            } else {
+                Assert.assertFalse(accepted)
+            }
+            if (packet.isEndOfFrame) {
+                expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
+                expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
+                if (i % 97 == 0) /* Prime number so it's out of sync with packet cycles. */ {
+                    targetTid = (targetTid + 2) % 3
+                    targetIndex = getIndex(0, targetTid)
+                }
+            }
+        }
+    }
 }
 
 private open class Av1PacketGenerator(
