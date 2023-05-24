@@ -762,7 +762,7 @@ class Relay @JvmOverloads constructor(
                 }
             )
             ep.statsId = statsId
-            ep.audioSources = audioSources.toTypedArray()
+            ep.audioSources = audioSources.toList()
             ep.mediaSources = videoSources.toTypedArray()
 
             relayedEndpoints[id] = ep
@@ -794,7 +794,7 @@ class Relay @JvmOverloads constructor(
             }
             val oldSsrcs = ep.ssrcs
 
-            ep.audioSources = audioSources.toTypedArray()
+            ep.audioSources = audioSources.toList()
             ep.mediaSources = videoSources.toTypedArray()
 
             val newSsrcs = ep.ssrcs
@@ -883,7 +883,7 @@ class Relay @JvmOverloads constructor(
         audioSources: Collection<AudioSourceDesc>,
         videoSources: Collection<MediaSourceDesc>
     ) {
-        ep.audioSources = audioSources.toTypedArray()
+        ep.audioSources = audioSources.toList()
         ep.mediaSources = videoSources.toTypedArray()
     }
 

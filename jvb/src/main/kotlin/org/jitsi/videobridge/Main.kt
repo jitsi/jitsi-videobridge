@@ -51,6 +51,10 @@ import org.jitsi.videobridge.websocket.singleton as webSocketServiceSingleton
 fun main() {
     val logger = LoggerImpl("org.jitsi.videobridge.Main")
 
+    Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
+        logger.error("An uncaught exception occurred in thread=$thread", exception)
+    }
+
     setupMetaconfigLogger()
 
     setSystemPropertyDefaults()

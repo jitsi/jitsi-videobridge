@@ -93,8 +93,6 @@ class RelayMessageTransport(
      */
     private val sentMessagesCounts: MutableMap<String, AtomicLong> = ConcurrentHashMap()
 
-    init { logger.addContext("relay-id", relay.id) }
-
     /**
      * Connect the bridge channel message to the websocket URL specified
      */

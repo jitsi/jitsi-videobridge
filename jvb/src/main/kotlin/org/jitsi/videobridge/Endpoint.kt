@@ -67,6 +67,7 @@ import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.relay.RelayedEndpoint
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.DataChannelHandler
 import org.jitsi.videobridge.sctp.SctpHandler
@@ -401,9 +402,11 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Whether this endpoint has any endpoints "on-stage".
+     * Return the list of sources the endpoint has selected as "on stage". We just concatenate with the old
+     * "onStageEndpoints" since even with the old API we have matching source names.
      */
-    fun isInStageView() = bitrateController.allocationSettings.onStageEndpoints.isNotEmpty()
+    fun getOnStageSources() =
+        bitrateController.allocationSettings.onStageEndpoints + bitrateController.allocationSettings.onStageSources
 
     private fun setupDtlsTransport() {
         dtlsTransport.incomingDataHandler = object : DtlsTransport.IncomingDataHandler {
@@ -876,9 +879,11 @@ class Endpoint @JvmOverloads constructor(
      */
     override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
         conference.getEndpointBySsrc(ssrc)?.let { ep ->
-            if (ep !is Endpoint)
-                return null
-            return ep.audioSources.find { s -> s.ssrc == ssrc }
+            return when (ep) {
+                is Endpoint -> ep.audioSources
+                is RelayedEndpoint -> ep.audioSources
+                else -> emptyList()
+            }.find { it.ssrc == ssrc }
         }
         logger.error { "No properties found for SSRC $ssrc." }
         return null
