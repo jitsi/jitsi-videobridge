@@ -298,13 +298,11 @@ class Av1DDAdaptiveSourceProjectionContext(
 
         // this is a simulcast switch. The typical incremental value =
         // 90kHz / 30 = 90,000Hz / 30 = 3000 per frame or per 33ms
-        val tsDelta: Long = lastAv1FrameProjection.created?.let { created ->
+        val tsDelta = lastAv1FrameProjection.created?.let { created ->
             receivedTime?.let {
                 3000 * Duration.between(created, receivedTime).dividedBy(33).seconds.coerceAtLeast(1L)
             }
-        } ?: run {
-            3000
-        }
+        } ?: 3000
         val projectedTs = RtpUtils.applyTimestampDelta(lastAv1FrameProjection.timestamp, tsDelta)
 
         val frameNumber: Int
