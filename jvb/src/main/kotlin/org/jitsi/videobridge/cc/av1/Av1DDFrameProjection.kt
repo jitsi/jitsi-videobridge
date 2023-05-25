@@ -28,20 +28,7 @@ import java.time.Instant
  * projection is responsible for rewriting a AV1 DD packet. Instances of this class
  * are thread-safe.
  */
-class Av1DDFrameProjection
-/**
- * Ctor.
- *
- * @param av1Frame The [Av1Frame] that's projected.
- * @param ssrc The RTP SSRC of the projected frame that this instance refers
- * to (RFC3550).
- * @param timestamp The RTP timestamp of the projected frame that this
- * instance refers to (RFC3550).
- * @param sequenceNumberDelta The starting RTP sequence number of the
- * projected frame that this instance refers to (RFC3550).
- * @param frameNumber The frame number of the projected frame.
- */
-internal constructor(
+class Av1DDFrameProjection internal constructor(
     /**
      * The diagnostic context for this instance.
      */
@@ -155,7 +142,7 @@ internal constructor(
             )
         }
 
-        // update ssrc, sequence number, timestamp, pictureId and tl0picidx
+        // update ssrc, sequence number, timestamp, frameNumber, and templateID
         pkt.ssrc = ssrc
         pkt.timestamp = timestamp
         pkt.sequenceNumber = sequenceNumber
