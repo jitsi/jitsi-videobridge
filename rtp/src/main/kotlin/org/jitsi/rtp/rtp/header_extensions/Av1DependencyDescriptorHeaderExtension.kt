@@ -483,7 +483,7 @@ class Av1DependencyDescriptorReader(
             /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
              * none of these fields are parseable statelessly.
              */
-            reader.skipbits(4)
+            reader.skipBits(4)
 
             if (templateDependencyStructurePresent) {
                 localTemplateDependencyStructure = readTemplateDependencyStructure()

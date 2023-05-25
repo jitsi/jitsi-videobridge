@@ -43,7 +43,7 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
     /** Read a single bit from the buffer, as an integer, incrementing the offset. */
     fun bit() = if (bitAsBoolean()) 1 else 0
 
-    /** Read N bits from the buffer, returning them as an unsigned integer. */
+    /** Read [n] bits from the buffer, returning them as an unsigned integer. */
     fun bits(n: Int): Int {
         require(n < Int.SIZE_BITS)
 
@@ -58,7 +58,7 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
         return ret
     }
 
-    /** Read N bits from the buffer, returning them as an unsigned long. */
+    /** Read [n] bits from the buffer, returning them as an unsigned long. */
     fun bitsLong(n: Int): Long {
         require(n < Long.SIZE_BITS)
 
@@ -73,17 +73,16 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
         return ret
     }
 
-    /** Skip forward N bits in the buffer. */
-    fun skipbits(n: Int) {
+    /** Skip forward [n] bits in the buffer. */
+    fun skipBits(n: Int) {
         offset += n
     }
 
-    /** Read a non-symmetric unsigned integer with max value N from the buffer.
+    /** Read a non-symmetric unsigned integer with max *value* [n] from the buffer.
+     * (Note: *not* the number of bits.)
      *  See https://aomediacodec.github.io/av1-rtp-spec/#a82-syntax
      */
     fun ns(n: Int): Int {
-        require(n < Int.SIZE_BITS)
-
         var w = 0
         var x = n
         while (x != 0) {
