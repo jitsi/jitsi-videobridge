@@ -161,8 +161,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         }
 
     fun addPayloadType(payloadType: PayloadType) {
-        packetHandler.addPayloadType(payloadType)
-
         if (payloadType.encoding == PayloadTypeEncoding.RTX) {
             supportsRtx = true
         }

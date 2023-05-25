@@ -17,13 +17,11 @@ package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.av1.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
 import org.jitsi.nlj.rtp.codec.vp9.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.av1.*;
@@ -96,28 +94,21 @@ public class AdaptiveSourceProjection
      */
     private int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
 
-    private final Map<Byte, PayloadType> payloadTypes;
-
     /**
      * Ctor.
      *
      * @param source the {@link MediaSourceDesc} that owns the packets
      * that this instance filters.
-     *
-     * @param payloadTypes a reference to a map of payload types.  This map
-     *                     should be updated as the payload types change.
      */
     public AdaptiveSourceProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaSourceDesc source,
         Runnable keyframeRequester,
-        Map<Byte, PayloadType> payloadTypes,
         Logger parentLogger
     )
     {
         targetSsrc = source.getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
-        this.payloadTypes = payloadTypes;
         this.parentLogger = parentLogger;
         this.logger = parentLogger.createChildLogger(AdaptiveSourceProjection.class.getName(),
             Map.of("targetSsrc", Long.toString(targetSsrc),
