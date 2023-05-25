@@ -28,7 +28,6 @@ import org.jitsi.nlj.util.DataSize
  * @author George Politis
  */
 abstract class RtpLayerDesc
-@JvmOverloads
 constructor(
     /**
      * The index of this instance's encoding in the source encoding array.
