@@ -23,12 +23,13 @@ import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.nlj.util.TreeCache
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
 /**
  * Some [Av1DDPacket] fields are not able to be determined by looking at a single packet with an AV1 DD
- * (for example the template dependency strcture is only carried in keyframes).  This class updates the layer
+ * (for example the template dependency structure is only carried in keyframes).  This class updates the layer
  * descriptions with information from frames, and also diagnoses packet format variants that the Jitsi videobridge
  * won't be able to route.
  */
@@ -39,7 +40,7 @@ class Av1DDParser(
     private val logger = createChildLogger(parentLogger)
 
     /** History of AV1 templates and decode targets. */
-    private val ddStateHistory = HashMap<Long, TemplateHistory>()
+    private val ddStateHistory = LRUCache<Long, TemplateHistory>(STATE_HISTORY_SIZE, true)
 
     fun createFrom(packet: RtpPacket, av1DdExtId: Int): Av1DDPacket {
         val history = ddStateHistory.getOrPut(packet.ssrc) {
@@ -90,6 +91,7 @@ class Av1DDParser(
     }
 
     companion object {
+        const val STATE_HISTORY_SIZE = 500
         const val TEMPLATE_HISTORY_SIZE = 500
     }
 }
