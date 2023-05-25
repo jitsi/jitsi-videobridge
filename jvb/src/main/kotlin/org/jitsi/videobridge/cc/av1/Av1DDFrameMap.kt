@@ -4,6 +4,7 @@ import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
@@ -41,7 +42,7 @@ class Av1DDFrameMap(
             if (tsDelta > 0) {
                 return true
             }
-            if (RtpUtils.getSequenceNumberDelta(packet.sequenceNumber, latestFrame.latestKnownSequenceNumber) > 0) {
+            if (packet.sequenceNumber isNewerThan latestFrame.latestKnownSequenceNumber) {
                 return true
             }
         }
