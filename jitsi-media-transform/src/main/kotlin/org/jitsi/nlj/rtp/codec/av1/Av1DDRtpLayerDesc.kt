@@ -35,8 +35,6 @@ class Av1DDRtpLayerDesc(
      * The max height of the bitstream that this instance represents. The actual
      * height may be less due to bad network or system load.
      */
-    // XXX we should be able to sniff the actual height from the RTP
-    // packets.
     height: Int,
     /**
      * The max frame rate (in fps) of the bitstream that this instance
@@ -62,6 +60,14 @@ class Av1DDRtpLayerDesc(
     }
 
     override fun indexString(): String = indexString(index)
+
+    /**
+     * {@inheritDoc}
+     */
+    override fun toString(): String {
+        return "subjective_quality=" + index +
+            ",DT=" + dt
+    }
 
     companion object {
         /**
