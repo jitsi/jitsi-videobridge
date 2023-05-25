@@ -328,7 +328,7 @@ internal class Av1DDQualityFilter(
         val frameInfo = frame.frameInfo ?: run {
             // something went terribly wrong, normally we should be able to
             // extract the frame info from a keyframe.
-            logger.error("unable to get layer id from keyframe")
+            logger.error("unable to get frame info from keyframe")
             return@acceptKeyframe false
         }
         logger.debug {
