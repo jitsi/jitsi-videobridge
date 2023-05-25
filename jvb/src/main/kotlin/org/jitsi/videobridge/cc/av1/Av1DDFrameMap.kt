@@ -181,12 +181,11 @@ internal class FrameHistory(size: Int) :
         get() = getIndex(lastIndex)
 
     fun insert(frame: Av1DDFrame): Boolean {
-        val index = indexTracker.update(frame.frameNumber)
-        val ret = super.insertItem(frame, index)
+        val ret = super.insertItem(frame, frame.index)
         if (ret) {
             numCached++
-            if (firstIndex == -1 || index < firstIndex) {
-                firstIndex = index
+            if (firstIndex == -1 || frame.index < firstIndex) {
+                firstIndex = frame.index
             }
         }
         return ret
@@ -210,7 +209,7 @@ internal class FrameHistory(size: Int) :
         if (lastIndex == -1) {
             return null
         }
-        val index = indexTracker.interpret(frame.frameNumber)
+        val index = frame.index
         val searchStartIndex = Integer.min(index - 1, lastIndex)
         val searchEndIndex = Integer.max(lastIndex - size, firstIndex - 1)
         return doFind(pred, searchStartIndex, searchEndIndex, -1)
@@ -221,7 +220,7 @@ internal class FrameHistory(size: Int) :
         if (lastIndex == -1) {
             return null
         }
-        val index = indexTracker.interpret(frame.frameNumber)
+        val index = frame.index
         if (index >= lastIndex) {
             return null
         }
