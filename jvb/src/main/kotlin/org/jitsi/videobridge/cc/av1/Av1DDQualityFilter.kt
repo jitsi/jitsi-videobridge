@@ -306,7 +306,7 @@ internal class Av1DDQualityFilter(
      * method at a time.
      *
      * @param receivedTime the time the frame was received
-     * @return true to accept the VP9 keyframe, otherwise false.
+     * @return true to accept the AV1 keyframe, otherwise false.
      */
     @Synchronized
     private fun acceptKeyframe(

@@ -95,7 +95,7 @@ class Av1DDFrame internal constructor(
     val activeDecodeTargets: Int?,
 
     /**
-     * A boolean that indicates whether the incoming VP9 frame that this
+     * A boolean that indicates whether the incoming AV1 frame that this
      * instance refers to is a keyframe.
      */
     var isKeyframe: Boolean,
