@@ -316,7 +316,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             templateIdDelta = if (nextTemplateId != null) {
                 val structure = frame.structure
                 check(structure != null)
-                (nextTemplateId - structure.templateIdOffset) % 64
+                (nextTemplateId - structure.templateIdOffset + 64) % 64
             } else {
                 0
             }
@@ -376,7 +376,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             if (nextTemplateId != null) {
                 val structure = frame.structure
                 check(structure != null)
-                (nextTemplateId - structure.templateIdOffset) % 64
+                (nextTemplateId - structure.templateIdOffset + 64) % 64
             } else {
                 0
             }
@@ -446,7 +446,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             if (nextTemplateId != null) {
                 val structure = frame.structure
                 check(structure != null)
-                (nextTemplateId - structure.templateIdOffset) % 64
+                (nextTemplateId - structure.templateIdOffset + 64) % 64
             } else {
                 0
             }
