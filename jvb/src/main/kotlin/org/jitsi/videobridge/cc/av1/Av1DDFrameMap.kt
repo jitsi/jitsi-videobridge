@@ -201,7 +201,7 @@ internal class FrameHistory(size: Int) :
     /**
      * Called when an item in the cache is replaced/discarded.
      */
-    fun discardItem(frame: Av1DDFrame?) {
+    override fun discardItem(item: Av1DDFrame) {
         numCached--
     }
 
