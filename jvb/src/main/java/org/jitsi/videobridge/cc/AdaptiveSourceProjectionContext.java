@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.cc;
 
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.rtp.rtcp.*;
 import org.json.simple.*;
 
