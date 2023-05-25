@@ -144,20 +144,30 @@ class EndpointConnectionStats(
             // The delaySinceLastSr value is given in 1/65536ths of a second, so divide it by .000065536 to get it
             // in nanoseconds
             val remoteProcessingDelay = Duration.ofNanos((reportBlock.delaySinceLastSr / .000065536).toLong())
-            rtt = (Duration.between(srSentTime, receivedTime) - remoteProcessingDelay).toDoubleMillis()
-            if (rtt > 7.secs.toMillis()) {
-                logger.warn(
-                    "Suspiciously high rtt value: $rtt ms, remote processing delay was " +
-                        "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
-                        "received time was $receivedTime"
-                )
-            } else if (rtt < 0) {
-                logger.warn(
-                    "Negative rtt value: $rtt ms, remote processing delay was " +
-                        "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
-                        "received time was $receivedTime"
-                )
+            if (remoteProcessingDelay > Duration.ofMinutes(5)) {
+                logger.warn("Ignoring report block with suspiciously long DLSR: $remoteProcessingDelay")
+                return@let
             }
+
+            val newRtt = (Duration.between(srSentTime, receivedTime) - remoteProcessingDelay).toDoubleMillis()
+            if (newRtt > 7.secs.toMillis()) {
+                logger.warn(
+                    "Ignoring suspiciously high rtt value: $newRtt ms, remote processing delay was " +
+                        "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
+                        "received time was $receivedTime"
+                )
+                return@let
+            }
+            if (newRtt < 0) {
+                logger.warn(
+                    "Negative rtt value: $newRtt ms, remote processing delay was " +
+                        "$remoteProcessingDelay (${reportBlock.delaySinceLastSr}), srSentTime was $srSentTime, " +
+                        "received time was $receivedTime"
+                )
+                return@let
+            }
+
+            rtt = newRtt
             endpointConnectionStatsListeners.forEach { it.onRttUpdate(rtt) }
         } ?: run {
             logger.cdebug {
