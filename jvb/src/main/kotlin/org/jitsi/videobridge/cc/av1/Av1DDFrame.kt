@@ -84,6 +84,11 @@ class Av1DDFrame internal constructor(
     val index: Int,
 
     /**
+     * The template ID of this frame
+     */
+    val templateId: Int,
+
+    /**
      * The AV1 Template Dependency Structure in effect for this frame, if known
      */
     structure: Av1TemplateDependencyStructure?,
@@ -176,6 +181,7 @@ class Av1DDFrame internal constructor(
         frameInfo = packet.frameInfo,
         frameNumber = packet.statelessDescriptor.frameNumber,
         index = index,
+        templateId = packet.statelessDescriptor.frameDependencyTemplateId,
         structure = packet.descriptor?.structure,
         activeDecodeTargets = packet.activeDecodeTargets,
         isKeyframe = packet.isKeyframe,
@@ -267,11 +273,13 @@ class Av1DDFrame internal constructor(
                 with(pkt) {
                     append("Packet ssrc $ssrc, seq $sequenceNumber, frame number $frameNumber, timestamp $timestamp ")
                 }
-                append("is not consistent with picture $ssrc, ")
+                append("is not consistent with frame $ssrc, ")
                 append("seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
                 append("frame number $frameNumber, timestamp $timestamp: ")
 
-                append("frame info $frameInfo != packet frame info ${pkt.frameInfo}")
+                append("frame template $templateId info $frameInfo != ")
+                append("packet template ${pkt.statelessDescriptor.frameDependencyTemplateId} ")
+                append("frame info ${pkt.frameInfo}")
             }
         )
     }

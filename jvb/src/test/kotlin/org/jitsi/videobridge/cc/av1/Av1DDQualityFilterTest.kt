@@ -741,6 +741,7 @@ private open class DDBasedGenerator(
             frameInfo = structure.templateInfo[templateId],
             frameNumber = frameCount, /* Will be less than 0xffff */
             index = frameCount,
+            templateId = templateId,
             structure = structure,
             activeDecodeTargets = null,
             isKeyframe = isKeyframe(keyCycle),
@@ -849,6 +850,7 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
             frameInfo = structure.templateInfo[templateId],
             frameNumber = pictureCount, /* Will be less than 0xffff */
             index = pictureCount,
+            templateId = templateId,
             structure = structure,
             activeDecodeTargets = null,
             isKeyframe = keyframePicture,
