@@ -771,7 +771,7 @@ class Av1DDAdaptiveSourceProjectionTest {
         val firstPacketInfo = generator.nextPacket()
         val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
         val targetIndex = getIndex(eid = 0, dt = 2)
-        for (i in 0..0) { // TODO: we can only reorder one frame for AV1, not three
+        for (i in 0..2) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Av1DDPacket>()
             val packetIndices = packet.layerIds.map { getIndex(0, it) }

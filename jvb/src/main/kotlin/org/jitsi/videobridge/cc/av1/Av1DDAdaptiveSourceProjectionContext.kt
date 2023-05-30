@@ -97,7 +97,7 @@ class Av1DDAdaptiveSourceProjectionContext(
                  * packet, so treat this frame as though it weren't a keyframe.
                  * Note that this may mean re-analyzing the packets with a now-available template dependency structure.
                  */
-                if (haveSubsequentNonAcceptedRequired(frame, incomingEncoding, incomingIndices, targetIndex)) {
+                if (haveSubsequentNonAcceptedChain(frame, incomingEncoding, incomingIndices, targetIndex)) {
                     frame.isKeyframe = false
                 }
             }
@@ -155,29 +155,43 @@ class Av1DDAdaptiveSourceProjectionContext(
     private fun insertPacketInMap(av1Packet: Av1DDPacket) =
         av1FrameMaps.getOrPut(av1Packet.ssrc) { Av1DDFrameMap(logger) }.insertPacket(av1Packet)
 
-    private fun haveSubsequentNonAcceptedRequired(
+    private fun haveSubsequentNonAcceptedChain(
         frame: Av1DDFrame,
         incomingEncoding: Int,
         incomingIndices: Collection<Int>,
         targetIndex: Int
     ): Boolean {
-        val map = av1FrameMaps[frame.ssrc] ?: run { return false }
-        val structure = frame.structure
+        val map = av1FrameMaps[frame.ssrc] ?: return false
+        val structure = frame.structure ?: return false
         val dtsToCheck = if (incomingEncoding == getEidFromIndex(targetIndex)) {
             setOf(getDtFromIndex(targetIndex))
         } else {
             incomingIndices.map { getDtFromIndex(it) }
         }
+        val chainsToCheck = dtsToCheck.map { structure.decodeTargetInfo[it].protectedBy }.toSet()
         return map.nextFrameWith(frame) {
             if (it.isAccepted) return@nextFrameWith false
-            if (structure != null && it.frameInfo == null) {
+            if (it.frameInfo == null) {
                 it.updateParse(structure, logger)
             }
-            return@nextFrameWith dtsToCheck.any { dt ->
-                val dti = it.frameInfo?.dti?.get(dt)
-                dti == DTI.SWITCH || dti == DTI.REQUIRED
+            return@nextFrameWith chainsToCheck.any { chainIdx ->
+                it.partOfActiveChain(chainIdx)
             }
         } != null
+    }
+
+    private fun Av1DDFrame.partOfActiveChain(chainIdx: Int): Boolean {
+        val structure = structure ?: return false
+        val frameInfo = frameInfo ?: return false
+        for (i in structure.decodeTargetInfo.indices) {
+            if (structure.decodeTargetInfo[i].protectedBy != chainIdx) {
+                continue
+            }
+            if (frameInfo.dti[i] == DTI.NOT_PRESENT || frameInfo.dti[i] == DTI.DISCARDABLE) {
+                return false
+            }
+        }
+        return true
     }
 
     /**
