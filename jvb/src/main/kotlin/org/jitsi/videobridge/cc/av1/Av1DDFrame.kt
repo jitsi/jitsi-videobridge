@@ -215,6 +215,14 @@ class Av1DDFrame internal constructor(
         if (packet.isMarked) {
             seenMarker = true
         }
+
+        if (structure == null && packet.descriptor?.structure != null) {
+            structure = packet.descriptor?.structure
+        }
+
+        if (frameInfo == null && packet.frameInfo != null) {
+            frameInfo = packet.frameInfo
+        }
     }
 
     fun updateParse(templateDependencyStructure: Av1TemplateDependencyStructure, logger: Logger) {
@@ -225,14 +233,14 @@ class Av1DDFrame internal constructor(
         val descriptor = try {
             parser.parse(templateDependencyStructure)
         } catch (e: Av1DependencyException) {
-            logger.warn("Could not parse AV1 Dependency Descriptor: ${e.message}", e)
+            logger.warn("Could not parse updated AV1 Dependency Descriptor: ${e.message}")
             return
         }
         structure = descriptor.structure
         frameInfo = try {
             descriptor.frameInfo
         } catch (e: Av1DependencyException) {
-            logger.warn("Could not extract frame info from AV1 Dependency Descriptor: ${e.message}", e)
+            logger.warn("Could not extract frame info from updated AV1 Dependency Descriptor: ${e.message}")
             null
         }
     }
@@ -264,6 +272,9 @@ class Av1DDFrame internal constructor(
     }
 
     fun validateConsistency(pkt: Av1DDPacket) {
+        if (frameInfo == null) {
+            return
+        }
         if (frameInfo == pkt.frameInfo) {
             return
         }

@@ -67,14 +67,20 @@ class Av1DDPacket : ParsedVideoPacket {
         descriptor = try {
             parser.parse(templateDependencyStructure)
         } catch (e: Av1DependencyException) {
-            logger.warn("Could not parse AV1 Dependency Descriptor: ${e.message}", e)
+            logger.warn(
+                "Could not parse AV1 Dependency Descriptor for ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: " +
+                    e.message
+            )
             null
         }
         statelessDescriptor = descriptor ?: parser.parseStateless()
         frameInfo = try {
             descriptor?.frameInfo
         } catch (e: Av1DependencyException) {
-            logger.warn("Could not extract frame info from AV1 Dependency Descriptor: ${e.message}", e)
+            logger.warn(
+                "Could not extract frame info from AV1 Dependency Descriptor for " +
+                    "ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: ${e.message}"
+            )
             null
         }
     }
