@@ -47,10 +47,14 @@ open class TreeCache<T>(
             highestIndex = index
         }
 
-        /* Purge entries older than highestIndex - minSize, but always keep at least one entry. */
-        if (map.size > 1) {
-            val last = map.keys.last()
-            map.keys.removeIf { key -> key < last && key < highestIndex - minSize }
+        /* Keep at most one entry older than highestIndex - minSize. */
+        val headMap = map.headMap(highestIndex - minSize)
+        if (headMap.size > 1) {
+            val last = headMap.keys.last()
+            headMap.keys.removeIf { it < last }
         }
     }
+
+    val size
+        get() = map.size
 }
