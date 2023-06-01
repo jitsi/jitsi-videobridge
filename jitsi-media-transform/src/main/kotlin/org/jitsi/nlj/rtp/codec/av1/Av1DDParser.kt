@@ -39,7 +39,7 @@ class Av1DDParser(
 ) : VideoCodecParser(sources) {
     private val logger = createChildLogger(parentLogger)
 
-    /** History of AV1 templates and decode targets. */
+    /** History of AV1 templates. */
     private val ddStateHistory = LRUCache<Long, TemplateHistory>(STATE_HISTORY_SIZE, true)
 
     fun createFrom(packet: RtpPacket, av1DdExtId: Int): Av1DDPacket {
@@ -47,19 +47,13 @@ class Av1DDParser(
             TemplateHistory(TEMPLATE_HISTORY_SIZE)
         }
 
-        val priorTemplate = history.get(packet.sequenceNumber)
+        val priorStructure = history.get(packet.sequenceNumber)?.structure
 
-        return Av1DDPacket(packet, av1DdExtId, priorTemplate?.structure, logger).also {
-            val descriptor = it.descriptor
-            val decodeTargets = descriptor?.activeDecodeTargetsBitmask
-            // a new template structure implies a non-null decodeTargets, so only have to check the latter
-            if (decodeTargets != null) {
-                val changed = descriptor.structure.templateIdOffset != priorTemplate?.structure?.templateIdOffset ||
-                    descriptor.activeDecodeTargetsBitmask != priorTemplate.activeDecodeTargets
-                history.insert(
-                    packet.sequenceNumber,
-                    Av1DdInfo(descriptor.structure, decodeTargets, changed)
-                )
+        return Av1DDPacket(packet, av1DdExtId, priorStructure, logger).also {
+            val newStructure = it.descriptor?.newTemplateDependencyStructure
+            if (newStructure != null) {
+                val structureChanged = newStructure.templateIdOffset != priorStructure?.templateIdOffset
+                history.insert(packet.sequenceNumber, Av1DdInfo(newStructure, structureChanged))
             }
         }
     }
@@ -68,22 +62,28 @@ class Av1DDParser(
         val av1Packet = packetInfo.packetAs<Av1DDPacket>()
         val history = ddStateHistory[av1Packet.ssrc]
 
-        checkNotNull(history) {
-            "History for ${av1Packet.ssrc} disappeared between createFrom and parse!"
+        if (history == null) {
+            /** Probably getting spammed with SSRCs? */
+            logger.warn("History for ${av1Packet.ssrc} disappeared between createFrom and parse!")
+            return
         }
 
-        val template = history.get(av1Packet.sequenceNumber)
+        val activeDecodeTargets = av1Packet.activeDecodeTargets
 
-        if (template?.changed == true) {
-            packetInfo.layeringChanged = true
+        if (activeDecodeTargets != null) {
+            val changed = history.updateDecodeTargets(av1Packet.sequenceNumber, activeDecodeTargets)
 
-            findSourceDescAndRtpEncodingDesc(av1Packet)?.let { (src, enc) ->
-                av1Packet.getScalabilityStructure(eid = enc.eid)?.let {
-                    src.setEncodingLayers(it.layers, av1Packet.ssrc)
-                }
-                for (otherEnc in src.rtpEncodings) {
-                    if (!ddStateHistory.keys.contains(otherEnc.primarySSRC)) {
-                        src.setEncodingLayers(emptyArray(), otherEnc.primarySSRC)
+            if (changed) {
+                packetInfo.layeringChanged = true
+
+                findSourceDescAndRtpEncodingDesc(av1Packet)?.let { (src, enc) ->
+                    av1Packet.getScalabilityStructure(eid = enc.eid)?.let {
+                        src.setEncodingLayers(it.layers, av1Packet.ssrc)
+                    }
+                    for (otherEnc in src.rtpEncodings) {
+                        if (!ddStateHistory.keys.contains(otherEnc.primarySSRC)) {
+                            src.setEncodingLayers(emptyArray(), otherEnc.primarySSRC)
+                        }
                     }
                 }
             }
@@ -99,6 +99,8 @@ class Av1DDParser(
 class TemplateHistory(minHistory: Int) {
     private val indexTracker = Rfc3711IndexTracker()
     private val history = TreeCache<Av1DdInfo>(minHistory)
+    private var latestDecodeTargets = -1
+    private var latestDecodeTargetIndex = -1
 
     fun get(seqNo: Int): Av1DdInfo? {
         val index = indexTracker.update(seqNo)
@@ -109,10 +111,22 @@ class TemplateHistory(minHistory: Int) {
         val index = indexTracker.update(seqNo)
         return history.insert(index, value)
     }
+
+    /** Update the current decode targets.
+     *  Return true if the decode target set or the template structure has changed. */
+    fun updateDecodeTargets(seqNo: Int, decodeTargets: Int): Boolean {
+        val index = indexTracker.update(seqNo)
+        if (index < latestDecodeTargetIndex) {
+            return false
+        }
+        val changed = decodeTargets != latestDecodeTargets || history.get(index)?.changed == true
+        latestDecodeTargetIndex = index
+        latestDecodeTargets = decodeTargets
+        return changed
+    }
 }
 
 data class Av1DdInfo(
     val structure: Av1TemplateDependencyStructure,
-    val activeDecodeTargets: Int,
     val changed: Boolean
 )

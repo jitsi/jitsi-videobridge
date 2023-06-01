@@ -42,6 +42,8 @@ open class TreeCache<T>(
         return map.floorEntry(index)?.value
     }
 
+    fun get(index: Int): T? = map[index]
+
     private fun updateState(index: Int) {
         if (highestIndex < index) {
             highestIndex = index
