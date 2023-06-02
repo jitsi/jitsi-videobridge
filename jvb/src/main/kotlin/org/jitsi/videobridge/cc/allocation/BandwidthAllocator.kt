@@ -124,7 +124,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             debugState["bweBps"] = bweBps
             debugState["allocation"] = allocation.debugState
             debugState["allocationSettings"] = allocationSettings.toJson()
-            debugState["effectiveConstraints"] = effectiveConstraints
+            debugState["effectiveConstraints"] = effectiveConstraints.mapKeys { it.key.sourceName }
             return debugState
         }
 
