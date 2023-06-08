@@ -18,6 +18,7 @@ package org.jitsi.videobridge
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
+import org.jitsi.nlj.codec.vpx.VpxUtils
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
@@ -37,39 +38,6 @@ import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.json.simple.JSONObject
-
-/**
- * Get tl0PicIdx field for codecs that have it.
- * Return -1 if not applicable.
- */
-private fun RtpPacket.getTl0Index(): Int {
-    return when (this) {
-        is Vp9Packet -> this.TL0PICIDX
-        is Vp8Packet -> this.TL0PICIDX
-        else -> -1
-    }
-}
-
-/**
- * Set tl0PicIdx field for codecs that have it.
- * No-op if not applicable.
- */
-private fun RtpPacket.setTl0Index(tl0Index: Int) {
-    when (this) {
-        is Vp9Packet -> this.TL0PICIDX = tl0Index
-        is Vp8Packet -> this.TL0PICIDX = tl0Index
-    }
-}
-
-/**
- * Addition clipped to 8 unsigned bits.
- */
-private infix fun Int.bytePlus(x: Int) = this.plus(x) and 0xff
-
-/**
- * Subtraction clipped to 8 unsigned bits.
- */
-private infix fun Int.byteMinus(x: Int) = this.minus(x) and 0xff
 
 /**
  * Align common fields from different source types.
@@ -105,20 +73,20 @@ class SourceDesc private constructor(
 class RtpState {
     var lastSequenceNumber = 0
     var lastTimestamp = 0L
-    var lastTl0Index = -1
+    var codecState: CodecState? = null
     var valid = false
 
     fun update(packet: RtpPacket) {
         lastSequenceNumber = packet.sequenceNumber
         lastTimestamp = packet.timestamp
-        lastTl0Index = packet.getTl0Index()
+        codecState = packet.getCodecState()
         valid = true
     }
 
     /**
      * {@inheritDoc}
      */
-    override fun toString(): String = if (valid) "$lastSequenceNumber/$lastTimestamp/$lastTl0Index" else "-"
+    override fun toString(): String = if (valid) "$lastSequenceNumber/$lastTimestamp/$codecState" else "-"
 }
 
 /**
@@ -146,15 +114,13 @@ class SendSsrc(val ssrc: Long) {
     private val state = RtpState()
     private var sequenceNumberDelta = 0
     private var timestampDelta = 0L
-    private var tl0IndexDelta = 0
+    private var codecDeltas: CodecDeltas? = null
 
     /**
      * Update RTP state and apply deltas.
      */
     fun rewriteRtp(packet: RtpPacket, sending: Boolean, recv: ReceiveSsrc) {
         if (sending) {
-
-            val tl0Index = packet.getTl0Index()
 
             if (!recv.hasDeltas) {
                 /* Calculate new deltas the first time a receive ssrc is mapped to a send ssrc. */
@@ -164,10 +130,7 @@ class SendSsrc(val ssrc: Long) {
                             RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, recv.state.lastSequenceNumber)
                         timestampDelta =
                             RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
-                        if (state.lastTl0Index != -1 && recv.state.lastTl0Index != 1)
-                            tl0IndexDelta = state.lastTl0Index byteMinus recv.state.lastTl0Index
-                        else
-                            tl0IndexDelta = 0
+                        codecDeltas = state.codecState?.getDeltas(recv.state.codecState)
                     } else {
                         val prevSequenceNumber =
                             RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1)
@@ -177,10 +140,7 @@ class SendSsrc(val ssrc: Long) {
                             RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, prevSequenceNumber)
                         timestampDelta =
                             RtpUtils.getTimestampDiff(state.lastTimestamp, prevTimestamp)
-                        if (state.lastTl0Index != -1 && tl0Index != -1)
-                            tl0IndexDelta = state.lastTl0Index byteMinus (tl0Index - 1)
-                        else
-                            tl0IndexDelta = 0
+                        codecDeltas = state.codecState?.getDeltas(packet)
                     }
                 }
                 recv.hasDeltas = true
@@ -191,9 +151,7 @@ class SendSsrc(val ssrc: Long) {
             packet.ssrc = ssrc
             packet.sequenceNumber = RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, sequenceNumberDelta)
             packet.timestamp = RtpUtils.applyTimestampDelta(packet.timestamp, timestampDelta)
-            if (tl0Index != -1) {
-                packet.setTl0Index(tl0Index bytePlus tl0IndexDelta)
-            }
+            codecDeltas?.rewritePacket(packet)
 
             state.update(packet)
         } else {
@@ -218,7 +176,7 @@ class SendSsrc(val ssrc: Long) {
     /**
      * {@inheritDoc}
      */
-    override fun toString(): String = "$ssrc{$state,\u2206=$sequenceNumberDelta/$timestampDelta/$tl0IndexDelta}"
+    override fun toString(): String = "$ssrc{$state,\u2206=$sequenceNumberDelta/$timestampDelta/$codecDeltas}"
 }
 
 /**
@@ -329,9 +287,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
          * Print packet fields relevant to rewriting mode.
          */
         private fun debugInfo(packet: RtpPacket): String {
-            val tl0Index = packet.getTl0Index()
-            val tl0Info = if (tl0Index != -1) " tl0PicIdx=$tl0Index" else ""
-            return "ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" + tl0Info
+            val codecState = packet.getCodecState()
+            val codecInfo = codecState?.toString() ?: ""
+            return "ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" + codecInfo
         }
     }
 
@@ -617,5 +575,86 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
         }.also {
             ep.sendMessage(VideoSourcesMap(it))
         }
+    }
+}
+
+/** Codec-specific packet state. */
+interface CodecState {
+    fun getDeltas(otherState: CodecState?): CodecDeltas?
+    fun getDeltas(packet: RtpPacket): CodecDeltas?
+}
+
+/** Codec-specific packet deltas. */
+interface CodecDeltas {
+    fun rewritePacket(packet: RtpPacket)
+}
+
+private class Vp8CodecState(val lastTl0Index: Int) : CodecState {
+    constructor(packet: Vp8Packet) : this(packet.TL0PICIDX)
+
+    override fun getDeltas(otherState: CodecState?): CodecDeltas? {
+        if (otherState !is Vp8CodecState) {
+            return null
+        }
+        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, otherState.lastTl0Index)
+        return Vp8CodecDeltas(tl0IndexDelta)
+    }
+
+    override fun getDeltas(packet: RtpPacket): CodecDeltas? {
+        if (packet !is Vp8Packet) {
+            return null
+        }
+        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+        return Vp8CodecDeltas(tl0IndexDelta)
+    }
+
+    override fun toString() = "[VP8 TL0Idx]$lastTl0Index"
+}
+
+private class Vp8CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
+    override fun rewritePacket(packet: RtpPacket) {
+        require(packet is Vp8Packet)
+        packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
+    }
+
+    override fun toString() = "[VP8 TL0Idx]$tl0IndexDelta"
+}
+
+private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
+    constructor(packet: Vp9Packet) : this(packet.TL0PICIDX)
+
+    override fun getDeltas(otherState: CodecState?): CodecDeltas? {
+        if (otherState !is Vp9CodecState) {
+            return null
+        }
+        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, otherState.lastTl0Index)
+        return Vp9CodecDeltas(tl0IndexDelta)
+    }
+
+    override fun getDeltas(packet: RtpPacket): CodecDeltas? {
+        if (packet !is Vp9Packet) {
+            return null
+        }
+        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+        return Vp9CodecDeltas(tl0IndexDelta)
+    }
+
+    override fun toString() = "[VP9 TL0Idx]$lastTl0Index"
+}
+
+private class Vp9CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
+    override fun rewritePacket(packet: RtpPacket) {
+        require(packet is Vp9Packet)
+        packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
+    }
+
+    override fun toString() = "[VP9 TL0Idx]$tl0IndexDelta"
+}
+
+private fun RtpPacket.getCodecState(): CodecState? {
+    return when (this) {
+        is Vp8Packet -> Vp8CodecState(this)
+        is Vp9Packet -> Vp9CodecState(this)
+        else -> null
     }
 }
