@@ -71,7 +71,7 @@ class RtpSequenceNumberProgression(
     val start: RtpSequenceNumber,
     val endInclusive: RtpSequenceNumber,
     val step: Int = 1
-) : Iterable<RtpSequenceNumber> /*, ClosedRange<RtpSequenceNumber> */ {
+) : Iterable<RtpSequenceNumber> { // , ClosedRange<RtpSequenceNumber>
 
     override fun iterator(): Iterator<RtpSequenceNumber> =
         RtpSequenceNumberProgressionIterator(start, endInclusive, step)

@@ -26,9 +26,11 @@ internal open class IqProcessingException(
 }
 
 internal class UnknownEndpointException(val endpointId: String) : IqProcessingException(
-    StanzaError.Condition.item_not_found, "Unknown endpoint $endpointId"
+    StanzaError.Condition.item_not_found,
+    "Unknown endpoint $endpointId"
 )
 
 internal class FeatureNotImplementedException(message: String) : IqProcessingException(
-    StanzaError.Condition.feature_not_implemented, message
+    StanzaError.Condition.feature_not_implemented,
+    message
 )

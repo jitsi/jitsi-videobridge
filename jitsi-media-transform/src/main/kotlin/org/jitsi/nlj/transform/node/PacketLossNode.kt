@@ -48,7 +48,9 @@ class PacketLossNode(val config: PacketLossConfig) : FilterNode("PacketLossNode(
                 currentBurstPacketsDropped = 0
             }
             false
-        } else true
+        } else {
+            true
+        }
     }
 
     override fun trace(f: () -> Unit) { }

@@ -87,12 +87,14 @@ class TlsClientImpl(
                         (context.crypto as BcTlsCrypto),
                         PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
                         certificateInfo.certificate,
-                        if (TlsUtils.isSignatureAlgorithmsExtensionAllowed(context.serverVersion))
+                        if (TlsUtils.isSignatureAlgorithmsExtensionAllowed(context.serverVersion)) {
                             SignatureAndHashAlgorithm(
                                 HashAlgorithm.sha256,
                                 SignatureAlgorithm.ecdsa
                             )
-                        else null
+                        } else {
+                            null
+                        }
                     )
                 }
                 return clientCredentials!!

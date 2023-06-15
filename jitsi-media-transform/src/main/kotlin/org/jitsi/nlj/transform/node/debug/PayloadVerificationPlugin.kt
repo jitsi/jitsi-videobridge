@@ -41,7 +41,6 @@ class PayloadVerificationPlugin {
             if (PacketInfo.ENABLE_PAYLOAD_VERIFICATION &&
                 packetInfo.payloadVerification != null
             ) {
-
                 val expected = packetInfo.payloadVerification
                 val actual = packetInfo.packet.payloadVerification
                 if (expected != actual) {

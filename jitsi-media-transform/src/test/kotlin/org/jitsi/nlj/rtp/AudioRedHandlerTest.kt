@@ -199,7 +199,7 @@ class AudioRedHandlerTest : ShouldSpec() {
         packet4WasAvailable: Boolean
     ) {
         size shouldBe 6
-        map { it.sequenceNumber }.toList() shouldBe listOf(0, 1, 2, 3, /* 4 is lost */ 5, 6)
+        map { it.sequenceNumber }.toList() shouldBe listOf(0, 1, 2, 3, 5, 6) // 4 is lost
         forEach {
             it.payloadType shouldBe 112
             it.shouldBeTypeOf<RedAudioRtpPacket>()

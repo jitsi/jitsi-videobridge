@@ -65,14 +65,18 @@ class KeyframeRequester @JvmOverloads constructor(
     // Number of PLI/FIRs received and forwarded to the endpoint.
     private var numPlisForwarded: Int = 0
     private var numFirsForwarded: Int = 0
+
     // Number of PLI/FIRs received but dropped due to throttling.
     private var numPlisDropped: Int = 0
     private var numFirsDropped: Int = 0
+
     // Number of PLI/FIRs generated as a result of an API request or due to translation between PLI/FIR.
     private var numPlisGenerated: Int = 0
     private var numFirsGenerated: Int = 0
+
     // Number of calls to requestKeyframe
     private var numApiRequests: Int = 0
+
     // Number of calls to requestKeyframe ignored due to throttling
     private var numApiRequestsDropped: Int = 0
 

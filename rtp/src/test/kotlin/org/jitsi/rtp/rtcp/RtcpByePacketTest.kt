@@ -44,7 +44,8 @@ internal class RtcpByePacketTest : ShouldSpec() {
     private val byeReason = "Connection terminated"
     private val byeReasonData = byeReason.toByteArray(StandardCharsets.US_ASCII)
     private val rtcpByeReasonData = byteArrayOf(
-        byeReasonData.size.toByte(), *byeReasonData.toTypedArray()
+        byeReasonData.size.toByte(),
+        *byeReasonData.toTypedArray()
     )
     private val reasonSize = 1 + byeReasonData.size
     private val padding = byteArrayOf(0x00, 0x00)

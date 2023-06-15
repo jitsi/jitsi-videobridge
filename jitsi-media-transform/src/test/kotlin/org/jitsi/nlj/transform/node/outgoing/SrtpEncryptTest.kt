@@ -41,7 +41,7 @@ internal class SrtpEncryptTest : ShouldSpec() {
             SrtpSample.srtpProfileInformation,
             SrtpSample.keyingMaterial.array(),
             SrtpSample.tlsRole,
-            cryptex = false, /* TODO: add tests for cryptex case */
+            cryptex = false, // TODO: add tests for cryptex case
             StdoutLogger()
         )
 
@@ -69,7 +69,8 @@ internal class SrtpEncryptTest : ShouldSpec() {
                     println("original packet:\n${originalPacket.buffer.toHex()}")
                     println("packet after:\n${encryptedPacket.buffer.toHex()}")
                     RtcpHeader.getPacketType(
-                        encryptedPacket.buffer, encryptedPacket.offset
+                        encryptedPacket.buffer,
+                        encryptedPacket.offset
                     ) shouldBe TransportLayerRtcpFbPacket.PT
                 }
             }

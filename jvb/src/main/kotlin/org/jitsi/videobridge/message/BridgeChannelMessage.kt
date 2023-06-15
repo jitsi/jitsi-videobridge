@@ -68,12 +68,14 @@ sealed class BridgeChannelMessage(
     val type: String
 ) {
     private val jsonCacheDelegate = ResettableLazy { createJson() }
+
     /**
      * Caches the JSON string representation of this object. Note that after any changes to state (e.g. vars being set)
      * the cache needs to be invalidated via [resetJsonCache].
      */
     private val jsonCache: String by jsonCacheDelegate
     protected fun resetJsonCache() = jsonCacheDelegate.reset()
+
     /**
      * Get a JSON representation of this [BridgeChannelMessage].
      */
@@ -89,6 +91,7 @@ sealed class BridgeChannelMessage(
         private val mapper = jacksonObjectMapper().apply {
             enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
         }
+
         @JvmStatic
         @Throws(JsonProcessingException::class, JsonMappingException::class)
         fun parse(string: String): BridgeChannelMessage {
@@ -273,7 +276,9 @@ class DominantSpeakerMessage @JvmOverloads constructor(
      * element.
      */
     constructor(previousSpeakers: List<String>, silence: Boolean) : this(
-        previousSpeakers[0], previousSpeakers.drop(1), silence
+        previousSpeakers[0],
+        previousSpeakers.drop(1),
+        silence
     )
     companion object {
         const val TYPE = "DominantSpeakerEndpointChangeEvent"
@@ -308,10 +313,10 @@ class EndpointConnectionStatusMessage(
  */
 @Deprecated("Use ForwardedSourcesMessage", ReplaceWith("ForwardedSourcesMessage"), DeprecationLevel.WARNING)
 class ForwardedEndpointsMessage(
-    @get:JsonProperty("lastNEndpoints")
     /**
      * The set of endpoints for which the bridge is currently sending video.
      */
+    @get:JsonProperty("lastNEndpoints")
     val forwardedEndpoints: Collection<String>
 ) : BridgeChannelMessage(TYPE) {
     companion object {

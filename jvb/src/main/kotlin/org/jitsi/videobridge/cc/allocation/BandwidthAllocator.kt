@@ -241,7 +241,9 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         var remainingBandwidth = if (allocationSettings.assumedBandwidthBps >= 0) {
             logger.warn("Allocating with assumed bandwidth ${allocationSettings.assumedBandwidthBps.bps}.")
             allocationSettings.assumedBandwidthBps
-        } else availableBandwidth
+        } else {
+            availableBandwidth
+        }
         var oldRemainingBandwidth: Long = -1
         var oversending = false
         while (oldRemainingBandwidth != remainingBandwidth) {

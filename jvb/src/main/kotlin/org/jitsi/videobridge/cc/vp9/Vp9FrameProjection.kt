@@ -175,7 +175,9 @@ internal constructor(
         synchronized(vp9Frame) {
             return if (closedSeq < 0) {
                 true
-            } else rtpPacket.sequenceNumber isOlderThan closedSeq
+            } else {
+                rtpPacket.sequenceNumber isOlderThan closedSeq
+            }
         }
     }
 

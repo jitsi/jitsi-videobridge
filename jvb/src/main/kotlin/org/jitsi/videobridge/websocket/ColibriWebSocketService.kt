@@ -100,6 +100,7 @@ class ColibriWebSocketService(
 
     companion object {
         private val logger = createLogger()
+
         /**
          * The root path of the HTTP endpoint for COLIBRI WebSockets.
          */

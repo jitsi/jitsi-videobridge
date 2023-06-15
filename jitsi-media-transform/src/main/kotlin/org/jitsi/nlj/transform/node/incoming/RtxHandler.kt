@@ -40,6 +40,7 @@ class RtxHandler(
     private val logger = createChildLogger(parentLogger)
     private var numPaddingPacketsReceived = 0
     private var numRtxPacketsReceived = 0
+
     /**
      * Maps the Integer payload type of RTX to the [RtxPayloadType] instance.  We do this
      * so we can look up the associated (original) payload type from the [RtxPayloadType]

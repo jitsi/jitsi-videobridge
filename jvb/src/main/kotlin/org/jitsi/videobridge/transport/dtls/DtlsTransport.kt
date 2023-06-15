@@ -43,10 +43,13 @@ class DtlsTransport(parentLogger: Logger) {
     private val logger = createChildLogger(parentLogger)
 
     private val running = AtomicBoolean(true)
+
     @JvmField
     var incomingDataHandler: IncomingDataHandler? = null
+
     @JvmField
     var outgoingDataHandler: OutgoingDataHandler? = null
+
     @JvmField
     var eventHandler: EventHandler? = null
     private var dtlsHandshakeComplete = false

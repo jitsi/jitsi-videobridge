@@ -75,18 +75,23 @@ class RtcpFbTccPacketBuilder(
 ) {
     var base_seq_no_: RtpSequenceNumber = RtpSequenceNumber.INVALID
         private set
+
     // The reference time, in ticks.  Chrome passes this into BuildFeedbackPacket, but we don't
     // hold the times in the same way, so we'll just assign it the first time we see
     // a packet in AddReceivedPacket
     private var base_time_ticks_: Long = -1
+
     // The amount of packets_ whose status are represented
     var num_seq_no_ = 0
         private set
+
     // The current chunk we're 'filling out' as packets
     // are received
     private var last_chunk_ = LastChunk()
+
     // All but last encoded packet chunks.
     private val encoded_chunks_ = mutableListOf<Chunk>()
+
     // The size of the entire packet, in bytes
     private var size_bytes_ = kTransportFeedbackHeaderSizeBytes
     private var last_timestamp_us_: Long = 0
@@ -119,14 +124,16 @@ class RtcpFbTccPacketBuilder(
                 return false
             }
             while (next_seq_no != sequence_number) {
-                if (!AddDeltaSize(0))
+                if (!AddDeltaSize(0)) {
                     return false
+                }
                 next_seq_no += 1
             }
         }
         val delta_size = if (delta >= 0 && delta <= 0xff) 1 else 2
-        if (!AddDeltaSize(delta_size))
+        if (!AddDeltaSize(delta_size)) {
             return false
+        }
 
         packets_.add(ReceivedPacketReport(sequence_number.value, delta))
         last_timestamp_us_ += delta * kDeltaScaleFactor
@@ -139,12 +146,14 @@ class RtcpFbTccPacketBuilder(
         base_time_ticks_ * kBaseScaleFactor
 
     private fun AddDeltaSize(deltaSize: DeltaSize): Boolean {
-        if (num_seq_no_ == kMaxReportedPackets)
+        if (num_seq_no_ == kMaxReportedPackets) {
             return false
+        }
         val add_chunk_size = if (last_chunk_.Empty()) kChunkSizeBytes else 0
 
-        if (size_bytes_ + deltaSize + add_chunk_size > kMaxSizeBytes)
+        if (size_bytes_ + deltaSize + add_chunk_size > kMaxSizeBytes) {
             return false
+        }
 
         if (last_chunk_.CanAdd(deltaSize)) {
             size_bytes_ += add_chunk_size
@@ -153,8 +162,9 @@ class RtcpFbTccPacketBuilder(
             return true
         }
 
-        if (size_bytes_ + deltaSize + kChunkSizeBytes > kMaxSizeBytes)
+        if (size_bytes_ + deltaSize + kChunkSizeBytes > kMaxSizeBytes) {
             return false
+        }
 
         encoded_chunks_.add(last_chunk_.Emit())
         size_bytes_ += kChunkSizeBytes
@@ -374,6 +384,7 @@ class RtcpFbTccPacket(
     // All but last encoded packet chunks.
     private val encoded_chunks_: MutableList<Chunk>
         get() = data.encoded_chunks_
+
     // The current chunk we're 'filling out' as packets
     // are received
     private var last_chunk_: LastChunk
@@ -395,6 +406,7 @@ class RtcpFbTccPacket(
         set(value) {
             data.last_timestamp_us_ = value
         }
+
     // The reference time, in ticks.
     private var base_time_ticks_: Long
         get() = data.base_time_ticks_
@@ -413,20 +425,26 @@ class RtcpFbTccPacket(
 
     companion object {
         const val FMT = 15
+
         // Convert to multiples of 0.25ms
         const val kDeltaScaleFactor = 250
+
         // Maximum number of packets_ (including missing) TransportFeedback can report.
         const val kMaxReportedPackets = 0xFFFF
         const val kChunkSizeBytes = 2
+
         // Fit TCC packets within an MTU and allow for further encapsulation (and perhaps compound RTCP)
         const val kMaxSizeBytes = 1200
+
         // Header size:
         // * 4 bytes Common RTCP Packet Header
         // * 8 bytes Common Packet Format for RTCP Feedback Messages
         // * 8 bytes FeedbackPacket header
         const val kTransportFeedbackHeaderSizeBytes = 4 + 8 + 8
+
         // Used to convert from microseconds to multiples of 64ms
         const val kBaseScaleFactor = kDeltaScaleFactor * (1 shl 8)
+
         // The reference time field is 24 bits and are represented as multiples of 64ms
         // When the reference time field would need to wrap around
         const val kTimeWrapPeriodUs: Long = (1 shl 24).toLong() * kBaseScaleFactor
@@ -436,6 +454,7 @@ class RtcpFbTccPacket(
         const val REFERENCE_TIME_OFFSET = RtcpFbPacket.HEADER_SIZE + 4
         const val FB_PACKET_COUNT_OFFSET = RtcpFbPacket.HEADER_SIZE + 7
         const val PACKET_CHUNKS_OFFSET = RtcpFbPacket.HEADER_SIZE + 8
+
         // baseOffset in all of these refers to the start of the entire RTCP TCC packet
         fun getBaseSeqNum(buf: ByteArray, baseOffset: Int): Int =
             buf.getShortAsInt(baseOffset + BASE_SEQ_NUM_OFFSET)

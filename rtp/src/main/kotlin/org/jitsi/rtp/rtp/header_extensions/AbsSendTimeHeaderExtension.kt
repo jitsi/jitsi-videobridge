@@ -34,6 +34,7 @@ import java.time.Instant
 class AbsSendTimeHeaderExtension {
     companion object {
         const val DATA_SIZE_BYTES = 3
+
         /**
          * One billion.
          */

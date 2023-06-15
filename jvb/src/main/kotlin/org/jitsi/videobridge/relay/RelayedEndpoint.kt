@@ -143,7 +143,7 @@ class RelayedEndpoint(
             AddReceiverMessage(
                 RelayConfig.config.relayId,
                 id,
-                null, /* source name  - used in multi-stream */
+                null, // source name  - used in multi-stream
                 maxVideoConstraints
             )
         )

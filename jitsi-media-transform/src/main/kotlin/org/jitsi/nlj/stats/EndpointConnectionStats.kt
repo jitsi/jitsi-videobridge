@@ -41,6 +41,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 private const val MAX_SR_TIMESTAMP_HISTORY = 200
 
 private data class SsrcAndTimestamp(val ssrc: Long, val timestamp: Long)
+
 /**
  * Tracks stats which are not necessarily tied to send or receive but the endpoint overall
  */
@@ -72,6 +73,7 @@ class EndpointConnectionStats(
     private val logger = createChildLogger(parentLogger)
 
     private val lock = Object()
+
     /**
      * The calculated RTT, in milliseconds, between the bridge and the endpoint
      */

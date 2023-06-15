@@ -271,8 +271,11 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
                     if (f.spatialLayer == 2) sawTargetLayer = true
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else
+                    result.accept shouldBe if (!sawKeyframe) {
+                        (f.spatialLayer == 0)
+                    } else {
                         (f.spatialLayer == 2 || !f.isInterPicturePredicted)
+                    }
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 0) else (f.spatialLayer == 2)
                         filter.needsKeyframe shouldBe (sawTargetLayer && !sawKeyframe)
@@ -287,9 +290,11 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.spatialLayer == 1) sawTargetLayer = true
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
-                        ((f.spatialLayer == 2 || !f.isInterPicturePredicted) && f.temporalLayer == 0) else
+                    result.accept shouldBe if (!sawKeyframe) {
+                        ((f.spatialLayer == 2 || !f.isInterPicturePredicted) && f.temporalLayer == 0)
+                    } else {
                         (f.spatialLayer == 1 || (!f.isInterPicturePredicted && f.spatialLayer < 1))
+                    }
                     if (result.accept) {
                         result.mark shouldBe if (!sawKeyframe) (f.spatialLayer == 2) else (f.spatialLayer == 1)
                         filter.needsKeyframe shouldBe !sawKeyframe
@@ -384,9 +389,11 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 val targetIndex3 = RtpLayerDesc.getIndex(1, 0, 2)
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
-                        (f.temporalLayer == 0 && (f.ssrc == 2L || f.isKeyframe)) else
+                    result.accept shouldBe if (!sawKeyframe) {
+                        (f.temporalLayer == 0 && (f.ssrc == 2L || f.isKeyframe))
+                    } else {
                         (f.ssrc == 1L || (f.isKeyframe && f.ssrc < 1L))
+                    }
                     if (result.accept) {
                         result.mark shouldBe true
                         filter.needsKeyframe shouldBe !sawKeyframe
@@ -638,7 +645,7 @@ private class SimulcastFrameGenerator : FrameGenerator() {
         val keyframePicture = (pictureCount % 48) == 0
 
         val f = Vp9Frame(
-            ssrc = enc.toLong(), /* Use the encoding ID as the SSRC to make testing easier. */
+            ssrc = enc.toLong(), // Use the encoding ID as the SSRC to make testing easier.
             timestamp = pictureCount * 3000L,
             earliestKnownSequenceNumber = pictureCount + (enc * 10000),
             latestKnownSequenceNumber = pictureCount + (enc * 10000),

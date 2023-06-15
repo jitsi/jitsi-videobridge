@@ -57,8 +57,10 @@ class TccGeneratorNode(
     private var currTccSeqNum: Int = 0
     private var lastTccSentTime: Instant = NEVER
     private val lock = Any()
+
     // Tcc seq num -> arrival time in ms
     private val packetArrivalTimes = TreeMap<Int, Instant>()
+
     // The first sequence number of the current tcc feedback packet
     private var windowStartSeq: Int = -1
     private val tccFeedbackBitrate = BitrateTracker(1.secs, 10.ms)
@@ -148,8 +150,8 @@ class TccGeneratorNode(
                         }
                     } else if (tccSeqNum < windowStartSeq || !packetArrivalTimes.containsKey(tccSeqNum)) {
                         /* If we've already cleared the arrival info about this packet, assume it was previously
-                        * reported as lost - there are some corner cases where this isn't true, but they should be rare.
-                        */
+                         * reported as lost - there are some corner cases where this isn't true, but they should be rare.
+                         */
                         lossListeners.forEach {
                             it.packetReceived(true)
                         }

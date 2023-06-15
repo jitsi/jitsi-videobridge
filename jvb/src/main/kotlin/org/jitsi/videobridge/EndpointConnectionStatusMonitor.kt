@@ -159,6 +159,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
             "endpoints_disconnected",
             "Endpoints detected as temporarily inactive/disconnected due to inactivity."
         )
+
         @JvmField
         val endpointsReconnected = VideobridgeMetricsContainer.instance.registerCounter(
             "endpoints_reconnected",

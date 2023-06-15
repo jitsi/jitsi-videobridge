@@ -139,6 +139,7 @@ class DtlsStack(
         )
         roleSet.countDown()
     }
+
     /**
      * 'start' this stack, in whatever role it has been told to operate (client or server).  If a role
      * has not yet been yet (via [actAsServer] or [actAsClient]), then it will block until the role
@@ -243,6 +244,7 @@ class DtlsStack(
 
     companion object {
         private const val QUEUE_SIZE = 50
+
         /**
          * Because generating the certificateInfo can be expensive, we generate a single
          * one to be used everywhere which expires in 24 hours (when we'll generate

@@ -59,13 +59,21 @@ fun main() {
     val executor = Executors.newSingleThreadExecutor()
 
     val sender = SenderFactory.createSender(
-        executor, backgroundExecutor, pcap.srtpData,
-        pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations
+        executor,
+        backgroundExecutor,
+        pcap.srtpData,
+        pcap.payloadTypes,
+        pcap.headerExtensions,
+        pcap.ssrcAssociations
     )
 
     val receiver = ReceiverFactory.createReceiver(
-        executor, backgroundExecutor, pcap.srtpData,
-        pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations,
+        executor,
+        backgroundExecutor,
+        pcap.srtpData,
+        pcap.payloadTypes,
+        pcap.headerExtensions,
+        pcap.ssrcAssociations,
         { rtcpPacket -> sender.processPacket(PacketInfo(rtcpPacket)) }
     )
 

@@ -25,6 +25,7 @@ import kotlin.math.abs
 open class JitterStats {
     var jitter: Double = 0.0
         private set
+
     /**
      * The timestamp of the previously received packet, converted to a millisecond timestamp based on the received
      * RTP timestamp and the clock rate for that stream.

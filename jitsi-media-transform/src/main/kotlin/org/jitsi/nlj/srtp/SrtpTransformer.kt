@@ -39,6 +39,7 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
     parentLogger: Logger
 ) {
     protected val logger = createChildLogger(parentLogger)
+
     /**
      * All the known SSRC's corresponding SrtpCryptoContexts
      */

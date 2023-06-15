@@ -37,7 +37,9 @@ class DataChannelHandler : ConsumerNode("Data channel handler") {
             when (val packet = packetInfo.packet) {
                 is DataChannelPacket -> {
                     dataChannelStack?.onIncomingDataChannelPacket(
-                        ByteBuffer.wrap(packet.buffer), packet.sid, packet.ppid
+                        ByteBuffer.wrap(packet.buffer),
+                        packet.sid,
+                        packet.ppid
                     ) ?: run {
                         cachedDataChannelPackets.add(packetInfo)
                     }
@@ -64,7 +66,9 @@ class DataChannelHandler : ConsumerNode("Data channel handler") {
                 cachedDataChannelPackets.forEach {
                     val dcp = it.packet as DataChannelPacket
                     dataChannelStack.onIncomingDataChannelPacket(
-                        ByteBuffer.wrap(dcp.buffer), dcp.sid, dcp.ppid
+                        ByteBuffer.wrap(dcp.buffer),
+                        dcp.sid,
+                        dcp.ppid
                     )
                 }
             }
