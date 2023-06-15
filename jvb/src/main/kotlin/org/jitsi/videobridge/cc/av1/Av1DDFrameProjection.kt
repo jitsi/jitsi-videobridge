@@ -156,21 +156,18 @@ class Av1DDFrameProjection internal constructor(
         ) {
             descriptor.frameNumber = frameNumber
             descriptor.frameDependencyTemplateId = templateId
-            val structure = descriptor.newTemplateDependencyStructure
-            if (structure != null) {
-                structure.templateIdOffset = rewriteTemplateId(structure.templateIdOffset)
-            }
-            if (dti != null && (structure == null || dti != (1 shl structure.decodeTargetCount) - 1)) {
+            val structure = descriptor.structure
+            check(descriptor.newTemplateDependencyStructure == null ||
+                descriptor.newTemplateDependencyStructure === descriptor.structure)
+
+            structure.templateIdOffset = rewriteTemplateId(structure.templateIdOffset)
+            if (dti != null && (descriptor.newTemplateDependencyStructure == null ||
+                    dti != (1 shl structure.decodeTargetCount) - 1)) {
                 descriptor.activeDecodeTargetsBitmask = dti
             }
 
-            var ext = pkt.getHeaderExtension(pkt.av1DDHeaderExtensionId)
-            if (ext == null || ext.dataLengthBytes != descriptor.encodedLength) {
-                pkt.removeHeaderExtension(pkt.av1DDHeaderExtensionId)
-                ext = pkt.addHeaderExtension(pkt.av1DDHeaderExtensionId, descriptor.encodedLength)
-            }
             pkt.descriptor = descriptor
-            descriptor.write(ext)
+            pkt.reencodeDdExt()
         }
     }
 

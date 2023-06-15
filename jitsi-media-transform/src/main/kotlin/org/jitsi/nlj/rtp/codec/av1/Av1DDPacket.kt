@@ -125,10 +125,26 @@ class Av1DDPacket : ParsedVideoPacket {
         baseFrameRate: Double = 30.0
     ): RtpEncodingDesc? {
         val descriptor = this.descriptor
-        require(descriptor != null) {
+        requireNotNull(descriptor) {
             "Can't get scalability structure from packet without a descriptor"
         }
         return descriptor.getScalabilityStructure(ssrc, eid, baseFrameRate)
+    }
+
+    /** Re-encode the current descriptor to the header extension.  For use after modifying it. */
+    fun reencodeDdExt() {
+        val descriptor = this.descriptor
+        requireNotNull(descriptor) {
+            "Can't re-encode extension from a packet without a descriptor"
+        }
+
+        var ext = getHeaderExtension(av1DDHeaderExtensionId)
+        if (ext == null || ext.dataLengthBytes != descriptor.encodedLength) {
+            removeHeaderExtension(av1DDHeaderExtensionId)
+            ext = addHeaderExtension(av1DDHeaderExtensionId, descriptor.encodedLength)
+        }
+        descriptor.write(ext)
+
     }
 }
 
