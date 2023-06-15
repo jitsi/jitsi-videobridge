@@ -94,6 +94,7 @@ class OutgoingSsrcStats(
     private val ssrc: Long
 ) {
     private var statsLock = Any()
+
     // Start variables protected by statsLock
     private var packetCount: Int = 0
     private var octetCount: Int = 0

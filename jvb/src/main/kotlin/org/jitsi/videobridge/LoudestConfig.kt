@@ -26,18 +26,22 @@ class LoudestConfig private constructor() {
         val routeLoudestOnly: Boolean by config(
             "videobridge.loudest.route-loudest-only".from(JitsiConfig.newConfig)
         )
+
         @JvmStatic
         val numLoudest: Int by config(
             "videobridge.loudest.num-loudest".from(JitsiConfig.newConfig)
         )
+
         @JvmStatic
         val alwaysRouteDominant: Boolean by config(
             "videobridge.loudest.always-route-dominant".from(JitsiConfig.newConfig)
         )
+
         @JvmStatic
         val energyExpireTime: Duration by config(
             "videobridge.loudest.energy-expire-time".from(JitsiConfig.newConfig)
         )
+
         @JvmStatic
         val energyAlphaPct: Int by config(
             "videobridge.loudest.energy-alpha-pct".from(JitsiConfig.newConfig)

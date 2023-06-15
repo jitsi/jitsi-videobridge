@@ -34,7 +34,9 @@ open class VideoRtpPacket protected constructor(
         offset: Int,
         length: Int
     ) : this(
-        buffer, offset, length,
+        buffer,
+        offset,
+        length,
         qualityIndex = null
     )
 

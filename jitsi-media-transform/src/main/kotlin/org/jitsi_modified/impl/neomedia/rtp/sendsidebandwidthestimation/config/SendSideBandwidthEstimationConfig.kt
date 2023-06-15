@@ -25,7 +25,7 @@ import org.jitsi.nlj.util.kbps
 class SendSideBandwidthEstimationConfig {
     companion object {
         private val defaultLowLossThreshold: Double by
-        config("jmt.bwe.send-side.low-loss-threshold".from(JitsiConfig.newConfig))
+            config("jmt.bwe.send-side.low-loss-threshold".from(JitsiConfig.newConfig))
 
         /**
          * The low-loss threshold (expressed as a proportion of lost packets) when the loss probability
@@ -35,7 +35,7 @@ class SendSideBandwidthEstimationConfig {
         fun defaultLowLossThreshold() = defaultLowLossThreshold
 
         private val defaultHighLossThreshold: Double by
-        config("jmt.bwe.send-side.high-loss-threshold".from(JitsiConfig.newConfig))
+            config("jmt.bwe.send-side.high-loss-threshold".from(JitsiConfig.newConfig))
 
         /**
          * The high-loss threshold (expressed as a proportion of lost packets) when the loss probability
@@ -48,6 +48,7 @@ class SendSideBandwidthEstimationConfig {
             "jmt.bwe.send-side.bitrate-threshold".from(JitsiConfig.newConfig)
                 .convertFrom<String> { Bandwidth.fromString(it) }
         }
+
         /**
          * The bitrate threshold when the loss probability experiment is *not* active.
          */

@@ -52,6 +52,7 @@ class RemoteBandwidthEstimator(
     private val clock: Clock = Clock.systemUTC()
 ) : ObserverNode("Remote Bandwidth Estimator") {
     private val logger = createChildLogger(parentLogger)
+
     /**
      * The remote bandwidth estimation is enabled when REMB support is signaled, but TCC is not signaled.
      */
@@ -60,13 +61,19 @@ class RemoteBandwidthEstimator(
         logger.debug { "Setting enabled=$newValue." }
     }
     private var astExtId: Int? = null
+
     /**
      * We use the full [GoogleCcEstimator] here, but we don't notify it of packet loss, effectively using only the
      * delay-based part.
      */
     private val bwe: BandwidthEstimator by lazy { GoogleCcEstimator(diagnosticContext, logger) }
     private val ssrcs: MutableSet<Long> =
-        Collections.synchronizedSet(LRUCache.lruSet(MAX_SSRCS, true /* accessOrder */))
+        Collections.synchronizedSet(
+            LRUCache.lruSet(
+                MAX_SSRCS,
+                true // accessOrder
+            )
+        )
     private var numRembsCreated = 0
     private var numPacketsWithoutAbsSendTime = 0
     private var localSsrc = 0L

@@ -126,8 +126,9 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
         private val rfc3711IndexTracker = Rfc3711IndexTracker()
 
         private fun fillBetween(start: Int, end: Int, firstNewIndex: Int) {
-            if (end <= lastIndex - size + 1)
+            if (end <= lastIndex - size + 1) {
                 return
+            }
             val actualStart = if (start <= lastIndex - size) {
                 lastIndex - size + 1
             } else {
@@ -187,8 +188,9 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
 
                     if (item.accept == null) {
                         item.accept = accept
-                        if (!accept)
+                        if (!accept) {
                             gapsLeft++
+                        }
                     }
 
                     newIndex = item.newIndex
@@ -204,7 +206,7 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
 
                     val oldestNewIndex = oldest.item!!.newIndex
 
-                    val indexGap = index - oldestIndex /* Negative */
+                    val indexGap = index - oldestIndex // Negative
 
                     val newGap = indexGap + if (accept) 0 else 1
 
@@ -230,8 +232,9 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
             }
 
             if (accept) return toSequenceNumber(newIndex)
-            return sequenceNumber /* Don't care about sequence numbers for non-accepted packets,
-              so make sure rewriteRtp does nothing. */
+            /* Don't care about sequence numbers for non-accepted packets,
+             so make sure rewriteRtp does nothing. */
+            return sequenceNumber
         }
 
         init {

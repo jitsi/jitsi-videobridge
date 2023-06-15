@@ -55,9 +55,15 @@ class RtpPacketTest : ShouldSpec() {
 
     private val oneByteHeaderExtensions = byteArrayOf(
         // BEDE, length=1
-        0xbe, 0xde, 0x00, 0x01,
+        0xbe,
+        0xde,
+        0x00,
+        0x01,
         // ExtId=1,Length=0(1 byte),Data=FF,Padding
-        0x10, 0xff, 0x00, 0x00
+        0x10,
+        0xff,
+        0x00,
+        0x00
     )
 
     private val oneByteHeaderExtensionsPaddingBetween = byteArrayOf(
@@ -87,8 +93,14 @@ class RtpPacketTest : ShouldSpec() {
     )
 
     private val cryptexHeaderExtensions = byteArrayOf(
-        0xc0, 0xde, 0x00, 0x01,
-        0xeb, 0x92, 0x36, 0x52
+        0xc0,
+        0xde,
+        0x00,
+        0x01,
+        0xeb,
+        0x92,
+        0x36,
+        0x52
     )
 
     private val rtpHeaderWithNoExtensions = byteArrayOf(

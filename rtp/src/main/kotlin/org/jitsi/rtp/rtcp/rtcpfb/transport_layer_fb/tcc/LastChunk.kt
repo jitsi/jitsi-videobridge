@@ -45,19 +45,23 @@ class LastChunk {
     // Return if delta sizes still can be encoded into single chunk with added
     // |delta_size|.
     fun CanAdd(deltaSize: DeltaSize): Boolean {
-        if (size_ < kMaxTwoBitCapacity)
+        if (size_ < kMaxTwoBitCapacity) {
             return true
-        if (size_ < kMaxOneBitCapacity && !has_large_delta_ && deltaSize != kLarge)
+        }
+        if (size_ < kMaxOneBitCapacity && !has_large_delta_ && deltaSize != kLarge) {
             return true
-        if (size_ < kMaxRunLengthCapacity && all_same_ && delta_sizes_[0] == deltaSize)
+        }
+        if (size_ < kMaxRunLengthCapacity && all_same_ && delta_sizes_[0] == deltaSize) {
             return true
+        }
         return false
     }
 
     // Add |delta_size|, assumes |CanAdd(delta_size)|,
     fun Add(deltaSize: DeltaSize) {
-        if (size_ < kMaxVectorCapacity)
+        if (size_ < kMaxVectorCapacity) {
             delta_sizes_[size_] = deltaSize
+        }
         size_++
         all_same_ = all_same_ && deltaSize == delta_sizes_[0]
         has_large_delta_ = has_large_delta_ || deltaSize == kLarge

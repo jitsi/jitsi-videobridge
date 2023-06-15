@@ -48,8 +48,12 @@ fun main() {
     val receivers = mutableListOf<RtpReceiver>()
     repeat(numReceivers) {
         val receiver = ReceiverFactory.createReceiver(
-            executor, backgroundExecutor, pcap.srtpData,
-            pcap.payloadTypes, pcap.headerExtensions, pcap.ssrcAssociations,
+            executor,
+            backgroundExecutor,
+            pcap.srtpData,
+            pcap.payloadTypes,
+            pcap.headerExtensions,
+            pcap.ssrcAssociations,
             logger = StdoutLogger("receiver", Level.ALL)
         )
         receivers.add(receiver)

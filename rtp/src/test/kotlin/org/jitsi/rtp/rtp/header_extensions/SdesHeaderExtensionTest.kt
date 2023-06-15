@@ -44,9 +44,15 @@ class SdesHeaderExtensionTest : ShouldSpec() {
 
     private val rtpHeaderSimpleSdesExtension = byteArrayOf(
         // BEDE, length=1
-        0xbe, 0xde, 0x00, 0x01,
+        0xbe,
+        0xde,
+        0x00,
+        0x01,
         // ExtId=1,Length=0(1 byte),Data='1',Padding
-        0x10, 0x31, 0x00, 0x00
+        0x10,
+        0x31,
+        0x00,
+        0x00
     )
 
     private val rtpHeaderEmojiSdesExtension = byteArrayOf(
@@ -140,7 +146,7 @@ class SdesHeaderExtensionTest : ShouldSpec() {
                 sdesExt.dataLengthBytes shouldBe 4
                 val payload = SdesHeaderExtension.getTextValue(sdesExt)
                 /* The payload here is UTF-8, but we only parse ASCII.
-                *  Parsing doesn't fail, but the string contains garbage. */
+                 *  Parsing doesn't fail, but the string contains garbage. */
                 payload shouldNotBe null
             }
         }

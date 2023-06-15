@@ -35,9 +35,13 @@ import org.jitsi.rtp.util.byteBufferOf
 class SrtpSample {
     companion object {
         val srtpProfileInformation = SrtpProfileInformation(
-            cipherKeyLength = 16, cipherSaltLength = 14, cipherName = 1,
-            authFunctionName = 1, authKeyLength = 20,
-            rtcpAuthTagLength = 10, rtpAuthTagLength = 10
+            cipherKeyLength = 16,
+            cipherSaltLength = 14,
+            cipherName = 1,
+            authFunctionName = 1,
+            authKeyLength = 20,
+            rtcpAuthTagLength = 10,
+            rtpAuthTagLength = 10
         )
         val keyingMaterial = byteBufferOf(
             0xB4, 0x04, 0x3B, 0x87, 0x67, 0xF6, 0xC4, 0x67,

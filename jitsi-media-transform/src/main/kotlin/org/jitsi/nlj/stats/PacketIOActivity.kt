@@ -29,12 +29,14 @@ class PacketIOActivity {
     var lastRtpPacketReceivedInstant: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
         newValue.isAfter(oldValue)
     }
+
     /**
      * The last time an RTP or RTCP packet was received.
      */
     var lastRtpPacketSentInstant: Instant by threadSafeVetoable(NEVER) { _, oldValue, newValue ->
         newValue.isAfter(oldValue)
     }
+
     /**
      * The last time ICE consent was refreshed.
      */

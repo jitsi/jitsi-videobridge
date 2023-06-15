@@ -22,7 +22,8 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging2.Logger
 
 class CompoundRtcpParser(parentLogger: Logger) : PacketParser(
-    "Compound RTCP parser", parentLogger,
+    "Compound RTCP parser",
+    parentLogger,
     {
         CompoundRtcpPacket(it.buffer, it.offset, it.length).also { compoundPacket ->
             // Force packets to be evaluated to trigger any parsing errors
@@ -34,7 +35,8 @@ class CompoundRtcpParser(parentLogger: Logger) : PacketParser(
 }
 
 class SingleRtcpParser(parentLogger: Logger) : PacketParser(
-    "Single RTCP parser", parentLogger,
+    "Single RTCP parser",
+    parentLogger,
     {
         RtcpPacket.parse(it.buffer, it.offset, it.length)
     }

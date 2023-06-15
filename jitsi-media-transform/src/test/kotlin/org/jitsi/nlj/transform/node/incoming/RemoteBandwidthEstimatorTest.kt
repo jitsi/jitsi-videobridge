@@ -40,6 +40,7 @@ class RemoteBandwidthEstimatorTest : ShouldSpec() {
 
     private val clock: FakeClock = FakeClock()
     private val astExtensionId = 3
+
     // REMB is enabled by having at least one payload type which has "goog-remb" signaled as a rtcp-fb, and TCC is
     // disabled.
     private val vp8PayloadType = Vp8PayloadType(100, emptyMap(), setOf("goog-remb"))

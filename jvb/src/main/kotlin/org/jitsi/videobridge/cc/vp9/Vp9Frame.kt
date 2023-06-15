@@ -207,6 +207,7 @@ class Vp9Frame internal constructor(
         isKeyframe = packet.isKeyframe,
         numSpatialLayers = packet.scalabilityStructureNumSpatial
     )
+
     /**
      * Remember another packet of this frame.
      * Note: this assumes every packet is received only once, i.e. a filter
@@ -305,7 +306,8 @@ class Vp9Frame internal constructor(
             isUpperLevelReference == pkt.isUpperLevelReference &&
             usesInterLayerDependency == pkt.usesInterLayerDependency &&
             isInterPicturePredicted == pkt.isInterPicturePredicted
-        ) /* TODO: also check start, end, seq nums? */ {
+            // TODO: also check start, end, seq nums?
+        ) {
             return
         }
         throw RuntimeException(
@@ -391,7 +393,7 @@ class Vp9Frame internal constructor(
             delta == 0 ->
                 spatialLayer == otherFrame.spatialLayer + 1
             delta == 1 ->
-                spatialLayer == 0 && otherFrame.spatialLayer == 2 /* ??? */
+                spatialLayer == 0 && otherFrame.spatialLayer == 2 // ???
             else ->
                 false
         }

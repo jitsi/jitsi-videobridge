@@ -68,7 +68,9 @@ class Vp9AdaptiveSourceProjectionContext(
 
     private var lastVp9FrameProjection = Vp9FrameProjection(
         diagnosticContext,
-        rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp
+        rtpState.ssrc,
+        rtpState.maxSequenceNumber,
+        rtpState.maxTimestamp
     )
 
     /**
@@ -116,8 +118,12 @@ class Vp9AdaptiveSourceProjectionContext(
                 val projection: Vp9FrameProjection
                 try {
                     projection = createProjection(
-                        frame = frame, initialPacket = packet, isResumption = acceptResult.isResumption,
-                        isReset = result.isReset, mark = acceptResult.mark, receivedTime = receivedTime
+                        frame = frame,
+                        initialPacket = packet,
+                        isResumption = acceptResult.isResumption,
+                        isReset = result.isReset,
+                        mark = acceptResult.mark,
+                        receivedTime = receivedTime
                     )
                 } catch (e: Exception) {
                     logger.warn("Failed to create frame projection", e)
@@ -352,7 +358,7 @@ class Vp9AdaptiveSourceProjectionContext(
 
         /* These must be non-null because we don't execute this function unless
             frameIsNewSsrc has returned false.
-        */
+         */
         val lastFrame = prevFrame(frame)!!
         val lastProjectedFrame = lastVp9FrameProjection.vp9Frame!!
 
@@ -393,7 +399,7 @@ class Vp9AdaptiveSourceProjectionContext(
     ): Vp9FrameProjection {
         /* This must be non-null because we don't execute this function unless
             frameIsNewSsrc has returned false.
-        */
+         */
         val lastFrame = lastVp9FrameProjection.vp9Frame!!
 
         /* Apply the latest projected frame's projections out, linearly. */
@@ -452,8 +458,11 @@ class Vp9AdaptiveSourceProjectionContext(
            frameIsNewSsrc has returned false.)
          */
         return createInEncodingProjection(
-            frame, lastVp9FrameProjection.vp9Frame!!,
-            initialPacket, mark, receivedTime
+            frame,
+            lastVp9FrameProjection.vp9Frame!!,
+            initialPacket,
+            mark,
+            receivedTime
         )
     }
 

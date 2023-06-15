@@ -137,14 +137,15 @@ class Vp9PacketTest : ShouldSpec() {
                 0x6098017bL,
                 arrayOf(
                     RtpLayerDesc(0, 0, 0, 180, 7.5),
-                    RtpLayerDesc(0, 1, 0, 180, 15.0 /* TODO: dependencies */),
-                    RtpLayerDesc(0, 2, 0, 180, 30.0 /* TODO: dependencies */),
-                    RtpLayerDesc(0, 0, 1, 360, 7.5 /* TODO: dependencies */),
-                    RtpLayerDesc(0, 1, 1, 360, 15.0 /* TODO: dependencies */),
-                    RtpLayerDesc(0, 2, 1, 360, 30.0 /* TODO: dependencies */),
-                    RtpLayerDesc(0, 0, 2, 720, 7.5 /* TODO: dependencies */),
-                    RtpLayerDesc(0, 1, 2, 720, 15.0 /* TODO: dependencies */),
-                    RtpLayerDesc(0, 2, 2, 720, 30.0 /* TODO: dependencies */)
+                    /* TODO: dependencies */
+                    RtpLayerDesc(0, 1, 0, 180, 15.0),
+                    RtpLayerDesc(0, 2, 0, 180, 30.0),
+                    RtpLayerDesc(0, 0, 1, 360, 7.5),
+                    RtpLayerDesc(0, 1, 1, 360, 15.0),
+                    RtpLayerDesc(0, 2, 1, 360, 30.0),
+                    RtpLayerDesc(0, 0, 2, 720, 7.5),
+                    RtpLayerDesc(0, 1, 2, 720, 15.0),
+                    RtpLayerDesc(0, 2, 2, 720, 30.0)
                 )
             )
         ),

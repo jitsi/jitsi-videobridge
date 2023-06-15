@@ -37,7 +37,11 @@ class StreamPacketRequesterTest : ShouldSpec() {
     }
 
     private val streamPacketRequester = RetransmissionRequester.StreamPacketRequester(
-        123L, scheduler, scheduler.clock, ::rtcpSender, StdoutLogger()
+        123L,
+        scheduler,
+        scheduler.clock,
+        ::rtcpSender,
+        StdoutLogger()
     )
 
     init {

@@ -895,12 +895,14 @@ class Endpoint @JvmOverloads constructor(
     override fun getNextSendSsrc(): Long {
         synchronized(sendSsrcs) {
             while (true) {
-                val ssrc = if (useRandomSendSsrcs)
+                val ssrc = if (useRandomSendSsrcs) {
                     random.nextLong().and(0xFFFF_FFFFL)
-                else
+                } else {
                     nextSendSsrc++
-                if (sendSsrcs.add(ssrc))
+                }
+                if (sendSsrcs.add(ssrc)) {
                     return ssrc
+                }
             }
         }
     }
@@ -928,8 +930,9 @@ class Endpoint @JvmOverloads constructor(
                 bitrateController.transformRtcp(packet)
                 if (doSsrcRewriting) {
                     // Just check both tables instead of looking up the type first.
-                    if (!videoSsrcs.rewriteRtcp(packet) && !audioSsrcs.rewriteRtcp(packet))
+                    if (!videoSsrcs.rewriteRtcp(packet) && !audioSsrcs.rewriteRtcp(packet)) {
                         return
+                    }
                 }
                 logger.trace {
                     "relaying an sr from ssrc=${packet.senderSsrc}, timestamp=${packet.senderInfo.rtpTimestamp}"

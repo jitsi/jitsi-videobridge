@@ -153,7 +153,6 @@ class Vp9Picture(packet: Vp9Packet, index: Int) {
      * @throws RuntimeException if the specified RTP packet is inconsistent with this frame
      */
     fun validateConsistency(pkt: Vp9Packet) {
-
         val f = frame(pkt)
         if (f != null) {
             f.validateConsistency(pkt)

@@ -102,7 +102,9 @@ open class BitrateCalculator(
             // In the grace period any received data counts, and we check the bitrate because we can only access the
             // packet rate rounded to an Int.
             bitrate.bps > 0
-        } else packetRatePps >= activePacketRateThreshold
+        } else {
+            packetRatePps >= activePacketRateThreshold
+        }
 
     override fun observe(packetInfo: PacketInfo) {
         val now = clock.millis()

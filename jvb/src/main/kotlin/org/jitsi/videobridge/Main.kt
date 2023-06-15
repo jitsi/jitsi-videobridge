@@ -93,7 +93,11 @@ fun main() {
     val xmppConnection = XmppConnection().apply { start() }
     val shutdownService = ShutdownServiceImpl()
     val videobridge = Videobridge(
-        xmppConnection, shutdownService, versionService.currentVersion, VersionConfig.config.release, Clock.systemUTC()
+        xmppConnection,
+        shutdownService,
+        versionService.currentVersion,
+        VersionConfig.config.release,
+        Clock.systemUTC()
     ).apply { start() }
     val healthChecker = videobridge.jvbHealthChecker
     val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, xmppConnection)).apply {

@@ -163,7 +163,6 @@ class DtlsUtils {
             certificateInfo: org.bouncycastle.tls.Certificate,
             remoteFingerprints: Map<String, String>
         ) {
-
             if (certificateInfo.certificateList.isEmpty()) {
                 throw DtlsException("No remote fingerprints.")
             }
@@ -224,7 +223,7 @@ class DtlsUtils {
                         hashFunction = hashFunctionUpgrade
                 }
             }
-            */
+             */
 
             val certificateFingerprint = certificate.getFingerprint(hashFunction)
 
@@ -265,6 +264,7 @@ class DtlsUtils {
         }
 
         private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
+
         /**
          * Helper function to convert a [ByteArray] to a colon-delimited hex string
          */

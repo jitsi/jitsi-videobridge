@@ -43,7 +43,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 
 // This is an API class, so its usages will largely be outside of this library
-@Suppress("unused")
 /**
  * Handles all packets (incoming and outgoing) for a particular stream.
  * (TODO: 'stream' defined as what, exactly, here?)
@@ -56,6 +55,7 @@ import java.util.concurrent.ScheduledExecutorService
  * have the one thread just read from the queue and send, rather than that thread
  * having to read from a bunch of individual queues)
  */
+@Suppress("unused")
 class Transceiver(
     private val id: String,
     receiverExecutor: ExecutorService,
@@ -80,6 +80,7 @@ class Transceiver(
     private val endpointConnectionStats = EndpointConnectionStats(logger)
     private val streamInformationStore = StreamInformationStoreImpl()
     val readOnlyStreamInformationStore: ReadOnlyStreamInformationStore = streamInformationStore
+
     /**
      * A central place to subscribe to be notified on the reception or transmission of RTCP packets for
      * this transceiver.  This is intended to be used by internal entities: mainly logic for things like generating

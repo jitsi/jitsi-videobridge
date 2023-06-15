@@ -20,6 +20,7 @@ enum class VideoType {
     DESKTOP,
     DESKTOP_HIGH_FPS,
     DISABLED,
+
     // NONE was used in the context where an Endpoint has always one media source description. It used to cover both
     // lack of the actual source and the source being temporarily disabled. With the support for multiple sources per
     // endpoint DISABLED means a source is turned off. Lack of a MediaSourceDesc is equivalent to NONE.

@@ -110,7 +110,6 @@ class BitrateControllerPerfTest : StringSpec() {
     }
 
     private fun run(testName: String, selectedEndpoints: List<String>, maxFrameHeight: Int) {
-
         val start = System.nanoTime()
         bc.lastN = 7
 

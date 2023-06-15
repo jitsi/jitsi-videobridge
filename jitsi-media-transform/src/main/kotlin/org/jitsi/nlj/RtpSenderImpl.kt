@@ -95,6 +95,7 @@ class RtpSenderImpl(
     var running = true
     private var localVideoSsrc: Long? = null
     private var localAudioSsrc: Long? = null
+
     // TODO(brian): this is changed to a handler instead of a queue because we want to use
     // a PacketQueue, and the handler for a PacketQueue must be set at the time of creation.
     // since we want the handler to be another entity (something in jvb) we just use

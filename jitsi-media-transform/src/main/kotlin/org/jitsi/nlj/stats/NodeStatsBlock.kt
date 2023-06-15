@@ -21,6 +21,7 @@ import org.jitsi.utils.OrderedJsonObject
 
 class NodeStatsBlock(val name: String) {
     private val stats = mutableMapOf<String, Any>()
+
     /**
      * Holds stats that are computed based on other values in the map (to e.g. calculate the
      * ratio of two values). Restricted to [Number] because this makes it easier to implement and

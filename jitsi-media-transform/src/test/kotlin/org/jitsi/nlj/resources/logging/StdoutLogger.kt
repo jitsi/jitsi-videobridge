@@ -131,6 +131,7 @@ class StdoutLogger(
     override fun setLevel(level: Level) {
         _level = level
     }
+
     /* These can be stubs */
     override fun setUseParentHandlers(useParentHandlers: Boolean) = Unit
     override fun addHandler(handler: Handler?) = Unit

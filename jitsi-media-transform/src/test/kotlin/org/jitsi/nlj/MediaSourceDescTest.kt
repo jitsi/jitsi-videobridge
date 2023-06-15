@@ -141,13 +141,15 @@ private fun createRTPLayerDescs(
                 arrayOf(
                     rtpLayers[
                         idx(
-                            spatialIdx, temporalIdx - 1,
+                            spatialIdx,
+                            temporalIdx - 1,
                             temporalLen
                         )
                     ]!!,
                     rtpLayers[
                         idx(
-                            spatialIdx - 1, temporalIdx,
+                            spatialIdx - 1,
+                            temporalIdx,
                             temporalLen
                         )
                     ]!!
@@ -157,7 +159,8 @@ private fun createRTPLayerDescs(
                 arrayOf(
                     rtpLayers[
                         idx(
-                            spatialIdx - 1, temporalIdx,
+                            spatialIdx - 1,
+                            temporalIdx,
                             temporalLen
                         )
                     ]!!
@@ -167,7 +170,8 @@ private fun createRTPLayerDescs(
                 arrayOf(
                     rtpLayers[
                         idx(
-                            spatialIdx, temporalIdx - 1,
+                            spatialIdx,
+                            temporalIdx - 1,
                             temporalLen
                         )
                     ]!!
@@ -180,7 +184,11 @@ private fun createRTPLayerDescs(
             val spatialId = if (spatialLen > 1) spatialIdx else -1
             rtpLayers[idx] = RtpLayerDesc(
                 encodingIdx,
-                temporalId, spatialId, height, frameRate, dependencies
+                temporalId,
+                spatialId,
+                height,
+                frameRate,
+                dependencies
             )
             frameRate *= 2.0
         }
@@ -207,8 +215,10 @@ private fun createRtpEncodingDesc(
     height: Int
 ): RtpEncodingDesc {
     val layers: Array<RtpLayerDesc> = createRTPLayerDescs(
-        spatialLen, temporalLen,
-        encodingIdx, height
+        spatialLen,
+        temporalLen,
+        encodingIdx,
+        height
     )
     val enc = RtpEncodingDesc(primarySsrc, layers)
     return enc
@@ -228,7 +238,10 @@ private fun createSource(
         val primarySsrc: Long = primarySsrcs[encodingIdx]
         val ret = createRtpEncodingDesc(
             primarySsrc,
-            numSpatialLayersPerStream, numTemporalLayersPerStream, encodingIdx, height
+            numSpatialLayersPerStream,
+            numTemporalLayersPerStream,
+            encodingIdx,
+            height
         )
         height *= 2
         ret

@@ -34,10 +34,12 @@ class RetransmissionSender(
     parentLogger: Logger
 ) : ModifierNode("Retransmission sender") {
     private val logger = createChildLogger(parentLogger)
+
     /**
      * Maps an original payload type (Int) to its [RtxPayloadType]
      */
     private val origPtToRtxPayloadType: MutableMap<Int, RtxPayloadType> = ConcurrentHashMap()
+
     /**
      * A map of rtx stream ssrc to the current sequence number for that stream
      */
@@ -112,7 +114,8 @@ class RetransmissionSender(
             addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
             addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
             addString(
-                "rtx_payload_types(orig -> rtx)", this@RetransmissionSender.origPtToRtxPayloadType.toString()
+                "rtx_payload_types(orig -> rtx)",
+                this@RetransmissionSender.origPtToRtxPayloadType.toString()
             )
         }
     }

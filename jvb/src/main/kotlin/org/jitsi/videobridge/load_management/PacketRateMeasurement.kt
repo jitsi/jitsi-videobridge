@@ -36,6 +36,7 @@ class PacketRateMeasurement(private val packetRate: Long) : JvbLoadMeasurement {
 
         @JvmStatic
         val loadedThreshold = config.loadThreshold
+
         @JvmStatic
         val recoveryThreshold = config.recoverThreshold
     }

@@ -48,6 +48,7 @@ sealed class Node(
 
     private var nextNode: Node? = null
     private val inputNodes: MutableList<Node> by lazy { mutableListOf<Node>() }
+
     // Create these once here so we don't allocate a new string every time
     protected val nodeEntryString = "Entered node $name"
     protected val nodeExitString = "Exited node $name"
@@ -114,6 +115,7 @@ sealed class Node(
             nextNode?.processPacket(packetInfo)
         }
     }
+
     /**
      * This function must be implemented by leaf nodes, as
      * ```
@@ -130,6 +132,7 @@ sealed class Node(
     companion object {
         var TRACE_ENABLED = false
         var PLUGINS_ENABLED = false
+
         // 'Plugins' are observers which, when enabled, will be passed every packet that passes through
         // every node
         val plugins: MutableSet<NodePlugin> = mutableSetOf()

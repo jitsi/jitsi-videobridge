@@ -158,7 +158,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.endpointId = endpointId
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
-        @Suppress("UNCHECKED_CAST") /* ArrayList.clone() really does return ArrayList, not Object. */
+        @Suppress("UNCHECKED_CAST") // ArrayList.clone() really does return ArrayList, not Object.
         clone.onSentActions = onSentActions?.clone() as ArrayList<() -> Unit>?
         return clone
     }

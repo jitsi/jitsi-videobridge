@@ -38,15 +38,18 @@ class SdesHeaderExtension {
 
         private fun getTextValue(buf: ByteArray, offset: Int, dataLength: Int): String {
             /* RFC 7941 says the value in RTP is UTF-8. But we use this for MID and RID values
-            * which are define for SDP in RFC 5888 and RFC 4566 as ASCII only. Thus we don't
-            * support UTF-8 to keep things simpler. */
+             * which are define for SDP in RFC 5888 and RFC 4566 as ASCII only. Thus we don't
+             * support UTF-8 to keep things simpler. */
             return String(buf, offset, dataLength, StandardCharsets.US_ASCII)
         }
 
         private fun setTextValue(buf: ByteArray, offset: Int, sdesValue: String) {
             System.arraycopy(
-                sdesValue.toByteArray(StandardCharsets.US_ASCII), 0, buf,
-                offset, sdesValue.length
+                sdesValue.toByteArray(StandardCharsets.US_ASCII),
+                0,
+                buf,
+                offset,
+                sdesValue.length
             )
         }
     }
