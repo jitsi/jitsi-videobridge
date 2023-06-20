@@ -116,10 +116,11 @@ class Vp8Packet private constructor(
     val temporalLayerIndex: Int = Vp8Utils.getTemporalLayerIdOfFrame(this)
 
     override val layerIds: Collection<Int>
-        get() = if (hasTemporalLayerIndex)
+        get() = if (hasTemporalLayerIndex) {
             listOf(RtpLayerDesc.getIndex(0, 0, temporalLayerIndex))
-        else
+        } else {
             super.layerIds
+        }
 
     /**
      * This is currently used as an overall spatial index, not an in-band spatial quality index a la vp9.  That is,

@@ -187,7 +187,9 @@ class Av1DDFrame internal constructor(
         isKeyframe = packet.isKeyframe,
         rawDependencyDescriptor = if (packet.frameInfo == null) {
             packet.getHeaderExtension(packet.av1DDHeaderExtensionId)?.clone()
-        } else null
+        } else {
+            null
+        }
     )
 
     /**
@@ -259,6 +261,7 @@ class Av1DDFrame internal constructor(
     fun matchesSSRC(av1Frame: Av1DDFrame): Boolean {
         return ssrc == av1Frame.ssrc
     }
+
     /**
      * Checks whether the specified RTP packet is part of this frame.
      *

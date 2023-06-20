@@ -56,7 +56,9 @@ class Av1DDAdaptiveSourceProjectionContext(
 
     private var lastAv1FrameProjection = Av1DDFrameProjection(
         diagnosticContext,
-        rtpState.ssrc, rtpState.maxSequenceNumber, rtpState.maxTimestamp
+        rtpState.ssrc,
+        rtpState.maxSequenceNumber,
+        rtpState.maxTimestamp
     )
 
     /**
@@ -109,8 +111,12 @@ class Av1DDAdaptiveSourceProjectionContext(
                 val projection: Av1DDFrameProjection
                 try {
                     projection = createProjection(
-                        frame = frame, initialPacket = packet, isResumption = acceptResult.isResumption,
-                        isReset = result.isReset, mark = acceptResult.mark, newDt = acceptResult.newDt,
+                        frame = frame,
+                        initialPacket = packet,
+                        isResumption = acceptResult.isResumption,
+                        isReset = result.isReset,
+                        mark = acceptResult.mark,
+                        newDt = acceptResult.newDt,
                         receivedTime = receivedTime
                     )
                 } catch (e: Exception) {
@@ -367,7 +373,7 @@ class Av1DDAdaptiveSourceProjectionContext(
 
         /* These must be non-null because we don't execute this function unless
             frameIsNewSsrc has returned false.
-        */
+         */
         val lastFrame = prevFrame(frame)!!
         val lastProjectedFrame = lastAv1FrameProjection.av1Frame!!
 
@@ -431,7 +437,7 @@ class Av1DDAdaptiveSourceProjectionContext(
     ): Av1DDFrameProjection {
         /* This must be non-null because we don't execute this function unless
             frameIsNewSsrc has returned false.
-        */
+         */
         val lastFrame = lastAv1FrameProjection.av1Frame!!
 
         /* Apply the latest projected frame's projections out, linearly. */
@@ -508,8 +514,12 @@ class Av1DDAdaptiveSourceProjectionContext(
            frameIsNewSsrc has returned false.)
          */
         return createInEncodingProjection(
-            frame, lastAv1FrameProjection.av1Frame!!,
-            initialPacket, mark, newDt, receivedTime
+            frame,
+            lastAv1FrameProjection.av1Frame!!,
+            initialPacket,
+            mark,
+            newDt,
+            receivedTime
         )
     }
 

@@ -150,19 +150,24 @@ class Av1DDFrameProjection internal constructor(
 
         val descriptor = pkt.descriptor
         if (descriptor != null && (
-            frameNumber != pkt.frameNumber || templateId != descriptor.frameDependencyTemplateId ||
-                dti != null
-            )
+                frameNumber != pkt.frameNumber || templateId != descriptor.frameDependencyTemplateId ||
+                    dti != null
+                )
         ) {
             descriptor.frameNumber = frameNumber
             descriptor.frameDependencyTemplateId = templateId
             val structure = descriptor.structure
-            check(descriptor.newTemplateDependencyStructure == null ||
-                descriptor.newTemplateDependencyStructure === descriptor.structure)
+            check(
+                descriptor.newTemplateDependencyStructure == null ||
+                    descriptor.newTemplateDependencyStructure === descriptor.structure
+            )
 
             structure.templateIdOffset = rewriteTemplateId(structure.templateIdOffset)
-            if (dti != null && (descriptor.newTemplateDependencyStructure == null ||
-                    dti != (1 shl structure.decodeTargetCount) - 1)) {
+            if (dti != null && (
+                    descriptor.newTemplateDependencyStructure == null ||
+                        dti != (1 shl structure.decodeTargetCount) - 1
+                    )
+            ) {
                 descriptor.activeDecodeTargetsBitmask = dti
             }
 
@@ -189,7 +194,9 @@ class Av1DDFrameProjection internal constructor(
         synchronized(av1Frame) {
             return if (closedSeq < 0) {
                 true
-            } else rtpPacket.sequenceNumber isOlderThan closedSeq
+            } else {
+                rtpPacket.sequenceNumber isOlderThan closedSeq
+            }
         }
     }
 

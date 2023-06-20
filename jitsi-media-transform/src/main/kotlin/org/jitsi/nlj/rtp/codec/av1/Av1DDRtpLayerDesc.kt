@@ -103,7 +103,10 @@ class Av1DDRtpLayerDesc(
          */
         @JvmStatic
         fun indexString(index: Int): String =
-            if (index == SUSPENDED_INDEX) "SUSP"
-            else "E${getEidFromIndex(index)}DT${getDtFromIndex(index)}"
+            if (index == SUSPENDED_INDEX) {
+                "SUSP"
+            } else {
+                "E${getEidFromIndex(index)}DT${getDtFromIndex(index)}"
+            }
     }
 }

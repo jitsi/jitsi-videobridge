@@ -193,10 +193,11 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     if (f.isKeyframe) sawKeyframe = true
                     result.accept shouldBe if (!sawKeyframe) (f.frameInfo!!.spatialId == 0) else true
                     if (result.accept) {
-                        result.mark shouldBe if (!sawKeyframe)
+                        result.mark shouldBe if (!sawKeyframe) {
                             (f.frameInfo!!.spatialId == 0)
-                        else
+                        } else {
                             (f.frameInfo!!.spatialId == 2)
+                        }
                         filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
                 }
@@ -303,15 +304,17 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 var sawKeyframe = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
+                    result.accept shouldBe if (!sawKeyframe) {
                         (f.frameInfo!!.spatialId == 0)
-                    else
+                    } else {
                         (f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency())
+                    }
                     if (result.accept) {
-                        result.mark shouldBe if (!sawKeyframe)
+                        result.mark shouldBe if (!sawKeyframe) {
                             (f.frameInfo!!.spatialId == 0)
-                        else
+                        } else {
                             (f.frameInfo!!.spatialId == 2)
+                        }
                         filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
                 }
@@ -321,19 +324,21 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 sawKeyframe = false
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
+                    result.accept shouldBe if (!sawKeyframe) {
                         (f.frameInfo!!.spatialId == 2 || !f.frameInfo!!.hasInterPictureDependency())
-                    else
+                    } else {
                         (
                             f.frameInfo!!.spatialId == 1 || (
                                 f.frameInfo!!.spatialId == 0 && !f.frameInfo!!.hasInterPictureDependency()
                                 )
                             )
+                    }
                     if (result.accept) {
-                        result.mark shouldBe if (!sawKeyframe)
+                        result.mark shouldBe if (!sawKeyframe) {
                             (f.frameInfo!!.spatialId == 2)
-                        else
+                        } else {
                             (f.frameInfo!!.spatialId == 1)
+                        }
                         filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
                 }
@@ -411,15 +416,17 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 var sawKeyframe = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
+                    result.accept shouldBe if (!sawKeyframe) {
                         (f.frameInfo!!.spatialId == 0)
-                    else
+                    } else {
                         (f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency())
+                    }
                     if (result.accept) {
-                        result.mark shouldBe if (!sawKeyframe)
+                        result.mark shouldBe if (!sawKeyframe) {
                             (f.frameInfo!!.spatialId == 0)
-                        else
+                        } else {
                             (f.frameInfo!!.spatialId == 1)
+                        }
                         filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
                 }
@@ -429,15 +436,17 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 sawKeyframe = false
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
+                    result.accept shouldBe if (!sawKeyframe) {
                         (f.frameInfo!!.spatialId == 1 || !f.frameInfo!!.hasInterPictureDependency())
-                    else
+                    } else {
                         (f.frameInfo!!.spatialId == 0)
+                    }
                     if (result.accept) {
-                        result.mark shouldBe if (!sawKeyframe)
+                        result.mark shouldBe if (!sawKeyframe) {
                             (f.frameInfo!!.spatialId == 1)
-                        else
+                        } else {
                             (f.frameInfo!!.spatialId == 0)
+                        }
                         filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
                 }
@@ -526,10 +535,11 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 var sawKeyframe = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
+                    result.accept shouldBe if (!sawKeyframe) {
                         (f.frameInfo!!.spatialId == 0)
-                    else
+                    } else {
                         (f.frameInfo!!.spatialId == 2)
+                    }
                     if (result.accept) {
                         result.mark shouldBe true
                         filter.needsKeyframe shouldBe (!sawKeyframe)
@@ -541,10 +551,11 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 sawKeyframe = false
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
+                    result.accept shouldBe if (!sawKeyframe) {
                         (f.frameInfo!!.spatialId == 2)
-                    else
+                    } else {
                         (f.frameInfo!!.spatialId == 1)
+                    }
                     if (result.accept) {
                         result.mark shouldBe true
                         filter.needsKeyframe shouldBe (!sawKeyframe)
@@ -635,10 +646,11 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 var sawKeyframe = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
+                    result.accept shouldBe if (!sawKeyframe) {
                         (f.ssrc == 0L)
-                    else
+                    } else {
                         (f.ssrc == 2L || f.isKeyframe)
+                    }
                     if (result.accept) {
                         result.mark shouldBe true
                         filter.needsKeyframe shouldBe (!sawKeyframe)
@@ -650,11 +662,12 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 sawKeyframe = false
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
-                    result.accept shouldBe if (!sawKeyframe)
-                    // We don't send discardable frames for the DT while there's a pending encoding downswitch
+                    result.accept shouldBe if (!sawKeyframe) {
+                        // We don't send discardable frames for the DT while there's a pending encoding downswitch
                         (f.ssrc == 2L && f.frameInfo!!.temporalId != 2)
-                    else
+                    } else {
                         (f.ssrc == 1L || (f.ssrc == 0L && f.isKeyframe))
+                    }
                     if (result.accept) {
                         result.mark shouldBe true
                         filter.needsKeyframe shouldBe (!sawKeyframe)
@@ -725,10 +738,11 @@ private open class DDBasedGenerator(
         val tCycle = frameCount % normalTemplates.size
         val keyCycle = frameCount % keyframeInterval
 
-        val templateId = if (keyCycle < keyframeTemplates.size)
+        val templateId = if (keyCycle < keyframeTemplates.size) {
             keyframeTemplates[tCycle]
-        else
+        } else {
             normalTemplates[tCycle]
+        }
 
         val f = Av1DDFrame(
             ssrc = 0,
@@ -739,7 +753,7 @@ private open class DDBasedGenerator(
             seenEndOfFrame = true,
             seenMarker = true,
             frameInfo = structure.templateInfo[templateId],
-            frameNumber = frameCount, /* Will be less than 0xffff */
+            frameNumber = frameCount, // Will be less than 0xffff
             index = frameCount,
             templateId = templateId,
             structure = structure,
@@ -832,10 +846,11 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
         val tCycle = pictureCount % normalTemplates.size
         val keyCycle = pictureCount % keyframeInterval
 
-        val templateId = if (keyCycle < keyframeTemplates.size)
+        val templateId = if (keyCycle < keyframeTemplates.size) {
             keyframeTemplates[tCycle]
-        else
+        } else {
             normalTemplates[tCycle]
+        }
 
         val keyframePicture = keyCycle == 0
 
@@ -848,7 +863,7 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
             seenEndOfFrame = true,
             seenMarker = true,
             frameInfo = structure.templateInfo[templateId],
-            frameNumber = pictureCount, /* Will be less than 0xffff */
+            frameNumber = pictureCount, // Will be less than 0xffff
             index = pictureCount,
             templateId = templateId,
             structure = structure,

@@ -140,7 +140,7 @@ class Av1DDFrameMap(
     }
 
     companion object {
-        const val FRAME_MAP_SIZE = 500 /* Matches PacketCache default size. */
+        const val FRAME_MAP_SIZE = 500 // Matches PacketCache default size.
     }
 }
 

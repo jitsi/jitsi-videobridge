@@ -69,9 +69,11 @@ class Vp9Packet private constructor(
         isEndOfFrame ?: DePacketizer.VP9PayloadDescriptor.isEndOfFrame(buffer, payloadOffset, payloadLength)
 
     override val layerIds: Collection<Int>
-        get() = if (hasLayerIndices)
+        get() = if (hasLayerIndices) {
             listOf(RtpLayerDesc.getIndex(0, spatialLayerIndex, temporalLayerIndex))
-        else super.layerIds
+        } else {
+            super.layerIds
+        }
 
     /** End of VP9 picture is the marker bit. Note frame/picture distinction. */
     /* TODO: not sure this should be the override from [ParsedVideoPacket] */

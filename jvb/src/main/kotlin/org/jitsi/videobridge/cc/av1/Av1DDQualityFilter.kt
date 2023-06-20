@@ -109,14 +109,19 @@ internal class Av1DDQualityFilter(
         val mark = currentDt != SUSPENDED_DT &&
             (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
-        if (isResumption) check(accept) {
-            // Every code path that can turn off SUSPENDED_INDEX also accepts
-            "isResumption=$isResumption but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
+        if (isResumption) {
+            check(accept) {
+                // Every code path that can turn off SUSPENDED_INDEX also accepts
+                "isResumption=$isResumption but accept=$accept for frame ${frame.frameNumber}, " +
+                    "frameInfo=${frame.frameInfo}"
+            }
         }
         val dtChanged = (prevIndex != currentIndex)
-        if (dtChanged && currentDt != SUSPENDED_DT) check(accept) {
-            // Every code path that changes DT also accepts
-            "dtChanged=$dtChanged but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
+        if (dtChanged && currentDt != SUSPENDED_DT) {
+            check(accept) {
+                // Every code path that changes DT also accepts
+                "dtChanged=$dtChanged but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
+            }
         }
         val newDt = if (dtChanged || frame.activeDecodeTargets != null) currentDt else null
         return AcceptResult(accept = accept, isResumption = isResumption, mark = mark, newDt = newDt)
@@ -200,10 +205,11 @@ internal class Av1DDQualityFilter(
                 return@doAcceptFrame false
             }
             var currentDt = getDtFromIndex(currentIndex)
-            val externalTargetDt = if (currentEncoding == externalTargetEncoding)
+            val externalTargetDt = if (currentEncoding == externalTargetEncoding) {
                 getDtFromIndex(externalTargetIndex)
-            else
+            } else {
                 currentDt
+            }
 
             if (
                 frame.activeDecodeTargets != null &&

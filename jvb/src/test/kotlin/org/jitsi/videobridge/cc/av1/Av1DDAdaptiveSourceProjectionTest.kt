@@ -52,7 +52,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         val generator = ScalableAv1PacketGenerator(1)
         val packetInfo = generator.nextPacket()
@@ -80,7 +81,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         var expectedSeq = 10001
         var expectedTs: Long = 1003000
@@ -93,7 +95,8 @@ class Av1DDAdaptiveSourceProjectionTest {
 
             val accepted = context.accept(
                 packetInfo,
-                packetIndices, targetIndex
+                packetIndices,
+                targetIndex
             )
             val endOfFrame = packet.isEndOfFrame
             val endOfPicture = packet.isMarked // Save this before rewriteRtp
@@ -384,7 +387,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         var orderedCount = initialOrderedCount - 1
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         var latestSeq = buffer[0].packetAs<Av1DDPacket>().sequenceNumber
         val projectedPackets = TreeMap<Int, ProjectedPacket?>()
@@ -469,13 +473,13 @@ class Av1DDAdaptiveSourceProjectionTest {
                     ) < 0
                 )
                 if (prevPacket.packet.sequenceNumber ==
-                    RtpUtils.applySequenceNumberDelta(packet.packet.sequenceNumber, - 1)
+                    RtpUtils.applySequenceNumberDelta(packet.packet.sequenceNumber, -1)
                 ) {
                     Assert.assertTrue(prevPacket.packet.isEndOfFrame)
                 }
             } else {
                 if (prevPacket.packet.sequenceNumber ==
-                    RtpUtils.applySequenceNumberDelta(packet.packet.sequenceNumber, - 1)
+                    RtpUtils.applySequenceNumberDelta(packet.packet.sequenceNumber, -1)
                 ) {
                     Assert.assertEquals(prevPacket.packet.frameNumber, packet.packet.frameNumber)
                     Assert.assertEquals(prevPacket.packet.timestamp, packet.packet.timestamp)
@@ -510,7 +514,8 @@ class Av1DDAdaptiveSourceProjectionTest {
                 doRunOutOfOrderTest(generator, targetIndex, initialOrderedCount, seed, expectAccept)
             } catch (e: Throwable) {
                 logger.error(
-                    "Exception thrown in randomized test, seed = $seed", e
+                    "Exception thrown in randomized test, seed = $seed",
+                    e
                 )
                 throw e
             }
@@ -766,7 +771,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         val firstPacketInfo = generator.nextPacket()
         val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
@@ -804,7 +810,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         val firstPacketInfo = generator.nextPacket()
         val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
@@ -1016,7 +1023,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         var targetTid = 0
         var decodableTid = 0
@@ -1051,7 +1059,7 @@ class Av1DDAdaptiveSourceProjectionTest {
             if (packet.isEndOfFrame) {
                 expectedTs = RtpUtils.applyTimestampDelta(expectedTs, 3000)
                 expectedFrameNumber = RtpUtils.applySequenceNumberDelta(expectedFrameNumber, 1)
-                if (i % 97 == 0) /* Prime number so it's out of sync with packet cycles. */ {
+                if (i % 97 == 0) { // Prime number so it's out of sync with packet cycles.
                     targetTid = (targetTid + 2) % 3
                     targetIndex = getIndex(0, targetTid)
                 }
@@ -1069,7 +1077,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         var expectedSeq = 10001
         var expectedTs: Long = 1003000
@@ -1195,7 +1204,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Av1DDAdaptiveSourceProjectionContext(
             diagnosticContext,
-            initialState, logger
+            initialState,
+            logger
         )
         var expectedSeq = 10001
         var expectedTs: Long = 1003000
@@ -1370,7 +1380,7 @@ private open class Av1PacketGenerator(
     val packetsPerFrame: Int,
     val keyframeTemplates: Array<Int>,
     val normalTemplates: Array<Int>,
-    val framesPerTimestamp: Int, /* Equivalent to number of layers */
+    val framesPerTimestamp: Int, // Equivalent to number of layers
     templateDdHex: String,
     val allKeyframesGetStructure: Boolean = false
 ) {
@@ -1441,8 +1451,11 @@ private open class Av1PacketGenerator(
             frameDependencyTemplateId = templateId,
             frameNumber = frameNumber,
             newTemplateDependencyStructure =
-            if (keyframePicture && startOfFrame && (startOfPicture || allKeyframesGetStructure))
-                structure else null,
+            if (keyframePicture && startOfFrame && (startOfPicture || allKeyframesGetStructure)) {
+                structure
+            } else {
+                null
+            },
             activeDecodeTargetsBitmask = null,
             customDtis = null,
             customFdiffs = null,
@@ -1529,16 +1542,17 @@ private open class Av1PacketGenerator(
     }
 
     companion object {
-        val baseReceivedTime: Instant = Instant.ofEpochMilli(1577836800000L) /* 2020-01-01 00:00:00 UTC */
+        val baseReceivedTime: Instant = Instant.ofEpochMilli(1577836800000L) // 2020-01-01 00:00:00 UTC
 
         const val AV1_DD_HEADER_EXTENSION_ID = 11
 
-        private val packetTemplate = DatatypeConverter.parseHexBinary( /* RTP Header */
-            "80" + /* V, P, X, CC */
-                "29" + /* M, PT */
-                "0000" + /* Seq */
-                "00000000" + /* TS */
-                "cafebabe" + /* SSRC */
+        private val packetTemplate = DatatypeConverter.parseHexBinary(
+            // RTP Header
+            "80" + // V, P, X, CC
+                "29" + // M, PT
+                "0000" + // Seq
+                "00000000" + // TS
+                "cafebabe" + // SSRC
                 // Header extension will be added dynamically
                 // Dummy payload data
                 "0000000000000000000000"

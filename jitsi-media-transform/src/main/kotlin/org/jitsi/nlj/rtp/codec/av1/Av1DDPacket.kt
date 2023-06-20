@@ -144,7 +144,6 @@ class Av1DDPacket : ParsedVideoPacket {
             ext = addHeaderExtension(av1DDHeaderExtensionId, descriptor.encodedLength)
         }
         descriptor.write(ext)
-
     }
 }
 
