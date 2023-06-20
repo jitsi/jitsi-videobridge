@@ -49,7 +49,6 @@ fun NodeStatsBlock.addRatio(
     denominatorKey: String,
     defaultDenominator: Number = 1
 ) = addCompoundValue(name) {
-
     val numerator = it.getNumber(numeratorKey) ?: 0
     val denominator = it.getNumber(denominatorKey) ?: defaultDenominator
 

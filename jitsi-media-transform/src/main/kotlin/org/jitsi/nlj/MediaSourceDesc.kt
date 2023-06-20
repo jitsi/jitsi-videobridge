@@ -160,7 +160,10 @@ class MediaSourceDesc
      */
     @Synchronized
     fun copy() = MediaSourceDesc(
-        Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() }, this.owner, this.sourceName, this.videoType
+        Array(this.rtpEncodings.size) { i -> this.rtpEncodings[i].copy() },
+        this.owner,
+        this.sourceName,
+        this.videoType
     )
 
     override fun toString(): String = "MediaSourceDesc[name=$sourceName owner=$owner, videoType=$videoType, " +

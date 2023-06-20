@@ -74,15 +74,19 @@ class RedPacketParser<PacketType : RtpPacket>(
                 )
 
                 System.arraycopy(
-                    buffer, offset,
-                    byteArray, BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                    buffer,
+                    offset,
+                    byteArray,
+                    BYTES_TO_LEAVE_AT_START_OF_PACKET,
                     FIXED_HEADER_SIZE_BYTES
                 )
                 RtpHeader.setCsrcCount(byteArray, BYTES_TO_LEAVE_AT_START_OF_PACKET, 0)
                 RtpHeader.setHasExtensions(byteArray, BYTES_TO_LEAVE_AT_START_OF_PACKET, false)
                 System.arraycopy(
-                    buffer, currentOffset,
-                    byteArray, BYTES_TO_LEAVE_AT_START_OF_PACKET + FIXED_HEADER_SIZE_BYTES,
+                    buffer,
+                    currentOffset,
+                    byteArray,
+                    BYTES_TO_LEAVE_AT_START_OF_PACKET + FIXED_HEADER_SIZE_BYTES,
                     blockLength
                 )
 
@@ -110,8 +114,10 @@ class RedPacketParser<PacketType : RtpPacket>(
         val newOffset = currentOffset - headerLength
         val newLength = length - currentOffset + offset + headerLength
         System.arraycopy(
-            buffer, offset,
-            buffer, newOffset,
+            buffer,
+            offset,
+            buffer,
+            newOffset,
             headerLength
         )
         offset = newOffset
@@ -241,8 +247,10 @@ class RedPacketBuilder<PacketType : RtpPacket>(val createPacket: (ByteArray, Int
         val primaryHeaderLength = primary.headerLength
 
         System.arraycopy(
-            primary.buffer, primary.offset,
-            buf, currentOffset,
+            primary.buffer,
+            primary.offset,
+            buf,
+            currentOffset,
             primaryHeaderLength
         )
         currentOffset += primaryHeaderLength
@@ -263,8 +271,10 @@ class RedPacketBuilder<PacketType : RtpPacket>(val createPacket: (ByteArray, Int
             redHeaderOffset += header.write(buf, redHeaderOffset)
 
             System.arraycopy(
-                it.buffer, it.payloadOffset,
-                buf, currentOffset,
+                it.buffer,
+                it.payloadOffset,
+                buf,
+                currentOffset,
                 payloadLength
             )
             currentOffset += payloadLength
@@ -274,8 +284,10 @@ class RedPacketBuilder<PacketType : RtpPacket>(val createPacket: (ByteArray, Int
         redHeaderOffset += primaryHeader.write(buf, redHeaderOffset)
 
         System.arraycopy(
-            primary.buffer, primary.payloadOffset,
-            buf, currentOffset,
+            primary.buffer,
+            primary.payloadOffset,
+            buf,
+            currentOffset,
             primary.payloadLength
         )
 

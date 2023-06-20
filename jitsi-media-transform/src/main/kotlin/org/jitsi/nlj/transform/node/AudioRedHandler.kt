@@ -221,46 +221,48 @@ class AudioRedHandler(
                 }
             }
 
-            return if (strip) buildList {
-                val redPacket = packetInfo.packetAs<RedAudioRtpPacket>()
+            return if (strip) {
+                buildList {
+                    val redPacket = packetInfo.packetAs<RedAudioRtpPacket>()
 
-                val seq = redPacket.sequenceNumber
-                val prev = applySequenceNumberDelta(seq, -1)
-                val prev2 = applySequenceNumberDelta(seq, -2)
-                val prevMissing = !sentAudioCache.contains(prev)
-                val prev2Missing = !sentAudioCache.contains(prev2)
+                    val seq = redPacket.sequenceNumber
+                    val prev = applySequenceNumberDelta(seq, -1)
+                    val prev2 = applySequenceNumberDelta(seq, -2)
+                    val prevMissing = !sentAudioCache.contains(prev)
+                    val prev2Missing = !sentAudioCache.contains(prev2)
 
-                try {
-                    if (prevMissing || prev2Missing) {
-                        redPacket.removeRedAndGetRedundancyPackets().forEach {
-                            if ((it.sequenceNumber == prev && prevMissing) ||
-                                (it.sequenceNumber == prev2 && prev2Missing)
-                            ) {
-                                add(PacketInfo(it))
-                                stats.lostPacketRecovered()
+                    try {
+                        if (prevMissing || prev2Missing) {
+                            redPacket.removeRedAndGetRedundancyPackets().forEach {
+                                if ((it.sequenceNumber == prev && prevMissing) ||
+                                    (it.sequenceNumber == prev2 && prev2Missing)
+                                ) {
+                                    add(PacketInfo(it))
+                                    stats.lostPacketRecovered()
+                                }
+                                sentAudioCache.insert(it)
                             }
-                            sentAudioCache.insert(it)
+                        } else {
+                            redPacket.removeRed()
                         }
-                    } else {
-                        redPacket.removeRed()
+                    } catch (e: IllegalArgumentException) {
+                        logger.warn(
+                            "Dropping invalid RED packet from ep=${packetInfo.endpointId} (${e.message}): " +
+                                "$redPacket. Contents (50B): ${redPacket.toHex(50)}"
+                        )
+                        stats.invalidRedPacketDropped()
+                        return@buildList
                     }
-                } catch (e: IllegalArgumentException) {
-                    logger.warn(
-                        "Dropping invalid RED packet from ep=${packetInfo.endpointId} (${e.message}): " +
-                            "$redPacket. Contents (50B): ${redPacket.toHex(50)}"
-                    )
-                    stats.invalidRedPacketDropped()
-                    return@buildList
-                }
 
-                stats.redPacketDecapsulated()
-                packetInfo.packet = redPacket.toOtherType(::AudioRtpPacket)
+                    stats.redPacketDecapsulated()
+                    packetInfo.packet = redPacket.toOtherType(::AudioRtpPacket)
 
-                // It's possible we already forwarded the primary packet if we recovered it from a previously received
-                // packet.
-                if (!sentAudioCache.contains(seq)) {
-                    sentAudioCache.insert(packetInfo.packetAs())
-                    add(packetInfo)
+                    // It's possible we already forwarded the primary packet if we recovered it from a previously received
+                    // packet.
+                    if (!sentAudioCache.contains(seq)) {
+                        sentAudioCache.insert(packetInfo.packetAs())
+                        add(packetInfo)
+                    }
                 }
             } else {
                 stats.redPacketForwarded()
@@ -279,10 +281,12 @@ enum class RedPolicy {
      * No change.
      */
     NOOP,
+
     /**
      * Always strip.
      */
     STRIP,
+
     /**
      * Add RED for all endpoints.
      */

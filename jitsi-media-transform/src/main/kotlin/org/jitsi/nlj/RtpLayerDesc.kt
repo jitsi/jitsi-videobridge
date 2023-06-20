@@ -188,7 +188,10 @@ constructor(
          */
         @JvmStatic
         fun indexString(index: Int): String =
-            if (index == SUSPENDED_INDEX) "SUSP"
-            else "E${getEidFromIndex(index)}S${getSidFromIndex(index)}T${getTidFromIndex(index)}"
+            if (index == SUSPENDED_INDEX) {
+                "SUSP"
+            } else {
+                "E${getEidFromIndex(index)}S${getSidFromIndex(index)}T${getTidFromIndex(index)}"
+            }
     }
 }

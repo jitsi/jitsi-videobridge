@@ -60,7 +60,8 @@ class HeaderExtStripper(
 
     companion object {
         private val retainedExtTypes: Set<RtpExtensionType> = setOf(
-            RtpExtensionType.SSRC_AUDIO_LEVEL, RtpExtensionType.VIDEO_ORIENTATION
+            RtpExtensionType.SSRC_AUDIO_LEVEL,
+            RtpExtensionType.VIDEO_ORIENTATION
         )
     }
 }

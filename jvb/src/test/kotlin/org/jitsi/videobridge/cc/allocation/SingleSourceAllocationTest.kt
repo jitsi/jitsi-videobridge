@@ -65,7 +65,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("Without constraints") {
                     val allocation =
                         SingleSourceAllocation(
-                            endpointId, mediaSource, VideoConstraints(720), false, diagnosticContext, clock
+                            endpointId,
+                            mediaSource,
+                            VideoConstraints(720),
+                            false,
+                            diagnosticContext,
+                            clock
                         )
 
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
@@ -77,7 +82,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("With constraints") {
                     val allocation =
                         SingleSourceAllocation(
-                            endpointId, mediaSource, VideoConstraints(360), false, diagnosticContext, clock
+                            endpointId,
+                            mediaSource,
+                            VideoConstraints(360),
+                            false,
+                            diagnosticContext,
+                            clock
                         )
 
                     // We include all resolutions up to the preferred resolution, and only high-FPS (at least
@@ -100,7 +110,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     context("Non-zero constraints") {
                         val allocation =
                             SingleSourceAllocation(
-                                endpointId, mediaSource, VideoConstraints(360), false, diagnosticContext, clock
+                                endpointId,
+                                mediaSource,
+                                VideoConstraints(360),
+                                false,
+                                diagnosticContext,
+                                clock
                             )
 
                         // The receiver set 360p constraints, but we only have a 720p stream.
@@ -111,7 +126,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     context("Zero constraints") {
                         val allocation =
                             SingleSourceAllocation(
-                                endpointId, mediaSource, VideoConstraints(0), false, diagnosticContext, clock
+                                endpointId,
+                                mediaSource,
+                                VideoConstraints(0),
+                                false,
+                                diagnosticContext,
+                                clock
                             )
 
                         // The receiver set a maxHeight=0 constraint.
@@ -141,7 +161,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                 val allocation =
                     SingleSourceAllocation(
-                        endpointId, mediaSource, VideoConstraints(720), false, diagnosticContext, clock
+                        endpointId,
+                        mediaSource,
+                        VideoConstraints(720),
+                        false,
+                        diagnosticContext,
+                        clock
                     )
 
                 // We include all resolutions up to the preferred resolution, and only high-FPS (at least
@@ -168,7 +193,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("With no constraints") {
                     val allocation =
                         SingleSourceAllocation(
-                            endpointId, mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                            endpointId,
+                            mediaSource,
+                            VideoConstraints(720),
+                            true,
+                            diagnosticContext,
+                            clock
                         )
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
@@ -181,7 +211,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("With 360p constraints") {
                     val allocation =
                         SingleSourceAllocation(
-                            endpointId, mediaSource, VideoConstraints(360), true, diagnosticContext, clock
+                            endpointId,
+                            mediaSource,
+                            VideoConstraints(360),
+                            true,
+                            diagnosticContext,
+                            clock
                         )
 
                     allocation.preferredLayer shouldBe sd30
@@ -207,7 +242,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
 
                 val allocation =
                     SingleSourceAllocation(
-                        "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                        "A",
+                        mediaSource,
+                        VideoConstraints(720),
+                        true,
+                        diagnosticContext,
+                        clock
                     )
 
                 // For screensharing the "preferred" layer should be the highest -- always prioritized over other
@@ -238,7 +278,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("With no constraints") {
                     val allocation =
                         SingleSourceAllocation(
-                            "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                            "A",
+                            mediaSource,
+                            VideoConstraints(720),
+                            true,
+                            diagnosticContext,
+                            clock
                         )
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
@@ -250,7 +295,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("With 180p constraints") {
                     val allocation =
                         SingleSourceAllocation(
-                            "A", mediaSource, VideoConstraints(180), true, diagnosticContext, clock
+                            "A",
+                            mediaSource,
+                            VideoConstraints(180),
+                            true,
+                            diagnosticContext,
+                            clock
                         )
 
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
@@ -280,7 +330,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 context("With no constraints") {
                     val allocation =
                         SingleSourceAllocation(
-                            "A", mediaSource, VideoConstraints(720), true, diagnosticContext, clock
+                            "A",
+                            mediaSource,
+                            VideoConstraints(720),
+                            true,
+                            diagnosticContext,
+                            clock
                         )
 
                     allocation.preferredLayer shouldBe l3
@@ -294,7 +349,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // these layers.
                     context("On stage") {
                         val allocation = SingleSourceAllocation(
-                            "A", mediaSource, VideoConstraints(180), true, diagnosticContext, clock
+                            "A",
+                            mediaSource,
+                            VideoConstraints(180),
+                            true,
+                            diagnosticContext,
+                            clock
                         )
 
                         allocation.preferredLayer shouldBe l3
@@ -303,7 +363,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     }
                     context("Off stage") {
                         val allocation = SingleSourceAllocation(
-                            "A", mediaSource, VideoConstraints(180), false, diagnosticContext, clock
+                            "A",
+                            mediaSource,
+                            VideoConstraints(180),
+                            false,
+                            diagnosticContext,
+                            clock
                         )
 
                         allocation.preferredLayer shouldBe l1

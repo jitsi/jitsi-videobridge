@@ -153,7 +153,7 @@ class Vp9PictureMap(
     }
 
     companion object {
-        const val PICTURE_MAP_SIZE = 500 /* Matches PacketCache default size. */
+        const val PICTURE_MAP_SIZE = 500 // Matches PacketCache default size.
     }
 }
 

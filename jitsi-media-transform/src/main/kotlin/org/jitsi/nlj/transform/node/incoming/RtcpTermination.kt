@@ -44,6 +44,7 @@ class RtcpTermination(
 ) : TransformerNode("RTCP termination") {
     private val logger = createChildLogger(parentLogger)
     private var packetReceiveCounts = mutableMapOf<String, Int>()
+
     /**
      * Number of packets we failed to forward because a compound packet contained more than one
      * packet we wanted to forward. Ideally this shouldn't happen.

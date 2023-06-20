@@ -75,6 +75,7 @@ class RtcpFbFirPacket(
 
     companion object {
         const val FMT = 4
+
         // TODO: support multiple FCI?
         const val SIZE_BYTES = HEADER_SIZE + 8
 

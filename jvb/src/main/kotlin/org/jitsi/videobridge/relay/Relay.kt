@@ -579,8 +579,8 @@ class Relay @JvmOverloads constructor(
 
         if (sctpSocket == null) {
             /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
-            *  disabled for relay.
-            */
+             *  disabled for relay.
+             */
             if (messageTransport.isActive) {
                 iceUdpTransportPacketExtension.addChildExtension(
                     WebSocketPacketExtension().apply { active = true }

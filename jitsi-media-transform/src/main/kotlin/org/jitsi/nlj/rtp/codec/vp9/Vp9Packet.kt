@@ -104,7 +104,10 @@ class Vp9Packet private constructor(
         get() = _TL0PICIDX
         set(newValue) {
             if (newValue != -1 && !DePacketizer.VP9PayloadDescriptor.setTL0PICIDX(
-                    buffer, payloadOffset, payloadLength, newValue
+                    buffer,
+                    payloadOffset,
+                    payloadLength,
+                    newValue
                 )
             ) {
                 logger.cwarn { "Failed to set the TL0PICIDX of a VP9 packet." }
@@ -122,7 +125,10 @@ class Vp9Packet private constructor(
         get() = _pictureId
         set(newValue) {
             if (!DePacketizer.VP9PayloadDescriptor.setExtendedPictureId(
-                    buffer, payloadOffset, payloadLength, newValue
+                    buffer,
+                    payloadOffset,
+                    payloadLength,
+                    newValue
                 )
             ) {
                 logger.cwarn { "Failed to set the picture id of a VP9 packet." }
@@ -240,7 +246,9 @@ class Vp9Packet private constructor(
              */
 
             var off = DePacketizer.VP9PayloadDescriptor.getScalabilityStructureOffset(
-                buffer, payloadOffset, payloadLength
+                buffer,
+                payloadOffset,
+                payloadLength
             )
             if (off == -1) {
                 return null

@@ -38,6 +38,7 @@ class RetransmissionSenderTest : ShouldSpec() {
     private val originalSsrc = 1234L
     private val rtxSsrc = 5678L
     private val streamInformationStore = StreamInformationStoreImpl()
+
     // NOTE(brian): unfortunately i ran into issues trying to use mock frameworks to mock
     // a packet, notably i ran into issues when trying to mock the byte[] property in
     // the parent java class, mocking frameworks seem to struggle with this

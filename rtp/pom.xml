@@ -177,7 +177,7 @@
             <plugin>
               <groupId>com.github.gantsign.maven</groupId>
               <artifactId>ktlint-maven-plugin</artifactId>
-              <version>1.13.1</version>
+              <version>${ktlint-maven-plugin.version}</version>
               <configuration>
                 <sourceRoots>
                   <sourceRoot>${project.basedir}/src/main/kotlin</sourceRoot>

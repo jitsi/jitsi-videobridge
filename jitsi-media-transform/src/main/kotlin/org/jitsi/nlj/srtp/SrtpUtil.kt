@@ -23,7 +23,7 @@ import org.jitsi.utils.logging2.Logger
 
 enum class TlsRole {
     CLIENT,
-    SERVER;
+    SERVER
 }
 
 class SrtpUtil {
@@ -139,8 +139,10 @@ class SrtpUtil {
                 val keyingMaterialValue = keyingMaterialValues[i]
 
                 System.arraycopy(
-                    keyingMaterial, keyingMaterialOffset,
-                    keyingMaterialValue, 0,
+                    keyingMaterial,
+                    keyingMaterialOffset,
+                    keyingMaterialValue,
+                    0,
                     keyingMaterialValue.size
                 )
                 keyingMaterialOffset += keyingMaterialValue.size

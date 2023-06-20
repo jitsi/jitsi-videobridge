@@ -78,7 +78,9 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
         if (sendTime != null && recvTime != null) {
             bitrateEstimatorAbsSendTime.incomingPacketInfo(
                 now.toEpochMilli(),
-                sendTime.toEpochMilli(), recvTime.toEpochMilli(), size.bytes.toInt()
+                sendTime.toEpochMilli(),
+                recvTime.toEpochMilli(),
+                size.bytes.toInt()
             )
         }
         sendSideBandwidthEstimation.updateReceiverEstimate(bitrateEstimatorAbsSendTime.latestEstimate)
@@ -105,7 +107,8 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
     }
 
     override fun getStats(now: Instant): StatisticsSnapshot = StatisticsSnapshot(
-        "GoogleCcEstimator", getCurrentBw(now)
+        "GoogleCcEstimator",
+        getCurrentBw(now)
     ).apply {
         addNumber("incomingEstimateExpirations", bitrateEstimatorAbsSendTime.incomingEstimateExpirations)
         addNumber("latestDelayEstimate", sendSideBandwidthEstimation.latestREMB)

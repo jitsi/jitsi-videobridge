@@ -135,8 +135,10 @@ class IncomingSsrcStats(
     private val jitterStats = JitterStats()
     private var numReceivedPackets: Int = 0
     private var numReceivedBytes: Int = 0
+
     /** How long this SSRC has been active. */
     private var durationActive = Duration.ZERO
+
     /** The receiveTime of the last packet */
     private var lastPacketReceivedTime: Instant? = null
 
@@ -157,6 +159,7 @@ class IncomingSsrcStats(
          * from the cumulative loss amount)
          */
         const val MAX_OOO_AMOUNT = 100
+
         /**
          * https://tools.ietf.org/html/rfc3550#appendix-A.1
          * "...a source is declared valid only after MIN_SEQUENTIAL packets have been received in
@@ -320,10 +323,11 @@ class IncomingSsrcStats(
             val numReceivedPacketsInterval = numReceivedPackets - previousSnapshot.numReceivedPackets
 
             val numLostPacketsInterval = numExpectedPacketsInterval - numReceivedPacketsInterval
-            return if (numExpectedPacketsInterval == 0 || numLostPacketsInterval <= 0)
+            return if (numExpectedPacketsInterval == 0 || numLostPacketsInterval <= 0) {
                 0
-            else
+            } else {
                 (((numLostPacketsInterval shl 8) / numExpectedPacketsInterval.toDouble())).toInt()
+            }
         }
 
         fun toJson() = OrderedJsonObject().apply {

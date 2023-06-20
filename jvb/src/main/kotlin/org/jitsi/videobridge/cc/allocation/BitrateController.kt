@@ -54,12 +54,14 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     val eventEmitter = SyncEventEmitter<EventHandler>()
 
     private val bitrateAllocatorEventHandler = BitrateAllocatorEventHandler()
+
     /**
      * Keep track of the "forwarded" endpoints, i.e. the endpoints for which we are forwarding *some* layer.
      */
     @Deprecated("", ReplaceWith("forwardedSources"), DeprecationLevel.WARNING)
     var forwardedEndpoints: Set<String> = emptySet()
         private set
+
     /**
      * Keep track of the "forwarded" sources, i.e. the media sources for which we are forwarding *some* layer.
      */
@@ -262,6 +264,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             newEffectiveConstraints: EffectiveConstraintsMap,
         )
         fun keyframeNeeded(endpointId: String?, ssrc: Long)
+
         /**
          * This is meant to be internal to BitrateAllocator, but is exposed here temporarily for the purposes of testing.
          */

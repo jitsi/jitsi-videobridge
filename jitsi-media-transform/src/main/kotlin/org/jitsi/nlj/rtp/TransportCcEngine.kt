@@ -147,9 +147,9 @@ class TransportCcEngine(
 
             when (packetReport) {
                 is UnreceivedPacketReport -> {
-                    if (packetDetail.state == PacketDetailState.unreported) {
+                    if (packetDetail.state == PacketDetailState.Unreported) {
                         bandwidthEstimator.processPacketLoss(now, packetDetail.packetSendTime, tccSeqNum)
-                        packetDetail.state = PacketDetailState.reportedLost
+                        packetDetail.state = PacketDetailState.ReportedLost
                         numPacketsReported.increment()
                         numPacketsReportedLost.increment()
                         synchronized(this) {
@@ -163,8 +163,8 @@ class TransportCcEngine(
                     currArrivalTimestamp += packetReport.deltaDuration
 
                     when (packetDetail.state) {
-                        PacketDetailState.unreported, PacketDetailState.reportedLost -> {
-                            val previouslyReportedLost = packetDetail.state == PacketDetailState.reportedLost
+                        PacketDetailState.Unreported, PacketDetailState.ReportedLost -> {
+                            val previouslyReportedLost = packetDetail.state == PacketDetailState.ReportedLost
                             if (previouslyReportedLost) {
                                 numPacketsReportedAfterLost.increment()
                                 numPacketsReportedLost.decrement()
@@ -177,8 +177,11 @@ class TransportCcEngine(
                                 currArrivalTimestamp - Duration.between(localReferenceTime, remoteReferenceTime)
 
                             bandwidthEstimator.processPacketArrival(
-                                now, packetDetail.packetSendTime, arrivalTimeInLocalClock,
-                                tccSeqNum, packetDetail.packetLength,
+                                now,
+                                packetDetail.packetSendTime,
+                                arrivalTimeInLocalClock,
+                                tccSeqNum,
+                                packetDetail.packetLength,
                                 previouslyReportedLost = previouslyReportedLost
                             )
                             synchronized(this) {
@@ -186,10 +189,10 @@ class TransportCcEngine(
                                     it.packetReceived(previouslyReportedLost)
                                 }
                             }
-                            packetDetail.state = PacketDetailState.reportedReceived
+                            packetDetail.state = PacketDetailState.ReportedReceived
                         }
 
-                        PacketDetailState.reportedReceived ->
+                        PacketDetailState.ReportedReceived ->
                             numDuplicateReports.increment()
                     }
                 }
@@ -253,7 +256,7 @@ class TransportCcEngine(
      * [PacketDetailState] is the state of a [PacketDetail]
      */
     private enum class PacketDetailState {
-        unreported, reportedLost, reportedReceived
+        Unreported, ReportedLost, ReportedReceived
     }
 
     /**
@@ -272,7 +275,7 @@ class TransportCcEngine(
          * as [unreported]: once we receive a TCC feedback from the remote side referring
          * to this packet, the state will transition to either [reportedLost] or [reportedReceived].
          */
-        var state = PacketDetailState.unreported
+        var state = PacketDetailState.Unreported
     }
 
     data class StatisticsSnapshot(
@@ -302,8 +305,9 @@ class TransportCcEngine(
         clock = clock
     ) {
         override fun discardItem(item: PacketDetail) {
-            if (item.state == PacketDetailState.unreported)
+            if (item.state == PacketDetailState.Unreported) {
                 numPacketsUnreported.increment()
+            }
         }
 
         private val rfc3711IndexTracker = Rfc3711IndexTracker()

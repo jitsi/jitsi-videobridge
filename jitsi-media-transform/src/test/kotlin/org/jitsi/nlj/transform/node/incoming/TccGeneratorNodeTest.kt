@@ -39,6 +39,7 @@ class TccGeneratorNodeTest : ShouldSpec() {
     private val onTccReady = { tccPacket: RtcpPacket -> tccPackets.add(tccPacket); Unit }
     private val streamInformationStore = StreamInformationStoreImpl()
     private val tccExtensionId = 5
+
     // TCC is enabled by having at least one payload type which has "transport-cc" signaled as a rtcp-fb.
     private val vp8PayloadType = Vp8PayloadType(100, emptyMap(), setOf("transport-cc"))
 

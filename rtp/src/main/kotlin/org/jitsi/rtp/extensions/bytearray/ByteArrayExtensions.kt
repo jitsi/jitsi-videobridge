@@ -108,6 +108,7 @@ operator fun ByteArray.plus(other: ByteArray): ByteArray {
 }
 
 private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
+
 /**
  * Print the contents of the [ByteArray] as hex digits.
  */

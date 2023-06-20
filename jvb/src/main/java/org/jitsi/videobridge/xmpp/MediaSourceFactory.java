@@ -401,7 +401,7 @@ public class MediaSourceFactory
             logger.warn(
                 "Unprocessed source groups: " +
                     sourceGroupsCopy.stream()
-                        .map(e -> e.toXML(XmlEnvironment.EMPTY))
+                        .map(e -> e.toXML(XmlEnvironment.EMPTY).toString())
                         .reduce(String::concat));
         }
 

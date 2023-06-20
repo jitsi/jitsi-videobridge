@@ -211,7 +211,6 @@ internal class SingleSourceAllocation(
         constraints: VideoConstraints,
         onStage: Boolean
     ): Layers {
-
         var activeLayers = layers.filter { it.bitrate > 0 }
         // No active layers usually happens when the source has just been signaled and we haven't received
         // any packets yet. Add the layers here, so one gets selected and we can start forwarding sooner.
@@ -289,7 +288,6 @@ internal class SingleSourceAllocation(
         layers: List<LayerSnapshot>,
         constraints: VideoConstraints,
     ): Layers {
-
         val minHeight = layers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
         val noActiveLayers = layers.none { (_, bitrate) -> bitrate > 0 }
         val (preferredHeight, preferredFps) = getPreferred(constraints)

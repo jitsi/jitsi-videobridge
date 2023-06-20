@@ -58,6 +58,7 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
 
     private var firstPacketReceivedTimestamp = -1L
     private var firstPacketForwardedTimestamp = -1L
+
     /**
      * How many packets, total, we put into the cache while waiting for the transformer
      * (this includes packets which may have been dropped due to the cache filling up)
@@ -81,8 +82,9 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
                 } else {
                     val err = transformer.transform(packetInfo)
                     countErrorStatus(err)
-                    outPackets = if (err == SrtpErrorStatus.OK)
-                        listOf(packetInfo) else {
+                    outPackets = if (err == SrtpErrorStatus.OK) {
+                        listOf(packetInfo)
+                    } else {
                         packetDiscarded(packetInfo)
                         emptyList()
                     }

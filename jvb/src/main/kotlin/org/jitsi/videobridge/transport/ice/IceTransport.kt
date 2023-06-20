@@ -93,6 +93,7 @@ class IceTransport @JvmOverloads constructor(
      * Whether or not this [IceTransport] has connected.
      */
     private val iceConnected = AtomicBoolean(false)
+
     /**
      * Whether or not this [IceTransport] has failed to connect.
      */
@@ -460,10 +461,12 @@ class IceTransport @JvmOverloads constructor(
          * Notify the event handler that ICE connected successfully
          */
         fun connected()
+
         /**
          * Notify the event handler that ICE failed to connect
          */
         fun failed()
+
         /**
          * Notify the event handler that ICE consent was updated
          */
@@ -497,7 +500,8 @@ private fun CandidatePacketExtension.ipNeedsResolution(): Boolean =
     !InetAddresses.isInetAddress(ip)
 
 private fun TransportAddress.isPrivateAddress(): Boolean = address.isSiteLocalAddress ||
-    /* 0xfc00::/7 */ ((address is Inet6Address) && ((addressBytes[0].toInt() and 0xfe) == 0xfc))
+    /* 0xfc00::/7 */
+    ((address is Inet6Address) && ((addressBytes[0].toInt() and 0xfe) == 0xfc))
 
 private fun Transport.isTcpType(): Boolean = this == Transport.TCP || this == Transport.SSLTCP
 

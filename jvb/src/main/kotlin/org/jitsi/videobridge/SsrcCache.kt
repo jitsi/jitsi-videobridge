@@ -52,7 +52,11 @@ class SourceDesc private constructor(
     val ssrc2: Long
 ) {
     constructor(s: AudioSourceDesc) : this(
-        s.sourceName ?: "anon", s.owner ?: "unknown", VideoType.DISABLED, s.ssrc, -1
+        s.sourceName ?: "anon",
+        s.owner ?: "unknown",
+        VideoType.DISABLED,
+        s.ssrc,
+        -1
     )
     constructor(s: MediaSourceDesc) : this(s.sourceName, s.owner, s.videoType, s.primarySSRC, getRtx(s))
     companion object {
@@ -122,7 +126,6 @@ class SendSsrc(val ssrc: Long) {
      */
     fun rewriteRtp(packet: RtpPacket, sending: Boolean, recv: ReceiveSsrc) {
         if (sending) {
-
             if (!recv.hasDeltas) {
                 /* Calculate new deltas the first time a receive ssrc is mapped to a send ssrc. */
                 if (state.valid) {
@@ -136,7 +139,7 @@ class SendSsrc(val ssrc: Long) {
                         val prevSequenceNumber =
                             RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1)
                         val prevTimestamp =
-                            RtpUtils.applyTimestampDelta(packet.timestamp, -960) /* guessing */
+                            RtpUtils.applyTimestampDelta(packet.timestamp, -960) // guessing
                         sequenceNumberDelta =
                             RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, prevSequenceNumber)
                         timestampDelta =
@@ -169,7 +172,8 @@ class SendSsrc(val ssrc: Long) {
         packet.senderSsrc = ssrc
         if (packet is RtcpSrPacket) {
             packet.senderInfo.rtpTimestamp = RtpUtils.applyTimestampDelta(
-                packet.senderInfo.rtpTimestamp, timestampDelta
+                packet.senderInfo.rtpTimestamp,
+                timestampDelta
             )
         }
     }
@@ -270,7 +274,10 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      * forwarded to the endpoint, the element at the front of this list will be removed and that element's
      * local SSRC will be used. Note: indexed by primary SSRC.
      */
-    private val sendSources = LRUCache<Long, SendSource>(size, true /* accessOrder */)
+    private val sendSources = LRUCache<Long, SendSource>(
+        size,
+        true // accessOrder
+    )
 
     /**
      * Whether an incoming RTP packet can automatically activate its source (i.e. acquire a send SSRC).
@@ -317,13 +324,13 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
         allowCreate: Boolean,
         remappings: MutableList<SendSource>
     ): SendSource? {
-
         /* Moves to end of LRU when found. */
         var sendSource = sendSources.get(ssrc)
 
         if (sendSource == null) {
-            if (!allowCreate)
+            if (!allowCreate) {
                 return null
+            }
             if (sendSources.size == size) {
                 val eldest = sendSources.eldest()
                 sendSource = SendSource(props, eldest.value.send1, eldest.value.send2)
@@ -351,7 +358,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      * Assign send SSRCs to the given sources. Any remapped SSRCs will be notified to the client.
      */
     fun activate(sources: List<MediaSourceDesc>) {
-
         val remappings = mutableListOf<SendSource>()
 
         synchronized(sendSources) {
@@ -367,8 +373,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             logger.debug { this.toString() }
         }
 
-        if (remappings.isNotEmpty())
+        if (remappings.isNotEmpty()) {
             notifyMappings(remappings)
+        }
     }
 
     /**
@@ -382,8 +389,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             remappings = sendSources.values.toList()
         }
 
-        if (remappings.isNotEmpty())
+        if (remappings.isNotEmpty()) {
             notifyMappings(remappings)
+        }
     }
 
     /**
@@ -394,7 +402,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      * @return whether to send this packet.
      */
     fun rewriteRtp(packet: RtpPacket, start: Boolean = true): Boolean {
-
         val remappings = mutableListOf<SendSource>()
         var send = false
 
@@ -425,8 +432,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             }
         }
 
-        if (remappings.isNotEmpty())
+        if (remappings.isNotEmpty()) {
             notifyMappings(remappings)
+        }
 
         return send
     }
@@ -436,8 +444,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      * For packets in the same direction as media flow; feedback messages handled separately.
      */
     fun rewriteRtcp(packet: RtcpPacket): Boolean {
-
-        val remappings = mutableListOf<SendSource>() /* unused */
+        val remappings = mutableListOf<SendSource>() // unused
         val senderSsrc = packet.senderSsrc
 
         synchronized(sendSources) {
@@ -459,7 +466,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      * then do not modify the packet and return null.
      */
     fun unmapRtcpFbSsrc(packet: RtcpFbPacket): String? {
-
         val mediaSsrc = packet.mediaSourceSsrc
 
         synchronized(sendSources) {
@@ -532,10 +538,11 @@ class AudioSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
      */
     override fun findSourceProps(ssrc: Long): SourceDesc? {
         val p = ep.findAudioSourceProps(ssrc)
-        if (p == null || p.sourceName == null || p.owner == null)
+        if (p == null || p.sourceName == null || p.owner == null) {
             return null
-        else
+        } else {
             return SourceDesc(p)
+        }
     }
 
     /**

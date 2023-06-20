@@ -58,9 +58,13 @@ class RtcpReportBlock(
         lastSrTimestamp: Long,
         delaySinceLastSr: Long
     ) : this(
-        ssrc, fractionLost, cumulativePacketsLost,
+        ssrc,
+        fractionLost,
+        cumulativePacketsLost,
         ((seqNumCycles shl 16) + seqNum.toShort()).toPositiveLong(),
-        interarrivalJitter, lastSrTimestamp, delaySinceLastSr
+        interarrivalJitter,
+        lastSrTimestamp,
+        delaySinceLastSr
     )
 
     val seqNumCycles: Int by lazy {
@@ -82,6 +86,7 @@ class RtcpReportBlock(
 
     companion object {
         const val SIZE_BYTES = 24
+
         // Offsets relative to the start of an RTCP Report Block
         const val SSRC_OFFSET = 0
         const val FRACTION_LOST_OFFSET = 4
@@ -100,8 +105,13 @@ class RtcpReportBlock(
             val delaySinceLastSr = getDelaySinceLastSr(buffer, offset)
 
             return RtcpReportBlock(
-                ssrc, fractionLost, cumulativePacketsLost, extendedHighestSeqNum,
-                interarrivalJitter, lastSrTimestamp, delaySinceLastSr
+                ssrc,
+                fractionLost,
+                cumulativePacketsLost,
+                extendedHighestSeqNum,
+                interarrivalJitter,
+                lastSrTimestamp,
+                delaySinceLastSr
             )
         }
 

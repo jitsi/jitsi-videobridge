@@ -51,8 +51,10 @@ abstract class Packet(
     protected fun cloneBuffer(bytesToLeaveAtStart: Int): ByteArray =
         BufferPool.getArray(bytesToLeaveAtStart + length + BYTES_TO_LEAVE_AT_END_OF_PACKET).apply {
             System.arraycopy(
-                buffer, offset,
-                this, bytesToLeaveAtStart,
+                buffer,
+                offset,
+                this,
+                bytesToLeaveAtStart,
                 length
             )
         }

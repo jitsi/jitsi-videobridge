@@ -577,11 +577,14 @@ open class RtpPacket(
                 // This treats unknown header extension types as no extensions, which is what we want.
                 if (headerExtensionParser != null) {
                     val extensionBlockLength = HeaderExtensionHelpers.getExtensionsTotalLength(
-                        buffer, offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4
+                        buffer,
+                        offset + RtpHeader.FIXED_HEADER_SIZE_BYTES + csrcCount * 4
                     )
 
                     extensionBlockLength - HeaderExtensionHelpers.TOP_LEVEL_EXT_HEADER_SIZE_BYTES
-                } else 0
+                } else {
+                    0
+                }
 
             if (extLength <= 0) {
                 // No extensions

@@ -65,6 +65,7 @@ class RestConfig private constructor() {
         "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN".from(JitsiConfig.legacyConfig)
         "videobridge.rest.shutdown.enabled".from(JitsiConfig.newConfig)
     }
+
     /**
      * Due to historical reasons the shutdown API is only enabled when the COLIBRI API is enabled.
      */

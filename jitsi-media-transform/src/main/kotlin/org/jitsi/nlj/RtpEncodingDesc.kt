@@ -144,7 +144,9 @@ constructor(
     fun matches(ssrc: Long): Boolean {
         return if (primarySSRC == ssrc) {
             true
-        } else secondarySsrcs.containsKey(ssrc)
+        } else {
+            secondarySsrcs.containsKey(ssrc)
+        }
     }
 
     /**
