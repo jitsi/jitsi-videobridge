@@ -118,7 +118,11 @@ class RelayedEndpoint(
         return streamInformationStore.receiveSsrcs.contains(ssrc)
     }
 
-    override fun getSsrcs() = HashSet(streamInformationStore.receiveSsrcs)
+    override val ssrcs
+        get() = HashSet(streamInformationStore.receiveSsrcs)
+
+    // Visitors are never advertised between relays, so relayed endpoints are never visitors.
+    override val visitor = false
 
     fun hasReceiveSsrcs(): Boolean = streamInformationStore.receiveSsrcs.isNotEmpty()
 
@@ -129,8 +133,10 @@ class RelayedEndpoint(
 
     override fun requestKeyframe() = relay.transceiver.requestKeyFrame(mediaSource?.primarySSRC)
 
-    override fun isSendingAudio(): Boolean = rtpReceiver.isReceivingAudio()
-    override fun isSendingVideo(): Boolean = rtpReceiver.isReceivingVideo()
+    override val isSendingAudio
+        get() = rtpReceiver.isReceivingAudio()
+    override val isSendingVideo
+        get() = rtpReceiver.isReceivingVideo()
 
     override fun addPayloadType(payloadType: PayloadType) = streamInformationStore.addRtpPayloadType(payloadType)
     override fun addRtpExtension(rtpExtension: RtpExtension) =
@@ -210,12 +216,11 @@ class RelayedEndpoint(
         }
     }
 
-    override fun getDebugState(): JSONObject {
-        return super.getDebugState().apply {
+    override val debugState: JSONObject
+        get() = super.debugState.apply {
             val block = getNodeStats()
             put(block.name, block.toJson())
         }
-    }
 
     private fun updateStatsOnExpire() {
         val relayStats = relay.statistics
@@ -231,7 +236,7 @@ class RelayedEndpoint(
     }
 
     override fun expire() {
-        if (super.isExpired()) {
+        if (super.isExpired) {
             return
         }
         super.expire()

@@ -112,7 +112,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
      */
-    val visitor: Boolean,
+    override val visitor: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -232,14 +232,12 @@ class Endpoint @JvmOverloads constructor(
      * The instance which manages the Colibri messaging (over a data channel
      * or web sockets).
      */
-    private val _messageTransport = EndpointMessageTransport(
+    override val messageTransport = EndpointMessageTransport(
         this,
         Supplier { conference.videobridge.statistics },
         conference,
         logger
     )
-
-    override fun getMessageTransport(): EndpointMessageTransport = _messageTransport
 
     /**
      * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
@@ -481,14 +479,15 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    override fun isSendingAudio(): Boolean {
-        // The endpoint is sending audio if we (the transceiver) are receiving audio.
-        return transceiver.isReceivingAudio()
-    }
-    override fun isSendingVideo(): Boolean {
-        // The endpoint is sending video if we (the transceiver) are receiving video.
-        return transceiver.isReceivingVideo()
-    }
+    override val isSendingAudio: Boolean
+        get() =
+            // The endpoint is sending audio if we (the transceiver) are receiving audio.
+            transceiver.isReceivingAudio()
+
+    override val isSendingVideo: Boolean
+        get() =
+            // The endpoint is sending video if we (the transceiver) are receiving video.
+            transceiver.isReceivingVideo()
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
@@ -629,7 +628,7 @@ class Endpoint @JvmOverloads constructor(
                 // This handles if the remote side will be opening the data channel
                 dataChannelStack!!.onDataChannelStackEvents { dataChannel ->
                     logger.info("Remote side opened a data channel.")
-                    _messageTransport.setDataChannel(dataChannel)
+                    messageTransport.setDataChannel(dataChannel)
                 }
                 dataChannelHandler.setDataChannelStack(dataChannelStack!!)
                 if (openDataChannelLocally) {
@@ -642,7 +641,7 @@ class Endpoint @JvmOverloads constructor(
                         0,
                         "default"
                     )
-                    _messageTransport.setDataChannel(dataChannel)
+                    messageTransport.setDataChannel(dataChannel)
                     dataChannel.open()
                 } else {
                     logger.info("Will wait for the remote side to open the data channel.")
@@ -838,9 +837,11 @@ class Endpoint @JvmOverloads constructor(
 
     fun unmapRtcpFbSsrc(packet: RtcpFbPacket) = videoSsrcs.unmapRtcpFbSsrc(packet)
 
-    override fun getSsrcs() = HashSet(transceiver.receiveSsrcs)
+    override val ssrcs
+        get() = HashSet(transceiver.receiveSsrcs)
 
-    override fun getLastIncomingActivity(): Instant = transceiver.packetIOActivity.lastIncomingActivityInstant
+    override val lastIncomingActivity
+        get() = transceiver.packetIOActivity.lastIncomingActivityInstant
 
     override fun requestKeyframe() = transceiver.requestKeyFrame()
 
@@ -1101,8 +1102,8 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    override fun getDebugState(): JSONObject {
-        return super.getDebugState().apply {
+    override val debugState: JSONObject
+        get() = super.debugState.apply {
             put("bitrateController", bitrateController.debugState)
             put("bandwidthProbing", bandwidthProbing.getDebugState())
             put("iceTransport", iceTransport.getDebugState())
@@ -1117,10 +1118,9 @@ class Endpoint @JvmOverloads constructor(
                 put("videoSsrcs", videoSsrcs.getDebugState())
             }
         }
-    }
 
     override fun expire() {
-        if (super.isExpired()) {
+        if (super.isExpired) {
             return
         }
         super.expire()
@@ -1137,7 +1137,7 @@ class Endpoint @JvmOverloads constructor(
             logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
 
             transceiver.teardown()
-            _messageTransport.close()
+            messageTransport.close()
             sctpHandler.stop()
             sctpManager?.closeConnection()
         } catch (t: Throwable) {
