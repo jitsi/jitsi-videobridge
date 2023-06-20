@@ -781,11 +781,15 @@ public class Conference
     }
 
     /**
-     * An endpoint was added or removed.
+     * One or more endpoints was added or removed.
+     * @param includesNonVisitors Whether any of the endpoints changed was not a visitor.
      */
-    private void endpointsChanged()
+    private void endpointsChanged(boolean includesNonVisitors)
     {
-        speechActivity.endpointsChanged(getEndpoints());
+        if (includesNonVisitors)
+        {
+            speechActivity.endpointsChanged(getNonVisitorEndpoints());
+        }
     }
 
     /**
@@ -858,6 +862,14 @@ public class Conference
     public List<AbstractEndpoint> getEndpoints()
     {
         return new ArrayList<>(this.endpointsById.values());
+    }
+
+    /**
+     * Gets the <tt>Endpoint</tt>s participating in this conference that are not visitors.
+     */
+    public List<AbstractEndpoint> getNonVisitorEndpoints()
+    {
+        return this.endpointsById.values().stream().filter(ep -> !ep.getVisitor()).collect(Collectors.toList());
     }
 
     List<AbstractEndpoint> getOrderedEndpoints()
@@ -986,7 +998,7 @@ public class Conference
 
         relaysById.forEach((i, relay) -> relay.endpointExpired(id));
         endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));
-        endpointsChanged();
+        endpointsChanged(removedEndpoint.getVisitor());
     }
 
     /**
@@ -1024,7 +1036,11 @@ public class Conference
 
         updateEndpointsCache();
 
-        endpointsChanged();
+        boolean hasNonVisitor = endpoints.stream().anyMatch( endpoint ->
+            !(endpoint instanceof Endpoint) || !((Endpoint)endpoint).getVisitor()
+        );
+
+        endpointsChanged(hasNonVisitor);
     }
 
     /**
