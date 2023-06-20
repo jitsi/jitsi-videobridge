@@ -981,7 +981,7 @@ public class Conference
             // The removed endpoint was a local Endpoint as opposed to a RelayedEndpoint.
             updateEndpointsCache();
             endpointsById.forEach((i, senderEndpoint) -> senderEndpoint.removeReceiver(id));
-            videobridge.localEndpointExpired(((Endpoint) removedEndpoint).getVisitor());
+            videobridge.localEndpointExpired(removedEndpoint.getVisitor());
         }
 
         relaysById.forEach((i, relay) -> relay.endpointExpired(id));

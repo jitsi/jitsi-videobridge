@@ -112,7 +112,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
      */
-    val visitor: Boolean,
+    override val visitor: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,

@@ -154,6 +154,9 @@ abstract class AbstractEndpoint protected constructor(
     open val messageTransport: AbstractEndpointMessageTransport?
         get() = null
 
+    /** Whether this endpoint represents a visitor. */
+    abstract val visitor: Boolean
+
     /**
      * Gets the description of the video [MediaSourceDesc] that this endpoint has advertised, or `null` if
      * it hasn't advertised any video sources.

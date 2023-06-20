@@ -121,6 +121,9 @@ class RelayedEndpoint(
     override val ssrcs
         get() = HashSet(streamInformationStore.receiveSsrcs)
 
+    // Visitors are never advertised between relays, so relayed endpoints are never visitors.
+    override val visitor = false
+
     fun hasReceiveSsrcs(): Boolean = streamInformationStore.receiveSsrcs.isNotEmpty()
 
     /** Relayed endpoints are not automatically expired. **/
