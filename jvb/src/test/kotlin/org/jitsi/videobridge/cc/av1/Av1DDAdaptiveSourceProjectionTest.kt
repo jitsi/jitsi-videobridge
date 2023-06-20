@@ -982,7 +982,7 @@ class Av1DDAdaptiveSourceProjectionTest {
             val packet2 = packetInfo2.packetAs<Av1DDPacket>()
             val packet2Indices = packet1.layerIds.map { getIndex(1, it) }
             Assert.assertTrue(context.accept(packetInfo2, packet2Indices, targetIndex))
-            val expectedTemplateId = packet2.descriptor!!.frameDependencyTemplateId + expectedTemplateOffset
+            val expectedTemplateId = (packet2.descriptor!!.frameDependencyTemplateId + expectedTemplateOffset) % 64
             context.rewriteRtp(packetInfo2)
             Assert.assertTrue(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(packet2.ssrc, srPacket2.senderSsrc)
@@ -1435,8 +1435,10 @@ private open class Av1PacketGenerator(
         val startOfPicture = startOfFrame && frameOfPicture == 0
         val endOfPicture = endOfFrame && frameOfPicture == framesPerTimestamp - 1
 
-        val templateId = (if (keyframePicture) keyframeTemplates[templateIdx] else normalTemplates[templateIdx]) +
-            structure.templateIdOffset
+        val templateId = (
+            (if (keyframePicture) keyframeTemplates[templateIdx] else normalTemplates[templateIdx]) +
+                structure.templateIdOffset
+            ) % 64
 
         val buffer = packetTemplate.clone()
         val rtpPacket = RtpPacket(buffer, 0, buffer.size)
