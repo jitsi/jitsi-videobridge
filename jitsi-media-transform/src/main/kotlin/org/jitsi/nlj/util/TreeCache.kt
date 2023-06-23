@@ -37,9 +37,9 @@ open class TreeCache<T>(
         updateState(index)
     }
 
-    fun getValueBefore(index: Int): T? {
+    fun getEntryBefore(index: Int): Map.Entry<Int, T>? {
         updateState(index)
-        return map.floorEntry(index)?.value
+        return map.floorEntry(index)
     }
 
     fun get(index: Int): T? = map[index]

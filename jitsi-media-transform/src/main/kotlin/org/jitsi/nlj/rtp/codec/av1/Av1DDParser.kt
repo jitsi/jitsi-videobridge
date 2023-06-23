@@ -24,6 +24,8 @@ import org.jitsi.nlj.util.TreeCache
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.utils.LRUCache
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
@@ -35,7 +37,8 @@ import org.jitsi.utils.logging2.createChildLogger
  */
 class Av1DDParser(
     sources: Array<MediaSourceDesc>,
-    parentLogger: Logger
+    parentLogger: Logger,
+    private val diagnosticContext: DiagnosticContext
 ) : VideoCodecParser(sources) {
     private val logger = createChildLogger(parentLogger)
 
@@ -47,15 +50,39 @@ class Av1DDParser(
             TemplateHistory(TEMPLATE_HISTORY_SIZE)
         }
 
-        val priorStructure = history.get(packet.sequenceNumber)?.structure
+        val priorEntry = history.get(packet.sequenceNumber)
 
-        return Av1DDPacket(packet, av1DdExtId, priorStructure, logger).also {
-            val newStructure = it.descriptor?.newTemplateDependencyStructure
-            if (newStructure != null) {
-                val structureChanged = newStructure.templateIdOffset != priorStructure?.templateIdOffset
-                history.insert(packet.sequenceNumber, Av1DdInfo(newStructure, structureChanged))
-            }
+        val priorStructure = priorEntry?.value?.structure
+
+        val av1Packet = Av1DDPacket(packet, av1DdExtId, priorStructure, logger)
+
+        val newStructure = av1Packet.descriptor?.newTemplateDependencyStructure
+        if (newStructure != null) {
+            val structureChanged = newStructure.templateIdOffset != priorStructure?.templateIdOffset
+            history.insert(packet.sequenceNumber, Av1DdInfo(newStructure, structureChanged))
         }
+
+        if (timeSeriesLogger.isTraceEnabled) {
+            val point = diagnosticContext
+                .makeTimeSeriesPoint("av1_parser")
+                .addField("rtp.ssrc", packet.ssrc)
+                .addField("rtp.seq", packet.sequenceNumber)
+                .addField("rtp.timestamp", packet.timestamp)
+                .addField("av1_parser.key", priorEntry?.key)
+                .addField("av1.startOfFrame", av1Packet.statelessDescriptor.startOfFrame)
+                .addField("av1.endOfFrame", av1Packet.statelessDescriptor.endOfFrame)
+                .addField("av1.templateId", av1Packet.statelessDescriptor.frameDependencyTemplateId)
+                .addField("av1.frameNum", av1Packet.statelessDescriptor.frameNumber)
+                .addField("av1.frameInfo", av1Packet.frameInfo)
+                .addField("av1.structure", newStructure != null)
+            if (newStructure != null) {
+                point.addField("av1.structureIdOffset", newStructure.templateIdOffset)
+                    .addField("av1.templateCount", newStructure.templateCount)
+            }
+            timeSeriesLogger.trace(point)
+        }
+
+        return av1Packet
     }
 
     override fun parse(packetInfo: PacketInfo) {
@@ -93,6 +120,8 @@ class Av1DDParser(
     companion object {
         const val STATE_HISTORY_SIZE = 500
         const val TEMPLATE_HISTORY_SIZE = 500
+
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(Av1DDParser::class.java)
     }
 }
 
@@ -102,9 +131,9 @@ class TemplateHistory(minHistory: Int) {
     private var latestDecodeTargets = -1
     private var latestDecodeTargetIndex = -1
 
-    fun get(seqNo: Int): Av1DdInfo? {
+    fun get(seqNo: Int): Map.Entry<Int, Av1DdInfo>? {
         val index = indexTracker.update(seqNo)
-        return history.getValueBefore(index)
+        return history.getEntryBefore(index)
     }
 
     fun insert(seqNo: Int, value: Av1DdInfo) {

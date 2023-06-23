@@ -768,7 +768,7 @@ open class FrameInfo(
     }
 
     override fun toString(): String {
-        return "spatialId=$spatialId, temporalId = $temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
+        return "spatialId=$spatialId, temporalId=$temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
     }
 
     /** Whether the frame has a dependency on a frame earlier than this "picture", the other frames of this

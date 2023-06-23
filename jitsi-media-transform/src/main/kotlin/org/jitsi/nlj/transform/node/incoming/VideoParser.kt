@@ -34,6 +34,7 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -43,7 +44,8 @@ import org.jitsi.utils.logging2.createChildLogger
  */
 class VideoParser(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
+    parentLogger: Logger,
+    private val diagnosticContext: DiagnosticContext
 ) : TransformerNode("Video parser") {
     private val logger = createChildLogger(parentLogger)
     private val stats = Stats()
@@ -108,7 +110,7 @@ class VideoParser(
                         }
                         resetSources()
                         packetInfo.layeringChanged = true
-                        videoCodecParser = Av1DDParser(sources, logger)
+                        videoCodecParser = Av1DDParser(sources, logger, diagnosticContext)
                     }
 
                     val av1DDPacket = (videoCodecParser as Av1DDParser).createFrom(packet, av1DDExtId)
