@@ -287,11 +287,7 @@ class Av1DDFrame internal constructor(
                 with(pkt) {
                     append("Packet ssrc $ssrc, seq $sequenceNumber, frame number $frameNumber, timestamp $timestamp ")
                 }
-                append("is not consistent with frame $ssrc, ")
-                append("seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
-                append("frame number $frameNumber, timestamp $timestamp: ")
-
-                append("frame template $templateId info $frameInfo != ")
+                append("is not consistent with frame $this != ")
                 append("packet template ${pkt.statelessDescriptor.frameDependencyTemplateId} ")
                 append("frame info ${pkt.frameInfo}")
             }
@@ -300,5 +296,12 @@ class Av1DDFrame internal constructor(
     fun isImmediatelyAfter(otherFrame: Av1DDFrame): Boolean {
         return frameNumber ==
             applySequenceNumberDelta(otherFrame.frameNumber, 1)
+    }
+
+    override fun toString() = buildString {
+        append("$ssrc, ")
+        append("seq $earliestKnownSequenceNumber-$latestKnownSequenceNumber ")
+        append("frame number $frameNumber, timestamp $timestamp: ")
+        append("frame template $templateId info $frameInfo")
     }
 }

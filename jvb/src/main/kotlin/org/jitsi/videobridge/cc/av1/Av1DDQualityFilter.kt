@@ -225,6 +225,9 @@ internal class Av1DDQualityFilter(
 
             if (currentDt != externalTargetDt) {
                 val frameMap = av1FrameMap[frame.ssrc]
+                if (frameInfo.dti.size >= externalTargetDt) {
+                    logger.warn { "Target DT $externalTargetDt not present for frame $frame" }
+                }
                 if (frameInfo.dti[externalTargetDt] == DTI.SWITCH &&
                     frameMap != null &&
                     frameInfo.fdiff.all {
