@@ -107,6 +107,10 @@ class Av1DDPacket : ParsedVideoPacket {
     val activeDecodeTargets
         get() = descriptor?.activeDecodeTargetsBitmask
 
+    override fun toString(): String {
+        return super.toString() + ", DTIs=${frameInfo?.dtisPresent}"
+    }
+
     override fun clone(): Av1DDPacket {
         return Av1DDPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
