@@ -73,7 +73,7 @@ class Av1DDParser(
                 .addField("av1.endOfFrame", av1Packet.statelessDescriptor.endOfFrame)
                 .addField("av1.templateId", av1Packet.statelessDescriptor.frameDependencyTemplateId)
                 .addField("av1.frameNum", av1Packet.statelessDescriptor.frameNumber)
-                .addField("av1.frameInfo", av1Packet.frameInfo)
+                .addField("av1.frameInfo", av1Packet.frameInfo?.toString())
                 .addField("av1.structure", newStructure != null)
             if (newStructure != null) {
                 point.addField("av1.structureIdOffset", newStructure.templateIdOffset)
