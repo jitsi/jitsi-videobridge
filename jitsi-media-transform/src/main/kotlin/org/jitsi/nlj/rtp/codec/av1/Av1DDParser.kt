@@ -52,14 +52,14 @@ class Av1DDParser(
 
         val priorEntry = history.get(packet.sequenceNumber)
 
-        val priorStructure = priorEntry?.value?.structure
+        val priorStructure = priorEntry?.value?.structure?.clone()
 
         val av1Packet = Av1DDPacket(packet, av1DdExtId, priorStructure, logger)
 
         val newStructure = av1Packet.descriptor?.newTemplateDependencyStructure
         if (newStructure != null) {
             val structureChanged = newStructure.templateIdOffset != priorStructure?.templateIdOffset
-            history.insert(packet.sequenceNumber, Av1DdInfo(newStructure, structureChanged))
+            history.insert(packet.sequenceNumber, Av1DdInfo(newStructure.clone(), structureChanged))
             logger.debug {
                 "Inserting new structure with templates ${newStructure.templateIdOffset} .. " +
                     "${(newStructure.templateIdOffset + newStructure.templateCount - 1) % 64} " +
