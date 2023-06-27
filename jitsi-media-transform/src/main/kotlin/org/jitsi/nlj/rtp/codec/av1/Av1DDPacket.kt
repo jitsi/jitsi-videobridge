@@ -107,9 +107,12 @@ class Av1DDPacket : ParsedVideoPacket {
     val activeDecodeTargets
         get() = descriptor?.activeDecodeTargetsBitmask
 
-    override fun toString(): String {
-        return super.toString() + ", DTIs=${frameInfo?.dtisPresent}"
-    }
+    override fun toString(): String =
+        buildString {
+            append(super.toString())
+            append(", DTIs=${frameInfo?.dtisPresent}")
+            activeDecodeTargets?.let { append(", ActiveTargets=$it") }
+        }
 
     override fun clone(): Av1DDPacket {
         return Av1DDPacket(

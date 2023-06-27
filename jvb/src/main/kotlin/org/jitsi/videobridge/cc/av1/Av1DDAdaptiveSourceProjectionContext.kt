@@ -611,6 +611,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             ?: throw RewriteException("Frame does not have projection?")
         /* Shouldn't happen for an accepted packet whose frame is still known? */
 
+        logger.trace { "Rewriting packet with structure ${System.identityHashCode(av1Packet.descriptor?.structure)}" }
         av1Projection.rewriteRtp(av1Packet)
     }
 

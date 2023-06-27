@@ -286,10 +286,10 @@ class Av1DDFrame internal constructor(
             buildString {
                 with(pkt) {
                     append("Packet ssrc $ssrc, seq $sequenceNumber, frame number $frameNumber, timestamp $timestamp ")
+                    append("packet template ${statelessDescriptor.frameDependencyTemplateId} ")
+                    append("frame info $frameInfo ")
                 }
-                append("is not consistent with frame $this != ")
-                append("packet template ${pkt.statelessDescriptor.frameDependencyTemplateId} ")
-                append("frame info ${pkt.frameInfo}")
+                append("is not consistent with frame ${this@Av1DDFrame}")
             }
         )
     }

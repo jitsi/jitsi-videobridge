@@ -60,6 +60,12 @@ class Av1DDParser(
         if (newStructure != null) {
             val structureChanged = newStructure.templateIdOffset != priorStructure?.templateIdOffset
             history.insert(packet.sequenceNumber, Av1DdInfo(newStructure, structureChanged))
+            logger.debug {
+                "Inserting new structure with templates ${newStructure.templateIdOffset} .. " +
+                    "${(newStructure.templateIdOffset + newStructure.templateCount - 1) % 64} " +
+                    "for RTP packet ssrc ${packet.ssrc} seq ${packet.sequenceNumber}.  " +
+                    "Changed from previous: $structureChanged."
+            }
         }
 
         if (timeSeriesLogger.isTraceEnabled) {
@@ -75,9 +81,17 @@ class Av1DDParser(
                 .addField("av1.frameNum", av1Packet.statelessDescriptor.frameNumber)
                 .addField("av1.frameInfo", av1Packet.frameInfo?.toString())
                 .addField("av1.structure", newStructure != null)
+                .addField("av1.activeTargets", av1Packet.descriptor?.activeDecodeTargetsBitmask)
+            val packetStructure = av1Packet.descriptor?.structure
+            if (packetStructure != null) {
+                point.addField("av1.structureIdOffset", packetStructure.templateIdOffset)
+                    .addField("av1.templateCount", packetStructure.templateCount)
+                    .addField("av1.structureId", System.identityHashCode(packetStructure))
+            }
             if (newStructure != null) {
-                point.addField("av1.structureIdOffset", newStructure.templateIdOffset)
-                    .addField("av1.templateCount", newStructure.templateCount)
+                point.addField("av1.newStructureIdOffset", newStructure.templateIdOffset)
+                    .addField("av1.newTemplateCount", newStructure.templateCount)
+                    .addField("av1.newStructureId", System.identityHashCode(newStructure))
             }
             timeSeriesLogger.trace(point)
         }
@@ -102,6 +116,10 @@ class Av1DDParser(
 
             if (changed) {
                 packetInfo.layeringChanged = true
+                logger.debug {
+                    "Decode targets for ${av1Packet.ssrc} changed in seq ${av1Packet.sequenceNumber}: " +
+                        "now $activeDecodeTargets.  Updating layering."
+                }
 
                 findSourceDescAndRtpEncodingDesc(av1Packet)?.let { (src, enc) ->
                     av1Packet.getScalabilityStructure(eid = enc.eid)?.let {
