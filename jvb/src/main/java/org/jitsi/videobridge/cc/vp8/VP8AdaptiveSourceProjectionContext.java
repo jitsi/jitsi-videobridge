@@ -252,26 +252,19 @@ public class VP8AdaptiveSourceProjectionContext
      * Determines whether a packet should be accepted or not.
      *
      * @param packetInfo the RTP packet to determine whether to project or not.
-     * @param incomingIndices the quality indices of the incoming RTP packet
+     * @param incomingEncoding the encoding of the incoming RTP packet
      * @param targetIndex the target quality index we want to achieve
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean accept(
-        @NotNull PacketInfo packetInfo, Collection<Integer> incomingIndices, int targetIndex)
+        @NotNull PacketInfo packetInfo, int incomingEncoding, int targetIndex)
     {
         if (!(packetInfo.getPacket() instanceof Vp8Packet))
         {
             logger.warn("Packet is not VP8 packet");
             return false;
         }
-        if (incomingIndices.size() != 1)
-        {
-            logger.warn("Zero, or more than one, incoming indices for a VP8 packet: " +
-                incomingIndices.size());
-            return false;
-        }
-        int incomingIndex = incomingIndices.iterator().next();
         Vp8Packet vp8Packet = packetInfo.packetAs();
 
         VP8FrameMap.FrameInsertionResult result = insertPacketInMap(vp8Packet);
@@ -303,7 +296,7 @@ public class VP8AdaptiveSourceProjectionContext
 
             Instant receivedTime = packetInfo.getReceivedTime();
             boolean accepted = vp8QualityFilter
-                .acceptFrame(frame, incomingIndex, targetIndex, receivedTime);
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime);
 
             if (accepted)
             {

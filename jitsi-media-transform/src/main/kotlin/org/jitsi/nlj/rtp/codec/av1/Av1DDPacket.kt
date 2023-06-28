@@ -17,6 +17,7 @@
 package org.jitsi.nlj.rtp.codec.av1
 
 import org.jitsi.nlj.RtpEncodingDesc
+import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
@@ -41,11 +42,11 @@ class Av1DDPacket : ParsedVideoPacket {
         offset: Int,
         length: Int,
         av1DDHeaderExtensionId: Int,
-        encodingIndices: Collection<Int>,
+        encodingId: Int,
         descriptor: Av1DependencyDescriptorHeaderExtension?,
         statelessDescriptor: Av1DependencyDescriptorStatelessSubset,
         frameInfo: FrameInfo?
-    ) : super(buffer, offset, length, encodingIndices) {
+    ) : super(buffer, offset, length, encodingId) {
         this.descriptor = descriptor
         this.statelessDescriptor = statelessDescriptor
         this.frameInfo = frameInfo
@@ -57,7 +58,7 @@ class Av1DDPacket : ParsedVideoPacket {
         av1DDHeaderExtensionId: Int,
         templateDependencyStructure: Av1TemplateDependencyStructure?,
         logger: Logger
-    ) : super(packet.buffer, packet.offset, packet.length, emptyList()) {
+    ) : super(packet.buffer, packet.offset, packet.length, RtpLayerDesc.SUSPENDED_ENCODING_ID) {
         this.av1DDHeaderExtensionId = av1DDHeaderExtensionId
         val ddExt = packet.getHeaderExtension(av1DDHeaderExtensionId)
         requireNotNull(ddExt) {
@@ -120,7 +121,7 @@ class Av1DDPacket : ParsedVideoPacket {
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
             av1DDHeaderExtensionId = av1DDHeaderExtensionId,
-            encodingIndices = qualityIndices,
+            encodingId = encodingId,
             descriptor = descriptor?.clone(),
             statelessDescriptor = statelessDescriptor,
             frameInfo = frameInfo

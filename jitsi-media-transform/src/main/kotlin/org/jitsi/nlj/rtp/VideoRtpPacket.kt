@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtp
 
+import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.rtp.rtp.RtpPacket
 
 /**
@@ -22,33 +23,13 @@ import org.jitsi.rtp.rtp.RtpPacket
  * parsed (i.e. we don't know information gained from
  * parsing codec-specific data).
  */
-open class VideoRtpPacket protected constructor(
+open class VideoRtpPacket @JvmOverloads constructor(
     buffer: ByteArray,
     offset: Int,
     length: Int,
-    /** The indices of this packet relative to its source's RtpLayers. */
-    qualityIndices: Collection<Int>
+    /** The encoding ID of this packet. */
+    var encodingId: Int = RtpLayerDesc.SUSPENDED_ENCODING_ID
 ) : RtpPacket(buffer, offset, length) {
-
-    constructor(
-        buffer: ByteArray,
-        offset: Int,
-        length: Int
-    ) : this(
-        buffer,
-        offset,
-        length,
-        qualityIndices = emptyList()
-    )
-
-    constructor(
-        buffer: ByteArray,
-        offset: Int,
-        length: Int,
-        qualityIndex: Int
-    ) : this(buffer, offset, length, listOf(qualityIndex))
-
-    var qualityIndices: Collection<Int> = qualityIndices.toList()
 
     open val layerIds: Collection<Int> = listOf(0)
 
@@ -57,7 +38,7 @@ open class VideoRtpPacket protected constructor(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
-            qualityIndices = qualityIndices
+            encodingId = encodingId
         )
     }
 }

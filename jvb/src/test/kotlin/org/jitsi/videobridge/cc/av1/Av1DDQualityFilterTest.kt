@@ -693,13 +693,10 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
             ms = if (f.timestamp != lastTs) { f.timestamp / 90 } else { ms + 1 }
             lastTs = f.timestamp
 
-            val packetIndices = f.frameInfo!!.dtisPresent.map { Av1DDRtpLayerDesc.getIndex(f.ssrc.toInt(), it) }
-
             val result = filter.acceptFrame(
                 frame = f,
                 externalTargetIndex = targetIndex,
                 incomingEncoding = f.ssrc.toInt(),
-                incomingIndices = packetIndices,
                 receivedTime = Instant.ofEpochMilli(ms)
             )
             f.isAccepted = result.accept

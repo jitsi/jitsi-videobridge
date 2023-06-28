@@ -106,7 +106,7 @@ class VP8QualityFilter
      * method at a time.
      *
      * @param frame  the VP8 frame.
-     * @param incomingIndex the quality index of the incoming RTP packet
+     * @param incomingEncoding the encoding index of the incoming RTP packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
      * @param receivedTime the current time
@@ -114,7 +114,7 @@ class VP8QualityFilter
      */
     synchronized boolean acceptFrame(
         @NotNull VP8Frame frame,
-        int incomingIndex,
+        int incomingEncoding,
         int externalTargetIndex, Instant receivedTime)
     {
         // We make local copies of the externalTemporalLayerIdTarget and the
@@ -154,16 +154,15 @@ class VP8QualityFilter
             temporalLayerIdOfFrame = 0;
         }
 
-        int encodingId = RtpLayerDesc.getEidFromIndex(incomingIndex);
         if (frame.isKeyframe())
         {
             logger.debug(() -> "Quality filter got keyframe for stream "
                     + frame.getSsrc());
-            return acceptKeyframe(encodingId, receivedTime);
+            return acceptKeyframe(incomingEncoding, receivedTime);
         }
         else if (currentEncodingId > SUSPENDED_ENCODING_ID)
         {
-            if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(encodingId))
+            if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding))
             {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
                 // that trigger this. what happens is the client sends a base
@@ -176,7 +175,7 @@ class VP8QualityFilter
                 needsKeyframe = true;
             }
 
-            if (encodingId != currentEncodingId)
+            if (incomingEncoding != currentEncodingId)
             {
                 // for non-keyframes, we can't route anything but the current encoding
                 return false;

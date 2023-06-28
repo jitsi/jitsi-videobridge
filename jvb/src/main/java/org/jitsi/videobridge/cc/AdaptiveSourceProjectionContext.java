@@ -41,11 +41,11 @@ public interface AdaptiveSourceProjectionContext
      * Determines whether an RTP packet should be accepted or not.
      *
      * @param packetInfo the RTP packet to determine whether to accept or not.
-     * @param incomingIndices the quality indices of the incoming RTP packet.
+     * @param incomingEncoding The encoding of the incoming packet.
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
-    boolean accept(PacketInfo packetInfo, Collection<Integer> incomingIndices, int targetIndex);
+    boolean accept(PacketInfo packetInfo, int incomingEncoding, int targetIndex);
 
     /**
      * @return true if this stream context needs a keyframe in order to either

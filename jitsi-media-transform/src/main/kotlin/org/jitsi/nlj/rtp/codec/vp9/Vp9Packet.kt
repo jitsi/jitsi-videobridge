@@ -40,10 +40,10 @@ class Vp9Packet private constructor(
     isKeyframe: Boolean?,
     isStartOfFrame: Boolean?,
     isEndOfFrame: Boolean?,
-    encodingIndices: Collection<Int>,
+    encodingId: Int,
     pictureId: Int?,
     TL0PICIDX: Int?
-) : ParsedVideoPacket(buffer, offset, length, encodingIndices) {
+) : ParsedVideoPacket(buffer, offset, length, encodingId) {
 
     constructor(
         buffer: ByteArray,
@@ -54,7 +54,7 @@ class Vp9Packet private constructor(
         isKeyframe = null,
         isStartOfFrame = null,
         isEndOfFrame = null,
-        encodingIndices = emptyList(),
+        encodingId = RtpLayerDesc.SUSPENDED_ENCODING_ID,
         pictureId = null,
         TL0PICIDX = null
     )
@@ -200,7 +200,7 @@ class Vp9Packet private constructor(
             isKeyframe = isKeyframe,
             isStartOfFrame = isStartOfFrame,
             isEndOfFrame = isEndOfFrame,
-            encodingIndices = qualityIndices,
+            encodingId = encodingId,
             pictureId = pictureId,
             TL0PICIDX = TL0PICIDX
         )

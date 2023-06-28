@@ -38,11 +38,11 @@ class Vp8Packet private constructor(
     length: Int,
     isKeyframe: Boolean?,
     isStartOfFrame: Boolean?,
-    encodingIndices: Collection<Int>,
+    encodingId: Int,
     height: Int?,
     pictureId: Int?,
     TL0PICIDX: Int?
-) : ParsedVideoPacket(buffer, offset, length, encodingIndices) {
+) : ParsedVideoPacket(buffer, offset, length, encodingId) {
 
     constructor(
         buffer: ByteArray,
@@ -52,7 +52,7 @@ class Vp8Packet private constructor(
         buffer, offset, length,
         isKeyframe = null,
         isStartOfFrame = null,
-        encodingIndices = emptyList(),
+        encodingId = RtpLayerDesc.SUSPENDED_ENCODING_ID,
         height = null,
         pictureId = null,
         TL0PICIDX = null
@@ -157,7 +157,7 @@ class Vp8Packet private constructor(
             length,
             isKeyframe = isKeyframe,
             isStartOfFrame = isStartOfFrame,
-            encodingIndices = qualityIndices,
+            encodingId = encodingId,
             height = height,
             pictureId = pictureId,
             TL0PICIDX = TL0PICIDX

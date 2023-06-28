@@ -99,12 +99,11 @@ internal class Av1DDQualityFilter(
     fun acceptFrame(
         frame: Av1DDFrame,
         incomingEncoding: Int,
-        incomingIndices: Collection<Int>,
         externalTargetIndex: Int,
         receivedTime: Instant?
     ): AcceptResult {
         val prevIndex = currentIndex
-        val accept = doAcceptFrame(frame, incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
+        val accept = doAcceptFrame(frame, incomingEncoding, externalTargetIndex, receivedTime)
         val currentDt = getDtFromIndex(currentIndex)
         val mark = currentDt != SUSPENDED_DT &&
             (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
@@ -130,7 +129,6 @@ internal class Av1DDQualityFilter(
     private fun doAcceptFrame(
         frame: Av1DDFrame,
         incomingEncoding: Int,
-        incomingIndices: Collection<Int>,
         externalTargetIndex: Int,
         receivedTime: Instant?
     ): Boolean {
@@ -157,7 +155,7 @@ internal class Av1DDQualityFilter(
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            acceptKeyframe(frame, incomingEncoding, incomingIndices, externalTargetIndex, receivedTime)
+            acceptKeyframe(frame, incomingEncoding, externalTargetIndex, receivedTime)
         } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
             if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
@@ -323,7 +321,6 @@ internal class Av1DDQualityFilter(
     private fun acceptKeyframe(
         frame: Av1DDFrame,
         incomingEncoding: Int,
-        incomingIndices: Collection<Int>,
         externalTargetIndex: Int,
         receivedTime: Instant?
     ): Boolean {
@@ -353,7 +350,7 @@ internal class Av1DDQualityFilter(
             incomingEncoding == externalTargetEncoding -> externalTargetIndex
             incomingEncoding == internalTargetEncoding && internalTargetDt != -1 ->
                 getIndex(currentEncoding, internalTargetDt)
-            else -> incomingIndices.maxOrNull()!!
+            else -> frameInfo.dtisPresent.maxOrNull()!!
         }
         val dtIfSwitched = getDtFromIndex(indexIfSwitched)
         val dtiIfSwitched = frameInfo.dti[dtIfSwitched]

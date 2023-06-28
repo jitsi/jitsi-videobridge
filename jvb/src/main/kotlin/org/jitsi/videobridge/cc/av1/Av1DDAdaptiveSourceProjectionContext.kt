@@ -68,7 +68,7 @@ class Av1DDAdaptiveSourceProjectionContext(
      */
     private var lastFrameNumberIndexResumption = -1
 
-    override fun accept(packetInfo: PacketInfo, incomingIndices: Collection<Int>, targetIndex: Int): Boolean {
+    override fun accept(packetInfo: PacketInfo, incomingEncoding: Int, targetIndex: Int): Boolean {
         val packet = packetInfo.packet
 
         if (packet !is Av1DDPacket) {
@@ -82,15 +82,6 @@ class Av1DDAdaptiveSourceProjectionContext(
 
         val frame = result.frame
 
-        val incomingEncoding = getEidFromIndex(incomingIndices.first())
-        if (incomingIndices.any { getEidFromIndex(it) != incomingEncoding }) {
-            logger.warn(
-                "Incoming indices have more than one encoding: " +
-                    incomingIndices.map { Av1DDRtpLayerDesc.indexString(it) }
-            )
-            return false
-        }
-
         if (result.isNewFrame) {
             if (packet.isKeyframe && frameIsNewSsrc(frame)) {
                 /* If we're not currently projecting this SSRC, check if we've
@@ -99,13 +90,13 @@ class Av1DDAdaptiveSourceProjectionContext(
                  * packet, so treat this frame as though it weren't a keyframe.
                  * Note that this may mean re-analyzing the packets with a now-available template dependency structure.
                  */
-                if (haveSubsequentNonAcceptedChain(frame, incomingEncoding, incomingIndices, targetIndex)) {
+                if (haveSubsequentNonAcceptedChain(frame, incomingEncoding, targetIndex)) {
                     frame.isKeyframe = false
                 }
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = av1QualityFilter
-                .acceptFrame(frame, incomingEncoding, incomingIndices, targetIndex, receivedTime)
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
             frame.isAccepted = acceptResult.accept && frame.index >= lastFrameNumberIndexResumption
             if (frame.isAccepted) {
                 val projection: Av1DDFrameProjection
@@ -164,7 +155,6 @@ class Av1DDAdaptiveSourceProjectionContext(
     private fun haveSubsequentNonAcceptedChain(
         frame: Av1DDFrame,
         incomingEncoding: Int,
-        incomingIndices: Collection<Int>,
         targetIndex: Int
     ): Boolean {
         val map = av1FrameMaps[frame.ssrc] ?: return false
@@ -172,7 +162,7 @@ class Av1DDAdaptiveSourceProjectionContext(
         val dtsToCheck = if (incomingEncoding == getEidFromIndex(targetIndex)) {
             setOf(getDtFromIndex(targetIndex))
         } else {
-            incomingIndices.map { getDtFromIndex(it) }
+            frame.frameInfo?.dtisPresent ?: emptySet()
         }
         val chainsToCheck = dtsToCheck.map { structure.decodeTargetInfo[it].protectedBy }.toSet()
         return map.nextFrameWith(frame) {

@@ -80,7 +80,7 @@ class Vp9AdaptiveSourceProjectionContext(
     @Synchronized
     override fun accept(
         packetInfo: PacketInfo,
-        incomingIndices: Collection<Int>,
+        incomingEncoding: Int,
         targetIndex: Int
     ): Boolean {
         val packet = packetInfo.packet
@@ -88,11 +88,6 @@ class Vp9AdaptiveSourceProjectionContext(
             logger.warn("Packet is not Vp9 packet")
             return false
         }
-        if (incomingIndices.size != 1) {
-            logger.warn("Zero, or more than one, incoming indices for a VP9 packet: ${incomingIndices.size}")
-            return false
-        }
-        val incomingIndex = incomingIndices.first()
 
         /* If insertPacketInMap returns null, this is a very old picture, more than Vp9PictureMap.PICTURE_MAP_SIZE old,
            or something is wrong with the stream. */
@@ -114,7 +109,7 @@ class Vp9AdaptiveSourceProjectionContext(
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
-                .acceptFrame(frame, incomingIndex, targetIndex, receivedTime)
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
             frame.isAccepted = acceptResult.accept && frame.index >= lastPicIdIndexResumption
             if (frame.isAccepted) {
                 val projection: Vp9FrameProjection
@@ -148,7 +143,9 @@ class Vp9AdaptiveSourceProjectionContext(
                 .addField("timestamp", packet.timestamp)
                 .addField("seq", packet.sequenceNumber)
                 .addField("pictureId", packet.pictureId)
-                .addField("index", indexString(incomingIndex))
+                .addField("encoding", incomingEncoding)
+                .addField("spatialLayer", packet.spatialLayerIndex)
+                .addField("temporalLayer", packet.temporalLayerIndex)
                 .addField("isInterPicturePredicted", packet.isInterPicturePredicted)
                 .addField("usesInterLayerDependency", packet.usesInterLayerDependency)
                 .addField("isUpperLevelReference", packet.isUpperLevelReference)

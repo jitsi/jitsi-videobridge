@@ -58,11 +58,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         val generator = ScalableAv1PacketGenerator(1)
         val packetInfo = generator.nextPacket()
         val packet = packetInfo.packetAs<Av1DDPacket>()
-        val packetIndices = packet.layerIds.map { getIndex(0, it) }
         val targetIndex = getIndex(eid = 0, dt = 0)
-        Assert.assertTrue(
-            context.accept(packetInfo, packetIndices, targetIndex)
-        )
+        Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
         context.rewriteRtp(packetInfo)
         Assert.assertEquals(10001, packet.sequenceNumber)
         Assert.assertEquals(1003000, packet.timestamp)
@@ -91,13 +88,8 @@ class Av1DDAdaptiveSourceProjectionTest {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Av1DDPacket>()
             val frameInfo = packet.frameInfo!!
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
 
-            val accepted = context.accept(
-                packetInfo,
-                packetIndices,
-                targetIndex
-            )
+            val accepted = context.accept(packetInfo, 0, targetIndex)
             val endOfFrame = packet.isEndOfFrame
             val endOfPicture = packet.isMarked // Save this before rewriteRtp
             if (expectAccept(frameInfo)) {
@@ -405,9 +397,8 @@ class Av1DDAdaptiveSourceProjectionTest {
                 latestSeq = origSeq
             }
             val frameInfo = packet.frameInfo!!
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
 
-            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            val accepted = context.accept(packetInfo, 0, targetIndex)
             val oldestValidSeq: Int =
                 RtpUtils.applySequenceNumberDelta(
                     latestSeq,
@@ -775,29 +766,17 @@ class Av1DDAdaptiveSourceProjectionTest {
             logger
         )
         val firstPacketInfo = generator.nextPacket()
-        val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
         val targetIndex = getIndex(eid = 0, dt = 2)
         for (i in 0..2) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Av1DDPacket>()
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
 
-            Assert.assertFalse(
-                context.accept(packetInfo, packetIndices, targetIndex)
-            )
+            Assert.assertFalse(context.accept(packetInfo, 0, targetIndex))
         }
-        val firstPacketIndices = firstPacket.layerIds.map { getIndex(0, it) }
-        Assert.assertTrue(
-            context.accept(firstPacketInfo, firstPacketIndices, targetIndex)
-        )
+        Assert.assertTrue(context.accept(firstPacketInfo, 0, targetIndex))
         context.rewriteRtp(firstPacketInfo)
         for (i in 0..9995) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Av1DDPacket>()
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
-            Assert.assertTrue(
-                context.accept(packetInfo, packetIndices, targetIndex)
-            )
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
         }
     }
@@ -814,36 +793,20 @@ class Av1DDAdaptiveSourceProjectionTest {
             logger
         )
         val firstPacketInfo = generator.nextPacket()
-        val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
         val targetIndex = getIndex(eid = 0, dt = 2)
         for (i in 0..3) {
             val packetInfo = generator.nextPacket(missedStructure = true)
-            val packet = packetInfo.packetAs<Av1DDPacket>()
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
-            Assert.assertFalse(
-                context.accept(packetInfo, packetIndices, targetIndex)
-            )
+            Assert.assertFalse(context.accept(packetInfo, 0, targetIndex))
         }
-        val firstPacketIndices = firstPacket.layerIds.map { getIndex(0, it) }
-        Assert.assertFalse(
-            context.accept(firstPacketInfo, firstPacketIndices, targetIndex)
-        )
+        Assert.assertFalse(context.accept(firstPacketInfo, 0, targetIndex))
         for (i in 0..9) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Av1DDPacket>()
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
-            Assert.assertFalse(
-                context.accept(packetInfo, packetIndices, targetIndex)
-            )
+            Assert.assertFalse(context.accept(packetInfo, 0, targetIndex))
         }
         generator.requestKeyframe()
         for (i in 0..9995) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Av1DDPacket>()
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
-            Assert.assertTrue(
-                context.accept(packetInfo, packetIndices, targetIndex)
-            )
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
         }
     }
@@ -863,13 +826,10 @@ class Av1DDAdaptiveSourceProjectionTest {
         for (i in 0..9999) {
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Av1DDPacket>()
-            val packet1Indices = packet1.layerIds.map { getIndex(1, it) }
 
-            Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
+            Assert.assertTrue(context.accept(packetInfo1, 1, targetIndex))
             val packetInfo2 = generator2.nextPacket()
-            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
-            val packet2Indices = packet2.layerIds.map { getIndex(0, it) }
-            Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
+            Assert.assertFalse(context.accept(packetInfo2, 0, targetIndex))
             context.rewriteRtp(packetInfo1)
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
@@ -900,20 +860,17 @@ class Av1DDAdaptiveSourceProjectionTest {
             val srPacket1 = generator1.srPacket
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Av1DDPacket>()
-            val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
             if (i == 0) {
                 expectedTemplateOffset = packet1.descriptor!!.structure.templateIdOffset
             }
-            Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
+            Assert.assertTrue(context.accept(packetInfo1, 0, targetIndex))
             context.rewriteRtp(packetInfo1)
             Assert.assertTrue(context.rewriteRtcp(srPacket1))
             Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
             Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
             val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
-            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
-            val packet2Indices = packet2.layerIds.map { getIndex(1, it) }
-            Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
+            Assert.assertFalse(context.accept(packetInfo2, 1, targetIndex))
             Assert.assertFalse(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
@@ -934,17 +891,14 @@ class Av1DDAdaptiveSourceProjectionTest {
             val srPacket1 = generator1.srPacket
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Av1DDPacket>()
-            val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
-            Assert.assertTrue(context.accept(packetInfo1, packet1Indices, targetIndex))
+            Assert.assertTrue(context.accept(packetInfo1, 0, targetIndex))
             context.rewriteRtp(packetInfo1)
             Assert.assertTrue(context.rewriteRtcp(srPacket1))
             Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
             Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
             val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
-            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
-            val packet2Indices = packet2.layerIds.map { getIndex(1, it) }
-            Assert.assertFalse(context.accept(packetInfo2, packet2Indices, targetIndex))
+            Assert.assertFalse(context.accept(packetInfo2, 1, targetIndex))
             Assert.assertFalse(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
@@ -966,10 +920,9 @@ class Av1DDAdaptiveSourceProjectionTest {
             val srPacket1 = generator1.srPacket
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Av1DDPacket>()
-            val packet1Indices = packet1.layerIds.map { getIndex(0, it) }
 
             /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
-            Assert.assertEquals(i == 0, context.accept(packetInfo1, packet1Indices, targetIndex))
+            Assert.assertEquals(i == 0, context.accept(packetInfo1, 0, targetIndex))
             Assert.assertEquals(i == 0, context.rewriteRtcp(srPacket1))
             if (i == 0) {
                 context.rewriteRtp(packetInfo1)
@@ -980,8 +933,7 @@ class Av1DDAdaptiveSourceProjectionTest {
             val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
             val packet2 = packetInfo2.packetAs<Av1DDPacket>()
-            val packet2Indices = packet1.layerIds.map { getIndex(1, it) }
-            Assert.assertTrue(context.accept(packetInfo2, packet2Indices, targetIndex))
+            Assert.assertTrue(context.accept(packetInfo2, 1, targetIndex))
             val expectedTemplateId = (packet2.descriptor!!.frameDependencyTemplateId + expectedTemplateOffset) % 64
             context.rewriteRtp(packetInfo2)
             Assert.assertTrue(context.rewriteRtcp(srPacket2))
@@ -1035,8 +987,7 @@ class Av1DDAdaptiveSourceProjectionTest {
         for (i in 0..9999) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Av1DDPacket>()
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
-            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            val accepted = context.accept(packetInfo, 0, targetIndex)
             if (accepted) {
                 if (decodableTid < packet.frameInfo!!.temporalId) {
                     decodableTid = packet.frameInfo!!.temporalId
@@ -1086,9 +1037,8 @@ class Av1DDAdaptiveSourceProjectionTest {
         for (i in 0..999) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Av1DDPacket>()
-            val packetIndices = packet.layerIds.map { getIndex(0, it) }
 
-            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            val accepted = context.accept(packetInfo, 0, targetIndex)
             val frameInfo = packet.frameInfo!!
             val endOfPicture = packet.isMarked
             if (expectAccept(frameInfo)) {
@@ -1120,9 +1070,8 @@ class Av1DDAdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 frameInfo = packet.frameInfo!!
             } while (!expectAccept(frameInfo))
-            var packetIndices = packet.layerIds.map { getIndex(0, it) }
             var endOfPicture = packet.isMarked
-            Assert.assertTrue(context.accept(packetInfo, packetIndices, targetIndex))
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
 
             /* Allow any values after a gap. */
@@ -1138,8 +1087,7 @@ class Av1DDAdaptiveSourceProjectionTest {
             for (i in 0..999) {
                 packetInfo = generator.nextPacket()
                 packet = packetInfo.packetAs()
-                packetIndices = packet.layerIds.map { getIndex(0, it) }
-                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                val accepted = context.accept(packetInfo, 0, targetIndex)
                 endOfPicture = packet.isMarked
                 frameInfo = packet.frameInfo!!
                 if (expectAccept(frameInfo)) {
@@ -1213,7 +1161,6 @@ class Av1DDAdaptiveSourceProjectionTest {
 
         var packetInfo: PacketInfo
         var packet: Av1DDPacket
-        var packetIndices: Collection<Int>
         var frameInfo: FrameInfo
 
         var lastPacketAccepted = false
@@ -1223,8 +1170,7 @@ class Av1DDAdaptiveSourceProjectionTest {
             packetInfo = generator.nextPacket()
             packet = packetInfo.packetAs()
             frameInfo = packet.frameInfo!!
-            packetIndices = packet.layerIds.map { getIndex(0, it) }
-            val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+            val accepted = context.accept(packetInfo, 0, targetIndex)
             val endOfPicture = packet.isMarked
             if (expectAccept(frameInfo)) {
                 Assert.assertTrue(accepted)
@@ -1253,9 +1199,8 @@ class Av1DDAdaptiveSourceProjectionTest {
                 while (generator.packetOfFrame != 0) {
                     packetInfo = generator.nextPacket()
                     packet = packetInfo.packetAs()
-                    packetIndices = packet.layerIds.map { getIndex(0, it) }
 
-                    val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                    val accepted = context.accept(packetInfo, 0, targetIndex)
                     val endOfPicture = packet.isMarked
                     Assert.assertTrue(accepted)
                     context.rewriteRtp(packetInfo)
@@ -1272,9 +1217,8 @@ class Av1DDAdaptiveSourceProjectionTest {
             for (i in 0 until suspended) {
                 packetInfo = generator.nextPacket()
                 packet = packetInfo.packetAs()
-                packetIndices = packet.layerIds.map { getIndex(0, it) }
 
-                val accepted = context.accept(packetInfo, packetIndices, RtpLayerDesc.SUSPENDED_INDEX)
+                val accepted = context.accept(packetInfo, 0, RtpLayerDesc.SUSPENDED_INDEX)
                 Assert.assertFalse(accepted)
                 val endOfPicture = packet.isMarked
                 if (endOfPicture) {
@@ -1287,9 +1231,8 @@ class Av1DDAdaptiveSourceProjectionTest {
             for (i in 0 until 30) {
                 packetInfo = generator.nextPacket()
                 packet = packetInfo.packetAs()
-                packetIndices = packet.layerIds.map { getIndex(0, it) }
 
-                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                val accepted = context.accept(packetInfo, 0, targetIndex)
                 val endOfPicture = packet.isMarked
                 Assert.assertFalse(accepted)
                 if (endOfPicture) {
@@ -1303,8 +1246,7 @@ class Av1DDAdaptiveSourceProjectionTest {
             while (generator.packetOfFrame != 0) {
                 packetInfo = generator.nextPacket()
                 packet = packetInfo.packetAs()
-                packetIndices = packet.layerIds.map { getIndex(0, it) }
-                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                val accepted = context.accept(packetInfo, 0, targetIndex)
                 val endOfPicture = packet.isMarked
                 Assert.assertFalse(accepted)
                 if (endOfPicture) {
@@ -1317,8 +1259,7 @@ class Av1DDAdaptiveSourceProjectionTest {
                 packetInfo = generator.nextPacket()
                 packet = packetInfo.packetAs()
                 frameInfo = packet.frameInfo!!
-                packetIndices = packet.layerIds.map { getIndex(0, it) }
-                val accepted = context.accept(packetInfo, packetIndices, targetIndex)
+                val accepted = context.accept(packetInfo, 0, targetIndex)
                 val endOfPicture = packet.isMarked
                 if (expectAccept(frameInfo)) {
                     Assert.assertTrue(accepted)

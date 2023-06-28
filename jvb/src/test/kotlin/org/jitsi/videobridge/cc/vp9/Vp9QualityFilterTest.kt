@@ -419,12 +419,10 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
             ms = if (f.timestamp != lastTs) { f.timestamp / 90 } else { ms + 1 }
             lastTs = f.timestamp
 
-            val packetIndex = RtpLayerDesc.getIndex(f.ssrc.toInt(), f.spatialLayer, f.temporalLayer)
-
             val result = filter.acceptFrame(
                 frame = f,
+                incomingEncoding = f.ssrc.toInt(),
                 externalTargetIndex = targetIndex,
-                incomingIndex = packetIndex,
                 receivedTime = Instant.ofEpochMilli(ms)
             )
             evaluator(f, result)

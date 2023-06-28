@@ -190,3 +190,12 @@ fun Array<MediaSourceDesc>.copy() = Array(this.size) { i -> this[i].copy() }
 fun Array<MediaSourceDesc>.findRtpLayerDescs(packet: VideoRtpPacket): Collection<RtpLayerDesc> {
     return this.flatMap { it.findRtpLayerDescs(packet) }
 }
+
+fun Array<MediaSourceDesc>.findRtpEncodingId(packet: VideoRtpPacket): Int? {
+    for (source in this) {
+        source.findRtpEncodingDesc(packet.ssrc)?.let {
+            return it.eid
+        }
+    }
+    return null
+}

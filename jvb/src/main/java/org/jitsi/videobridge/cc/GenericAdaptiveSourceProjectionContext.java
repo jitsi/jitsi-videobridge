@@ -132,13 +132,13 @@ class GenericAdaptiveSourceProjectionContext
      * thread) accessing this method at a time.
      *
      * @param packetInfo the RTP packet to determine whether to accept or not.
-     * @param incomingIndices the quality index of the
+     * @param incomingEncoding The encoding index of the packet
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean
-    accept(@NotNull PacketInfo packetInfo, Collection<Integer> incomingIndices, int targetIndex)
+    accept(@NotNull PacketInfo packetInfo, int incomingEncoding, int targetIndex)
     {
         VideoRtpPacket rtpPacket = packetInfo.packetAs();
         if (targetIndex == RtpLayerDesc.SUSPENDED_INDEX)
