@@ -118,7 +118,7 @@ class Av1DDParser(
                 packetInfo.layeringChanged = true
                 logger.debug {
                     "Decode targets for ${av1Packet.ssrc} changed in seq ${av1Packet.sequenceNumber}: " +
-                        "now $activeDecodeTargets.  Updating layering."
+                        "now 0x${Integer.toHexString(activeDecodeTargets)}.  Updating layering."
                 }
 
                 findSourceDescAndRtpEncodingDesc(av1Packet)?.let { (src, enc) ->

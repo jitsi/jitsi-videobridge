@@ -216,7 +216,7 @@ internal class Av1DDQualityFilter(
                 /* This shouldn't happen, because we should have set layeringChanged for this packet. */
                 logger.warn {
                     "External target DT $externalTargetDt not present in current decode targets 0x" +
-                        Integer.toHexString(frame.activeDecodeTargets)
+                        Integer.toHexString(frame.activeDecodeTargets) + " for frame $frame."
                 }
                 return false
             }
