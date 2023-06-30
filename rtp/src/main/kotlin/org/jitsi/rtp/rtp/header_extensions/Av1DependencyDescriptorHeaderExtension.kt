@@ -19,6 +19,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
 import org.jitsi.rtp.util.BitWriter
+import org.jitsi.utils.OrderedJsonObject
+import org.json.simple.JSONAware
 
 /**
  * The subset of the fields of an AV1 Dependency Descriptor that can be parsed statelessly.
@@ -57,7 +59,8 @@ class Av1DependencyDescriptorHeaderExtension(
     frameDependencyTemplateId,
     frameNumber,
     newTemplateDependencyStructure
-) {
+),
+    JSONAware {
     val frameInfo: FrameInfo by lazy {
         val templateIndex = (frameDependencyTemplateId + 64 - structure.templateIdOffset) % 64
         if (templateIndex >= structure.templateCount) {
@@ -237,6 +240,21 @@ class Av1DependencyDescriptorHeaderExtension(
     private fun writePadding(writer: BitWriter) {
         writer.writeBits(writer.remainingBits, 0)
     }
+
+    override fun toJSONString(): String {
+        return OrderedJsonObject().apply {
+            put("startOfFrame", startOfFrame)
+            put("endOfFrame", endOfFrame)
+            put("frameDependencyTemplateId", frameDependencyTemplateId)
+            put("frameNumber", frameNumber)
+            newTemplateDependencyStructure?.let { put("templateStructure", it) }
+            customDtis?.let { put("customDTIs", it) }
+            customFdiffs?.let { put("customFdiffs", it) }
+            customChains?.let { put("customChains", it) }
+        }.toJSONString()
+    }
+
+    override fun toString(): String = toJSONString()
 }
 
 fun Int.bitsForFdiff() =
@@ -260,7 +278,7 @@ class Av1TemplateDependencyStructure(
     val maxRenderResolutions: List<Resolution>,
     val maxSpatialId: Int,
     val maxTemporalId: Int
-) {
+) : JSONAware {
     val templateCount
         get() = templateInfo.size
 
@@ -429,6 +447,21 @@ class Av1TemplateDependencyStructure(
         }
         return mask
     }
+
+    override fun toJSONString(): String {
+        return OrderedJsonObject().apply {
+            put("templateIdOffset", templateIdOffset)
+            put("templateInfo", templateInfo.toIndexedMap())
+            put("decodeTargetInfo", decodeTargetInfo.toIndexedMap())
+            if (maxRenderResolutions.isNotEmpty()) {
+                put("maxRenderResolutions", maxRenderResolutions.toIndexedMap())
+            }
+            put("maxSpatialId", maxSpatialId)
+            put("maxTemporalId", maxTemporalId)
+        }.toJSONString()
+    }
+
+    override fun toString() = toJSONString()
 }
 
 fun nsBits(n: Int, v: Int): Int {
@@ -743,11 +776,11 @@ open class FrameInfo(
     open val dti: List<DTI>,
     open val fdiff: List<Int>,
     open val chains: List<Int>
-) {
+) : JSONAware {
     val fdiffCnt
         get() = fdiff.size
 
-    override operator fun equals(other: Any?): Boolean {
+    override fun equals(other: Any?): Boolean {
         if (other !is FrameInfo) {
             return false
         }
@@ -769,6 +802,16 @@ open class FrameInfo(
 
     override fun toString(): String {
         return "spatialId=$spatialId, temporalId=$temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
+    }
+
+    override fun toJSONString(): String {
+        return OrderedJsonObject().apply {
+            put("spatialId", spatialId)
+            put("temporalId", temporalId)
+            put("dti", dti)
+            put("fdiff", fdiff)
+            put("chains", chains)
+        }.toJSONString()
     }
 
     /** Whether the frame has a dependency on a frame earlier than this "picture", the other frames of this
@@ -794,16 +837,31 @@ class TemplateFrameInfo(
 
 class DecodeTargetInfo(
     val protectedBy: Int
-) {
+) : JSONAware {
     /** Todo: only want to be able to set these from the constructor */
     var spatialId: Int = -1
     var temporalId: Int = -1
+
+    override fun toJSONString(): String {
+        return OrderedJsonObject().apply {
+            put("protectedBy", protectedBy)
+            put("spatialId", spatialId)
+            put("temporalId", temporalId)
+        }.toJSONString()
+    }
 }
 
 data class Resolution(
     val width: Int,
     val height: Int
-)
+) : JSONAware {
+    override fun toJSONString(): String {
+        return OrderedJsonObject().apply {
+            put("width", width)
+            put("height", height)
+        }.toJSONString()
+    }
+}
 
 /** Decode target indication */
 enum class DTI(val dti: Int) {
@@ -819,3 +877,5 @@ enum class DTI(val dti: Int) {
 }
 
 class Av1DependencyException(msg: String) : RuntimeException(msg)
+
+fun <T> List<T>.toIndexedMap(): Map<Int, T> = mapIndexed { i, t -> i to t }.toMap()
