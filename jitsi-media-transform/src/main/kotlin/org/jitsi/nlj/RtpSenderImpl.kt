@@ -299,6 +299,7 @@ class RtpSenderImpl(
     }
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
+        addBlock(super.getNodeStats())
         addBlock(nackHandler.getNodeStats())
         addBlock(probingDataSender.getNodeStats())
         addJson("packetQueue", incomingPacketQueue.debugState)
