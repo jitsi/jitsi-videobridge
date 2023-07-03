@@ -202,7 +202,8 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 
         logger.trace {
             "Finished allocation: allocationChanged=$allocationChanged, " +
-                "effectiveConstraintsChanged=$effectiveConstraintsChanged"
+                "effectiveConstraintsChanged=$effectiveConstraintsChanged " +
+                "allocation=[$allocation]"
         }
         if (effectiveConstraintsChanged) {
             eventEmitter.fireEvent {
