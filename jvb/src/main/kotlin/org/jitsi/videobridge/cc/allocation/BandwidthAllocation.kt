@@ -93,5 +93,5 @@ data class SingleAllocation(
     fun isForwarded(): Boolean = targetIndex > -1
 
     override fun toString(): String = "[id=$endpointId target=${targetLayer?.height}/${targetLayer?.frameRate} " +
-        "ideal=${idealLayer?.height}/${idealLayer?.frameRate}"
+        "ideal=${idealLayer?.height}/${idealLayer?.frameRate}]"
 }
