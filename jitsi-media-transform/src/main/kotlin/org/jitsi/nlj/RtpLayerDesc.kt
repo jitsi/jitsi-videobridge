@@ -217,7 +217,7 @@ constructor(
     /**
      * Extracts a [NodeStatsBlock] from an [RtpLayerDesc].
      */
-    fun getNodeStats() = NodeStatsBlock(layerId.toString()).apply {
+    fun getNodeStats() = NodeStatsBlock(indexString(index)).apply {
         addNumber("frameRate", frameRate)
         addNumber("height", height)
         addNumber("index", index)

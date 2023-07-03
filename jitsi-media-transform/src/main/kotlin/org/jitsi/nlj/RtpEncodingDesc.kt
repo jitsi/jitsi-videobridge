@@ -155,6 +155,7 @@ constructor(
     fun getNodeStats() = NodeStatsBlock(primarySSRC.toString()).apply {
         addNumber("rtx_ssrc", getSecondarySsrc(SsrcAssociationType.RTX))
         addNumber("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
+        addNumber("eid", eid)
         for (layer in layers) {
             addBlock(layer.getNodeStats())
         }
