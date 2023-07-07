@@ -34,7 +34,7 @@ JVB_CONFIG_DIR_LOCATION="~/"
 JVB_CONFIG_DIR_NAME=".jvb"
 JVB_CONFIG_FILE="$JVB_CONFIG_DIR_LOCATION/$JVB_JVB_CONFIG_DIR_NAME/jvb.conf"
 
-mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.MainKt -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=$JVB_CONFIG_DIR_LOCATION -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=$JVB_CONFIG_DIR_NAME -Dconfig.file=$JVB_CONFIG_.FILE"
+mvn compile exec:exec -Dexec.executable=java -Dexec.args="-cp %classpath org.jitsi.videobridge.MainKt -Djava.library.path=$JVB_HOME/lib/native/linux-64 -Djava.util.logging.config.file=$JVB_HOME/lib/logging.properties -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=$JVB_CONFIG_DIR_LOCATION -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=$JVB_CONFIG_DIR_NAME -Dconfig.file=$JVB_CONFIG_FILE"
 ```
 
 # Configuration
