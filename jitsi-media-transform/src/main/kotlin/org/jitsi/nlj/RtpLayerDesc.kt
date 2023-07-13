@@ -34,16 +34,24 @@ constructor(
      */
     val eid: Int,
     /**
+     * The temporal layer ID of this instance.
+     */
+    val tid: Int,
+    /**
+     * The spatial layer ID of this instance.
+     */
+    val sid: Int,
+    /**
      * The max height of the bitstream that this instance represents. The actual
-     * height may be less due to bad network or system load.
+     * height may be less due to bad network or system load.  [NO_HEIGHT] for unknown.
      */
     // XXX we should be able to sniff the actual height from the RTP
     // packets.
-    val height: Int,
+    var height: Int,
     /**
      * The max frame rate (in fps) of the bitstream that this instance
      * represents. The actual frame rate may be less due to bad network or
-     * system load.
+     * system load.  [NO_FRAME_RATE] for unknown.
      */
     val frameRate: Double,
 ) {

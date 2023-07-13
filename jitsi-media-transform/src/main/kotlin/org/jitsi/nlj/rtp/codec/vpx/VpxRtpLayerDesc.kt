@@ -35,14 +35,14 @@ constructor(
     /**
      * The temporal layer ID of this instance, or negative for unknown.
      */
-    val tid: Int,
+    tid: Int,
     /**
      * The spatial layer ID of this instance, or negative for unknown.
      */
-    val sid: Int,
+    sid: Int,
     /**
      * The max height of the bitstream that this instance represents. The actual
-     * height may be less due to bad network or system load.
+     * height may be less due to bad network or system load.  [RtpLayerDesc.NO_HEIGHT] for unknown.
      */
     // XXX we should be able to sniff the actual height from the RTP
     // packets.
@@ -50,7 +50,7 @@ constructor(
     /**
      * The max frame rate (in fps) of the bitstream that this instance
      * represents. The actual frame rate may be less due to bad network or
-     * system load.
+     * system load.  [RtpLayerDesc.NO_FRAME_RATE] for unknown.
      */
     frameRate: Double,
     /**
@@ -62,7 +62,7 @@ constructor(
      * (The intended use case is K-SVC mode.)
      */
     val softDependencyLayers: Array<VpxRtpLayerDesc> = emptyArray()
-) : RtpLayerDesc(eid, height, frameRate) {
+) : RtpLayerDesc(eid, tid, sid, height, frameRate) {
     init {
         require(tid < 8) { "Invalid temporal ID $tid" }
         require(sid < 8) { "Invalid spatial ID $sid" }
@@ -133,7 +133,7 @@ constructor(
     override fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs).values.sum()
 
     /**
-     * Recursively adds the bitrate (in bps) of this [RTPLayerDesc] and
+     * Recursively adds the bitrate (in bps) of this [RtpLayerDesc] and
      * its dependencies in the map passed in as an argument.
      *
      * This is necessary to ensure we don't double-count layers in cases

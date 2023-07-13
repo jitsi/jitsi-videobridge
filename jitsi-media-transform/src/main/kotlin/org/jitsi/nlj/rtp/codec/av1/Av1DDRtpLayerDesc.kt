@@ -32,9 +32,18 @@ class Av1DDRtpLayerDesc(
      */
     val dt: Int,
     /**
+     * The temporal layer ID of this instance,.
+     */
+    tid: Int,
+    /**
+     * The spatial layer ID of this instance.
+     */
+    sid: Int,
+    /**
      * The max height of the bitstream that this instance represents. The actual
      * height may be less due to bad network or system load.
      */
+
     height: Int,
     /**
      * The max frame rate (in fps) of the bitstream that this instance
@@ -42,8 +51,8 @@ class Av1DDRtpLayerDesc(
      * system load.
      */
     frameRate: Double,
-) : RtpLayerDesc(eid, height, frameRate) {
-    override fun copy(height: Int): RtpLayerDesc = Av1DDRtpLayerDesc(eid, dt, height, frameRate)
+) : RtpLayerDesc(eid, tid, sid, height, frameRate) {
+    override fun copy(height: Int): RtpLayerDesc = Av1DDRtpLayerDesc(eid, dt, tid, sid, height, frameRate)
 
     override val layerId = dt
     override val index = getIndex(eid, dt)

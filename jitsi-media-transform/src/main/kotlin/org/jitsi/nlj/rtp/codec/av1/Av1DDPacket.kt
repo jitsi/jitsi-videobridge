@@ -201,7 +201,7 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
         // Calculate the fraction of this spatial layer's framerate this DT comprises.
         val frameRate = baseFrameRate * layerCounts[dt.spatialId][dt.temporalId] / maxFrameGroup
 
-        layers.add(Av1DDRtpLayerDesc(eid, i, height, frameRate))
+        layers.add(Av1DDRtpLayerDesc(eid, i, dt.temporalId, dt.spatialId, height, frameRate))
     }
     return RtpEncodingDesc(ssrc, layers.toArray(arrayOf()), eid)
 }

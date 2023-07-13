@@ -71,9 +71,17 @@ constructor(
     }
     init { validateLayerEids(initialLayers) }
 
+    private var nominalHeight = initialLayers.getNominalHeight()
+
     internal var layers = initialLayers
         set(newLayers) {
             validateLayerEids(newLayers)
+            /* Check if the new layer set is a single spatial layer that doesn't specify a height - if so, we
+             * want to apply the nominal height to them.
+             */
+            val useNominalHeight = nominalHeight != RtpLayerDesc.NO_HEIGHT &&
+                newLayers.all { it.sid == 0 } &&
+                newLayers.all { it.height == RtpLayerDesc.NO_HEIGHT }
             /* Copy the rate statistics objects from the old layers to the new layers
              * with matching layer IDs.
              */
@@ -86,6 +94,15 @@ constructor(
             for (newLayer in newLayers) {
                 oldLayerMap[newLayer.layerId]?.let {
                     newLayer.inheritFrom(it)
+                    if (useNominalHeight) {
+                        newLayer.height = nominalHeight
+                    }
+                }
+            }
+            if (!useNominalHeight) {
+                val newNominalHeight = newLayers.getNominalHeight()
+                if (newNominalHeight != RtpLayerDesc.NO_HEIGHT) {
+                    nominalHeight = newNominalHeight
                 }
             }
             field = newLayers
@@ -156,6 +173,7 @@ constructor(
         addNumber("rtx_ssrc", getSecondarySsrc(SsrcAssociationType.RTX))
         addNumber("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
         addNumber("eid", eid)
+        addNumber("nominal_height", nominalHeight)
         for (layer in layers) {
             addBlock(layer.getNodeStats())
         }
@@ -169,4 +187,18 @@ constructor(
 
 fun VideoRtpPacket.getEncodingIds(): Collection<Long> {
     return this.layerIds.map { RtpEncodingDesc.calcEncodingId(ssrc, it) }
+}
+
+/**
+ * Get the "nominal" height of a set of layers - if they all indicate the same spatial layer and same height.
+ */
+private fun Array<RtpLayerDesc>.getNominalHeight(): Int {
+    if (isEmpty()) {
+        return RtpLayerDesc.NO_HEIGHT
+    }
+    val firstHeight = first().height
+    if (any { it.sid != 0 || it.height != firstHeight }) {
+        return RtpLayerDesc.NO_HEIGHT
+    }
+    return firstHeight
 }

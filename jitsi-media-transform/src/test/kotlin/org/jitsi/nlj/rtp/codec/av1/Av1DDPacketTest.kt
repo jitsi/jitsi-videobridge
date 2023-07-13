@@ -75,7 +75,7 @@ class Av1DDPacketTest : ShouldSpec() {
             RtpEncodingDesc(
                 0x114ed316L,
                 arrayOf(
-                    Av1DDRtpLayerDesc(0, 0, 270, 30.0)
+                    Av1DDRtpLayerDesc(0, 0, 0, 0, 270, 30.0)
                 )
             )
         )
@@ -103,15 +103,15 @@ class Av1DDPacketTest : ShouldSpec() {
             RtpEncodingDesc(
                 0x2ab2873cL,
                 arrayOf(
-                    Av1DDRtpLayerDesc(0, 0, 180, 7.5),
-                    Av1DDRtpLayerDesc(0, 1, 180, 15.0),
-                    Av1DDRtpLayerDesc(0, 2, 180, 30.0),
-                    Av1DDRtpLayerDesc(0, 3, 360, 7.5),
-                    Av1DDRtpLayerDesc(0, 4, 360, 15.0),
-                    Av1DDRtpLayerDesc(0, 5, 360, 30.0),
-                    Av1DDRtpLayerDesc(0, 6, 720, 7.5),
-                    Av1DDRtpLayerDesc(0, 7, 720, 15.0),
-                    Av1DDRtpLayerDesc(0, 8, 720, 30.0)
+                    Av1DDRtpLayerDesc(0, 0, 0, 0, 180, 7.5),
+                    Av1DDRtpLayerDesc(0, 1, 1, 0, 180, 15.0),
+                    Av1DDRtpLayerDesc(0, 2, 2, 0, 180, 30.0),
+                    Av1DDRtpLayerDesc(0, 3, 1, 0, 360, 7.5),
+                    Av1DDRtpLayerDesc(0, 4, 1, 1, 360, 15.0),
+                    Av1DDRtpLayerDesc(0, 5, 1, 2, 360, 30.0),
+                    Av1DDRtpLayerDesc(0, 6, 2, 0, 720, 7.5),
+                    Av1DDRtpLayerDesc(0, 7, 2, 1, 720, 15.0),
+                    Av1DDRtpLayerDesc(0, 8, 2, 2, 720, 30.0)
                 )
             )
         )
@@ -155,9 +155,9 @@ class Av1DDPacketTest : ShouldSpec() {
             RtpEncodingDesc(
                 0x2ab2873cL,
                 arrayOf(
-                    Av1DDRtpLayerDesc(0, 0, 180, 7.5),
-                    Av1DDRtpLayerDesc(0, 1, 180, 15.0),
-                    Av1DDRtpLayerDesc(0, 2, 180, 30.0),
+                    Av1DDRtpLayerDesc(0, 0, 0, 0, 180, 7.5),
+                    Av1DDRtpLayerDesc(0, 1, 0, 1, 180, 15.0),
+                    Av1DDRtpLayerDesc(0, 2, 0, 2, 180, 30.0),
                 )
             )
         )
