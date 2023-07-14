@@ -197,7 +197,10 @@ private fun Array<RtpLayerDesc>.getNominalHeight(): Int {
         return RtpLayerDesc.NO_HEIGHT
     }
     val firstHeight = first().height
-    if (any { it.sid != 0 || it.height != firstHeight }) {
+    if (!(all { it.sid == 0 } || all { it.sid == -1 })) {
+        return RtpLayerDesc.NO_HEIGHT
+    }
+    if (any { it.height != firstHeight }) {
         return RtpLayerDesc.NO_HEIGHT
     }
     return firstHeight

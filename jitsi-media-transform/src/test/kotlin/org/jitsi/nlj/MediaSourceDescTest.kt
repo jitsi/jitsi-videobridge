@@ -237,7 +237,7 @@ private fun createSource(
     name: String,
     videoType: VideoType,
 ): MediaSourceDesc {
-    var height = 720
+    var height = 180
 
     val encodings = Array(primarySsrcs.size) { encodingIdx ->
         val primarySsrc: Long = primarySsrcs[encodingIdx]
