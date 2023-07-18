@@ -94,9 +94,9 @@ constructor(
             for (newLayer in newLayers) {
                 oldLayerMap[newLayer.layerId]?.let {
                     newLayer.inheritFrom(it)
-                    if (useNominalHeight) {
-                        newLayer.height = nominalHeight
-                    }
+                }
+                if (useNominalHeight) {
+                    newLayer.height = nominalHeight
                 }
             }
             if (!useNominalHeight) {
