@@ -1036,9 +1036,7 @@ public class Conference
 
         updateEndpointsCache();
 
-        boolean hasNonVisitor = endpoints.stream().anyMatch( endpoint ->
-            !(endpoint instanceof Endpoint) || !((Endpoint)endpoint).getVisitor()
-        );
+        boolean hasNonVisitor = endpoints.stream().anyMatch(endpoint -> !endpoint.getVisitor());
 
         endpointsChanged(hasNonVisitor);
     }
