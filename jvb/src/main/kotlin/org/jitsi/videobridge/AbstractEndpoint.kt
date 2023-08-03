@@ -28,7 +28,6 @@ import org.jitsi.videobridge.cc.allocation.ReceiverConstraintsMap
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.json.simple.JSONObject
 import java.time.Instant
-import java.util.*
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -61,7 +60,7 @@ abstract class AbstractEndpoint protected constructor(
     /**
      * The map of source name -> ReceiverConstraintsMap.
      */
-    private val receiverVideoConstraints: MutableMap<String, ReceiverConstraintsMap> = HashMap()
+    private val receiverVideoConstraints = mutableMapOf<String, ReceiverConstraintsMap>()
 
     /**
      * The statistics id of this <tt>Endpoint</tt>.
@@ -82,25 +81,16 @@ abstract class AbstractEndpoint protected constructor(
         private set
 
     /**
-     * The maximum set of constraints applied by all receivers of this endpoint
-     * in the conference. The client needs to send _at least_ this to satisfy
-     * all receivers.
-     *
-     */
-    @Deprecated("Use maxReceiverVideoConstraintsMap.")
-    protected var maxReceiverVideoConstraints = VideoConstraints(0, 0.0)
-
-    /**
      * A map of source name -> VideoConstraints.
      *
      * Stores the maximum set of constraints applied by all receivers for each media source sent by this endpoint.
      * The client needs to send _at least_ this for a media source to satisfy all its receivers.
      */
-    protected var maxReceiverVideoConstraintsMap: MutableMap<String, VideoConstraints> = HashMap()
+    protected var maxReceiverVideoConstraints = mutableMapOf<String, VideoConstraints>()
 
     protected val eventEmitter: EventEmitter<EventHandler> = SyncEventEmitter()
 
-    protected var videoTypeCache: MutableMap<String, VideoType> = HashMap()
+    private val videoTypeCache = mutableMapOf<String, VideoType>()
 
     fun hasVideoAvailable(): Boolean {
         for (source in mediaSources) {
@@ -177,12 +167,7 @@ abstract class AbstractEndpoint protected constructor(
         eventEmitter.removeHandler(eventHandler)
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    override fun toString(): String {
-        return javaClass.name + " " + id
-    }
+    override fun toString() = "${javaClass.name} $id"
 
     /**
      * Expires this [AbstractEndpoint].
@@ -224,10 +209,7 @@ abstract class AbstractEndpoint protected constructor(
      */
     abstract fun requestKeyframe()
 
-    /**
-     * A JSON representation of the parts of this object's state that
-     * are deemed useful for debugging.
-     */
+    /** A JSON representation of the parts of this object's state that are deemed useful for debugging. */
     open val debugState: JSONObject
         get() {
             val debugState = JSONObject()
@@ -236,7 +218,7 @@ abstract class AbstractEndpoint protected constructor(
                 receiverVideoConstraints[sourceName] = receiverConstraints.getDebugState()
             }
             debugState["receiverVideoConstraints"] = receiverVideoConstraints
-            debugState["maxReceiverVideoConstraintsMap"] = HashMap(maxReceiverVideoConstraintsMap)
+            debugState["maxReceiverVideoConstraints"] = HashMap(maxReceiverVideoConstraints)
             debugState["expired"] = isExpired
             debugState["statsId"] = statsId
             return debugState
@@ -251,10 +233,10 @@ abstract class AbstractEndpoint protected constructor(
      * (Currently we only support constraining the height, and not frame rate.)
      */
     private fun receiverVideoConstraintsChanged(sourceName: String, newMaxHeight: Int) {
-        val oldReceiverMaxVideoConstraints = maxReceiverVideoConstraintsMap[sourceName]
+        val oldReceiverMaxVideoConstraints = maxReceiverVideoConstraints[sourceName]
         val newReceiverMaxVideoConstraints = VideoConstraints(newMaxHeight, -1.0)
         if (newReceiverMaxVideoConstraints != oldReceiverMaxVideoConstraints) {
-            maxReceiverVideoConstraintsMap[sourceName] = newReceiverMaxVideoConstraints
+            maxReceiverVideoConstraints[sourceName] = newReceiverMaxVideoConstraints
             sendVideoConstraintsV2(sourceName, newReceiverMaxVideoConstraints)
         }
     }
