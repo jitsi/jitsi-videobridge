@@ -204,7 +204,7 @@ class RelayMessageTransport(
     }
 
     override fun unhandledMessage(message: BridgeChannelMessage) {
-        logger.warn("Received a message with an unexpected type: " + message.type)
+        logger.warn("Received a message with an unexpected type: ${message.javaClass.simpleName}")
     }
 
     /**

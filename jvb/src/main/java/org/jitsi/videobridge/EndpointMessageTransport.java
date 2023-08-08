@@ -166,9 +166,9 @@ public class EndpointMessageTransport
     }
 
     @Override
-    public void unhandledMessage(BridgeChannelMessage message)
+    public void unhandledMessage(@NotNull BridgeChannelMessage message)
     {
-        getLogger().warn("Received a message with an unexpected type: " + message.getType());
+        getLogger().warn("Received a message with an unexpected type: " + message.getClass().getSimpleName());
     }
 
     /**

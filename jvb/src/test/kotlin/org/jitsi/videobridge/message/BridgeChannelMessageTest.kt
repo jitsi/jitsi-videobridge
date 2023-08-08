@@ -46,7 +46,7 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.shouldBeInstanceOf<JSONObject>()
                 val parsedColibriClass = parsed["colibriClass"]
                 parsedColibriClass.shouldBeInstanceOf<String>()
-                parsedColibriClass shouldBe message.type
+                parsedColibriClass shouldBe ClientHelloMessage.TYPE
             }
         }
         context("parsing an invalid message") {
