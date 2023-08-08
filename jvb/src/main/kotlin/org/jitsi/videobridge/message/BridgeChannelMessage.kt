@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicLong
  * The messages are formatted in JSON with a required "colibriClass" field, which indicates the message type. Different
  * message types have different (if any) additional fields.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "colibriClass")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = BridgeChannelMessage.TYPE_PROPERTY_NAME)
 @JsonSubTypes(
     JsonSubTypes.Type(value = ClientHelloMessage::class, name = ClientHelloMessage.TYPE),
     JsonSubTypes.Type(value = ServerHelloMessage::class, name = ServerHelloMessage.TYPE),
@@ -62,11 +62,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = SourceVideoTypeMessage::class, name = SourceVideoTypeMessage.TYPE),
     JsonSubTypes.Type(value = VideoTypeMessage::class, name = VideoTypeMessage.TYPE)
 )
-sealed class BridgeChannelMessage(
-    // The type is included as colibriClass (as it has to be on the wire) by the annotation above.
-    @JsonIgnore
-    val type: String
-) {
+sealed class BridgeChannelMessage {
     private val jsonCacheDelegate = ResettableLazy { createJson() }
 
     /**
@@ -97,6 +93,7 @@ sealed class BridgeChannelMessage(
         fun parse(string: String): BridgeChannelMessage {
             return mapper.readValue(string)
         }
+        const val TYPE_PROPERTY_NAME = "colibriClass"
     }
 }
 
@@ -162,7 +159,7 @@ open class MessageHandler {
 /**
  * A message sent from a client to a bridge in the beginning of a session.
  */
-class ClientHelloMessage : BridgeChannelMessage(TYPE) {
+class ClientHelloMessage : BridgeChannelMessage() {
     companion object {
         const val TYPE = "ClientHello"
     }
@@ -174,7 +171,7 @@ class ClientHelloMessage : BridgeChannelMessage(TYPE) {
 class ServerHelloMessage @JvmOverloads constructor(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     val version: String? = null
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
 
     override fun createJson(): String =
         if (version == null) JSON_STRING_NO_VERSION else """{"colibriClass":"$TYPE","version":"$version"}"""
@@ -194,7 +191,7 @@ class ServerHelloMessage @JvmOverloads constructor(
  * bridge, sent to a client or sent to a bridge.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
+class EndpointMessage(val to: String) : BridgeChannelMessage() {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var from: String? = null
         set(value) {
@@ -213,7 +210,9 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
 
     @JsonAnySetter
     fun put(key: String, value: Any?) {
-        otherFields[key] = value
+        if (key != TYPE_PROPERTY_NAME) {
+            otherFields[key] = value
+        }
     }
 
     companion object {
@@ -231,7 +230,7 @@ class EndpointMessage(val to: String) : BridgeChannelMessage(TYPE) {
  * bridge, sent to a client or sent to a bridge.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-class EndpointStats : BridgeChannelMessage(TYPE) {
+class EndpointStats : BridgeChannelMessage() {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var from: String? = null
         set(value) {
@@ -244,7 +243,9 @@ class EndpointStats : BridgeChannelMessage(TYPE) {
 
     @JsonAnySetter
     fun put(key: String, value: Any?) {
-        otherFields[key] = value
+        if (key != TYPE_PROPERTY_NAME) {
+            otherFields[key] = value
+        }
     }
 
     companion object {
@@ -256,7 +257,7 @@ class EndpointStats : BridgeChannelMessage(TYPE) {
  * A message sent from a client, indicating that it wishes to change its "lastN" (i.e. the maximum number of video
  * streams to be received).
  */
-class LastNMessage(val lastN: Int) : BridgeChannelMessage(TYPE) {
+class LastNMessage(val lastN: Int) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "LastNChangedEvent"
     }
@@ -270,7 +271,7 @@ class DominantSpeakerMessage @JvmOverloads constructor(
     val dominantSpeakerEndpoint: String,
     val previousSpeakers: List<String>? = null,
     val silence: Boolean = false
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     /**
      * Construct a message from a list of speakers with the dominant speaker on top. The list must have at least one
      * element.
@@ -292,7 +293,7 @@ class DominantSpeakerMessage @JvmOverloads constructor(
 class EndpointConnectionStatusMessage(
     val endpoint: String,
     activeBoolean: Boolean
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
 
     // For whatever reason we encode the boolean in JSON as a string.
     val active: String = activeBoolean.toString()
@@ -318,7 +319,7 @@ class ForwardedEndpointsMessage(
      */
     @get:JsonProperty("lastNEndpoints")
     val forwardedEndpoints: Collection<String>
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "LastNEndpointsChangeEvent"
     }
@@ -332,7 +333,7 @@ class ForwardedSourcesMessage(
      * The set of media sources for which the bridge is currently sending video.
      */
     val forwardedSources: Collection<String>
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "ForwardedSources"
     }
@@ -360,7 +361,7 @@ data class VideoSourceMapping(
 class VideoSourcesMap(
     /* The current list of maps of sources to ssrcs. */
     val mappedSources: Collection<VideoSourceMapping>
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "VideoSourcesMap"
     }
@@ -384,7 +385,7 @@ data class AudioSourceMapping(
 class AudioSourcesMap(
     /* The current list of maps of sources to ssrcs. */
     val mappedSources: Collection<AudioSourceMapping>
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "AudioSourcesMap"
     }
@@ -397,7 +398,7 @@ class AudioSourcesMap(
  * TODO: update https://github.com/jitsi/jitsi-videobridge/blob/master/doc/constraints.md before removing.
  */
 @Deprecated("", ReplaceWith("SenderSourceConstraints"), DeprecationLevel.WARNING)
-class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage(TYPE) {
+class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage() {
     constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
 
     /**
@@ -422,7 +423,7 @@ class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : Br
 class SenderSourceConstraintsMessage(
     val sourceName: String,
     val maxHeight: Int
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
 
     /**
      * Serialize manually because it's faster than Jackson.
@@ -444,7 +445,7 @@ class AddReceiverMessage(
     val endpointId: String?, // Used in single stream per endpoint mode and wil be removed
     val sourceName: String?, // Used in the multi-stream mode
     val videoConstraints: VideoConstraints
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     /**
      * Serialize manually because it's faster than Jackson.
      */
@@ -466,7 +467,7 @@ class AddReceiverMessage(
 class RemoveReceiverMessage(
     val bridgeId: String,
     val endpointId: String
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     /**
      * Serialize manually because it's faster than Jackson.
      */
@@ -489,7 +490,7 @@ class ReceiverVideoConstraintsMessage(
     val defaultConstraints: VideoConstraints? = null,
     val constraints: Map<String, VideoConstraints>? = null,
     val assumedBandwidthBps: Long? = null
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "ReceiverVideoConstraints"
     }
@@ -506,7 +507,7 @@ class SourceVideoTypeMessage(
      * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var endpointId: String? = endpointId
         set(value) {
@@ -536,7 +537,7 @@ class VideoTypeMessage(
      * message was received on (non-null values are needed only for Relays).
      */
     endpointId: String? = null
-) : BridgeChannelMessage(TYPE) {
+) : BridgeChannelMessage() {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var endpointId: String? = endpointId
         set(value) {
