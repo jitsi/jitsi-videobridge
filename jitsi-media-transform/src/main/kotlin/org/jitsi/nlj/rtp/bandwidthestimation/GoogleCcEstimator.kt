@@ -111,7 +111,12 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
         getCurrentBw(now)
     ).apply {
         addNumber("incomingEstimateExpirations", bitrateEstimatorAbsSendTime.incomingEstimateExpirations)
-        addNumber("latestDelayEstimate", sendSideBandwidthEstimation.latestREMB)
+        with(bitrateEstimatorAbsSendTime.statistics) {
+            addNumber("delayBasedEstimatorOffset", offset)
+            addNumber("delayBasedEstimatorThreshold", threshold)
+            addNumber("delayBasedEstimatorHypothesis", hypothesis.value)
+        }
+        addNumber("latestDelayBasedEstimate", sendSideBandwidthEstimation.latestREMB)
         addNumber("latestLossFraction", sendSideBandwidthEstimation.latestFractionLoss / 256.0)
         with(sendSideBandwidthEstimation.statistics) {
             update(now.toEpochMilli())
