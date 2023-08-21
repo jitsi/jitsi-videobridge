@@ -195,4 +195,9 @@ class OveruseDetector
 
         lastUpdateMs = nowMs;
     }
+
+    public double getThreshold()
+    {
+        return threshold;
+    }
 }
