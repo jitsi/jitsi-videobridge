@@ -280,7 +280,7 @@ public class Videobridge
     {
         final Conference conference = doCreateConference(name, meetingId, isRtcStatsEnabled);
 
-        logger.info(() -> "create_conf, id=" + conference.getID() + " meetingId=" + meetingId);
+        logger.info(() -> "create_conf, id=" + conference.getID() + " meeting_id=" + meetingId);
 
         return conference;
     }
@@ -485,7 +485,7 @@ public class Videobridge
             {
                 if (conference == null)
                 {
-                    logger.warn("Conference with meetingId=" + meetingId + " not found.");
+                    logger.warn("Conference with meeting_id=" + meetingId + " not found.");
                     throw new ConferenceNotFoundException();
                 }
                 return conference;
