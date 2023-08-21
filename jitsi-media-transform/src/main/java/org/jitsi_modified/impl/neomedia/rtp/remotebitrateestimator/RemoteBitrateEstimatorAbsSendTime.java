@@ -392,8 +392,12 @@ public class RemoteBitrateEstimatorAbsSendTime
     /**
      * Get various statistics about the estimation process.  [Local addition, not in original C++.]
      */
-    public synchronized Statistics getStatistics()
+    public synchronized @Nullable Statistics getStatistics()
     {
+        if (detector == null)
+        {
+            return null;
+        }
         return new Statistics(
             detector.estimator.getOffset(),
             detector.detector.getThreshold(),
