@@ -1021,7 +1021,7 @@ class Relay @JvmOverloads constructor(
         s?.expire()
     }
 
-    val incomingBitrateBps: Double
+    val incomingBitrateBps: Long
         get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.getBitrateBps() +
             synchronized(endpointsLock) {
                 relayedEndpoints.values.sumOf { it.getIncomingStats().getBitrateBps() }
@@ -1033,7 +1033,7 @@ class Relay @JvmOverloads constructor(
                 relayedEndpoints.values.sumOf { it.getIncomingStats().packetRate }
             }
 
-    val outgoingBitrateBps: Double
+    val outgoingBitrateBps: Long
         get() = transceiver.getTransceiverStats().outgoingPacketStreamStats.getBitrateBps() +
             senders.values.sumOf { it.getOutgoingStats().getBitrateBps() }
 

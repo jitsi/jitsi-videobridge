@@ -18,17 +18,19 @@ package org.jitsi.nlj.util
 
 import java.text.DecimalFormat
 import java.time.Duration
-import kotlin.math.sign
+import kotlin.math.round
 
 /**
  * [Bandwidth] models a current bandwidth, represented as a rate of bits per second.
  */
 @JvmInline
-value class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
+value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
+
+    constructor(bps: Double) : this(round(bps).toLong())
     val kbps: Double
-        get() = bps / 1000
+        get() = bps.toDouble() / 1000
     val mbps: Double
-        get() = bps / (1000 * 1000)
+        get() = bps.toDouble() / (1000 * 1000)
 
     operator fun minus(other: Bandwidth): Bandwidth =
         Bandwidth(bps - other.bps)
@@ -46,7 +48,7 @@ value class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
      * to reduce 'currentBandwidth' by 5%
      */
     operator fun times(other: Double): Bandwidth =
-        Bandwidth(bps * other)
+        Bandwidth(round(bps.toDouble() * other))
 
     operator fun times(other: Int): Bandwidth =
         Bandwidth(bps * other)
@@ -57,15 +59,15 @@ value class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
      * by another bandwidth, giving a number
      */
     operator fun div(other: Double): Bandwidth =
-        Bandwidth(bps / other)
+        Bandwidth(round(bps / other))
 
     operator fun div(other: Int): Bandwidth =
         Bandwidth(bps / other)
 
     operator fun div(other: Bandwidth): Double =
-        bps / other.bps
+        bps.toDouble() / other.bps.toDouble()
 
-    override fun compareTo(other: Bandwidth): Int = sign(bps - other.bps).toInt()
+    override fun compareTo(other: Bandwidth): Int = bps.compareTo(other.bps)
 
     override fun toString(): String {
         // To determine which unit we'll print in,
@@ -90,6 +92,10 @@ value class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
                 else -> throw IllegalArgumentException("Unrecognized unit $unit")
             }
         }
+
+        val INFINITY = Bandwidth(Double.POSITIVE_INFINITY)
+        val ZERO = Bandwidth(0.0)
+        val MINUS_INFINITY = Bandwidth(Double.NEGATIVE_INFINITY)
     }
 }
 
@@ -125,10 +131,40 @@ val Long.mbps: Bandwidth
  * Create a [Bandwidth] from a [DataSize] over a given time
  */
 fun DataSize.per(duration: Duration): Bandwidth {
-    return Bandwidth(this.bits / duration.seconds.toDouble())
+    return Bandwidth(round(this.bits / duration.toDouble()))
+}
+
+/**
+ * Create a [Duration] from a [DataSize] per [Bandwidth]
+ */
+operator fun DataSize.div(bandwidth: Bandwidth): Duration {
+    return Duration.ofNanos(round((this.bits.toDouble() / bandwidth.bps * 1e9)).toLong())
+}
+
+/**
+ * create a [DataSize] from a [Bandwidth] times [Duration]
+ */
+operator fun Bandwidth.times(duration: Duration): DataSize {
+    return round(bps * duration.toDouble()).toLong().bits
 }
 
 /**
  * Returns the sum of all elements in the collection.
  */
 fun Iterable<Bandwidth>.sum(): Bandwidth = reduce(Bandwidth::plus)
+
+/**
+ * Returns the maximum of two [Bandwidth]s
+ */
+fun max(a: Bandwidth, b: Bandwidth): Bandwidth {
+    return if (a >= b) a else b
+}
+
+/**
+ * Ensures that this value is not greater than the specified [maximumValue].
+ *
+ * @return this value if it's less than or equal to the [maximumValue] or the [maximumValue] otherwise.
+ */
+public fun Bandwidth.coerceAtMost(maximumValue: Bandwidth): Bandwidth {
+    return if (this > maximumValue) maximumValue else this
+}

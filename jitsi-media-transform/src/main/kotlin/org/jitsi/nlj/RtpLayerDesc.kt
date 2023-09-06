@@ -160,10 +160,10 @@ constructor(
     open fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs).values.sum()
 
     /**
-     * Expose [getBitrate] as a [Double] in order to make it accessible from java (since [Bandwidth] is an inline
+     * Expose [getBitrate] as a [Long] in order to make it accessible from java (since [Bandwidth] is an inline
      * class).
      */
-    fun getBitrateBps(nowMs: Long): Double = getBitrate(nowMs).bps
+    fun getBitrateBps(nowMs: Long): Long = getBitrate(nowMs).bps
 
     /**
      * Recursively adds the bitrate (in bps) of this [RTPLayerDesc] and

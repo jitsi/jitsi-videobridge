@@ -86,7 +86,7 @@ class BitrateControllerConfig private constructor() {
         "videobridge.cc.max-oversend-bitrate".from(JitsiConfig.newConfig)
             .convertFrom<String> { Bandwidth.fromString(it) }
     }
-    fun maxOversendBitrateBps(): Double = maxOversendBitrate.bps
+    fun maxOversendBitrateBps(): Long = maxOversendBitrate.bps
 
     /**
      * Whether or not we should trust the bandwidth

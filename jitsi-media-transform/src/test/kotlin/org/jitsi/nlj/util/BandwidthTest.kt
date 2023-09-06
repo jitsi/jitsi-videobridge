@@ -20,7 +20,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
+import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 
 class BandwidthTest : ShouldSpec() {
@@ -47,25 +47,25 @@ class BandwidthTest : ShouldSpec() {
                 b += 0.5.mbps
                 b shouldBe 1.5.mbps
                 b.kbps shouldBe 1500.0
-                b.bps shouldBe 1_500_000.0
+                b.bps shouldBe 1_500_000
 
                 b = 1.mbps
                 b -= 0.5.mbps
                 b shouldBe 0.5.mbps
                 b.kbps shouldBe 500.0
-                b.bps shouldBe 500_000.0
+                b.bps shouldBe 500_000
 
                 b = 1.mbps
                 b *= 2.0
                 b shouldBe 2.0.mbps
                 b.kbps shouldBe 2_000.0
-                b.bps shouldBe 2_000_000.0
+                b.bps shouldBe 2_000_000
 
                 b = 1.mbps
                 b /= 2.0
                 b shouldBe 0.5.mbps
                 b.kbps shouldBe 500.0
-                b.bps shouldBe 500_000.0
+                b.bps shouldBe 500_000
             }
         }
         context("printing bandwidths") {
@@ -82,17 +82,25 @@ class BandwidthTest : ShouldSpec() {
                     1000.bps shouldBeGreaterThan 999.bps
                 }
             }
-            context("with fractional bps") {
-                should("work correctly") {
-                    0.2.bps shouldNotBe 0.bps
-                    0.2.bps shouldBeGreaterThan 0.1.bps
-                }
-            }
         }
         context("creation from 'per'") {
             should("work correctly") {
                 1.megabytes.per(1.secs) shouldBe 8.mbps
-                2.bits.per(5.secs) shouldBe 0.4.bps
+                2.bits.per(5.secs) shouldBe 0.bps // bps is an integer
+                1.kilobytes.per(1.ms) shouldBe 8.mbps
+                6.bits.per(1500.ms) shouldBe 4.bps
+            }
+        }
+        context("creating intervals from rates") {
+            should("work correctly") {
+                1.kilobytes / 4.kbps shouldBe 2.secs
+                20.megabytes / 500.kbps shouldBe 320.secs
+            }
+        }
+        context("calculating datasizes from rates and intervals") {
+            should("work correctly") {
+                100.kbps * 100.ms shouldBe 10000.bits
+                40.bps * 10.secs shouldBe 400.bits
             }
         }
         context("creation from a string") {

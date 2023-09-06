@@ -17,6 +17,7 @@
 package org.jitsi.nlj.util
 
 import java.text.DecimalFormat
+import kotlin.math.round
 
 /**
  * Model an amount of data, internally represented as a number of bits.
@@ -52,6 +53,12 @@ class DataSize(
     operator fun timesAssign(other: Int) {
         bits *= other
     }
+
+    operator fun div(other: Double): DataSize =
+        DataSize(round(bits / other).toLong())
+
+    operator fun div(other: DataSize): Double =
+        bits.toDouble() / other.bits.toDouble()
 
     override fun toString(): String {
         // To determine which unit we'll print in,
