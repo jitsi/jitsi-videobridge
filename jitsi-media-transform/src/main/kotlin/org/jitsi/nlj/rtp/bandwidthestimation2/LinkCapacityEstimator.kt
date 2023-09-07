@@ -44,16 +44,16 @@ class LinkCapacityEstimator {
         estimateKbps = null
     }
 
-    fun onOveruseDetected(acknowledgedRate: Bandwidth) = Update(acknowledgedRate, 0.05)
+    fun onOveruseDetected(acknowledgedRate: Bandwidth) = update(acknowledgedRate, 0.05)
 
-    fun onProbeRate(probeRate: Bandwidth) = Update(probeRate, 0.5)
+    fun onProbeRate(probeRate: Bandwidth) = update(probeRate, 0.5)
 
     fun hasEstimate(): Boolean = estimateKbps != null
 
     val estimate: Bandwidth
         get() = estimateKbps!!.kbps
 
-    private fun Update(capacitySample: Bandwidth, alpha: Double) {
+    private fun update(capacitySample: Bandwidth, alpha: Double) {
         val sampleKbps = capacitySample.kbps
         estimateKbps = if (estimateKbps == null) {
             sampleKbps

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 // This file uses WebRTC's naming style for enums
-@file:Suppress("ktlint:standard:enum-entry-name-case")
+@file:Suppress("ktlint:enum-entry-name-case")
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
@@ -74,7 +74,10 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
 
     // TODO: field trials: remove code that checks these
     private val noBitrateIncreaseInAlr: Boolean = false
-    private val disableEstimateBoundedIncrease: Boolean = false
+
+    // Only tested when networkEstimate != null
+    // private val disableEstimateBoundedIncrease: Boolean = false
+
     private val initialBackoffInterval: Duration? = null
     private val linkCapacityFix: Boolean = false
 
@@ -302,8 +305,6 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
                 timeLastBitrateChange = atTime
                 timeLastBitrateDecrease = atTime
             }
-            else ->
-                throw java.lang.IllegalStateException()
         }
         currentBitrate = clampBitrate(newBitrate ?: currentBitrate)
     }
