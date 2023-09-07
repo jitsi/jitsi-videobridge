@@ -77,3 +77,10 @@ fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
     }
     return sum
 }
+
+/**
+ * Returns the maximum of two [Bandwidth]s
+ */
+fun max(a: Instant, b: Instant): Instant {
+    return if (a >= b) a else b
+}
