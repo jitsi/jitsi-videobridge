@@ -525,7 +525,7 @@ class Endpoint @JvmOverloads constructor(
     }
 
     private fun sendAllVideoConstraints() {
-        maxReceiverVideoConstraintsMap.forEach { (sourceName, constraints) ->
+        maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
             sendVideoConstraintsV2(sourceName, constraints)
         }
     }
@@ -591,7 +591,7 @@ class Endpoint @JvmOverloads constructor(
                 logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
                 sendMessage(senderSourceConstraintsMessage)
             } else {
-                maxReceiverVideoConstraintsMap[sourceName]?.let {
+                maxReceiverVideoConstraints[sourceName]?.let {
                     sendVideoConstraints(it)
                 }
                     ?: logger.error("No max receiver constraints mapping found for: $sourceName")

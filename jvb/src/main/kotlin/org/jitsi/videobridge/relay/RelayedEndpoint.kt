@@ -167,7 +167,7 @@ class RelayedEndpoint(
     }
 
     fun relayMessageTransportConnected() {
-        maxReceiverVideoConstraintsMap.forEach { (sourceName, constraints) ->
+        maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
             sendVideoConstraintsV2(sourceName, constraints)
         }
     }

@@ -20,7 +20,7 @@ package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
  *
  * @author Lyubomir Marinov
  */
-enum BandwidthUsage
+public enum BandwidthUsage
 {
     kBwNormal(0), kBwUnderusing(-1), kBwOverusing(1);
 

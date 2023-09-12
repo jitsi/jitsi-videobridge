@@ -390,6 +390,22 @@ public class RemoteBitrateEstimatorAbsSendTime
     }
 
     /**
+     * Get various statistics about the estimation process.  [Local addition, not in original C++.]
+     */
+    public synchronized @Nullable Statistics getStatistics()
+    {
+        if (detector == null)
+        {
+            return null;
+        }
+        return new Statistics(
+            detector.estimator.getOffset(),
+            detector.detector.getThreshold(),
+            detector.detector.getState()
+        );
+    }
+
+    /**
      * Holds the {@link InterArrival}, {@link OveruseEstimator} and
      * {@link OveruseDetector} instances that estimate the remote bitrate of a
      * stream.
@@ -438,5 +454,21 @@ public class RemoteBitrateEstimatorAbsSendTime
     public static long convertMsTo24Bits(long timeMs)
     {
         return (((timeMs << kAbsSendTimeFraction) + 500) / 1000) & 0x00FFFFFF;
+    }
+
+    /**
+     * Various statistics about the estimation process.  [Local addition, not in original C++.]
+     */
+    public static class Statistics {
+        public double offset;
+        public double threshold;
+        public BandwidthUsage hypothesis;
+
+        public Statistics(double o, double t, BandwidthUsage h)
+        {
+            offset = o;
+            threshold = t;
+            hypothesis = h;
+        }
     }
 }
