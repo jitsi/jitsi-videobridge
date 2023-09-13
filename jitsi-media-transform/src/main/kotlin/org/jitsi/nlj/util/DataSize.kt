@@ -87,6 +87,10 @@ class DataSize(
     }
 
     override fun hashCode(): Int = bits.hashCode()
+
+    companion object {
+        val ZERO = DataSize(0)
+    }
 }
 
 val Int.bits: DataSize
