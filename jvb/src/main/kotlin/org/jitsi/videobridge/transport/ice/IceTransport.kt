@@ -62,6 +62,7 @@ class IceTransport @JvmOverloads constructor(
      * unique local ports, rather than the configured port.
      */
     useUniquePort: Boolean,
+    private val advertisePrivateAddresses: Boolean,
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
 ) {
@@ -276,7 +277,7 @@ class IceTransport @JvmOverloads constructor(
             password = iceAgent.localPassword
             ufrag = iceAgent.localUfrag
             iceComponent.localCandidates?.forEach { cand ->
-                cand.toCandidatePacketExtension()?.let { pe.addChildExtension(it) }
+                cand.toCandidatePacketExtension(advertisePrivateAddresses)?.let { pe.addChildExtension(it) }
             }
             addChildExtension(IceRtcpmuxPacketExtension())
         }
@@ -512,8 +513,10 @@ private fun generateCandidateId(candidate: LocalCandidate): String = buildString
     append(java.lang.Long.toHexString(candidate.hashCode().toLong()))
 }
 
-private fun LocalCandidate.toCandidatePacketExtension(): CandidatePacketExtension? {
-    if (!IceConfig.config.advertisePrivateCandidates && transportAddress.isPrivateAddress()) {
+private fun LocalCandidate.toCandidatePacketExtension(advertisePrivateAddresses: Boolean): CandidatePacketExtension? {
+    if (!(advertisePrivateAddresses && IceConfig.config.advertisePrivateCandidates) &&
+        transportAddress.isPrivateAddress()
+    ) {
         return null
     }
     val cpe = IceCandidatePacketExtension()
