@@ -167,7 +167,16 @@ class Relay @JvmOverloads constructor(
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
 
-    private val iceTransport = IceTransport(id, iceControlling, useUniquePort, true, logger, clock)
+    private val iceTransport = IceTransport(
+        id = id,
+        controlling = iceControlling,
+        useUniquePort = useUniquePort,
+        // There's no good reason to disable private addresses.
+        advertisePrivateAddresses = true,
+        parentLogger = logger,
+        clock = clock
+    )
+
     private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.relay }
 
     private var cryptex = CryptexConfig.relay
