@@ -106,7 +106,7 @@ class IceConfig private constructor() {
 
     /**
      * Whether to advertise ICE candidates with private IP addresses (RFC1918 IPv4 addresses and
-     * fec0::/10 or fc00::/7 IPv6 addresses) to endpoints that have signaled support for private addresses.
+     * fec0::/10 or fc00::/7 IPv6 addresses) even to endpoints that have not signaled support for private addresses.
      */
     val advertisePrivateCandidates: Boolean by config(
         "videobridge.ice.advertise-private-candidates".from(JitsiConfig.newConfig)

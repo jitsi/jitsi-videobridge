@@ -62,6 +62,9 @@ class IceTransport @JvmOverloads constructor(
      * unique local ports, rather than the configured port.
      */
     useUniquePort: Boolean,
+    /**
+     * Use private addresses for this [IceTransport] even if [IceConfig.advertisePrivateCandidates] is false.
+     */
     private val advertisePrivateAddresses: Boolean,
     parentLogger: Logger,
     private val clock: Clock = Clock.systemUTC()
@@ -514,8 +517,9 @@ private fun generateCandidateId(candidate: LocalCandidate): String = buildString
 }
 
 private fun LocalCandidate.toCandidatePacketExtension(advertisePrivateAddresses: Boolean): CandidatePacketExtension? {
-    if (!(advertisePrivateAddresses && IceConfig.config.advertisePrivateCandidates) &&
-        transportAddress.isPrivateAddress()
+    if (transportAddress.isPrivateAddress() &&
+        !advertisePrivateAddresses &&
+        !IceConfig.config.advertisePrivateCandidates
     ) {
         return null
     }
