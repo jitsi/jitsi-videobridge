@@ -175,12 +175,14 @@ class Colibri2ConferenceHandler(
             )
             val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
             val ssrcRewriting = sourceNames && c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
+            val privateAddresses = c2endpoint.hasCapability(Capability.CAP_PRIVATE_ADDRESS_CONNECTIVITY)
             conference.createLocalEndpoint(
                 c2endpoint.id,
                 transport.iceControlling,
                 sourceNames,
                 ssrcRewriting,
-                c2endpoint.mucRole == MUCRole.visitor
+                c2endpoint.mucRole == MUCRole.visitor,
+                privateAddresses
             ).apply {
                 c2endpoint.statsId?.let {
                     statsId = it

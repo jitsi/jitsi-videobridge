@@ -722,7 +722,8 @@ public class Conference
             boolean iceControlling,
             boolean sourceNames,
             boolean doSsrcRewriting,
-            boolean visitor)
+            boolean visitor,
+            boolean privateAddresses)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -730,7 +731,8 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        final Endpoint endpoint = new Endpoint(id, this, logger, iceControlling, sourceNames, doSsrcRewriting, visitor);
+        final Endpoint endpoint = new Endpoint(
+                id, this, logger, iceControlling, sourceNames, doSsrcRewriting, visitor, privateAddresses);
         videobridge.localEndpointCreated(visitor);
 
         subscribeToEndpointEvents(endpoint);
