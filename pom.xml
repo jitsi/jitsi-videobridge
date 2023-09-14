@@ -34,7 +34,7 @@
         <spotbugs.version>4.6.0</spotbugs.version>
         <jersey.version>3.0.10</jersey.version>
         <jackson.version>2.12.4</jackson.version>
-        <bouncycastle.version>1.75</bouncycastle.version>
+        <bouncycastle.version>1.70</bouncycastle.version>
         <prometheus.version>0.16.0</prometheus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
