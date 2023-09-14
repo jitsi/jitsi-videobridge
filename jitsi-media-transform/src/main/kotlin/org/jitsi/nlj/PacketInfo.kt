@@ -198,7 +198,10 @@ open class PacketInfo @JvmOverloads constructor(
     fun sent() {
         var actions: List<() -> Unit> = Collections.emptyList()
         synchronized(this) {
-            onSentActions?.let { actions = it; onSentActions = null } ?: run { return@sent }
+            onSentActions?.let {
+                actions = it
+                onSentActions = null
+            } ?: run { return@sent }
         }
         for (action in actions) {
             action.invoke()
