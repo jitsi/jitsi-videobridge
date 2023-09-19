@@ -20,6 +20,7 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.SUSPENDED_DT
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
@@ -426,7 +427,7 @@ internal class Av1DDQualityFilter(
         justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
     )
     internal fun addDiagnosticContext(pt: DiagnosticContext.TimeSeriesPoint) {
-        pt.addField("qf.currentIndex", indexString(currentIndex))
+        pt.addField("qf.currentIndex", Av1DDRtpLayerDesc.indexString(currentIndex))
             .addField("qf.internalTargetEncoding", internalTargetEncoding)
             .addField("qf.needsKeyframe", needsKeyframe)
             .addField(
@@ -450,8 +451,8 @@ internal class Av1DDQualityFilter(
             debugState["mostRecentKeyframeGroupArrivalTimeMs"] =
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
             debugState["needsKeyframe"] = needsKeyframe
-            debugState["internalTargetIndex"] = internalTargetEncoding
-            debugState["currentIndex"] = indexString(currentIndex)
+            debugState["internalTargetEncoding"] = internalTargetEncoding
+            debugState["currentIndex"] = Av1DDRtpLayerDesc.indexString(currentIndex)
             return debugState
         }
 
