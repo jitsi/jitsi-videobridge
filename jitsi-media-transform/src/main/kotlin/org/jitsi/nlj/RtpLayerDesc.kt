@@ -20,6 +20,7 @@ import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Keeps track of its subjective quality index,
@@ -131,6 +132,8 @@ constructor(
         addNumber("index", index)
         addNumber("bitrate_bps", getBitrate(System.currentTimeMillis()).bps)
     }
+
+    fun debugState(): OrderedJsonObject = getNodeStats().toJson().apply { put("indexString", indexString()) }
 
     abstract fun indexString(): String
 

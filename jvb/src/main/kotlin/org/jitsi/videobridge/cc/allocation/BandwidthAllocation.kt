@@ -61,6 +61,13 @@ class BandwidthAllocation @JvmOverloads constructor(
             put("oversending", oversending)
             put("has_suspended_sources", hasSuspendedSources)
             put("suspended_sources", suspendedSources)
+            val allocations = JSONObject().apply {
+                allocations.forEach() {
+                    val name = it.mediaSource?.sourceName ?: it.endpointId
+                    put(name, it.debugState)
+                }
+            }
+            put("allocations", allocations)
         }
 }
 
@@ -94,4 +101,10 @@ data class SingleAllocation(
 
     override fun toString(): String = "[id=$endpointId target=${targetLayer?.height}/${targetLayer?.frameRate} " +
         "ideal=${idealLayer?.height}/${idealLayer?.frameRate}]"
+
+    val debugState: JSONObject
+        get() = JSONObject().apply {
+            put("target", targetLayer?.debugState())
+            put("ideal", idealLayer?.debugState())
+        }
 }
