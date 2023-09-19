@@ -113,6 +113,7 @@ class Endpoint @JvmOverloads constructor(
      * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
      */
     override val visitor: Boolean,
+    supportsPrivateAddresses: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -127,7 +128,7 @@ class Endpoint @JvmOverloads constructor(
     private val dataChannelHandler = DataChannelHandler()
 
     /* TODO: do we ever want to support useUniquePort for an Endpoint? */
-    private val iceTransport = IceTransport(id, iceControlling, false, logger)
+    private val iceTransport = IceTransport(id, iceControlling, false, supportsPrivateAddresses, logger)
     private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.endpoint }
 
     private var cryptex: Boolean = CryptexConfig.endpoint
