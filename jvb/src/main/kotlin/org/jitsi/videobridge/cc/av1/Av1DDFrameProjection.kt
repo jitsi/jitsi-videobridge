@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
+import org.jitsi.rtp.rtp.header_extensions.toShortString
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.utils.logging.DiagnosticContext
@@ -130,7 +131,7 @@ class Av1DDFrameProjection internal constructor(
                     .addField("orig.rtp.timestamp", pkt.timestamp)
                     .addField("orig.rtp.seq", pkt.sequenceNumber)
                     .addField("orig.av1.framenum", pkt.frameNumber)
-                    .addField("orig.av1.dti", pkt.frameInfo?.dti ?: -1)
+                    .addField("orig.av1.dti", pkt.frameInfo?.dti?.toShortString() ?: "-")
                     .addField("orig.av1.templateid", pkt.statelessDescriptor.frameDependencyTemplateId)
                     .addField("proj.rtp.ssrc", ssrc)
                     .addField("proj.rtp.timestamp", timestamp)

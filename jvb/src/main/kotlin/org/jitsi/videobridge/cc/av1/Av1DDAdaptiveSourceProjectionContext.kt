@@ -22,6 +22,7 @@ import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtp.header_extensions.DTI
+import org.jitsi.rtp.rtp.header_extensions.toShortString
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.utils.logging.DiagnosticContext
@@ -131,7 +132,13 @@ class Av1DDAdaptiveSourceProjectionContext(
                 .addField("timestamp", packet.timestamp)
                 .addField("seq", packet.sequenceNumber)
                 .addField("frameNumber", packet.frameNumber)
-                // TODO add relevant fields from AV1 DD for debugging
+                .addField("templateId", packet.statelessDescriptor.frameDependencyTemplateId)
+                .addField("hasStructure", packet.descriptor?.newTemplateDependencyStructure != null)
+                .addField("spatialLayer", packet.frameInfo?.spatialId)
+                .addField("temporalLayer", packet.frameInfo?.temporalId)
+                .addField("dti", packet.frameInfo?.dti?.toShortString())
+                .addField("hasInterPictureDependency", packet.frameInfo?.hasInterPictureDependency())
+                // TODO add more relevant fields from AV1 DD for debugging
                 .addField("targetIndex", Av1DDRtpLayerDesc.indexString(targetIndex))
                 .addField("new_frame", result.isNewFrame)
                 .addField("accept", accept)

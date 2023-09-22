@@ -874,6 +874,19 @@ enum class DTI(val dti: Int) {
         private val map = DTI.values().associateBy(DTI::dti)
         fun fromInt(type: Int) = map[type] ?: throw java.lang.IllegalArgumentException("Bad DTI $type")
     }
+
+    fun toShortString(): String {
+        return when (this) {
+            NOT_PRESENT -> "N"
+            DISCARDABLE -> "D"
+            SWITCH -> "S"
+            REQUIRED -> "R"
+        }
+    }
+}
+
+fun List<DTI>.toShortString(): String {
+    return joinToString(separator = "") { it.toShortString() }
 }
 
 class Av1DependencyException(msg: String) : RuntimeException(msg)
