@@ -20,9 +20,10 @@ import org.jitsi.nlj.util.instantOfEpochMicro
 import org.jitsi.nlj.util.toEpochMicro
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.ms
 import org.jitsi.utils.time.FakeClock
 import java.lang.Long.max
-import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 
@@ -36,10 +37,10 @@ import java.util.*
 class TestBitrateObserver {
     var updated = false
         private set
-    var latestBitrate = 0
+    var latestBitrate = 0L
         private set
 
-    fun onReceivedBitrateChanged(bitrate: Int) {
+    fun onReceivedBitrateChanged(bitrate: Long) {
         latestBitrate = bitrate
         updated = true
     }
@@ -108,14 +109,14 @@ class StreamGenerator(
 
     /** Divides `bitrate_bps` among all streams. The allocated bitrate per stream
      is decided by the initial allocation ratios. */
-    fun setBitrateBps(bitrateBps: Int) {
+    fun setBitrateBps(bitrateBps: Long) {
         check(streams.isNotEmpty())
         var totalBitrateBefore = 0
         for (stream in streams) {
             totalBitrateBefore += stream.bitrateBps
         }
         var bitrateBefore = 0L
-        var totalBitrateAfter = 0
+        var totalBitrateAfter = 0L
         for (stream in streams) {
             bitrateBefore += stream.bitrateBps
             val bitrateAfter: Long =
@@ -153,10 +154,11 @@ class StreamGenerator(
 }
 
 class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticContext) {
-    val clock: Clock = FakeClock().also { it.setTime(instantOfEpochMicro(1000000)) }
+    val clock = FakeClock().also { it.setTime(instantOfEpochMicro(1000000)) }
     val bitrateObserver = TestBitrateObserver()
-    val acknowledgedBitrateEstimator: AcknowledgedBitrateEstimatorInterface = Unit
-    val probeBitrateEstimator: ProbeBitrateEstimator? = null
+    val acknowledgedBitrateEstimator: AcknowledgedBitrateEstimatorInterface =
+        AcknowledgedBitrateEstimatorInterface.create()
+    val probeBitrateEstimator = ProbeBitrateEstimator()
     val bitrateEstimator = DelayBasedBwe(parentLogger, diagnosticContext)
     val streamGenerator = StreamGenerator(1e6.toInt(), clock.instant().toEpochMicro())
 
@@ -164,16 +166,45 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
     var firstUpdate: Boolean = true
 
     fun addDefaultStream() {
+        streamGenerator.addStream(RtpStream(30, 3e5.toInt()))
     }
 
     // Helpers to insert a single packet into the delay-based BWE.
-    fun incomingFeedback(arrivalTimeMs: Long, sendTimeMs: Long, payloadSize: Long) {
-    }
+    fun incomingFeedback(arrivalTimeMs: Long, sendTimeMs: Long, payloadSize: Long) =
+        incomingFeedback(arrivalTimeMs, sendTimeMs, payloadSize, PacedPacketInfo())
 
     fun incomingFeedback(arrivalTimeMs: Long, sendTimeMs: Long, payloadSize: Long, pacingInfo: PacedPacketInfo) {
+        check(arrivalTimeMs + arrivalTimeOffsetMs >= 0)
+        incomingFeedback(
+            Instant.ofEpochMilli(arrivalTimeMs + arrivalTimeOffsetMs),
+            Instant.ofEpochMilli(sendTimeMs),
+            payloadSize,
+            pacingInfo
+        )
     }
 
-    fun incomingFeedback(receiveTime: Instant, sendTime: Instant, payloadSize: Long, packingInfo: PacedPacketInfo) {
+    fun incomingFeedback(receiveTime: Instant, sendTime: Instant, payloadSize: Long, pacingInfo: PacedPacketInfo) {
+        val packet = PacketResult()
+        packet.receiveTime = receiveTime
+        packet.sentPacket.sendTime = sendTime
+        packet.sentPacket.size = payloadSize.bytes
+        packet.sentPacket.pacingInfo = pacingInfo
+        if (packet.sentPacket.pacingInfo.probeClusterId != PacedPacketInfo.kNotAProbe) {
+            probeBitrateEstimator.handleProbeAndEstimateBitrate(packet)
+        }
+
+        val msg = TransportPacketsFeedback()
+        msg.feedbackTime = clock.instant()
+        msg.packetFeedbacks.add(packet)
+        val result = bitrateEstimator.incomingPacketFeedbackVector(
+            msg,
+            acknowledgedBitrateEstimator.bitrate(),
+            probeBitrateEstimator.fetchAndResetLastEstimatedBitrate(),
+            false
+        )
+        if (result.updated) {
+            bitrateObserver.onReceivedBitrateChanged(result.targetBitrate.bps)
+        }
     }
 
     /** Generates a frame of packets belonging to a stream at a given bitrate and
@@ -183,6 +214,49 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
      The StreamGenerator::updated() should be used to check for any changes in
      target bitrate after the call to this function. */
     fun generateAndProcessFrame(ssrc: Long, bitrateBps: Long): Boolean {
+        streamGenerator.setBitrateBps(bitrateBps)
+        val packets = ArrayList<PacketResult>()
+
+        val nextTimeUs = streamGenerator.generateFrame(packets, clock.instant().toEpochMicro())
+        if (packets.isEmpty()) {
+            return false
+        }
+
+        var overuse = false
+        bitrateObserver.reset()
+        clock.elapse(Duration.between(clock.instant(), packets.last().receiveTime))
+
+        for (packet in packets) {
+            check(packet.receiveTime.toEpochMilli() + arrivalTimeOffsetMs >= 0)
+            packet.receiveTime += Duration.ofMillis(arrivalTimeOffsetMs)
+
+            if (packet.sentPacket.pacingInfo.probeClusterId != PacedPacketInfo.kNotAProbe) {
+                probeBitrateEstimator.handleProbeAndEstimateBitrate(packet)
+            }
+        }
+
+        acknowledgedBitrateEstimator.incomingPacketFeedbackVector(packets)
+        val msg = TransportPacketsFeedback()
+        msg.packetFeedbacks = packets
+        msg.feedbackTime = clock.instant()
+
+        val result =
+            bitrateEstimator.incomingPacketFeedbackVector(
+                msg,
+                acknowledgedBitrateEstimator.bitrate(),
+                probeBitrateEstimator.fetchAndResetLastEstimatedBitrate(),
+                false
+            )
+        if (result.updated) {
+            bitrateObserver.onReceivedBitrateChanged(result.targetBitrate.bps)
+            if (!firstUpdate && result.targetBitrate.bps < bitrateBps) {
+                overuse = true
+            }
+            firstUpdate = false
+        }
+
+        clock.setTime(instantOfEpochMicro(nextTimeUs))
+        return overuse
     }
 
     /** Run the bandwidth estimator with a stream of `number_of_frames` frames, or
@@ -191,12 +265,63 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
      into a steady state. */
     fun steadyStateRun(
         ssrc: Long,
-        numberOfFrames: Int,
+        maxNumberOfFrames: Int,
         startBitrate: Long,
         minBitrate: Long,
         maxBitrate: Long,
         targetBitrate: Long
-    ) {
+    ): Long {
+        var bitrateBps = startBitrate
+        var bitrateUpdateSeen = false
+        for (i in 0 until maxNumberOfFrames) {
+            // Produce `number_of_frames` frames and give them to the estimator.
+            val overuse = generateAndProcessFrame(ssrc, bitrateBps)
+            if (overuse) {
+                check(bitrateObserver.latestBitrate <= maxBitrate)
+                check(bitrateObserver.latestBitrate >= minBitrate)
+                bitrateBps = bitrateObserver.latestBitrate
+                bitrateUpdateSeen = true
+            } else if (bitrateObserver.updated) {
+                bitrateBps = bitrateObserver.latestBitrate
+                bitrateObserver.reset()
+            }
+            if (bitrateUpdateSeen && bitrateBps >= targetBitrate) {
+                break
+            }
+        }
+        check(bitrateUpdateSeen)
+        return bitrateBps
+    }
+
+    fun initialBehaviorTestHelper(expectedConvergeBitrate: Long) {
+        val kFramerate = 50 // 50 fps to avoid rounding errors.
+        val kFrameIntervalMs = 1000L / kFramerate
+        val kPacingInfo = PacedPacketInfo(0, 5, 5000)
+        var sendTimeMs = 0L
+        check(bitrateEstimator.latestEstimate() == null)
+        check(!bitrateObserver.updated)
+        bitrateObserver.reset()
+        clock.elapse(1000.ms)
+        // Inserting packets for 5 seconds to get a valid estimate.
+        for (i in 0 until 5 * kFramerate + 1 + kNumInitialPackets) {
+            val pacingInfo = if (i < kInitialProbingPackets) { kPacingInfo } else { PacedPacketInfo() }
+            if (i == kNumInitialPackets) {
+                check(bitrateEstimator.latestEstimate() == null)
+                check(!bitrateObserver.updated)
+                bitrateObserver.reset()
+            }
+            incomingFeedback(clock.millis(), sendTimeMs, kMtu, pacingInfo)
+            clock.elapse((1000 / kFramerate).ms)
+            sendTimeMs = kFrameIntervalMs
+        }
+        val bitrate = bitrateEstimator.latestEstimate()
+        check(bitrate != null)
+        check(
+            bitrate.bps in
+                expectedConvergeBitrate - kAcceptedBitrateErrorBps..expectedConvergeBitrate + kAcceptedBitrateErrorBps
+        )
+        check(bitrateObserver.updated)
+        check(bitrateObserver.latestBitrate == bitrate.bps)
     }
 
     fun testTimestampGroupingTestHelper() {
@@ -205,7 +330,26 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
     fun testWrappingHelper(silenceTimeS: Int) {
     }
 
+    fun rateIncreaseReorderingTestHelper(expectedBitrate: Long) {
+    }
+
+    fun rateIncreaseRtpTimestampsTestHelper(expectedIterations: Int) {
+    }
+
+    fun capacityDropTestHelper(
+        numberOfStreams: Int,
+        wrapTimeStamp: Boolean,
+        expectedBitrateDropDelta: Long,
+        receiverClockOffsetChangeMs: Long
+    ) {
+    }
+
     companion object {
-        const val kDefaultSsrc
+        const val kMtu = 1200L
+        const val kAcceptedBitrateErrorBps = 50000
+
+        // Number of packets needed before we have a valid estimate.
+        const val kNumInitialPackets = 2
+        const val kInitialProbingPackets = 5
     }
 }

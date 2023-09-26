@@ -77,7 +77,7 @@ data class SentPacket(
 /**
  * The result (of what???)
  */
-class PacketResult() {
+class PacketResult {
     var sentPacket = SentPacket()
 
     var receiveTime: Instant = NEVER
@@ -86,12 +86,12 @@ class PacketResult() {
 /**
  * Summary of transport packets feedback
  */
-class TransportPacketsFeedback() {
+class TransportPacketsFeedback {
     var feedbackTime: Instant = NEVER
     var firstUnackedSendTime: Instant = NEVER
     var dataInFlight: DataSize = DataSize.ZERO
     var priorInFlight: DataSize = DataSize.ZERO
-    val packetFeedbacks = ArrayList<PacketResult>()
+    var packetFeedbacks: MutableList<PacketResult> = ArrayList()
 
     /** Arrival times for messages without send times information */
     val sendlessArrivalTimes = ArrayList<PacketResult>()
