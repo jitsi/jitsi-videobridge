@@ -36,7 +36,10 @@ class TccGeneratorNodeTest : ShouldSpec() {
 
     private val clock: FakeClock = FakeClock()
     private val tccPackets = mutableListOf<RtcpPacket>()
-    private val onTccReady = { tccPacket: RtcpPacket -> tccPackets.add(tccPacket); Unit }
+    private val onTccReady = { tccPacket: RtcpPacket ->
+        tccPackets.add(tccPacket)
+        Unit
+    }
     private val streamInformationStore = StreamInformationStoreImpl()
     private val tccExtensionId = 5
 
