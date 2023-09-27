@@ -163,6 +163,11 @@ public class Conference
     @NotNull private final EncodingsManager encodingsManager = new EncodingsManager();
 
     /**
+     * Cache here because it's accessed on every packet.
+     */
+    private final boolean routeLoudestOnly = LoudestConfig.getRouteLoudestOnly();
+
+    /**
      * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
      * endpoints stopping or starting to their video streams (which affects the order).
      */
@@ -1283,7 +1288,7 @@ public class Conference
     public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long level)
     {
         SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
-        if (ranking == null)
+        if (ranking == null || !routeLoudestOnly)
             return false;
         if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
             return false;
