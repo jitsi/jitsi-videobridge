@@ -1138,7 +1138,9 @@ public class Conference
     {
         if (!LoudestConfig.Companion.getRouteLoudestOnly())
         {
-            return false;
+            // When "route loudest only" is disabled all speakers should be considered "ranked" (we forward all audio
+            // and stats).
+            return true;
         }
         return speechActivity.isAmongLoudest(ep.getId());
     }
