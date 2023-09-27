@@ -567,6 +567,7 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    @Deprecated("use sendVideoConstraintsV2")
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (mediaSources.isEmpty()) {

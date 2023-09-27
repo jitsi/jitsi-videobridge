@@ -144,6 +144,7 @@ class RelayedEndpoint(
 
     override fun setExtmapAllowMixed(allow: Boolean) = streamInformationStore.setExtmapAllowMixed(allow)
 
+    @Deprecated("use sendVideoConstraintsV2")
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         relay.sendMessage(
             AddReceiverMessage(

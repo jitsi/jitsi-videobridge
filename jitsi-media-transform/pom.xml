@@ -125,8 +125,9 @@
         </dependency>
         <dependency>
             <groupId>io.mockk</groupId>
-            <artifactId>mockk</artifactId>
-            <version>1.12.4</version>
+            <artifactId>mockk-jvm</artifactId>
+            <version>${mockk.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>javax.xml.bind</groupId>
