@@ -84,7 +84,7 @@ public class Conference
     /**
      * A map of the endpoints in this conference, by their ssrcs.
      */
-    private ConcurrentHashMap<Long, AbstractEndpoint> endpointsBySsrc = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, AbstractEndpoint> endpointsBySsrc = new ConcurrentHashMap<>();
 
     /**
      * The relays participating in this conference.
@@ -643,11 +643,9 @@ public class Conference
 
         if (logger.isInfoEnabled())
         {
-            StringBuilder sb = new StringBuilder("expire_conf,");
-            sb.append("duration=").append(durationSeconds)
-                .append(",has_failed=").append(hasFailed)
-                .append(",has_partially_failed=").append(hasPartiallyFailed);
-            logger.info(sb.toString());
+            logger.info("expire_conf,duration=" + durationSeconds +
+                    ",has_failed=" + hasFailed +
+                    ",has_partially_failed=" + hasPartiallyFailed);
         }
     }
 
@@ -1083,11 +1081,6 @@ public class Conference
         }
     }
 
-    public void removeEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
-    {
-        endpointsBySsrc.remove(ssrc, endpoint);
-    }
-
     /**
      * Gets the conference name.
      *
@@ -1199,7 +1192,6 @@ public class Conference
 
     /**
      * Handles an RTP/RTCP packet coming from a specific endpoint.
-     * @param packetInfo
      */
     public void handleIncomingPacket(PacketInfo packetInfo)
     {

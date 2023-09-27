@@ -93,7 +93,6 @@ import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Supplier
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -220,7 +219,7 @@ class Endpoint @JvmOverloads constructor(
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) =
                 conference.requestKeyframe(endpointId, ssrc)
         },
-        Supplier { getOrderedEndpoints() },
+        { getOrderedEndpoints() },
         diagnosticContext,
         logger,
         isUsingSourceNames,
@@ -235,7 +234,7 @@ class Endpoint @JvmOverloads constructor(
      */
     override val messageTransport = EndpointMessageTransport(
         this,
-        Supplier { conference.videobridge.statistics },
+        { conference.videobridge.statistics },
         conference,
         logger
     )
@@ -288,7 +287,7 @@ class Endpoint @JvmOverloads constructor(
                 return transceiver.sendProbing(mediaSsrcs, numBytes)
             }
         },
-        Supplier { bitrateController.getStatusSnapshot() }
+        { bitrateController.getStatusSnapshot() }
     ).apply {
         diagnosticsContext = this@Endpoint.diagnosticContext
         enabled = true
@@ -559,7 +558,7 @@ class Endpoint @JvmOverloads constructor(
         if (doSsrcRewriting) {
             val newActiveSources =
                 newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
-            val newActiveSourceNames = newActiveSources.mapNotNull { it.sourceName }.toSet()
+            val newActiveSourceNames = newActiveSources.map { it.sourceName }.toSet()
             /* safe unlocked access of activeSources. BitrateController will not overlap calls to this method. */
             if (activeSources != newActiveSourceNames) {
                 activeSources = newActiveSourceNames

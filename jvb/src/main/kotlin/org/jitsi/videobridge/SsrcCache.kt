@@ -448,7 +448,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
 
         synchronized(sendSources) {
             /* Don't activate a source on RTCP. */
-            var rs = receivedSsrcs.get(packet.senderSsrc) ?: return false
+            val rs = receivedSsrcs.get(packet.senderSsrc) ?: return false
             val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreate = false, remappings) ?: return false
             ss.rewriteRtcp(packet)
             logger.debug {
@@ -537,10 +537,10 @@ class AudioSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
      */
     override fun findSourceProps(ssrc: Long): SourceDesc? {
         val p = ep.findAudioSourceProps(ssrc)
-        if (p == null || p.sourceName == null || p.owner == null) {
-            return null
+        return if (p?.sourceName == null || p.owner == null) {
+            null
         } else {
-            return SourceDesc(p)
+            SourceDesc(p)
         }
     }
 
