@@ -93,7 +93,6 @@ import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Supplier
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -113,6 +112,7 @@ class Endpoint @JvmOverloads constructor(
      * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
      */
     override val visitor: Boolean,
+    supportsPrivateAddresses: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -127,7 +127,7 @@ class Endpoint @JvmOverloads constructor(
     private val dataChannelHandler = DataChannelHandler()
 
     /* TODO: do we ever want to support useUniquePort for an Endpoint? */
-    private val iceTransport = IceTransport(id, iceControlling, false, logger)
+    private val iceTransport = IceTransport(id, iceControlling, false, supportsPrivateAddresses, logger)
     private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.endpoint }
 
     private var cryptex: Boolean = CryptexConfig.endpoint
@@ -219,7 +219,7 @@ class Endpoint @JvmOverloads constructor(
             override fun keyframeNeeded(endpointId: String?, ssrc: Long) =
                 conference.requestKeyframe(endpointId, ssrc)
         },
-        Supplier { getOrderedEndpoints() },
+        { getOrderedEndpoints() },
         diagnosticContext,
         logger,
         isUsingSourceNames,
@@ -234,7 +234,7 @@ class Endpoint @JvmOverloads constructor(
      */
     override val messageTransport = EndpointMessageTransport(
         this,
-        Supplier { conference.videobridge.statistics },
+        { conference.videobridge.statistics },
         conference,
         logger
     )
@@ -287,7 +287,7 @@ class Endpoint @JvmOverloads constructor(
                 return transceiver.sendProbing(mediaSsrcs, numBytes)
             }
         },
-        Supplier { bitrateController.getStatusSnapshot() }
+        { bitrateController.getStatusSnapshot() }
     ).apply {
         diagnosticsContext = this@Endpoint.diagnosticContext
         enabled = true
@@ -558,7 +558,7 @@ class Endpoint @JvmOverloads constructor(
         if (doSsrcRewriting) {
             val newActiveSources =
                 newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
-            val newActiveSourceNames = newActiveSources.mapNotNull { it.sourceName }.toSet()
+            val newActiveSourceNames = newActiveSources.map { it.sourceName }.toSet()
             /* safe unlocked access of activeSources. BitrateController will not overlap calls to this method. */
             if (activeSources != newActiveSourceNames) {
                 activeSources = newActiveSourceNames
@@ -567,6 +567,7 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    @Deprecated("use sendVideoConstraintsV2")
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (mediaSources.isEmpty()) {
