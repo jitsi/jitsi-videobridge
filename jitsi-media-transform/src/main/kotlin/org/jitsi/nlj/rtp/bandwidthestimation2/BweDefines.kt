@@ -15,7 +15,7 @@
  */
 
 // This file uses WebRTC's naming style for enums
-@file:Suppress("ktlint:enum-entry-name-case")
+@file:Suppress("ktlint:standard:enum-entry-name-case")
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 

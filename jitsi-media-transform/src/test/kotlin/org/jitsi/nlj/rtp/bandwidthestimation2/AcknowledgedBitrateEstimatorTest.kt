@@ -114,14 +114,8 @@ class AcknowledgedBitrateEstimatorTest : ShouldSpec() {
                 val states = AcknowledgedBitrateEstimatorTestStates()
                 val returnValue = 42.kbps
 
-                // Unfortunately this doesn't work with the version of mockk we're using - it has problems
-                // with a mock returning a value class.
-                // every { states.mockBitrateEstimator.bitrate() } returns returnValue
-
-                // Instead, use JVM reflection to set the private value that BandwidthEstimator.bitrate() uses
-                val field = states.mockBitrateEstimator.javaClass.getDeclaredField("bitrateEstimateKbps")
-                field.isAccessible = true
-                field.set(states.mockBitrateEstimator, returnValue.kbps.toFloat())
+                // Unfortunately this goes into an infinite loop in mockk.
+//                every { states.mockBitrateEstimator.bitrate() } returns returnValue
 
                 states.acknowledgedBitrateEstimator.bitrate() shouldBe returnValue
 
