@@ -230,6 +230,7 @@ public class Conference
                 {
                     try
                     {
+                        logger.info("RECV colibri2 request: " + request.getRequest().toXML());
                         long start = System.currentTimeMillis();
                         Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
                         IQ response = p.getFirst();
@@ -244,6 +245,7 @@ public class Conference
                             logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
                                     + totalDelay + " ms): " + request.getRequest().toXML());
                         }
+                        logger.info("SENT colibri2 response: " + response.toXML());
                         request.getCallback().invoke(response);
                         if (expire) videobridge.expireConference(this);
                     }
