@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.confirmVerified
+import io.mockk.every
 import io.mockk.spyk
 import io.mockk.verifySequence
 import org.jitsi.nlj.util.bytes
@@ -110,12 +111,12 @@ class AcknowledgedBitrateEstimatorTest : ShouldSpec() {
         }
 
         context("ReturnBitrate") {
-            should("work correctly") {
+            should("work correctly").config(enabled = false) {
                 val states = AcknowledgedBitrateEstimatorTestStates()
                 val returnValue = 42.kbps
 
                 // Unfortunately this goes into an infinite loop in mockk.
-//                every { states.mockBitrateEstimator.bitrate() } returns returnValue
+                every { states.mockBitrateEstimator.bitrate() } returns returnValue
 
                 states.acknowledgedBitrateEstimator.bitrate() shouldBe returnValue
 
