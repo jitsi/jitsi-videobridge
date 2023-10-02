@@ -344,10 +344,7 @@ class Colibri2ConferenceHandler(
      * the conference-modified.
      */
     @Throws(IqProcessingException::class)
-    private fun handleColibri2Relay(
-        c2relay: Colibri2Relay,
-        ignoreUnknownRelays: Boolean
-    ): Colibri2Relay {
+    private fun handleColibri2Relay(c2relay: Colibri2Relay, ignoreUnknownRelays: Boolean): Colibri2Relay {
         val respBuilder = Colibri2Relay.getBuilder()
         respBuilder.setId(c2relay.id)
         if (c2relay.expire) {

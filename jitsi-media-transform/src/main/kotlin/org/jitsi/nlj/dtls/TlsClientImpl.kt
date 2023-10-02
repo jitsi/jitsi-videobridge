@@ -169,8 +169,7 @@ class TlsClientImpl(
         logger.cinfo { "Negotiated DTLS version $serverVersion" }
     }
 
-    override fun getSupportedVersions(): Array<ProtocolVersion> =
-        arrayOf<ProtocolVersion>(ProtocolVersion.DTLSv12)
+    override fun getSupportedVersions(): Array<ProtocolVersion> = arrayOf<ProtocolVersion>(ProtocolVersion.DTLSv12)
 
     override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) =
         logger.notifyAlertRaised(alertLevel, alertDescription, message, cause)

@@ -299,8 +299,7 @@ class Transceiver(
         internalTransformers = internal
     }
 
-    fun setSrtpInformation(srtpTransformers: SrtpTransformers) =
-        setSrtpInformationInternal(srtpTransformers, false)
+    fun setSrtpInformation(srtpTransformers: SrtpTransformers) = setSrtpInformationInternal(srtpTransformers, false)
 
     /**
      * Forcibly mute or unmute the incoming audio stream

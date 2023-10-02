@@ -139,11 +139,10 @@ class XmppConnection : IQListener {
         return true
     }
 
-    private fun MucClientConfiguration.matches(other: MucClientConfiguration) =
-        hostname == other.hostname &&
-            port == other.port &&
-            domain == other.domain &&
-            username == other.username
+    private fun MucClientConfiguration.matches(other: MucClientConfiguration) = hostname == other.hostname &&
+        port == other.port &&
+        domain == other.domain &&
+        username == other.username
 
     /**
      * Returns ids of [MucClient] that have been added.

@@ -446,7 +446,8 @@ class RelayMessageTransport(
             conference.sendMessage(
                 message,
                 listOf(targetEndpoint),
-                false // sendToRelays
+                // sendToRelays
+                false
             )
         }
         return null

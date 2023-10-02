@@ -51,8 +51,7 @@ value class RtpSequenceNumber internal constructor(val value: Int) : Comparable<
     operator fun minus(num: Int): RtpSequenceNumber = plus(-num)
     operator fun minus(seqNum: RtpSequenceNumber): RtpSequenceNumber = plus(-seqNum.value)
 
-    override operator fun compareTo(other: RtpSequenceNumber): Int =
-        RtpUtils.getSequenceNumberDelta(value, other.value)
+    override operator fun compareTo(other: RtpSequenceNumber): Int = RtpUtils.getSequenceNumberDelta(value, other.value)
 
     operator fun rangeTo(other: RtpSequenceNumber) = RtpSequenceNumberProgression(this, other)
 

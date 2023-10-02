@@ -39,9 +39,12 @@ class PacketCache(
         LinkedHashMap<Long, RtpPacketCache>(
             // These are the default values of initialCapacity and loadFactor - we have to set them to be able to set
             // accessOrder
-            16, // initialCapacity
-            0.75F, // loadFactor
-            true // accessOrder
+            // initialCapacity
+            16,
+            // loadFactor
+            0.75F,
+            // accessOrder
+            true
         )
     )
 

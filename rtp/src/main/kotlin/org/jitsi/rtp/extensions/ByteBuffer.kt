@@ -151,8 +151,7 @@ fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer {
  * and capacity will be the amount of bytes between [startPosition] and
  * the current buffer's [limit()]
  */
-fun ByteBuffer.subBuffer(startPosition: Int): ByteBuffer =
-    subBuffer(startPosition, limit() - startPosition)
+fun ByteBuffer.subBuffer(startPosition: Int): ByteBuffer = subBuffer(startPosition, limit() - startPosition)
 
 /**
  * Put [buf] into this buffer starting at [index]

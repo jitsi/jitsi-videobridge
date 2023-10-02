@@ -337,10 +337,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * @return true to accept the VP9 keyframe, otherwise false.
      */
     @Synchronized
-    private fun acceptKeyframe(
-        incomingIndex: Int,
-        receivedTime: Instant?
-    ): Boolean {
+    private fun acceptKeyframe(incomingIndex: Int, receivedTime: Instant?): Boolean {
         val encodingIdOfKeyframe = getEidFromIndex(incomingIndex)
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast

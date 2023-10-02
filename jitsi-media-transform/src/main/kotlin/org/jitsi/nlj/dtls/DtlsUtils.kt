@@ -100,10 +100,7 @@ class DtlsUtils {
          *
          * TODO: make the algorithm dynamic (passed in) to support older dtls versions/clients
          */
-        private fun generateCertificate(
-            subject: X500Name,
-            keyPair: KeyPair
-        ): Certificate {
+        private fun generateCertificate(subject: X500Name, keyPair: KeyPair): Certificate {
             val now = System.currentTimeMillis()
             val startDate = Date(now - Duration.ofDays(1).toMillis())
             val expiryDate = Date(now + Duration.ofDays(7).toMillis())
@@ -182,10 +179,7 @@ class DtlsUtils {
          * and validate against the fingerprints presented by the remote endpoint
          * via the signaling path.
          */
-        private fun verifyAndValidateCertificate(
-            certificate: Certificate,
-            remoteFingerprints: Map<String, String>
-        ) {
+        private fun verifyAndValidateCertificate(certificate: Certificate, remoteFingerprints: Map<String, String>) {
             // RFC 4572 "Connection-Oriented Media Transport over the Transport
             // Layer Security (TLS) Protocol in the Session Description Protocol
             // (SDP)" defines that "[a] certificate fingerprint MUST be computed

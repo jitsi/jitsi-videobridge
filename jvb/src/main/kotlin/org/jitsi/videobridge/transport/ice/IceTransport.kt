@@ -290,10 +290,7 @@ class IceTransport @JvmOverloads constructor(
      * @return the number of network reachable remote candidates contained in
      * the given list of candidates.
      */
-    private fun addRemoteCandidates(
-        remoteCandidates: List<CandidatePacketExtension>,
-        iceAgentIsRunning: Boolean
-    ): Int {
+    private fun addRemoteCandidates(remoteCandidates: List<CandidatePacketExtension>, iceAgentIsRunning: Boolean): Int {
         var remoteCandidateCount = 0
         // Sort the remote candidates (host < reflexive < relayed) in order to
         // create first the host, then the reflexive, the relayed candidates and
@@ -497,11 +494,9 @@ private data class IceProcessingStateTransition(
     }
 }
 
-private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean =
-    remoteUfrag != null && remotePassword != null
+private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean = remoteUfrag != null && remotePassword != null
 
-private fun CandidatePacketExtension.ipNeedsResolution(): Boolean =
-    !InetAddresses.isInetAddress(ip)
+private fun CandidatePacketExtension.ipNeedsResolution(): Boolean = !InetAddresses.isInetAddress(ip)
 
 private fun TransportAddress.isPrivateAddress(): Boolean = address.isSiteLocalAddress ||
     /* 0xfc00::/7 */

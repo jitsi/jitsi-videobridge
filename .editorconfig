@@ -1,5 +1,6 @@
 [*.{kt,kts}]
 max_line_length=120
+ktlint_code_style = intellij_idea
 
 # I find trailing commas annoying
 ktlint_standard_trailing-comma-on-call-site = disabled

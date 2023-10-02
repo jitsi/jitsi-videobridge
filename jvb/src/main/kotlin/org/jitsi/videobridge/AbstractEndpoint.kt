@@ -154,10 +154,9 @@ abstract class AbstractEndpoint protected constructor(
     protected val mediaSource: MediaSourceDesc?
         get() = mediaSources.firstOrNull()
 
-    fun findMediaSourceDesc(sourceName: String): MediaSourceDesc? =
-        mediaSources.firstOrNull {
-            sourceName == it.sourceName
-        }
+    fun findMediaSourceDesc(sourceName: String): MediaSourceDesc? = mediaSources.firstOrNull {
+        sourceName == it.sourceName
+    }
 
     fun addEventHandler(eventHandler: EventHandler) {
         eventEmitter.addHandler(eventHandler)
@@ -296,11 +295,7 @@ abstract class AbstractEndpoint protected constructor(
      * @param sourceName the name of the media source for which the constraints are to be applied.
      * @param newVideoConstraints the video constraints that the receiver wishes to receive.
      */
-    fun addReceiver(
-        receiverId: String,
-        sourceName: String,
-        newVideoConstraints: VideoConstraints
-    ) {
+    fun addReceiver(receiverId: String, sourceName: String, newVideoConstraints: VideoConstraints) {
         val sourceConstraints = receiverVideoConstraints.computeIfAbsent(sourceName) { ReceiverConstraintsMap() }
         val oldVideoConstraints = sourceConstraints.put(receiverId, newVideoConstraints)
         if (oldVideoConstraints == null || oldVideoConstraints != newVideoConstraints) {

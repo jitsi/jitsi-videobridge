@@ -942,8 +942,7 @@ class PaddingOnlyPacket private constructor(
     length: Int
 ) : RtpPacket(buffer, offset, length) {
 
-    override fun clone(): PaddingOnlyPacket =
-        throw NotImplementedError("clone() not supported for padding packets.")
+    override fun clone(): PaddingOnlyPacket = throw NotImplementedError("clone() not supported for padding packets.")
 
     companion object {
         /**

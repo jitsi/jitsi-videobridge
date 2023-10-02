@@ -84,7 +84,7 @@ class OutgoingStatisticsSnapshot(
     val ssrcStats: Map<Long, OutgoingSsrcStats.Snapshot>
 ) {
     fun toJson() = OrderedJsonObject().apply {
-        ssrcStats.forEach() { (ssrc, snapshot) ->
+        ssrcStats.forEach { (ssrc, snapshot) ->
             put(ssrc, snapshot.toJson())
         }
     }

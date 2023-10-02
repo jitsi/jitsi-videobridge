@@ -23,11 +23,7 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 
-fun testSource(
-    endpointId: String,
-    sourceName: String,
-    videoType: VideoType = VideoType.CAMERA
-): MediaSourceDesc {
+fun testSource(endpointId: String, sourceName: String, videoType: VideoType = VideoType.CAMERA): MediaSourceDesc {
     return MediaSourceDesc(
         emptyArray(),
         endpointId,
