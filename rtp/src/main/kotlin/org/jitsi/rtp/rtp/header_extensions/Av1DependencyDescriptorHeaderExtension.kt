@@ -257,13 +257,12 @@ class Av1DependencyDescriptorHeaderExtension(
     override fun toString(): String = toJSONString()
 }
 
-fun Int.bitsForFdiff() =
-    when {
-        this <= 0x10 -> 4
-        this <= 0x100 -> 8
-        this <= 0x1000 -> 12
-        else -> throw IllegalArgumentException("Invalid FDiff value $this")
-    }
+fun Int.bitsForFdiff() = when {
+    this <= 0x10 -> 4
+    this <= 0x100 -> 8
+    this <= 0x1000 -> 12
+    else -> throw IllegalArgumentException("Invalid FDiff value $this")
+}
 
 /**
  * The template information about a stream described by AV1 dependency descriptors.  This is carried in the
@@ -428,10 +427,9 @@ class Av1TemplateDependencyStructure(
      * without a keyframe.
      * Note this makes certain assumptions about the encoding structure.
      */
-    fun canSwitchWithoutKeyframe(fromDt: Int, toDt: Int): Boolean =
-        templateInfo.any {
-            it.hasInterPictureDependency() && it.dti[fromDt] != DTI.NOT_PRESENT && it.dti[toDt] == DTI.SWITCH
-        }
+    fun canSwitchWithoutKeyframe(fromDt: Int, toDt: Int): Boolean = templateInfo.any {
+        it.hasInterPictureDependency() && it.dti[fromDt] != DTI.NOT_PRESENT && it.dti[toDt] == DTI.SWITCH
+    }
 
     /** Given that we are sending packets for a given DT, return a decodeTargetBitmask corresponding to all DTs
      * contained in that DT.
@@ -818,8 +816,7 @@ open class FrameInfo(
      * temporal moment.  If it doesn't, it's probably part of a keyframe, and not part of the regular structure.
      * Note this makes assumptions about the scalability structure.
      */
-    fun hasInterPictureDependency(): Boolean =
-        fdiff.any { it > spatialId }
+    fun hasInterPictureDependency(): Boolean = fdiff.any { it > spatialId }
 
     val dtisPresent: List<Int>
         get() = dti.withIndex().filter { (_, dti) -> dti != DTI.NOT_PRESENT }.map { (i, _) -> i }

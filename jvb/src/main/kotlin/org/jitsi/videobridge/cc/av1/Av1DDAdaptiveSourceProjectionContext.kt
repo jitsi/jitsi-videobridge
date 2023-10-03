@@ -150,8 +150,7 @@ class Av1DDAdaptiveSourceProjectionContext(
     }
 
     /** Look up an Av1DDFrame for a packet. */
-    private fun lookupAv1Frame(av1Packet: Av1DDPacket): Av1DDFrame? =
-        av1FrameMaps[av1Packet.ssrc]?.findFrame(av1Packet)
+    private fun lookupAv1Frame(av1Packet: Av1DDPacket): Av1DDFrame? = av1FrameMaps[av1Packet.ssrc]?.findFrame(av1Packet)
 
     /**
      * Insert a packet in the appropriate [Av1DDFrameMap].
@@ -159,11 +158,7 @@ class Av1DDAdaptiveSourceProjectionContext(
     private fun insertPacketInMap(av1Packet: Av1DDPacket) =
         av1FrameMaps.getOrPut(av1Packet.ssrc) { Av1DDFrameMap(logger) }.insertPacket(av1Packet)
 
-    private fun haveSubsequentNonAcceptedChain(
-        frame: Av1DDFrame,
-        incomingEncoding: Int,
-        targetIndex: Int
-    ): Boolean {
+    private fun haveSubsequentNonAcceptedChain(frame: Av1DDFrame, incomingEncoding: Int, targetIndex: Int): Boolean {
         val map = av1FrameMaps[frame.ssrc] ?: return false
         val structure = frame.structure ?: return false
         val dtsToCheck = if (incomingEncoding == getEidFromIndex(targetIndex)) {
@@ -230,34 +225,29 @@ class Av1DDAdaptiveSourceProjectionContext(
         return seqGap
     }
 
-    private fun frameIsNewSsrc(frame: Av1DDFrame): Boolean =
-        lastAv1FrameProjection.av1Frame?.matchesSSRC(frame) != true
+    private fun frameIsNewSsrc(frame: Av1DDFrame): Boolean = lastAv1FrameProjection.av1Frame?.matchesSSRC(frame) != true
 
     /**
      * Find the previous frame before the given one.
      */
     @Synchronized
-    private fun prevFrame(frame: Av1DDFrame) =
-        av1FrameMaps[frame.ssrc]?.prevFrame(frame)
+    private fun prevFrame(frame: Av1DDFrame) = av1FrameMaps[frame.ssrc]?.prevFrame(frame)
 
     /**
      * Find the next frame after the given one.
      */
     @Synchronized
-    private fun nextFrame(frame: Av1DDFrame) =
-        av1FrameMaps[frame.ssrc]?.nextFrame(frame)
+    private fun nextFrame(frame: Av1DDFrame) = av1FrameMaps[frame.ssrc]?.nextFrame(frame)
 
     /**
      * Find the previous accepted frame before the given one.
      */
-    private fun findPrevAcceptedFrame(frame: Av1DDFrame) =
-        av1FrameMaps[frame.ssrc]?.findPrevAcceptedFrame(frame)
+    private fun findPrevAcceptedFrame(frame: Av1DDFrame) = av1FrameMaps[frame.ssrc]?.findPrevAcceptedFrame(frame)
 
     /**
      * Find the next accepted frame after the given one.
      */
-    private fun findNextAcceptedFrame(frame: Av1DDFrame) =
-        av1FrameMaps[frame.ssrc]?.findNextAcceptedFrame(frame)
+    private fun findNextAcceptedFrame(frame: Av1DDFrame) = av1FrameMaps[frame.ssrc]?.findNextAcceptedFrame(frame)
 
     /**
      * Create a projection for this frame.

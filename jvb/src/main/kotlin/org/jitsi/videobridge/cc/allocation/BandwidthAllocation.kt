@@ -61,7 +61,7 @@ class BandwidthAllocation @JvmOverloads constructor(
             put("has_suspended_sources", hasSuspendedSources)
             put("suspended_sources", suspendedSources)
             val allocations = JSONObject().apply {
-                allocations.forEach() {
+                allocations.forEach {
                     val name = it.mediaSource?.sourceName ?: it.endpointId
                     put(name, it.debugState)
                 }

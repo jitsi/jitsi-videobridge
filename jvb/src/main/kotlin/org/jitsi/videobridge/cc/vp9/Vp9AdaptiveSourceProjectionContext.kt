@@ -78,11 +78,7 @@ class Vp9AdaptiveSourceProjectionContext(
     private var lastPicIdIndexResumption = -1
 
     @Synchronized
-    override fun accept(
-        packetInfo: PacketInfo,
-        incomingEncoding: Int,
-        targetIndex: Int
-    ): Boolean {
+    override fun accept(packetInfo: PacketInfo, incomingEncoding: Int, targetIndex: Int): Boolean {
         val packet = packetInfo.packet
         if (packet !is Vp9Packet) {
             logger.warn("Packet is not Vp9 packet")

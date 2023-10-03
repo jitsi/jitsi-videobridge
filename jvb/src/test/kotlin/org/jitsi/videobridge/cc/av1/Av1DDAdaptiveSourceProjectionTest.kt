@@ -68,11 +68,7 @@ class Av1DDAdaptiveSourceProjectionTest {
         Assert.assertEquals(0, packet.frameInfo?.temporalId)
     }
 
-    private fun runInOrderTest(
-        generator: Av1PacketGenerator,
-        targetIndex: Int,
-        expectAccept: (FrameInfo) -> Boolean
-    ) {
+    private fun runInOrderTest(generator: Av1PacketGenerator, targetIndex: Int, expectAccept: (FrameInfo) -> Boolean) {
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
         val initialState = RtpState(1, 10000, 1000000)
@@ -1321,7 +1317,8 @@ private open class Av1PacketGenerator(
     val packetsPerFrame: Int,
     val keyframeTemplates: Array<Int>,
     val normalTemplates: Array<Int>,
-    val framesPerTimestamp: Int, // Equivalent to number of layers
+    // Equivalent to number of layers
+    val framesPerTimestamp: Int,
     templateDdHex: String,
     val allKeyframesGetStructure: Boolean = false
 ) {

@@ -43,9 +43,10 @@ constructor(
     /**
      * The max height of the bitstream that this instance represents. The actual
      * height may be less due to bad network or system load.  [RtpLayerDesc.NO_HEIGHT] for unknown.
+     *
+     * XXX we should be able to sniff the actual height from the RTP
+     * packets.
      */
-    // XXX we should be able to sniff the actual height from the RTP
-    // packets.
     height: Int,
     /**
      * The max frame rate (in fps) of the bitstream that this instance
@@ -72,9 +73,7 @@ constructor(
      * Clone an existing layer desc, inheriting its statistics,
      * modifying only specific values.
      */
-    override fun copy(
-        height: Int,
-    ) = VpxRtpLayerDesc(
+    override fun copy(height: Int) = VpxRtpLayerDesc(
         eid = this.eid,
         tid = this.tid,
         sid = this.sid,

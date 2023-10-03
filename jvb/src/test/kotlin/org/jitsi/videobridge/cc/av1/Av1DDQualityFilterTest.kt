@@ -690,7 +690,11 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
         while (g.hasNext() && frames < numFrames) {
             val f = g.next()
 
-            ms = if (f.timestamp != lastTs) { f.timestamp / 90 } else { ms + 1 }
+            ms = if (f.timestamp != lastTs) {
+                f.timestamp / 90
+            } else {
+                ms + 1
+            }
             lastTs = f.timestamp
 
             val result = filter.acceptFrame(
@@ -727,7 +731,7 @@ private open class DDBasedGenerator(
         structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
     }
 
-    override fun hasNext(): Boolean = frameCount < totalFrames
+    override fun hasNext(): Boolean = frameCount < TOTAL_FRAMES
 
     protected open fun isKeyframe(keyCycle: Int) = keyCycle == 0
 
@@ -750,7 +754,8 @@ private open class DDBasedGenerator(
             seenEndOfFrame = true,
             seenMarker = true,
             frameInfo = structure.templateInfo[templateId],
-            frameNumber = frameCount, // Will be less than 0xffff
+            // Will be less than 0xffff
+            frameNumber = frameCount,
             index = frameCount,
             templateId = templateId,
             structure = structure,
@@ -764,7 +769,7 @@ private open class DDBasedGenerator(
     }
 
     companion object {
-        private const val totalFrames = 10000
+        private const val TOTAL_FRAMES = 10000
     }
 }
 
@@ -835,13 +840,13 @@ private class SingleEncodingSimulcastGenerator(av1FrameMaps: HashMap<Long, Av1DD
 private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : FrameGenerator() {
     private var frameCount = 0
 
-    override fun hasNext(): Boolean = frameCount < totalFrames
+    override fun hasNext(): Boolean = frameCount < TOTAL_FRAMES
 
     override fun next(): Av1DDFrame {
-        val pictureCount = frameCount / numEncodings
-        val encoding = frameCount % numEncodings
+        val pictureCount = frameCount / NUM_ENCODINGS
+        val encoding = frameCount % NUM_ENCODINGS
         val tCycle = pictureCount % normalTemplates.size
-        val keyCycle = pictureCount % keyframeInterval
+        val keyCycle = pictureCount % KEYFRAME_INTERVAL
 
         val templateId = if (keyCycle < keyframeTemplates.size) {
             keyframeTemplates[tCycle]
@@ -860,7 +865,8 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
             seenEndOfFrame = true,
             seenMarker = true,
             frameInfo = structure.templateInfo[templateId],
-            frameNumber = pictureCount, // Will be less than 0xffff
+            // Will be less than 0xffff
+            frameNumber = pictureCount,
             index = pictureCount,
             templateId = templateId,
             structure = structure,
@@ -874,9 +880,9 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
     }
 
     companion object {
-        private const val totalFrames = 10000
-        private const val keyframeInterval = 144
-        private const val numEncodings = 3
+        private const val TOTAL_FRAMES = 10000
+        private const val KEYFRAME_INTERVAL = 144
+        private const val NUM_ENCODINGS = 3
         private val keyframeTemplates = arrayOf(0)
         private val normalTemplates = arrayOf(1, 3, 2, 4)
 

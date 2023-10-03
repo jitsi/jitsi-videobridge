@@ -58,13 +58,13 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
             "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434"
     )
 
-    val descL3T3_KEY = parseHexBinary(
+    val descL3T3Key = parseHexBinary(
         "8f008581e81485214eaaaaa8000600004000100002aa80a8000600004000100002a000a80006000040" +
             "0016d549241b5524906d54923157e001974ca864330e222396eca8655304224390eca87753013f00b3027f016704ff02cf"
     )
 
     /* As of Chrome version 111, it doesn't support L3T3_KEY_SHIFT, but it does support L2T2_KEY_SHIFT, so test that. */
-    val descL2T2_KEY_SHIFT = parseHexBinary(
+    val descL2T2KeyShift = parseHexBinary(
         "8700ed80e3061eaa82804028280514d14134518010a091889a09409fc059c13fc0b3c0"
     )
 
@@ -180,7 +180,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor with a K-SVC dependency structure") {
-                val ldsr = Av1DependencyDescriptorReader(descL3T3_KEY, 0, descL3T3_KEY.size)
+                val ldsr = Av1DependencyDescriptorReader(descL3T3Key, 0, descL3T3Key.size)
                 val lds = ldsr.parse(null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
@@ -242,16 +242,16 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     structure.getDtBitmaskForDt(8) shouldBe 0b111000000
                 }
                 should("Calculate its own length properly") {
-                    lds.encodedLength shouldBe descL3T3_KEY.size
+                    lds.encodedLength shouldBe descL3T3Key.size
                 }
                 should("Be re-encoded to the same bytes") {
                     val buf = ByteArray(lds.encodedLength)
                     lds.write(buf, 0, buf.size)
-                    buf shouldBe descL3T3_KEY
+                    buf shouldBe descL3T3Key
                 }
             }
             context("a descriptor with a K-SVC dependency structure with key shift") {
-                val ldsr = Av1DependencyDescriptorReader(descL2T2_KEY_SHIFT, 0, descL2T2_KEY_SHIFT.size)
+                val ldsr = Av1DependencyDescriptorReader(descL2T2KeyShift, 0, descL2T2KeyShift.size)
                 val lds = ldsr.parse(null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
@@ -308,12 +308,12 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     structure.getDtBitmaskForDt(3) shouldBe 0b1100
                 }
                 should("Calculate its own length properly") {
-                    lds.encodedLength shouldBe descL2T2_KEY_SHIFT.size
+                    lds.encodedLength shouldBe descL2T2KeyShift.size
                 }
                 should("Be re-encoded to the same bytes") {
                     val buf = ByteArray(lds.encodedLength)
                     lds.write(buf, 0, buf.size)
-                    buf shouldBe descL2T2_KEY_SHIFT
+                    buf shouldBe descL2T2KeyShift
                 }
             }
             context("a descriptor following the dependency structure, specifying decode targets") {

@@ -112,8 +112,7 @@ class Av1DDFrameProjection internal constructor(
         return applySequenceNumberDelta(seq, sequenceNumberDelta)
     }
 
-    fun rewriteTemplateId(id: Int): Int =
-        (id + templateIdDelta) and 0x3f
+    fun rewriteTemplateId(id: Int): Int = (id + templateIdDelta) and 0x3f
 
     /**
      * Rewrites an RTP packet.

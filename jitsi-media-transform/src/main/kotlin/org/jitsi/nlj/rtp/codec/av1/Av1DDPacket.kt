@@ -108,12 +108,11 @@ class Av1DDPacket : ParsedVideoPacket {
     val activeDecodeTargets
         get() = descriptor?.activeDecodeTargetsBitmask
 
-    override fun toString(): String =
-        buildString {
-            append(super.toString())
-            append(", DTIs=${frameInfo?.dtisPresent}")
-            activeDecodeTargets?.let { append(", ActiveTargets=$it") }
-        }
+    override fun toString(): String = buildString {
+        append(super.toString())
+        append(", DTIs=${frameInfo?.dtisPresent}")
+        activeDecodeTargets?.let { append(", ActiveTargets=$it") }
+    }
 
     override fun clone(): Av1DDPacket {
         return Av1DDPacket(
@@ -128,10 +127,7 @@ class Av1DDPacket : ParsedVideoPacket {
         )
     }
 
-    fun getScalabilityStructure(
-        eid: Int = 0,
-        baseFrameRate: Double = 30.0
-    ): RtpEncodingDesc? {
+    fun getScalabilityStructure(eid: Int = 0, baseFrameRate: Double = 30.0): RtpEncodingDesc? {
         val descriptor = this.descriptor
         requireNotNull(descriptor) {
             "Can't get scalability structure from packet without a descriptor"
@@ -207,5 +203,4 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
 }
 
 /** Check whether an activeDecodeTargetsBitmask contains a specific decode target. */
-fun Int.containsDecodeTarget(dt: Int) =
-    ((1 shl dt) and this) != 0
+fun Int.containsDecodeTarget(dt: Int) = ((1 shl dt) and this) != 0

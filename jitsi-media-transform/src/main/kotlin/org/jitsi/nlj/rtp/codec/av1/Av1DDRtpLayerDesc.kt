@@ -111,11 +111,10 @@ class Av1DDRtpLayerDesc(
          * Get a string description of a layer index.
          */
         @JvmStatic
-        fun indexString(index: Int): String =
-            if (index == SUSPENDED_INDEX) {
-                "SUSP"
-            } else {
-                "E${getEidFromIndex(index)}DT${getDtFromIndex(index)}"
-            }
+        fun indexString(index: Int): String = if (index == SUSPENDED_INDEX) {
+            "SUSP"
+        } else {
+            "E${getEidFromIndex(index)}DT${getDtFromIndex(index)}"
+        }
     }
 }

@@ -168,7 +168,9 @@ class Av1DDFrame internal constructor(
     var isAccepted = false
 
     // Validate that the index matches the pictureId
-    init { assert((index and 0xffff) == frameNumber) }
+    init {
+        assert((index and 0xffff) == frameNumber)
+    }
 
     constructor(packet: Av1DDPacket, index: Int) : this(
         ssrc = packet.ssrc,
