@@ -49,7 +49,6 @@ import org.jxmpp.stringprep.*;
 
 import java.time.*;
 import java.util.*;
-import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
 
@@ -119,13 +118,8 @@ public class Videobridge
     /**
      * The {@link JvbLoadManager} instance used for this bridge.
      */
-    private final JvbLoadManager<PacketRateMeasurement> jvbLoadManager;
-
-    /**
-     * The task which manages the recurring load sampling and updating of
-     * {@link Videobridge#jvbLoadManager}.
-     */
-    private final ScheduledFuture<?> loadSamplerTask;
+    @NotNull
+    private final JvbLoadManager<?> jvbLoadManager;
 
     @NotNull private final Version version;
     @Nullable private final String releaseId;
@@ -158,29 +152,7 @@ public class Videobridge
     {
         this.clock = clock;
         videobridgeExpireThread = new VideobridgeExpireThread(this);
-        jvbLoadManager = new JvbLoadManager<>(
-            PacketRateMeasurement.getLoadedThreshold(),
-            PacketRateMeasurement.getRecoveryThreshold(),
-            new LastNReducer(
-                this::getConferences,
-                JvbLastNKt.jvbLastNSingleton
-            )
-        );
-        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
-            new PacketRateLoadSampler(
-                this,
-                (loadMeasurement) -> {
-                    // Update the load manager with the latest measurement
-                    jvbLoadManager.loadUpdate(loadMeasurement);
-                    // Update the stats with the latest stress level
-                    getStatistics().stressLevel = jvbLoadManager.getCurrentStressLevel();
-                    return Unit.INSTANCE;
-                }
-            ),
-            0,
-            10,
-            TimeUnit.SECONDS
-        );
+        jvbLoadManager = JvbLoadManager.create(this);
         if (xmppConnection != null)
         {
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
@@ -610,10 +582,7 @@ public class Videobridge
     public void stop()
     {
         videobridgeExpireThread.stop();
-        if (loadSamplerTask != null)
-        {
-            loadSamplerTask.cancel(true);
-        }
+        jvbLoadManager.stop();
     }
 
     /**
