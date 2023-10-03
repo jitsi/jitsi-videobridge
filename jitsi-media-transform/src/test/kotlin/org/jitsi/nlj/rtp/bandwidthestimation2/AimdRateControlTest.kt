@@ -205,4 +205,4 @@ class AimdRateControlTest : ShouldSpec() {
     }
 }
 
-private infix fun Long.plusOrMinus(tolerance: Long) = LongRange(this - tolerance, this + tolerance)
+infix fun Long.plusOrMinus(tolerance: Long) = LongRange(this - tolerance, this + tolerance)
