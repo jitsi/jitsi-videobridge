@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
@@ -193,7 +195,11 @@ class TrendlineEstimator : DelayIncreaseDetectorInterface {
             return
         }
 
-        val k = if (abs(modifiedTrend) < threshold) { kDown } else { kUp }
+        val k = if (abs(modifiedTrend) < threshold) {
+            kDown
+        } else {
+            kUp
+        }
         val kMaxTimeDeltaMs = 100L
         val timeDeltaMs = min(nowMs - lastUpdateMs, kMaxTimeDeltaMs)
         threshold += k * (abs(modifiedTrend) - threshold) * timeDeltaMs

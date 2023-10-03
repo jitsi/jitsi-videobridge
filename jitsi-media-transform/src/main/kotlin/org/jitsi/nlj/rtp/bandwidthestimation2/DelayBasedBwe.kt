@@ -178,7 +178,11 @@ class DelayBasedBwe(
         if ((result.updated && prevBitrate != result.targetBitrate) ||
             detectorState != prevState
         ) {
-            val bitrate = if (result.updated) { result.targetBitrate } else { prevBitrate }
+            val bitrate = if (result.updated) {
+                result.targetBitrate
+            } else {
+                prevBitrate
+            }
             /** TODO: time series log: bitrate, atTime, detectorState */
 
             prevBitrate = bitrate
@@ -191,7 +195,11 @@ class DelayBasedBwe(
     private fun updateEstimate(atTime: Instant, ackedBitrate: Bandwidth?): Bandwidth? {
         val input = RateControlInput(delayDetector.state(), ackedBitrate)
         val targetRate = rateControl.update(input, atTime)
-        return if (rateControl.validEstimate()) { targetRate } else { null }
+        return if (rateControl.validEstimate()) {
+            targetRate
+        } else {
+            null
+        }
     }
 
     fun onRttUpdate(avgRtt: Duration) {
@@ -199,7 +207,9 @@ class DelayBasedBwe(
     }
 
     fun latestEstimate(): Bandwidth? {
-        if (rateControl.validEstimate()) { return null }
+        if (rateControl.validEstimate()) {
+            return null
+        }
         return rateControl.latestEstimate()
     }
 

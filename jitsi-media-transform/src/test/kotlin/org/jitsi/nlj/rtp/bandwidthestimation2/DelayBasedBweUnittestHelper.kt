@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.bytes
@@ -304,7 +306,11 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         clock.elapse(1000.ms)
         // Inserting packets for 5 seconds to get a valid estimate.
         for (i in 0 until 5 * kFramerate + 1 + kNumInitialPackets) {
-            val pacingInfo = if (i < kInitialProbingPackets) { kPacingInfo } else { PacedPacketInfo() }
+            val pacingInfo = if (i < kInitialProbingPackets) {
+                kPacingInfo
+            } else {
+                PacedPacketInfo()
+            }
             if (i == kNumInitialPackets) {
                 check(bitrateEstimator.latestEstimate() == null)
                 check(!bitrateObserver.updated)

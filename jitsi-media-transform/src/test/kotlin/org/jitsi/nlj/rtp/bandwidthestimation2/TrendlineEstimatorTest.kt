@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.ShouldSpec

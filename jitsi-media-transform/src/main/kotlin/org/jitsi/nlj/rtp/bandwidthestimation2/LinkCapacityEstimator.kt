@@ -70,8 +70,7 @@ class LinkCapacityEstimator {
         deviationKbps = deviationKbps.coerceIn(0.4, 2.5)
     }
 
-    private fun deviationEstimateKbps(): Double =
-        // Calculate the max bit rate std dev given the normalized
+    private fun deviationEstimateKbps(): Double = // Calculate the max bit rate std dev given the normalized
         // variance and the current throughput bitrate. The standard deviation will
         // only be used if estimateKbps has a value.
         sqrt(deviationKbps * estimateKbps!!)

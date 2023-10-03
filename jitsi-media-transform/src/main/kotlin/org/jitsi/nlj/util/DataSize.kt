@@ -39,14 +39,11 @@ class DataSize(
 
     operator fun times(other: Int): DataSize = DataSize(bits * other)
 
-    operator fun times(other: Double): DataSize =
-        DataSize((bits * other).roundToLong())
+    operator fun times(other: Double): DataSize = DataSize((bits * other).roundToLong())
 
-    operator fun div(other: Double): DataSize =
-        DataSize((bits / other).roundToLong())
+    operator fun div(other: Double): DataSize = DataSize((bits / other).roundToLong())
 
-    operator fun div(other: DataSize): Double =
-        bits.toDouble() / other.bits.toDouble()
+    operator fun div(other: DataSize): Double = bits.toDouble() / other.bits.toDouble()
 
     override fun toString(): String {
         // To determine which unit we'll print in,

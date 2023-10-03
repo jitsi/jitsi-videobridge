@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 // This file uses WebRTC's naming style for enums
-@file:Suppress("ktlint:standard:enum-entry-name-case")
+@file:Suppress("ktlint:standard:enum-entry-name-case", "ktlint:standard:property-naming")
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
@@ -349,7 +349,9 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     }
 
     private enum class RateControlState {
-        kRcHold, kRcIncrease, kRcDecrease
+        kRcHold,
+        kRcIncrease,
+        kRcDecrease
     }
 
     companion object {
