@@ -17,12 +17,21 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.longs.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.longs.shouldBeInRange
+import io.kotest.matchers.longs.shouldBeLessThan
+import io.kotest.matchers.longs.shouldBeLessThanOrEqual
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.instantOfEpochMicro
 import org.jitsi.nlj.util.toEpochMicro
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
 import java.lang.Long.max
 import java.time.Duration
@@ -54,7 +63,7 @@ class TestBitrateObserver {
 
 class RtpStream(
     val fps: Int,
-    var bitrateBps: Int
+    var bitrateBps: Long
 ) {
     init {
         require(fps > 0)
@@ -71,7 +80,7 @@ class RtpStream(
             return nextRtpTime
         }
         val bitsPerFrame = (bitrateBps + fps / 2) / fps
-        val nPackets = ((bitsPerFrame + 4 * kMtu) / (8 * kMtu)).coerceAtLeast(1)
+        val nPackets = ((bitsPerFrame + 4 * kMtu) / (8 * kMtu)).coerceAtLeast(1).toInt()
         val payloadSize = (bitsPerFrame + 4 * nPackets) / (8 * nPackets)
         repeat(nPackets) {
             val packet = PacketResult()
@@ -90,7 +99,7 @@ class RtpStream(
 }
 
 class StreamGenerator(
-    private var capacity: Int,
+    private var capacity: Long,
     timeNow: Long
 ) {
     /** All streams being transmitted on this simulated channel. */
@@ -104,7 +113,7 @@ class StreamGenerator(
     }
 
     /** Set the link capacity */
-    fun setCapacityBps(capacityBps: Int) {
+    fun setCapacityBps(capacityBps: Long) {
         require(capacityBps > 0)
         capacity = capacityBps
     }
@@ -113,7 +122,7 @@ class StreamGenerator(
      is decided by the initial allocation ratios. */
     fun setBitrateBps(bitrateBps: Long) {
         check(streams.isNotEmpty())
-        var totalBitrateBefore = 0
+        var totalBitrateBefore = 0L
         for (stream in streams) {
             totalBitrateBefore += stream.bitrateBps
         }
@@ -124,10 +133,10 @@ class StreamGenerator(
             val bitrateAfter: Long =
                 (bitrateBefore * bitrateBps + totalBitrateBefore / 2) /
                     totalBitrateBefore
-            stream.bitrateBps = (bitrateAfter - totalBitrateAfter).toInt()
+            stream.bitrateBps = bitrateAfter - totalBitrateAfter
             totalBitrateAfter += stream.bitrateBps
         }
-        check(bitrateBefore == totalBitrateBefore.toLong())
+        check(bitrateBefore == totalBitrateBefore)
         check(totalBitrateAfter == bitrateBps)
     }
 
@@ -162,13 +171,13 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         AcknowledgedBitrateEstimatorInterface.create()
     val probeBitrateEstimator = ProbeBitrateEstimator()
     val bitrateEstimator = DelayBasedBwe(parentLogger, diagnosticContext)
-    val streamGenerator = StreamGenerator(1e6.toInt(), clock.instant().toEpochMicro())
+    val streamGenerator = StreamGenerator(1e6.toLong(), clock.instant().toEpochMicro())
 
-    val arrivalTimeOffsetMs: Long = 0L
+    var arrivalTimeOffsetMs: Long = 0L
     var firstUpdate: Boolean = true
 
     fun addDefaultStream() {
-        streamGenerator.addStream(RtpStream(30, 3e5.toInt()))
+        streamGenerator.addStream(RtpStream(30, 3e5.toLong()))
     }
 
     // Helpers to insert a single packet into the delay-based BWE.
@@ -209,13 +218,13 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         }
     }
 
-    /** Generates a frame of packets belonging to a stream at a given bitrate and
-     with a given ssrc. The stream is pushed through a very simple simulated
+    /** Generates a frame of packets belonging to a stream at a given bitrate ~~and
+     with a given ssrc~~. The stream is pushed through a very simple simulated
      network, and is then given to the receive-side bandwidth estimator.
      Returns true if an over-use was seen, false otherwise.
      The StreamGenerator::updated() should be used to check for any changes in
      target bitrate after the call to this function. */
-    fun generateAndProcessFrame(ssrc: Long, bitrateBps: Long): Boolean {
+    fun generateAndProcessFrame(bitrateBps: Long): Boolean {
         streamGenerator.setBitrateBps(bitrateBps)
         val packets = ArrayList<PacketResult>()
 
@@ -266,7 +275,6 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
      Can for instance be used to run the estimator for some time to get it
      into a steady state. */
     fun steadyStateRun(
-        ssrc: Long,
         maxNumberOfFrames: Int,
         startBitrate: Long,
         minBitrate: Long,
@@ -277,10 +285,10 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         var bitrateUpdateSeen = false
         for (i in 0 until maxNumberOfFrames) {
             // Produce `number_of_frames` frames and give them to the estimator.
-            val overuse = generateAndProcessFrame(ssrc, bitrateBps)
+            val overuse = generateAndProcessFrame(bitrateBps)
             if (overuse) {
-                check(bitrateObserver.latestBitrate <= maxBitrate)
-                check(bitrateObserver.latestBitrate >= minBitrate)
+                bitrateObserver.latestBitrate shouldBeLessThanOrEqual maxBitrate
+                bitrateObserver.latestBitrate shouldBeGreaterThanOrEqual minBitrate
                 bitrateBps = bitrateObserver.latestBitrate
                 bitrateUpdateSeen = true
             } else if (bitrateObserver.updated) {
@@ -300,8 +308,8 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         val kFrameIntervalMs = 1000L / kFramerate
         val kPacingInfo = PacedPacketInfo(0, 5, 5000)
         var sendTimeMs = 0L
-        check(bitrateEstimator.latestEstimate() == null)
-        check(!bitrateObserver.updated)
+        bitrateEstimator.latestEstimate() shouldBe null
+        bitrateObserver.updated shouldBe false
         bitrateObserver.reset()
         clock.elapse(1000.ms)
         // Inserting packets for 5 seconds to get a valid estimate.
@@ -312,8 +320,8 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
                 PacedPacketInfo()
             }
             if (i == kNumInitialPackets) {
-                check(bitrateEstimator.latestEstimate() == null)
-                check(!bitrateObserver.updated)
+                bitrateEstimator.latestEstimate() shouldBe null
+                bitrateObserver.updated shouldBe false
                 bitrateObserver.reset()
             }
             incomingFeedback(clock.millis(), sendTimeMs, kMtu, pacingInfo)
@@ -321,25 +329,70 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
             sendTimeMs = kFrameIntervalMs
         }
         val bitrate = bitrateEstimator.latestEstimate()
-        check(bitrate != null)
-        check(
-            bitrate.bps in
-                expectedConvergeBitrate - kAcceptedBitrateErrorBps..expectedConvergeBitrate + kAcceptedBitrateErrorBps
-        )
-        check(bitrateObserver.updated)
-        check(bitrateObserver.latestBitrate == bitrate.bps)
+        bitrate shouldNotBe null
+        bitrate!!.bps shouldBeInRange (expectedConvergeBitrate plusOrMinus kAcceptedBitrateErrorBps)
+        bitrateObserver.updated shouldBe true
+        bitrateObserver.latestBitrate shouldBe bitrate.bps
     }
 
-    fun testTimestampGroupingTestHelper() {
+    fun rateIncreaseReorderingTestHelper(expectedBitrateBps: Long) {
+        val kFramerate = 50 // fps to avoid rounding errors.
+        val kFrameIntervalMs = 1000L / kFramerate
+        val kPacingInfo = PacedPacketInfo(0, 5, 5000)
+        var sendTimeMs = 0L
+        // Inserting packets for five seconds to get a valid estimate.
+        for (i in 0 until 5 * kFramerate + 1 + kNumInitialPackets) {
+            // NOTE!!! If the following line is moved under the if case then this test
+            //         wont work on windows realease bots.
+            val pacingInfo = if (i < kInitialProbingPackets) kPacingInfo else PacedPacketInfo()
+
+            // TODO(sprang): Remove this hack once the single stream estimator is gone,
+            //  as it doesn't do anything in Process().
+            if (i == kNumInitialPackets) {
+                // Process after we have enough frames to get a valid input rate estimate.
+
+                bitrateObserver.updated shouldBe false // No valid estimate.
+            }
+            incomingFeedback(clock.millis(), sendTimeMs, kMtu, pacingInfo)
+            clock.elapse((2 * kFrameIntervalMs).ms)
+            sendTimeMs += kFrameIntervalMs
+        }
+        bitrateObserver.updated shouldBe true
+        expectedBitrateBps shouldBeInRange (bitrateObserver.latestBitrate plusOrMinus kAcceptedBitrateErrorBps)
+
+        repeat(10) {
+            clock.elapse((2 * kFrameIntervalMs).ms)
+            sendTimeMs += 2 * kFrameIntervalMs
+            incomingFeedback(clock.millis(), sendTimeMs, 1000)
+            incomingFeedback(clock.millis(), sendTimeMs - kFrameIntervalMs, 1000)
+        }
+        bitrateObserver.updated shouldBe true
+        expectedBitrateBps shouldBeInRange (bitrateObserver.latestBitrate plusOrMinus kAcceptedBitrateErrorBps)
     }
 
-    fun testWrappingHelper(silenceTimeS: Int) {
-    }
-
-    fun rateIncreaseReorderingTestHelper(expectedBitrate: Long) {
-    }
-
+    // Make sure we initially increase the bitrate as expected.
     fun rateIncreaseRtpTimestampsTestHelper(expectedIterations: Int) {
+        // This threshold corresponds approximately to increasing linearly with
+        // bitrate(i) = 1.04 * bitrate(i-1) + 1000
+        // until bitrate(i) > 500000, with bitrate(1) ~= 30000.
+        var bitrateBps = 30000L
+        var iterations = 0
+        addDefaultStream()
+        // Feed the estimator with a stream of packets and verify that it reaches
+        // 500 kbps at the expected time.
+        while (bitrateBps < 5e5) {
+            val overuse = generateAndProcessFrame(bitrateBps)
+            if (overuse) {
+                bitrateObserver.latestBitrate shouldBeGreaterThan bitrateBps
+                bitrateBps = bitrateObserver.latestBitrate
+                bitrateObserver.reset()
+            } else if (bitrateObserver.updated) {
+                bitrateBps = bitrateObserver.latestBitrate
+                bitrateObserver.reset()
+            }
+            ++iterations
+        }
+        iterations shouldBe expectedIterations
     }
 
     fun capacityDropTestHelper(
@@ -348,11 +401,129 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         expectedBitrateDropDelta: Long,
         receiverClockOffsetChangeMs: Long
     ) {
+        val kFramerate = 30
+        val kStartBitrate = 900e3.toLong()
+        val kMinExpectedBitrate = 800e3.toLong()
+        val kMaxExpectedBitrate = 1100e3.toLong()
+        val kInitialCapacityBps = 1000e3.toLong()
+        val kReducedCapacityBps = 500e3.toLong()
+
+        var steadyStateTime = 0
+        if (numberOfStreams <= 1) {
+            steadyStateTime = 10
+            addDefaultStream()
+        } else {
+            steadyStateTime = 10 * numberOfStreams
+            var bitrateSum = 0L
+            val kBitrateDenom = numberOfStreams * (numberOfStreams - 1)
+            for (i in 0 until numberOfStreams) {
+                // First stream gets half available bitrate, while the rest share the
+                // remaining half i.e.: 1/2 = Sum[n/(N*(N-1))] for n=1..N-1 (rounded up)
+                var bitrate = kStartBitrate / 2
+                if (i > 0) {
+                    bitrate = (kStartBitrate * i + kBitrateDenom / 2) / kBitrateDenom
+                }
+                streamGenerator.addStream(RtpStream(kFramerate, bitrate))
+                bitrateSum += bitrate
+            }
+            check(bitrateSum == kStartBitrate)
+        }
+
+        // Run in steady state to make the estimator converge.
+        streamGenerator.setCapacityBps(kInitialCapacityBps)
+        var bitrateBps = steadyStateRun(
+            steadyStateTime * kFramerate,
+            kStartBitrate,
+            kMinExpectedBitrate,
+            kMaxExpectedBitrate,
+            kInitialCapacityBps
+        )
+        bitrateBps shouldBeInRange (kInitialCapacityBps plusOrMinus 180000)
+        bitrateObserver.reset()
+
+        // Add an offset to make sure the BWE can handle it.
+        arrivalTimeOffsetMs += receiverClockOffsetChangeMs
+
+        // Reduce the capacity and verify the decrease time.
+        streamGenerator.setCapacityBps(kReducedCapacityBps)
+        val overuseStartTime = clock.millis()
+        var bitrateDropTime = -1L
+        repeat(100 * numberOfStreams) {
+            generateAndProcessFrame(bitrateBps)
+            if (bitrateDropTime == -1L &&
+                bitrateObserver.latestBitrate <= kReducedCapacityBps
+            ) {
+                bitrateDropTime = clock.millis()
+            }
+            if (bitrateObserver.updated) {
+                bitrateBps = bitrateObserver.latestBitrate
+            }
+        }
+
+        bitrateDropTime - overuseStartTime shouldBeInRange (expectedBitrateDropDelta plusOrMinus 33)
+    }
+
+    fun testTimestampGroupingTestHelper() {
+        val kFramerate = 50 // 50 fps to avoid rounding errors.
+        val kFrameIntervalMs = 1000L / kFramerate
+        var sendTimeMs = 0L
+        // Initial set of frames to increase the bitrate. 6 seconds to have enough
+        // time for the first estimate to be generated and for Process() to be called.
+        repeat(6 * kFramerate) {
+            incomingFeedback(clock.millis(), sendTimeMs, 1000)
+
+            clock.elapse(kFrameIntervalMs.ms)
+            sendTimeMs += kFrameIntervalMs
+        }
+        bitrateObserver.updated shouldBe true
+        bitrateObserver.latestBitrate shouldBeGreaterThanOrEqual 400000
+
+        // Insert batches of frames which were sent very close in time. Also simulate
+        // capacity over-use to see that we back off correctly.
+        val kTimestampGroupLength = 15
+        repeat(100) {
+            repeat(kTimestampGroupLength) {
+                // Insert `kTimestampGroupLength` frames with just 1 timestamp ticks in
+                // between. Should be treated as part of the same group by the estimator.
+                incomingFeedback(clock.millis(), sendTimeMs, 100)
+                clock.elapse((kFrameIntervalMs / kTimestampGroupLength).ms)
+                sendTimeMs += 1
+            }
+            // Increase time until next batch to simulate over-use.
+            clock.elapse(10.ms)
+            sendTimeMs += kFrameIntervalMs - kTimestampGroupLength
+        }
+        bitrateObserver.updated shouldBe true
+        // Should have reduced the estimate.
+        bitrateObserver.latestBitrate shouldBeLessThan 400000
+    }
+
+    fun testWrappingHelper(silenceTimeS: Int) {
+        val kFramerate = 100
+        val kFrameIntervalMs = 1000 / kFramerate
+        var sendTimeMs = 0L
+
+        repeat(3000) {
+            incomingFeedback(clock.millis(), sendTimeMs, 1000)
+            clock.elapse(kFrameIntervalMs.ms)
+            sendTimeMs += kFrameIntervalMs
+        }
+        val bitrateBefore = bitrateEstimator.latestEstimate()
+
+        clock.elapse(silenceTimeS.secs)
+
+        repeat(24) {
+            incomingFeedback(clock.millis(), sendTimeMs, 1000)
+            clock.elapse((2 * kFrameIntervalMs).ms)
+            sendTimeMs += kFrameIntervalMs
+        }
+        val bitrateAfter = bitrateEstimator.latestEstimate()
+        bitrateAfter!! shouldBeLessThan bitrateBefore!!
     }
 
     companion object {
         const val kMtu = 1200L
-        const val kAcceptedBitrateErrorBps = 50000
+        const val kAcceptedBitrateErrorBps = 50000L
 
         // Number of packets needed before we have a valid estimate.
         const val kNumInitialPackets = 2
