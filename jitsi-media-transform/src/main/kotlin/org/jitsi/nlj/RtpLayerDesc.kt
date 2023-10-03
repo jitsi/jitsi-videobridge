@@ -48,7 +48,7 @@ constructor(
      *
      * XXX we should be able to sniff the actual height from the RTP packets.
      */
-    val height: Int,
+    var height: Int,
     /**
      * The max frame rate (in fps) of the bitstream that this instance
      * represents. The actual frame rate may be less due to bad network or
