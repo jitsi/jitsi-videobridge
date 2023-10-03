@@ -58,7 +58,7 @@ class DelayBasedBwe(
         /* networkEstimate: NetworkStateEstimate?, */
         inAlr: Boolean
     ): Result {
-        val packetFeedbackVector = msg.sortedByReceiveTime
+        val packetFeedbackVector = msg.sortedByReceiveTime()
         if (packetFeedbackVector.isEmpty()) {
             // TODO(holmer): An empty feedback vector here likely means that
             // all acks were too late and that the send time history had

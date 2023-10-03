@@ -82,6 +82,8 @@ class PacketResult {
     var sentPacket = SentPacket()
 
     var receiveTime: Instant = NEVER
+
+    fun isReceived() = receiveTime != NEVER
 }
 
 /**
@@ -95,10 +97,21 @@ class TransportPacketsFeedback {
     var packetFeedbacks: MutableList<PacketResult> = ArrayList()
 
     /** Arrival times for messages without send times information */
-    val sendlessArrivalTimes = ArrayList<PacketResult>()
+    val sendlessArrivalTimes = ArrayList<Instant>()
 
-    val receivedWithSendInfo = ArrayList<PacketResult>()
-    val lostWithSendInfo = ArrayList<PacketResult>()
-    val packetsWithFeedback = ArrayList<PacketResult>()
-    val sortedByReceiveTime = ArrayList<PacketResult>()
+    fun receivedWithSendInfo(): List<PacketResult> {
+        return packetFeedbacks.filter { it.isReceived() }
+    }
+
+    fun lostWithSendInfo(): List<PacketResult> {
+        return packetFeedbacks.filterNot { it.isReceived() }
+    }
+
+    fun packetsWithFeedback(): List<PacketResult> {
+        return packetFeedbacks
+    }
+
+    fun sortedByReceiveTime(): List<PacketResult> {
+        return receivedWithSendInfo().sortedBy { it.receiveTime }
+    }
 }
