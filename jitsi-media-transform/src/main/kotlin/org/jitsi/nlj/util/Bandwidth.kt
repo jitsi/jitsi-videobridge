@@ -161,6 +161,13 @@ fun max(a: Bandwidth, b: Bandwidth): Bandwidth {
 }
 
 /**
+ * Returns the minimum of two [Bandwidth]s
+ */
+fun min(a: Bandwidth, b: Bandwidth): Bandwidth {
+    return if (a <= b) a else b
+}
+
+/**
  * Ensures that this value is not greater than the specified [maximumValue].
  *
  * @return this value if it's less than or equal to the [maximumValue] or the [maximumValue] otherwise.
