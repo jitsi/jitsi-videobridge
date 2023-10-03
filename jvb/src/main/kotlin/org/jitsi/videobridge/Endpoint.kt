@@ -93,7 +93,6 @@ import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Supplier
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -217,10 +216,9 @@ class Endpoint @JvmOverloads constructor(
                 newEffectiveConstraints: EffectiveConstraintsMap,
             ) = this@Endpoint.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
 
-            override fun keyframeNeeded(endpointId: String?, ssrc: Long) =
-                conference.requestKeyframe(endpointId, ssrc)
+            override fun keyframeNeeded(endpointId: String?, ssrc: Long) = conference.requestKeyframe(endpointId, ssrc)
         },
-        Supplier { getOrderedEndpoints() },
+        { getOrderedEndpoints() },
         diagnosticContext,
         logger,
         isUsingSourceNames,
@@ -235,7 +233,7 @@ class Endpoint @JvmOverloads constructor(
      */
     override val messageTransport = EndpointMessageTransport(
         this,
-        Supplier { conference.videobridge.statistics },
+        { conference.videobridge.statistics },
         conference,
         logger
     )
@@ -243,8 +241,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Gets the endpoints in the conference in LastN order, with this {@link Endpoint} removed.
      */
-    fun getOrderedEndpoints(): List<AbstractEndpoint> =
-        conference.orderedEndpoints.filterNot { it == this }
+    fun getOrderedEndpoints(): List<AbstractEndpoint> = conference.orderedEndpoints.filterNot { it == this }
 
     /**
      * Listen for RTT updates from [transceiver] and update the ICE stats the first time an RTT is available. Note that
@@ -288,7 +285,7 @@ class Endpoint @JvmOverloads constructor(
                 return transceiver.sendProbing(mediaSsrcs, numBytes)
             }
         },
-        Supplier { bitrateController.getStatusSnapshot() }
+        { bitrateController.getStatusSnapshot() }
     ).apply {
         diagnosticsContext = this@Endpoint.diagnosticContext
         enabled = true
@@ -559,7 +556,7 @@ class Endpoint @JvmOverloads constructor(
         if (doSsrcRewriting) {
             val newActiveSources =
                 newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
-            val newActiveSourceNames = newActiveSources.mapNotNull { it.sourceName }.toSet()
+            val newActiveSourceNames = newActiveSources.map { it.sourceName }.toSet()
             /* safe unlocked access of activeSources. BitrateController will not overlap calls to this method. */
             if (activeSources != newActiveSourceNames) {
                 activeSources = newActiveSourceNames
@@ -568,6 +565,7 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    @Deprecated("use sendVideoConstraintsV2")
     override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (mediaSources.isEmpty()) {
@@ -601,7 +599,7 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Create an SCTP connection for this Endpoint.  If [openDataChannelLocally] is true,
+     * Create an SCTP connection for this Endpoint.  If [OPEN_DATA_CHANNEL_LOCALLY] is true,
      * we will create the data channel locally, otherwise we will wait for the remote side
      * to open it.
      */
@@ -632,7 +630,7 @@ class Endpoint @JvmOverloads constructor(
                     messageTransport.setDataChannel(dataChannel)
                 }
                 dataChannelHandler.setDataChannelStack(dataChannelStack!!)
-                if (openDataChannelLocally) {
+                if (OPEN_DATA_CHANNEL_LOCALLY) {
                     // This logic is for opening the data channel locally
                     logger.info("Will open the data channel.")
                     val dataChannel = dataChannelStack!!.createDataChannel(
@@ -1170,7 +1168,7 @@ class Endpoint @JvmOverloads constructor(
          * Whether or not the bridge should be the peer which opens the data channel
          * (as opposed to letting the far peer/client open it).
          */
-        private const val openDataChannelLocally = false
+        private const val OPEN_DATA_CHANNEL_LOCALLY = false
 
         /**
          * Count the number of dropped packets and exceptions.

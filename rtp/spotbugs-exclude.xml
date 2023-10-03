@@ -32,6 +32,9 @@
 
     <!-- False positives with kotlin 1.5 -->
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
+
+    <!-- Tests are often testing whether a value is not null, and should throw NPE if not -->
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
   </Or>
   <Or>
     <Source name="~.*\.*Test.kt" />

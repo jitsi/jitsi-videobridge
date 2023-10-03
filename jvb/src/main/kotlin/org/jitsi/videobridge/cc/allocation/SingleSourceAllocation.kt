@@ -284,10 +284,7 @@ internal class SingleSourceAllocation(
      * require a high frame rate, with preconfigured values for the "preferred" height and frame rate, and we do not allow
      * oversending.
      */
-    private fun selectLayersForCamera(
-        layers: List<LayerSnapshot>,
-        constraints: VideoConstraints,
-    ): Layers {
+    private fun selectLayersForCamera(layers: List<LayerSnapshot>, constraints: VideoConstraints): Layers {
         val minHeight = layers.map { it.layer.height }.minOrNull() ?: return Layers.noLayers
         val noActiveLayers = layers.none { (_, bitrate) -> bitrate > 0 }
         val (preferredHeight, preferredFps) = getPreferred(constraints)

@@ -202,42 +202,36 @@ class Vp9AdaptiveSourceProjectionContext(
         return seqGap
     }
 
-    private fun frameIsNewSsrc(frame: Vp9Frame): Boolean =
-        lastVp9FrameProjection.vp9Frame?.matchesSSRC(frame) != true
+    private fun frameIsNewSsrc(frame: Vp9Frame): Boolean = lastVp9FrameProjection.vp9Frame?.matchesSSRC(frame) != true
 
     /**
      * Find the previous frame before the given one.
      */
     @Synchronized
-    private fun prevFrame(frame: Vp9Frame) =
-        vp9PictureMaps.get(frame.ssrc)?.prevFrame(frame)
+    private fun prevFrame(frame: Vp9Frame) = vp9PictureMaps.get(frame.ssrc)?.prevFrame(frame)
 
     /**
      * Find the next frame after the given one.
      */
     @Synchronized
-    private fun nextFrame(frame: Vp9Frame) =
-        vp9PictureMaps.get(frame.ssrc)?.nextFrame(frame)
+    private fun nextFrame(frame: Vp9Frame) = vp9PictureMaps.get(frame.ssrc)?.nextFrame(frame)
 
     /**
      * Find the previous accepted frame before the given one.
      */
-    private fun findPrevAcceptedFrame(frame: Vp9Frame) =
-        vp9PictureMaps.get(frame.ssrc)?.findPrevAcceptedFrame(frame)
+    private fun findPrevAcceptedFrame(frame: Vp9Frame) = vp9PictureMaps.get(frame.ssrc)?.findPrevAcceptedFrame(frame)
 
     /**
      * Find the next accepted frame after the given one.
      */
-    private fun findNextAcceptedFrame(frame: Vp9Frame) =
-        vp9PictureMaps.get(frame.ssrc)?.findNextAcceptedFrame(frame)
+    private fun findNextAcceptedFrame(frame: Vp9Frame) = vp9PictureMaps.get(frame.ssrc)?.findNextAcceptedFrame(frame)
 
     /**
      * Find a subsequent base-layer TL0 frame after the given frame
      * @param frame The frame to query
      * @return A subsequent base-layer TL0 frame, or null
      */
-    private fun findNextBaseTl0(frame: Vp9Frame) =
-        vp9PictureMaps.get(frame.ssrc)?.findNextBaseTl0(frame)
+    private fun findNextBaseTl0(frame: Vp9Frame) = vp9PictureMaps.get(frame.ssrc)?.findNextBaseTl0(frame)
 
     /**
      * Create a projection for this frame.

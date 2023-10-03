@@ -33,19 +33,17 @@ class RedAudioRtpPacket(
         removed = true
     }
 
-    fun removeRedAndGetRedundancyPackets(): List<AudioRtpPacket> =
-        if (removed) {
-            throw IllegalStateException("RED encapsulation already removed.")
-        } else {
-            parser.decapsulate(this, parseRedundancy = true).also { removed = true }
-        }
+    fun removeRedAndGetRedundancyPackets(): List<AudioRtpPacket> = if (removed) {
+        throw IllegalStateException("RED encapsulation already removed.")
+    } else {
+        parser.decapsulate(this, parseRedundancy = true).also { removed = true }
+    }
 
-    override fun clone(): RedAudioRtpPacket =
-        RedAudioRtpPacket(
-            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length
-        )
+    override fun clone(): RedAudioRtpPacket = RedAudioRtpPacket(
+        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length
+    )
 
     companion object {
         val parser = RedPacketParser(::AudioRtpPacket)

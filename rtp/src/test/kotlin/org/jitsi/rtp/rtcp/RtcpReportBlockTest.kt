@@ -37,8 +37,12 @@ class RtcpReportBlockTest : ShouldSpec() {
 
     val reportBlockData = with(ByteBuffer.allocate(24)) {
         putInt(expectedSsrc.toInt())
-        put(expectedFractionLost.toByte()); put3Bytes(expectedCumulativeLost)
-        putShort(expectedSeqNumCycles.toShort()); putShort(expectedSeqNum.toShort())
+        put(expectedFractionLost.toByte())
+        put3Bytes(expectedCumulativeLost)
+
+        putShort(expectedSeqNumCycles.toShort())
+        putShort(expectedSeqNum.toShort())
+
         putInt(expectedInterarrivalJitter.toInt())
         putInt(expectedLastSrTimestamp.toInt())
         putInt(expectedDelaySinceLastSr.toInt())

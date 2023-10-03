@@ -36,6 +36,7 @@ infix fun DataSize.atRate(bw: Bandwidth): Duration {
 
 fun howMuchCanISendAtRate(bw: Bandwidth): Bandwidth = bw
 
+@Suppress("ktlint:standard:function-naming")
 infix fun Bandwidth.`in`(time: Duration): DataSize {
     return DataSize((bps * (time.seconds + time.nano / 1e9)).toLong())
 }

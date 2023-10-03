@@ -202,7 +202,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     }
                 }
                 context("and then a new ep joins") {
-                    every { conference.getLocalEndpoint("4") } returns mockk() { every { id } returns "4" }
+                    every { conference.getLocalEndpoint("4") } returns mockk { every { id } returns "4" }
                     monitor.endpointConnected("4")
                     should("update the new endpoint of the other non-visitor endpoints' statuses") {
                         sendMessageCalls shouldHaveSize 2

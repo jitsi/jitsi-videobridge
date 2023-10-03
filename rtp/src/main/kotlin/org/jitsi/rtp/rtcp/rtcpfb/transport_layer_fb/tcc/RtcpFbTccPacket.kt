@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming", "ktlint:standard:function-naming")
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
@@ -142,8 +143,7 @@ class RtcpFbTccPacketBuilder(
         return true
     }
 
-    fun GetBaseTimeUs(): Long =
-        base_time_ticks_ * kBaseScaleFactor
+    fun GetBaseTimeUs(): Long = base_time_ticks_ * kBaseScaleFactor
 
     private fun AddDeltaSize(deltaSize: DeltaSize): Boolean {
         if (num_seq_no_ == kMaxReportedPackets) {
@@ -416,8 +416,7 @@ class RtcpFbTccPacket(
 
     val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
-    fun GetBaseTimeUs(): Long =
-        base_time_ticks_ * kBaseScaleFactor
+    fun GetBaseTimeUs(): Long = base_time_ticks_ * kBaseScaleFactor
 
     override fun iterator(): Iterator<PacketReport> = packets_.iterator()
 
@@ -456,8 +455,7 @@ class RtcpFbTccPacket(
         const val PACKET_CHUNKS_OFFSET = RtcpFbPacket.HEADER_SIZE + 8
 
         // baseOffset in all of these refers to the start of the entire RTCP TCC packet
-        fun getBaseSeqNum(buf: ByteArray, baseOffset: Int): Int =
-            buf.getShortAsInt(baseOffset + BASE_SEQ_NUM_OFFSET)
+        fun getBaseSeqNum(buf: ByteArray, baseOffset: Int): Int = buf.getShortAsInt(baseOffset + BASE_SEQ_NUM_OFFSET)
         fun setBaseSeqNum(buf: ByteArray, baseOffset: Int, value: Int) =
             buf.putShort(baseOffset + BASE_SEQ_NUM_OFFSET, value.toShort())
 

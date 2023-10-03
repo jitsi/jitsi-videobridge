@@ -84,7 +84,7 @@ public class Conference
     /**
      * A map of the endpoints in this conference, by their ssrcs.
      */
-    private ConcurrentHashMap<Long, AbstractEndpoint> endpointsBySsrc = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, AbstractEndpoint> endpointsBySsrc = new ConcurrentHashMap<>();
 
     /**
      * The relays participating in this conference.
@@ -163,6 +163,11 @@ public class Conference
     @NotNull private final EncodingsManager encodingsManager = new EncodingsManager();
 
     /**
+     * Cache here because it's accessed on every packet.
+     */
+    private final boolean routeLoudestOnly = LoudestConfig.getRouteLoudestOnly();
+
+    /**
      * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
      * endpoints stopping or starting to their video streams (which affects the order).
      */
@@ -225,6 +230,7 @@ public class Conference
                 {
                     try
                     {
+                        logger.info("RECV colibri2 request: " + request.getRequest().toXML());
                         long start = System.currentTimeMillis();
                         Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
                         IQ response = p.getFirst();
@@ -239,6 +245,7 @@ public class Conference
                             logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
                                     + totalDelay + " ms): " + request.getRequest().toXML());
                         }
+                        logger.info("SENT colibri2 response: " + response.toXML());
                         request.getCallback().invoke(response);
                         if (expire) videobridge.expireConference(this);
                     }
@@ -643,11 +650,9 @@ public class Conference
 
         if (logger.isInfoEnabled())
         {
-            StringBuilder sb = new StringBuilder("expire_conf,");
-            sb.append("duration=").append(durationSeconds)
-                .append(",has_failed=").append(hasFailed)
-                .append(",has_partially_failed=").append(hasPartiallyFailed);
-            logger.info(sb.toString());
+            logger.info("expire_conf,duration=" + durationSeconds +
+                    ",has_failed=" + hasFailed +
+                    ",has_partially_failed=" + hasPartiallyFailed);
         }
     }
 
@@ -1083,11 +1088,6 @@ public class Conference
         }
     }
 
-    public void removeEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
-    {
-        endpointsBySsrc.remove(ssrc, endpoint);
-    }
-
     /**
      * Gets the conference name.
      *
@@ -1133,7 +1133,9 @@ public class Conference
     {
         if (!LoudestConfig.Companion.getRouteLoudestOnly())
         {
-            return false;
+            // When "route loudest only" is disabled all speakers should be considered "ranked" (we forward all audio
+            // and stats).
+            return true;
         }
         return speechActivity.isAmongLoudest(ep.getId());
     }
@@ -1199,7 +1201,6 @@ public class Conference
 
     /**
      * Handles an RTP/RTCP packet coming from a specific endpoint.
-     * @param packetInfo
      */
     public void handleIncomingPacket(PacketInfo packetInfo)
     {
@@ -1283,7 +1284,7 @@ public class Conference
     public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long level)
     {
         SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
-        if (ranking == null)
+        if (ranking == null || !routeLoudestOnly)
             return false;
         if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
             return false;

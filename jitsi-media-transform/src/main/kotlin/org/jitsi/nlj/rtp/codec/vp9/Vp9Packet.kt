@@ -99,6 +99,7 @@ class Vp9Packet private constructor(
     val isInterPicturePredicted =
         DePacketizer.VP9PayloadDescriptor.isInterPicturePredicted(buffer, payloadOffset, payloadLength)
 
+    @field:Suppress("ktlint:standard:property-naming")
     private var _TL0PICIDX =
         TL0PICIDX ?: DePacketizer.VP9PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
 
@@ -158,10 +159,8 @@ class Vp9Packet private constructor(
     val usesInterLayerDependency: Boolean =
         DePacketizer.VP9PayloadDescriptor.usesInterLayerDependency(buffer, payloadOffset, payloadLength)
 
-    fun getScalabilityStructure(
-        eid: Int = 0,
-        baseFrameRate: Double = 30.0
-    ) = Companion.getScalabilityStructure(buffer, payloadOffset, payloadLength, ssrc, eid, baseFrameRate)
+    fun getScalabilityStructure(eid: Int = 0, baseFrameRate: Double = 30.0) =
+        Companion.getScalabilityStructure(buffer, payloadOffset, payloadLength, ssrc, eid, baseFrameRate)
 
     val scalabilityStructureNumSpatial: Int
         get() {

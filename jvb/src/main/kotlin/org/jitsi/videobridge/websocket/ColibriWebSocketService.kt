@@ -79,10 +79,7 @@ class ColibriWebSocketService(
         return relayBaseUrls.map { "$it/$conferenceId/$relayId?pwd=$pwd" }
     }
 
-    fun registerServlet(
-        servletContextHandler: ServletContextHandler,
-        videobridge: Videobridge
-    ) {
+    fun registerServlet(servletContextHandler: ServletContextHandler, videobridge: Videobridge) {
         if (config.enabled) {
             logger.info("Registering servlet with baseUrls = $baseUrls, relayBaseUrls = $relayBaseUrls")
             val holder = ServletHolder().apply {

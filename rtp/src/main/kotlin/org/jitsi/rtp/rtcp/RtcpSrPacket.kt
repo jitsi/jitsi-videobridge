@@ -46,18 +46,15 @@ class SenderInfoParser {
         const val SENDERS_PACKET_COUNT_OFFSET = 12
         const val SENDERS_OCTET_COUNT_OFFSET = 16
 
-        fun getNtpTimestampMsw(buf: ByteArray, baseOffset: Int): Long =
-            buf.getIntAsLong(baseOffset + NTP_TS_MSW_OFFSET)
+        fun getNtpTimestampMsw(buf: ByteArray, baseOffset: Int): Long = buf.getIntAsLong(baseOffset + NTP_TS_MSW_OFFSET)
         fun setNtpTimestampMsw(buf: ByteArray, baseOffset: Int, value: Long) =
             buf.putInt(baseOffset + NTP_TS_MSW_OFFSET, value.toInt())
 
-        fun getNtpTimestampLsw(buf: ByteArray, baseOffset: Int): Long =
-            buf.getIntAsLong(baseOffset + NTP_TS_LSW_OFFSET)
+        fun getNtpTimestampLsw(buf: ByteArray, baseOffset: Int): Long = buf.getIntAsLong(baseOffset + NTP_TS_LSW_OFFSET)
         fun setNtpTimestampLsw(buf: ByteArray, baseOffset: Int, value: Long) =
             buf.putInt(baseOffset + NTP_TS_LSW_OFFSET, value.toInt())
 
-        fun getRtpTimestamp(buf: ByteArray, baseOffset: Int): Long =
-            buf.getIntAsLong(baseOffset + RTP_TS_OFFSET)
+        fun getRtpTimestamp(buf: ByteArray, baseOffset: Int): Long = buf.getIntAsLong(baseOffset + RTP_TS_OFFSET)
         fun setRtpTimestamp(buf: ByteArray, baseOffset: Int, value: Long) =
             buf.putInt(baseOffset + RTP_TS_OFFSET, value.toInt())
 

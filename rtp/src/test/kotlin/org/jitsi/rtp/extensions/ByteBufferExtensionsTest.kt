@@ -191,7 +191,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                 }
                 context("moving the data past the capacity") {
                     val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
-                    shouldThrow<Exception>() {
+                    shouldThrow<Exception> {
                         buf.shiftDataRight(4, 6, 10)
                     }
                 }
@@ -206,7 +206,7 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                 }
                 context("moving the data past the start") {
                     val buf = byteBufferOf(0x01, 0x02, 0x03, 0x04, 0x00, 0x0, 0x00, 0x00)
-                    shouldThrow<Exception>() {
+                    shouldThrow<Exception> {
                         buf.shiftDataLeft(1, 2, 2)
                     }
                 }

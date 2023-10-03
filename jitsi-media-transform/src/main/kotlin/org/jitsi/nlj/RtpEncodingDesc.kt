@@ -69,7 +69,9 @@ constructor(
             require(layer.eid == eid) { "Cannot add layer with EID ${layer.eid} to encoding with EID $eid" }
         }
     }
-    init { validateLayerEids(initialLayers) }
+    init {
+        validateLayerEids(initialLayers)
+    }
 
     private var nominalHeight = initialLayers.getNominalHeight()
 
@@ -114,8 +116,7 @@ constructor(
      * rid). This server-side id is used in the layer lookup table that is
      * maintained in [MediaSourceDesc].
      */
-    fun encodingId(layer: RtpLayerDesc): Long =
-        calcEncodingId(primarySSRC, layer.layerId)
+    fun encodingId(layer: RtpLayerDesc): Long = calcEncodingId(primarySSRC, layer.layerId)
 
     /**
      * Get the secondary ssrc for this encoding that corresponds to the given
@@ -180,8 +181,7 @@ constructor(
     }
 
     companion object {
-        fun calcEncodingId(ssrc: Long, layerId: Int) =
-            ssrc or (layerId.toLong() shl 32)
+        fun calcEncodingId(ssrc: Long, layerId: Int) = ssrc or (layerId.toLong() shl 32)
     }
 }
 

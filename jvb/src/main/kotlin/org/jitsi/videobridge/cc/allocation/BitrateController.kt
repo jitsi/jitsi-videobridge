@@ -179,9 +179,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * Query whether this source is on stage or selected, as of the most recent
      * video constraints
      */
-    fun isOnStageOrSelected(source: MediaSourceDesc) =
-        allocationSettings.onStageSources.contains(source.sourceName) ||
-            allocationSettings.selectedSources.contains(source.sourceName)
+    fun isOnStageOrSelected(source: MediaSourceDesc) = allocationSettings.onStageSources.contains(source.sourceName) ||
+        allocationSettings.selectedSources.contains(source.sourceName)
 
     /**
      * Query whether this allocator has non-zero effective constraints for a given source

@@ -33,14 +33,10 @@ fun ByteArray.getBitsAsInt(byteOffset: Int, bitStartPos: Int, numBits: Int): Int
 fun ByteArray.putNumberAsBits(byteOffset: Int, bitOffset: Int, numBits: Int, value: Number) {
     putBits(byteOffset, bitOffset, value.toByte(), numBits)
 }
-fun ByteArray.getByteAsInt(offset: Int): Int =
-    get(offset).toPositiveInt()
+fun ByteArray.getByteAsInt(offset: Int): Int = get(offset).toPositiveInt()
 
-fun ByteArray.getShortAsInt(offset: Int): Int =
-    getShort(offset).toPositiveInt()
+fun ByteArray.getShortAsInt(offset: Int): Int = getShort(offset).toPositiveInt()
 
-fun ByteArray.get3BytesAsInt(offset: Int): Int =
-    get3Bytes(offset).toPositiveInt()
+fun ByteArray.get3BytesAsInt(offset: Int): Int = get3Bytes(offset).toPositiveInt()
 
-fun ByteArray.getIntAsLong(offset: Int): Long =
-    getInt(offset).toPositiveLong()
+fun ByteArray.getIntAsLong(offset: Int): Long = getInt(offset).toPositiveLong()

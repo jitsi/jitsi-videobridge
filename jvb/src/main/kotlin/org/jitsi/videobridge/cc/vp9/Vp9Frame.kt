@@ -185,7 +185,9 @@ class Vp9Frame internal constructor(
         get() = if (spatialLayer >= 0) spatialLayer else 0
 
     // Validate that the index matches the pictureId
-    init { assert((index and 0x7fff) == pictureId) }
+    init {
+        assert((index and 0x7fff) == pictureId)
+    }
 
     constructor(packet: Vp9Packet, index: Int) : this(
         ssrc = packet.ssrc,

@@ -1204,12 +1204,18 @@ class Vp9AdaptiveSourceProjectionTest {
             }
         }
         companion object {
-            private val vp9PacketTemplate = DatatypeConverter.parseHexBinary( // RTP Header
-                "80" + // V, P, X, CC
-                    "60" + // M, PT
-                    "0000" + // Seq
-                    "00000000" + // TS
-                    "cafebabe" + // SSRC
+            private val vp9PacketTemplate = DatatypeConverter.parseHexBinary(
+                // RTP Header
+                // V, P, X, CC
+                "80" +
+                    // M, PT
+                    "60" +
+                    // Seq
+                    "0000" +
+                    // TS
+                    "00000000" +
+                    // SSRC
+                    "cafebabe" +
                     // VP9 Payload descriptor
                     // I=1,P=0,L=0,F=0,B=1,E=0,V=0,Z=0
                     "88" +
@@ -1394,12 +1400,18 @@ class Vp9AdaptiveSourceProjectionTest {
             }
 
         companion object {
-            private val vp9SvcPacketTemplate = DatatypeConverter.parseHexBinary( // RTP Header
-                "80" + // V, P, X, CC
-                    "60" + // M, PT
-                    "0000" + // Seq
-                    "00000000" + // TS
-                    "cafebabe" + // SSRC
+            private val vp9SvcPacketTemplate = DatatypeConverter.parseHexBinary(
+                // RTP Header
+                // V, P, X, CC
+                "80" +
+                    // M, PT
+                    "60" +
+                    // Seq
+                    "0000" +
+                    // TS
+                    "00000000" +
+                    // SSRC
+                    "cafebabe" +
                     // VP9 Payload descriptor
                     // I=1,P=0,L=1,F=0,B=1,E=0,V=0,Z=0
                     "a8" +

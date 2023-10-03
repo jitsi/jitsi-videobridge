@@ -30,10 +30,9 @@ class UnparsedPacket(
      * Note that we leave the same space at the start as for RTP packets, because an [UnparsedPacket]'s buffer
      * might be used directly to create an [RtpPacket].
      */
-    override fun clone(): UnparsedPacket =
-        UnparsedPacket(
-            cloneBuffer(RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length
-        )
+    override fun clone(): UnparsedPacket = UnparsedPacket(
+        cloneBuffer(RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length
+    )
 }

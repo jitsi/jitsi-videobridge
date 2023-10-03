@@ -54,8 +54,7 @@ class VpxUtils {
          * @return the extended picture ID resulting from doing "start + delta"
          */
         @JvmStatic
-        fun applyExtendedPictureIdDelta(start: Int, delta: Int): Int =
-            (start + delta) and EXTENDED_PICTURE_ID_MASK
+        fun applyExtendedPictureIdDelta(start: Int, delta: Int): Int = (start + delta) and EXTENDED_PICTURE_ID_MASK
 
         /**
          * Returns the delta between two VP8/VP9 Tl0PicIdx values, taking into account
@@ -86,7 +85,6 @@ class VpxUtils {
          * @return the Tl0PicIdx resulting from doing "start + delta"
          */
         @JvmStatic
-        fun applyTl0PicIdxDelta(start: Int, delta: Int): Int =
-            (start + delta) and TL0PICIDX_MASK
+        fun applyTl0PicIdxDelta(start: Int, delta: Int): Int = (start + delta) and TL0PICIDX_MASK
     }
 }

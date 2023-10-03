@@ -301,8 +301,7 @@ class EndpointConnectionStatusMessage(
     /**
      * Serialize manually because it's faster than Jackson.
      */
-    override fun createJson(): String =
-        """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
+    override fun createJson(): String = """{"colibriClass":"$TYPE","endpoint":"$endpoint","active":"$active"}"""
 
     companion object {
         const val TYPE = "EndpointConnectivityStatusChangeEvent"
@@ -442,18 +441,19 @@ class SenderSourceConstraintsMessage(
  */
 class AddReceiverMessage(
     val bridgeId: String,
-    val endpointId: String?, // Used in single stream per endpoint mode and wil be removed
-    val sourceName: String?, // Used in the multi-stream mode
+    // Used in single stream per endpoint mode and wil be removed
+    val endpointId: String?,
+    // Used in the multi-stream mode
+    val sourceName: String?,
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage() {
     /**
      * Serialize manually because it's faster than Jackson.
      */
-    override fun createJson(): String =
-        "{\"colibriClass\":\"$TYPE\",\"bridgeId\":\"$bridgeId\"," +
-            (if (endpointId != null) "\"endpointId\":\"$endpointId\"," else "") +
-            (if (sourceName != null) "\"sourceName\":\"$sourceName\"," else "") +
-            "\"videoConstraints\":$videoConstraints}"
+    override fun createJson(): String = "{\"colibriClass\":\"$TYPE\",\"bridgeId\":\"$bridgeId\"," +
+        (if (endpointId != null) "\"endpointId\":\"$endpointId\"," else "") +
+        (if (sourceName != null) "\"sourceName\":\"$sourceName\"," else "") +
+        "\"videoConstraints\":$videoConstraints}"
 
     companion object {
         const val TYPE = "AddReceiver"
@@ -471,8 +471,7 @@ class RemoveReceiverMessage(
     /**
      * Serialize manually because it's faster than Jackson.
      */
-    override fun createJson(): String =
-        """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
+    override fun createJson(): String = """{"colibriClass":"$TYPE","bridgeId":"$bridgeId","endpointId":"$endpointId"}"""
 
     companion object {
         const val TYPE = "RemoveReceiver"

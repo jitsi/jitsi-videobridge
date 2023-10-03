@@ -87,8 +87,7 @@ class RtcpFbRembPacket(
         const val BR_LEN = 3
         const val SSRCS_OFF = BR_OFF + BR_LEN
 
-        fun getBrExp(buf: ByteArray, baseOffset: Int): Int =
-            buf.getBitsAsInt(baseOffset + BR_OFF, 0, 6)
+        fun getBrExp(buf: ByteArray, baseOffset: Int): Int = buf.getBitsAsInt(baseOffset + BR_OFF, 0, 6)
         fun getBrMantissa(buf: ByteArray, baseOffset: Int): Int =
             (buf.getBitsAsInt(baseOffset + BR_OFF, 6, 2) shl 16) + buf.getShortAsInt(baseOffset + BR_OFF + 1)
         fun getBitrate(buf: ByteArray, baseOffset: Int): Long {
@@ -104,8 +103,7 @@ class RtcpFbRembPacket(
 
             return brBps
         }
-        fun getNumSsrc(buf: ByteArray, baseOffset: Int): Int =
-            buf.getByteAsInt(baseOffset + NUM_SSRC_OFF)
+        fun getNumSsrc(buf: ByteArray, baseOffset: Int): Int = buf.getByteAsInt(baseOffset + NUM_SSRC_OFF)
         fun getSsrc(buf: ByteArray, baseOffset: Int, ssrcIndex: Int) =
             buf.getIntAsLong(baseOffset + SSRCS_OFF + ssrcIndex * 4)
 

@@ -18,5 +18,4 @@ package org.jitsi.nlj.util
 
 import java.time.Instant
 
-fun latest(vararg instants: Instant): Instant =
-    instants.reduce { a, b -> maxOf(a, b) }
+fun latest(vararg instants: Instant): Instant = instants.reduce { a, b -> maxOf(a, b) }

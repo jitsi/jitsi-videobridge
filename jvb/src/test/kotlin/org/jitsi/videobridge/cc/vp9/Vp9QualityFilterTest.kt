@@ -416,7 +416,11 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
         while (g.hasNext() && frames < numFrames) {
             val f = g.next()
 
-            ms = if (f.timestamp != lastTs) { f.timestamp / 90 } else { ms + 1 }
+            ms = if (f.timestamp != lastTs) {
+                f.timestamp / 90
+            } else {
+                ms + 1
+            }
             lastTs = f.timestamp
 
             val result = filter.acceptFrame(
@@ -643,7 +647,8 @@ private class SimulcastFrameGenerator : FrameGenerator() {
         val keyframePicture = (pictureCount % 48) == 0
 
         val f = Vp9Frame(
-            ssrc = enc.toLong(), // Use the encoding ID as the SSRC to make testing easier.
+            // Use the encoding ID as the SSRC to make testing easier.
+            ssrc = enc.toLong(),
             timestamp = pictureCount * 3000L,
             earliestKnownSequenceNumber = pictureCount + (enc * 10000),
             latestKnownSequenceNumber = pictureCount + (enc * 10000),

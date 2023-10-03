@@ -69,21 +69,19 @@ open class ArrayCache<T>(
     /**
      * Inserts an item with a specific index in the cache. Stores a copy.
      */
-    fun insertItem(item: T, index: Int, timeAdded: Long): Boolean =
-        if (synchronize) {
-            synchronized(syncRoot) {
-                doInsert(item, index, timeAdded)
-            }
-        } else {
+    fun insertItem(item: T, index: Int, timeAdded: Long): Boolean = if (synchronize) {
+        synchronized(syncRoot) {
             doInsert(item, index, timeAdded)
         }
+    } else {
+        doInsert(item, index, timeAdded)
+    }
 
     /**
      * Inserts an item with a specific index in the cache, computing time
      * from [clock]. Stores a copy.
      */
-    fun insertItem(item: T, index: Int): Boolean =
-        insertItem(item, index, clock.millis())
+    fun insertItem(item: T, index: Int): Boolean = insertItem(item, index, clock.millis())
 
     private fun doInsert(item: T, index: Int, timeAdded: Long): Boolean {
         val diff = if (head == -1) -1 else index - cache[head].index
@@ -187,14 +185,13 @@ open class ArrayCache<T>(
     /**
      * Updates the [timeAdded] value of an item with a particular index, if it is in the cache.
      */
-    protected fun updateTimeAdded(index: Int, timeAdded: Long) =
-        if (synchronize) {
-            synchronized(syncRoot) {
-                doUpdateTimeAdded(index, timeAdded)
-            }
-        } else {
+    protected fun updateTimeAdded(index: Int, timeAdded: Long) = if (synchronize) {
+        synchronized(syncRoot) {
             doUpdateTimeAdded(index, timeAdded)
         }
+    } else {
+        doUpdateTimeAdded(index, timeAdded)
+    }
 
     private fun doUpdateTimeAdded(index: Int, timeAdded: Long) {
         if (head == -1 || index > cache[head].index) {
@@ -213,14 +210,13 @@ open class ArrayCache<T>(
      * iteration and returns.  Note that if the caller must clone the item on their own if they want to keep or modify
      * it in any way.
      */
-    fun forEachDescending(predicate: (T) -> Boolean) =
-        if (synchronize) {
-            synchronized(syncRoot) {
-                doForEachDescending(predicate)
-            }
-        } else {
+    fun forEachDescending(predicate: (T) -> Boolean) = if (synchronize) {
+        synchronized(syncRoot) {
             doForEachDescending(predicate)
         }
+    } else {
+        doForEachDescending(predicate)
+    }
 
     private fun doForEachDescending(predicate: (T) -> Boolean) {
         if (head == -1) return
@@ -240,14 +236,13 @@ open class ArrayCache<T>(
     /**
      * Removes all items stored in the cache, calling [discardItem] for each one.
      */
-    fun flush() =
-        if (synchronize) {
-            synchronized(syncRoot) {
-                doFlush()
-            }
-        } else {
+    fun flush() = if (synchronize) {
+        synchronized(syncRoot) {
             doFlush()
         }
+    } else {
+        doFlush()
+    }
 
     private fun doFlush() {
         for (container in cache) {

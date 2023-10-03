@@ -79,18 +79,16 @@ class Vp8Utils {
             }
         }
 
-        fun getTemporalLayerIdOfFrame(vp8Payload: ByteBuffer) =
-            DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
-                vp8Payload.array(),
-                vp8Payload.arrayOffset(),
-                vp8Payload.limit()
-            )
+        fun getTemporalLayerIdOfFrame(vp8Payload: ByteBuffer) = DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
+            vp8Payload.array(),
+            vp8Payload.arrayOffset(),
+            vp8Payload.limit()
+        )
 
-        fun getTemporalLayerIdOfFrame(vp8Packet: RtpPacket) =
-            DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
-                vp8Packet.buffer,
-                vp8Packet.payloadOffset,
-                vp8Packet.payloadLength
-            )
+        fun getTemporalLayerIdOfFrame(vp8Packet: RtpPacket) = DePacketizer.VP8PayloadDescriptor.getTemporalLayerIndex(
+            vp8Packet.buffer,
+            vp8Packet.payloadOffset,
+            vp8Packet.payloadLength
+        )
     }
 }

@@ -198,7 +198,10 @@ open class PacketInfo @JvmOverloads constructor(
     fun sent() {
         var actions: List<() -> Unit> = Collections.emptyList()
         synchronized(this) {
-            onSentActions?.let { actions = it; onSentActions = null } ?: run { return@sent }
+            onSentActions?.let {
+                actions = it
+                onSentActions = null
+            } ?: run { return@sent }
         }
         for (action in actions) {
             action.invoke()
@@ -212,6 +215,7 @@ open class PacketInfo @JvmOverloads constructor(
         /**
          * If this is enabled all [Node]s will verify that the payload didn't unexpectedly change. This is expensive.
          */
+        @field:Suppress("ktlint:standard:property-naming")
         var ENABLE_PAYLOAD_VERIFICATION = false
     }
 }

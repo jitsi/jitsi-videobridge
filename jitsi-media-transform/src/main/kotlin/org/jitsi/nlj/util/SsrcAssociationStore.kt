@@ -59,8 +59,7 @@ class SsrcAssociationStore(
         ssrcAssociationsBySecondarySsrc = ssrcAssociations.associateBy(SsrcAssociation::secondarySsrc)
     }
 
-    fun getPrimarySsrc(secondarySsrc: Long): Long? =
-        ssrcAssociationsBySecondarySsrc[secondarySsrc]?.primarySsrc
+    fun getPrimarySsrc(secondarySsrc: Long): Long? = ssrcAssociationsBySecondarySsrc[secondarySsrc]?.primarySsrc
 
     fun getSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? =
         ssrcAssociationsByPrimarySsrc[primarySsrc]?.find { it.type == associationType }?.secondarySsrc

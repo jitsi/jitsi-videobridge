@@ -92,8 +92,7 @@ class SdesChunk(
         const val SSRC_OFFSET = 0
         const val SDES_ITEMS_OFFSET = 4
 
-        fun getSsrc(buf: ByteArray, baseOffset: Int): Long =
-            buf.getIntAsLong(baseOffset + SSRC_OFFSET)
+        fun getSsrc(buf: ByteArray, baseOffset: Int): Long = buf.getIntAsLong(baseOffset + SSRC_OFFSET)
 
         fun getSdesItems(buf: ByteArray, baseOffset: Int): List<SdesItem> {
             var currOffset = baseOffset + SDES_ITEMS_OFFSET
@@ -142,11 +141,9 @@ abstract class SdesItem(
         const val LENGTH_OFFSET = 1
         const val DATA_OFFSET = 2
 
-        fun getType(buf: ByteArray, baseOffset: Int): Int =
-            buf.getByteAsInt(baseOffset + TYPE_OFFSET)
+        fun getType(buf: ByteArray, baseOffset: Int): Int = buf.getByteAsInt(baseOffset + TYPE_OFFSET)
 
-        fun getLength(buf: ByteArray, baseOffset: Int): Int =
-            buf.getByteAsInt(baseOffset + LENGTH_OFFSET)
+        fun getLength(buf: ByteArray, baseOffset: Int): Int = buf.getByteAsInt(baseOffset + LENGTH_OFFSET)
 
         fun copyData(buf: ByteArray, baseOffset: Int, dataLength: Int): ByteArray {
             if (dataLength <= 0) {

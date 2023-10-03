@@ -221,7 +221,9 @@ class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc
      * Fix SSRC and timestamps in an RTCP packet.
      * For packets in the same direction as media flow; feedback messages handled separately.
      */
-    fun rewriteRtcp(packet: RtcpPacket) { getSender(packet.senderSsrc).rewriteRtcp(packet) }
+    fun rewriteRtcp(packet: RtcpPacket) {
+        getSender(packet.senderSsrc).rewriteRtcp(packet)
+    }
 
     /**
      * {@inheritDoc}
@@ -276,7 +278,8 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      */
     private val sendSources = LRUCache<Long, SendSource>(
         size,
-        true // accessOrder
+        // accessOrder
+        true
     )
 
     /**
@@ -449,7 +452,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
 
         synchronized(sendSources) {
             /* Don't activate a source on RTCP. */
-            var rs = receivedSsrcs.get(packet.senderSsrc) ?: return false
+            val rs = receivedSsrcs.get(packet.senderSsrc) ?: return false
             val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreate = false, remappings) ?: return false
             ss.rewriteRtcp(packet)
             logger.debug {
@@ -538,10 +541,10 @@ class AudioSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
      */
     override fun findSourceProps(ssrc: Long): SourceDesc? {
         val p = ep.findAudioSourceProps(ssrc)
-        if (p == null || p.sourceName == null || p.owner == null) {
-            return null
+        return if (p?.sourceName == null || p.owner == null) {
+            null
         } else {
-            return SourceDesc(p)
+            SourceDesc(p)
         }
     }
 
@@ -570,8 +573,7 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
     /**
      * {@inheritDoc}
      */
-    override fun findSourceProps(ssrc: Long): SourceDesc? =
-        ep.findVideoSourceProps(ssrc)?.let { SourceDesc(it) }
+    override fun findSourceProps(ssrc: Long): SourceDesc? = ep.findVideoSourceProps(ssrc)?.let { SourceDesc(it) }
 
     /**
      * {@inheritDoc}

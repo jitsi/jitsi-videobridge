@@ -40,17 +40,16 @@ class BandwidthAllocation @JvmOverloads constructor(
     /**
      * Whether the two allocations have the same endpoints and same layers.
      */
-    fun isTheSameAs(other: BandwidthAllocation) =
-        allocations.size == other.allocations.size &&
-            oversending == other.oversending &&
-            allocations.all { allocation ->
-                other.allocations.any { otherAllocation ->
-                    allocation.endpointId == otherAllocation.endpointId &&
-                        allocation.mediaSource?.primarySSRC ==
-                        otherAllocation.mediaSource?.primarySSRC &&
-                        allocation.targetLayer?.index == otherAllocation.targetLayer?.index
-                }
+    fun isTheSameAs(other: BandwidthAllocation) = allocations.size == other.allocations.size &&
+        oversending == other.oversending &&
+        allocations.all { allocation ->
+            other.allocations.any { otherAllocation ->
+                allocation.endpointId == otherAllocation.endpointId &&
+                    allocation.mediaSource?.primarySSRC ==
+                    otherAllocation.mediaSource?.primarySSRC &&
+                    allocation.targetLayer?.index == otherAllocation.targetLayer?.index
             }
+        }
 
     override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
 

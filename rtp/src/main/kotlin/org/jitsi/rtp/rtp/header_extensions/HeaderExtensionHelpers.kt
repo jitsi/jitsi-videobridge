@@ -44,8 +44,7 @@ abstract class HeaderExtensionParser {
      * Return the entire size, in bytes, of the extension in [buf] whose header
      * starts at [offset]
      */
-    fun getEntireLengthBytes(buf: ByteArray, offset: Int): Int =
-        getDataLengthBytes(buf, offset) + extHeaderSizeBytes
+    fun getEntireLengthBytes(buf: ByteArray, offset: Int): Int = getDataLengthBytes(buf, offset) + extHeaderSizeBytes
 
     /**
      * Return the data size, in bytes, of the extension in [buf] whose header
@@ -60,11 +59,9 @@ object OneByteHeaderExtensionParser : HeaderExtensionParser() {
     override val extHeaderSizeBytes = 1
     override val minimumExtSizeBytes = 2
 
-    override fun isMatchingType(profileField: Int): Boolean =
-        profileField == headerExtensionLabel
+    override fun isMatchingType(profileField: Int): Boolean = profileField == headerExtensionLabel
 
-    override fun getId(buf: ByteArray, offset: Int): Int =
-        (buf[offset].toInt() ushr 4) and 0x0F
+    override fun getId(buf: ByteArray, offset: Int): Int = (buf[offset].toInt() ushr 4) and 0x0F
 
     override fun writeIdAndLength(id: Int, dataLength: Int, buf: ByteArray, offset: Int) {
         require(id in 1..14)
@@ -79,16 +76,15 @@ object OneByteHeaderExtensionParser : HeaderExtensionParser() {
 object TwoByteHeaderExtensionParser : HeaderExtensionParser() {
     /* We don't support "value 256", in the low four bits of the "defined by profile" field. */
     override val headerExtensionLabel = 0x1000
-    private const val headerExtensionMask = 0xFFF0
+    private const val HEADER_EXTENSION_MASK = 0xFFF0
 
     override val extHeaderSizeBytes = 2
     override val minimumExtSizeBytes = 2
 
     override fun isMatchingType(profileField: Int): Boolean =
-        (profileField and headerExtensionMask) == headerExtensionLabel
+        (profileField and HEADER_EXTENSION_MASK) == headerExtensionLabel
 
-    override fun getId(buf: ByteArray, offset: Int): Int =
-        buf[offset].toInt()
+    override fun getId(buf: ByteArray, offset: Int): Int = buf[offset].toInt()
 
     override fun writeIdAndLength(id: Int, dataLength: Int, buf: ByteArray, offset: Int) {
         require(id in 1..255)
@@ -98,8 +94,7 @@ object TwoByteHeaderExtensionParser : HeaderExtensionParser() {
         buf[offset + 1] = dataLength.toByte()
     }
 
-    override fun getDataLengthBytes(buf: ByteArray, offset: Int): Int =
-        buf[offset + 1].toPositiveInt()
+    override fun getDataLengthBytes(buf: ByteArray, offset: Int): Int = buf[offset + 1].toPositiveInt()
 }
 
 private val headerExtensionParsers = arrayOf(OneByteHeaderExtensionParser, TwoByteHeaderExtensionParser)
@@ -116,8 +111,7 @@ class HeaderExtensionHelpers {
          * only be called if it's been verified that the header held in [buf]
          * actually contains extensions
          */
-        fun getExtensionsProfileType(buf: ByteArray, offset: Int) =
-            buf.getShortAsInt(offset)
+        fun getExtensionsProfileType(buf: ByteArray, offset: Int) = buf.getShortAsInt(offset)
 
         /**
          * Return the length of the entire header extensions block, including
