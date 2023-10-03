@@ -113,8 +113,7 @@ class MediaSourceDescTest : ShouldSpec() {
  * @return the subjective quality index of the flow specified in the
  * arguments.
  */
-private fun idx(spatialIdx: Int, temporalIdx: Int, temporalLen: Int) =
-    spatialIdx * temporalLen + temporalIdx
+private fun idx(spatialIdx: Int, temporalIdx: Int, temporalLen: Int) = spatialIdx * temporalLen + temporalIdx
 
 /*
  * Creates layers for an encoding.
@@ -124,12 +123,7 @@ private fun idx(spatialIdx: Int, temporalIdx: Int, temporalLen: Int) =
  * @param height the maximum height of the top spatial layer
  * @return an array that holds the layer descriptions.
  */
-private fun createRTPLayerDescs(
-    spatialLen: Int,
-    temporalLen: Int,
-    encodingIdx: Int,
-    height: Int
-): Array<RtpLayerDesc> {
+private fun createRTPLayerDescs(spatialLen: Int, temporalLen: Int, encodingIdx: Int, height: Int): Array<RtpLayerDesc> {
     val rtpLayers = arrayOfNulls<RtpLayerDesc>(spatialLen * temporalLen)
     for (spatialIdx in 0 until spatialLen) {
         var frameRate = 30.toDouble() / (1 shl temporalLen - 1)

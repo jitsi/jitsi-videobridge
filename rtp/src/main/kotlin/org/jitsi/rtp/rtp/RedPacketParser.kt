@@ -37,10 +37,7 @@ class RedPacketParser<PacketType : RtpPacket>(
      * @param parseRedundancy whether to parse redundancy packets
      * @return The list of parsed redundancy packets.
      */
-    fun decapsulate(
-        rtpPacket: RtpPacket,
-        parseRedundancy: Boolean
-    ): List<PacketType> = with(rtpPacket) {
+    fun decapsulate(rtpPacket: RtpPacket, parseRedundancy: Boolean): List<PacketType> = with(rtpPacket) {
         var currentOffset = payloadOffset
 
         val redundancyBlockHeaders = mutableListOf<RedundancyBlockHeader>()
@@ -214,12 +211,11 @@ class RedundancyBlockHeader(
 }
 
 internal class RtpRedPacket(buffer: ByteArray, offset: Int, length: Int) : RtpPacket(buffer, offset, length) {
-    override fun clone(): RtpRedPacket =
-        RtpRedPacket(
-            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length
-        )
+    override fun clone(): RtpRedPacket = RtpRedPacket(
+        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length
+    )
 
     companion object {
         val parser = RedPacketParser { b, o, l -> RtpPacket(b, o, l) }

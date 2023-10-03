@@ -173,14 +173,12 @@ class DtlsTransport(parentLogger: Logger) {
     /**
      * Notify this layer that DTLS data has been received from the network
      */
-    fun dtlsDataReceived(data: ByteArray, off: Int, len: Int) =
-        dtlsStack.processIncomingProtocolData(data, off, len)
+    fun dtlsDataReceived(data: ByteArray, off: Int, len: Int) = dtlsStack.processIncomingProtocolData(data, off, len)
 
     /**
      * Send out DTLS data
      */
-    fun sendDtlsData(data: ByteArray, off: Int, len: Int) =
-        dtlsStack.sendApplicationData(data, off, len)
+    fun sendDtlsData(data: ByteArray, off: Int, len: Int) = dtlsStack.sendApplicationData(data, off, len)
 
     fun stop() {
         if (running.compareAndSet(true, false)) {

@@ -89,8 +89,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
         }
     }
 
-    fun getCurrentStressLevel(): Double =
-        mostRecentLoadMeasurement?.div(jvbLoadThreshold) ?: 0.0
+    fun getCurrentStressLevel(): Double = mostRecentLoadMeasurement?.div(jvbLoadThreshold) ?: 0.0
 
     fun getStats() = OrderedJsonObject().apply {
         put("state", state.toString())

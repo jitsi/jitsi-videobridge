@@ -115,13 +115,10 @@ class RtcpReportBlock(
             )
         }
 
-        fun getSsrc(buffer: ByteArray, offset: Int): Long =
-            buffer.getIntAsLong(offset + SSRC_OFFSET)
-        fun setSsrc(buf: ByteArray, baseOffset: Int, value: Long) =
-            buf.putInt(baseOffset + SSRC_OFFSET, value.toInt())
+        fun getSsrc(buffer: ByteArray, offset: Int): Long = buffer.getIntAsLong(offset + SSRC_OFFSET)
+        fun setSsrc(buf: ByteArray, baseOffset: Int, value: Long) = buf.putInt(baseOffset + SSRC_OFFSET, value.toInt())
 
-        fun getFractionLost(buffer: ByteArray, offset: Int): Int =
-            buffer.getByteAsInt(offset + FRACTION_LOST_OFFSET)
+        fun getFractionLost(buffer: ByteArray, offset: Int): Int = buffer.getByteAsInt(offset + FRACTION_LOST_OFFSET)
         fun setFractionLost(buf: ByteArray, baseOffset: Int, value: Int) =
             buf.set(baseOffset + FRACTION_LOST_OFFSET, value.toByte())
 

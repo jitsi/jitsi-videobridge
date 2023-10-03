@@ -139,11 +139,10 @@ class XmppConnection : IQListener {
         return true
     }
 
-    private fun MucClientConfiguration.matches(other: MucClientConfiguration) =
-        hostname == other.hostname &&
-            port == other.port &&
-            domain == other.domain &&
-            username == other.username
+    private fun MucClientConfiguration.matches(other: MucClientConfiguration) = hostname == other.hostname &&
+        port == other.port &&
+        domain == other.domain &&
+        username == other.username
 
     /**
      * Returns ids of [MucClient] that have been added.
@@ -183,7 +182,10 @@ class XmppConnection : IQListener {
         if (iq == null) {
             return null
         }
-        logger.cdebug { "RECV: ${iq.toXML()}" }
+        // colibri2 requests are logged at the conference level.
+        if (iq !is ConferenceModifyIQ) {
+            logger.cdebug { "RECV: ${iq.toXML()}" }
+        }
 
         return when (iq.type) {
             IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient)?.also {
@@ -208,7 +210,6 @@ class XmppConnection : IQListener {
                 handler.colibriRequestReceived(
                     ColibriRequest(iq, colibriDelayStats, colibriProcessingDelayStats) { response ->
                         response.setResponseTo(iq)
-                        logger.debug { "SENT: ${response.toXML()}" }
                         mucClient.sendStanza(response)
                     }
                 )

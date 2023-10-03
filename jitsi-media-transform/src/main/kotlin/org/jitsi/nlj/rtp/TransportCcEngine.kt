@@ -256,7 +256,9 @@ class TransportCcEngine(
      * [PacketDetailState] is the state of a [PacketDetail]
      */
     private enum class PacketDetailState {
-        Unreported, ReportedLost, ReportedReceived
+        Unreported,
+        ReportedLost,
+        ReportedReceived
     }
 
     /**

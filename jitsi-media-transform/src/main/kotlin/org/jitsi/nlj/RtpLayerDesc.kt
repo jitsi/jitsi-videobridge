@@ -49,9 +49,9 @@ constructor(
     /**
      * The max height of the bitstream that this instance represents. The actual
      * height may be less due to bad network or system load.
+     *
+     * XXX we should be able to sniff the actual height from the RTP packets.
      */
-    // XXX we should be able to sniff the actual height from the RTP
-    // packets.
     val height: Int,
     /**
      * The max frame rate (in fps) of the bitstream that this instance
@@ -287,11 +287,10 @@ constructor(
          * Get a string description of a layer index.
          */
         @JvmStatic
-        fun indexString(index: Int): String =
-            if (index == SUSPENDED_INDEX) {
-                "SUSP"
-            } else {
-                "E${getEidFromIndex(index)}S${getSidFromIndex(index)}T${getTidFromIndex(index)}"
-            }
+        fun indexString(index: Int): String = if (index == SUSPENDED_INDEX) {
+            "SUSP"
+        } else {
+            "E${getEidFromIndex(index)}S${getSidFromIndex(index)}T${getTidFromIndex(index)}"
+        }
     }
 }

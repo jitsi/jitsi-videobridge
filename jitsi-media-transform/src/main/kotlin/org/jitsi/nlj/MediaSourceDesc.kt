@@ -87,19 +87,21 @@ class MediaSourceDesc
     private fun updateLayerCache() {
         layersById.clear()
         layersByIndex.clear()
-        val layers_ = ArrayList<RtpLayerDesc>()
+        val tempLayers = ArrayList<RtpLayerDesc>()
 
         for (encoding in rtpEncodings) {
             for (layer in encoding.layers) {
                 layersById[encoding.encodingId(layer)] = layer
                 layersByIndex[layer.index] = layer
-                layers_.add(layer)
+                tempLayers.add(layer)
             }
         }
-        layers = Collections.unmodifiableList(layers_)
+        layers = Collections.unmodifiableList(tempLayers)
     }
 
-    init { updateLayerCache() }
+    init {
+        updateLayerCache()
+    }
 
     /**
      * Gets the last "stable" bitrate (in bps) of the encoding of the specified
@@ -126,15 +128,13 @@ class MediaSourceDesc
     fun hasRtpLayers(): Boolean = layers.isNotEmpty()
 
     @Synchronized
-    fun numRtpLayers(): Int =
-        layersByIndex.size
+    fun numRtpLayers(): Int = layersByIndex.size
 
     val primarySSRC: Long
         get() = rtpEncodings[0].primarySSRC
 
     @Synchronized
-    fun getRtpLayerByQualityIdx(idx: Int): RtpLayerDesc? =
-        layersByIndex[idx]
+    fun getRtpLayerByQualityIdx(idx: Int): RtpLayerDesc? = layersByIndex[idx]
 
     @Synchronized
     fun findRtpLayerDesc(videoRtpPacket: VideoRtpPacket): RtpLayerDesc? {
@@ -147,8 +147,7 @@ class MediaSourceDesc
     }
 
     @Synchronized
-    fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? =
-        rtpEncodings.find { it.matches(ssrc) }
+    fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? = rtpEncodings.find { it.matches(ssrc) }
 
     @Synchronized
     fun setEncodingLayers(layers: Array<RtpLayerDesc>, ssrc: Long) {

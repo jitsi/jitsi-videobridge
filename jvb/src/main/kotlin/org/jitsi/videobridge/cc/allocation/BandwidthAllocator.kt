@@ -297,26 +297,25 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     }
 
     @Synchronized
-    private fun createAllocations(
-        conferenceMediaSources: List<MediaSourceDesc>
-    ): List<SingleSourceAllocation> = conferenceMediaSources.map { source ->
-        SingleSourceAllocation(
-            source.owner,
-            source,
-            // Note that we use the effective constraints and not the receiver's constraints
-            // directly. This means we never even try to allocate bitrate to sources "outside
-            // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
-            // stream with bitrate higher that the available bandwidth, we will forward no
-            // video at all instead of going to the second endpoint in the list.
-            // I think this is not desired behavior. However, it is required for the "effective
-            // constraints" to work as designed.
-            effectiveConstraints[source]!!,
-            allocationSettings.onStageSources.contains(source.sourceName),
-            diagnosticContext,
-            clock,
-            logger
-        )
-    }.toList()
+    private fun createAllocations(conferenceMediaSources: List<MediaSourceDesc>): List<SingleSourceAllocation> =
+        conferenceMediaSources.map { source ->
+            SingleSourceAllocation(
+                source.owner,
+                source,
+                // Note that we use the effective constraints and not the receiver's constraints
+                // directly. This means we never even try to allocate bitrate to sources "outside
+                // lastN". For example, if LastN=1 and the first endpoint sends a non-scalable
+                // stream with bitrate higher that the available bandwidth, we will forward no
+                // video at all instead of going to the second endpoint in the list.
+                // I think this is not desired behavior. However, it is required for the "effective
+                // constraints" to work as designed.
+                effectiveConstraints[source]!!,
+                allocationSettings.onStageSources.contains(source.sourceName),
+                diagnosticContext,
+                clock,
+                logger
+            )
+        }.toList()
 
     /**
      * Expire this bandwidth allocator.

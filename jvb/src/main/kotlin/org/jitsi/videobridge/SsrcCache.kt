@@ -220,7 +220,9 @@ class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc
      * Fix SSRC and timestamps in an RTCP packet.
      * For packets in the same direction as media flow; feedback messages handled separately.
      */
-    fun rewriteRtcp(packet: RtcpPacket) { getSender(packet.senderSsrc).rewriteRtcp(packet) }
+    fun rewriteRtcp(packet: RtcpPacket) {
+        getSender(packet.senderSsrc).rewriteRtcp(packet)
+    }
 
     /**
      * {@inheritDoc}
@@ -275,7 +277,8 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      */
     private val sendSources = LRUCache<Long, SendSource>(
         size,
-        true // accessOrder
+        // accessOrder
+        true
     )
 
     /**
@@ -569,8 +572,7 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
     /**
      * {@inheritDoc}
      */
-    override fun findSourceProps(ssrc: Long): SourceDesc? =
-        ep.findVideoSourceProps(ssrc)?.let { SourceDesc(it) }
+    override fun findSourceProps(ssrc: Long): SourceDesc? = ep.findVideoSourceProps(ssrc)?.let { SourceDesc(it) }
 
     /**
      * {@inheritDoc}

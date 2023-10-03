@@ -38,8 +38,7 @@ fun ByteArray.putBits(byteIndex: Int, destBitPos: Int, src: Byte, numBits: Int) 
     set(byteIndex, byte)
 }
 
-fun ByteArray.getBitAsBool(byteOffset: Int, bitOffset: Int): Boolean =
-    get(byteOffset).getBitAsBool(bitOffset)
+fun ByteArray.getBitAsBool(byteOffset: Int, bitOffset: Int): Boolean = get(byteOffset).getBitAsBool(bitOffset)
 
 fun ByteArray.putBitAsBoolean(byteIndex: Int, destBitPos: Int, isSet: Boolean) {
     var byte = get(byteIndex)

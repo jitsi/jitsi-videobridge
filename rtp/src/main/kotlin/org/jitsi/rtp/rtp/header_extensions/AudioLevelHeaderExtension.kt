@@ -36,11 +36,9 @@ class AudioLevelHeaderExtension {
 
         fun getAudioLevel(ext: RtpPacket.HeaderExtension): Int = getAudioLevel(ext.buffer, ext.dataOffset)
 
-        private fun getAudioLevel(buf: ByteArray, offset: Int): Int =
-            (buf[offset] and AUDIO_LEVEL_MASK).toPositiveInt()
+        private fun getAudioLevel(buf: ByteArray, offset: Int): Int = (buf[offset] and AUDIO_LEVEL_MASK).toPositiveInt()
 
         fun getVad(ext: RtpPacket.HeaderExtension): Boolean = getVad(ext.buffer, ext.dataOffset)
-        private fun getVad(buf: ByteArray, offset: Int): Boolean =
-            (buf[offset].toInt() and 0x80) != 0
+        private fun getVad(buf: ByteArray, offset: Int): Boolean = (buf[offset].toInt() and 0x80) != 0
     }
 }

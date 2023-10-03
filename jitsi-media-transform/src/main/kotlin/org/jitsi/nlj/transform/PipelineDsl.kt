@@ -48,7 +48,9 @@ class PipelineBuilder {
     }
 
     fun node(node: Node, condition: () -> Boolean = { true }) {
-        if (condition()) { addNode(node) }
+        if (condition()) {
+            addNode(node)
+        }
     }
 
     /**

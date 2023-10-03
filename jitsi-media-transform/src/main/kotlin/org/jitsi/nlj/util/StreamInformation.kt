@@ -205,8 +205,7 @@ class StreamInformationStoreImpl : StreamInformationStore {
     // NOTE(brian): Currently, we only have a use case to do a mapping of
     // secondary -> primary for local SSRCs and primary -> secondary for
     // remote SSRCs
-    override fun getLocalPrimarySsrc(secondarySsrc: Long): Long? =
-        localSsrcAssociations.getPrimarySsrc(secondarySsrc)
+    override fun getLocalPrimarySsrc(secondarySsrc: Long): Long? = localSsrcAssociations.getPrimarySsrc(secondarySsrc)
 
     override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? =
         remoteSsrcAssociations.getSecondarySsrc(primarySsrc, associationType)
@@ -218,11 +217,9 @@ class StreamInformationStoreImpl : StreamInformationStore {
         }
     }
 
-    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) =
-        receiveSsrcStore.addReceiveSsrc(ssrc, mediaType)
+    override fun addReceiveSsrc(ssrc: Long, mediaType: MediaType) = receiveSsrcStore.addReceiveSsrc(ssrc, mediaType)
 
-    override fun removeReceiveSsrc(ssrc: Long) =
-        receiveSsrcStore.removeReceiveSsrc(ssrc)
+    override fun removeReceiveSsrc(ssrc: Long) = receiveSsrcStore.removeReceiveSsrc(ssrc)
 
     override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Stream Information Store").apply {
         addBlock(

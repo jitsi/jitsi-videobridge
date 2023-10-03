@@ -46,5 +46,4 @@ data class VideoConstraints @JvmOverloads constructor(
     }
 }
 
-fun Map<String, VideoConstraints>.prettyPrint(): String =
-    entries.joinToString { "${it.key}->${it.value.maxHeight}" }
+fun Map<String, VideoConstraints>.prettyPrint(): String = entries.joinToString { "${it.key}->${it.value.maxHeight}" }

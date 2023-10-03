@@ -33,14 +33,11 @@ class DataSize(
     val kiloBytes: Double = bytes / 1000.0
     val megaBytes: Double = kiloBytes / 1000.0
 
-    operator fun minus(other: DataSize): DataSize =
-        DataSize(bits - other.bits)
+    operator fun minus(other: DataSize): DataSize = DataSize(bits - other.bits)
 
-    operator fun plus(other: DataSize): DataSize =
-        DataSize(bits + other.bits)
+    operator fun plus(other: DataSize): DataSize = DataSize(bits + other.bits)
 
-    operator fun times(other: Int): DataSize =
-        DataSize(bits * other)
+    operator fun times(other: Int): DataSize = DataSize(bits * other)
 
     operator fun times(other: Double): DataSize =
         DataSize((bits * other).roundToLong())

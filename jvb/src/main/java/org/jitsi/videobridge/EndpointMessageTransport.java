@@ -151,9 +151,9 @@ public class EndpointMessageTransport
 
         Conference conference = endpoint.getConference();
 
-        if (conference == null || conference.isExpired())
+        if (conference.isExpired())
         {
-            getLogger().warn("Unable to forward SourceVideoTypeMessage, conference is null or expired");
+            getLogger().warn("Unable to forward SourceVideoTypeMessage, conference is expired");
             return null;
         }
 

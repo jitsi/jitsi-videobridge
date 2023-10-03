@@ -100,7 +100,6 @@ enum class RtpExtensionType(val uri: String) {
 
     companion object {
         private val uriMap = RtpExtensionType.values().associateBy(RtpExtensionType::uri)
-        fun createFromUri(uri: String): RtpExtensionType? =
-            uriMap.getOrDefault(uri, null)
+        fun createFromUri(uri: String): RtpExtensionType? = uriMap.getOrDefault(uri, null)
     }
 }

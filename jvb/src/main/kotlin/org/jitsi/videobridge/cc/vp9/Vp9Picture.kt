@@ -42,8 +42,7 @@ class Vp9Picture(packet: Vp9Packet, index: Int) {
 
     fun frame(packet: Vp9Packet) = frame(packet.effectiveSpatialLayerIndex)
 
-    private fun setFrameAtSid(frame: Vp9Frame, sid: Int) =
-        frames.setAndExtend(sid, frame, null)
+    private fun setFrameAtSid(frame: Vp9Frame, sid: Int) = frames.setAndExtend(sid, frame, null)
 
     /**
      * Return the first (lowest-sid, earliest in decoding order) frame that we've received so far.

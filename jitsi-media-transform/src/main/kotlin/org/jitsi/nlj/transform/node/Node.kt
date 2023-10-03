@@ -130,7 +130,10 @@ sealed class Node(
     abstract fun trace(f: () -> Unit)
 
     companion object {
+        @field:Suppress("ktlint:standard:property-naming")
         var TRACE_ENABLED = false
+
+        @field:Suppress("ktlint:standard:property-naming")
         var PLUGINS_ENABLED = false
 
         // 'Plugins' are observers which, when enabled, will be passed every packet that passes through
