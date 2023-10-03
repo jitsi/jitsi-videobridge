@@ -60,8 +60,10 @@ fun prioritize(
 /**
  * Return the "effective" constraints for the given media sources, i.e. the constraints adjusted for LastN.
  */
-fun getEffectiveConstraints(sources: List<MediaSourceDesc>, allocationSettings: AllocationSettings):
-    EffectiveConstraintsMap {
+fun getEffectiveConstraints(
+    sources: List<MediaSourceDesc>,
+    allocationSettings: AllocationSettings
+): EffectiveConstraintsMap {
     // FIXME figure out before merge - is using source count instead of endpoints
     // Add 1 for the receiver endpoint, which is not in the list.
     val effectiveLastN = effectiveLastN(allocationSettings.lastN, sources.size + 1)

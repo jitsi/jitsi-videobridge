@@ -35,8 +35,8 @@ class JvbVersionService : VersionService {
 
     override fun parseVersionString(version: String?): Version {
         val matcher = Pattern.compile("(\\d*)\\.(\\d*)-(.*)").matcher(version ?: "").apply { find() }
-        val majorVersion = matcher.groupOrNull(1)?.toInt() ?: defaultMajorVersion
-        val minorVersion = matcher.groupOrNull(2)?.toInt() ?: defaultMinorVersion
+        val majorVersion = matcher.groupOrNull(1)?.toInt() ?: DEFAULT_MAJOR_VERSION
+        val minorVersion = matcher.groupOrNull(2)?.toInt() ?: DEFAULT_MINOR_VERSION
         val buildId = matcher.groupOrNull(3) ?: defaultBuildId
 
         return VersionImpl(
@@ -48,8 +48,8 @@ class JvbVersionService : VersionService {
     }
 
     companion object {
-        private const val defaultMajorVersion = 2
-        private const val defaultMinorVersion = 1
+        private const val DEFAULT_MAJOR_VERSION = 2
+        private const val DEFAULT_MINOR_VERSION = 1
         private val defaultBuildId: String? = null
     }
 }

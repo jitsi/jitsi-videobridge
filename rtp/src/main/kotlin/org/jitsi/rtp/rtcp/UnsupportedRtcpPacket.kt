@@ -25,6 +25,5 @@ class UnsupportedRtcpPacket(
     offset: Int,
     packetLengthBytes: Int
 ) : RtcpPacket(buf, offset, packetLengthBytes) {
-    override fun clone(): UnsupportedRtcpPacket =
-        UnsupportedRtcpPacket(cloneBuffer(0), 0, length)
+    override fun clone(): UnsupportedRtcpPacket = UnsupportedRtcpPacket(cloneBuffer(0), 0, length)
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming", "ktlint:standard:function-naming")
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc
 
@@ -145,8 +146,7 @@ class LastChunk {
      * S = symbol
      * Run Length = Unsigned integer denoting the run length of the symbol
      */
-    private fun EncodeRunLength(): Chunk =
-        ((delta_sizes_[0] shl 13) or size_)
+    private fun EncodeRunLength(): Chunk = ((delta_sizes_[0] shl 13) or size_)
 
     private fun DecodeRunLength(chunk: Chunk, max_count: Int) {
         size_ = min(chunk and 0x1fff, max_count)

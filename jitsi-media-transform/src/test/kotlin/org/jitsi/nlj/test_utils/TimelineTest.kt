@@ -40,5 +40,4 @@ internal class TimelineTest(private val clock: FakeClock) {
     }
 }
 
-internal fun timeline(clock: FakeClock, block: TimelineTest.() -> Unit): TimelineTest =
-    TimelineTest(clock).apply(block)
+internal fun timeline(clock: FakeClock, block: TimelineTest.() -> Unit): TimelineTest = TimelineTest(clock).apply(block)

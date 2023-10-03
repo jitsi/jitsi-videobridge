@@ -99,7 +99,7 @@ class IncomingStatisticsSnapshot(
     val ssrcStats: Map<Long, IncomingSsrcStats.Snapshot>
 ) {
     fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
-        ssrcStats.forEach() { (ssrc, snapshot) ->
+        ssrcStats.forEach { (ssrc, snapshot) ->
             put(ssrc, snapshot.toJson())
         }
     }
@@ -233,11 +233,7 @@ class IncomingSsrcStats(
      * raw RTP timestamp, but the 'translated' timestamp which is a function of the RTP timestamp and the clockrate)
      * and was received at [packetReceivedTime]
      */
-    fun packetReceived(
-        packet: RtpPacket,
-        packetSentTimestamp: Instant,
-        packetReceivedTime: Instant
-    ) {
+    fun packetReceived(packet: RtpPacket, packetSentTimestamp: Instant, packetReceivedTime: Instant) {
         val packetSequenceNumber = packet.sequenceNumber
         synchronized(statsLock) {
             activitySinceLastSnapshot = true

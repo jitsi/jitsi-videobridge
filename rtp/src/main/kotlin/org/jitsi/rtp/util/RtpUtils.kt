@@ -34,14 +34,13 @@ class RtpUtils {
         /**
          * Get the number of bytes needed to pad [dataSizeBytes] bytes to a 4-byte word boundary.
          */
-        fun getNumPaddingBytes(dataSizeBytes: Int): Int =
-            when (dataSizeBytes % 4) {
-                0 -> 0
-                1 -> 3
-                2 -> 2
-                3 -> 1
-                else -> 0 // The above is exhaustive.
-            }
+        fun getNumPaddingBytes(dataSizeBytes: Int): Int = when (dataSizeBytes % 4) {
+            0 -> 0
+            1 -> 3
+            2 -> 2
+            3 -> 1
+            else -> 0 // The above is exhaustive.
+        }
 
         /**
          * Returns the delta between two RTP sequence numbers, taking into account
@@ -52,8 +51,7 @@ class RtpUtils {
          * @return the delta between two RTP sequence numbers (modulo 2^16).
          */
         @JvmStatic
-        fun getSequenceNumberDelta(a: Int, b: Int): Int =
-            getSequenceNumberDeltaAsShort(a, b).toInt()
+        fun getSequenceNumberDelta(a: Int, b: Int): Int = getSequenceNumberDeltaAsShort(a, b).toInt()
 
         /**
          * Like [getSequenceNumberDelta], but returning the delta as a [Short].
@@ -74,8 +72,7 @@ class RtpUtils {
          * @return the sequence number resulting from doing "start + delta"
          */
         @JvmStatic
-        fun applySequenceNumberDelta(start: Int, delta: Int): Int =
-            (start + delta) and 0xffff
+        fun applySequenceNumberDelta(start: Int, delta: Int): Int = (start + delta) and 0xffff
 
         /**
          * Apply a delta to a given RTP timestamp and return the result (taking
@@ -85,32 +82,26 @@ class RtpUtils {
          * @return the timestamp result from doing "start + delta"
          */
         @JvmStatic
-        fun applyTimestampDelta(start: Long, delta: Long): Long =
-            (start + delta) and 0xffff_ffffL
+        fun applyTimestampDelta(start: Long, delta: Long): Long = (start + delta) and 0xffff_ffffL
 
         @JvmStatic
-        fun isNewerSequenceNumberThan(a: Int, b: Int): Boolean =
-            getSequenceNumberDeltaAsShort(a, b) > 0
+        fun isNewerSequenceNumberThan(a: Int, b: Int): Boolean = getSequenceNumberDeltaAsShort(a, b) > 0
 
         @JvmStatic
-        fun isOlderSequenceNumberThan(a: Int, b: Int): Boolean =
-            getSequenceNumberDeltaAsShort(a, b) < 0
+        fun isOlderSequenceNumberThan(a: Int, b: Int): Boolean = getSequenceNumberDeltaAsShort(a, b) < 0
 
         @JvmStatic
-        fun isNewerTimestampThan(a: Long, b: Long): Boolean =
-            getTimestampDiffAsInt(a, b) > 0
+        fun isNewerTimestampThan(a: Long, b: Long): Boolean = getTimestampDiffAsInt(a, b) > 0
 
         @JvmStatic
-        fun isOlderTimestampThan(a: Long, b: Long): Boolean =
-            getTimestampDiffAsInt(a, b) < 0
+        fun isOlderTimestampThan(a: Long, b: Long): Boolean = getTimestampDiffAsInt(a, b) < 0
 
         /**
          * Returns the difference between two RTP timestamps.
          * @return the difference between two RTP timestamps.
          */
         @JvmStatic
-        fun getTimestampDiff(a: Long, b: Long): Long =
-            getTimestampDiffAsInt(a, b).toLong()
+        fun getTimestampDiff(a: Long, b: Long): Long = getTimestampDiffAsInt(a, b).toLong()
 
         /**
          * Returns the difference between two RTP timestamps as an [Int].
@@ -163,27 +154,21 @@ fun Byte.isPadding(): Boolean = this == 0x00.toByte()
  * Returns true if the RTP sequence number represented by [this] represents a more recent RTP packet than the one
  * represented by [otherSeqNum]
  */
-infix fun Int.isNewerThan(otherSeqNum: Int): Boolean =
-    RtpUtils.isNewerSequenceNumberThan(this, otherSeqNum)
+infix fun Int.isNewerThan(otherSeqNum: Int): Boolean = RtpUtils.isNewerSequenceNumberThan(this, otherSeqNum)
 
-infix fun Int.isOlderThan(otherSeqNum: Int): Boolean =
-    RtpUtils.isOlderSequenceNumberThan(this, otherSeqNum)
+infix fun Int.isOlderThan(otherSeqNum: Int): Boolean = RtpUtils.isOlderSequenceNumberThan(this, otherSeqNum)
 
-infix fun Long.isNewerTimestampThan(otherTimestamp: Long): Boolean =
-    RtpUtils.isNewerTimestampThan(this, otherTimestamp)
+infix fun Long.isNewerTimestampThan(otherTimestamp: Long): Boolean = RtpUtils.isNewerTimestampThan(this, otherTimestamp)
 
-infix fun Long.isOlderTimestampThan(otherTimestamp: Long): Boolean =
-    RtpUtils.isOlderTimestampThan(this, otherTimestamp)
+infix fun Long.isOlderTimestampThan(otherTimestamp: Long): Boolean = RtpUtils.isOlderTimestampThan(this, otherTimestamp)
 
 /**
  * Returns true if getting to [otherSeqNum] from the current sequence number involves wrapping around
  */
 infix fun Int.rolledOverTo(otherSeqNum: Int): Boolean =
-    /**
-     * If, according to [isOlderThan], [this] is older than [otherSeqNum] and
-     * yet [otherSeqNum] is less than [this], then we wrapped around to get from [this] to
-     * [otherSeqNum]
-     */
+    // If, according to [isOlderThan], [this] is older than [otherSeqNum] and
+    // yet [otherSeqNum] is less than [this], then we wrapped around to get from [this] to
+    // [otherSeqNum]
     this isOlderThan otherSeqNum && otherSeqNum < this
 
 /**

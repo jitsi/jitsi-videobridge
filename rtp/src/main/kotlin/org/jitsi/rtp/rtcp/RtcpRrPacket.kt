@@ -76,8 +76,7 @@ data class RtcpRrPacketBuilder(
         require(reportBlocks.size <= 31) { "Too many report blocks ${reportBlocks.size}: RR can contain at most 31" }
     }
 
-    private fun getLengthValue(): Int =
-        RtpUtils.calculateRtcpLengthFieldValue(sizeBytes)
+    private fun getLengthValue(): Int = RtpUtils.calculateRtcpLengthFieldValue(sizeBytes)
 
     private val sizeBytes: Int
         get() = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES

@@ -23,10 +23,9 @@ open class AudioRtpPacket(
     length: Int
 ) : RtpPacket(buffer, offset, length) {
 
-    override fun clone(): AudioRtpPacket =
-        AudioRtpPacket(
-            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length
-        )
+    override fun clone(): AudioRtpPacket = AudioRtpPacket(
+        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length
+    )
 }

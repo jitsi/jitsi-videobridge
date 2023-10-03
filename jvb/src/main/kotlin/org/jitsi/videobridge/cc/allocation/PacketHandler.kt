@@ -173,7 +173,9 @@ internal class PacketHandler(
 
     fun timeSinceFirstMedia(): Duration = firstMedia?.let { Duration.between(it, clock.instant()) } ?: Duration.ZERO
 
-    fun addPayloadType(payloadType: PayloadType) { payloadTypes[payloadType.pt] = payloadType }
+    fun addPayloadType(payloadType: PayloadType) {
+        payloadTypes[payloadType.pt] = payloadType
+    }
 
     val debugState: JSONObject
         get() = JSONObject().apply {

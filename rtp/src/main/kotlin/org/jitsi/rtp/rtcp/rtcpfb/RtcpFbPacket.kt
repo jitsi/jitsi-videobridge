@@ -62,8 +62,7 @@ abstract class RtcpFbPacket(
         const val HEADER_SIZE = RtcpHeader.SIZE_BYTES + 4
         const val FCI_OFFSET = HEADER_SIZE
 
-        fun getFmt(buf: ByteArray, baseOffset: Int): Int =
-            RtcpHeader.getReportCount(buf, baseOffset)
+        fun getFmt(buf: ByteArray, baseOffset: Int): Int = RtcpHeader.getReportCount(buf, baseOffset)
         fun getMediaSourceSsrc(buf: ByteArray, baseOffset: Int): Long =
             buf.getInt(baseOffset + MEDIA_SOURCE_SSRC_OFFSET).toPositiveLong()
         fun setMediaSourceSsrc(buf: ByteArray, baseOffset: Int, value: Long) =

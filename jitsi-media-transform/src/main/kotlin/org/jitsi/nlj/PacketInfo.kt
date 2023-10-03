@@ -215,6 +215,7 @@ open class PacketInfo @JvmOverloads constructor(
         /**
          * If this is enabled all [Node]s will verify that the payload didn't unexpectedly change. This is expensive.
          */
+        @field:Suppress("ktlint:standard:property-naming")
         var ENABLE_PAYLOAD_VERIFICATION = false
     }
 }

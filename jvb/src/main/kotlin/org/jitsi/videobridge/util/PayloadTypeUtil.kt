@@ -60,10 +60,7 @@ class PayloadTypeUtil {
          * @param ext the XML extension which describes the payload type.
          */
         @JvmStatic
-        fun create(
-            ext: PayloadTypePacketExtension,
-            mediaType: MediaType
-        ): PayloadType? {
+        fun create(ext: PayloadTypePacketExtension, mediaType: MediaType): PayloadType? {
             val parameters: MutableMap<String, String> = ConcurrentHashMap()
             ext.parameters.forEach { parameter ->
                 // In SDP, format parameters don't necessarily come in name=value pairs (see e.g. the format used in

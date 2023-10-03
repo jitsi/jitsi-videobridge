@@ -30,11 +30,9 @@ value class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
     val mbps: Double
         get() = bps / (1000 * 1000)
 
-    operator fun minus(other: Bandwidth): Bandwidth =
-        Bandwidth(bps - other.bps)
+    operator fun minus(other: Bandwidth): Bandwidth = Bandwidth(bps - other.bps)
 
-    operator fun plus(other: Bandwidth): Bandwidth =
-        Bandwidth(bps + other.bps)
+    operator fun plus(other: Bandwidth): Bandwidth = Bandwidth(bps + other.bps)
 
     /**
      * For multiplication, we support multiplying against
@@ -45,25 +43,20 @@ value class Bandwidth(val bps: Double) : Comparable<Bandwidth> {
      *
      * to reduce 'currentBandwidth' by 5%
      */
-    operator fun times(other: Double): Bandwidth =
-        Bandwidth(bps * other)
+    operator fun times(other: Double): Bandwidth = Bandwidth(bps * other)
 
-    operator fun times(other: Int): Bandwidth =
-        Bandwidth(bps * other)
+    operator fun times(other: Int): Bandwidth = Bandwidth(bps * other)
 
     /**
      * For division, we support both dividing by
      * a normal number (giving a bandwidth), and dividing
      * by another bandwidth, giving a number
      */
-    operator fun div(other: Double): Bandwidth =
-        Bandwidth(bps / other)
+    operator fun div(other: Double): Bandwidth = Bandwidth(bps / other)
 
-    operator fun div(other: Int): Bandwidth =
-        Bandwidth(bps / other)
+    operator fun div(other: Int): Bandwidth = Bandwidth(bps / other)
 
-    operator fun div(other: Bandwidth): Double =
-        bps / other.bps
+    operator fun div(other: Bandwidth): Double = bps / other.bps
 
     override fun compareTo(other: Bandwidth): Int = sign(bps - other.bps).toInt()
 

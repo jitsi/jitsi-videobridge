@@ -35,15 +35,18 @@ class SingleSourceAllocationTest : ShouldSpec() {
     private val clock = FakeClock()
     private val diagnosticContext = DiagnosticContext()
 
-    private val ld7_5 = MockRtpLayerDesc(tid = 0, eid = 0, height = 180, frameRate = 7.5, bitrate = bitrateLd * 0.33)
+    private val ld7point5 =
+        MockRtpLayerDesc(tid = 0, eid = 0, height = 180, frameRate = 7.5, bitrate = bitrateLd * 0.33)
     private val ld15 = MockRtpLayerDesc(tid = 1, eid = 0, height = 180, frameRate = 15.0, bitrate = bitrateLd * 0.66)
     private val ld30 = MockRtpLayerDesc(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = bitrateLd)
 
-    private val sd7_5 = MockRtpLayerDesc(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = bitrateSd * 0.33)
+    private val sd7point5 =
+        MockRtpLayerDesc(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = bitrateSd * 0.33)
     private val sd15 = MockRtpLayerDesc(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = bitrateSd * 0.66)
     private val sd30 = MockRtpLayerDesc(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = bitrateSd)
 
-    private val hd7_5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = bitrateHd * 0.33)
+    private val hd7point5 =
+        MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = bitrateHd * 0.33)
     private val hd15 = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = bitrateHd * 0.66)
     private val hd30 = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = bitrateHd)
 
@@ -53,12 +56,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val endpointId = "A"
                 val mediaSource = MediaSourceDesc(
                     arrayOf(
-                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        RtpEncodingDesc(1L, arrayOf(ld7point5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7point5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))
                     ),
-                    sourceName = sourceName,
-                    owner = owner,
+                    sourceName = SOURCE_NAME,
+                    owner = OWNER,
                     videoType = VideoType.CAMERA
                 )
 
@@ -77,7 +80,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // "preferred FPS") layers for higher resolutions.
                     allocation.preferredLayer shouldBe sd30
                     allocation.oversendLayer shouldBe null
-                    allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd30, hd30)
+                    allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30, sd30, hd30)
                 }
                 context("With constraints") {
                     val allocation =
@@ -94,16 +97,16 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // "preferred FPS") layers for higher resolutions.
                     allocation.preferredLayer shouldBe sd30
                     allocation.oversendLayer shouldBe null
-                    allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd30)
+                    allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30, sd30)
                 }
                 context("With constraints unmet by any layer") {
                     // Single high-res stream with 3 temporal layers.
                     val endpointId = "A"
                     val mediaSource = MediaSourceDesc(
                         // No simulcast.
-                        arrayOf(RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))),
-                        sourceName = sourceName,
-                        owner = owner,
+                        arrayOf(RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))),
+                        sourceName = SOURCE_NAME,
+                        owner = OWNER,
                         videoType = VideoType.CAMERA
                     )
 
@@ -121,7 +124,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         // The receiver set 360p constraints, but we only have a 720p stream.
                         allocation.preferredLayer shouldBe hd30
                         allocation.oversendLayer shouldBe null
-                        allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
+                        allocation.layers.map { it.layer } shouldBe listOf(hd7point5, hd15, hd30)
                     }
                     context("Zero constraints") {
                         val allocation =
@@ -144,18 +147,18 @@ class SingleSourceAllocationTest : ShouldSpec() {
             context("When some layers are inactive") {
                 // Override layers with bitrate=0. Simulate only up to 360p/15 being active.
                 val sd30 = MockRtpLayerDesc(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = 0.bps)
-                val hd7_5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
+                val hd7point5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
                 val hd15 = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
                 val hd30 = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
                 val endpointId = "A"
                 val mediaSource = MediaSourceDesc(
                     arrayOf(
-                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        RtpEncodingDesc(1L, arrayOf(ld7point5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7point5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))
                     ),
-                    sourceName = sourceName,
-                    owner = owner,
+                    sourceName = SOURCE_NAME,
+                    owner = OWNER,
                     videoType = VideoType.CAMERA
                 )
 
@@ -173,7 +176,7 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 // "preferred FPS") layers for higher resolutions.
                 allocation.preferredLayer shouldBe ld30
                 allocation.oversendLayer shouldBe null
-                allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30)
+                allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30)
             }
         }
         context("Screensharing") {
@@ -181,12 +184,12 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val endpointId = "A"
                 val mediaSource = MediaSourceDesc(
                     arrayOf(
-                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        RtpEncodingDesc(1L, arrayOf(ld7point5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7point5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))
                     ),
-                    sourceName = sourceName,
-                    owner = owner,
+                    sourceName = SOURCE_NAME,
+                    owner = OWNER,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -204,9 +207,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints.
                     allocation.preferredLayer shouldBe hd30
-                    allocation.oversendLayer shouldBe hd7_5
+                    allocation.oversendLayer shouldBe hd7point5
                     allocation.layers.map { it.layer } shouldBe
-                        listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30, hd7_5, hd15, hd30)
+                        listOf(ld7point5, ld15, ld30, sd7point5, sd15, sd30, hd7point5, hd15, hd30)
                 }
                 context("With 360p constraints") {
                     val allocation =
@@ -220,23 +223,23 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         )
 
                     allocation.preferredLayer shouldBe sd30
-                    allocation.oversendLayer shouldBe sd7_5
-                    allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30)
+                    allocation.oversendLayer shouldBe sd7point5
+                    allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30, sd7point5, sd15, sd30)
                 }
             }
             context("The high layers are inactive (send-side bwe restrictions)") {
                 // Override layers with bitrate=0. Simulate only up to 360p/30 being active.
-                val hd7_5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
+                val hd7point5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
                 val hd15 = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
                 val hd30 = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
                 val mediaSource = MediaSourceDesc(
                     arrayOf(
-                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        RtpEncodingDesc(1L, arrayOf(ld7point5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7point5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))
                     ),
-                    sourceName = sourceName,
-                    owner = owner,
+                    sourceName = SOURCE_NAME,
+                    owner = OWNER,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -253,25 +256,25 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                 // endpoints.
                 allocation.preferredLayer shouldBe sd30
-                allocation.oversendLayer shouldBe sd7_5
-                allocation.layers.map { it.layer } shouldBe listOf(ld7_5, ld15, ld30, sd7_5, sd15, sd30)
+                allocation.oversendLayer shouldBe sd7point5
+                allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30, sd7point5, sd15, sd30)
             }
             context("The low layers are inactive (simulcast signaled but not used)") {
                 // Override layers with bitrate=0. Simulate simulcast being signaled but effectively disabled.
-                val ld7_5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
+                val ld7point5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
                 val ld15 = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
                 val ld30 = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
-                val sd7_5 = MockRtpLayerDesc(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = 0.bps)
+                val sd7point5 = MockRtpLayerDesc(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = 0.bps)
                 val sd15 = MockRtpLayerDesc(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = 0.bps)
                 val sd30 = MockRtpLayerDesc(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = 0.bps)
                 val mediaSource = MediaSourceDesc(
                     arrayOf(
-                        RtpEncodingDesc(1L, arrayOf(ld7_5, ld15, ld30)),
-                        RtpEncodingDesc(1L, arrayOf(sd7_5, sd15, sd30)),
-                        RtpEncodingDesc(1L, arrayOf(hd7_5, hd15, hd30))
+                        RtpEncodingDesc(1L, arrayOf(ld7point5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7point5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))
                     ),
-                    sourceName = sourceName,
-                    owner = owner,
+                    sourceName = SOURCE_NAME,
+                    owner = OWNER,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -289,8 +292,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // For screensharing the "preferred" layer should be the highest -- always prioritized over other
                     // endpoints.
                     allocation.preferredLayer shouldBe hd30
-                    allocation.oversendLayer shouldBe hd7_5
-                    allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
+                    allocation.oversendLayer shouldBe hd7point5
+                    allocation.layers.map { it.layer } shouldBe listOf(hd7point5, hd15, hd30)
                 }
                 context("With 180p constraints") {
                     val allocation =
@@ -307,8 +310,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
                     // lowest available resolution (which is high).
                     allocation.preferredLayer shouldBe hd30
-                    allocation.oversendLayer shouldBe hd7_5
-                    allocation.layers.map { it.layer } shouldBe listOf(hd7_5, hd15, hd30)
+                    allocation.oversendLayer shouldBe hd7point5
+                    allocation.layers.map { it.layer } shouldBe listOf(hd7point5, hd15, hd30)
                 }
             }
             context("VP9") {
@@ -322,8 +325,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         RtpEncodingDesc(1L, arrayOf(l2)),
                         RtpEncodingDesc(1L, arrayOf(l3))
                     ),
-                    sourceName = sourceName,
-                    owner = owner,
+                    sourceName = SOURCE_NAME,
+                    owner = OWNER,
                     videoType = VideoType.DESKTOP
                 )
 
@@ -381,5 +384,5 @@ class SingleSourceAllocationTest : ShouldSpec() {
     }
 }
 
-private val sourceName = "sourceName"
-private val owner = "owner"
+private const val SOURCE_NAME = "sourceName"
+private const val OWNER = "owner"

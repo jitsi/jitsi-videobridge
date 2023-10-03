@@ -36,7 +36,8 @@ internal class SrtpDecryptTest : ShouldSpec() {
             SrtpSample.srtpProfileInformation,
             SrtpSample.keyingMaterial.array(),
             SrtpSample.tlsRole,
-            cryptex = false, // TODO: add tests for cryptex case
+            // TODO: add tests for cryptex case
+            cryptex = false,
             StdoutLogger()
         )
 

@@ -53,7 +53,7 @@ class RtcpFbTccPacketTest : ShouldSpec() {
     /**
      * These correspond to the Deltas section above.
      */
-    val expectedTccRlePacketInfo = mapOf<Int, Short> (
+    val expectedTccRlePacketInfo = mapOf<Int, Short>(
         0xfffa to 0xd8,
         0xfffb to 0x00,
         0xfffc to 0x18,
@@ -94,7 +94,7 @@ class RtcpFbTccPacketTest : ShouldSpec() {
         // Recv delta padding
         0x00, 0x00, 0x00
     )
-    val expectedTccMixedChunkTypePacketInfo = mapOf<Int, Short> (
+    val expectedTccMixedChunkTypePacketInfo = mapOf<Int, Short>(
         5376 to 2.toTicks(),
         5377 to 0.toTicks(),
         5378 to 0.toTicks(),
@@ -129,7 +129,7 @@ class RtcpFbTccPacketTest : ShouldSpec() {
         // Recv delta padding
         0x00
     )
-    val expectedTccSvChunkPacketInfo = mapOf<Int, Long> (
+    val expectedTccSvChunkPacketInfo = mapOf<Int, Long>(
         6227 to -1,
         6228 to 107784064 + 27
     )

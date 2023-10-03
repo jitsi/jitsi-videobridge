@@ -71,7 +71,8 @@ class RemoteBandwidthEstimator(
         Collections.synchronizedSet(
             LRUCache.lruSet(
                 MAX_SSRCS,
-                true // accessOrder
+                // accessOrder
+                true
             )
         )
     private var numRembsCreated = 0

@@ -25,8 +25,7 @@ class PaddingVideoPacket private constructor(
     length: Int
 ) : VideoRtpPacket(buffer, offset, length) {
 
-    override fun clone(): PaddingVideoPacket =
-        throw NotImplementedError("clone() not supported for padding packets.")
+    override fun clone(): PaddingVideoPacket = throw NotImplementedError("clone() not supported for padding packets.")
 
     companion object {
         /**

@@ -87,8 +87,7 @@ class RtcpFbFirPacket(
         fun setMediaSenderSsrc(buf: ByteArray, baseOffset: Int, value: Long) =
             buf.putInt(baseOffset + MEDIA_SENDER_SSRC_OFFSET, value.toInt())
 
-        fun getSeqNum(buf: ByteArray, baseOffset: Int): Int =
-            buf.get(baseOffset + SEQ_NUM_OFFSET).toPositiveInt()
+        fun getSeqNum(buf: ByteArray, baseOffset: Int): Int = buf.get(baseOffset + SEQ_NUM_OFFSET).toPositiveInt()
         fun setSeqNum(buf: ByteArray, baseOffset: Int, value: Int) =
             buf.set(baseOffset + SEQ_NUM_OFFSET, value.toByte())
     }
