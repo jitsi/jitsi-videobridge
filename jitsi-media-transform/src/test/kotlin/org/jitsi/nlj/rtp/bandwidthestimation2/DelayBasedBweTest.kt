@@ -19,6 +19,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.longs.shouldBeGreaterThan
+import io.kotest.matchers.longs.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
@@ -36,7 +37,7 @@ class DelayBasedBweTest : ShouldSpec() {
 
     init {
         context("ProbeDetection") {
-            should("work properly") {
+            should("work correctly") {
                 val test = OneDelayBasedBweTest(logger, diagnosticContext)
 
                 var nowMs = test.clock.millis()
@@ -57,6 +58,66 @@ class DelayBasedBweTest : ShouldSpec() {
                 }
                 test.bitrateObserver.updated shouldBe true
                 test.bitrateObserver.latestBitrate shouldBeGreaterThan 1500000
+            }
+        }
+
+        context("ProbeDetectionNonPacedPackets") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                var nowMs = test.clock.millis()
+                // First burst sent at 8 * 1000 / 10 = 800 kbps, but with every other packet
+                // not being paced which could mess things up.
+                repeat(kNumProbesCluster0) {
+                    test.clock.elapse(5.ms)
+                    nowMs = test.clock.millis()
+                    test.incomingFeedback(nowMs, nowMs, 1000, kPacingInfo0)
+                    // Non-paced packet, arriving 5 ms after.
+                    test.clock.elapse(5.ms)
+                    test.incomingFeedback(nowMs, nowMs, 100, PacedPacketInfo())
+                }
+
+                test.bitrateObserver.updated shouldBe true
+                test.bitrateObserver.latestBitrate shouldBeGreaterThan 800000
+            }
+        }
+
+        context("ProbeDetectionFasterArrival") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                var nowMs = test.clock.millis()
+                // First burst sent at 8 * 1000 / 10 = 800 kbps.
+                // Arriving at 8 * 1000 / 5 = 1600 kbps.
+                var sendTimeMs = 0L
+                repeat(kNumProbesCluster0) {
+                    test.clock.elapse(1.ms)
+                    sendTimeMs += 10
+                    nowMs = test.clock.millis()
+                    test.incomingFeedback(nowMs, sendTimeMs, 1000, kPacingInfo0)
+                }
+
+                test.bitrateObserver.updated shouldBe false
+            }
+        }
+
+        context("ProbeDetectionSlowerArrival") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                var nowMs = test.clock.millis()
+                // First burst sent at 8 * 1000 / 5 = 1600 kbps.
+                // Arriving at 8 * 1000 / 7 = 1142 kbps.
+                // Since the receive rate is significantly below the send rate, we expect to
+                // use 95% of the estimated capacity.
+                var sendTimeMs = 0L
+                repeat(kNumProbesCluster1) {
+                    test.clock.elapse(7.ms)
+                    sendTimeMs += 5
+                    nowMs = test.clock.millis()
+                    test.incomingFeedback(nowMs, sendTimeMs, 1000, kPacingInfo1)
+                }
+
+                test.bitrateObserver.updated shouldBe true
+                test.bitrateObserver.latestBitrate shouldBeInRange
+                    ((1140000 * kTargetUtilizationFraction).toLong() plusOrMinus 10000)
             }
         }
     }
