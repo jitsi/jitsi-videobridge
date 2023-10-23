@@ -209,6 +209,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         val msg = TransportPacketsFeedback()
         msg.feedbackTime = clock.instant()
         msg.packetFeedbacks.add(packet)
+        acknowledgedBitrateEstimator.incomingPacketFeedbackVector(msg.sortedByReceiveTime())
         val result = bitrateEstimator.incomingPacketFeedbackVector(
             msg,
             acknowledgedBitrateEstimator.bitrate(),
@@ -471,7 +472,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         var sendTimeMs = 0L
         // Initial set of frames to increase the bitrate. 6 seconds to have enough
         // time for the first estimate to be generated and for Process() to be called.
-        repeat(6 * kFramerate) {
+        for (i in 0 until 6 * kFramerate) {
             incomingFeedback(clock.roundedMillis(), sendTimeMs, 1000)
 
             clock.elapse(kFrameIntervalMs.ms)

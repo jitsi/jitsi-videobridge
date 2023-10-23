@@ -211,6 +211,34 @@ class DelayBasedBweTest : ShouldSpec() {
                 test.capacityDropTestHelper(1, true, 300, 0)
             }
         }
+
+        context("TestTimestampGrouping") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.testTimestampGroupingTestHelper()
+            }
+        }
+
+        context("TestShortTimeoutAndWrap") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                // Simulate a client leaving and rejoining the call after 35 seconds. This
+                // will make abs send time wrap, so if streams aren't timed out properly
+                // the next 30 seconds of packets will be out of order.
+                test.testWrappingHelper(35)
+            }
+        }
+
+        context("TestLongTimeoutAndWrap") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                // Simulate a client leaving and rejoining the call after some multiple of
+                // 64 seconds later. This will cause a zero difference in abs send times due
+                // to the wrap, but a big difference in arrival time, if streams aren't
+                // properly timed out.
+                test.testWrappingHelper(10 * 64)
+            }
+        }
     }
 
     companion object {
