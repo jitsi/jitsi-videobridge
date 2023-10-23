@@ -73,6 +73,10 @@ class DataSize(
 
     override fun hashCode(): Int = bits.hashCode()
 
+    fun toWholeBytes(): DataSize {
+        return (bits / 8.0).roundToLong().bytes
+    }
+
     companion object {
         val ZERO = DataSize(0)
     }

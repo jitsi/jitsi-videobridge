@@ -19,6 +19,7 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.utils.TimeUtils
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 
@@ -28,6 +29,25 @@ val NEVER: Instant = Instant.MIN
 fun Instant.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.epochSecond, this.nano)
 
 fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.seconds, this.nano)
+
+/**
+ * Like [Instant.toEpochMilli], but rounded to nearest rather than rounded to zero.
+ *
+ * This is needed to be bit-exact with Google CC unit tests, since libwebrtc clocks round this way
+ */
+fun Instant.toRoundedEpochMilli(): Long {
+    var ret = toEpochMilli()
+    val remainder = nano.floorMod(1_000_000)
+    if (remainder > 499_999) {
+        ret++
+    }
+    return ret
+}
+
+/**
+ * Like [Clock.millis], but rounded to nearest rather than rounded to zero.
+ */
+fun Clock.roundedMillis() = this.instant().toRoundedEpochMilli()
 
 /**
  * Converts this instant to the number of microseconds from the epoch

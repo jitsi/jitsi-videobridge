@@ -26,7 +26,7 @@ import kotlin.math.round
 @JvmInline
 value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
 
-    constructor(bps: Double) : this(round(bps).toLong())
+    constructor(bps: Double) : this(bps.toLong())
     val kbps: Double
         get() = bps.toDouble() / 1000
     val mbps: Double
@@ -124,7 +124,7 @@ val Long.mbps: Bandwidth
  * Create a [Bandwidth] from a [DataSize] over a given time
  */
 fun DataSize.per(duration: Duration): Bandwidth {
-    return Bandwidth(round(this.bits / duration.toDouble()))
+    return Bandwidth((this.bits * 1_000_000) / duration.toRoundedMicros())
 }
 
 /**

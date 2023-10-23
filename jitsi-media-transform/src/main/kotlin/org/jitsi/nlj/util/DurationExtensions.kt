@@ -13,6 +13,27 @@ fun Duration.toDoubleMillis(): Double {
     return sec * 1e3 + nano * 1e-6
 }
 
+/** Like [Duration.toMillis], but rounded to nearest rather than rounded to zero.
+ *
+ * */
+fun Duration.toRoundedMillis(): Long {
+    var ret = this.toMillis()
+    val remainder = nano.floorMod(1_000_000)
+    if (remainder > 499_999) {
+        ret++
+    }
+    return ret
+}
+
+fun Duration.toRoundedMicros(): Long {
+    var ret = this.toNanos() / 1_000
+    val remainder = nano.floorMod(1_000)
+    if (remainder > 499) {
+        ret++
+    }
+    return ret
+}
+
 fun durationOfDoubleSeconds(duration: Double): Duration {
     return Duration.ofNanos(round(duration * 1e9).toLong())
 }
