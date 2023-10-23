@@ -183,6 +183,34 @@ class DelayBasedBweTest : ShouldSpec() {
                 test.rateIncreaseRtpTimestampsTestHelper(622)
             }
         }
+
+        context("CapacityDropOneStream") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.capacityDropTestHelper(1, false, 300, 0)
+            }
+        }
+
+        context("CapacityDropPosOffsetChange") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.capacityDropTestHelper(1, false, 867, 30000)
+            }
+        }
+
+        context("CapacityDropNegOffsetChange") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.capacityDropTestHelper(1, false, 933, -30000)
+            }
+        }
+
+        context("CapacityDropOneStreamWrap") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.capacityDropTestHelper(1, true, 300, 0)
+            }
+        }
     }
 
     companion object {

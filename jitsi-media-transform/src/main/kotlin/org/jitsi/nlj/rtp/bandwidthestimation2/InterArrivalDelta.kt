@@ -97,8 +97,8 @@ class InterArrivalDelta(
                                 "arrivalTimeDelta=$arrivalTimeDelta, sendTimeDelta=$sendTimeDelta"
                         )
                         reset()
-                        return ComputeDeltasResult(false)
                     }
+                    return ComputeDeltasResult(false)
                 } else {
                     numConsecutiveReorderedPackets = 0
                 }
