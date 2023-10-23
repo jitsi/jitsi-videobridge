@@ -22,6 +22,7 @@ import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.per
+import org.jitsi.nlj.util.toRoundedEpochMilli
 import org.jitsi.utils.ms
 import java.time.Instant
 import kotlin.math.abs
@@ -58,7 +59,7 @@ open class BitrateEstimator {
     open fun update(atTime: Instant, amount: DataSize, inAlr: Boolean) {
         val rateWindowMs = if (bitrateEstimateKbps < 0.0f) initialWindowMs else noninitialWindowMs
         val (bitrateSampleKbps, isSmallSample) =
-            updateWindow(atTime.toEpochMilli(), amount.bytes.roundToInt(), rateWindowMs)
+            updateWindow(atTime.toRoundedEpochMilli(), amount.bytes.roundToInt(), rateWindowMs)
         if (bitrateSampleKbps < 0.0f) {
             return
         }
@@ -94,11 +95,11 @@ open class BitrateEstimator {
         // that the bitrate changes over time.
         val predBitrateEstimateVar = bitrateEstimateVar + 5.0f
         bitrateEstimateKbps = (
-            sampleVar * bitrateSampleKbps +
+            sampleVar * bitrateEstimateKbps +
                 predBitrateEstimateVar * bitrateSampleKbps
             ) /
             (sampleVar + predBitrateEstimateVar)
-        bitrateEstimateKbps = max(bitrateSampleKbps, estimateFloor.kbps.toFloat())
+        bitrateEstimateKbps = max(bitrateEstimateKbps, estimateFloor.kbps.toFloat())
         bitrateEstimateVar = sampleVar * predBitrateEstimateVar /
             (sampleVar + predBitrateEstimateVar)
         /* TODO: Timeseries logger: atTime, bitrateEstimateKbps * 1000 */

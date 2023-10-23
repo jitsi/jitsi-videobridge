@@ -18,6 +18,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.equals.shouldNotBeEqual
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeInRange
 import io.kotest.matchers.shouldBe
@@ -117,7 +118,48 @@ class DelayBasedBweTest : ShouldSpec() {
 
                 test.bitrateObserver.updated shouldBe true
                 test.bitrateObserver.latestBitrate shouldBeInRange
-                    ((1140000 * kTargetUtilizationFraction).toLong() plusOrMinus 10000)
+                    ((kTargetUtilizationFraction * 1140000).toLong() plusOrMinus 10000)
+            }
+        }
+
+        context("ProbeDetectionSlowerArrivalHighBitrate") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                var nowMs = test.clock.millis()
+                // Burst sent at 8 * 1000 / 1 = 8000 kbps.
+                // Arriving at 8 * 1000 / 2 = 4000 kbps.
+                // Since the receive rate is significantly below the send rate, we expect to
+                // use 95% of the estimated capacity.
+                var sendTimeMs = 0L
+                repeat(kNumProbesCluster1) {
+                    test.clock.elapse(2.ms)
+                    sendTimeMs += 1
+                    nowMs = test.clock.millis()
+                    test.incomingFeedback(nowMs, sendTimeMs, 1000, kPacingInfo1)
+                }
+
+                test.bitrateObserver.updated shouldBe true
+                test.bitrateObserver.latestBitrate shouldBeInRange
+                    ((kTargetUtilizationFraction * 4000000).toLong() plusOrMinus 10000)
+            }
+        }
+
+        context("GetExpectedBwePeriodMs") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                val defaultInterval = test.bitrateEstimator.getExpectedBwePeriod()
+                defaultInterval.toMillis() shouldBeGreaterThan 0
+                test.capacityDropTestHelper(1, true, 333, 0)
+                val interval = test.bitrateEstimator.getExpectedBwePeriod()
+                interval.toMillis() shouldBeGreaterThan 0
+                interval shouldNotBeEqual defaultInterval
+            }
+        }
+
+        context("InitialBehavior") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.initialBehaviorTestHelper(730000)
             }
         }
     }

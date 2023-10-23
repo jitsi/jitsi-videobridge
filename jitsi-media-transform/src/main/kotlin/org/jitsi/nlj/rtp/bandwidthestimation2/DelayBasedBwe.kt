@@ -20,6 +20,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.toDoubleMillis
+import org.jitsi.nlj.util.toRoundedEpochMilli
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.ms
@@ -119,8 +120,8 @@ class DelayBasedBwe(
         delayDetector.update(
             calculatedDeltas.arrivalTimeDelta.toDoubleMillis(),
             calculatedDeltas.sendTimeDelta.toDoubleMillis(),
-            packetFeedback.sentPacket.sendTime.toEpochMilli(),
-            packetFeedback.receiveTime.toEpochMilli(),
+            packetFeedback.sentPacket.sendTime.toRoundedEpochMilli(),
+            packetFeedback.receiveTime.toRoundedEpochMilli(),
             packetSize.bytes.toLong(),
             calculatedDeltas.computed
         )
@@ -207,7 +208,7 @@ class DelayBasedBwe(
     }
 
     fun latestEstimate(): Bandwidth? {
-        if (rateControl.validEstimate()) {
+        if (!rateControl.validEstimate()) {
             return null
         }
         return rateControl.latestEstimate()

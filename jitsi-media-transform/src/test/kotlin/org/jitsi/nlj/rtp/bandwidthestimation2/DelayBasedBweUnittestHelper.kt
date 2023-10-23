@@ -27,7 +27,9 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.instantOfEpochMicro
+import org.jitsi.nlj.util.roundedMillis
 import org.jitsi.nlj.util.toEpochMicro
+import org.jitsi.nlj.util.toRoundedEpochMilli
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.ms
@@ -152,7 +154,7 @@ class StreamGenerator(
             val requiredNetworkTimeUs =
                 (8 * 1000 * packet.sentPacket.size.bytes.toLong() + capacityBpus / 2) /
                     capacityBpus
-            val prevArrivalTimeUs =
+            prevArrivalTimeUs =
                 max(
                     timeNowUs + requiredNetworkTimeUs,
                     prevArrivalTimeUs + requiredNetworkTimeUs
@@ -165,7 +167,7 @@ class StreamGenerator(
 }
 
 class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticContext) {
-    val clock = FakeClock().also { it.setTime(instantOfEpochMicro(1000000)) }
+    val clock = FakeClock().also { it.setTime(instantOfEpochMicro(100000000)) }
     val bitrateObserver = TestBitrateObserver()
     val acknowledgedBitrateEstimator: AcknowledgedBitrateEstimatorInterface =
         AcknowledgedBitrateEstimatorInterface.create()
@@ -238,7 +240,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         clock.elapse(Duration.between(clock.instant(), packets.last().receiveTime))
 
         for (packet in packets) {
-            check(packet.receiveTime.toEpochMilli() + arrivalTimeOffsetMs >= 0)
+            check(packet.receiveTime.toRoundedEpochMilli() + arrivalTimeOffsetMs >= 0)
             packet.receiveTime += Duration.ofMillis(arrivalTimeOffsetMs)
 
             if (packet.sentPacket.pacingInfo.probeClusterId != PacedPacketInfo.kNotAProbe) {
@@ -249,7 +251,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         acknowledgedBitrateEstimator.incomingPacketFeedbackVector(packets)
         val msg = TransportPacketsFeedback()
         msg.packetFeedbacks = packets
-        msg.feedbackTime = clock.instant()
+        msg.feedbackTime = Instant.ofEpochMilli(clock.roundedMillis())
 
         val result =
             bitrateEstimator.incomingPacketFeedbackVector(
@@ -299,7 +301,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
                 break
             }
         }
-        check(bitrateUpdateSeen)
+        bitrateUpdateSeen shouldBe true
         return bitrateBps
     }
 
@@ -324,7 +326,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
                 bitrateObserver.updated shouldBe false
                 bitrateObserver.reset()
             }
-            incomingFeedback(clock.millis(), sendTimeMs, kMtu, pacingInfo)
+            incomingFeedback(clock.roundedMillis(), sendTimeMs, kMtu, pacingInfo)
             clock.elapse((1000 / kFramerate).ms)
             sendTimeMs = kFrameIntervalMs
         }
@@ -353,7 +355,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
 
                 bitrateObserver.updated shouldBe false // No valid estimate.
             }
-            incomingFeedback(clock.millis(), sendTimeMs, kMtu, pacingInfo)
+            incomingFeedback(clock.roundedMillis(), sendTimeMs, kMtu, pacingInfo)
             clock.elapse((2 * kFrameIntervalMs).ms)
             sendTimeMs += kFrameIntervalMs
         }
@@ -363,8 +365,8 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         repeat(10) {
             clock.elapse((2 * kFrameIntervalMs).ms)
             sendTimeMs += 2 * kFrameIntervalMs
-            incomingFeedback(clock.millis(), sendTimeMs, 1000)
-            incomingFeedback(clock.millis(), sendTimeMs - kFrameIntervalMs, 1000)
+            incomingFeedback(clock.roundedMillis(), sendTimeMs, 1000)
+            incomingFeedback(clock.roundedMillis(), sendTimeMs - kFrameIntervalMs, 1000)
         }
         bitrateObserver.updated shouldBe true
         expectedBitrateBps shouldBeInRange (bitrateObserver.latestBitrate plusOrMinus kAcceptedBitrateErrorBps)
@@ -446,14 +448,14 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
 
         // Reduce the capacity and verify the decrease time.
         streamGenerator.setCapacityBps(kReducedCapacityBps)
-        val overuseStartTime = clock.millis()
+        val overuseStartTime = clock.roundedMillis()
         var bitrateDropTime = -1L
-        repeat(100 * numberOfStreams) {
+        for (i in 0 until 100 * numberOfStreams) {
             generateAndProcessFrame(bitrateBps)
             if (bitrateDropTime == -1L &&
                 bitrateObserver.latestBitrate <= kReducedCapacityBps
             ) {
-                bitrateDropTime = clock.millis()
+                bitrateDropTime = clock.roundedMillis()
             }
             if (bitrateObserver.updated) {
                 bitrateBps = bitrateObserver.latestBitrate
@@ -470,7 +472,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         // Initial set of frames to increase the bitrate. 6 seconds to have enough
         // time for the first estimate to be generated and for Process() to be called.
         repeat(6 * kFramerate) {
-            incomingFeedback(clock.millis(), sendTimeMs, 1000)
+            incomingFeedback(clock.roundedMillis(), sendTimeMs, 1000)
 
             clock.elapse(kFrameIntervalMs.ms)
             sendTimeMs += kFrameIntervalMs
@@ -485,7 +487,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
             repeat(kTimestampGroupLength) {
                 // Insert `kTimestampGroupLength` frames with just 1 timestamp ticks in
                 // between. Should be treated as part of the same group by the estimator.
-                incomingFeedback(clock.millis(), sendTimeMs, 100)
+                incomingFeedback(clock.roundedMillis(), sendTimeMs, 100)
                 clock.elapse((kFrameIntervalMs / kTimestampGroupLength).ms)
                 sendTimeMs += 1
             }
@@ -504,7 +506,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         var sendTimeMs = 0L
 
         repeat(3000) {
-            incomingFeedback(clock.millis(), sendTimeMs, 1000)
+            incomingFeedback(clock.roundedMillis(), sendTimeMs, 1000)
             clock.elapse(kFrameIntervalMs.ms)
             sendTimeMs += kFrameIntervalMs
         }
@@ -513,7 +515,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         clock.elapse(silenceTimeS.secs)
 
         repeat(24) {
-            incomingFeedback(clock.millis(), sendTimeMs, 1000)
+            incomingFeedback(clock.roundedMillis(), sendTimeMs, 1000)
             clock.elapse((2 * kFrameIntervalMs).ms)
             sendTimeMs += kFrameIntervalMs
         }

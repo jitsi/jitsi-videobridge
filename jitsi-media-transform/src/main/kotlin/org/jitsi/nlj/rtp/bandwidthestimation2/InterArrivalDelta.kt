@@ -105,7 +105,7 @@ class InterArrivalDelta(
                 packetSizeDelta = currentTimestampGroup.size.toInt() - prevTimestampGroup.size.toInt()
                 calculatedDeltas = true
             }
-            prevTimestampGroup = currentTimestampGroup
+            prevTimestampGroup = currentTimestampGroup.copy()
             // The new timestamp is now the current frame
             currentTimestampGroup.firstSendTime = sendTime
             currentTimestampGroup.sendTime = sendTime
@@ -164,6 +164,8 @@ class InterArrivalDelta(
         var lastSystemTime: Instant = NEVER
     ) {
         fun isFirstPacket(): Boolean = completeTime == NEVER
+
+        fun copy() = SendTimeGroup(size, firstSendTime, sendTime, firstArrival, completeTime, lastSystemTime)
     }
 
     companion object {

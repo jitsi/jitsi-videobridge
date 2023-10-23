@@ -30,6 +30,7 @@ import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.per
 import org.jitsi.nlj.util.times
 import org.jitsi.nlj.util.toDouble
+import org.jitsi.nlj.util.toRoundedMillis
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.times
@@ -108,7 +109,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     }
 
     fun timeToReduceFurther(atTime: Instant, estimatedThroughput: Bandwidth): Boolean {
-        val bitrateReductionInterval = rtt.coerceIn(10.ms, 100.ms)
+        val bitrateReductionInterval = rtt.coerceIn(10.ms, 200.ms)
         if (Duration.between(timeLastBitrateChange, atTime) >= bitrateReductionInterval) {
             return true
         }
@@ -145,7 +146,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
         // TODO(bugs.webrtc.org/9379): The comment above doesn't match to the code.
         if (!bitrateIsInitialized) {
             val kInitializionTime = 5.secs
-            check(kBitrateWindowMs <= kInitializionTime.toMillis())
+            check(kBitrateWindowMs <= kInitializionTime.toRoundedMillis())
             if (timeFirstThroughputEstimate == NEVER) {
                 if (input.estimatedThroughput != null) {
                     timeFirstThroughputEstimate = atTime
@@ -174,10 +175,10 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     fun getNearMaxIncreaseRateBpsPerSecond(): Double {
         check(currentBitrate != 0.bps)
         val kFrameInterval = 1.secs / 30.0
-        val frameSize = currentBitrate * kFrameInterval
+        val frameSize = (currentBitrate * kFrameInterval).toWholeBytes()
         val kPacketSize = 1200.bytes
         val packetsPerFrame = ceil(frameSize / kPacketSize)
-        val avgPacketSize = frameSize / packetsPerFrame
+        val avgPacketSize = (frameSize / packetsPerFrame).toWholeBytes()
 
         // Approximate the over-use estimator delay to 100 ms.
         var responseTime = rtt + 100.ms

@@ -54,7 +54,9 @@ class LinkCapacityEstimator {
         get() = estimateKbps!!.kbps
 
     private fun update(capacitySample: Bandwidth, alpha: Double) {
-        val sampleKbps = capacitySample.kbps
+        // This double-cast is probably a bug in the Google CC code (it calls `capacity_sample.kbps()` rather than
+        // `capacity_sample.kbps<double>()`) but emulate it to be bit-exact.
+        val sampleKbps = capacitySample.kbps.toLong().toDouble()
         estimateKbps = if (estimateKbps == null) {
             sampleKbps
         } else {
