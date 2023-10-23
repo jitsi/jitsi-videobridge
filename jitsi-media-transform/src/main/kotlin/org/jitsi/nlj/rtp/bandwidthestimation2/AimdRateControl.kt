@@ -123,13 +123,13 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     }
 
     fun initialTimeToReduceFurther(atTime: Instant): Boolean {
-        if (initialBackoffInterval != null) {
-            // TODO this is dead code because we're not using the initialBackoffInterval field trial
+        if (initialBackoffInterval == null) {
             return validEstimate() &&
                 timeToReduceFurther(atTime, latestEstimate() / 2 - 1.bps)
         }
         // TODO(terelius): We could use the RTT (clamped to suitable limits) instead
-        // of a fixed bitrate_reduction_interval.
+        //  of a fixed bitrate_reduction_interval.
+        // TODO this is dead code because we're not using the initialBackoffInterval field trial
         if (timeLastBitrateDecrease == NEVER ||
             Duration.between(timeLastBitrateDecrease, atTime) >= initialBackoffInterval
         ) {

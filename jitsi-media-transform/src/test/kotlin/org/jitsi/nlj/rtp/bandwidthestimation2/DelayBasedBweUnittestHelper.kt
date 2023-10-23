@@ -356,7 +356,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
                 bitrateObserver.updated shouldBe false // No valid estimate.
             }
             incomingFeedback(clock.roundedMillis(), sendTimeMs, kMtu, pacingInfo)
-            clock.elapse((2 * kFrameIntervalMs).ms)
+            clock.elapse(kFrameIntervalMs.ms)
             sendTimeMs += kFrameIntervalMs
         }
         bitrateObserver.updated shouldBe true

@@ -162,6 +162,27 @@ class DelayBasedBweTest : ShouldSpec() {
                 test.initialBehaviorTestHelper(730000)
             }
         }
+
+        context("InitializeResult") {
+            should("work correctly") {
+                val result = DelayBasedBwe.Result()
+                result.delayDetectorState shouldBe BandwidthUsage.kBwNormal
+            }
+        }
+
+        context("RateIncreaseReordering") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.rateIncreaseReorderingTestHelper(730000)
+            }
+        }
+
+        context("RateIncreaseRtpTimestamps") {
+            should("work correctly") {
+                val test = OneDelayBasedBweTest(logger, diagnosticContext)
+                test.rateIncreaseRtpTimestampsTestHelper(622)
+            }
+        }
     }
 
     companion object {
