@@ -197,10 +197,10 @@ allow it by setting `jmt.debug.pcap.enabled=true` in `/etc/jitsi/videobridge/jvb
 
 Enable:
 ```
-POST /debug/stats/endpoint/CONFERENCE_ID/ENDPOINT_ID/pcap-dump/true
+POST /debug/features/endpoint/CONFERENCE_ID/ENDPOINT_ID/pcap-dump/true
 ```
 
 Disable:
 ```
-POST /debug/stats/endpoint/CONFERENCE_ID/ENDPOINT_ID/pcap-dump/false
+POST /debug/features/endpoint/CONFERENCE_ID/ENDPOINT_ID/pcap-dump/false
 ```
