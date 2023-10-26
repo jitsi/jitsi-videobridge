@@ -21,6 +21,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
+import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.parts.*;
 import org.jxmpp.util.*;
@@ -402,7 +403,7 @@ public class MediaSourceFactory
             logger.warn(
                 "Unprocessed source groups: " +
                     sourceGroupsCopy.stream()
-                        .map(e -> e.toXML(XmlEnvironment.EMPTY).toString())
+                        .map(XmlStringBuilderUtil::toStringOpt)
                         .reduce(String::concat));
         }
 
