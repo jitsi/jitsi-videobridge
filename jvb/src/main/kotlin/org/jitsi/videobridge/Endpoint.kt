@@ -82,6 +82,7 @@ import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
+import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import org.jitsi_modified.sctp4j.SctpDataCallback
 import org.jitsi_modified.sctp4j.SctpServerSocket
 import org.jitsi_modified.sctp4j.SctpSocket
@@ -781,7 +782,7 @@ class Endpoint @JvmOverloads constructor(
             if (fingerprintExtension.hash != null && fingerprintExtension.fingerprint != null) {
                 remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
             } else {
-                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
+                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toStringOpt()}")
             }
             if (CryptexConfig.endpoint) {
                 cryptex = cryptex && fingerprintExtension.cryptex
@@ -810,7 +811,7 @@ class Endpoint @JvmOverloads constructor(
             }
         }
 
-        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
+        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toStringOpt()}" }
 
         return iceUdpTransportPacketExtension
     }
