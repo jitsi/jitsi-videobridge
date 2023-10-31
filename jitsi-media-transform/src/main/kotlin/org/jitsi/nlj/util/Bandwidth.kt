@@ -74,6 +74,10 @@ value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
         }
     }
 
+    fun isInfinite() = (this == INFINITY || this == MINUS_INFINITY)
+
+    fun isFinite() = !isInfinite()
+
     companion object {
         fun fromString(str: String): Bandwidth {
             val (digits, notDigits) = str.partition { it.isDigit() }
@@ -86,9 +90,9 @@ value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
             }
         }
 
-        val INFINITY = Bandwidth(Double.POSITIVE_INFINITY)
+        val INFINITY = Bandwidth(Long.MAX_VALUE)
         val ZERO = Bandwidth(0.0)
-        val MINUS_INFINITY = Bandwidth(Double.NEGATIVE_INFINITY)
+        val MINUS_INFINITY = Bandwidth(Long.MIN_VALUE)
     }
 }
 

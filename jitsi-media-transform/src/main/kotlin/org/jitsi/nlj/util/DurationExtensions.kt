@@ -40,6 +40,28 @@ fun durationOfDoubleSeconds(duration: Double): Duration {
 
 operator fun Duration.div(other: Double): Duration = durationOfDoubleSeconds(toDouble() / other)
 
+fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
+    var sum: Duration = Duration.ZERO
+    for (element in this) {
+        sum += selector(element)
+    }
+    return sum
+}
+
+/**
+ * Returns the maximum of two [Duration]s
+ */
+fun max(a: Duration, b: Duration): Duration {
+    return if (a >= b) a else b
+}
+
+/**
+ * Returns the minimum of two [Duration]s
+ */
+fun min(a: Duration, b: Duration): Duration {
+    return if (a <= b) a else b
+}
+
 /**
  * Ensures that this value lies in the specified range [minimumValue]..[maximumValue].
  *

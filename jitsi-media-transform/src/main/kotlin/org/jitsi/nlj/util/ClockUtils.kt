@@ -44,6 +44,10 @@ fun Instant.toRoundedEpochMilli(): Long {
     return ret
 }
 
+fun Instant.isInfinite(): Boolean = (this == Instant.MAX || this == Instant.MIN)
+
+fun Instant.isFinite(): Boolean = !this.isInfinite()
+
 /**
  * Like [Clock.millis], but rounded to nearest rather than rounded to zero.
  */
@@ -90,17 +94,16 @@ fun instantOfEpochMicro(epochMicro: Long): Instant {
     return Instant.ofEpochSecond(secs, micros * 1000L)
 }
 
-fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
-    var sum: Duration = Duration.ZERO
-    for (element in this) {
-        sum += selector(element)
-    }
-    return sum
-}
-
 /**
- * Returns the maximum of two [Bandwidth]s
+ * Returns the maximum of two [Instant]s
  */
 fun max(a: Instant, b: Instant): Instant {
     return if (a >= b) a else b
+}
+
+/**
+ * Returns the minimum of two [Instant]s
+ */
+fun min(a: Instant, b: Instant): Instant {
+    return if (a <= b) a else b
 }

@@ -164,8 +164,6 @@ class InterArrivalDelta(
         var lastSystemTime: Instant = NEVER
     ) {
         fun isFirstPacket(): Boolean = completeTime == NEVER
-
-        fun copy() = SendTimeGroup(size, firstSendTime, sendTime, firstArrival, completeTime, lastSystemTime)
     }
 
     companion object {
