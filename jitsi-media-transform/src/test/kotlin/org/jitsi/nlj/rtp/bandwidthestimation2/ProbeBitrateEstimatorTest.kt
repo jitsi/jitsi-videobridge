@@ -17,7 +17,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.longs.shouldBeInRange
 import io.kotest.matchers.shouldBe
@@ -57,224 +57,194 @@ class TestProbeBitrateEstimator {
     }
 }
 
-class ProbeBitrateEstimatorTest : ShouldSpec() {
+class ProbeBitrateEstimatorTest : FreeSpec() {
     init {
-        context("OneCluster") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 20)
-                test.addPacketFeedback(0, 1000, 20, 30)
-                test.addPacketFeedback(0, 1000, 30, 40)
+        "OneCluster" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 20)
+            test.addPacketFeedback(0, 1000, 20, 30)
+            test.addPacketFeedback(0, 1000, 30, 40)
 
-                test.measuredDataRate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
-            }
+            test.measuredDataRate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
         }
 
-        context("OneClusterTooFewProbes") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 20)
-                test.addPacketFeedback(0, 1000, 20, 30)
+        "OneClusterTooFewProbes" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 20)
+            test.addPacketFeedback(0, 1000, 20, 30)
 
-                test.measuredDataRate shouldBe null
-            }
+            test.measuredDataRate shouldBe null
         }
 
-        context("OneClusterTooFewBytes") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                val kMinBytes = 6000
-                test.addPacketFeedback(0, 1000, 0, 10, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 1000, 10, 20, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 1000, 20, 30, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 1000, 30, 40, kDefaultMinProbes, kMinBytes)
+        "OneClusterTooFewBytes" {
+            val test = TestProbeBitrateEstimator()
+            val kMinBytes = 6000
+            test.addPacketFeedback(0, 1000, 0, 10, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 1000, 10, 20, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 1000, 20, 30, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 1000, 30, 40, kDefaultMinProbes, kMinBytes)
 
-                test.measuredDataRate shouldBe null
-            }
+            test.measuredDataRate shouldBe null
         }
 
-        context("SmallCluster") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                val kMinBytes = 1000
-                test.addPacketFeedback(0, 150, 0, 10, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 150, 10, 20, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 150, 20, 30, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 150, 30, 40, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 150, 40, 50, kDefaultMinProbes, kMinBytes)
-                test.addPacketFeedback(0, 150, 50, 60, kDefaultMinProbes, kMinBytes)
+        "SmallCluster" {
+            val test = TestProbeBitrateEstimator()
+            val kMinBytes = 1000
+            test.addPacketFeedback(0, 150, 0, 10, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 150, 10, 20, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 150, 20, 30, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 150, 30, 40, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 150, 40, 50, kDefaultMinProbes, kMinBytes)
+            test.addPacketFeedback(0, 150, 50, 60, kDefaultMinProbes, kMinBytes)
 
-                test.measuredDataRate!!.bps shouldBeInRange (120000L plusOrMinus 10L)
-            }
+            test.measuredDataRate!!.bps shouldBeInRange (120000L plusOrMinus 10L)
         }
 
-        context("LargeCluster") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                val kMinProbes = 30
-                val kMinBytes = 312500
+        "LargeCluster" {
+            val test = TestProbeBitrateEstimator()
+            val kMinProbes = 30
+            val kMinBytes = 312500
 
-                var sendTime = 0L
-                var receiveTime = 5L
-                repeat(25) {
-                    test.addPacketFeedback(0, 12500, sendTime, receiveTime, kMinProbes, kMinBytes)
-                    ++sendTime
-                    ++receiveTime
-                }
-
-                test.measuredDataRate!!.bps shouldBeInRange (100000000L plusOrMinus 10L)
+            var sendTime = 0L
+            var receiveTime = 5L
+            repeat(25) {
+                test.addPacketFeedback(0, 12500, sendTime, receiveTime, kMinProbes, kMinBytes)
+                ++sendTime
+                ++receiveTime
             }
+
+            test.measuredDataRate!!.bps shouldBeInRange (100000000L plusOrMinus 10L)
         }
 
-        context("FastReceive") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 15)
-                test.addPacketFeedback(0, 1000, 10, 30)
-                test.addPacketFeedback(0, 1000, 20, 35)
-                test.addPacketFeedback(0, 1000, 30, 40)
+        "FastReceive" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 15)
+            test.addPacketFeedback(0, 1000, 10, 30)
+            test.addPacketFeedback(0, 1000, 20, 35)
+            test.addPacketFeedback(0, 1000, 30, 40)
 
-                test.measuredDataRate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
-            }
+            test.measuredDataRate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
         }
 
-        context("TooFastReceive") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 19)
-                test.addPacketFeedback(0, 1000, 10, 22)
-                test.addPacketFeedback(0, 1000, 20, 25)
-                test.addPacketFeedback(0, 1000, 30, 27)
+        "TooFastReceive" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 19)
+            test.addPacketFeedback(0, 1000, 10, 22)
+            test.addPacketFeedback(0, 1000, 20, 25)
+            test.addPacketFeedback(0, 1000, 30, 27)
 
-                test.measuredDataRate shouldBe null
-            }
+            test.measuredDataRate shouldBe null
         }
 
-        context("SlowReceive") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 40)
-                test.addPacketFeedback(0, 1000, 20, 70)
-                test.addPacketFeedback(0, 1000, 30, 85)
-                // Expected send rate = 800 kbps, expected receive rate = 320 kbps.
+        "SlowReceive" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 40)
+            test.addPacketFeedback(0, 1000, 20, 70)
+            test.addPacketFeedback(0, 1000, 30, 85)
+            // Expected send rate = 800 kbps, expected receive rate = 320 kbps.
 
-                test.measuredDataRate!!.bps shouldBeInRange
-                    ((kTargetUtilizationFraction * 320000.0).toLong() plusOrMinus 10)
-            }
+            test.measuredDataRate!!.bps shouldBeInRange
+                ((kTargetUtilizationFraction * 320000.0).toLong() plusOrMinus 10)
         }
 
-        context("BurstReceive") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 50)
-                test.addPacketFeedback(0, 1000, 10, 50)
-                test.addPacketFeedback(0, 1000, 20, 50)
-                test.addPacketFeedback(0, 1000, 30, 50)
+        "BurstReceive" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 50)
+            test.addPacketFeedback(0, 1000, 10, 50)
+            test.addPacketFeedback(0, 1000, 20, 50)
+            test.addPacketFeedback(0, 1000, 30, 50)
 
-                test.measuredDataRate shouldBe null
-            }
+            test.measuredDataRate shouldBe null
         }
 
-        context("MultipleClusters") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 20)
-                test.addPacketFeedback(0, 1000, 20, 30)
-                test.addPacketFeedback(0, 1000, 40, 60)
-                // Expected send rate = 600 kbps, expected receive rate = 480 kbps.
-                test.measuredDataRate!!.bps shouldBeInRange
-                    ((kTargetUtilizationFraction * 480000.0).toLong() plusOrMinus 10)
+        "MultipleClusters" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 20)
+            test.addPacketFeedback(0, 1000, 20, 30)
+            test.addPacketFeedback(0, 1000, 40, 60)
+            // Expected send rate = 600 kbps, expected receive rate = 480 kbps.
+            test.measuredDataRate!!.bps shouldBeInRange
+                ((kTargetUtilizationFraction * 480000.0).toLong() plusOrMinus 10)
 
-                test.addPacketFeedback(0, 1000, 50, 60)
-                // Expected send rate = 640 kbps, expected receive rate = 640 kbps.
-                test.measuredDataRate!!.bps shouldBeInRange (640000L plusOrMinus 10L)
+            test.addPacketFeedback(0, 1000, 50, 60)
+            // Expected send rate = 640 kbps, expected receive rate = 640 kbps.
+            test.measuredDataRate!!.bps shouldBeInRange (640000L plusOrMinus 10L)
 
-                test.addPacketFeedback(1, 1000, 60, 70)
-                test.addPacketFeedback(1, 1000, 65, 77)
-                test.addPacketFeedback(1, 1000, 70, 84)
-                test.addPacketFeedback(1, 1000, 75, 90)
-                // Expected send rate = 1600 kbps, expected receive rate = 1200 kbps.
+            test.addPacketFeedback(1, 1000, 60, 70)
+            test.addPacketFeedback(1, 1000, 65, 77)
+            test.addPacketFeedback(1, 1000, 70, 84)
+            test.addPacketFeedback(1, 1000, 75, 90)
+            // Expected send rate = 1600 kbps, expected receive rate = 1200 kbps.
 
-                test.measuredDataRate!!.bps shouldBeInRange
-                    ((kTargetUtilizationFraction * 1200000.0).toLong() plusOrMinus 10)
-            }
+            test.measuredDataRate!!.bps shouldBeInRange
+                ((kTargetUtilizationFraction * 1200000.0).toLong() plusOrMinus 10)
         }
 
-        context("IgnoreOldClusters") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 20)
-                test.addPacketFeedback(0, 1000, 20, 30)
+        "IgnoreOldClusters" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 20)
+            test.addPacketFeedback(0, 1000, 20, 30)
 
-                test.addPacketFeedback(1, 1000, 60, 70)
-                test.addPacketFeedback(1, 1000, 65, 77)
-                test.addPacketFeedback(1, 1000, 70, 84)
-                test.addPacketFeedback(1, 1000, 75, 90)
-                // Expected send rate = 1600 kbps, expected receive rate = 1200 kbps.
+            test.addPacketFeedback(1, 1000, 60, 70)
+            test.addPacketFeedback(1, 1000, 65, 77)
+            test.addPacketFeedback(1, 1000, 70, 84)
+            test.addPacketFeedback(1, 1000, 75, 90)
+            // Expected send rate = 1600 kbps, expected receive rate = 1200 kbps.
 
-                test.measuredDataRate!!.bps shouldBeInRange
-                    ((kTargetUtilizationFraction * 1200000.0).toLong() plusOrMinus 10)
+            test.measuredDataRate!!.bps shouldBeInRange
+                ((kTargetUtilizationFraction * 1200000.0).toLong() plusOrMinus 10)
 
-                // Coming in 6s later
-                test.addPacketFeedback(0, 1000, 40 + 6000, 60 + 6000)
-                test.measuredDataRate shouldBe null
-            }
+            // Coming in 6s later
+            test.addPacketFeedback(0, 1000, 40 + 6000, 60 + 6000)
+            test.measuredDataRate shouldBe null
         }
 
-        context("IgnoreSizeLastSendPacket") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 20)
-                test.addPacketFeedback(0, 1000, 20, 30)
-                test.addPacketFeedback(0, 1000, 30, 40)
-                test.addPacketFeedback(0, 1500, 40, 50)
-                // Expected send rate = 800 kbps, expected receive rate = 900 kbps.
+        "IgnoreSizeLastSendPacket" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 20)
+            test.addPacketFeedback(0, 1000, 20, 30)
+            test.addPacketFeedback(0, 1000, 30, 40)
+            test.addPacketFeedback(0, 1500, 40, 50)
+            // Expected send rate = 800 kbps, expected receive rate = 900 kbps.
 
-                test.measuredDataRate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
-            }
+            test.measuredDataRate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
         }
 
-        context("IgnoreSizeFirstReceivePacket") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1500, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 20)
-                test.addPacketFeedback(0, 1000, 20, 30)
-                test.addPacketFeedback(0, 1000, 30, 40)
-                // Expected send rate = 933 kbps, expected receive rate = 800 kbps.
+        "IgnoreSizeFirstReceivePacket" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1500, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 20)
+            test.addPacketFeedback(0, 1000, 20, 30)
+            test.addPacketFeedback(0, 1000, 30, 40)
+            // Expected send rate = 933 kbps, expected receive rate = 800 kbps.
 
-                test.measuredDataRate!!.bps shouldBeInRange
-                    ((kTargetUtilizationFraction * 800000.0).toLong() plusOrMinus 10)
-            }
+            test.measuredDataRate!!.bps shouldBeInRange
+                ((kTargetUtilizationFraction * 800000.0).toLong() plusOrMinus 10)
         }
 
-        context("NoLastEstimatedBitrateBps") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.probeBitrateEstimator.fetchAndResetLastEstimatedBitrate() shouldBe null
-            }
+        "NoLastEstimatedBitrateBps" {
+            val test = TestProbeBitrateEstimator()
+            test.probeBitrateEstimator.fetchAndResetLastEstimatedBitrate() shouldBe null
         }
 
-        context("FetchLastEstimatedBitrateBps") {
-            should("work properly") {
-                val test = TestProbeBitrateEstimator()
-                test.addPacketFeedback(0, 1000, 0, 10)
-                test.addPacketFeedback(0, 1000, 10, 20)
-                test.addPacketFeedback(0, 1000, 20, 30)
-                test.addPacketFeedback(0, 1000, 30, 40)
+        "FetchLastEstimatedBitrateBps" {
+            val test = TestProbeBitrateEstimator()
+            test.addPacketFeedback(0, 1000, 0, 10)
+            test.addPacketFeedback(0, 1000, 10, 20)
+            test.addPacketFeedback(0, 1000, 20, 30)
+            test.addPacketFeedback(0, 1000, 30, 40)
 
-                val estimatedBitrate = test.probeBitrateEstimator.fetchAndResetLastEstimatedBitrate()
+            val estimatedBitrate = test.probeBitrateEstimator.fetchAndResetLastEstimatedBitrate()
 
-                estimatedBitrate shouldNotBe null
-                estimatedBitrate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
-                test.probeBitrateEstimator.fetchAndResetLastEstimatedBitrate() shouldBe null
-            }
+            estimatedBitrate shouldNotBe null
+            estimatedBitrate!!.bps shouldBeInRange (800000L plusOrMinus 10L)
+            test.probeBitrateEstimator.fetchAndResetLastEstimatedBitrate() shouldBe null
         }
     }
 }

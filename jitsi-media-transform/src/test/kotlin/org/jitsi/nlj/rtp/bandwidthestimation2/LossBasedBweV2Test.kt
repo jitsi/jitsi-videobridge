@@ -17,7 +17,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Exhaustive
 import io.kotest.property.checkAll
@@ -111,116 +111,100 @@ private fun createPacketResultsWith100pLossRate(firstPacketTimestamp: Instant): 
     return enoughFeedback
 }
 
-class LossBasedBweV2Test : ShouldSpec() {
+class LossBasedBweV2Test : FreeSpec() {
     init {
-        context("EnabledWhenGivenValidConfigurationValues") {
-            should("work correctly") {
-                Exhaustive.boolean().checkAll {
-                    val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
-                    val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-                    lossBasedBandwidthEstimator.isEnabled() shouldBe true
-                }
+        "EnabledWhenGivenValidConfigurationValues" {
+            Exhaustive.boolean().checkAll {
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                lossBasedBandwidthEstimator.isEnabled() shouldBe true
             }
         }
-        context("DisabledWhenGivenDisabledConfiguration") {
-            should("work correctly") {
-                Exhaustive.boolean().checkAll {
-                    val config = config(enabled = false, valid = true, trendlineIntegrationEnabled = it)
-                    val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-                    lossBasedBandwidthEstimator.isEnabled() shouldBe false
-                }
-            }
-        }
-        context("DisabledWhenGivenNonValidConfigurationValues") {
-            should("work correctly") {
-                Exhaustive.boolean().checkAll {
-                    val config = config(enabled = true, valid = false, trendlineIntegrationEnabled = it)
-                    val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-                    lossBasedBandwidthEstimator.isEnabled() shouldBe false
-                }
-            }
-        }
-        context("DisabledWhenGivenNonPositiveCandidateFactor") {
-            should("work correctly") {
-                val configNegativeCandidateFactor =
-                    LossBasedBweV2.Config(enabled = true, candidateFactors = doubleArrayOf(-1.3, 1.1))
-                val lossBasedBandwidthEstimator1 = LossBasedBweV2(configNegativeCandidateFactor)
-                lossBasedBandwidthEstimator1.isEnabled() shouldBe false
-
-                val configZeroCandidateFactor =
-                    LossBasedBweV2.Config(enabled = true, candidateFactors = doubleArrayOf(-0.0, 1.1))
-                val lossBasedBandwidthEstimator2 = LossBasedBweV2(configZeroCandidateFactor)
-                lossBasedBandwidthEstimator2.isEnabled() shouldBe false
-            }
-        }
-        context("DisabledWhenGivenConfigurationThatDoesNotAllowGeneratingCandidates") {
-            should("work correctly") {
-                val config =
-                    LossBasedBweV2.Config(
-                        enabled = true,
-                        candidateFactors = doubleArrayOf(1.0),
-                        appendAcknowledgedRateCandidate = false,
-                        appendDelayBasedEstimateCandidate = false
-                    )
+        "DisabledWhenGivenDisabledConfiguration" {
+            Exhaustive.boolean().checkAll {
+                val config = config(enabled = false, valid = true, trendlineIntegrationEnabled = it)
                 val lossBasedBandwidthEstimator = LossBasedBweV2(config)
                 lossBasedBandwidthEstimator.isEnabled() shouldBe false
             }
         }
-        context("ReturnsDelayBasedEstimateWhenDisabled") {
-            should("work correctly") {
-                Exhaustive.boolean().checkAll {
-                    val config = config(enabled = false, valid = true, trendlineIntegrationEnabled = false)
-                    val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-                    lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                        arrayOf(),
-                        100.kbps,
-                        BandwidthUsage.kBwNormal,
-                        null,
-                        Bandwidth.INFINITY,
-                        false
-                    )
-                    lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 100.kbps
-                }
+        "DisabledWhenGivenNonValidConfigurationValues" {
+            Exhaustive.boolean().checkAll {
+                val config = config(enabled = true, valid = false, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                lossBasedBandwidthEstimator.isEnabled() shouldBe false
             }
         }
-        context("ReturnsDelayBasedEstimateWhenWhenGivenNonValidConfigurationValues") {
-            should("work correctly") {
-                Exhaustive.boolean().checkAll {
-                    val config = config(enabled = true, valid = false, trendlineIntegrationEnabled = false)
-                    val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-                    lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                        arrayOf(),
-                        100.kbps,
-                        BandwidthUsage.kBwNormal,
-                        null,
-                        Bandwidth.INFINITY,
-                        false
-                    )
-                    lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 100.kbps
-                }
+        "DisabledWhenGivenNonPositiveCandidateFactor" {
+            val configNegativeCandidateFactor =
+                LossBasedBweV2.Config(enabled = true, candidateFactors = doubleArrayOf(-1.3, 1.1))
+            val lossBasedBandwidthEstimator1 = LossBasedBweV2(configNegativeCandidateFactor)
+            lossBasedBandwidthEstimator1.isEnabled() shouldBe false
+
+            val configZeroCandidateFactor =
+                LossBasedBweV2.Config(enabled = true, candidateFactors = doubleArrayOf(-0.0, 1.1))
+            val lossBasedBandwidthEstimator2 = LossBasedBweV2(configZeroCandidateFactor)
+            lossBasedBandwidthEstimator2.isEnabled() shouldBe false
+        }
+        "DisabledWhenGivenConfigurationThatDoesNotAllowGeneratingCandidates" {
+            val config =
+                LossBasedBweV2.Config(
+                    enabled = true,
+                    candidateFactors = doubleArrayOf(1.0),
+                    appendAcknowledgedRateCandidate = false,
+                    appendDelayBasedEstimateCandidate = false
+                )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.isEnabled() shouldBe false
+        }
+        "ReturnsDelayBasedEstimateWhenDisabled" {
+            Exhaustive.boolean().checkAll {
+                val config = config(enabled = false, valid = true, trendlineIntegrationEnabled = false)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    arrayOf(),
+                    100.kbps,
+                    BandwidthUsage.kBwNormal,
+                    null,
+                    Bandwidth.INFINITY,
+                    false
+                )
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 100.kbps
             }
         }
-        context("BandwidthEstimateGivenInitializationAndThenFeedback") {
-            should("work correctly") {
-                Exhaustive.boolean().checkAll {
-                    val enoughFeedback = createPacketResultsWithReceivedPackets(Instant.ofEpochMilli(0))
+        "ReturnsDelayBasedEstimateWhenWhenGivenNonValidConfigurationValues" {
+            Exhaustive.boolean().checkAll {
+                val config = config(enabled = true, valid = false, trendlineIntegrationEnabled = false)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    arrayOf(),
+                    100.kbps,
+                    BandwidthUsage.kBwNormal,
+                    null,
+                    Bandwidth.INFINITY,
+                    false
+                )
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 100.kbps
+            }
+        }
+        "BandwidthEstimateGivenInitializationAndThenFeedback" {
+            Exhaustive.boolean().checkAll {
+                val enoughFeedback = createPacketResultsWithReceivedPackets(Instant.ofEpochMilli(0))
 
-                    val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
-                    val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
 
-                    lossBasedBandwidthEstimator.setBandwidthEstiamte(600.kbps)
-                    lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                        enoughFeedback,
-                        Bandwidth.INFINITY,
-                        BandwidthUsage.kBwNormal,
-                        null,
-                        Bandwidth.INFINITY,
-                        false
-                    )
+                lossBasedBandwidthEstimator.setBandwidthEstiamte(600.kbps)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback,
+                    Bandwidth.INFINITY,
+                    BandwidthUsage.kBwNormal,
+                    null,
+                    Bandwidth.INFINITY,
+                    false
+                )
 
-                    lossBasedBandwidthEstimator.isReady() shouldBe true
-                    lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate.isFinite() shouldBe true
-                }
+                lossBasedBandwidthEstimator.isReady() shouldBe true
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate.isFinite() shouldBe true
             }
         }
     }

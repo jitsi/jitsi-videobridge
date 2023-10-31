@@ -17,7 +17,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 
 /**
@@ -74,68 +74,60 @@ class OneTrendlineEstimatorTest(
  * Based on WebRTC modules/congestion_controller/goog_cc/trendline_estimator_test.cc in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  */
-class TrendlineEstimatorTest : ShouldSpec() {
+class TrendlineEstimatorTest : FreeSpec() {
     init {
-        context("Normal usage") {
-            should("be detected correctly") {
-                val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
-                /* Delivered at the same pace */
-                val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 20.0)
+        "Normal usage" {
+            val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
+            /* Delivered at the same pace */
+            val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 20.0)
 
-                val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get)
-                test.estimator.state() shouldBe BandwidthUsage.kBwNormal
-                test.runTestUntilStateChange()
-                test.estimator.state() shouldBe BandwidthUsage.kBwNormal
-                test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
-            }
+            val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get)
+            test.estimator.state() shouldBe BandwidthUsage.kBwNormal
+            test.runTestUntilStateChange()
+            test.estimator.state() shouldBe BandwidthUsage.kBwNormal
+            test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
         }
 
-        context("Overusing") {
-            should("be detected correctly") {
-                val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
-                /* 10% slower delivery */
-                val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 1.1 * 20.0)
+        "Overusing" {
+            val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
+            /* 10% slower delivery */
+            val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 1.1 * 20.0)
 
-                val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get)
-                test.estimator.state() shouldBe BandwidthUsage.kBwNormal
-                test.runTestUntilStateChange()
-                test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
-                test.runTestUntilStateChange()
-                test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
-                test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
-            }
+            val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get)
+            test.estimator.state() shouldBe BandwidthUsage.kBwNormal
+            test.runTestUntilStateChange()
+            test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
+            test.runTestUntilStateChange()
+            test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
+            test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
         }
 
-        context("Underusing") {
-            should("be detected correctly") {
-                val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
-                /* 15% faster delivery */
-                val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 0.85 * 20.0)
+        "Underusing" {
+            val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
+            /* 15% faster delivery */
+            val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 0.85 * 20.0)
 
-                val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get)
-                test.estimator.state() shouldBe BandwidthUsage.kBwNormal
-                test.runTestUntilStateChange()
-                test.estimator.state() shouldBe BandwidthUsage.kBwUnderusing
-                test.runTestUntilStateChange()
-                test.estimator.state() shouldBe BandwidthUsage.kBwUnderusing
-                test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
-            }
+            val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get)
+            test.estimator.state() shouldBe BandwidthUsage.kBwNormal
+            test.runTestUntilStateChange()
+            test.estimator.state() shouldBe BandwidthUsage.kBwUnderusing
+            test.runTestUntilStateChange()
+            test.estimator.state() shouldBe BandwidthUsage.kBwUnderusing
+            test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
         }
 
-        context("IncludesSmallPacketsByDefault") {
-            should("be detected correctly") {
-                val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
-                /* 10% slower delivery */
-                val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 1.1 * 20.0)
+        "IncludesSmallPacketsByDefault" {
+            val sendTimeGenerator = PacketTimeGenerator(initialClock = 123456789, timeBetweenPackets = 20.0)
+            /* 10% slower delivery */
+            val recvTimeGenerator = PacketTimeGenerator(initialClock = 987654321, timeBetweenPackets = 1.1 * 20.0)
 
-                val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get, 100)
-                test.estimator.state() shouldBe BandwidthUsage.kBwNormal
-                test.runTestUntilStateChange()
-                test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
-                test.runTestUntilStateChange()
-                test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
-                test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
-            }
+            val test = OneTrendlineEstimatorTest(sendTimeGenerator::get, recvTimeGenerator::get, 100)
+            test.estimator.state() shouldBe BandwidthUsage.kBwNormal
+            test.runTestUntilStateChange()
+            test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
+            test.runTestUntilStateChange()
+            test.estimator.state() shouldBe BandwidthUsage.kBwOverusing
+            test.count shouldBe OneTrendlineEstimatorTest.kPacketCount // All packets processed
         }
     }
 }

@@ -17,7 +17,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -62,69 +62,63 @@ const val kFirstSendTimeMs = 10L
 const val kSequenceNumber = 1L
 const val kPayloadSize = 1L
 
-class AcknowledgedBitrateEstimatorTest : ShouldSpec() {
+class AcknowledgedBitrateEstimatorTest : FreeSpec() {
     init {
-        context("UpdateBandwidth") {
-            should("work correctly") {
-                val states = AcknowledgedBitrateEstimatorTestStates()
-                val packetFeedbackVector = createFeedbackVector()
+        "UpdateBandwidth" {
+            val states = AcknowledgedBitrateEstimatorTestStates()
+            val packetFeedbackVector = createFeedbackVector()
 
-                states.acknowledgedBitrateEstimator.incomingPacketFeedbackVector(packetFeedbackVector)
+            states.acknowledgedBitrateEstimator.incomingPacketFeedbackVector(packetFeedbackVector)
 
-                verifySequence {
-                    states.mockBitrateEstimator.update(
-                        packetFeedbackVector[0].receiveTime,
-                        packetFeedbackVector[0].sentPacket.size,
-                        false
-                    )
-                    states.mockBitrateEstimator.update(
-                        packetFeedbackVector[1].receiveTime,
-                        packetFeedbackVector[1].sentPacket.size,
-                        false
-                    )
-                }
+            verifySequence {
+                states.mockBitrateEstimator.update(
+                    packetFeedbackVector[0].receiveTime,
+                    packetFeedbackVector[0].sentPacket.size,
+                    false
+                )
+                states.mockBitrateEstimator.update(
+                    packetFeedbackVector[1].receiveTime,
+                    packetFeedbackVector[1].sentPacket.size,
+                    false
+                )
+            }
 
-                confirmVerified(states.mockBitrateEstimator)
+            confirmVerified(states.mockBitrateEstimator)
+        }
+
+        "ExpectFastRateChangeWhenLeftAlr" {
+            val states = AcknowledgedBitrateEstimatorTestStates()
+            val packetFeedbackVector = createFeedbackVector()
+
+            states.acknowledgedBitrateEstimator.setAlrEndedTime(Instant.ofEpochMilli(kFirstArrivalTimeMs + 1))
+            states.acknowledgedBitrateEstimator.incomingPacketFeedbackVector(packetFeedbackVector)
+
+            verifySequence {
+                states.mockBitrateEstimator.update(
+                    packetFeedbackVector[0].receiveTime,
+                    packetFeedbackVector[0].sentPacket.size,
+                    false
+                )
+                states.mockBitrateEstimator.expectFastRateChange()
+                states.mockBitrateEstimator.update(
+                    packetFeedbackVector[1].receiveTime,
+                    packetFeedbackVector[1].sentPacket.size,
+                    false
+                )
             }
         }
 
-        context("ExpectFastRateChangeWhenLeftAlr") {
-            should("work correctly") {
-                val states = AcknowledgedBitrateEstimatorTestStates()
-                val packetFeedbackVector = createFeedbackVector()
+        "ReturnBitrate".config(enabled = false) {
+            val states = AcknowledgedBitrateEstimatorTestStates()
+            val returnValue = 42.kbps
 
-                states.acknowledgedBitrateEstimator.setAlrEndedTime(Instant.ofEpochMilli(kFirstArrivalTimeMs + 1))
-                states.acknowledgedBitrateEstimator.incomingPacketFeedbackVector(packetFeedbackVector)
+            // Unfortunately this goes into an infinite loop in mockk.
+            every { states.mockBitrateEstimator.bitrate() } returns returnValue
 
-                verifySequence {
-                    states.mockBitrateEstimator.update(
-                        packetFeedbackVector[0].receiveTime,
-                        packetFeedbackVector[0].sentPacket.size,
-                        false
-                    )
-                    states.mockBitrateEstimator.expectFastRateChange()
-                    states.mockBitrateEstimator.update(
-                        packetFeedbackVector[1].receiveTime,
-                        packetFeedbackVector[1].sentPacket.size,
-                        false
-                    )
-                }
-            }
-        }
+            states.acknowledgedBitrateEstimator.bitrate() shouldBe returnValue
 
-        context("ReturnBitrate") {
-            should("work correctly").config(enabled = false) {
-                val states = AcknowledgedBitrateEstimatorTestStates()
-                val returnValue = 42.kbps
-
-                // Unfortunately this goes into an infinite loop in mockk.
-                every { states.mockBitrateEstimator.bitrate() } returns returnValue
-
-                states.acknowledgedBitrateEstimator.bitrate() shouldBe returnValue
-
-                verifySequence {
-                    states.mockBitrateEstimator.bitrate()
-                }
+            verifySequence {
+                states.mockBitrateEstimator.bitrate()
             }
         }
     }
