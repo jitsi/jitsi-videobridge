@@ -196,7 +196,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
-    fun setBandwidthEstiamte(bandwidthEstimate: Bandwidth) {
+    fun setBandwidthEstimate(bandwidthEstimate: Bandwidth) {
         if (isValid(bandwidthEstimate)) {
             currentEstimate.lossLimitedBandwidth = bandwidthEstimate
         } else {
@@ -250,7 +250,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         var bestCandidate = currentEstimate
-        var objectiveMax = Double.MIN_VALUE
+        var objectiveMax = -Double.MAX_VALUE
         for (candidate in getCandidates(inAlr)) {
             newtonsMethodUpdate(candidate)
 
@@ -735,7 +735,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             val averageReportedLossRatio = getAverageReportedLossRatio()
             return adjustBiasFactor(averageReportedLossRatio, config.higherBandwidthBiasFactor) *
                 bandwidth.kbps +
-                adjustBiasFactor(averageReportedLossRatio, config.higherBandwidthBiasFactor) *
+                adjustBiasFactor(averageReportedLossRatio, config.higherLogBandwidthBiasFactor) *
                 ln(1.0 + bandwidth.kbps)
         }
         return 0.0

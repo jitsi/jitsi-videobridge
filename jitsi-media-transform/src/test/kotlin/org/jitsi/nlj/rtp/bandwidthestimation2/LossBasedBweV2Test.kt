@@ -19,11 +19,13 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Exhaustive
 import io.kotest.property.checkAll
 import io.kotest.property.exhaustive.boolean
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bytes
+import org.jitsi.nlj.util.div
 import org.jitsi.nlj.util.kbps
 import org.jitsi.utils.ms
 import org.jitsi.utils.times
@@ -46,6 +48,7 @@ private fun config(enabled: Boolean, valid: Boolean, trendlineIntegrationEnabled
         bandwidthRampupUpperBoundFactor = if (valid) 1.2 else 0.0,
         trendlineIntegrationEnabled = trendlineIntegrationEnabled,
         candidateFactors = doubleArrayOf(1.1, 1.0, 0.95),
+        higherBandwidthBiasFactor = 0.01,
         inherentLossLowerBound = 0.001,
         inherentLossUpperBoundBandwidthBalance = 14.kbps,
         inherentLossUpperBoundOffset = 0.9,
@@ -193,7 +196,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
                 val lossBasedBandwidthEstimator = LossBasedBweV2(config)
 
-                lossBasedBandwidthEstimator.setBandwidthEstiamte(600.kbps)
+                lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
                 lossBasedBandwidthEstimator.updateBandwidthEstimate(
                     enoughFeedback,
                     Bandwidth.INFINITY,
@@ -205,6 +208,95 @@ class LossBasedBweV2Test : FreeSpec() {
 
                 lossBasedBandwidthEstimator.isReady() shouldBe true
                 lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate.isFinite() shouldBe true
+            }
+        }
+        "NoBandwidthEstimateGivenNoInitialization" {
+            Exhaustive.boolean().checkAll {
+                val enoughFeedback = createPacketResultsWithReceivedPackets(Instant.EPOCH)
+
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback,
+                    Bandwidth.INFINITY,
+                    BandwidthUsage.kBwNormal,
+                    null,
+                    Bandwidth.INFINITY,
+                    false
+                )
+                lossBasedBandwidthEstimator.isReady() shouldBe false
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe Bandwidth.INFINITY
+            }
+        }
+        "NoBandwidthEstimateGivenNotEnoughFeedback" {
+            Exhaustive.boolean().checkAll {
+                val notEnoughFeedback = Array(2) { PacketResult() }
+                notEnoughFeedback[0].sentPacket.size = 15_000.bytes
+                notEnoughFeedback[1].sentPacket.size = 15_000.bytes
+                notEnoughFeedback[0].sentPacket.sendTime = Instant.EPOCH
+                notEnoughFeedback[1].sentPacket.sendTime = Instant.EPOCH + kObservationDurationLowerBound / 2
+                notEnoughFeedback[0].receiveTime = Instant.EPOCH + kObservationDurationLowerBound / 2
+                notEnoughFeedback[1].receiveTime = Instant.EPOCH + kObservationDurationLowerBound
+
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+
+                lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+                lossBasedBandwidthEstimator.isReady() shouldBe false
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe Bandwidth.INFINITY
+
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    notEnoughFeedback,
+                    Bandwidth.INFINITY,
+                    BandwidthUsage.kBwNormal,
+                    null,
+                    Bandwidth.INFINITY,
+                    false
+                )
+
+                lossBasedBandwidthEstimator.isReady() shouldBe false
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe Bandwidth.INFINITY
+            }
+        }
+
+        "SetValueIsTheEstimateUntilAdditionalFeedbackHasBeenReceived" {
+            Exhaustive.boolean().checkAll {
+                val enoughFeedback1 = createPacketResultsWithReceivedPackets(Instant.EPOCH)
+                val enoughFeedback2 = createPacketResultsWithReceivedPackets(
+                    Instant.EPOCH + kObservationDurationLowerBound * 2
+                )
+
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+
+                lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback1,
+                    Bandwidth.INFINITY,
+                    BandwidthUsage.kBwNormal,
+                    null,
+                    Bandwidth.INFINITY,
+                    false
+                )
+
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldNotBe 600.kbps
+
+                lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 600.kbps
+
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback2,
+                    Bandwidth.INFINITY,
+                    BandwidthUsage.kBwNormal,
+                    null,
+                    Bandwidth.INFINITY,
+                    false
+                )
+
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldNotBe 600.kbps
             }
         }
     }

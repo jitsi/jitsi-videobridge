@@ -40,6 +40,8 @@ fun durationOfDoubleSeconds(duration: Double): Duration {
 
 operator fun Duration.div(other: Double): Duration = durationOfDoubleSeconds(toDouble() / other)
 
+operator fun Duration.div(other: Long): Duration = this.dividedBy(other)
+
 fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
     var sum: Duration = Duration.ZERO
     for (element in this) {
