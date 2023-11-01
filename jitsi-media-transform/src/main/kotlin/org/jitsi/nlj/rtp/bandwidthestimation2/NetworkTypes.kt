@@ -76,7 +76,7 @@ data class SentPacket(
 )
 
 /**
- * The result (of what???)
+ * The result of packet feedback
  */
 class PacketResult {
     var sentPacket = SentPacket()
