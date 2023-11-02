@@ -116,9 +116,7 @@ constructor(
      * {@inheritDoc}
      */
     override fun toString(): String {
-        return "subjective_quality=" + index +
-            ",temporal_id=" + tid +
-            ",spatial_id=" + sid
+        return "subjective_quality=$index,temporal_id=$tid,spatial_id=$sid,height=$height"
     }
 
     /**
