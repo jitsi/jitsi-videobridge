@@ -25,6 +25,7 @@ import org.json.simple.JSONAware
 /**
  * The subset of the fields of an AV1 Dependency Descriptor that can be parsed statelessly.
  */
+@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 open class Av1DependencyDescriptorStatelessSubset(
     val startOfFrame: Boolean,
     val endOfFrame: Boolean,
@@ -32,7 +33,17 @@ open class Av1DependencyDescriptorStatelessSubset(
     var frameNumber: Int,
 
     val newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
-)
+) {
+    open fun clone(): Av1DependencyDescriptorStatelessSubset {
+        return Av1DependencyDescriptorStatelessSubset(
+            startOfFrame = startOfFrame,
+            endOfFrame = endOfFrame,
+            frameDependencyTemplateId = frameDependencyTemplateId,
+            frameNumber = frameNumber,
+            newTemplateDependencyStructure = newTemplateDependencyStructure?.clone()
+        )
+    }
+}
 
 /**
  * The AV1 Dependency Descriptor header extension, as defined in https://aomediacodec.github.io/av1-rtp-spec/#appendix
@@ -123,7 +134,7 @@ class Av1DependencyDescriptorHeaderExtension(
             return length
         }
 
-    fun clone(): Av1DependencyDescriptorHeaderExtension {
+    override fun clone(): Av1DependencyDescriptorHeaderExtension {
         val structureCopy = structure.clone()
         val newStructure = if (newTemplateDependencyStructure == null) null else structureCopy
         return Av1DependencyDescriptorHeaderExtension(

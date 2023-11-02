@@ -115,13 +115,15 @@ class Av1DDPacket : ParsedVideoPacket {
     }
 
     override fun clone(): Av1DDPacket {
+        val descriptor = descriptor?.clone()
+        val statelessDescriptor = descriptor ?: statelessDescriptor.clone()
         return Av1DDPacket(
             cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
             av1DDHeaderExtensionId = av1DDHeaderExtensionId,
             encodingId = encodingId,
-            descriptor = descriptor?.clone(),
+            descriptor = descriptor,
             statelessDescriptor = statelessDescriptor,
             frameInfo = frameInfo
         )
