@@ -90,7 +90,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * method at a time.
      *
      * @param frame the VP9 frame.
-     * @param incomingIndex the quality index of the incoming RTP packet
+     * @param incomingEncoding the encoding of the incoming RTP packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
      * @param receivedTime the current time (as an Instant)
@@ -272,11 +272,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         } else {
             // In this branch we're not processing a keyframe and the
             // currentEncoding is in suspended state, which means we need
-            // a keyframe to start streaming again. Reaching this point also
-            // means that we want to forward something (because both
-            // externalEncodingTarget is not suspended) so we set the request keyframe flag.
+            // a keyframe to start streaming again.
 
-            // assert needsKeyframe == true;
+            // We should have already requested a keyframe, either above or when the
+            // internal target encoding was first moved off SUSPENDED_ENCODING.
+
             false
         }
     }
@@ -286,7 +286,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * or not.
      *
      * @param receivedTime the time the latest frame was received
-     * @return true if we're in layer switching phase, false otherwise.
+     * @return false if we're in layer switching phase, true otherwise.
      */
     @Synchronized
     private fun isOutOfSwitchingPhase(receivedTime: Instant?): Boolean {

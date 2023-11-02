@@ -91,6 +91,7 @@ internal class Av1DDQualityFilter(
      * method at a time.
      *
      * @param frame the AV1 frame.
+     * @param incomingEncoding The encoding ID of the incoming packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
      * @param receivedTime the current time (as an Instant)
@@ -176,19 +177,6 @@ internal class Av1DDQualityFilter(
 
             /** Logic to forward a non-keyframe:
              * If the frame does not have FrameInfo, reject and set needsKeyframe (we couldn't decode its templates).
-             * In normal circumstances (when the target index == the current index), or when we're trying to switch
-             * *up* encodings, forward all frames whose DT for the current DT is not NOT_PRESENT.
-             * If we're trying to switch *down* encodings, only forward frames which are REQUIRED or SWITCH for the
-             * current DT.
-             * If we're trying to switch DTs in the current encoding, check the template structure to ensure that
-             * there is at least one template which is SWITCH for the target DT and not NOT_PRESENT for the current DT.
-             * If there is not, request a keyframe.
-             * If the current frame is SWITCH for the target DT, and we've forwarded all the frames on which (by
-             * its fdiffs) it depends, forward it, and change the current DT to the target DT.
-             * Otherwise, forward for the current DT.
-             */
-            /** Logic to forward a non-keyframe:
-             * If the frame does not have FrameInfo, reject and set needsKeyframe (we couldn't decode its templates).
              * If we're trying to switch DTs in the current encoding, check the template structure to ensure that
              * there is at least one template which is SWITCH for the target DT and not NOT_PRESENT for the current DT.
              * If there is not, request a keyframe.
@@ -255,11 +243,10 @@ internal class Av1DDQualityFilter(
         } else {
             // In this branch we're not processing a keyframe and the
             // currentEncoding is in suspended state, which means we need
-            // a keyframe to start streaming again. Reaching this point also
-            // means that we want to forward something (because both
-            // externalEncodingTarget is not suspended) so we set the request keyframe flag.
+            // a keyframe to start streaming again.
 
-            // assert needsKeyframe == true;
+            // We should have already requested a keyframe, either above or when the
+            // internal target encoding was first moved off SUSPENDED_ENCODING.
             false
         }
     }
@@ -269,7 +256,7 @@ internal class Av1DDQualityFilter(
      * or not.
      *
      * @param receivedTime the time the latest frame was received
-     * @return true if we're in layer switching phase, false otherwise.
+     * @return false if we're in layer switching phase, true otherwise.
      */
     @Synchronized
     private fun isOutOfSwitchingPhase(receivedTime: Instant?): Boolean {

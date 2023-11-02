@@ -205,13 +205,12 @@ class VP8QualityFilter
         else
         {
             // In this branch we're not processing a keyframe and the
-            // currentSpatialLayerId is in suspended state, which means we need
-            // a keyframe to start streaming again. Reaching this point also
-            // means that we want to forward something (because both
-            // externalEncodingIdTarget and externalTemporalLayerIdTarget
-            // are greater than 0) so we set the request keyframe flag.
+            // currentEncodingId is in suspended state, which means we need
+            // a keyframe to start streaming again.
 
-            // assert needsKeyframe == true;
+            // We should have already requested a keyframe, either above or when the
+            // internal target encoding was first moved off SUSPENDED_ENCODING.
+
             return false;
         }
     }
@@ -221,7 +220,7 @@ class VP8QualityFilter
      * or not.
      *
      * @param receivedTime the time the latest frame was received
-     * @return true if we're in layer switching phase, false otherwise.
+     * @return false if we're in layer switching phase, true otherwise.
      */
     private synchronized boolean isOutOfSwitchingPhase(@Nullable Instant receivedTime)
     {
