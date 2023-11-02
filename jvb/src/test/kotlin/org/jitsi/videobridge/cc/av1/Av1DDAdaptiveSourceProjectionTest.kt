@@ -351,9 +351,11 @@ class Av1DDAdaptiveSourceProjectionTest {
         val packet: Av1DDPacket,
         val origSeq: Int,
         val extOrigSeq: Int,
+        val extFrameNum: Int,
     )
 
-    /** Run an out-of-order test on a single stream, randomized order except for the first packet.  */
+    /** Run an out-of-order test on a single stream, randomized order except for the first
+     *  [initialOrderedCount] packets.  */
     private fun doRunOutOfOrderTest(
         generator: Av1PacketGenerator,
         targetIndex: Int,
@@ -379,11 +381,11 @@ class Av1DDAdaptiveSourceProjectionTest {
             logger
         )
         var latestSeq = buffer[0].packetAs<Av1DDPacket>().sequenceNumber
-        val projectedPackets = TreeMap<Int, ProjectedPacket?>()
+        val projectedPackets = TreeMap<Int, ProjectedPacket>()
         val origSeqIdxTracker = Rfc3711IndexTracker()
         val newSeqIdxTracker = Rfc3711IndexTracker()
         val frameNumsDropped = HashSet<Int>()
-        val droppedFrameNumsIndexTracker = Rfc3711IndexTracker()
+        val frameNumsIndexTracker = Rfc3711IndexTracker()
         for (i in 0..99999) {
             val packetInfo = buffer[0]
             val packet = packetInfo.packetAs<Av1DDPacket>()
@@ -405,7 +407,8 @@ class Av1DDAdaptiveSourceProjectionTest {
                 /* Note we don't want assertFalse(accepted) here because slightly-too-old packets
                  * that are part of an existing accepted frame will be accepted.
                  */
-                frameNumsDropped.add(droppedFrameNumsIndexTracker.update(packet.frameNumber))
+                val extFrameNum = frameNumsIndexTracker.update(packet.frameNumber)
+                frameNumsDropped.add(extFrameNum)
             } else if (expectAccept(frameInfo)
             ) {
                 Assert.assertTrue(accepted)
@@ -416,7 +419,8 @@ class Av1DDAdaptiveSourceProjectionTest {
                 val extNewSeq = newSeqIdxTracker.update(newSeq)
                 val extOrigSeq = origSeqIdxTracker.update(origSeq)
                 Assert.assertFalse(projectedPackets.containsKey(extNewSeq))
-                projectedPackets[extNewSeq] = ProjectedPacket(packet, origSeq, extOrigSeq)
+                val extFrameNum = frameNumsIndexTracker.update(packet.frameNumber)
+                projectedPackets[extNewSeq] = ProjectedPacket(packet, origSeq, extOrigSeq, extFrameNum)
             } else {
                 Assert.assertFalse(accepted)
             }
@@ -434,18 +438,16 @@ class Av1DDAdaptiveSourceProjectionTest {
         /* Add packets that weren't added yet, or that were dropped for being too old, to frameNumsSeen. */
         frameNumsSeen.addAll(frameNumsDropped)
         buffer.forEach {
-            frameNumsSeen.add(droppedFrameNumsIndexTracker.update(it.packetAs<Av1DDPacket>().frameNumber))
+            frameNumsSeen.add(frameNumsIndexTracker.update(it.packetAs<Av1DDPacket>().frameNumber))
         }
 
-        val frameNumTracker = Rfc3711IndexTracker()
         val iter = projectedPackets.keys.iterator()
-        var prevPacket = projectedPackets[iter.next()]
-        frameNumsSeen.add(frameNumTracker.update(prevPacket!!.packet.frameNumber))
+        var prevPacket = projectedPackets[iter.next()]!!
+        frameNumsSeen.add(prevPacket.extFrameNum)
         while (iter.hasNext()) {
             val packet = projectedPackets[iter.next()]
-            Assert.assertTrue(packet!!.origSeq isNewerThan prevPacket!!.origSeq)
-            val frameNumIdx = frameNumTracker.update(packet.packet.frameNumber)
-            frameNumsSeen.add(frameNumIdx)
+            Assert.assertTrue(packet!!.origSeq isNewerThan prevPacket.origSeq)
+            frameNumsSeen.add(packet.extFrameNum)
             Assert.assertTrue(
                 RtpUtils.getSequenceNumberDelta(
                     prevPacket.packet.frameNumber,
@@ -473,7 +475,7 @@ class Av1DDAdaptiveSourceProjectionTest {
                 }
             }
             packet.packet.frameInfo?.fdiff?.forEach {
-                Assert.assertTrue(frameNumsSeen.contains(frameNumIdx - it))
+                Assert.assertTrue(frameNumsSeen.contains(packet.extFrameNum - it))
             }
             prevPacket = packet
         }
@@ -495,7 +497,15 @@ class Av1DDAdaptiveSourceProjectionTest {
         expectAccept: (FrameInfo) -> Boolean
     ) {
         /* Seeds that have triggered problems in the past for this or VP8/VP9, plus a random one. */
-        val seeds = longArrayOf(1576267371838L, 1578347926155L, 1579620018479L, System.currentTimeMillis())
+        val seeds = longArrayOf(
+            1576267371838L,
+            1578347926155L,
+            1579620018479L,
+            5786714086792432950L,
+            5929140296748347521L,
+            -8226056792707023108L,
+            System.currentTimeMillis()
+        )
         for (seed in seeds) {
             try {
                 doRunOutOfOrderTest(generator, targetIndex, initialOrderedCount, seed, expectAccept)
