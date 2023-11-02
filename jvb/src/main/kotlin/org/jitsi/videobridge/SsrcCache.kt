@@ -21,6 +21,8 @@ import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.codec.vpx.VpxUtils
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
+import org.jitsi.nlj.rtp.codec.av1.applyTemplateIdDelta
+import org.jitsi.nlj.rtp.codec.av1.getTemplateIdDelta
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -714,10 +716,6 @@ private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int)
 
     override fun toString() = "[AV1DD FrameNum]$frameNumDelta [Av1DD templateId]$templateIdDelta"
 }
-
-fun getTemplateIdDelta(a: Int, b: Int): Int = (a - b + 64) % 64
-
-fun applyTemplateIdDelta(start: Int, delta: Int): Int = (start + delta) % 64
 
 private fun RtpPacket.getCodecState(): CodecState? {
     return when (this) {

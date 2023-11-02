@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
+import org.jitsi.nlj.rtp.codec.av1.applyTemplateIdDelta
 import org.jitsi.rtp.rtp.header_extensions.toShortString
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.isOlderThan
@@ -108,11 +109,9 @@ class Av1DDFrameProjection internal constructor(
         created = null
     )
 
-    fun rewriteSeqNo(seq: Int): Int {
-        return applySequenceNumberDelta(seq, sequenceNumberDelta)
-    }
+    fun rewriteSeqNo(seq: Int): Int = applySequenceNumberDelta(seq, sequenceNumberDelta)
 
-    fun rewriteTemplateId(id: Int): Int = (id + templateIdDelta) and 0x3f
+    fun rewriteTemplateId(id: Int): Int = applyTemplateIdDelta(id, templateIdDelta)
 
     /**
      * Rewrites an RTP packet.

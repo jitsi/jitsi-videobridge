@@ -20,6 +20,7 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
+import org.jitsi.nlj.rtp.codec.av1.getTemplateIdDelta
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.rtp.header_extensions.toShortString
@@ -323,7 +324,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             templateIdDelta = if (nextTemplateId != null) {
                 val structure = frame.structure
                 check(structure != null)
-                (nextTemplateId - structure.templateIdOffset + 64) % 64
+                getTemplateIdDelta(nextTemplateId, structure.templateIdOffset)
             } else {
                 0
             }
@@ -383,7 +384,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             if (nextTemplateId != null) {
                 val structure = frame.structure
                 check(structure != null)
-                (nextTemplateId - structure.templateIdOffset + 64) % 64
+                getTemplateIdDelta(nextTemplateId, structure.templateIdOffset)
             } else {
                 0
             }
@@ -453,7 +454,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             if (nextTemplateId != null) {
                 val structure = frame.structure
                 check(structure != null)
-                (nextTemplateId - structure.templateIdOffset + 64) % 64
+                getTemplateIdDelta(nextTemplateId, structure.templateIdOffset)
             } else {
                 0
             }

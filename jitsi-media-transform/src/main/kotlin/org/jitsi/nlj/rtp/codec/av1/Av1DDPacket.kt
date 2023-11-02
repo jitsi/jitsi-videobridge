@@ -206,3 +206,21 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
 
 /** Check whether an activeDecodeTargetsBitmask contains a specific decode target. */
 fun Int.containsDecodeTarget(dt: Int) = ((1 shl dt) and this) != 0
+
+/**
+ * Returns the delta between two AV1 templateID values, taking into account
+ * rollover.  This will return the 'positive' delta between the two
+ * picture IDs in the form of the number you'd add to b to get a. e.g.:
+ * getTl0PicIdxDelta(1, 10) -> 55 (10 + 55 = 1)
+ * getTl0PicIdxDelta(1, 58) -> 7 (58 + 7 = 1)
+ */
+fun getTemplateIdDelta(a: Int, b: Int): Int = (a - b + 64) % 64
+
+/**
+ * Apply a delta to a given templateID and return the result (taking
+ * rollover into account)
+ * @param start the starting templateID
+ * @param delta the delta to be applied
+ * @return the templateID resulting from doing "start + delta"
+ */
+fun applyTemplateIdDelta(start: Int, delta: Int): Int = (start + delta) % 64
