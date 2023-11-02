@@ -21,7 +21,9 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
+import org.jitsi.nlj.rtp.codec.av1.Av1DDParser
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Parser
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
@@ -32,6 +34,7 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.extensions.bytearray.toHex
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -41,7 +44,8 @@ import org.jitsi.utils.logging2.createChildLogger
  */
 class VideoParser(
     private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
+    parentLogger: Logger,
+    private val diagnosticContext: DiagnosticContext
 ) : TransformerNode("Video parser") {
     private val logger = createChildLogger(parentLogger)
     private val stats = Stats()
@@ -49,18 +53,27 @@ class VideoParser(
     private var sources: Array<MediaSourceDesc> = arrayOf()
     private var signaledSources: Array<MediaSourceDesc> = sources
 
+    private var av1DDExtId: Int? = null
+
     private var videoCodecParser: VideoCodecParser? = null
+
+    init {
+        streamInformationStore.onRtpExtensionMapping(RtpExtensionType.AV1_DEPENDENCY_DESCRIPTOR) {
+            av1DDExtId = it
+        }
+    }
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packetAs<RtpPacket>()
+        val av1DDExtId = this.av1DDExtId // So null checks work
         val payloadType = streamInformationStore.rtpPayloadTypes[packet.payloadType.toByte()] ?: run {
             logger.error("Unrecognized video payload type ${packet.payloadType}, cannot parse video information")
             stats.numPacketsDroppedUnknownPt++
             return null
         }
         val parsedPacket = try {
-            when (payloadType) {
-                is Vp8PayloadType -> {
+            when {
+                payloadType is Vp8PayloadType -> {
                     val vp8Packet = packetInfo.packet.toOtherType(::Vp8Packet)
                     packetInfo.packet = vp8Packet
                     packetInfo.resetPayloadVerification()
@@ -75,7 +88,7 @@ class VideoParser(
                     }
                     vp8Packet
                 }
-                is Vp9PayloadType -> {
+                payloadType is Vp9PayloadType -> {
                     val vp9Packet = packetInfo.packet.toOtherType(::Vp9Packet)
                     packetInfo.packet = vp9Packet
                     packetInfo.resetPayloadVerification()
@@ -89,6 +102,22 @@ class VideoParser(
                         videoCodecParser = Vp9Parser(sources, logger)
                     }
                     vp9Packet
+                }
+                av1DDExtId != null && packet.getHeaderExtension(av1DDExtId) != null -> {
+                    if (videoCodecParser !is Av1DDParser) {
+                        logger.cdebug {
+                            "Creating new Av1DDParser, current videoCodecParser is ${videoCodecParser?.javaClass}"
+                        }
+                        resetSources()
+                        packetInfo.layeringChanged = true
+                        videoCodecParser = Av1DDParser(sources, logger, diagnosticContext)
+                    }
+
+                    val av1DDPacket = (videoCodecParser as Av1DDParser).createFrom(packet, av1DDExtId)
+                    packetInfo.packet = av1DDPacket
+                    packetInfo.resetPayloadVerification()
+
+                    av1DDPacket
                 }
                 else -> {
                     if (videoCodecParser != null) {

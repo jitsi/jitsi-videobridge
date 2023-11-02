@@ -20,6 +20,9 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.codec.vpx.VpxUtils
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
+import org.jitsi.nlj.rtp.codec.av1.applyTemplateIdDelta
+import org.jitsi.nlj.rtp.codec.av1.getTemplateIdDelta
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -660,10 +663,65 @@ private class Vp9CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
     override fun toString() = "[VP9 TL0Idx]$tl0IndexDelta"
 }
 
+private class Av1DDCodecState : CodecState {
+    val lastFrameNum: Int
+    val lastTemplateIdx: Int
+    constructor(lastFrameNum: Int, lastTemplateIdx: Int) {
+        this.lastFrameNum = lastFrameNum
+        this.lastTemplateIdx = lastTemplateIdx
+    }
+
+    constructor(packet: Av1DDPacket) {
+        val descriptor = packet.descriptor
+        requireNotNull(descriptor) { "AV1 Packet being routed must have non-null descriptor" }
+        this.lastFrameNum = packet.frameNumber
+        this.lastTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
+    }
+
+    override fun getDeltas(otherState: CodecState?): CodecDeltas? {
+        if (otherState !is Av1DDCodecState) {
+            return null
+        }
+        val frameNumDelta = RtpUtils.getSequenceNumberDelta(lastFrameNum, otherState.lastFrameNum)
+        val templateIdDelta = getTemplateIdDelta(lastTemplateIdx, otherState.lastTemplateIdx)
+        return Av1DDCodecDeltas(frameNumDelta, templateIdDelta)
+    }
+
+    override fun getDeltas(packet: RtpPacket): CodecDeltas? {
+        if (packet !is Av1DDPacket) {
+            return null
+        }
+        val descriptor = packet.descriptor ?: return null
+        val frameNumDelta = RtpUtils.getSequenceNumberDelta(lastFrameNum, packet.frameNumber - 1)
+        val packetLastTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
+        val templateIdDelta = getTemplateIdDelta(lastTemplateIdx, packetLastTemplateIdx - 1)
+        return Av1DDCodecDeltas(frameNumDelta, templateIdDelta)
+    }
+}
+
+private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int) : CodecDeltas {
+    override fun rewritePacket(packet: RtpPacket) {
+        require(packet is Av1DDPacket)
+        val descriptor = packet.descriptor
+        requireNotNull(descriptor)
+
+        descriptor.frameNumber = RtpUtils.applySequenceNumberDelta(descriptor.frameNumber, frameNumDelta)
+        descriptor.frameDependencyTemplateId =
+            applyTemplateIdDelta(descriptor.frameDependencyTemplateId, templateIdDelta)
+        descriptor.structure.templateIdOffset =
+            applyTemplateIdDelta(descriptor.structure.templateIdOffset, templateIdDelta)
+
+        packet.reencodeDdExt()
+    }
+
+    override fun toString() = "[AV1DD FrameNum]$frameNumDelta [Av1DD templateId]$templateIdDelta"
+}
+
 private fun RtpPacket.getCodecState(): CodecState? {
     return when (this) {
         is Vp8Packet -> Vp8CodecState(this)
         is Vp9Packet -> Vp9CodecState(this)
+        is Av1DDPacket -> Av1DDCodecState(this)
         else -> null
     }
 }

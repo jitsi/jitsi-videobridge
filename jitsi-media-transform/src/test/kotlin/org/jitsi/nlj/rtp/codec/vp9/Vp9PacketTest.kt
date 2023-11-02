@@ -1,11 +1,28 @@
+/*
+ * Copyright @ 2018 - present 8x8, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.jitsi.nlj.rtp.codec.vp9
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.nlj.RtpEncodingDesc
-import org.jitsi.nlj.RtpLayerDesc
+import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
 import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
 import javax.xml.bind.DatatypeConverter
 
@@ -136,16 +153,16 @@ class Vp9PacketTest : ShouldSpec() {
             scalabilityStructure = RtpEncodingDesc(
                 0x6098017bL,
                 arrayOf(
-                    RtpLayerDesc(0, 0, 0, 180, 7.5),
+                    VpxRtpLayerDesc(0, 0, 0, 180, 7.5),
                     /* TODO: dependencies */
-                    RtpLayerDesc(0, 1, 0, 180, 15.0),
-                    RtpLayerDesc(0, 2, 0, 180, 30.0),
-                    RtpLayerDesc(0, 0, 1, 360, 7.5),
-                    RtpLayerDesc(0, 1, 1, 360, 15.0),
-                    RtpLayerDesc(0, 2, 1, 360, 30.0),
-                    RtpLayerDesc(0, 0, 2, 720, 7.5),
-                    RtpLayerDesc(0, 1, 2, 720, 15.0),
-                    RtpLayerDesc(0, 2, 2, 720, 30.0)
+                    VpxRtpLayerDesc(0, 1, 0, 180, 15.0),
+                    VpxRtpLayerDesc(0, 2, 0, 180, 30.0),
+                    VpxRtpLayerDesc(0, 0, 1, 360, 7.5),
+                    VpxRtpLayerDesc(0, 1, 1, 360, 15.0),
+                    VpxRtpLayerDesc(0, 2, 1, 360, 30.0),
+                    VpxRtpLayerDesc(0, 0, 2, 720, 7.5),
+                    VpxRtpLayerDesc(0, 1, 2, 720, 15.0),
+                    VpxRtpLayerDesc(0, 2, 2, 720, 30.0)
                 )
             )
         ),
@@ -480,7 +497,7 @@ class Vp9PacketTest : ShouldSpec() {
             scalabilityStructure = RtpEncodingDesc(
                 0x184b0cc4L,
                 arrayOf(
-                    RtpLayerDesc(0, 0, 0, 1158, 30.0)
+                    VpxRtpLayerDesc(0, 0, 0, 1158, 30.0)
                 )
             )
         ),
@@ -600,7 +617,7 @@ class Vp9PacketTest : ShouldSpec() {
             scalabilityStructure = RtpEncodingDesc(
                 0x6538459eL,
                 arrayOf(
-                    RtpLayerDesc(0, 0, 0, 720, 30.0)
+                    VpxRtpLayerDesc(0, 0, 0, 720, 30.0)
                 )
             )
         ),
@@ -663,9 +680,9 @@ class Vp9PacketTest : ShouldSpec() {
             scalabilityStructure = RtpEncodingDesc(
                 0xa4d04528L,
                 arrayOf(
-                    RtpLayerDesc(0, 0, 0, 720, 7.5),
-                    RtpLayerDesc(0, 1, 0, 720, 15.0),
-                    RtpLayerDesc(0, 2, 0, 720, 30.0)
+                    VpxRtpLayerDesc(0, 0, 0, 720, 7.5),
+                    VpxRtpLayerDesc(0, 1, 0, 720, 15.0),
+                    VpxRtpLayerDesc(0, 2, 0, 720, 30.0)
                 )
             )
         ),
@@ -773,6 +790,9 @@ class Vp9PacketTest : ShouldSpec() {
                                 val tLayer = tss.layers[index]
                                 layer.layerId shouldBe tLayer.layerId
                                 layer.index shouldBe tLayer.index
+                                layer should beInstanceOf<VpxRtpLayerDesc>()
+                                layer as VpxRtpLayerDesc
+                                tLayer as VpxRtpLayerDesc
                                 layer.sid shouldBe tLayer.sid
                                 layer.tid shouldBe tLayer.tid
                                 layer.height shouldBe tLayer.height

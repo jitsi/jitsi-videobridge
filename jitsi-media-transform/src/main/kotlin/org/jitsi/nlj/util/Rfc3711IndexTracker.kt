@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.rtp.util.rolledOverTo
 
@@ -77,5 +78,17 @@ class Rfc3711IndexTracker {
      */
     fun interpret(seqNum: Int): Int {
         return getIndex(seqNum, false)
+    }
+
+    /** Force this sequence number to be interpreted as the new highest, regardless
+     * of its rollover state.
+     */
+    fun resetAt(seq: Int) {
+        val delta = RtpUtils.getSequenceNumberDelta(seq, highestSeqNumReceived)
+        if (delta < 0) {
+            roc++
+            highestSeqNumReceived = seq
+        }
+        getIndex(seq, true)
     }
 }

@@ -17,19 +17,21 @@ package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.av1.*;
 import org.jitsi.nlj.rtp.codec.vp8.*;
+import org.jitsi.nlj.rtp.codec.vp9.*;
 import org.jitsi.rtp.rtcp.*;
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
+import org.jitsi.videobridge.cc.av1.*;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi.videobridge.cc.vp9.*;
 import org.json.simple.*;
 
 import java.lang.*;
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Filters the packets coming from a specific {@link MediaSourceDesc}
@@ -89,37 +91,25 @@ public class AdaptiveSourceProjection
     private AdaptiveSourceProjectionContext context;
 
     /**
-     * The payload type that was used to determine the {@link #context} type.
-     */
-    private int contextPayloadType = -1;
-
-    /**
      * The target quality index for this source projection.
      */
     private int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
-
-    private final Map<Byte, PayloadType> payloadTypes;
 
     /**
      * Ctor.
      *
      * @param source the {@link MediaSourceDesc} that owns the packets
      * that this instance filters.
-     *
-     * @param payloadTypes a reference to a map of payload types.  This map
-     *                     should be updated as the payload types change.
      */
     public AdaptiveSourceProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaSourceDesc source,
         Runnable keyframeRequester,
-        Map<Byte, PayloadType> payloadTypes,
         Logger parentLogger
     )
     {
         targetSsrc = source.getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
-        this.payloadTypes = payloadTypes;
         this.parentLogger = parentLogger;
         this.logger = parentLogger.createChildLogger(AdaptiveSourceProjection.class.getName(),
             Map.of("targetSsrc", Long.toString(targetSsrc),
@@ -160,7 +150,8 @@ public class AdaptiveSourceProjection
         // suspended so that it can raise the needsKeyframe flag and also allow
         // it to compute a sequence number delta when the target becomes > -1.
 
-        if (videoRtpPacket.getQualityIndex() < 0)
+        int encodingId = videoRtpPacket.getEncodingId();
+        if (encodingId == RtpLayerDesc.SUSPENDED_ENCODING_ID)
         {
             logger.warn(
                 "Dropping an RTP packet, because egress was unable to find " +
@@ -169,8 +160,7 @@ public class AdaptiveSourceProjection
         }
 
         int targetIndexCopy = targetIndex;
-        boolean accept = contextCopy.accept(
-            packetInfo, videoRtpPacket.getQualityIndex(), targetIndexCopy);
+        boolean accept = contextCopy.accept(packetInfo, encodingId, targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
@@ -190,8 +180,8 @@ public class AdaptiveSourceProjection
 
     /**
      * Gets or creates the adaptive source projection context that corresponds to
-     * the payload type of the RTP packet that is specified as a parameter. If
-     * the payload type is different from {@link #contextPayloadType}, then a
+     * the parsed class of the RTP packet that is specified as a parameter. If
+     * the payload type is different from the appropriate one for the context, then a
      * new adaptive source projection context is created that is appropriate for
      * the new payload type.
      *
@@ -204,26 +194,9 @@ public class AdaptiveSourceProjection
      */
     private AdaptiveSourceProjectionContext getContext(@NotNull VideoRtpPacket rtpPacket)
     {
-        PayloadType payloadTypeObject;
         int payloadType = rtpPacket.getPayloadType();
 
-        if (context == null || contextPayloadType != payloadType)
-        {
-            payloadTypeObject = payloadTypes.get((byte)payloadType);
-            if (payloadTypeObject == null)
-            {
-                logger.error("No payload type object signalled for payload type " + payloadType + " yet, " +
-                        "cannot create source projection context");
-                return null;
-            }
-        }
-        else
-        {
-            // No need to call the expensive getDynamicRTPPayloadTypes.
-            payloadTypeObject = context.getPayloadType();
-        }
-
-        if (payloadTypeObject instanceof Vp8PayloadType)
+        if (rtpPacket instanceof Vp8Packet)
         {
             // Context switch between VP8 simulcast and VP8 non-simulcast (sort
             // of pretend that they're different codecs).
@@ -233,8 +206,7 @@ public class AdaptiveSourceProjection
             // then simulcast is disabled.
 
             /* Check whether this stream is projectable by the VP8AdaptiveSourceProjectionContext. */
-            boolean projectable = rtpPacket instanceof Vp8Packet &&
-                ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex() &&
+            boolean projectable = ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex() &&
                 ((Vp8Packet)rtpPacket).getHasPictureId();
 
             if (projectable
@@ -244,39 +216,33 @@ public class AdaptiveSourceProjection
                 RtpState rtpState = getRtpState();
                 logger.debug(() -> "adaptive source projection " +
                     (context == null ? "creating new" : "changing to") +
-                    " VP8 context for payload type "
-                    + payloadType +
-                    ", source packet ssrc " + rtpPacket.getSsrc());
+                    " VP8 context for source packet ssrc " + rtpPacket.getSsrc());
                 context = new VP8AdaptiveSourceProjectionContext(
-                    diagnosticContext, payloadTypeObject, rtpState, parentLogger);
-                contextPayloadType = payloadType;
+                    diagnosticContext, rtpState, parentLogger);
             }
             else if (!projectable
-                && !(context instanceof GenericAdaptiveSourceProjectionContext))
+                && (!(context instanceof GenericAdaptiveSourceProjectionContext) ||
+                    ((GenericAdaptiveSourceProjectionContext)context).getPayloadType() != payloadType))
             {
                 RtpState rtpState = getRtpState();
                 // context switch
                 logger.debug(() -> {
-                    boolean hasTemporalLayer = rtpPacket instanceof Vp8Packet &&
-                        ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex();
-                    boolean hasPictureId = rtpPacket instanceof Vp8Packet &&
-                        ((Vp8Packet)rtpPacket).getHasPictureId();
+                    boolean hasTemporalLayer = ((Vp8Packet)rtpPacket).getHasTemporalLayerIndex();
+                    boolean hasPictureId = ((Vp8Packet)rtpPacket).getHasPictureId();
                     return "adaptive source projection " +
                         (context == null ? "creating new" : "changing to") +
-                        " generic context for non-scalable VP8 payload type "
-                        + payloadType +
+                        " generic context for non-scalable VP8 payload " +
                         " (packet is " + rtpPacket.getClass().getSimpleName() +
                         ", ssrc " + rtpPacket.getSsrc() +
                         ", hasTL=" + hasTemporalLayer + ", hasPID=" + hasPictureId + ")";
                 });
-                context = new GenericAdaptiveSourceProjectionContext(payloadTypeObject, rtpState, parentLogger);
-                contextPayloadType = payloadType;
+                context = new GenericAdaptiveSourceProjectionContext(payloadType, rtpState, parentLogger);
             }
 
             // no context switch
             return context;
         }
-        else if (payloadTypeObject instanceof Vp9PayloadType)
+        else if (rtpPacket instanceof Vp9Packet)
         {
             if (!(context instanceof Vp9AdaptiveSourceProjectionContext))
             {
@@ -284,28 +250,39 @@ public class AdaptiveSourceProjection
                 RtpState rtpState = getRtpState();
                 logger.debug(() -> "adaptive source projection " +
                     (context == null ? "creating new" : "changing to") +
-                    " VP9 context for payload type "
-                    + payloadType +
-                    ", source packet ssrc " + rtpPacket.getSsrc());
+                    " VP9 context for source packet ssrc " + rtpPacket.getSsrc());
                 context = new Vp9AdaptiveSourceProjectionContext(
-                    diagnosticContext, payloadTypeObject, rtpState, parentLogger);
-                contextPayloadType = payloadType;
+                    diagnosticContext, rtpState, parentLogger);
             }
 
             return context;
         }
-        else if (context == null || contextPayloadType != payloadType)
+        else if (rtpPacket instanceof Av1DDPacket)
         {
-            RtpState rtpState = getRtpState();
-            logger.debug(() -> "adaptive source projection "  +
-                (context == null ? "creating new" : "changing to") +
-                " generic context for payload type " + payloadType);
-            context = new GenericAdaptiveSourceProjectionContext(payloadTypeObject, rtpState, parentLogger);
-            contextPayloadType = payloadType;
+            if (!(context instanceof Av1DDAdaptiveSourceProjectionContext))
+            {
+                // context switch
+                RtpState rtpState = getRtpState();
+                logger.debug(() -> "adaptive source projection " +
+                    (context == null ? "creating new" : "changing to") +
+                    " AV1 DD context for source packet ssrc " + rtpPacket.getSsrc());
+                context = new Av1DDAdaptiveSourceProjectionContext(
+                    diagnosticContext, rtpState, parentLogger);
+            }
+
             return context;
         }
         else
         {
+            if (!(context instanceof GenericAdaptiveSourceProjectionContext) ||
+                ((GenericAdaptiveSourceProjectionContext)context).getPayloadType() != payloadType)
+            {
+                RtpState rtpState = getRtpState();
+                logger.debug(() -> "adaptive source projection " +
+                    (context == null ? "creating new" : "changing to") +
+                    " generic context for payload type " + rtpPacket.getPayloadType());
+                context = new GenericAdaptiveSourceProjectionContext(payloadType, rtpState, parentLogger);
+            }
             return context;
         }
     }
@@ -384,7 +361,6 @@ public class AdaptiveSourceProjection
         debugState.put(
                 "context",
                 contextCopy == null ? null : contextCopy.getDebugState());
-        debugState.put("contextPayloadType", contextPayloadType);
         debugState.put("targetIndex", targetIndex);
 
         return debugState;

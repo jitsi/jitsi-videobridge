@@ -18,6 +18,8 @@
     <!-- False positives with kotlin companions -->
     <Bug pattern="NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
     <!-- Reference exposure, our implementation deliberately uses this. -->
+    <!-- False positives with Kotlin smart casts to non-null -->
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Or>

@@ -143,7 +143,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
     private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
 
-    private val videoParser = VideoParser(streamInformationStore, logger)
+    private val videoParser = VideoParser(streamInformationStore, logger, diagnosticContext)
 
     override fun isReceivingAudio() = audioBitrateCalculator.active
     override fun isReceivingVideo() = videoBitrateCalculator.active

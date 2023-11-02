@@ -23,13 +23,10 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyTl0PicIdxDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getExtendedPictureIdDelta
-import org.jitsi.nlj.format.PayloadType
-import org.jitsi.nlj.format.Vp9PayloadType
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
-import org.jitsi.rtp.rtcp.SenderInfoBuilder
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
@@ -46,18 +43,11 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Random
 import java.util.TreeMap
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArraySet
 import javax.xml.bind.DatatypeConverter
 import kotlin.collections.ArrayList
 
 class Vp9AdaptiveSourceProjectionTest {
     private val logger: Logger = LoggerImpl(javaClass.name)
-    private val payloadType: PayloadType = Vp9PayloadType(
-        96.toByte(),
-        ConcurrentHashMap(),
-        CopyOnWriteArraySet()
-    )
 
     @Test
     fun singlePacketProjectionTest() {
@@ -66,7 +56,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -74,13 +63,7 @@ class Vp9AdaptiveSourceProjectionTest {
         val packetInfo = generator.nextPacket()
         val packet = packetInfo.packetAs<Vp9Packet>()
         val targetIndex = getIndex(eid = 0, sid = 0, tid = 0)
-        Assert.assertTrue(
-            context.accept(
-                packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                targetIndex
-            )
-        )
+        Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
         context.rewriteRtp(packetInfo)
         Assert.assertEquals(10001, packet.sequenceNumber)
         Assert.assertEquals(1003000, packet.timestamp)
@@ -95,7 +78,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -110,7 +92,7 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet = packetInfo.packetAs<Vp9Packet>()
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                0,
                 targetIndex
             )
             if (!packet.hasLayerIndices) {
@@ -146,7 +128,7 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
-    private class ProjectedPacket internal constructor(
+    private class ProjectedPacket constructor(
         val packet: Vp9Packet,
         val origSeq: Int,
         val extOrigSeq: Int,
@@ -176,7 +158,6 @@ class Vp9AdaptiveSourceProjectionTest {
         var orderedCount = initialOrderedCount - 1
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -193,11 +174,7 @@ class Vp9AdaptiveSourceProjectionTest {
             if (latestSeq isOlderThan origSeq) {
                 latestSeq = origSeq
             }
-            val accepted = context.accept(
-                packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                targetIndex
-            )
+            val accepted = context.accept(packetInfo, 0, targetIndex)
             val oldestValidSeq: Int =
                 RtpUtils.applySequenceNumberDelta(
                     latestSeq,
@@ -501,42 +478,20 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
         val firstPacketInfo = generator.nextPacket()
-        val firstPacket = firstPacketInfo.packetAs<Vp9Packet>()
         val targetIndex = getIndex(eid = 0, sid = 0, tid = 2)
         for (i in 0..2) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertFalse(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertFalse(context.accept(packetInfo, 0, targetIndex))
         }
-        Assert.assertTrue(
-            context.accept(
-                firstPacketInfo,
-                getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex),
-                targetIndex
-            )
-        )
+        Assert.assertTrue(context.accept(firstPacketInfo, 0, targetIndex))
         context.rewriteRtp(firstPacketInfo)
         for (i in 0..9995) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
         }
     }
@@ -549,53 +504,24 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
         val firstPacketInfo = generator.nextPacket()
-        val firstPacket = firstPacketInfo.packetAs<Vp9Packet>()
         val targetIndex = getIndex(eid = 0, sid = 0, tid = 2)
         for (i in 0..3) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertFalse(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertFalse(context.accept(packetInfo, 0, targetIndex))
         }
-        Assert.assertFalse(
-            context.accept(
-                firstPacketInfo,
-                getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex),
-                targetIndex
-            )
-        )
+        Assert.assertFalse(context.accept(firstPacketInfo, 0, targetIndex))
         for (i in 0..9) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertFalse(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertFalse(context.accept(packetInfo, 0, targetIndex))
         }
         generator.requestKeyframe()
         for (i in 0..9995) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
         }
     }
@@ -608,7 +534,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -619,38 +544,19 @@ class Vp9AdaptiveSourceProjectionTest {
         for (i in 0..10) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
             Assert.assertTrue(packet.sequenceNumber > 10001)
             lowestSeq = minOf(lowestSeq, packet.sequenceNumber)
         }
 
-        Assert.assertTrue(
-            context.accept(
-                firstPacketInfo,
-                getIndex(0, firstPacket.spatialLayerIndex, firstPacket.temporalLayerIndex),
-                targetIndex
-            )
-        )
+        Assert.assertTrue(context.accept(firstPacketInfo, 0, targetIndex))
         context.rewriteRtp(firstPacketInfo)
         Assert.assertEquals(lowestSeq - 1, firstPacket.sequenceNumber)
 
         for (i in 0..9980) {
             val packetInfo = generator.nextPacket()
-            val packet = packetInfo.packetAs<Vp9Packet>()
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
         }
     }
@@ -665,7 +571,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -675,22 +580,9 @@ class Vp9AdaptiveSourceProjectionTest {
         for (i in 0..9999) {
             val packetInfo1 = generator1.nextPacket()
             val packet1 = packetInfo1.packetAs<Vp9Packet>()
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo1,
-                    getIndex(1, packet1.spatialLayerIndex, packet1.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo1, 1, targetIndex))
             val packetInfo2 = generator2.nextPacket()
-            val packet2 = packetInfo2.packetAs<Vp9Packet>()
-            Assert.assertFalse(
-                context.accept(
-                    packetInfo2,
-                    getIndex(0, packet2.spatialLayerIndex, packet2.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertFalse(context.accept(packetInfo2, 0, targetIndex))
             context.rewriteRtp(packetInfo1)
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
@@ -711,7 +603,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -729,35 +620,14 @@ class Vp9AdaptiveSourceProjectionTest {
             if (packet1.isStartOfFrame && packet1.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
             }
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo1,
-                    getIndex(
-                        0,
-                        packet1.spatialLayerIndex,
-                        packet1.temporalLayerIndex
-                    ),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo1, 0, targetIndex))
             context.rewriteRtp(packetInfo1)
             Assert.assertTrue(context.rewriteRtcp(srPacket1))
             Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
             Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
             val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
-            val packet2 = packetInfo2.packetAs<Vp9Packet>()
-            Assert.assertFalse(
-                context.accept(
-                    packetInfo2,
-                    getIndex(
-                        1,
-                        packet2.spatialLayerIndex,
-                        packet2.temporalLayerIndex
-                    ),
-                    targetIndex
-                )
-            )
+            Assert.assertFalse(context.accept(packetInfo2, 1, targetIndex))
             Assert.assertFalse(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
@@ -779,27 +649,14 @@ class Vp9AdaptiveSourceProjectionTest {
             if (packet1.isStartOfFrame && packet1.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
             }
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo1,
-                    getIndex(0, packet1.spatialLayerIndex, packet1.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo1, 0, targetIndex))
             context.rewriteRtp(packetInfo1)
             Assert.assertTrue(context.rewriteRtcp(srPacket1))
             Assert.assertEquals(packet1.ssrc, srPacket1.senderSsrc)
             Assert.assertEquals(packet1.timestamp, srPacket1.senderInfo.rtpTimestamp)
             val srPacket2 = generator2.srPacket
             val packetInfo2 = generator2.nextPacket()
-            val packet2 = packetInfo2.packetAs<Vp9Packet>()
-            Assert.assertFalse(
-                context.accept(
-                    packetInfo2,
-                    getIndex(1, packet2.spatialLayerIndex, packet2.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertFalse(context.accept(packetInfo2, 1, targetIndex))
             Assert.assertFalse(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(expectedSeq, packet1.sequenceNumber)
             Assert.assertEquals(expectedTs, packet1.timestamp)
@@ -824,14 +681,7 @@ class Vp9AdaptiveSourceProjectionTest {
             }
 
             /* We will cut off the layer 0 keyframe after 1 packet, once we see the layer 1 keyframe. */
-            Assert.assertEquals(
-                i == 0,
-                context.accept(
-                    packetInfo1,
-                    getIndex(0, packet1.spatialLayerIndex, packet1.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertEquals(i == 0, context.accept(packetInfo1, 0, targetIndex))
             Assert.assertEquals(i == 0, context.rewriteRtcp(srPacket1))
             if (i == 0) {
                 context.rewriteRtp(packetInfo1)
@@ -844,13 +694,7 @@ class Vp9AdaptiveSourceProjectionTest {
             if (packet2.isStartOfFrame && packet2.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
             }
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo2,
-                    getIndex(1, packet2.spatialLayerIndex, packet2.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo2, 1, targetIndex))
             context.rewriteRtp(packetInfo2)
             Assert.assertTrue(context.rewriteRtcp(srPacket2))
             Assert.assertEquals(packet2.ssrc, srPacket2.senderSsrc)
@@ -883,7 +727,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -897,11 +740,7 @@ class Vp9AdaptiveSourceProjectionTest {
         for (i in 0..9999) {
             val packetInfo = generator.nextPacket()
             val packet = packetInfo.packetAs<Vp9Packet>()
-            val accepted = context.accept(
-                packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                targetIndex
-            )
+            val accepted = context.accept(packetInfo, 0, targetIndex)
             if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
                 expectedTl0PicIdx = applyTl0PicIdxDelta(expectedTl0PicIdx, 1)
             }
@@ -942,7 +781,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -957,7 +795,7 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet = packetInfo.packetAs<Vp9Packet>()
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                0,
                 targetIndex
             )
             if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
@@ -995,13 +833,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packetInfo = generator.nextPacket()
                 packet = packetInfo.packetAs()
             } while (packet.temporalLayerIndex > targetIndex)
-            Assert.assertTrue(
-                context.accept(
-                    packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
-                    targetIndex
-                )
-            )
+            Assert.assertTrue(context.accept(packetInfo, 0, targetIndex))
             context.rewriteRtp(packetInfo)
 
             /* Allow any values after a gap. */
@@ -1018,7 +850,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                    0,
                     targetIndex
                 )
                 if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
@@ -1074,7 +906,6 @@ class Vp9AdaptiveSourceProjectionTest {
         val initialState = RtpState(1, 10000, 1000000)
         val context = Vp9AdaptiveSourceProjectionContext(
             diagnosticContext,
-            payloadType,
             initialState,
             logger
         )
@@ -1096,7 +927,7 @@ class Vp9AdaptiveSourceProjectionTest {
             packet = packetInfo.packetAs()
             val accepted = context.accept(
                 packetInfo,
-                getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                0,
                 targetIndex
             )
             if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
@@ -1136,7 +967,7 @@ class Vp9AdaptiveSourceProjectionTest {
                     packet = packetInfo.packetAs()
                     val accepted = context.accept(
                         packetInfo,
-                        getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                        0,
                         targetIndex
                     )
                     Assert.assertTrue(accepted)
@@ -1154,7 +985,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                    0,
                     RtpLayerDesc.SUSPENDED_INDEX
                 )
                 Assert.assertFalse(accepted)
@@ -1170,7 +1001,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                    0,
                     targetIndex
                 )
                 Assert.assertFalse(accepted)
@@ -1187,7 +1018,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                    0,
                     targetIndex
                 )
                 Assert.assertFalse(accepted)
@@ -1202,7 +1033,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 packet = packetInfo.packetAs()
                 val accepted = context.accept(
                     packetInfo,
-                    getIndex(0, packet.spatialLayerIndex, packet.temporalLayerIndex),
+                    0,
                     targetIndex
                 )
                 if (packet.isStartOfFrame && packet.temporalLayerIndex == 0) {
@@ -1561,7 +1392,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 val srPacketBuilder = RtcpSrPacketBuilder()
                 srPacketBuilder.rtcpHeader.senderSsrc = ssrc
                 val siBuilder = srPacketBuilder.senderInfo
-                setSIBuilderNtp(srPacketBuilder.senderInfo, receivedTime.toEpochMilli())
+                siBuilder.setNtpFromJavaTime(receivedTime.toEpochMilli())
                 siBuilder.rtpTimestamp = ts
                 siBuilder.sendersOctetCount = packetCount.toLong()
                 siBuilder.sendersOctetCount = octetCount.toLong()
@@ -1594,16 +1425,6 @@ class Vp9AdaptiveSourceProjectionTest {
                     // Dummy payload data
                     "000000"
             )
-
-            /* TODO: move this to jitsi-rtp */
-            const val JAVA_TO_NTP_EPOCH_OFFSET_SECS = 2208988800L
-
-            fun setSIBuilderNtp(siBuilder: SenderInfoBuilder, wallTime: Long) {
-                val wallSecs = wallTime / 1000
-                val wallMs = wallTime % 1000
-                siBuilder.ntpTimestampMsw = wallSecs + JAVA_TO_NTP_EPOCH_OFFSET_SECS
-                siBuilder.ntpTimestampLsw = wallMs * (1L shl 32) / 1000
-            }
         }
     }
 }

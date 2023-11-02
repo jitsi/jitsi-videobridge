@@ -38,11 +38,11 @@ class Vp8Packet private constructor(
     length: Int,
     isKeyframe: Boolean?,
     isStartOfFrame: Boolean?,
-    encodingIndex: Int?,
+    encodingId: Int,
     height: Int?,
     pictureId: Int?,
     TL0PICIDX: Int?
-) : ParsedVideoPacket(buffer, offset, length, encodingIndex) {
+) : ParsedVideoPacket(buffer, offset, length, encodingId) {
 
     constructor(
         buffer: ByteArray,
@@ -52,7 +52,7 @@ class Vp8Packet private constructor(
         buffer, offset, length,
         isKeyframe = null,
         isStartOfFrame = null,
-        encodingIndex = null,
+        encodingId = RtpLayerDesc.SUSPENDED_ENCODING_ID,
         height = null,
         pictureId = null,
         TL0PICIDX = null
@@ -116,8 +116,12 @@ class Vp8Packet private constructor(
 
     val temporalLayerIndex: Int = Vp8Utils.getTemporalLayerIdOfFrame(this)
 
-    override val layerId: Int
-        get() = if (hasTemporalLayerIndex) RtpLayerDesc.getIndex(0, 0, temporalLayerIndex) else super.layerId
+    override val layerIds: Collection<Int>
+        get() = if (hasTemporalLayerIndex) {
+            listOf(RtpLayerDesc.getIndex(0, 0, temporalLayerIndex))
+        } else {
+            super.layerIds
+        }
 
     /**
      * This is currently used as an overall spatial index, not an in-band spatial quality index a la vp9.  That is,
@@ -154,7 +158,7 @@ class Vp8Packet private constructor(
             length,
             isKeyframe = isKeyframe,
             isStartOfFrame = isStartOfFrame,
-            encodingIndex = qualityIndex,
+            encodingId = encodingId,
             height = height,
             pictureId = pictureId,
             TL0PICIDX = TL0PICIDX

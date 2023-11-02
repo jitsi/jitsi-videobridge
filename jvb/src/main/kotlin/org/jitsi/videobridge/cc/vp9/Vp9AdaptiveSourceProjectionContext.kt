@@ -21,7 +21,6 @@ import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyTl0PicIdxDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getExtendedPictureIdDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getTl0PicIdxDelta
-import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
@@ -33,7 +32,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.times
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
@@ -49,7 +47,6 @@ import java.time.Instant
  */
 class Vp9AdaptiveSourceProjectionContext(
     private val diagnosticContext: DiagnosticContext,
-    private val payloadType: PayloadType,
     rtpState: RtpState,
     parentLogger: Logger
 ) : AdaptiveSourceProjectionContext {
@@ -81,7 +78,7 @@ class Vp9AdaptiveSourceProjectionContext(
     private var lastPicIdIndexResumption = -1
 
     @Synchronized
-    override fun accept(packetInfo: PacketInfo, incomingIndex: Int, targetIndex: Int): Boolean {
+    override fun accept(packetInfo: PacketInfo, incomingEncoding: Int, targetIndex: Int): Boolean {
         val packet = packetInfo.packet
         if (packet !is Vp9Packet) {
             logger.warn("Packet is not Vp9 packet")
@@ -108,7 +105,7 @@ class Vp9AdaptiveSourceProjectionContext(
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
-                .acceptFrame(frame, incomingIndex, targetIndex, receivedTime)
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
             frame.isAccepted = acceptResult.accept && frame.index >= lastPicIdIndexResumption
             if (frame.isAccepted) {
                 val projection: Vp9FrameProjection
@@ -142,7 +139,9 @@ class Vp9AdaptiveSourceProjectionContext(
                 .addField("timestamp", packet.timestamp)
                 .addField("seq", packet.sequenceNumber)
                 .addField("pictureId", packet.pictureId)
-                .addField("index", indexString(incomingIndex))
+                .addField("encoding", incomingEncoding)
+                .addField("spatialLayer", packet.spatialLayerIndex)
+                .addField("temporalLayer", packet.temporalLayerIndex)
                 .addField("isInterPicturePredicted", packet.isInterPicturePredicted)
                 .addField("usesInterLayerDependency", packet.usesInterLayerDependency)
                 .addField("isUpperLevelReference", packet.isUpperLevelReference)
@@ -584,10 +583,6 @@ class Vp9AdaptiveSourceProjectionContext(
         lastVp9FrameProjection.timestamp
     )
 
-    override fun getPayloadType(): PayloadType {
-        return payloadType
-    }
-
     @Synchronized
     override fun getDebugState(): JSONObject {
         val debugState = JSONObject()
@@ -602,8 +597,6 @@ class Vp9AdaptiveSourceProjectionContext(
         }
         debugState["vp9FrameMaps"] = mapSizes
         debugState["vp9QualityFilter"] = vp9QualityFilter.debugState
-
-        debugState["payloadType"] = payloadType.toString()
 
         return debugState
     }

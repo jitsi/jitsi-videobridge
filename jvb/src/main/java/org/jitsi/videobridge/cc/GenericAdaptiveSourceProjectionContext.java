@@ -17,12 +17,13 @@ package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
+
+import java.util.*;
 
 /**
  * A generic implementation of an adaptive source projection context that can be
@@ -69,9 +70,9 @@ class GenericAdaptiveSourceProjectionContext
     private boolean needsKeyframe = true;
 
     /**
-     * Useful to determine whether a packet is a "keyframe".
+     * Useful to determine when we need to change generic projection contexts.
      */
-    private final PayloadType payloadType;
+    private final int payloadType;
 
     /**
      * The maximum sequence number that we have sent.
@@ -109,7 +110,7 @@ class GenericAdaptiveSourceProjectionContext
      * @param rtpState the RTP state (i.e. seqnum, timestamp to start with, etc).
      */
     GenericAdaptiveSourceProjectionContext(
-            @NotNull PayloadType payloadType,
+            int payloadType,
             @NotNull RtpState rtpState,
             @NotNull Logger parentLogger)
     {
@@ -131,13 +132,13 @@ class GenericAdaptiveSourceProjectionContext
      * thread) accessing this method at a time.
      *
      * @param packetInfo the RTP packet to determine whether to accept or not.
-     * @param incomingIndex the quality index of the
+     * @param incomingEncoding The encoding index of the packet
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean
-    accept(@NotNull PacketInfo packetInfo, int incomingIndex, int targetIndex)
+    accept(@NotNull PacketInfo packetInfo, int incomingEncoding, int targetIndex)
     {
         VideoRtpPacket rtpPacket = packetInfo.packetAs();
         if (targetIndex == RtpLayerDesc.SUSPENDED_INDEX)
@@ -327,8 +328,7 @@ class GenericAdaptiveSourceProjectionContext
                 ssrc, maxDestinationSequenceNumber, maxDestinationTimestamp);
     }
 
-    @Override
-    public PayloadType getPayloadType()
+    public int getPayloadType()
     {
         return payloadType;
     }

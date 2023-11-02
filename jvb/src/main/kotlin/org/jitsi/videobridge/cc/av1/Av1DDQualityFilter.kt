@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.cc.vp9
+package org.jitsi.videobridge.cc.av1
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
-import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
-import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.SUSPENDED_DT
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
+import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
+import org.jitsi.nlj.rtp.codec.av1.containsDecodeTarget
+import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -31,11 +34,14 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * This class is responsible for dropping VP9 simulcast/svc packets based on
+ * This class is responsible for dropping AV1 simulcast/svc packets based on
  * their quality, i.e. packets that correspond to qualities that are above a
  * given quality target. Instances of this class are thread-safe.
  */
-internal class Vp9QualityFilter(parentLogger: Logger) {
+internal class Av1DDQualityFilter(
+    val av1FrameMap: Map<Long, Av1DDFrameMap>,
+    parentLogger: Logger
+) {
     /**
      * The [Logger] to be used by this instance to print debug
      * information.
@@ -50,7 +56,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
     /**
      * A boolean flag that indicates whether a keyframe is needed, due to an
-     * encoding or (in some cases) a spatial layer switch.
+     * encoding or (in some cases) a decode target switch.
      */
     var needsKeyframe = false
         private set
@@ -66,9 +72,9 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     private var internalTargetEncoding = SUSPENDED_ENCODING_ID
 
     /**
-     * The spatial layer that this instance tries to achieve.
+     * The decode target that this instance tries to achieve.
      */
-    private var internalTargetSpatialId = SUSPENDED_ENCODING_ID
+    private var internalTargetDt = SUSPENDED_DT
 
     /**
      * The layer index that we're currently forwarding. [SUSPENDED_INDEX]
@@ -78,48 +84,52 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     private var currentIndex = SUSPENDED_INDEX
 
     /**
-     * Which spatial layers are currently being forwarded.
-     */
-    private val layers: Array<Boolean> = Array(MAX_VP9_LAYERS) { false }
-
-    /**
-     * Determines whether to accept or drop a VP9 frame.
+     * Determines whether to accept or drop an AV1 frame.
      *
      * Note that, at the time of this writing, there's no practical need for a
      * synchronized keyword because there's only one thread accessing this
      * method at a time.
      *
-     * @param frame the VP9 frame.
-     * @param incomingEncoding the encoding of the incoming RTP packet
+     * @param frame the AV1 frame.
+     * @param incomingEncoding The encoding ID of the incoming packet
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
      * @param receivedTime the current time (as an Instant)
-     * @return true to accept the VP9 frame, otherwise false.
+     * @return true to accept the AV1 frame, otherwise false.
      */
     @Synchronized
     fun acceptFrame(
-        frame: Vp9Frame,
+        frame: Av1DDFrame,
         incomingEncoding: Int,
         externalTargetIndex: Int,
         receivedTime: Instant?
     ): AcceptResult {
         val prevIndex = currentIndex
         val accept = doAcceptFrame(frame, incomingEncoding, externalTargetIndex, receivedTime)
-        val mark = if (frame.isInterPicturePredicted) {
-            frame.spatialLayer.coerceAtLeast(0) == getSidFromIndex(currentIndex)
-        } else {
-            /* This is wrong if the stream isn't actually currently encoding the target index's spatial layer */
-            /* However, in that case the final (lower) spatial layer should have the marker bit set by the encoder, so
-               I think this shouldn't be a problem? */
-            frame.spatialLayer.coerceAtLeast(0) == getSidFromIndex(externalTargetIndex)
-        }
+        val currentDt = getDtFromIndex(currentIndex)
+        val mark = currentDt != SUSPENDED_DT &&
+            (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
-        if (isResumption) assert(accept) // Every code path that can turn off SUSPENDED_INDEX also accepts
-        return AcceptResult(accept = accept, isResumption = isResumption, mark = mark)
+        if (isResumption) {
+            check(accept) {
+                // Every code path that can turn off SUSPENDED_INDEX also accepts
+                "isResumption=$isResumption but accept=$accept for frame ${frame.frameNumber}, " +
+                    "frameInfo=${frame.frameInfo}"
+            }
+        }
+        val dtChanged = (prevIndex != currentIndex)
+        if (dtChanged && currentDt != SUSPENDED_DT) {
+            check(accept) {
+                // Every code path that changes DT also accepts
+                "dtChanged=$dtChanged but accept=$accept for frame ${frame.frameNumber}, frameInfo=${frame.frameInfo}"
+            }
+        }
+        val newDt = if (dtChanged || frame.activeDecodeTargets != null) currentDt else null
+        return AcceptResult(accept = accept, isResumption = isResumption, mark = mark, newDt = newDt)
     }
 
     private fun doAcceptFrame(
-        frame: Vp9Frame,
+        frame: Av1DDFrame,
         incomingEncoding: Int,
         externalTargetIndex: Int,
         receivedTime: Instant?
@@ -143,20 +153,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             currentIndex = SUSPENDED_INDEX
             return false
         }
-        // If temporal scalability is not enabled, pretend that this is the base temporal layer.
-        val temporalLayerIdOfFrame = frame.temporalLayer.coerceAtLeast(0)
         return if (frame.isKeyframe) {
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            val accept = acceptKeyframe(frame, incomingEncoding, receivedTime)
-            if (accept) {
-                // Keyframes reset layer forwarding, whether or not they're an encoding switch
-                for (i in layers.indices) {
-                    layers[i] = (i == 0)
-                }
-            }
-            accept
+            acceptKeyframe(frame, incomingEncoding, externalTargetIndex, receivedTime)
         } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
             if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
                 // XXX(george) i've noticed some "rogue" base layer keyframes
@@ -174,100 +175,70 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                 return false
             }
 
-            /* Logic to forward spatial layer:
-             * Can forward layer: If layer is being sent, or frame is not inter-picture predicted; and
-             *  if layer below is being sent, or if frame does not use inter-picture dependency.
-             * Switching layers: If layer of frame is closer to target than current, set current to target
-             *  if can forward, otherwise request keyframe.
-             * Want to forward layer: If layer of frame is equal to currentLayer, or is less than currentLayer
-             *  and isUpperLayerReference.
-             * If wantToForward and !canForward, something's wrong, request keyFrame.
-             * accept = wantToForward && canForward
-             * if (tid == 0)
-             *   layers[layerOfFrame] = accept
-             * return accept
+            /** Logic to forward a non-keyframe:
+             * If the frame does not have FrameInfo, reject and set needsKeyframe (we couldn't decode its templates).
+             * If we're trying to switch DTs in the current encoding, check the template structure to ensure that
+             * there is at least one template which is SWITCH for the target DT and not NOT_PRESENT for the current DT.
+             * If there is not, request a keyframe.
+             * If the current frame is SWITCH for the target DT, and we've forwarded all the frames on which (by
+             * its fdiffs) it depends, forward it, and change the current DT to the target DT.
+             * In normal circumstances (when the target index == the current index), or when we're trying to switch
+             * *up* encodings, forward all frames whose DT for the current DT is not NOT_PRESENT.
+             * If we're trying to switch *down* encodings, only forward frames which are REQUIRED or SWITCH for the
+             * current DT.
              */
-
-            val spatialLayerOfFrame = frame.spatialLayer.coerceAtLeast(0)
-            var externalTargetSpatialId = getSidFromIndex(externalTargetIndex)
-            var currentSpatialLayer = getSidFromIndex(currentIndex)
-
-            /* If the stream includes a new SS which doesn't list the target spatial layer, lower the target. */
-            /* The target should change the next time the BitrateController runs, but that may be some time. */
-            if (frame.numSpatialLayers != -1 && externalTargetSpatialId >= frame.numSpatialLayers) {
-                externalTargetSpatialId = frame.numSpatialLayers - 1
+            val frameInfo = frame.frameInfo ?: run {
+                needsKeyframe = true
+                return@doAcceptFrame false
+            }
+            var currentDt = getDtFromIndex(currentIndex)
+            val externalTargetDt = if (currentEncoding == externalTargetEncoding) {
+                getDtFromIndex(externalTargetIndex)
+            } else {
+                currentDt
             }
 
-            val canForwardLayer = (!frame.isInterPicturePredicted || layers[spatialLayerOfFrame]) &&
-                (!frame.usesInterLayerDependency || layers[spatialLayerOfFrame - 1])
-
-            /* TODO: this logic is fragile in the presence of frame reordering. */
-            val wantToSwitch =
-                (spatialLayerOfFrame > currentSpatialLayer && spatialLayerOfFrame <= externalTargetSpatialId) ||
-                    (spatialLayerOfFrame < currentSpatialLayer && spatialLayerOfFrame >= externalTargetSpatialId) ||
-                    (frame.numSpatialLayers != -1 && currentSpatialLayer >= frame.numSpatialLayers)
-
-            if (wantToSwitch) {
-                if (canForwardLayer) {
-                    logger.debug { "Switching to spatial layer $externalTargetSpatialId from $currentSpatialLayer" }
-                    currentIndex = RtpLayerDesc.getIndex(incomingEncoding, frame.spatialLayer, frame.temporalLayer)
-                    currentSpatialLayer = spatialLayerOfFrame
-                } else {
-                    if (internalTargetSpatialId != externalTargetSpatialId) {
-                        logger.debug {
-                            "Want to switch to spatial layer $externalTargetSpatialId from $currentSpatialLayer, " +
-                                "requesting keyframe"
-                        }
-                    }
-                    needsKeyframe = true
+            if (
+                frame.activeDecodeTargets != null &&
+                !frame.activeDecodeTargets.containsDecodeTarget(externalTargetDt)
+            ) {
+                /* This shouldn't happen, because we should have set layeringChanged for this packet. */
+                logger.warn {
+                    "External target DT $externalTargetDt not present in current decode targets 0x" +
+                        Integer.toHexString(frame.activeDecodeTargets) + " for frame $frame."
                 }
-                internalTargetSpatialId = externalTargetSpatialId
-            }
-
-            val wantToForwardLayer =
-                (spatialLayerOfFrame == currentSpatialLayer) ||
-                    (spatialLayerOfFrame < currentSpatialLayer && frame.isUpperLevelReference)
-
-            if (wantToForwardLayer && !canForwardLayer) {
-                logger.warn(
-                    "Want to forward ${indexString(currentIndex)} frame, but can't! " +
-                        "layers=${layers.joinToString()}, currentIndex=${indexString(currentIndex)}, " +
-                        "isInterPicturePredicted=${frame.isInterPicturePredicted}, " +
-                        "usesInterLayerDependency=${frame.usesInterLayerDependency}."
-                )
-            }
-
-            val accept = wantToForwardLayer && canForwardLayer
-
-            if (temporalLayerIdOfFrame == 0) {
-                layers[spatialLayerOfFrame] = accept
-            }
-
-            if (!accept) {
                 return false
             }
 
-            // This branch reads the {@link #currentEncodingId} and it
-            // filters packets based on their temporal layer.
-            /* TODO: pay attention to isSwitchingUpPoint.  (I believe the current VP9 encoders we deal with always
-             *  have it set, however.) */
-            if (currentEncoding > externalTargetEncoding || currentSpatialLayer > externalTargetSpatialId) {
-                // pending downscale, decrease the frame rate until we
-                // downscale.
-                temporalLayerIdOfFrame < 1
-            } else if (currentEncoding < externalTargetEncoding || currentSpatialLayer < externalTargetSpatialId) {
-                // pending upscale, increase the frame rate until we upscale.
-                true
-            } else {
-                // The currentEncoding exactly matches the externalTargetEncoding.
-                val externalTargetTemporalId = getTidFromIndex(externalTargetIndex)
-                val currentTemporalLayer = getTidFromIndex(currentIndex)
-
-                val acceptTemporal = temporalLayerIdOfFrame <= externalTargetTemporalId
-                if (acceptTemporal && temporalLayerIdOfFrame > currentTemporalLayer) {
-                    currentIndex = RtpLayerDesc.getIndex(currentEncoding, currentSpatialLayer, temporalLayerIdOfFrame)
+            if (currentDt != externalTargetDt) {
+                val frameMap = av1FrameMap[frame.ssrc]
+                if (frameInfo.dti.getOrNull(externalTargetDt) == null) {
+                    logger.warn { "Target DT $externalTargetDt not present for frame $frame [frameInfo $frameInfo]" }
                 }
-                acceptTemporal
+                if (frameInfo.dti[externalTargetDt] == DTI.SWITCH &&
+                    frameMap != null &&
+                    frameInfo.fdiff.all {
+                        frameMap.getIndex(frame.index - it)?.isAccepted == true
+                    }
+                ) {
+                    logger.debug { "Switching to DT $externalTargetDt from $currentDt" }
+                    currentDt = externalTargetDt
+                    currentIndex = externalTargetIndex
+                } else {
+                    if (frame.structure?.canSwitchWithoutKeyframe(currentDt, externalTargetDt) != true) {
+                        logger.debug {
+                            "Want to switch to DT $externalTargetDt from $currentDt, requesting keyframe"
+                        }
+                        needsKeyframe = true
+                    }
+                }
+            }
+
+            val currentFrameDti = frameInfo.dti[currentDt]
+            if (currentEncoding > externalTargetEncoding) {
+                (currentFrameDti == DTI.SWITCH || currentFrameDti == DTI.REQUIRED)
+            } else {
+                (currentFrameDti != DTI.NOT_PRESENT)
             }
         } else {
             // In this branch we're not processing a keyframe and the
@@ -276,7 +247,6 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
 
             // We should have already requested a keyframe, either above or when the
             // internal target encoding was first moved off SUSPENDED_ENCODING.
-
             false
         }
     }
@@ -325,7 +295,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     }
 
     /**
-     * Determines whether to accept or drop a VP9 keyframe. This method updates
+     * Determines whether to accept or drop an AV1 keyframe. This method updates
      * the encoding id.
      *
      * Note that, at the time of this writing, there's no practical need for a
@@ -333,28 +303,46 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * method at a time.
      *
      * @param receivedTime the time the frame was received
-     * @return true to accept the VP9 keyframe, otherwise false.
+     * @return true to accept the AV1 keyframe, otherwise false.
      */
     @Synchronized
-    private fun acceptKeyframe(frame: Vp9Frame, incomingEncoding: Int, receivedTime: Instant?): Boolean {
+    private fun acceptKeyframe(
+        frame: Av1DDFrame,
+        incomingEncoding: Int,
+        externalTargetIndex: Int,
+        receivedTime: Instant?
+    ): Boolean {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
         // stream.
         if (incomingEncoding < 0) {
             // something went terribly wrong, normally we should be able to
             // extract the layer id from a keyframe.
-            logger.error("invalid encoding id for keyframe")
+            logger.error("unable to get layer id from keyframe")
             return false
         }
-        // Keyframes have to be sid 0, tid 0, unless something screwy is going on.
-        // The layers can also be -1 if the layers aren't known
-        if (frame.spatialLayer > 0 || frame.temporalLayer > 0) {
-            logger.warn("Surprising layers S${frame.spatialLayer}T${frame.temporalLayer} on keyframe")
+        val frameInfo = frame.frameInfo ?: run {
+            // something went terribly wrong, normally we should be able to
+            // extract the frame info from a keyframe.
+            logger.error("unable to get frame info from keyframe")
+            return@acceptKeyframe false
         }
         logger.debug {
             "Received a keyframe of encoding: $incomingEncoding"
         }
-        val incomingIndex = RtpLayerDesc.getIndex(incomingEncoding, frame.spatialLayer, frame.temporalLayer)
+
+        val currentEncoding = getEidFromIndex(currentIndex)
+        val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
+
+        val indexIfSwitched = when {
+            incomingEncoding == externalTargetEncoding -> externalTargetIndex
+            incomingEncoding == internalTargetEncoding && internalTargetDt != -1 ->
+                getIndex(currentEncoding, internalTargetDt)
+            else -> frameInfo.dtisPresent.maxOrNull()!!
+        }
+        val dtIfSwitched = getDtFromIndex(indexIfSwitched)
+        val dtiIfSwitched = frameInfo.dti[dtIfSwitched]
+        val acceptIfSwitched = dtiIfSwitched != DTI.NOT_PRESENT
 
         // The keyframe request has been fulfilled at this point, regardless of
         // whether we'll be able to achieve the internalEncodingIdTarget.
@@ -371,15 +359,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                     "Target is $internalTargetEncoding"
             }
             if (incomingEncoding <= internalTargetEncoding) {
-                val currentEncoding = getEidFromIndex(currentIndex)
                 // If the target is 180p and the first keyframe of a group of
                 // keyframes is a 720p keyframe we don't project it. If we
                 // receive a 720p keyframe, we know that there MUST be a 180p
                 // keyframe shortly after.
-                if (currentEncoding != incomingEncoding) {
-                    currentIndex = incomingIndex
+                if (acceptIfSwitched) {
+                    currentIndex = indexIfSwitched
                 }
-                true
+                acceptIfSwitched
             } else {
                 false
             }
@@ -387,29 +374,30 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             // We're within the 300ms window since the reception of the
             // first key frame of a key frame group, let's check whether an
             // upscale/downscale is possible.
-            val currentEncoding = getEidFromIndex(currentIndex)
             when {
                 currentEncoding <= incomingEncoding &&
                     incomingEncoding <= internalTargetEncoding -> {
                     // upscale or current quality case
-                    if (currentEncoding != incomingEncoding) {
-                        currentIndex = incomingIndex
+                    if (acceptIfSwitched) {
+                        currentIndex = indexIfSwitched
+                        logger.debug {
+                            "Upscaling to encoding $incomingEncoding. " +
+                                "The target is $internalTargetEncoding"
+                        }
                     }
-                    logger.debug {
-                        "Upscaling to encoding $incomingEncoding. " +
-                            "The target is $internalTargetEncoding"
-                    }
-                    true
+                    acceptIfSwitched
                 }
                 incomingEncoding <= internalTargetEncoding &&
                     internalTargetEncoding < currentEncoding -> {
                     // downscale case
-                    currentIndex = incomingIndex
-                    logger.debug {
-                        "Downscaling to encoding $incomingEncoding. " +
-                            "The target is $internalTargetEncoding"
+                    if (acceptIfSwitched) {
+                        currentIndex = indexIfSwitched
+                        logger.debug {
+                            "Downscaling to encoding $incomingEncoding. " +
+                                "The target is $internalTargetEncoding"
+                        }
                     }
-                    true
+                    acceptIfSwitched
                 }
                 else -> {
                     false
@@ -426,16 +414,14 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
     )
     internal fun addDiagnosticContext(pt: DiagnosticContext.TimeSeriesPoint) {
-        pt.addField("qf.currentIndex", indexString(currentIndex))
+        pt.addField("qf.currentIndex", Av1DDRtpLayerDesc.indexString(currentIndex))
             .addField("qf.internalTargetEncoding", internalTargetEncoding)
             .addField("qf.needsKeyframe", needsKeyframe)
             .addField(
                 "qf.mostRecentKeyframeGroupArrivalTimeMs",
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
             )
-        for (i in layers.indices) {
-            pt.addField("qf.layer.$i", layers[i])
-        }
+        /* TODO any other fields necessary */
     }
 
     /**
@@ -452,15 +438,16 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             debugState["mostRecentKeyframeGroupArrivalTimeMs"] =
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
             debugState["needsKeyframe"] = needsKeyframe
-            debugState["internalTargetIndex"] = internalTargetEncoding
-            debugState["currentIndex"] = indexString(currentIndex)
+            debugState["internalTargetEncoding"] = internalTargetEncoding
+            debugState["currentIndex"] = Av1DDRtpLayerDesc.indexString(currentIndex)
             return debugState
         }
 
     data class AcceptResult(
         val accept: Boolean,
         val isResumption: Boolean,
-        val mark: Boolean
+        val mark: Boolean,
+        val newDt: Int?
     )
 
     companion object {
@@ -469,10 +456,5 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
          * generates key frame.
          */
         private val MIN_KEY_FRAME_WAIT = Duration.ofMillis(300)
-
-        /**
-         * The maximum possible number of VP9 spatial layers.
-         */
-        private const val MAX_VP9_LAYERS = 8
     }
 }

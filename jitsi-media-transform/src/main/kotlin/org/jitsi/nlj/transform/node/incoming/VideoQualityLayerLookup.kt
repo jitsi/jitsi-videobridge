@@ -19,7 +19,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
-import org.jitsi.nlj.findRtpLayerDesc
+import org.jitsi.nlj.findRtpEncodingId
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
@@ -37,10 +37,10 @@ class VideoQualityLayerLookup(
     private var sources: Array<MediaSourceDesc> = arrayOf()
     private val numPacketsDroppedNoEncoding = AtomicInteger()
 
-    /* TODO: combine this with VideoBitrateCalculator? They both do findRtpLayerDesc. */
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val videoPacket = packetInfo.packetAs<VideoRtpPacket>()
-        val encodingDesc = sources.findRtpLayerDesc(videoPacket) ?: run {
+        val encodingId = sources.findRtpEncodingId(videoPacket)
+        if (encodingId == null) {
             logger.warn(
                 "Unable to find encoding matching packet! packet=$videoPacket; " +
                     "sources=${sources.joinToString(separator = "\n")}"
@@ -48,7 +48,7 @@ class VideoQualityLayerLookup(
             numPacketsDroppedNoEncoding.incrementAndGet()
             return null
         }
-        videoPacket.qualityIndex = encodingDesc.index
+        videoPacket.encodingId = encodingId
 
         return packetInfo
     }
