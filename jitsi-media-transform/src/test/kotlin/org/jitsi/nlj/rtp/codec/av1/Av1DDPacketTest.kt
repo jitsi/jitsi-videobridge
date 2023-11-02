@@ -1,5 +1,3 @@
-package org.jitsi.nlj.rtp.codec.av1
-
 /*
  * Copyright @ 2018 - present 8x8, Inc.
  *
@@ -15,6 +13,7 @@ package org.jitsi.nlj.rtp.codec.av1
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.nlj.rtp.codec.av1
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
