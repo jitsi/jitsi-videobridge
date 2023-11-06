@@ -309,9 +309,11 @@ class RelayMessageTransport(
     override fun webSocketConnected(ws: ColibriWebSocket) {
         synchronized(webSocketSyncRoot) {
             // If we already have a web-socket, discard it and use the new one.
-            if (ws != webSocket && webSocket != null) {
-                logger.info("Replacing an existing websocket.")
-                webSocket?.session?.close(CloseStatus.NORMAL, "replaced")
+            if (ws != webSocket) {
+                if (webSocket != null) {
+                    logger.info("Replacing an existing websocket.")
+                    webSocket?.session?.close(CloseStatus.NORMAL, "replaced")
+                }
                 webSocketLastActive = true
                 webSocket = ws
                 sendMessage(ws, createServerHello())
