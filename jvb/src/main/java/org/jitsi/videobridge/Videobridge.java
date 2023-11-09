@@ -21,6 +21,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.health.Result;
 import org.jitsi.metrics.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
@@ -161,6 +162,35 @@ public class Videobridge
         this.releaseId = releaseId;
         this.shutdownManager = new ShutdownManager(shutdownService, logger);
         jvbHealthChecker.start();
+
+        // Register the lost packet histograms with JMT.
+        if (TransportCcEngine.Companion.getPacketsReceivedHistogram() == null)
+        {
+            TransportCcEngine.Companion.setPacketsReceivedHistogram(statistics.packetsReportedReceivedBySize);
+        }
+        else
+        {
+            logger.warn("Will not set TransportCcEngine.packetsReceivedHistogram, already set.");
+        }
+
+        if (TransportCcEngine.Companion.getPacketsLostHistogram() == null)
+        {
+            TransportCcEngine.Companion.setPacketsLostHistogram(statistics.packetsReportedLostBySize);
+        }
+        else
+        {
+            logger.warn("Will not set TransportCcEngine.packetsLostHistogram, already set.");
+        }
+
+        if (TransportCcEngine.Companion.getPacketsReceivedAfterLostHistogram() == null)
+        {
+            TransportCcEngine.Companion.setPacketsReceivedAfterLostHistogram(
+                    statistics.packetsReportedReceivedAfterLostBySize);
+        }
+        else
+        {
+            logger.warn("Will not set TransportCcEngine.packetsReceivedAfterLostHistogram, already set.");
+        }
     }
 
     @NotNull
@@ -1044,6 +1074,28 @@ public class Videobridge
                 "conferences",
                 "Current number of conferences."
         );
+
+        public HistogramMetric packetsReportedReceivedBySize
+                = VideobridgeMetricsContainer.getInstance().registerHistogram(
+                "packets_reported_received_by_size",
+                "The number of RTP packets that endpoints have reported to have received, by size in bytes.",
+                0.0, 100.0, 200.0, 500.0, 1000.0);
+
+        /**
+         *  We keep track of this in a separate histogram because there's no "unobserve" API. The number of actually
+         *  lost packets can be computed as lost - receivedAfterLost.
+         */
+        public HistogramMetric packetsReportedReceivedAfterLostBySize
+                = VideobridgeMetricsContainer.getInstance().registerHistogram(
+                "packets_reported_received_after_lost_by_size",
+                "The number of RTP packets that endpoints have reported received, "
+                        + "after having reported them as lost, by size in bytes.",
+                0.0, 100.0, 200.0, 500.0, 1000.0);
+
+        public HistogramMetric packetsReportedLostBySize = VideobridgeMetricsContainer.getInstance().registerHistogram(
+                "packets_reported_lost_by_size",
+                "The number of RTP packets that endpoints have reported to have not received, by size in bytes.",
+                0.0, 100.0, 200.0, 500.0, 1000.0);
     }
 
     private static class ConferenceNotFoundException extends Exception {}

@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtp
 
+import org.jitsi.metrics.HistogramMetric
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.ArrayCache
@@ -151,6 +152,7 @@ class TransportCcEngine(
                         bandwidthEstimator.processPacketLoss(now, packetDetail.packetSendTime, tccSeqNum)
                         packetDetail.state = PacketDetailState.ReportedLost
                         numPacketsReported.increment()
+                        packetsLostHistogram?.histogram?.observe(packetDetail.packetLength.bytes)
                         numPacketsReportedLost.increment()
                         synchronized(this) {
                             lossListeners.forEach {
@@ -168,9 +170,11 @@ class TransportCcEngine(
                             if (previouslyReportedLost) {
                                 numPacketsReportedAfterLost.increment()
                                 numPacketsReportedLost.decrement()
+                                packetsReceivedAfterLostHistogram?.histogram?.observe(packetDetail.packetLength.bytes)
                                 /* Packet has already been counted in numPacketsReported */
                             } else {
                                 numPacketsReported.increment()
+                                packetsReceivedHistogram?.histogram?.observe(packetDetail.packetLength.bytes)
                             }
 
                             val arrivalTimeInLocalClock =
@@ -341,5 +345,19 @@ class TransportCcEngine(
          * XXX this is an uninformed value.
          */
         private const val MAX_OUTGOING_PACKETS_HISTORY = 1000
+
+        /** Global histogram of packets reported received, by packet size. */
+        var packetsReceivedHistogram: HistogramMetric? = null
+
+        /**
+         *  Global histogram of packets reported received after being reported lost, by packet size.
+         *
+         *  We keep track of this in a separate histogram because there's no "unobserve" API. The number of actually
+         *  lost packets can be computed as lost - receivedAfterLost.
+         */
+        var packetsReceivedAfterLostHistogram: HistogramMetric? = null
+
+        /** Global histogram of packets reported lost, by packet size. */
+        var packetsLostHistogram: HistogramMetric? = null
     }
 }
