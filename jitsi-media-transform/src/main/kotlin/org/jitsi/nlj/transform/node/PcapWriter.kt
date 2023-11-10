@@ -36,7 +36,7 @@ import java.util.Random
 
 class PcapWriter(
     parentLogger: Logger,
-    filePath: String = "/tmp/${Random().nextLong()}.pcap}"
+    filePath: String = "/tmp/${Random().nextLong()}.pcap"
 ) : ObserverNode("PCAP writer") {
     private val logger = createChildLogger(parentLogger)
     private val lazyHandle = lazy {
