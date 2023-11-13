@@ -32,6 +32,7 @@ import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.AudioRedHandler
+import org.jitsi.nlj.transform.node.CompliancePcapWriter
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketCacher
@@ -108,6 +109,7 @@ class RtpSenderImpl(
     private val srtpEncryptWrapper = SrtpEncryptNode()
     private val srtcpEncryptWrapper = SrtcpEncryptNode()
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-tx")
+    private val compliancePcapWriter = CompliancePcapWriter(logger, streamInformationStore, id, "fe")
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime(streamInformationStore)
     private val statsTracker = OutgoingStatisticsTracker()
@@ -148,6 +150,7 @@ class RtpSenderImpl(
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
             node(HeaderExtEncoder(streamInformationStore, logger))
             node(toggleablePcapWriter.newObserverNode())
+            node(compliancePcapWriter.newObserverNode())
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
@@ -321,6 +324,11 @@ class RtpSenderImpl(
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
         incomingPacketQueue.close()
         toggleablePcapWriter.disable()
+        compliancePcapWriter.disable()
+    }
+
+    override fun setComplianceRecording(comRec: String?, contextId: String?) {
+        compliancePcapWriter.configure(comRec, contextId)
     }
 
     companion object {

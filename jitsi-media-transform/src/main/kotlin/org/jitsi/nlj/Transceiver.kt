@@ -379,6 +379,11 @@ class Transceiver(
         return rtpReceiver.isFeatureEnabled(feature)
     }
 
+    fun setComplianceRecording(comRec: String?, contextId: String?) {
+        rtpReceiver.setComplianceRecording(comRec, contextId)
+        rtpSender.setComplianceRecording(comRec, contextId)
+    }
+
     companion object {
         init {
 //            Node.plugins.add(BufferTracePlugin)
