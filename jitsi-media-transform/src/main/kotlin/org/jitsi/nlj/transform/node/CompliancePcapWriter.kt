@@ -124,7 +124,6 @@ class CompliancePcapWriter(
     }
 
     fun configure(newMode: String?, newContextId: String?) {
-
         // TODO - how to trace long line exceeding 120 chars
         logger.info("Compliance recording:${capId()} configure mode:$mode -> $newMode")
         logger.info("Compliance recording:${capId()} contextId:$contextId -> $newContextId")
