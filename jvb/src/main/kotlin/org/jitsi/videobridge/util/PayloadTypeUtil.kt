@@ -27,9 +27,11 @@ import org.jitsi.nlj.format.PayloadTypeEncoding.OPUS
 import org.jitsi.nlj.format.PayloadTypeEncoding.OTHER
 import org.jitsi.nlj.format.PayloadTypeEncoding.RED
 import org.jitsi.nlj.format.PayloadTypeEncoding.RTX
+import org.jitsi.nlj.format.PayloadTypeEncoding.TELEPHONE_EVENT
 import org.jitsi.nlj.format.PayloadTypeEncoding.VP8
 import org.jitsi.nlj.format.PayloadTypeEncoding.VP9
 import org.jitsi.nlj.format.RtxPayloadType
+import org.jitsi.nlj.format.TelephoneEventPayloadType
 import org.jitsi.nlj.format.VideoRedPayloadType
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
@@ -95,6 +97,7 @@ class PayloadTypeUtil {
                 H264 -> H264PayloadType(id, parameters, rtcpFeedbackSet)
                 RTX -> RtxPayloadType(id, parameters)
                 OPUS -> OpusPayloadType(id, parameters)
+                TELEPHONE_EVENT -> TelephoneEventPayloadType(id, clockRate, parameters)
                 RED -> when (mediaType) {
                     AUDIO -> AudioRedPayloadType(id, clockRate, parameters)
                     VIDEO -> VideoRedPayloadType(id, clockRate, parameters, rtcpFeedbackSet)
