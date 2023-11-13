@@ -65,17 +65,17 @@ class CompliancePcapWriter(
 
     fun validJmtConfig(): Boolean {
         if (!allowed) {
-            logger.info("Compliance recording:${capId()} is not allowed in jmt.compliance-recording.enabled")
+            logger.info("${capId()} is not allowed in jmt.compliance-recording.enabled")
             return false
         }
 
         if (basePath.isEmpty()) {
-            logger.error("Compliance recording:${capId()} jmt.compliance-recording.base-path is not configured")
+            logger.error("${capId()} jmt.compliance-recording.base-path is not configured")
             return false
         }
 
         if (!Files.isDirectory(Paths.get(basePath))) {
-            logger.error("Compliance recording:${capId()} base-path:$basePath is not a valid directory path")
+            logger.error("${capId()} base-path:$basePath is not a valid directory path")
             return false
         }
 
@@ -116,7 +116,7 @@ class CompliancePcapWriter(
         try {
             File(jsonFilename()).writeText(gson.toJson(je))
         } catch (ex: Exception) {
-            logger.error("Compliance recording:${capId()} exception: $ex")
+            logger.error("${capId()} exception: $ex")
             return false
         }
 
@@ -125,8 +125,8 @@ class CompliancePcapWriter(
 
     fun configure(newMode: String?, newContextId: String?) {
         // TODO - how to trace long line exceeding 120 chars
-        logger.info("Compliance recording:${capId()} configure mode:$mode -> $newMode")
-        logger.info("Compliance recording:${capId()} contextId:$contextId -> $newContextId")
+        logger.info("${capId()} configure mode:$mode -> $newMode")
+        logger.info("${capId()} contextId:$contextId -> $newContextId")
 
         // Disable conditions
         if (newMode.isNullOrEmpty() || newMode == CAP_MODE_NONE) {
@@ -144,26 +144,26 @@ class CompliancePcapWriter(
         }
 
         if (newMode !in listOf(CAP_MODE_AUDIO, CAP_MODE_VIDEO, CAP_MODE_AUDIO_VIDEO)) {
-            logger.error("Compliance recording:${capId()} invalid mode:$newMode")
+            logger.error("${capId()} invalid mode:$newMode")
             return
         }
 
         if (newContextId.isNullOrEmpty()) {
-            logger.error("Compliance recording:${capId()} invalid context-id:$newContextId")
+            logger.error("${capId()} invalid context-id:$newContextId")
             return
         }
 
         synchronized(lock) {
             if (mode == newMode && contextId == newContextId) {
                 // nothing to do
-                logger.warn("Compliance recording:${capId()} duplicate configuration request ignored.")
+                logger.warn("${capId()} duplicate configuration request ignored.")
                 return
             }
         }
 
         if (isEnabled()) {
             // reconfiguring to different mode on the fly?
-            logger.warn("Compliance recording:${capId()} is already enabled - resetting by disabling first.")
+            logger.warn("${capId()} is already enabled - resetting by disabling first.")
             disable()
         }
 
@@ -182,14 +182,14 @@ class CompliancePcapWriter(
     }
 
     fun enable() {
-        logger.info("Compliance recording:${capId()} enable ${pcapFilename()}")
+        logger.info("${capId()} enable ${pcapFilename()}")
 
         if (!validJmtConfig()) {
             return
         }
 
         if (contextId.isNullOrEmpty()) {
-            logger.error("Compliance recording:${capId()} is not configured with context-id")
+            logger.error("${capId()} is not configured with context-id")
             return
         }
 
@@ -204,13 +204,13 @@ class CompliancePcapWriter(
                     captureVideo = true
                 }
                 else -> {
-                    logger.error("Compliance recording:${capId()} invalid mode:$mode")
+                    logger.error("${capId()} invalid mode:$mode")
                     return
                 }
             }
 
             if (writer == null) {
-                logger.info("Compliance recording:${capId()} enable ${pcapFilename()}")
+                logger.info("${capId()} enable ${pcapFilename()}")
                 writer = PcapWriter(logger, pcapFilename())
             }
         }
@@ -222,7 +222,7 @@ class CompliancePcapWriter(
             captureVideo = false
 
             if (writer != null) {
-                logger.info("Compliance recording:${capId()} disable ${pcapFilename()}")
+                logger.info("${capId()} disable ${pcapFilename()}")
                 writer?.close()
                 writer = null
             }
@@ -231,7 +231,7 @@ class CompliancePcapWriter(
 
     fun isEnabled(): Boolean = writer != null
 
-    fun newObserverNode(): Node = PcapWriterNode("Compliance recording:${capId()} pcap writer")
+    fun newObserverNode(): Node = PcapWriterNode("${capId()} compliance pcap writer")
 
     private inner class PcapWriterNode(name: String) : ObserverNode(name) {
         override fun observe(packetInfo: PacketInfo) {
