@@ -15,9 +15,7 @@
  */
 package org.jitsi.nlj.transform.node
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonElement
-import com.google.gson.JsonParser
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
@@ -107,14 +105,22 @@ class CompliancePcapWriter(
         meta.put("payload_map", payloadsMap)
 
         // json-simple produces one long flat line
-        // File(jsonFilename()).writeText(meta.toJSONString())
+//        File(jsonFilename()).writeText(meta.toJSONString())
 
-        // gson produces elements on separate lines
-        val gson = GsonBuilder().setPrettyPrinting().create()
-        val je: JsonElement = JsonParser.parseString(meta.toJSONString())
+        // gson pretty printing
+//        try {
+//            val gson = GsonBuilder().setPrettyPrinting().create()
+//            val je: JsonElement = JsonParser.parseString(meta.toJSONString())
+//            File(jsonFilename()).writeText(gson.toJson(je))
+//        } catch (ex: Exception) {
+//            logger.error("${capId()} exception: $ex")
+//            return false
+//        }
 
+        // jackson pretty printing
         try {
-            File(jsonFilename()).writeText(gson.toJson(je))
+            val writer = jacksonObjectMapper().writerWithDefaultPrettyPrinter()
+            File(jsonFilename()).writeText(writer.writeValueAsString(meta))
         } catch (ex: Exception) {
             logger.error("${capId()} exception: $ex")
             return false
