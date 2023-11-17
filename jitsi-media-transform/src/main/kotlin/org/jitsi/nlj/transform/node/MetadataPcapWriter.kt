@@ -31,7 +31,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class CompliancePcapWriter(
+class MetadataPcapWriter(
     private val logger: Logger,
     private val streamInformationStore: ReadOnlyStreamInformationStore,
     private val id: String,
@@ -63,12 +63,12 @@ class CompliancePcapWriter(
 
     fun validJmtConfig(): Boolean {
         if (!allowed) {
-            logger.info("${capId()} is not allowed in jmt.compliance-recording.enabled")
+            logger.info("${capId()} is not allowed in jmt.metadata-pcap-recording.enabled")
             return false
         }
 
         if (basePath.isEmpty()) {
-            logger.error("${capId()} jmt.compliance-recording.base-path is not configured")
+            logger.error("${capId()} jmt.metadata-pcap-recording.base-path is not configured")
             return false
         }
 
@@ -94,31 +94,27 @@ class CompliancePcapWriter(
                 (it.value.mediaType == MediaType.VIDEO && (mode == CAP_MODE_VIDEO || mode == CAP_MODE_AUDIO_VIDEO))
             ) {
                 val entry = JSONObject()
+                val encoding = it.value.encoding.toString().lowercase()
                 entry["payload_type"] = it.value.pt
-                entry["encoding"] = it.value.encoding.toString().lowercase()
+                entry["encoding"] = encoding
                 entry["media_type"] = it.value.mediaType.name.lowercase()
                 entry["clock_rate"] = it.value.clockRate
+                if (encoding == "rtx") {
+                    val apt = it.value.parameters["apt"]
+                    entry["associated_pt"] = apt?.toInt() ?: -1
+                    if (apt == null) {
+                        logger.error("${capId()} no associated payload type for rtx:${it.value.pt}")
+                    }
+                }
+
                 payloadsMap.add(entry)
             }
         }
 
         meta.put("payload_map", payloadsMap)
 
-        // json-simple produces one long flat line
-//        File(jsonFilename()).writeText(meta.toJSONString())
-
-        // gson pretty printing
-//        try {
-//            val gson = GsonBuilder().setPrettyPrinting().create()
-//            val je: JsonElement = JsonParser.parseString(meta.toJSONString())
-//            File(jsonFilename()).writeText(gson.toJson(je))
-//        } catch (ex: Exception) {
-//            logger.error("${capId()} exception: $ex")
-//            return false
-//        }
-
-        // jackson pretty printing
         try {
+            // jackson pretty printing
             val writer = jacksonObjectMapper().writerWithDefaultPrettyPrinter()
             File(jsonFilename()).writeText(writer.writeValueAsString(meta))
         } catch (ex: Exception) {
@@ -237,7 +233,7 @@ class CompliancePcapWriter(
 
     fun isEnabled(): Boolean = writer != null
 
-    fun newObserverNode(): Node = PcapWriterNode("${capId()} compliance pcap writer")
+    fun newObserverNode(): Node = PcapWriterNode("${capId()} metadata pcap writer")
 
     private inner class PcapWriterNode(name: String) : ObserverNode(name) {
         override fun observe(packetInfo: PacketInfo) {
@@ -258,8 +254,8 @@ class CompliancePcapWriter(
     }
 
     companion object {
-        private val allowed: Boolean by config("jmt.compliance-recording.enabled".from(JitsiConfig.newConfig))
-        private val basePath: String by config("jmt.compliance-recording.base-path".from(JitsiConfig.newConfig))
+        private val allowed: Boolean by config("jmt.metadata-pcap-recording.enabled".from(JitsiConfig.newConfig))
+        private val basePath: String by config("jmt.metadata-pcap-recording.base-path".from(JitsiConfig.newConfig))
 
         private const val CAP_MODE_NONE = "none"
         private const val CAP_MODE_AUDIO = "audio"

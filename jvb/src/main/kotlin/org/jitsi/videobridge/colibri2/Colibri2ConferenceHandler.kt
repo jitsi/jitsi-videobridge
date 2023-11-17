@@ -240,15 +240,15 @@ class Colibri2ConferenceHandler(
             /* No need to put media in conference-modified. */
         }
 
-        // Configure compliance recording after the payload types maps are set
+        // Configure pcap recording after the payload types maps are set
         if (c2endpoint.create) {
-            val comRec = c2endpoint.getAttributeAsString("com-rec")
-            logger.info("com-rec value: $comRec")
+            val mode = c2endpoint.getAttributeAsString("pcap-rec-mode")
+            logger.info("pcap-rec-mode value: $mode")
 
             val contextId = c2endpoint.getAttributeAsString("context-id")
             logger.info("context-id value: $contextId")
 
-            endpoint.transceiver.setComplianceRecording(comRec, contextId)
+            endpoint.transceiver.setPcapRecording(mode, contextId)
         }
 
         endpoint.acceptAudio = endpoint.transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values.any {

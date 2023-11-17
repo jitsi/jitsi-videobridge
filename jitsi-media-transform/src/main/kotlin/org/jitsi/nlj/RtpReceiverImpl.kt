@@ -32,8 +32,8 @@ import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
-import org.jitsi.nlj.transform.node.CompliancePcapWriter
 import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.transform.node.MetadataPcapWriter
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketLossConfig
 import org.jitsi.nlj.transform.node.PacketLossNode
@@ -141,7 +141,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         })
     }
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx")
-    private val compliancePcapWriter = CompliancePcapWriter(logger, streamInformationStore, id, "ne")
+    private val metadataPcapWriter = MetadataPcapWriter(logger, streamInformationStore, id, "ne")
     private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
     private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
 
@@ -227,7 +227,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         // This reads audio levels from packets that use cryptex. TODO: should it go in the Audio path?
                         node(audioLevelReader.postDecryptNode)
                         node(toggleablePcapWriter.newObserverNode())
-                        node(compliancePcapWriter.newObserverNode())
+                        node(metadataPcapWriter.newObserverNode())
                         node(statsTracker)
                         node(PaddingTermination(logger))
                         demux("Media Type") {
@@ -353,14 +353,14 @@ class RtpReceiverImpl @JvmOverloads constructor(
         NodeTeardownVisitor().visit(inputTreeRoot)
         incomingPacketQueue.close()
         toggleablePcapWriter.disable()
-        compliancePcapWriter.disable()
+        metadataPcapWriter.disable()
     }
 
     override fun onRttUpdate(newRttMs: Double) {
         remoteBandwidthEstimator.onRttUpdate(newRttMs)
     }
 
-    override fun setComplianceRecording(comRec: String?, contextId: String?) {
-        compliancePcapWriter.configure(comRec, contextId)
+    override fun setPcapRecording(mode: String?, contextId: String?) {
+        metadataPcapWriter.configure(mode, contextId)
     }
 }

@@ -379,9 +379,9 @@ class Transceiver(
         return rtpReceiver.isFeatureEnabled(feature)
     }
 
-    fun setComplianceRecording(comRec: String?, contextId: String?) {
-        rtpReceiver.setComplianceRecording(comRec, contextId)
-        rtpSender.setComplianceRecording(comRec, contextId)
+    fun setPcapRecording(mode: String?, contextId: String?) {
+        rtpReceiver.setPcapRecording(mode, contextId)
+        rtpSender.setPcapRecording(mode, contextId)
     }
 
     companion object {

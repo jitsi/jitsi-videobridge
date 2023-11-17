@@ -64,7 +64,7 @@ abstract class RtpReceiver :
 
     abstract fun forceMuteVideo(shouldMute: Boolean)
 
-    abstract fun setComplianceRecording(comRec: String?, contextId: String?)
+    abstract fun setPcapRecording(mode: String?, contextId: String?)
 }
 
 interface RtpReceiverEventHandler {
