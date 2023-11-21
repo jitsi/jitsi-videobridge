@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.MapperFeature
@@ -86,6 +87,7 @@ sealed class BridgeChannelMessage {
     companion object {
         private val mapper = jacksonObjectMapper().apply {
             enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+            enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
         }
 
         @JvmStatic

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.message
 
+import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException
@@ -64,6 +65,49 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
             shouldThrow<InvalidTypeIdException> {
                 parse("""{"colibriClass": "invalid-colibri-class" }""")
+            }
+            shouldThrow<JsonParseException> {
+                parse(
+                    """
+                {
+                  "colibriClass": "EndpointStats",
+                  "colibriClass": "duplicate"
+                }
+                    """.trimIndent()
+                )
+            }
+            shouldThrow<JsonParseException> {
+                parse(
+                    """
+                {
+                  "colibriClass": "EndpointStats",
+                  "to": "a",
+                  "to": "b"
+                }
+                    """.trimIndent()
+                )
+            }
+            shouldThrow<JsonParseException> {
+                parse(
+                    """
+                {
+                  "colibriClass": "EndpointStats",
+                  "from": "a",
+                  "from": "b"
+                }
+                    """.trimIndent()
+                )
+            }
+            shouldThrow<JsonParseException> {
+                parse(
+                    """
+                {
+                  "colibriClass": "EndpointStats",
+                  "non-defined-prop": "a",
+                  "non-defined-prop": "b"
+                }
+                    """.trimIndent()
+                )
             }
 
             context("when some of the message-specific fields are missing/invalid") {
