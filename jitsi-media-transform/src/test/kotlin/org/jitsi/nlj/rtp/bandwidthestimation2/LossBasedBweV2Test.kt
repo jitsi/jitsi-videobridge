@@ -19,6 +19,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
@@ -32,6 +33,7 @@ import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.div
 import org.jitsi.nlj.util.kbps
 import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import org.jitsi.utils.times
 import java.time.Instant
 
@@ -871,6 +873,799 @@ class LossBasedBweV2Test : FreeSpec() {
             // The estimate is capped by acked_bitrate * BwRampupUpperBoundFactor.
             val estimate2 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
             estimate2 shouldBe ackedBitrate * 1.2
+        }
+
+        "EstimateBitrateIsBoundedDuringDelayedWindowAfterLossBasedBweBacksOff" {
+            Exhaustive.boolean().checkAll {
+
+                val enoughFeedback1 = createPacketResultsWithReceivedPackets(Instant.EPOCH)
+                val enoughFeedback2 = createPacketResultsWith50pLossRate(Instant.EPOCH + kDelayedIncreaseWindow - 2.ms)
+                val enoughFeedback3 =
+                    createPacketResultsWithReceivedPackets(Instant.EPOCH + kDelayedIncreaseWindow - 1.ms)
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                val delayBasedEstimate = 5000.kbps
+
+                lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+                lossBasedBandwidthEstimator.setAcknowledgedBitrate(300.kbps)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback1,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                // Increase the acknowledged bitrate to make sure that the estimate is not
+                // capped too low.
+                lossBasedBandwidthEstimator.setAcknowledgedBitrate(5000.kbps)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback2,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+
+                // The estimate is capped by current_estimate * kMaxIncreaseFactor because
+                // it recently backed off.
+                val estimate2 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
+
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback3,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                // The latest estimate is the same as the previous estimate since the sent
+                // packets were sent within the DelayedIncreaseWindow.
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe estimate2
+            }
+        }
+
+        // The estimate is not bounded after the delayed increase window.
+        "KeepIncreasingEstimateAfterDelayedIncreaseWindow" {
+            Exhaustive.boolean().checkAll {
+                val enoughFeedback1 = createPacketResultsWithReceivedPackets(Instant.EPOCH)
+                val enoughFeedback2 =
+                    createPacketResultsWithReceivedPackets(Instant.EPOCH + kDelayedIncreaseWindow - 1.ms)
+                val enoughFeedback3 =
+                    createPacketResultsWithReceivedPackets(Instant.EPOCH + kDelayedIncreaseWindow + 1.ms)
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                val delayBasedEstimate = 5000.kbps
+
+                lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+                lossBasedBandwidthEstimator.setAcknowledgedBitrate(300.kbps)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback1,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                // Increase the acknowledged bitrate to make sure that the estimate is not
+                // capped too low.
+                lossBasedBandwidthEstimator.setAcknowledgedBitrate(5000.kbps)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback2,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+
+                // The estimate is capped by current_estimate * kMaxIncreaseFactor because
+                // it recently backed off.
+                val estimate2 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
+
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback3,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThanOrEqualTo
+                    estimate2
+            }
+        }
+
+        "NotIncreaseIfInherentLossLessThanAverageLoss" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2),
+                appendAcknowledgedRateCandidate = false,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                notIncreaseIfInherentLossLessThanAverageLoss = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val enoughFeedback10pLoss2 =
+                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Do not increase the bitrate because inherent loss is less than average loss
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 600.kbps
+        }
+
+        "SelectHighBandwidthCandidateIfLossRateIsLessThanThreshold" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2, 0.8),
+                appendAcknowledgedRateCandidate = false,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                higherBandwidthBiasFactor = 1000.0,
+                higherLogBandwidthBiasFactor = 1000.0,
+                lossThresholdOfHighBandwidthPreference = 0.20,
+                notIncreaseIfInherentLossLessThanAverageLoss = false
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val enoughFeedback10pLoss2 =
+                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Because LossThresholdOfHighBandwidthPreference is 20%, the average loss is
+            // 10%, bandwidth estimate should increase.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThan 600.kbps
+        }
+
+        "SelectLowBandwidthCandidateIfLossRateIsIsHigherThanThreshold" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2, 0.8),
+                appendAcknowledgedRateCandidate = false,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                higherBandwidthBiasFactor = 1000.0,
+                higherLogBandwidthBiasFactor = 1000.0,
+                lossThresholdOfHighBandwidthPreference = 0.05
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val enoughFeedback10pLoss2 =
+                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Because LossThresholdOfHighBandwidthPreference is 5%, the average loss is
+            // 10%, bandwidth estimate should decrease.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan 600.kbps
+        }
+
+        "LimitByProbeResultWhenRecoveringFromLoss" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
+                appendAcknowledgedRateCandidate = true,
+                observationWindowSize = 2,
+                observationDurationLowerBound = 200.ms,
+                instantUpperBoundBandwidthBalance = 10000.kbps,
+                delayedIncreaseWindow = 100.secs,
+                appendDelayBasedEstimateCandidate = true,
+                maxIncreaseFactor = 1.3,
+                bandwidthRampupUpperBoundFactor = 2.0,
+                probeIntegrationEnabled = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+            val ackedRate = 300.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
+
+            // Create some loss to create the loss limited scenario.
+            val enoughFeedback1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Network recovers after loss
+            val probeEstimate = 300.kbps
+            var enoughFeedback2 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeEstimate,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            for (i in 2 until 5) {
+                enoughFeedback2 =
+                    createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound * i)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback2,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
+                resultAfterRecovery.bandwidthEstimate shouldBeLessThanOrEqualTo probeEstimate
+            }
+        }
+
+        "NotLimitByProbeResultWhenProbeResultIsExpired" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
+                appendAcknowledgedRateCandidate = true,
+                observationWindowSize = 2,
+                observationDurationLowerBound = 200.ms,
+                instantUpperBoundBandwidthBalance = 10000.kbps,
+                delayedIncreaseWindow = 100.secs,
+                appendDelayBasedEstimateCandidate = true,
+                maxIncreaseFactor = 1.3,
+                bandwidthRampupUpperBoundFactor = 2.0,
+                probeIntegrationEnabled = true,
+                probeExpiration = 10.secs
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+            val ackedRate = 300.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
+
+            // Create some loss to create the loss limited scenario.
+            val enoughFeedback1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Network recovers after loss
+            val probeEstimate = 300.kbps
+            var enoughFeedback2 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeEstimate,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            for (i in 2 until 5) {
+                enoughFeedback2 =
+                    createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound * i)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback2,
+                    delayBasedEstimate,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+            }
+
+            val enoughFeedback3 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound + 11.secs)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback3,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Probe result is expired after 10s.
+            val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
+            resultAfterRecovery.bandwidthEstimate shouldBeGreaterThan probeEstimate
+        }
+
+        // If BoundByUpperLinkCapacityWhenLossLimited is enabled, the estimate is
+        // bounded by the upper link capacity when bandwidth is loss limited.
+        "BoundEstimateByUpperLinkCapacityWhenLossLimited" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
+                appendAcknowledgedRateCandidate = true,
+                observationWindowSize = 2,
+                observationDurationLowerBound = 200.ms,
+                instantUpperBoundBandwidthBalance = 10000.kbps,
+                appendDelayBasedEstimateCandidate = true,
+                maxIncreaseFactor = 1000.0,
+                bandwidthRampupUpperBoundFactor = 2.0,
+                boundByUpperLinkCapacityWhenLossLimited = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+            val ackedRate = 300.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
+
+            // Create some loss to create the loss limited scenario.
+            val enoughFeedback1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Network recovers after loss
+            val upperLinkCapacity = 10.kbps
+            val enoughFeedback2 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity,
+                inAlr = false
+            )
+
+            val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
+            resultAfterRecovery.bandwidthEstimate shouldBe upperLinkCapacity
+        }
+
+        // If BoundByUpperLinkCapacityWhenLossLimited is enabled, the estimate is not
+        // bounded by the upper link capacity when bandwidth is not loss limited.
+        "NotBoundEstimateByUpperLinkCapacityWhenNotLossLimited" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
+                appendAcknowledgedRateCandidate = true,
+                observationWindowSize = 2,
+                observationDurationLowerBound = 200.ms,
+                instantUpperBoundBandwidthBalance = 10000.kbps,
+                appendDelayBasedEstimateCandidate = true,
+                maxIncreaseFactor = 1000.0,
+                bandwidthRampupUpperBoundFactor = 2.0,
+                boundByUpperLinkCapacityWhenLossLimited = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+            val ackedRate = 300.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
+
+            // Create a normal network without loss
+            val enoughFeedback1 = createPacketResultsWithReceivedPackets(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val upperLinkCapacity = 10.kbps
+            val enoughFeedback2 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity,
+                inAlr = false
+            )
+
+            val lossBasedResult = lossBasedBandwidthEstimator.getLossBasedResult()
+            lossBasedResult.bandwidthEstimate shouldBeGreaterThan upperLinkCapacity
+        }
+
+        // If BoundByUpperLinkCapacityWhenLossLimited is disabled, the estimate is not
+        // bounded by the upper link capacity.
+        "NotBoundEstimateByUpperLinkCapacity" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
+                appendAcknowledgedRateCandidate = true,
+                observationWindowSize = 2,
+                observationDurationLowerBound = 200.ms,
+                instantUpperBoundBandwidthBalance = 10000.kbps,
+                appendDelayBasedEstimateCandidate = true,
+                maxIncreaseFactor = 1000.0,
+                bandwidthRampupUpperBoundFactor = 2.0,
+                boundByUpperLinkCapacityWhenLossLimited = false
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+            val ackedRate = 300.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
+
+            // Create some loss to create the loss limited scenario.
+            val enoughFeedback1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Network recovers after loss
+            val upperLinkCapacity = 10.kbps
+            val enoughFeedback2 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity,
+                inAlr = false
+            )
+
+            val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
+            resultAfterRecovery.bandwidthEstimate shouldBeGreaterThan upperLinkCapacity
+        }
+
+        "StricterBoundUsingHighLossRateThresholdAt10pLossRate" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.0),
+                appendAcknowledgedRateCandidate = false,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                higherBandwidthBiasFactor = 1000.0,
+                higherLogBandwidthBiasFactor = 1000.0,
+                lossThresholdOfHighBandwidthPreference = 0.05,
+                highLossRateThreshold = 0.09,
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            val delayBasedEstimate = 5000.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val enoughFeedback10pLoss2 =
+                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback10pLoss2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // At 10% loss rate and high loss rate threshold to be 10%, cap the estimate
+            // to be 500 * 1000-0.1 = 400kbps.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 400.kbps
+        }
+
+        "StricterBoundUsingHighLossRateThresholdAt50pLossRate" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.0),
+                appendAcknowledgedRateCandidate = false,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                higherBandwidthBiasFactor = 1000.0,
+                higherLogBandwidthBiasFactor = 1000.0,
+                lossThresholdOfHighBandwidthPreference = 0.05,
+                highLossRateThreshold = 0.3,
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            val delayBasedEstimate = 5000.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val enoughFeedback50pLoss1 = createPacketResultsWith50pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback50pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val enoughFeedback50pLoss2 =
+                createPacketResultsWith50pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback50pLoss2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // At 50% loss rate and high loss rate threshold to be 30%, cap the estimate
+            // to be the min bitrate.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 10.kbps
+        }
+
+        "StricterBoundUsingHighLossRateThresholdAt100pLossRate" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.0),
+                appendAcknowledgedRateCandidate = false,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                higherBandwidthBiasFactor = 1000.0,
+                higherLogBandwidthBiasFactor = 1000.0,
+                lossThresholdOfHighBandwidthPreference = 0.05,
+                highLossRateThreshold = 0.3,
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            val delayBasedEstimate = 5000.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val enoughFeedback100pLoss1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback100pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val enoughFeedback100pLoss2 =
+                createPacketResultsWith100pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback100pLoss2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // At 100% loss rate and high loss rate threshold to be 30%, cap the estimate
+            // to be the min bitrate.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 10.kbps
+        }
+
+        "EstimateRecoversAfterHighLoss" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.1, 1.0, 0.9),
+                appendAcknowledgedRateCandidate = false,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                higherBandwidthBiasFactor = 1000.0,
+                higherLogBandwidthBiasFactor = 1000.0,
+                lossThresholdOfHighBandwidthPreference = 0.05,
+                highLossRateThreshold = 0.3,
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            val delayBasedEstimate = 5000.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val enoughFeedback100pLoss1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback100pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Make sure that the estimate is set to min bitrate because of 100% loss
+            // rate.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 10.kbps
+
+            // Create some feedbacks with 0 loss rate to simulate network recovering.
+            val enoughFeedback0pLoss1 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback0pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            val enoughFeedback0pLoss2 =
+                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound * 2)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback0pLoss2,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // The estimate increases as network recovers.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThan 10.kbps
+        }
+
+        "EstimateIsNotHigherThanMaxBitrate" {
+            Exhaustive.boolean().checkAll {
+                val config = config(enabled = true, valid = true, trendlineIntegrationEnabled = it)
+                val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+                lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000.kbps)
+                lossBasedBandwidthEstimator.setBandwidthEstimate(1000.kbps)
+                val enoughFeedback = createPacketResultsWithReceivedPackets(Instant.EPOCH)
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    enoughFeedback,
+                    delayBasedEstimate = Bandwidth.INFINITY,
+                    BandwidthUsage.kBwNormal,
+                    probeBitrate = null,
+                    upperLinkCapacity = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThanOrEqualTo 1000.kbps
+            }
+        }
+
+        "NotBackOffToAckedRateInAlr" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.1, 1.0, 0.9),
+                appendAcknowledgedRateCandidate = true,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                notUseAckedRateInAlr = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            val delayBasedEstimate = 5000.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val ackedRate = 100.kbps
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
+            val enoughFeedback100pLoss1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback100pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = true
+            )
+
+            // Make sure that the estimate decreases but higher than acked rate.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThan ackedRate
+
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan 600.kbps
+        }
+
+        "BackOffToAckedRateIfNotInAlr" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                candidateFactors = doubleArrayOf(1.1, 1.0, 0.9),
+                appendAcknowledgedRateCandidate = true,
+                observationWindowSize = 2,
+                appendDelayBasedEstimateCandidate = true,
+                instantUpperBoundBandwidthBalance = 100.kbps,
+                observationDurationLowerBound = 200.ms,
+                notUseAckedRateInAlr = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            val delayBasedEstimate = 5000.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+
+            val ackedRate = 100.kbps
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
+            val enoughFeedback100pLoss1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback100pLoss1,
+                delayBasedEstimate,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                upperLinkCapacity = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Make sure that the estimate decreases but higher than acked rate.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe ackedRate
         }
     }
 }

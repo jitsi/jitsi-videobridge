@@ -289,7 +289,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             val increasingWhenLossLimited = isEstimateIncreasingWhenLossLimited(bestCandidate)
             // Bound the best candidate by the acked bitrate unless there is a recent
             // probe result.
-            if (increasingWhenLossLimited && !isValid(probeBitrate) && isValid(acknowledgedBitrate)) {
+            if (increasingWhenLossLimited && !isValid(this.probeBitrate) && isValid(acknowledgedBitrate)) {
                 bestCandidate.lossLimitedBandwidth =
                     if (isValid(bestCandidate.lossLimitedBandwidth)) {
                         min(
@@ -313,13 +313,13 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         // Use probe bitrate as the estimate limit when probes are requested.
-        if (config.probeIntegrationEnabled && isValid(probeBitrate) &&
+        if (config.probeIntegrationEnabled && isValid(this.probeBitrate) &&
             isRequestingProbe()
         ) {
             if (lastProbeTimestamp + config.probeExpiration >=
                 lastSendTimeMostRecentObservation
             ) {
-                bestCandidate.lossLimitedBandwidth = min(probeBitrate!!, bestCandidate.lossLimitedBandwidth)
+                bestCandidate.lossLimitedBandwidth = min(this.probeBitrate, bestCandidate.lossLimitedBandwidth)
             }
         }
 
