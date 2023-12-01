@@ -38,8 +38,8 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
-/** Delay-based bandwidth estimation,
- * based on WebRTC modules/congestion_controller/goog_cc/lossbased_bwe.{h,cc} in
+/** Loss-based bandwidth estimation,
+ * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe.{h,cc} in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  *
  * Field trial settings are settable through the API, but not currently as config options.
