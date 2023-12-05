@@ -64,7 +64,7 @@ private class PacketResultsSummary {
     var lastSendTime = Instant.MIN
 }
 
-private fun getPacketResultsSummary(packetResults: Array<PacketResult>): PacketResultsSummary {
+private fun getPacketResultsSummary(packetResults: List<PacketResult>): PacketResultsSummary {
     val packetResultsSummary = PacketResultsSummary()
 
     packetResultsSummary.numPackets = packetResults.size
@@ -219,7 +219,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     }
 
     fun updateBandwidthEstimate(
-        packetResults: Array<PacketResult>,
+        packetResults: List<PacketResult>,
         delayBasedEstimate: Bandwidth,
         delayDetectorState: BandwidthUsage,
         probeBitrate: Bandwidth?,
@@ -882,7 +882,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     }
 
     /** Returns false if no observation was created. */
-    private fun pushBackObservation(packetResults: Array<PacketResult>, delayDetectorState: BandwidthUsage): Boolean {
+    private fun pushBackObservation(packetResults: List<PacketResult>, delayDetectorState: BandwidthUsage): Boolean {
         delayDetectorStates.addFirst(delayDetectorState)
         if (delayDetectorStates.size > config.trendlineObservationsWindowSize) {
             delayDetectorStates.removeLast()

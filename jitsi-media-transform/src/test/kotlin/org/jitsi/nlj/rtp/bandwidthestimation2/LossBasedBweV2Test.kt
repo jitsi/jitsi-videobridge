@@ -73,8 +73,8 @@ private fun config(enabled: Boolean, valid: Boolean, trendlineIntegrationEnabled
     )
 }
 
-private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant): Array<PacketResult> {
-    val enoughFeedback = Array(2) { PacketResult() }
+private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant): List<PacketResult> {
+    val enoughFeedback = List(2) { PacketResult() }
     enoughFeedback[0].sentPacket.size = 15_000.bytes
     enoughFeedback[1].sentPacket.size = 15_000.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
@@ -85,8 +85,8 @@ private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant
     return enoughFeedback
 }
 
-private fun createPacketResultsWith10pLossRate(firstPacketTimestamp: Instant): Array<PacketResult> {
-    val enoughFeedback = Array(10) { PacketResult() }
+private fun createPacketResultsWith10pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
+    val enoughFeedback = List(10) { PacketResult() }
     enoughFeedback[0].sentPacket.size = 15_000.bytes
 
     for (i in enoughFeedback.indices) {
@@ -98,8 +98,8 @@ private fun createPacketResultsWith10pLossRate(firstPacketTimestamp: Instant): A
     return enoughFeedback
 }
 
-private fun createPacketResultsWith50pLossRate(firstPacketTimestamp: Instant): Array<PacketResult> {
-    val enoughFeedback = Array(2) { PacketResult() }
+private fun createPacketResultsWith50pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
+    val enoughFeedback = List(2) { PacketResult() }
     enoughFeedback[0].sentPacket.size = 15_000.bytes
     enoughFeedback[1].sentPacket.size = 15_000.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
@@ -109,8 +109,8 @@ private fun createPacketResultsWith50pLossRate(firstPacketTimestamp: Instant): A
     return enoughFeedback
 }
 
-private fun createPacketResultsWith100pLossRate(firstPacketTimestamp: Instant): Array<PacketResult> {
-    val enoughFeedback = Array(2) { PacketResult() }
+private fun createPacketResultsWith100pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
+    val enoughFeedback = List(2) { PacketResult() }
     enoughFeedback[0].sentPacket.size = 15_000.bytes
     enoughFeedback[1].sentPacket.size = 15_000.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
@@ -170,7 +170,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 val config = config(enabled = false, valid = true, trendlineIntegrationEnabled = false)
                 val lossBasedBandwidthEstimator = LossBasedBweV2(config)
                 lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                    arrayOf(),
+                    listOf(),
                     100.kbps,
                     BandwidthUsage.kBwNormal,
                     null,
@@ -185,7 +185,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 val config = config(enabled = true, valid = false, trendlineIntegrationEnabled = false)
                 val lossBasedBandwidthEstimator = LossBasedBweV2(config)
                 lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                    arrayOf(),
+                    listOf(),
                     100.kbps,
                     BandwidthUsage.kBwNormal,
                     null,
@@ -237,7 +237,7 @@ class LossBasedBweV2Test : FreeSpec() {
         }
         "NoBandwidthEstimateGivenNotEnoughFeedback" {
             Exhaustive.boolean().checkAll {
-                val notEnoughFeedback = Array(2) { PacketResult() }
+                val notEnoughFeedback = List(2) { PacketResult() }
                 notEnoughFeedback[0].sentPacket.size = 15_000.bytes
                 notEnoughFeedback[1].sentPacket.size = 15_000.bytes
                 notEnoughFeedback[0].sentPacket.sendTime = Instant.EPOCH
