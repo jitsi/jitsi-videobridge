@@ -18,6 +18,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.isFinite
@@ -159,6 +160,8 @@ class SendSideBandwidthEstimation(
     private var lastLowBitrateLog: Instant = Instant.MIN
 
     private var hasDecreasedSinceLastFractionLoss: Boolean = false
+
+    @SuppressFBWarnings("URF_UNREAD_FIELD")
     private var lastLossFeedback: Instant = Instant.MIN
     private var lastLossPacketReport: Instant = Instant.MIN
     private var lastFractionLoss: UByte = 0u
