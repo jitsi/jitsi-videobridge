@@ -38,6 +38,10 @@ fun durationOfDoubleSeconds(duration: Double): Duration {
     return Duration.ofNanos(round(duration * 1e9).toLong())
 }
 
+operator fun Duration.times(other: Double): Duration = durationOfDoubleSeconds((toDouble() * other))
+
+operator fun Duration.times(other: Long): Duration = this.multipliedBy(other)
+
 operator fun Duration.div(other: Double): Duration = durationOfDoubleSeconds(toDouble() / other)
 
 operator fun Duration.div(other: Long): Duration = this.dividedBy(other)
