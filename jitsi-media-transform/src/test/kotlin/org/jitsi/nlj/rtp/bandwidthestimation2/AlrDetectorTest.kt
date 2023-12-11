@@ -20,7 +20,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 /**
  * Unit tests for AlrDetector.
  *
- * Based on WebRTC modules/congestion_control/goog_cc/alr_detector_unittest.cc in
+ * Based on WebRTC modules/congestion_controller/goog_cc/alr_detector_unittest.cc in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21, skipping tests of field trials.
  */
 
