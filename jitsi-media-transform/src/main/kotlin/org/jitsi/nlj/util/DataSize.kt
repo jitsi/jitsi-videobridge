@@ -79,6 +79,7 @@ class DataSize(
 
     companion object {
         val ZERO = DataSize(0)
+        val INFINITY = DataSize(Long.MAX_VALUE)
     }
 }
 

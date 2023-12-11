@@ -17,8 +17,12 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.per
+import org.jitsi.utils.secs
+import java.time.Duration
 import java.time.Instant
 
 /** Common network types used for bandwidth estimation,
@@ -114,4 +118,58 @@ class TransportPacketsFeedback {
     fun sortedByReceiveTime(): List<PacketResult> {
         return receivedWithSendInfo().sortedBy { it.receiveTime }
     }
+}
+
+// Network estimation
+class NetworkEstimate {
+    var atTime = Instant.MAX
+
+    // Deprecated, use TargetTransferRate::target_rate instead.
+    var bandwidth = Bandwidth.INFINITY
+    var roundTripTime = Long.MAX_VALUE.secs
+    var bwePeriod = Long.MAX_VALUE.secs
+
+    var lossRateRatio = 0.0f
+}
+
+class PacerConfig {
+    var atTime = Instant.MAX
+
+    // Pacer should send at most data_window data over time_window duration.
+    var dataWindow = DataSize.INFINITY
+    var timeWindow = Long.MAX_VALUE.secs
+
+    // Pacer should send at least pad_window data over time_window duration.
+    var padWindow = DataSize.ZERO
+
+    fun dataRate() = dataWindow.per(timeWindow)
+    fun padRate() = padWindow.per(timeWindow)
+}
+
+class ProbeClusterConfig {
+    var atTime = Instant.MAX
+    var targetDataRate = Bandwidth.ZERO
+    var targetDuration = Duration.ZERO
+    var targetProbeCount = 0
+    var id = 0
+}
+
+class TargetTransferRate {
+    var atTime = Instant.MAX
+
+    // The estimate on which the target rate is based on.
+    var networkEstimate = NetworkEstimate()
+    var targetRate = Bandwidth.ZERO
+    var stableTargetRate = Bandwidth.ZERO
+    var cwndReduceRatio = 0.0
+}
+
+// Contains updates of network controller comand state. Using nullables to
+// indicate whether a member has been updated. The array of probe clusters
+// should be used to send out probes if not empty.
+class NetworkControlUpdate {
+    var congestionWindow: DataSize? = null
+    var pacerConfig: PacerConfig? = null
+    var probeClusterConfig: List<ProbeClusterConfig> = emptyList()
+    var targetRate: TargetTransferRate? = null
 }
