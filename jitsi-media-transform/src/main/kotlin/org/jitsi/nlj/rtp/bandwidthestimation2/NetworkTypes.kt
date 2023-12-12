@@ -30,6 +30,60 @@ import java.time.Instant
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  */
 
+/* Configuration */
+/** Represents constraints and rates related to the currently enabled streams.
+ * This is used as input to the congestion controller via the StreamsConfig
+ * struct.
+ */
+class BitrateAllocationLimits(
+    /** The total minimum send bitrate required by all sending streams. */
+    val minAllocatableRate: Bandwidth = Bandwidth.ZERO,
+    /** The total maximum allocatable bitrate for all currently available streams. */
+    val maxAllocatableRate: Bandwidth = Bandwidth.ZERO,
+    /** The max bitrate to use for padding. The sum of the per-stream max padding
+     * rate. */
+    val maxPaddingRate: Bandwidth = Bandwidth.ZERO
+)
+
+/**
+ * Use StreamsConfig for information about streams that is required for specific
+ * adjustments to the algorithms in network controllers. Especially useful
+ * for experiments.
+ */
+class StreamsConfig(
+    val atTime: Instant = Instant.MAX,
+    val requestsAlrProbing: Boolean? = null,
+    val pacingFactor: Double? = null,
+
+    // TODO(srte): Use BitrateAllocationLimits here.
+    val minTotalAllocatedBitrate: Bandwidth? = null,
+    val maxPaddingRate: Bandwidth? = null,
+    val maxTotalAllocatedBitrate: Bandwidth? = null
+)
+
+class TargetRateConstraints(
+    val atTime: Instant = Instant.MAX,
+    val minDataRate: Bandwidth? = null,
+    val maxDataRate: Bandwidth? = null,
+    // The initial bandwidth estimate to base target rate on. This should be used
+    // as the basis for initial OnTargetTransferRate and OnPacerConfig callbacks.
+    val startingRate: Bandwidth? = null
+)
+
+/** Send side information */
+
+class NetworkAvailability(
+    val atTime: Instant = Instant.MAX,
+    val networkAvailable: Boolean = false
+)
+
+class NetworkRouteChange(
+    val atTime: Instant = Instant.MAX,
+    // The TargetRateConstraints are set here so they can be changed synchronously
+    // when network route changes.
+    val constraints: TargetRateConstraints = TargetRateConstraints()
+)
+
 /**
  * Information about a paced packet
  */
@@ -77,6 +131,27 @@ data class SentPacket(
     var sequenceNumber: Long = 0,
     /** Tracked data in flight when the packet was sent, excluding unacked data. */
     var dataInFlight: DataSize = DataSize.ZERO
+)
+
+/** Transport level feedback */
+
+class RemoteBitrateReport(
+    val receiveTime: Instant = Instant.MAX,
+    val bandwidth: Bandwidth = Bandwidth.INFINITY
+)
+
+class RoundTripTimeUpdate(
+    val receiveTime: Instant = Instant.MAX,
+    val roundTripTime: Duration = Long.MAX_VALUE.secs,
+    val smoothed: Boolean = false
+)
+
+class TransportLossReport(
+    val receiveTime: Instant = Instant.MAX,
+    val startTime: Instant = Instant.MAX,
+    val endTime: Instant = Instant.MAX,
+    val packetsLossDelta: Long = 0,
+    val packetsReceivedDelta: Long = 0
 )
 
 /**
@@ -173,3 +248,9 @@ class NetworkControlUpdate {
     var probeClusterConfig: List<ProbeClusterConfig> = emptyList()
     var targetRate: TargetTransferRate? = null
 }
+
+/** Process control */
+class ProcessInterval(
+    val atTime: Instant = Instant.MAX,
+    val pacerQueue: DataSize? = null
+)
