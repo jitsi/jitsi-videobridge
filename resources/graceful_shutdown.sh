@@ -53,6 +53,16 @@ function printError {
 	echo "$@" 1>&2
 }
 
+function waitForPid {
+    while [ -d /proc/$1 ] ;do
+        echo "PID $1 still exists"
+	sleep 10
+    done
+    echo "PID $1 is done"
+}
+
+JVB_PID=$(ps aux | grep java | grep jitsi-videobridge.jar | awk '{print $2}')
+
 shutdownStatus=`curl -s -o /dev/null -H "Content-Type: application/json" -d '{ "graceful-shutdown": "true" }' -w "%{http_code}" "$hostUrl/colibri/shutdown"`
 if [ "$shutdownStatus" == "200" ]
 then
@@ -63,13 +73,14 @@ then
 		sleep 10
 		participantCount=`getParticipantCount`
 		if [[ $? -gt 0 ]] ; then
-			printInfo "Failed to get participant count, Bridge already shutdown"
+			printInfo "Failed to get participant count, bridge may be already shutdown, waiting on pid $JVB_PID"
+			waitForPid $JVB_PID
 			exit 0
 		fi
 	done
 
-	echo "Waiting 60 seconds for bridge to finish shutting down"
-	sleep 60
+	echo "Waiting for bridge pid $JVB_PID to finish shutting down"
+	waitForPid $JVB_PID
 	printInfo "Bridge shutdown OK"
 	exit 0
 else
