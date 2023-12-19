@@ -9,10 +9,7 @@
 #    returned and 1 otherwise.
 #
 #   Arguments:
-#   "-p"(mandatory) the PID of jitsi Videobridge process
 #   "-h"("http://localhost:8080" by default) REST requests host URI part
-#   "-t"("25" by default) number of second we we for the bridge to shutdown
-#       gracefully after participant count drops to 0
 #   "-s"(disabled by default) enable silent mode - no info output
 #
 #   NOTE: script depends on the tool jq, used to parse json
@@ -20,21 +17,14 @@
 
 # Initialize arguments
 hostUrl="http://localhost:8080"
-timeout=25
 verbose=1
 
 # Parse arguments
 OPTIND=1
 while getopts "p:h:t:s" opt; do
     case "$opt" in
-    p)
-        pid=$OPTARG
-        ;;
     h)
         hostUrl=$OPTARG
-        ;;
-    t)
-        timeout=$OPTARG
         ;;
     s)
         verbose=0
@@ -42,22 +32,6 @@ while getopts "p:h:t:s" opt; do
     esac
 done
 shift "$((OPTIND-1))"
-
-# Try the pid file, if no pid was provided as an argument.
-# for systemd we use different pid file in a subfolder
-if [ "$pid" = "" ] ;then
-    if [ -f /var/run/jitsi-videobridge.pid ]; then
-        pid=`cat /var/run/jitsi-videobridge.pid`
-    else
-        pid=`cat /var/run/jitsi-videobridge/jitsi-videobridge.pid`
-    fi
-fi
-
-#Check if PID is a number
-re='^[0-9]+$'
-if ! [[ $pid =~ $re ]] ; then
-   echo "error: PID is not a number" >&2; exit 1
-fi
 
 # Returns local participant count by calling JVB REST statistics API and extracting
 # participant count from JSON stats text returned.
@@ -88,41 +62,14 @@ then
 		printInfo "There are still $participantCount participants"
 		sleep 10
 		participantCount=`getParticipantCount`
-	done
-
-	sleep 5
-
-	if ps -p $pid > /dev/null 2>&1
-	then
-		printInfo "It is still running, lets give it $timeout seconds"
-		sleep $timeout
-		if ps -p $pid > /dev/null 2>&1
-		then
-			printError "Bridge did not exit after $timeout sec - killing $pid"
-			kill $pid
-		fi
-	fi
-	# check for 3 seconds if we managed to kill
-	for I in 1 2 3
-	do
-		if ps -p $pid > /dev/null 2>&1
-		then
-			sleep 1
+		if [[ $? -gt 0 ]] ; then
+			printInfo "Failed to get participant count, Bridge already shutdown"
+			exit 0
 		fi
 	done
-	if ps -p $pid > /dev/null 2>&1
-	then
-		printError "Failed to kill $pid"
-		printError "Sending force kill to $pid"
-		kill -9 $pid
-		if ps -p $pid > /dev/null 2>&1
-		then
-			printError "Failed to force kill $pid, giving up."
-			exit 1
-		fi
-	fi
-    rm -f /var/run/jitsi-videobridge.pid
-    rm -f /var/run/jitsi-videobridge/jitsi-videobridge.pid
+
+	echo "Waiting 60 seconds for bridge to finish shutting down"
+	sleep 60
 	printInfo "Bridge shutdown OK"
 	exit 0
 else
