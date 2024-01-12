@@ -57,7 +57,7 @@ class JvbHealthChecker : HealthCheckService {
     }
 
     private fun hasValidAddress(): Boolean {
-        if (Harvesters.singlePortHarvesters.any { it.localAddress.address.isValid() }) {
+        if (Harvesters.singlePortHarvesters?.any { it.localAddress.address.isValid() } == true) {
             return true
         }
         if (MappingCandidateHarvesters.getHarvesters().any { it.mask?.address?.isValid() == true }) {
