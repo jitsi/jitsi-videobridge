@@ -76,6 +76,7 @@ fun main() {
     }
 
     startIce4j()
+    Harvesters.initializeStaticConfiguration()
 
     XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.config.jidCacheSize)
     PacketQueue.setEnableStatisticsDefault(true)
