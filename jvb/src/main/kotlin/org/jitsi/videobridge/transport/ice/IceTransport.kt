@@ -393,7 +393,6 @@ class IceTransport @JvmOverloads constructor(
 
     companion object {
         fun appendHarvesters(iceAgent: Agent) {
-            Harvesters.initializeStaticConfiguration()
             Harvesters.tcpHarvester?.let {
                 iceAgent.addCandidateHarvester(it)
             }
