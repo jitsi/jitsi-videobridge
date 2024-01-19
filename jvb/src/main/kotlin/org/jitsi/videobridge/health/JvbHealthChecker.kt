@@ -43,7 +43,7 @@ class JvbHealthChecker : HealthCheckService {
         if (config.requireStun && MappingCandidateHarvesters.stunDiscoveryFailed) {
             return Result(success = false, message = "Address discovery through STUN failed")
         }
-        if (!Harvesters.isHealthy()) {
+        if (!Harvesters.INSTANCE.healthy) {
             return Result(success = false, message = "Failed to bind single-port")
         }
 
@@ -57,7 +57,7 @@ class JvbHealthChecker : HealthCheckService {
     }
 
     private fun hasValidAddress(): Boolean {
-        if (Harvesters.singlePortHarvesters?.any { it.localAddress.address.isValid() } == true) {
+        if (Harvesters.INSTANCE.singlePortHarvesters.any { it.localAddress.address.isValid() }) {
             return true
         }
         if (MappingCandidateHarvesters.getHarvesters().any { it.mask?.address?.isValid() == true }) {
