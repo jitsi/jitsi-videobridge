@@ -38,6 +38,12 @@ fun durationOfDoubleSeconds(duration: Double): Duration {
     return Duration.ofNanos(round(duration * 1e9).toLong())
 }
 
+val minDuration = Duration.ofSeconds(Long.MIN_VALUE, 0)
+
+val maxDuration = Duration.ofSeconds(Long.MAX_VALUE, 999_999_999)
+
+fun Duration.isFinite() = this != minDuration && this != maxDuration
+
 operator fun Duration.times(other: Double): Duration = durationOfDoubleSeconds((toDouble() * other))
 
 operator fun Duration.times(other: Long): Duration = this.multipliedBy(other)

@@ -28,20 +28,20 @@ import java.time.Duration
  * optional to use for a network controller implementation. */
 class NetworkControllerConfig(
     val parentLogger: Logger,
-    val diagnosticContext: DiagnosticContext
-) {
+    val diagnosticContext: DiagnosticContext,
+
     /** The initial constraints to start with, these can be changed at any later
      * time by calls to OnTargetRateConstraints. Note that the starting rate
      * has to be set initially to provide a starting state for the network
      * controller, even though the field is marked as nullable.
      */
-    val constraints = TargetRateConstraints()
+    val constraints: TargetRateConstraints = TargetRateConstraints(),
 
     /** Initial stream specific configuration, these are changed at any later time
      * by calls to OnStreamsConfig.
      */
-    val streamBasedConfig = StreamsConfig()
-}
+    val streamBasedConfig: StreamsConfig = StreamsConfig()
+)
 
 /** NetworkControllerInterface is implemented by network controllers. A network
  * controller is a class that uses information about network state and traffic
@@ -68,7 +68,7 @@ interface NetworkControllerInterface {
     fun onRoundTripTimeUpdate(msg: RoundTripTimeUpdate): NetworkControlUpdate
 
     /** Called when a packet is sent on the network. */
-    fun onSentPacket(msg: SentPacket): NetworkControlUpdate
+    fun onSentPacket(sentPacket: SentPacket): NetworkControlUpdate
 
     // Omitted: onReceivedPacket: Not used
 
@@ -76,13 +76,13 @@ interface NetworkControllerInterface {
     fun onStreamsConfig(msg: StreamsConfig): NetworkControlUpdate
 
     /** Called when target transfer rate constraints has been changed. */
-    fun onTargetRateConstraints(msg: TargetRateConstraints): NetworkControlUpdate
+    fun onTargetRateConstraints(constraints: TargetRateConstraints): NetworkControlUpdate
 
     /** Called when a protocol specific calculation of packet loss has been made. */
     fun onTransportLossReport(msg: TransportLossReport): NetworkControlUpdate
 
     /** Called with per packet feedback regarding receive time. */
-    fun onTransportPacketsFeedback(msg: TransportPacketsFeedback): NetworkControlUpdate
+    fun onTransportPacketsFeedback(report: TransportPacketsFeedback): NetworkControlUpdate
 
     // Omitted: onNetworkStateUpdate: Not used
 }

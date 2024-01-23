@@ -20,8 +20,8 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.per
-import org.jitsi.utils.secs
 import java.time.Duration
 import java.time.Instant
 
@@ -67,7 +67,7 @@ class TargetRateConstraints(
     val maxDataRate: Bandwidth? = null,
     // The initial bandwidth estimate to base target rate on. This should be used
     // as the basis for initial OnTargetTransferRate and OnPacerConfig callbacks.
-    val startingRate: Bandwidth? = null
+    var startingRate: Bandwidth? = null
 )
 
 /** Send side information */
@@ -142,7 +142,7 @@ class RemoteBitrateReport(
 
 class RoundTripTimeUpdate(
     val receiveTime: Instant = Instant.MAX,
-    val roundTripTime: Duration = Long.MAX_VALUE.secs,
+    val roundTripTime: Duration = maxDuration,
     val smoothed: Boolean = false
 )
 
@@ -150,7 +150,7 @@ class TransportLossReport(
     val receiveTime: Instant = Instant.MAX,
     val startTime: Instant = Instant.MAX,
     val endTime: Instant = Instant.MAX,
-    val packetsLossDelta: Long = 0,
+    val packetsLostDelta: Long = 0,
     val packetsReceivedDelta: Long = 0
 )
 
@@ -201,8 +201,8 @@ class NetworkEstimate {
 
     // Deprecated, use TargetTransferRate::target_rate instead.
     var bandwidth = Bandwidth.INFINITY
-    var roundTripTime = Long.MAX_VALUE.secs
-    var bwePeriod = Long.MAX_VALUE.secs
+    var roundTripTime = maxDuration
+    var bwePeriod = maxDuration
 
     var lossRateRatio = 0.0f
 }
@@ -212,7 +212,7 @@ class PacerConfig {
 
     // Pacer should send at most data_window data over time_window duration.
     var dataWindow = DataSize.INFINITY
-    var timeWindow = Long.MAX_VALUE.secs
+    var timeWindow = maxDuration
 
     // Pacer should send at least pad_window data over time_window duration.
     var padWindow = DataSize.ZERO
@@ -242,12 +242,19 @@ class TargetTransferRate {
 // Contains updates of network controller comand state. Using nullables to
 // indicate whether a member has been updated. The array of probe clusters
 // should be used to send out probes if not empty.
-class NetworkControlUpdate {
-    var congestionWindow: DataSize? = null
-    var pacerConfig: PacerConfig? = null
-    var probeClusterConfig: List<ProbeClusterConfig> = emptyList()
-    var targetRate: TargetTransferRate? = null
-}
+open class NetworkControlUpdate(
+    open val congestionWindow: DataSize? = null,
+    open val pacerConfig: PacerConfig? = null,
+    open val probeClusterConfigs: List<ProbeClusterConfig> = listOf(),
+    open val targetRate: TargetTransferRate? = null
+)
+
+class MutableNetworkControlUpdate(
+    override var congestionWindow: DataSize? = null,
+    override var pacerConfig: PacerConfig? = null,
+    override var probeClusterConfigs: MutableList<ProbeClusterConfig> = mutableListOf(),
+    override var targetRate: TargetTransferRate? = null
+) : NetworkControlUpdate()
 
 /** Process control */
 class ProcessInterval(

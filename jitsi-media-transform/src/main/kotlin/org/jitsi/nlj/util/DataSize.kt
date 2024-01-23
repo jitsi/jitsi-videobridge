@@ -100,3 +100,17 @@ val Long.kilobytes: DataSize
     get() = DataSize(this * 1000 * 8)
 val Long.megabytes: DataSize
     get() = DataSize(this * 1000 * 1000 * 8)
+
+/**
+ * Returns the maximum of two [DataSize]s
+ */
+fun max(a: DataSize, b: DataSize): DataSize {
+    return if (a >= b) a else b
+}
+
+/**
+ * Returns the minimum of two [DataSize]s
+ */
+fun min(a: DataSize, b: DataSize): DataSize {
+    return if (a <= b) a else b
+}

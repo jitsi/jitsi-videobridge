@@ -20,6 +20,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.max
+import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.times
 import org.jitsi.utils.logging.DiagnosticContext
@@ -82,7 +83,7 @@ class ProbeControllerConfig(
     val alrProbeScale: Double = 2.0,
 
     // Configures how often we send probes if NetworkStateEstimate is available.
-    val networkStateEstimateProbingInterval: Duration = Long.MAX_VALUE.secs,
+    val networkStateEstimateProbingInterval: Duration = maxDuration,
     // Periodically probe as long as the the ratio beteeen current estimate and
     // NetworkStateEstimate is lower then this.
     val probeIfEstimateLowerThanNetworkStateEstimateRatio: Double = 0.0,
@@ -164,7 +165,7 @@ class ProbeController(
         startBitrate: Bandwidth,
         maxBitrate: Bandwidth,
         atTime: Instant
-    ): List<ProbeClusterConfig> {
+    ): MutableList<ProbeClusterConfig> {
         if (startBitrate > Bandwidth.ZERO) {
             this.startBitrate = startBitrate
             estimatedBitrate = startBitrate
@@ -200,12 +201,15 @@ class ProbeController(
                 }
         }
 
-        return emptyList()
+        return mutableListOf()
     }
 
     // The total bitrate, as opposed to the max bitrate, is the sum of the
     // configured bitrates for all active streams.
-    fun onMaxTotalAllocatedBitrate(maxTotalAllocatedBitrate: Bandwidth, atTime: Instant): List<ProbeClusterConfig> {
+    fun onMaxTotalAllocatedBitrate(
+        maxTotalAllocatedBitrate: Bandwidth,
+        atTime: Instant
+    ): MutableList<ProbeClusterConfig> {
         val inAlr = alrStartTime != null
         val allowAllocationProbe = inAlr
 
@@ -219,7 +223,7 @@ class ProbeController(
             this.maxTotalAllocatedBitrate = maxTotalAllocatedBitrate
 
             if (config.firstAllocationProbeScale == null) {
-                return emptyList()
+                return mutableListOf()
             }
             var firstProbeRate = maxTotalAllocatedBitrate * config.firstAllocationProbeScale
             val probeCap = config.allocationProbeMax
@@ -235,10 +239,10 @@ class ProbeController(
             return initiateProbing(atTime, probes, config.allocationAllowFurtherProbing)
         }
         this.maxTotalAllocatedBitrate = maxTotalAllocatedBitrate
-        return emptyList()
+        return mutableListOf()
     }
 
-    fun onNetworkAvailability(msg: NetworkAvailability): List<ProbeClusterConfig> {
+    fun onNetworkAvailability(msg: NetworkAvailability): MutableList<ProbeClusterConfig> {
         networkAvailable = msg.networkAvailable
 
         if (!networkAvailable && state == State.kWaitingForProbingResult) {
@@ -249,10 +253,10 @@ class ProbeController(
         if (networkAvailable && state == State.kInit && startBitrate != Bandwidth.ZERO) {
             return initiateExponentialProbing(msg.atTime)
         }
-        return emptyList()
+        return mutableListOf()
     }
 
-    private fun initiateExponentialProbing(atTime: Instant): List<ProbeClusterConfig> {
+    private fun initiateExponentialProbing(atTime: Instant): MutableList<ProbeClusterConfig> {
         assert(networkAvailable)
         assert(state == State.kInit)
         assert(startBitrate > Bandwidth.ZERO)
@@ -270,7 +274,7 @@ class ProbeController(
         bitrate: Bandwidth,
         bandwidthLimitedCause: BandwidthLimitedCause,
         atTime: Instant
-    ): List<ProbeClusterConfig> {
+    ): MutableList<ProbeClusterConfig> {
         this.bandwidthLimitedCause = bandwidthLimitedCause
         if (bitrate < estimatedBitrate * kBitrateDropThreshold) {
             timeOfLastLargeDrop = atTime
@@ -295,7 +299,7 @@ class ProbeController(
                 return initiateProbing(atTime, listOf(bitrate * config.furtherExponentialProbeScale), true)
             }
         }
-        return emptyList()
+        return mutableListOf()
     }
 
     fun enablePeriodicAlrProbing(enable: Boolean) {
@@ -314,7 +318,7 @@ class ProbeController(
         alrEndTime = Instant.ofEpochMilli(alrEndTimeMs)
     }
 
-    fun requestProbe(atTime: Instant): List<ProbeClusterConfig> {
+    fun requestProbe(atTime: Instant): MutableList<ProbeClusterConfig> {
         // Called once we have returned to normal state after a large drop in
         // estimated bandwidth. The current response is to initiate a single probe
         // session (if not already probing) at the previous bitrate.
@@ -344,7 +348,7 @@ class ProbeController(
                 }
             }
         }
-        return emptyList()
+        return mutableListOf()
     }
 
     /* Skipping setNetworkStateEstimate */
@@ -385,7 +389,7 @@ class ProbeController(
         return false
     }
 
-    fun process(atTime: Instant): List<ProbeClusterConfig> {
+    fun process(atTime: Instant): MutableList<ProbeClusterConfig> {
         if (Duration.between(timeLastProbingInitiated, atTime) > kMaxWaitingTimeForProbingResult) {
             if (state == State.kWaitingForProbingResult) {
                 logger.info("kWaitingForProbingResult: timeout")
@@ -394,12 +398,12 @@ class ProbeController(
             }
         }
         if (estimatedBitrate == Bandwidth.ZERO || state != State.kProbingComplete) {
-            return emptyList()
+            return mutableListOf()
         }
         if (timeForAlrProbe(atTime) || timeForNetworkStateProbe(atTime)) {
             return initiateProbing(atTime, listOf(estimatedBitrate * config.alrProbeScale), true)
         }
-        return emptyList()
+        return mutableListOf()
     }
 
     /** Gets the value of field trial not_probe_if_delay_increased. */
@@ -420,7 +424,7 @@ class ProbeController(
         now: Instant,
         bitratesToProbe: List<Bandwidth>,
         probeFurtherIn: Boolean
-    ): List<ProbeClusterConfig> {
+    ): MutableList<ProbeClusterConfig> {
         var probeFurther = probeFurtherIn
         if (config.skipIfEstimateLargerThanFractionOfMax > 0.0) {
             val networkEstimate = Bandwidth.INFINITY
@@ -432,7 +436,7 @@ class ProbeController(
             if (min(networkEstimate, estimatedBitrate) > maxProbeRate * config.skipIfEstimateLargerThanFractionOfMax) {
                 state = State.kProbingComplete
                 minBitrateToProbeFurther = Bandwidth.INFINITY
-                return emptyList()
+                return mutableListOf()
             }
         }
 
@@ -453,7 +457,7 @@ class ProbeController(
                 BandwidthLimitedCause.kLossLimitedBweDecreasing ->
                     // If bandwidth estimate is decreasing because of packet loss, do not
                     // send probes.
-                    return emptyList()
+                    return mutableListOf()
                 BandwidthLimitedCause.kLossLimitedBweIncreasing ->
                     estimateCappedBitrate =
                         min(maxProbeBitrate, estimatedBitrate * config.lossLimitedProbeScale)
@@ -467,7 +471,7 @@ class ProbeController(
             bandwidthLimitedCause == BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased ||
             bandwidthLimitedCause == BandwidthLimitedCause.kRttBasedBackOffHighRtt
         ) {
-            return emptyList()
+            return mutableListOf()
         }
 
         /* Skipping use of networkEstimate */
@@ -507,7 +511,7 @@ class ProbeController(
     }
 
     companion object {
-        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(javaClass)
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(ProbeController.javaClass)
 
         private fun maybeLogProbeClusterCreated(diagnosticContext: DiagnosticContext, probe: ProbeClusterConfig) {
             val minDataSize = probe.targetDataRate * probe.targetDuration
