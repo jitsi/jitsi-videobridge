@@ -19,8 +19,13 @@ import org.eclipse.jetty.websocket.api.*;
 import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.websocket.config.*;
 
+import java.nio.*;
+import java.time.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * @author Boris Grozev
@@ -36,6 +41,17 @@ public class ColibriWebSocket extends WebSocketAdapter
      * The {@link EventHandler}, if any, associated with this web socket.
      */
     private final EventHandler eventHandler;
+
+    /**
+     * The clock used to compute lastSendTime.
+     */
+    private final Clock clock = Clock.systemUTC();
+
+    /** The last time something was sent on this web socket */
+    private Instant lastSendTime = Instant.MIN;
+
+    /** The recurring task to send pings on the connection, if needed. */
+    private ScheduledFuture<?> pinger = null;
 
     /**
      * Initializes a new {@link ColibriWebSocket} instance.
@@ -72,6 +88,14 @@ public class ColibriWebSocket extends WebSocketAdapter
     {
         super.onWebSocketConnect(sess);
 
+        if (WebsocketServiceConfig.config.getSendKeepalivePings())
+        {
+            pinger = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(this::maybeSendPing,
+                WebsocketServiceConfig.config.getKeepalivePingTimeout().toMillis(),
+                WebsocketServiceConfig.config.getKeepalivePingTimeout().toMillis(),
+                TimeUnit.MILLISECONDS);
+        }
+
         eventHandler.webSocketConnected(this);
     }
 
@@ -82,6 +106,52 @@ public class ColibriWebSocket extends WebSocketAdapter
     public void onWebSocketClose(int statusCode, String reason)
     {
         eventHandler.webSocketClosed(this, statusCode, reason);
+        if (pinger != null)
+        {
+            pinger.cancel(true);
+        }
+    }
+
+    public void sendString(String message)
+    {
+        RemoteEndpoint remote = getRemote();
+        if (remote != null)
+        {
+            // We'll use the async version of sendString since this may be called
+            // from multiple threads.  It's just fire-and-forget though, so we
+            // don't wait on the result
+
+            remote.sendString(message, WriteCallback.NOOP);
+            synchronized (this)
+            {
+                lastSendTime = clock.instant();
+            }
+        }
+    }
+
+    private void maybeSendPing()
+    {
+        try
+        {
+            Instant now = clock.instant();
+            synchronized (this)
+            {
+                if (Duration.between(lastSendTime, now).
+                    compareTo(WebsocketServiceConfig.config.getKeepalivePingTimeout()) < 0)
+                {
+                    RemoteEndpoint remote = getRemote();
+                    if (remote != null)
+                    {
+                        remote.sendPing(ByteBuffer.allocate(0), WriteCallback.NOOP);
+                        lastSendTime = clock.instant();
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            logger.error("Error sending websocket ping", e);
+        }
     }
 
     /**
@@ -91,6 +161,10 @@ public class ColibriWebSocket extends WebSocketAdapter
     public void onWebSocketError(Throwable cause)
     {
         eventHandler.webSocketError(this, cause);
+        if (pinger != null)
+        {
+            pinger.cancel(true);
+        }
     }
 
     public interface EventHandler

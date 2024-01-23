@@ -19,6 +19,7 @@ package org.jitsi.videobridge.websocket.config
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
+import java.time.Duration
 
 class WebsocketServiceConfig private constructor() {
     /**
@@ -111,6 +112,21 @@ class WebsocketServiceConfig private constructor() {
             "org.jitsi.videobridge.rest.COLIBRI_WS_SERVER_ID".from(JitsiConfig.legacyConfig)
             "videobridge.websockets.server-id".from(JitsiConfig.newConfig)
         }
+    }
+
+    /** Whether keepalive pings are enabled */
+    val sendKeepalivePings: Boolean by config {
+        "videobridge.websockets.send-keepalive-pings".from(JitsiConfig.newConfig)
+    }
+
+    /** The time interval for keepalive pings */
+    val keepalivePingTimeout: Duration by config {
+        "videobridge.websockets.keepalive-ping-timeout".from(JitsiConfig.newConfig)
+    }
+
+    /** The time interval for websocket timeouts */
+    val idleTimeout: Duration by config {
+        "videobridge.websockets.idle-timeout".from(JitsiConfig.newConfig)
     }
 
     companion object {

@@ -22,6 +22,8 @@ import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.relay.*;
+import org.jitsi.videobridge.websocket.config.*;
+
 import static org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.config;
 
 import java.io.*;
@@ -67,7 +69,7 @@ class ColibriWebSocketServlet
     public void configure(JettyWebSocketServletFactory webSocketServletFactory)
     {
         // set a timeout of 1min
-        webSocketServletFactory.setIdleTimeout(Duration.ofMinutes(1));
+        webSocketServletFactory.setIdleTimeout(WebsocketServiceConfig.config.getIdleTimeout());
 
         webSocketServletFactory.setCreator((request, response) ->
         {
