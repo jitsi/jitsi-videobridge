@@ -28,13 +28,20 @@ class Harvesters private constructor(
     val healthy: Boolean
         get() = singlePortHarvesters.isNotEmpty()
 
-    fun close() {
+    private fun close() {
         singlePortHarvesters.forEach { it.close() }
         tcpHarvester?.close()
     }
 
     companion object {
         private val logger = createLogger()
+
+        fun init() {
+            // Trigger the lazy init.
+            INSTANCE
+        }
+
+        fun close() = INSTANCE.close()
 
         val INSTANCE: Harvesters by lazy {
             val singlePortHarvesters = SinglePortUdpHarvester.createHarvesters(IceConfig.config.port)
