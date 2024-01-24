@@ -120,8 +120,8 @@ class WebsocketServiceConfig private constructor() {
     }
 
     /** The time interval for keepalive pings */
-    val keepalivePingTimeout: Duration by config {
-        "videobridge.websockets.keepalive-ping-timeout".from(JitsiConfig.newConfig)
+    val keepalivePingInterval: Duration by config {
+        "videobridge.websockets.keepalive-ping-interval".from(JitsiConfig.newConfig)
     }
 
     /** The time interval for websocket timeouts */

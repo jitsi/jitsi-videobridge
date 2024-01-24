@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.websocket;
 
 import org.eclipse.jetty.websocket.api.*;
-import org.jitsi.utils.collections.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.util.*;
@@ -91,8 +90,8 @@ public class ColibriWebSocket extends WebSocketAdapter
         if (WebsocketServiceConfig.config.getSendKeepalivePings())
         {
             pinger = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(this::maybeSendPing,
-                WebsocketServiceConfig.config.getKeepalivePingTimeout().toMillis(),
-                WebsocketServiceConfig.config.getKeepalivePingTimeout().toMillis(),
+                WebsocketServiceConfig.config.getKeepalivePingInterval().toMillis(),
+                WebsocketServiceConfig.config.getKeepalivePingInterval().toMillis(),
                 TimeUnit.MILLISECONDS);
         }
 
@@ -137,7 +136,7 @@ public class ColibriWebSocket extends WebSocketAdapter
             synchronized (this)
             {
                 if (Duration.between(lastSendTime, now).
-                    compareTo(WebsocketServiceConfig.config.getKeepalivePingTimeout()) < 0)
+                    compareTo(WebsocketServiceConfig.config.getKeepalivePingInterval()) < 0)
                 {
                     RemoteEndpoint remote = getRemote();
                     if (remote != null)
