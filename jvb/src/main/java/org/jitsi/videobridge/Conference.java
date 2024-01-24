@@ -718,7 +718,6 @@ public class Conference
      * @param iceControlling {@code true} if the ICE agent of this endpoint's
      * transport will be initialized to serve as a controlling ICE agent;
      * otherwise, {@code false}
-     * @param sourceNames whether this endpoint signaled the source names support.
      * @param doSsrcRewriting whether this endpoint signaled SSRC rewriting support.
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
@@ -726,7 +725,6 @@ public class Conference
     public Endpoint createLocalEndpoint(
             String id,
             boolean iceControlling,
-            boolean sourceNames,
             boolean doSsrcRewriting,
             boolean visitor,
             boolean privateAddresses)
@@ -738,7 +736,7 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, sourceNames, doSsrcRewriting, visitor, privateAddresses);
+                id, this, logger, iceControlling, doSsrcRewriting, visitor, privateAddresses);
         videobridge.localEndpointCreated(visitor);
 
         subscribeToEndpointEvents(endpoint);

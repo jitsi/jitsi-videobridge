@@ -61,7 +61,6 @@ import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
 import org.jitsi.videobridge.message.BridgeChannelMessage
-import org.jitsi.videobridge.message.ForwardedEndpointsMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
@@ -107,7 +106,6 @@ class Endpoint @JvmOverloads constructor(
      * as a controlling ICE agent, false otherwise
      */
     iceControlling: Boolean,
-    private val isUsingSourceNames: Boolean,
     private val doSsrcRewriting: Boolean,
     /**
      * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
@@ -205,9 +203,6 @@ class Endpoint @JvmOverloads constructor(
                 // Intentional no-op
             }
 
-            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) =
-                sendForwardedEndpointsMessage(forwardedEndpoints)
-
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) {
                 sendForwardedSourcesMessage(forwardedSources)
             }
@@ -221,8 +216,7 @@ class Endpoint @JvmOverloads constructor(
         },
         { getOrderedEndpoints() },
         diagnosticContext,
-        logger,
-        isUsingSourceNames,
+        logger
     )
 
     /** Whether any sources are suspended from being sent to this endpoint because of BWE. */
@@ -329,7 +323,7 @@ class Endpoint @JvmOverloads constructor(
             conference.videobridge.statistics.totalVisitors.inc()
         }
 
-        logger.info("Created new endpoint isUsingSourceNames=$isUsingSourceNames, iceControlling=$iceControlling")
+        logger.info("Created new endpoint, iceControlling=$iceControlling")
     }
 
     override var mediaSources: Array<MediaSourceDesc>
@@ -514,11 +508,7 @@ class Endpoint @JvmOverloads constructor(
     // TODO: this should be part of an EndpointMessageTransport.EventHandler interface
     fun endpointMessageTransportConnected() {
         sendAllVideoConstraints()
-        if (isUsingSourceNames) {
-            sendForwardedSourcesMessage(bitrateController.forwardedSources)
-        } else {
-            sendForwardedEndpointsMessage(bitrateController.forwardedEndpoints)
-        }
+        sendForwardedSourcesMessage(bitrateController.forwardedSources)
         videoSsrcs.sendAllMappings()
         audioSsrcs.sendAllMappings()
     }
@@ -585,17 +575,10 @@ class Endpoint @JvmOverloads constructor(
                 "Suppressing sending a SenderVideoConstraints message, endpoint has no such source: $sourceName"
             }
         } else {
-            if (isUsingSourceNames) {
-                val senderSourceConstraintsMessage =
-                    SenderSourceConstraintsMessage(sourceName, maxVideoConstraints.maxHeight)
-                logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
-                sendMessage(senderSourceConstraintsMessage)
-            } else {
-                maxReceiverVideoConstraints[sourceName]?.let {
-                    sendVideoConstraints(it)
-                }
-                    ?: logger.error("No max receiver constraints mapping found for: $sourceName")
-            }
+            val senderSourceConstraintsMessage =
+                SenderSourceConstraintsMessage(sourceName, maxVideoConstraints.maxHeight)
+            logger.cdebug { "Sender constraints changed: ${senderSourceConstraintsMessage.toJson()}" }
+            sendMessage(senderSourceConstraintsMessage)
         }
     }
 
@@ -727,38 +710,12 @@ class Endpoint @JvmOverloads constructor(
     }
 
     /**
-     * Sends a message to this endpoint in order to notify it that the set of endpoints for which the bridge
-     * is sending video has changed.
-     *
-     * @param forwardedEndpoints the collection of forwarded endpoints.
-     */
-    @Deprecated("", ReplaceWith("sendForwardedSourcesMessage"), DeprecationLevel.WARNING)
-    fun sendForwardedEndpointsMessage(forwardedEndpoints: Collection<String>) {
-        if (isUsingSourceNames) {
-            return
-        }
-
-        val msg = ForwardedEndpointsMessage(forwardedEndpoints)
-        TaskPools.IO_POOL.execute {
-            try {
-                sendMessage(msg)
-            } catch (t: Throwable) {
-                logger.warn("Failed to send message:", t)
-            }
-        }
-    }
-
-    /**
      * Sends a message to this endpoint in order to notify it that the set of media sources for which the bridge
      * is sending video has changed.
      *
      * @param forwardedSources the collection of forwarded media sources (by name).
      */
     fun sendForwardedSourcesMessage(forwardedSources: Collection<String>) {
-        if (!isUsingSourceNames) {
-            return
-        }
-
         val msg = ForwardedSourcesMessage(forwardedSources)
         TaskPools.IO_POOL.execute {
             try {
@@ -851,9 +808,9 @@ class Endpoint @JvmOverloads constructor(
     fun isOversending(): Boolean = bitrateController.isOversending()
 
     /**
-     * Returns how many endpoints this Endpoint is currently forwarding video for
+     * Returns how many video sources are currently forwarding to this endpoint.
      */
-    fun numForwardedEndpoints(): Int = bitrateController.numForwardedEndpoints()
+    fun numForwardedSources(): Int = bitrateController.numForwardedSources()
 
     fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
         initialReceiverConstraintsReceived = true

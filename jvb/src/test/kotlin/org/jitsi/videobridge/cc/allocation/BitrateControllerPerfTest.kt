@@ -29,6 +29,7 @@ import org.jitsi.utils.nanos
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
+import org.jitsi.videobridge.util.endpointIdToSourceName
 import java.util.function.Supplier
 import kotlin.random.Random
 import kotlin.time.ExperimentalTime
@@ -67,7 +68,6 @@ class BitrateControllerPerfTest : StringSpec() {
     private val endpoints: MutableList<TestEndpoint> = createEndpoints(*endpointIds.toTypedArray())
     private val bc = BitrateController(
         object : BitrateController.EventHandler {
-            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
             override fun effectiveVideoConstraintsChanged(
                 oldEffectiveConstraints: EffectiveConstraintsMap,
@@ -79,8 +79,6 @@ class BitrateControllerPerfTest : StringSpec() {
         Supplier { endpoints.toList() },
         DiagnosticContext(),
         createLogger(),
-        // TODO cover the case for true?
-        false,
         clock,
     ).apply {
         // The BC only starts working 10 seconds after it first received media, so fake that.
@@ -122,7 +120,7 @@ class BitrateControllerPerfTest : StringSpec() {
 
         bc.setBandwidthAllocationSettings(
             ReceiverVideoConstraintsMessage(
-                selectedEndpoints = selectedEndpoints,
+                selectedSources = selectedEndpoints.map { endpointIdToSourceName(it) },
                 defaultConstraints = VideoConstraints(maxFrameHeight)
             )
         )

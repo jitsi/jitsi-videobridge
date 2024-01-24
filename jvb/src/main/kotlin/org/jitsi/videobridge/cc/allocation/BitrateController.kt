@@ -48,19 +48,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     endpointsSupplier: Supplier<List<T>>,
     private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
-    private val useSourceNames: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) {
     val eventEmitter = SyncEventEmitter<EventHandler>()
 
     private val bitrateAllocatorEventHandler = BitrateAllocatorEventHandler()
-
-    /**
-     * Keep track of the "forwarded" endpoints, i.e. the endpoints for which we are forwarding *some* layer.
-     */
-    @Deprecated("", ReplaceWith("forwardedSources"), DeprecationLevel.WARNING)
-    var forwardedEndpoints: Set<String> = emptySet()
-        private set
 
     /**
      * Keep track of the "forwarded" sources, i.e. the media sources for which we are forwarding *some* layer.
@@ -99,7 +91,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         )
     fun hasSuspendedSources() = bandwidthAllocator.allocation.hasSuspendedSources
 
-    private val allocationSettingsWrapper = AllocationSettingsWrapper(useSourceNames, parentLogger)
+    private val allocationSettingsWrapper = AllocationSettingsWrapper(parentLogger)
     val allocationSettings
         get() = allocationSettingsWrapper.get()
 
@@ -130,7 +122,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     /**
      * Return the number of endpoints whose streams are currently being forwarded.
      */
-    fun numForwardedEndpoints(): Int = forwardedEndpoints.size
+    fun numForwardedSources(): Int = forwardedSources.size
     fun getTotalOversendingTime(): Duration = oversendingTimeTracker.totalTimeOn()
     fun isOversending() = oversendingTimeTracker.state
     fun bandwidthChanged(newBandwidthBps: Long) {
@@ -154,7 +146,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         get() = JSONObject().apply {
             put("bitrate_allocator", bandwidthAllocator.debugState)
             put("packet_handler", packetHandler.debugState)
-            put("forwardedEndpoints", forwardedEndpoints.toString())
             put("forwardedSources", forwardedSources.toString())
             put("oversending", oversendingTimeTracker.state)
             put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
@@ -256,7 +247,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     }
 
     interface EventHandler {
-        fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>)
         fun forwardedSourcesChanged(forwardedSources: Set<String>)
         fun effectiveVideoConstraintsChanged(
             oldEffectiveConstraints: EffectiveConstraintsMap,
@@ -276,18 +266,10 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             // Actually implement the allocation (configure the packet filter to forward the chosen target layers).
             packetHandler.allocationChanged(allocation)
 
-            if (useSourceNames) {
-                val newForwardedSources = allocation.forwardedSources
-                if (forwardedSources != newForwardedSources) {
-                    forwardedSources = newForwardedSources
-                    eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
-                }
-            } else {
-                val newForwardedEndpoints = allocation.forwardedEndpoints
-                if (forwardedEndpoints != newForwardedEndpoints) {
-                    forwardedEndpoints = newForwardedEndpoints
-                    eventEmitter.fireEvent { forwardedEndpointsChanged(newForwardedEndpoints) }
-                }
+            val newForwardedSources = allocation.forwardedSources
+            if (forwardedSources != newForwardedSources) {
+                forwardedSources = newForwardedSources
+                eventEmitter.fireEvent { forwardedSourcesChanged(newForwardedSources) }
             }
 
             oversendingTimeTracker.setState(allocation.oversending)
