@@ -266,17 +266,6 @@ abstract class AbstractEndpoint protected constructor(
     abstract fun setExtmapAllowMixed(allow: Boolean)
 
     /**
-     * Notifies this instance that the max video constraints that the bridge
-     * needs to receive from this endpoint has changed. Each implementation
-     * handles this notification differently.
-     *
-     * @param maxVideoConstraints the max video constraints that the bridge
-     * needs to receive from this endpoint
-     */
-    @Deprecated("use sendVideoConstraintsV2")
-    protected abstract fun sendVideoConstraints(maxVideoConstraints: VideoConstraints)
-
-    /**
      * Notifies this instance that the max video constraints that the bridge needs to receive from a source of this
      * endpoint has changed. Each implementation handles this notification differently.
      *

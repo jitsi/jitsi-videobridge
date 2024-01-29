@@ -556,18 +556,6 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    @Deprecated("use sendVideoConstraintsV2")
-    override fun sendVideoConstraints(maxVideoConstraints: VideoConstraints) {
-        // Note that it's up to the client to respect these constraints.
-        if (mediaSources.isEmpty()) {
-            logger.cdebug { "Suppressing sending a SenderVideoConstraints message, endpoint has no streams." }
-        } else {
-            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(maxVideoConstraints.maxHeight)
-            logger.cdebug { "Sender constraints changed: ${senderVideoConstraintsMessage.toJson()}" }
-            sendMessage(senderVideoConstraintsMessage)
-        }
-    }
-
     override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (findMediaSourceDesc(sourceName) == null) {
