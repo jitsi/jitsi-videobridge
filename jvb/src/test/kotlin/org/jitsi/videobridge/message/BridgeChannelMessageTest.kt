@@ -31,7 +31,6 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.VideoType
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
-import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 
@@ -201,24 +200,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.active shouldBe "true"
         }
 
-        context("serializing and parsing ForwardedEndpointsMessage") {
-            val forwardedEndpoints = setOf("a", "b", "c")
-
-            val message = ForwardedEndpointsMessage(forwardedEndpoints)
-            val parsed = parse(message.toJson())
-
-            parsed.shouldBeInstanceOf<ForwardedEndpointsMessage>()
-
-            parsed.forwardedEndpoints shouldContainExactly forwardedEndpoints
-
-            // Make sure the forwardedEndpoints field is serialized as lastNEndpoints as the client (presumably) expects
-            val parsedJson = JSONParser().parse(message.toJson())
-            parsedJson.shouldBeInstanceOf<JSONObject>()
-            val parsedForwardedEndpoints = parsedJson["lastNEndpoints"]
-            parsedForwardedEndpoints.shouldBeInstanceOf<JSONArray>()
-            parsedForwardedEndpoints.toList() shouldContainExactly forwardedEndpoints
-        }
-
         context("serializing and parsing ForwardedSourcesMessage") {
             val forwardedSources = setOf("s1", "s2", "s3")
 
@@ -236,18 +217,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
             videoConstraints.maxFrameRate shouldBe 15.0
         }
 
-        context("and SenderVideoConstraintsMessage") {
-            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(1080)
-            val parsed = parse(senderVideoConstraintsMessage.toJson())
-
-            parsed.shouldBeInstanceOf<SenderVideoConstraintsMessage>()
-
-            parsed.videoConstraints.idealHeight shouldBe 1080
-        }
-
         context("serializing and parsing SenderSourceConstraintsMessage") {
-            val senderVideoConstraintsMessage = SenderSourceConstraintsMessage("s1", 1080)
-            val parsed = parse(senderVideoConstraintsMessage.toJson())
+            val senderSourceConstraintsMessage = SenderSourceConstraintsMessage("s1", 1080)
+            val parsed = parse(senderSourceConstraintsMessage.toJson())
 
             parsed.shouldBeInstanceOf<SenderSourceConstraintsMessage>()
 
@@ -455,8 +427,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
                 parsed.shouldBeInstanceOf<ReceiverVideoConstraintsMessage>()
                 parsed.lastN shouldBe 3
-                parsed.onStageEndpoints shouldBe listOf("onstage1", "onstage2")
-                parsed.selectedEndpoints shouldBe listOf("selected1", "selected2")
                 parsed.defaultConstraints shouldBe VideoConstraints(0)
                 val constraints = parsed.constraints
                 constraints.shouldNotBeNull()
@@ -470,8 +440,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 val parsed = parse(RECEIVER_VIDEO_CONSTRAINTS_EMPTY)
                 parsed.shouldBeInstanceOf<ReceiverVideoConstraintsMessage>()
                 parsed.lastN shouldBe null
-                parsed.onStageEndpoints shouldBe null
-                parsed.selectedEndpoints shouldBe null
                 parsed.defaultConstraints shouldBe null
                 parsed.constraints shouldBe null
             }
@@ -546,8 +514,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             {
               "colibriClass": "ReceiverVideoConstraints",
               "lastN": 3,
-              "selectedEndpoints": [ "selected1", "selected2" ],
-              "onStageEndpoints": [ "onstage1", "onstage2" ],
               "defaultConstraints": { "maxHeight": 0 },
               "constraints": {
                 "epOnStage": { "maxHeight": 720 },

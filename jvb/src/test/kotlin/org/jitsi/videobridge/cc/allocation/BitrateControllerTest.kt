@@ -1369,8 +1369,6 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
 
     val bc = BitrateController(
         object : BitrateController.EventHandler {
-            override fun forwardedEndpointsChanged(forwardedEndpoints: Set<String>) { }
-
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) {
                 Event(bwe, forwardedSources, clock.instant()).apply {
                     logger.info("Forwarded sources changed: $this")
@@ -1404,8 +1402,6 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         Supplier { endpoints },
         DiagnosticContext(),
         logger,
-        // TODO merge BitrateControllerNewTest with old and use this flag
-        true,
         clock
     )
 

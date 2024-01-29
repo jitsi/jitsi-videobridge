@@ -236,7 +236,7 @@ abstract class AbstractEndpoint protected constructor(
         val newReceiverMaxVideoConstraints = VideoConstraints(newMaxHeight, -1.0)
         if (newReceiverMaxVideoConstraints != oldReceiverMaxVideoConstraints) {
             maxReceiverVideoConstraints[sourceName] = newReceiverMaxVideoConstraints
-            sendVideoConstraintsV2(sourceName, newReceiverMaxVideoConstraints)
+            sendVideoConstraints(sourceName, newReceiverMaxVideoConstraints)
         }
     }
 
@@ -266,24 +266,13 @@ abstract class AbstractEndpoint protected constructor(
     abstract fun setExtmapAllowMixed(allow: Boolean)
 
     /**
-     * Notifies this instance that the max video constraints that the bridge
-     * needs to receive from this endpoint has changed. Each implementation
-     * handles this notification differently.
-     *
-     * @param maxVideoConstraints the max video constraints that the bridge
-     * needs to receive from this endpoint
-     */
-    @Deprecated("use sendVideoConstraintsV2")
-    protected abstract fun sendVideoConstraints(maxVideoConstraints: VideoConstraints)
-
-    /**
      * Notifies this instance that the max video constraints that the bridge needs to receive from a source of this
      * endpoint has changed. Each implementation handles this notification differently.
      *
      * @param sourceName the name of the media source
      * @param maxVideoConstraints the max video constraints that the bridge needs to receive from the source
      */
-    protected abstract fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints)
+    protected abstract fun sendVideoConstraints(sourceName: String, maxVideoConstraints: VideoConstraints)
 
     /**
      * Notifies this instance that a specified received wants to receive the specified video constraints from the media

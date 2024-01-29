@@ -23,7 +23,6 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
-import org.jitsi.videobridge.util.endpointIdToSourceName
 
 /**
  * This class encapsulates all of the client-controlled settings for bandwidth allocation.
@@ -60,16 +59,9 @@ data class AllocationSettings @JvmOverloads constructor(
  * the overall state changed.
  */
 internal class AllocationSettingsWrapper(
-    private val useSourceNames: Boolean,
     parentLogger: Logger = LoggerImpl(AllocationSettingsWrapper::class.java.name)
 ) {
     private val logger = createChildLogger(parentLogger)
-
-    /**
-     * The last selected endpoints set signaled by the receiving endpoint.
-     */
-    @Deprecated("", ReplaceWith("selectedSources"), DeprecationLevel.WARNING)
-    private var selectedEndpoints = emptyList<String>()
 
     /**
      * The last selected sources set signaled by the receiving endpoint.
@@ -83,9 +75,6 @@ internal class AllocationSettingsWrapper(
     private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx())
 
     private var assumedBandwidthBps: Long = -1
-
-    @Deprecated("", ReplaceWith("onStageSources"), DeprecationLevel.WARNING)
-    private var onStageEndpoints: List<String> = emptyList()
 
     private var onStageSources: List<String> = emptyList()
 
@@ -111,35 +100,16 @@ internal class AllocationSettingsWrapper(
                 changed = true
             }
         }
-        if (useSourceNames) {
-            message.selectedSources?.let {
-                if (selectedSources != it) {
-                    selectedSources = it
-                    changed = true
-                }
+        message.selectedSources?.let {
+            if (selectedSources != it) {
+                selectedSources = it
+                changed = true
             }
-            message.onStageSources?.let {
-                if (onStageSources != it) {
-                    onStageSources = it
-                    changed = true
-                }
-            }
-        } else {
-            message.selectedEndpoints?.let {
-                logger.warn("Setting deprecated selectedEndpoints=$it")
-                val newSelectedSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
-                if (selectedSources != newSelectedSources) {
-                    selectedSources = newSelectedSources
-                    changed = true
-                }
-            }
-            message.onStageEndpoints?.let {
-                logger.warn("Setting deprecated onStateEndpoints=$it")
-                val newOnStageSources = it.map { endpoint -> endpointIdToSourceName(endpoint) }
-                if (onStageSources != newOnStageSources) {
-                    onStageSources = newOnStageSources
-                    changed = true
-                }
+        }
+        message.onStageSources?.let {
+            if (onStageSources != it) {
+                onStageSources = it
+                changed = true
             }
         }
         message.defaultConstraints?.let {
@@ -149,19 +119,8 @@ internal class AllocationSettingsWrapper(
             }
         }
         message.constraints?.let {
-            var newConstraints = it
-
-            // Convert endpoint IDs to source names
-            if (!useSourceNames) {
-                newConstraints = HashMap(it.size)
-                it.entries.forEach {
-                        entry ->
-                    newConstraints[endpointIdToSourceName(entry.key)] = entry.value
-                }
-            }
-
-            if (this.videoConstraints != newConstraints) {
-                this.videoConstraints = newConstraints
+            if (this.videoConstraints != it) {
+                this.videoConstraints = it
                 changed = true
             }
         }
