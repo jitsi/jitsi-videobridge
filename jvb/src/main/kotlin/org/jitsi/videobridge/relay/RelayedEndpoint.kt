@@ -124,8 +124,6 @@ class RelayedEndpoint(
     // Visitors are never advertised between relays, so relayed endpoints are never visitors.
     override val visitor = false
 
-    fun hasReceiveSsrcs(): Boolean = streamInformationStore.receiveSsrcs.isNotEmpty()
-
     /** Relayed endpoints are not automatically expired. **/
     override fun shouldExpire(): Boolean = false
 
@@ -144,7 +142,7 @@ class RelayedEndpoint(
 
     override fun setExtmapAllowMixed(allow: Boolean) = streamInformationStore.setExtmapAllowMixed(allow)
 
-    override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
+    override fun sendVideoConstraints(sourceName: String, maxVideoConstraints: VideoConstraints) {
         relay.sendMessage(
             AddReceiverMessage(
                 RelayConfig.config.relayId,
@@ -158,7 +156,7 @@ class RelayedEndpoint(
 
     fun relayMessageTransportConnected() {
         maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
-            sendVideoConstraintsV2(sourceName, constraints)
+            sendVideoConstraints(sourceName, constraints)
         }
     }
 

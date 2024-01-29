@@ -514,7 +514,7 @@ class Endpoint @JvmOverloads constructor(
 
     private fun sendAllVideoConstraints() {
         maxReceiverVideoConstraints.forEach { (sourceName, constraints) ->
-            sendVideoConstraintsV2(sourceName, constraints)
+            sendVideoConstraints(sourceName, constraints)
         }
     }
 
@@ -555,7 +555,7 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    override fun sendVideoConstraintsV2(sourceName: String, maxVideoConstraints: VideoConstraints) {
+    override fun sendVideoConstraints(sourceName: String, maxVideoConstraints: VideoConstraints) {
         // Note that it's up to the client to respect these constraints.
         if (findMediaSourceDesc(sourceName) == null) {
             logger.warn {
