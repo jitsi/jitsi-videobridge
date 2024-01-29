@@ -53,7 +53,6 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = ForwardedSourcesMessage::class, name = ForwardedSourcesMessage.TYPE),
     JsonSubTypes.Type(value = VideoSourcesMap::class, name = VideoSourcesMap.TYPE),
     JsonSubTypes.Type(value = AudioSourcesMap::class, name = AudioSourcesMap.TYPE),
-    JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = SenderSourceConstraintsMessage::class, name = SenderSourceConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
@@ -117,7 +116,6 @@ open class MessageHandler {
             is ForwardedSourcesMessage -> forwardedSources(message)
             is VideoSourcesMap -> videoSourcesMap(message)
             is AudioSourcesMap -> audioSourcesMap(message)
-            is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
             is SenderSourceConstraintsMessage -> senderSourceConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
@@ -143,7 +141,6 @@ open class MessageHandler {
     open fun forwardedSources(message: ForwardedSourcesMessage) = unhandledMessageReturnNull(message)
     open fun videoSourcesMap(message: VideoSourcesMap) = unhandledMessageReturnNull(message)
     open fun audioSourcesMap(message: AudioSourcesMap) = unhandledMessageReturnNull(message)
-    open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun senderSourceConstraints(message: SenderSourceConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
@@ -369,32 +366,6 @@ class AudioSourcesMap(
 ) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "AudioSourcesMap"
-    }
-}
-
-/**
- * A message sent from the bridge to a client (sender), indicating constraints for the sender's video streams.
- *
- * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
- * TODO: update https://github.com/jitsi/jitsi-videobridge/blob/master/doc/constraints.md before removing.
- */
-@Deprecated("", ReplaceWith("SenderSourceConstraints"), DeprecationLevel.WARNING)
-class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage() {
-    constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
-
-    /**
-     * Serialize manually because it's faster than Jackson.
-     *
-     * We use the "idealHeight" format that the jitsi-meet client expects.
-     */
-    override fun createJson(): String =
-        """{"colibriClass":"$TYPE", "videoConstraints":{"idealHeight":${videoConstraints.idealHeight}}}"""
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class VideoConstraints(val idealHeight: Int)
-
-    companion object {
-        const val TYPE = "SenderVideoConstraints"
     }
 }
 

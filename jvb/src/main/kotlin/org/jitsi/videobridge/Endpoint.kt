@@ -64,7 +64,6 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
-import org.jitsi.videobridge.message.SenderVideoConstraintsMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.RelayedEndpoint
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures

@@ -217,18 +217,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
             videoConstraints.maxFrameRate shouldBe 15.0
         }
 
-        context("and SenderVideoConstraintsMessage") {
-            val senderVideoConstraintsMessage = SenderVideoConstraintsMessage(1080)
-            val parsed = parse(senderVideoConstraintsMessage.toJson())
-
-            parsed.shouldBeInstanceOf<SenderVideoConstraintsMessage>()
-
-            parsed.videoConstraints.idealHeight shouldBe 1080
-        }
-
         context("serializing and parsing SenderSourceConstraintsMessage") {
-            val senderVideoConstraintsMessage = SenderSourceConstraintsMessage("s1", 1080)
-            val parsed = parse(senderVideoConstraintsMessage.toJson())
+            val senderSourceConstraintsMessage = SenderSourceConstraintsMessage("s1", 1080)
+            val parsed = parse(senderSourceConstraintsMessage.toJson())
 
             parsed.shouldBeInstanceOf<SenderSourceConstraintsMessage>()
 
