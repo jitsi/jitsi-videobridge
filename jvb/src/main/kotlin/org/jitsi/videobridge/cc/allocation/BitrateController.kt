@@ -119,9 +119,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
     fun expire() = bandwidthAllocator.expire()
 
-    /**
-     * Return the number of endpoints whose streams are currently being forwarded.
-     */
+    /** Return the number of sources currently being forwarded. */
     fun numForwardedSources(): Int = forwardedSources.size
     fun getTotalOversendingTime(): Duration = oversendingTimeTracker.totalTimeOn()
     fun isOversending() = oversendingTimeTracker.state
@@ -161,7 +159,6 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
     fun setBandwidthAllocationSettings(message: ReceiverVideoConstraintsMessage) {
         if (allocationSettingsWrapper.setBandwidthAllocationSettings(message)) {
-            // TODO write a test for a user which uses only the endpoint based constraints
             bandwidthAllocator.update(allocationSettingsWrapper.get())
         }
     }
@@ -291,7 +288,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 }
 
 /**
- * Abstracts a source endpoint for the purposes of [BandwidthAllocator].
+ * Abstracts a media source for the purposes of [BandwidthAllocator].
  */
 interface MediaSourceContainer {
     val id: String
