@@ -33,6 +33,7 @@ import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.ice.Harvesters
+import org.jitsi.videobridge.metrics.Metrics
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsCollector
@@ -66,6 +67,8 @@ fun main() {
     // TODO: Instead of setting this here, we should integrate it with the infra/debian scripts
     //  to be passed.
     System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog")
+
+    Metrics.start()
 
     // Reload the Typesafe config used by ice4j, because the original was initialized before the new system
     // properties were set.
@@ -168,6 +171,7 @@ fun main() {
     }
     videobridge.stop()
     stopIce4j()
+    Metrics.stop()
 
     TaskPools.SCHEDULED_POOL.shutdownNow()
     TaskPools.CPU_POOL.shutdownNow()

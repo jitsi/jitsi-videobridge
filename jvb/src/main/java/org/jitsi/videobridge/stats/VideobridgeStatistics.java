@@ -29,7 +29,6 @@ import org.jitsi.videobridge.transport.ice.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
 
-import java.lang.management.*;
 import java.text.*;
 import java.util.*;
 import java.util.concurrent.locks.*;
@@ -446,9 +445,6 @@ public class VideobridgeStatistics
             videoSendersJson.add(n);
         }
 
-        // THREADS
-        int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
-
         double incomingLoss = 0;
         if (incomingPacketsReceived + incomingPacketsLost > 0)
         {
@@ -579,7 +575,7 @@ public class VideobridgeStatistics
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
             unlockedSetStat(CONFERENCES_BY_AUDIO_SENDERS, audioSendersJson);
             unlockedSetStat(CONFERENCES_BY_VIDEO_SENDERS, videoSendersJson);
-            unlockedSetStat(THREADS, threadCount);
+            unlockedSetStat(THREADS, ThreadsMetric.INSTANCE.getThreadCount().get());
             unlockedSetStat(
                     SHUTDOWN_IN_PROGRESS,
                     videobridge.isInGracefulShutdown());
