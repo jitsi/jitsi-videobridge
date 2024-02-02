@@ -21,6 +21,7 @@ import org.jitsi.nlj.rtcp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
@@ -120,9 +121,6 @@ public class VideobridgeStatistics
 
     private final @NotNull Videobridge videobridge;
 
-    private final BooleanMetric healthy = VideobridgeMetricsContainer.getInstance()
-            .registerBooleanMetric("healthy", "Whether the Videobridge instance is healthy or not.", true);
-
     /**
      * Creates instance of <tt>VideobridgeStatistics</tt>.
      */
@@ -145,8 +143,7 @@ public class VideobridgeStatistics
         unlockedSetStat(LARGEST_CONFERENCE, 0);
         unlockedSetStat(CONFERENCE_SIZES, "[]");
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
-        unlockedSetStat("healthy",
-                healthy.setAndGet(videobridge.getJvbHealthChecker().getResult().getSuccess()));
+        unlockedSetStat("healthy", JvbHealthChecker.Companion.getHealthyMetric().get());
 
         // Set these once, they won't change.
         unlockedSetStat(VERSION, videobridge.getVersion().toString());
@@ -621,8 +618,7 @@ public class VideobridgeStatistics
             unlockedSetStat("preemptive_kfr_sent", jvbStats.preemptiveKeyframeRequestsSent.get());
             unlockedSetStat("preemptive_kfr_suppressed", jvbStats.preemptiveKeyframeRequestsSuppressed.get());
             unlockedSetStat("endpoints_with_spurious_remb", RembHandler.Companion.endpointsWithSpuriousRemb());
-            unlockedSetStat("healthy",
-                    healthy.setAndGet(videobridge.getJvbHealthChecker().getResult().getSuccess()));
+            unlockedSetStat("healthy", JvbHealthChecker.Companion.getHealthyMetric().get());
             unlockedSetStat("endpoints_disconnected", EndpointConnectionStatusMonitor.endpointsDisconnected.get());
             unlockedSetStat("endpoints_reconnected", EndpointConnectionStatusMonitor.endpointsReconnected.get());
         }
