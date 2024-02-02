@@ -106,7 +106,7 @@ fun main() {
         Clock.systemUTC()
     ).apply { start() }
     val healthChecker = videobridge.jvbHealthChecker
-    val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, xmppConnection)).apply {
+    val statsCollector = StatsCollector(VideobridgeStatistics(videobridge)).apply {
         start()
         addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
     }

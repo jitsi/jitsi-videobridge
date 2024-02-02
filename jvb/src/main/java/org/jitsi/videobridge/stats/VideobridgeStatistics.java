@@ -119,7 +119,6 @@ public class VideobridgeStatistics
     private boolean inGenerate = false;
 
     private final @NotNull Videobridge videobridge;
-    private final @NotNull XmppConnection xmppConnection;
 
     private final BooleanMetric healthy = VideobridgeMetricsContainer.getInstance()
             .registerBooleanMetric("healthy", "Whether the Videobridge instance is healthy or not.", true);
@@ -127,13 +126,9 @@ public class VideobridgeStatistics
     /**
      * Creates instance of <tt>VideobridgeStatistics</tt>.
      */
-    public VideobridgeStatistics(
-            @NotNull Videobridge videobridge,
-            @NotNull XmppConnection xmppConnection
-    )
+    public VideobridgeStatistics(@NotNull Videobridge videobridge)
     {
         this.videobridge = videobridge;
-        this.xmppConnection = xmppConnection;
 
         timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -619,20 +614,10 @@ public class VideobridgeStatistics
                 unlockedSetStat(RELAY_ID, relayId);
             }
 
-            // TODO(brian): expose these stats in a `getStats` call in XmppConnection
-            //  rather than calling xmppConnection.getMucClientManager?
-            unlockedSetStat(
-                    MUC_CLIENTS_CONFIGURED,
-                    xmppConnection.getMucClientManager().getClientCount());
-            unlockedSetStat(
-                    MUC_CLIENTS_CONNECTED,
-                    xmppConnection.getMucClientManager().getClientConnectedCount());
-            unlockedSetStat(
-                    MUCS_CONFIGURED,
-                    xmppConnection.getMucClientManager().getMucCount());
-            unlockedSetStat(
-                    MUCS_JOINED,
-                    xmppConnection.getMucClientManager().getMucJoinedCount());
+            unlockedSetStat(MUC_CLIENTS_CONFIGURED, XmppConnection.Companion.getMucClientsConfigured().get());
+            unlockedSetStat(MUC_CLIENTS_CONNECTED, XmppConnection.Companion.getMucClientsConnected().get());
+            unlockedSetStat(MUCS_CONFIGURED, XmppConnection.Companion.getMucsConfigured().get());
+            unlockedSetStat(MUCS_JOINED, XmppConnection.Companion.getMucsJoined().get());
             unlockedSetStat("preemptive_kfr_sent", jvbStats.preemptiveKeyframeRequestsSent.get());
             unlockedSetStat("preemptive_kfr_suppressed", jvbStats.preemptiveKeyframeRequestsSuppressed.get());
             unlockedSetStat("endpoints_with_spurious_remb", RembHandler.Companion.endpointsWithSpuriousRemb());
