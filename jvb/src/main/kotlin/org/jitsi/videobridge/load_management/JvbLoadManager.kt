@@ -175,7 +175,7 @@ class PacketRateLoadManager(
     init {
         val sampler = PacketRateLoadSampler(videobridge) { loadMeasurement ->
             loadUpdate(loadMeasurement)
-            videobridge.statistics.stressLevel = getCurrentStressLevel()
+            videobridge.statistics.stressLevel.set(getCurrentStressLevel())
         }
 
         startSampler(sampler)
@@ -191,7 +191,7 @@ class CpuUsageLoadManager(
     init {
         val sampler = CpuLoadSampler { loadMeasurement ->
             loadUpdate(loadMeasurement)
-            videobridge.statistics.stressLevel = getCurrentStressLevel()
+            videobridge.statistics.stressLevel.set(getCurrentStressLevel())
         }
 
         startSampler(sampler)

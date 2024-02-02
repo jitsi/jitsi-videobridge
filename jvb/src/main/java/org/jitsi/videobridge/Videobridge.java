@@ -986,7 +986,10 @@ public class Videobridge
         /**
          * The stress level for this bridge
          */
-        public Double stressLevel = 0.0;
+        public DoubleGaugeMetric stressLevel = VideobridgeMetricsContainer.getInstance().registerDoubleGauge(
+                "stress",
+                "Current stress (between 0 and 1)."
+        );
 
         /** Distribution of energy scores for discarded audio packets  */
         public BucketStats tossedPacketsEnergy = new BucketStats(

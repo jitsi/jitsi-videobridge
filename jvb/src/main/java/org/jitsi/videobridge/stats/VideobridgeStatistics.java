@@ -550,7 +550,7 @@ public class VideobridgeStatistics
                 jvbStats.totalVideoStreamMillisecondsReceived.get());
             unlockedSetStat(
                 "stress_level",
-                jvbStats.stressLevel
+                jvbStats.stressLevel.get()
             );
             unlockedSetStat(
                 "average_participant_stress",
