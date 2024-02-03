@@ -91,13 +91,6 @@ public class VideobridgeStatistics
     public static final String OUTGOING_LOSS = "outgoing_loss";
 
     /**
-     * The name of the stat that tracks the total number of times our AIMDs have
-     * expired the incoming bitrate (and which would otherwise result in video
-     * suspension).
-     */
-    private static final String TOTAL_AIMD_BWE_EXPIRATIONS = "total_aimd_bwe_expirations";
-
-    /**
      * Fraction of incoming and outgoing packets that were lost.
      */
     public static final String OVERALL_LOSS = "overall_loss";
@@ -264,7 +257,6 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     ENDPOINTS_SENDING_VIDEO,
                     VideobridgePeriodicMetrics.INSTANCE.getEndpointsSendingVideo().get());
-            unlockedSetStat(VIDEO_CHANNELS, VideobridgePeriodicMetrics.INSTANCE.getEndpointsSendingVideo().get());
             unlockedSetStat(LARGEST_CONFERENCE, VideobridgePeriodicMetrics.INSTANCE.getLargestConference().get());
             unlockedSetStat(THREADS, ThreadsMetric.INSTANCE.getThreadCount().get());
             unlockedSetStat(SHUTDOWN_IN_PROGRESS, VideobridgeMetrics.INSTANCE.getGracefulShutdown().get());
@@ -285,7 +277,6 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
             unlockedSetStat(TOTAL_PACKETS_RECEIVED, jvbStats.packetsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.packetsSent.get());
-            unlockedSetStat("colibri2", true);
             unlockedSetStat(TOTAL_BYTES_RECEIVED_OCTO, jvbStats.totalRelayBytesReceived.get());
             unlockedSetStat(TOTAL_BYTES_SENT_OCTO, jvbStats.totalRelayBytesSent.get());
             unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO, jvbStats.relayPacketsReceived.get());
