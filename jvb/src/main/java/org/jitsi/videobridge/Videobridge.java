@@ -486,6 +486,7 @@ public class Videobridge
     public void setDrainMode(boolean enable)
     {
         logger.info("Received drain request. enable=" + enable);
+        VideobridgeMetrics.INSTANCE.getDrainMode().set(enable);
         drainMode = enable;
     }
 

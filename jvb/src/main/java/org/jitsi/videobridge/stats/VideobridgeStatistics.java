@@ -568,14 +568,12 @@ public class VideobridgeStatistics
             unlockedSetStat(CONFERENCES_BY_AUDIO_SENDERS, audioSendersJson);
             unlockedSetStat(CONFERENCES_BY_VIDEO_SENDERS, videoSendersJson);
             unlockedSetStat(THREADS, ThreadsMetric.INSTANCE.getThreadCount().get());
-            unlockedSetStat(
-                    SHUTDOWN_IN_PROGRESS,
-                    videobridge.isInGracefulShutdown());
+            unlockedSetStat(SHUTDOWN_IN_PROGRESS, VideobridgeMetrics.INSTANCE.getGracefulShutdown().get());
             if (videobridge.getShutdownState() == ShutdownState.SHUTTING_DOWN)
             {
                 unlockedSetStat("shutting_down", true);
             }
-            unlockedSetStat(DRAIN, videobridge.getDrainMode());
+            unlockedSetStat(DRAIN, VideobridgeMetrics.INSTANCE.getDrainMode().get());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
                             jvbStats.dataChannelMessagesReceived.get());
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_SENT,

@@ -18,6 +18,7 @@ package org.jitsi.videobridge.shutdown
 import org.jitsi.meet.ShutdownService
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.shutdown.ShutdownConfig.Companion.config
 import org.jitsi.videobridge.shutdown.ShutdownState.GRACEFUL_SHUTDOWN
 import org.jitsi.videobridge.shutdown.ShutdownState.RUNNING
@@ -52,6 +53,7 @@ class ShutdownManager(
         if (graceful) {
             if (state == RUNNING) {
                 state = GRACEFUL_SHUTDOWN
+                VideobridgeMetrics.gracefulShutdown.set(true)
                 logger.info(
                     "Entered graceful shutdown mode, will stay in this mode for up to " +
                         config.gracefulShutdownMaxDuration
