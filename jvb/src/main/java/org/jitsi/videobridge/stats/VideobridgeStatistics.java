@@ -229,15 +229,6 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_ICE_SUCCEEDED_TCP, IceTransport.Companion.getIceSucceededTcp().get());
             unlockedSetStat(TOTAL_ICE_SUCCEEDED_RELAYED, IceTransport.Companion.getIceSucceededRelayed().get());
             unlockedSetStat(TOTAL_CONFERENCE_SECONDS, jvbStats.totalConferenceSeconds.get());
-            unlockedSetStat(
-                    TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS,
-                    jvbStats.totalLossControlledParticipantMs.get() / 1000);
-            unlockedSetStat(
-                    TOTAL_LOSS_LIMITED_PARTICIPANT_SECONDS,
-                    jvbStats.totalLossLimitedParticipantMs.get() / 1000);
-            unlockedSetStat(
-                    TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
-                   jvbStats.totalLossDegradedParticipantMs.get() / 1000);
             unlockedSetStat(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get());
             unlockedSetStat("total_visitors", jvbStats.totalVisitors.get());
             unlockedSetStat(EPS_NO_MSG_TRANSPORT_AFTER_DELAY, jvbStats.numEndpointsNoMessageTransportAfterDelay.get());

@@ -1021,20 +1021,6 @@ class Endpoint @JvmOverloads constructor(
             totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideo.toMillis())
         }
 
-        run {
-            val bweStats = transceiverStats.bandwidthEstimatorStats
-            val lossLimitedMs = bweStats.getNumber("lossLimitedMs")?.toLong() ?: return@run
-            val lossDegradedMs = bweStats.getNumber("lossDegradedMs")?.toLong() ?: return@run
-            val lossFreeMs = bweStats.getNumber("lossFreeMs")?.toLong() ?: return@run
-
-            val participantMs = lossFreeMs + lossDegradedMs + lossLimitedMs
-            conference.videobridge.statistics.apply {
-                totalLossControlledParticipantMs.addAndGet(participantMs)
-                totalLossLimitedParticipantMs.addAndGet(lossLimitedMs)
-                totalLossDegradedParticipantMs.addAndGet(lossDegradedMs)
-            }
-        }
-
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring an endpoint with ICE connected, but not DTLS.")
             conferenceStats.dtlsFailedEndpoints.incrementAndGet()
