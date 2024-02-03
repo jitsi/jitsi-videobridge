@@ -1012,9 +1012,6 @@ class Endpoint @JvmOverloads constructor(
 
         conference.videobridge.statistics.apply {
             val bweStats = transceiverStats.bandwidthEstimatorStats
-            bweStats.getNumber("incomingEstimateExpirations")?.toLong()?.let {
-                incomingBitrateExpirations.addAndGet(it)
-            }
             keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
             layeringChangesReceived.addAndGet(
                 transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()

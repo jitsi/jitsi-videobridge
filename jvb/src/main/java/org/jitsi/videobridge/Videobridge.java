@@ -772,15 +772,6 @@ public class Videobridge
     public static class Statistics
     {
         /**
-         * The total number of times our AIMDs have expired the incoming bitrate
-         * (and which would otherwise result in video suspension).
-         * (see {@link AimdRateControl#incomingBitrateExpirations}).
-         */
-        public CounterMetric incomingBitrateExpirations = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "incoming_bitrate_expirations",
-                "Number of times our AIMDs have expired the incoming bitrate.");
-
-        /**
          * The cumulative/total number of conferences in which ALL of the endpoints failed ICE.
          */
         public CounterMetric failedConferences = VideobridgeMetricsContainer.getInstance().registerCounter(
