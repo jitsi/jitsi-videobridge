@@ -473,47 +473,23 @@ public class VideobridgeStatistics
             // The number of local (non-octo) active (in a conference where at least one endpoint sends audio or video)
             // endpoints.
             unlockedSetStat("local_active_endpoints", numLocalActiveEndpoints);
-            unlockedSetStat(
-                    BITRATE_DOWNLOAD,
-                    bitrateDownloadBps / 1000 /* kbps */);
-            unlockedSetStat(
-                    BITRATE_UPLOAD,
-                    bitrateUploadBps / 1000 /* kbps */);
+            unlockedSetStat(BITRATE_DOWNLOAD, bitrateDownloadBps / 1000 /* kbps */);
+            unlockedSetStat(BITRATE_UPLOAD, bitrateUploadBps / 1000 /* kbps */);
             unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
             unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
-            unlockedSetStat(
-                TOTAL_AIMD_BWE_EXPIRATIONS,
-                jvbStats.incomingBitrateExpirations.get());
+            unlockedSetStat(TOTAL_AIMD_BWE_EXPIRATIONS, jvbStats.incomingBitrateExpirations.get());
             // TODO seems broken (I see values of > 11 seconds)
             unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
-            unlockedSetStat(
-                    TOTAL_FAILED_CONFERENCES,
-                    jvbStats.failedConferences.get());
-            unlockedSetStat(
-                    TOTAL_PARTIALLY_FAILED_CONFERENCES,
-                    jvbStats.partiallyFailedConferences.get());
-            unlockedSetStat(
-                    TOTAL_CONFERENCES_CREATED,
-                    jvbStats.conferencesCreated.get());
-            unlockedSetStat(
-                    TOTAL_CONFERENCES_COMPLETED,
-                    jvbStats.conferencesCompleted.get());
-            unlockedSetStat(
-                    TOTAL_ICE_FAILED,
-                    IceTransport.Companion.getIceFailed().get());
-            unlockedSetStat(
-                    TOTAL_ICE_SUCCEEDED,
-                    IceTransport.Companion.getIceSucceeded().get());
-            unlockedSetStat(
-                    TOTAL_ICE_SUCCEEDED_TCP,
-                    IceTransport.Companion.getIceSucceededTcp().get());
-            unlockedSetStat(
-                    TOTAL_ICE_SUCCEEDED_RELAYED,
-                    IceTransport.Companion.getIceSucceededRelayed().get());
-            unlockedSetStat(
-                    TOTAL_CONFERENCE_SECONDS,
-                    jvbStats.totalConferenceSeconds.get());
+            unlockedSetStat(TOTAL_FAILED_CONFERENCES, jvbStats.failedConferences.get());
+            unlockedSetStat(TOTAL_PARTIALLY_FAILED_CONFERENCES, jvbStats.partiallyFailedConferences.get());
+            unlockedSetStat(TOTAL_CONFERENCES_CREATED, jvbStats.conferencesCreated.get());
+            unlockedSetStat(TOTAL_CONFERENCES_COMPLETED, jvbStats.conferencesCompleted.get());
+            unlockedSetStat(TOTAL_ICE_FAILED, IceTransport.Companion.getIceFailed().get());
+            unlockedSetStat(TOTAL_ICE_SUCCEEDED, IceTransport.Companion.getIceSucceeded().get());
+            unlockedSetStat(TOTAL_ICE_SUCCEEDED_TCP, IceTransport.Companion.getIceSucceededTcp().get());
+            unlockedSetStat(TOTAL_ICE_SUCCEEDED_RELAYED, IceTransport.Companion.getIceSucceededRelayed().get());
+            unlockedSetStat(TOTAL_CONFERENCE_SECONDS, jvbStats.totalConferenceSeconds.get());
 
             unlockedSetStat(
                     TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS,
@@ -526,10 +502,7 @@ public class VideobridgeStatistics
                    jvbStats.totalLossDegradedParticipantMs.get() / 1000);
             unlockedSetStat(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get());
             unlockedSetStat("total_visitors", jvbStats.totalVisitors.get());
-            unlockedSetStat(
-                EPS_NO_MSG_TRANSPORT_AFTER_DELAY,
-                jvbStats.numEndpointsNoMessageTransportAfterDelay.get()
-            );
+            unlockedSetStat(EPS_NO_MSG_TRANSPORT_AFTER_DELAY, jvbStats.numEndpointsNoMessageTransportAfterDelay.get());
             unlockedSetStat("total_relays", jvbStats.totalRelays.get());
             unlockedSetStat(
                 "num_relays_no_msg_transport_after_delay",
@@ -540,14 +513,8 @@ public class VideobridgeStatistics
             unlockedSetStat(
                 "total_video_stream_milliseconds_received",
                 jvbStats.totalVideoStreamMillisecondsReceived.get());
-            unlockedSetStat(
-                "stress_level",
-                jvbStats.stressLevel.get()
-            );
-            unlockedSetStat(
-                "average_participant_stress",
-                JvbLoadManager.Companion.getAverageParticipantStress()
-            );
+            unlockedSetStat("stress_level", jvbStats.stressLevel.get());
+            unlockedSetStat("average_participant_stress", JvbLoadManager.Companion.getAverageParticipantStress());
             unlockedSetStat("num_eps_oversending", numOversending);
             unlockedSetStat(CONFERENCES, jvbStats.currentConferences.get());
             unlockedSetStat(OCTO_CONFERENCES, octoConferences);
@@ -580,14 +547,11 @@ public class VideobridgeStatistics
                             jvbStats.dataChannelMessagesSent.get());
             unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED,
                             jvbStats.colibriWebSocketMessagesReceived.get());
-            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
-                            jvbStats.colibriWebSocketMessagesSent.get());
-            unlockedSetStat(
-                    TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get());
+            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT, jvbStats.colibriWebSocketMessagesSent.get());
+            unlockedSetStat(TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get());
             unlockedSetStat("dtls_failed_endpoints", jvbStats.endpointsDtlsFailed.get());
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
-            unlockedSetStat(
-                    TOTAL_PACKETS_RECEIVED, jvbStats.packetsReceived.get());
+            unlockedSetStat(TOTAL_PACKETS_RECEIVED, jvbStats.packetsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.packetsSent.get());
 
             unlockedSetStat("colibri2", true);
