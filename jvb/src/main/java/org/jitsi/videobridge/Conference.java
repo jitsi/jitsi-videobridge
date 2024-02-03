@@ -634,27 +634,9 @@ public class Conference
         videobridgeStatistics.relayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
         videobridgeStatistics.relayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
 
-        boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
-        boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;
-
         videobridgeStatistics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
 
-        if (hasPartiallyFailed)
-        {
-            videobridgeStatistics.partiallyFailedConferences.incAndGet();
-        }
-
-        if (hasFailed)
-        {
-            videobridgeStatistics.failedConferences.incAndGet();
-        }
-
-        if (logger.isInfoEnabled())
-        {
-            logger.info("expire_conf,duration=" + durationSeconds +
-                    ",has_failed=" + hasFailed +
-                    ",has_partially_failed=" + hasPartiallyFailed);
-        }
+        logger.info("expire_conf,duration=" + durationSeconds);
     }
 
     /**
@@ -739,7 +721,7 @@ public class Conference
                 id, this, logger, iceControlling, doSsrcRewriting, visitor, privateAddresses);
         videobridge.localEndpointCreated(visitor);
 
-        subscribeToEndpointEvents(endpoint);
+        endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
 
         addEndpoints(Collections.singleton(endpoint));
 
@@ -760,30 +742,6 @@ public class Conference
         relaysById.put(id, relay);
 
         return relay;
-    }
-
-    private void subscribeToEndpointEvents(Endpoint endpoint)
-    {
-        endpoint.addEventHandler(new AbstractEndpoint.EventHandler()
-        {
-            @Override
-            public void iceSucceeded()
-            {
-                getStatistics().hasIceSucceededEndpoint = true;
-            }
-
-            @Override
-            public void iceFailed()
-            {
-                getStatistics().hasIceFailedEndpoint = true;
-            }
-
-            @Override
-            public void sourcesChanged()
-            {
-                endpointSourcesChanged(endpoint);
-            }
-        });
     }
 
     /**
@@ -1481,8 +1439,6 @@ public class Conference
             jsonObject.put("total_relay_bytes_sent", totalRelayBytesSent.get());
             jsonObject.put("total_relay_packets_received", totalRelayPacketsReceived.get());
             jsonObject.put("total_relay_packets_sent", totalRelayPacketsSent.get());
-            jsonObject.put("has_failed_endpoint", hasIceFailedEndpoint);
-            jsonObject.put("has_succeeded_endpoint", hasIceSucceededEndpoint);
             jsonObject.put("dtls_failed_endpoints", dtlsFailedEndpoints.get());
             return jsonObject;
         }

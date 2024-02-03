@@ -370,7 +370,6 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.eventHandler = object : IceTransport.EventHandler {
             override fun connected() {
                 logger.info("ICE connected")
-                eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         packetInfo.addEvent(SRTP_QUEUE_ENTRY_EVENT)
@@ -382,7 +381,6 @@ class Endpoint @JvmOverloads constructor(
             }
 
             override fun failed() {
-                eventEmitter.fireEvent { iceFailed() }
             }
 
             override fun consentUpdated(time: Instant) {

@@ -222,8 +222,6 @@ public class VideobridgeStatistics
             unlockedSetStat(PACKET_RATE_DOWNLOAD, VideobridgePeriodicMetrics.INSTANCE.getIncomingPacketRate().get());
             unlockedSetStat(PACKET_RATE_UPLOAD, VideobridgePeriodicMetrics.INSTANCE.getOutgoingPacketRate().get());
             unlockedSetStat(RTT_AGGREGATE, VideobridgePeriodicMetrics.INSTANCE.getAverageRtt());
-            unlockedSetStat(TOTAL_FAILED_CONFERENCES, jvbStats.failedConferences.get());
-            unlockedSetStat(TOTAL_PARTIALLY_FAILED_CONFERENCES, jvbStats.partiallyFailedConferences.get());
             unlockedSetStat(TOTAL_CONFERENCES_CREATED, jvbStats.conferencesCreated.get());
             unlockedSetStat(TOTAL_CONFERENCES_COMPLETED, jvbStats.conferencesCompleted.get());
             unlockedSetStat(TOTAL_ICE_FAILED, IceTransport.Companion.getIceFailed().get());

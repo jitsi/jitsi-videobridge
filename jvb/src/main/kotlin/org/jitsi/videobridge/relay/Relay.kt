@@ -362,7 +362,6 @@ class Relay @JvmOverloads constructor(
         iceTransport.eventHandler = object : IceTransport.EventHandler {
             override fun connected() {
                 logger.info("ICE connected")
-                eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         packetInfo.addEvent(SRTP_QUEUE_ENTRY_EVENT)
@@ -373,9 +372,7 @@ class Relay @JvmOverloads constructor(
                 TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake)
             }
 
-            override fun failed() {
-                eventEmitter.fireEvent { iceFailed() }
-            }
+            override fun failed() {}
 
             override fun consentUpdated(time: Instant) {
                 transceiver.packetIOActivity.lastIceActivityInstant = time
