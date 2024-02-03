@@ -18,8 +18,6 @@ package org.jitsi.videobridge.stats;
 import org.jetbrains.annotations.*;
 import org.jitsi.metrics.*;
 import org.jitsi.nlj.rtcp.*;
-import org.jitsi.nlj.stats.*;
-import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
@@ -132,16 +130,6 @@ public class VideobridgeStatistics
         timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         // Is it necessary to set initial values for all of these?
-        unlockedSetStat(BITRATE_DOWNLOAD, 0);
-        unlockedSetStat(BITRATE_UPLOAD, 0);
-        unlockedSetStat(CONFERENCES, 0);
-        unlockedSetStat(PARTICIPANTS, 0);
-        unlockedSetStat(THREADS, 0);
-        unlockedSetStat(VIDEO_CHANNELS, 0);
-        unlockedSetStat(JITTER_AGGREGATE, 0d);
-        unlockedSetStat(RTT_AGGREGATE, 0d);
-        unlockedSetStat(LARGEST_CONFERENCE, 0);
-        unlockedSetStat(CONFERENCE_SIZES, "[]");
         unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
         unlockedSetStat("healthy", JvbHealthChecker.Companion.getHealthyMetric().get());
 
@@ -219,101 +207,21 @@ public class VideobridgeStatistics
     {
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
-        int videoChannels = 0;
-        int octoConferences = 0;
-        int endpoints = 0;
-        int localEndpoints = 0;
-        int octoEndpoints = 0;
-        double bitrateDownloadBps = 0;
-        double bitrateUploadBps = 0;
-        long packetRateUpload = 0;
-        long packetRateDownload = 0;
-        double relayBitrateIncomingBps = 0;
-        double relayBitrateOutgoingBps = 0;
-        long relayPacketRateOutgoing = 0;
-        long relayPacketRateIncoming = 0;
-
-        // Packets we received
-        long incomingPacketsReceived = 0;
-        // Packets we should have received but were lost
-        long incomingPacketsLost = 0;
-        // Packets we sent that were reported received
-        long outgoingPacketsReceived = 0;
-        // Packets we sent that were reported lost
-        long outgoingPacketsLost = 0;
-
-        // Average jitter and RTT across MediaStreams which report a valid value.
-        double jitterSumMs = 0; // TODO verify
-        int jitterCount = 0;
-        double rttSumMs = 0;
-        long rttCount = 0;
-        int largestConferenceSize = 0;
         int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
         int[] audioSendersBuckets = new int[CONFERENCE_SIZE_BUCKETS];
         int[] videoSendersBuckets = new int[CONFERENCE_SIZE_BUCKETS];
-        int inactiveConferences = 0;
-        int p2pConferences = 0;
-        int inactiveEndpoints = 0;
-        int receiveOnlyEndpoints = 0;
-        int numAudioSenders = 0;
-        int numVideoSenders = 0;
-        // The number of endpoints to which we're "oversending" (which can occur when
-        // enableOnstageVideoSuspend is false)
-        int numOversending = 0;
-        int endpointsWithHighOutgoingLoss = 0;
-        int numLocalActiveEndpoints = 0;
-        int endpointsWithSuspendedSources = 0;
 
         for (Conference conference : videobridge.getConferences())
         {
-            long conferenceBitrate = 0;
-            long conferencePacketRate = 0;
-            if (conference.isP2p())
-            {
-                p2pConferences++;
-            }
-
-            boolean inactive = conference.isInactive();
-            if (inactive)
-            {
-                inactiveConferences++;
-                inactiveEndpoints += conference.getEndpointCount();
-            }
-            else
-            {
-                numLocalActiveEndpoints += conference.getLocalEndpointCount();
-            }
-
-            if (conference.hasRelays())
-            {
-                octoConferences++;
-            }
             int numConferenceEndpoints = conference.getEndpointCount();
-            int numLocalEndpoints = conference.getLocalEndpointCount();
-            localEndpoints += numLocalEndpoints;
-            if (numConferenceEndpoints > largestConferenceSize)
-            {
-                largestConferenceSize = numConferenceEndpoints;
-            }
 
             updateBuckets(conferenceSizes, numConferenceEndpoints);
-            endpoints += numConferenceEndpoints;
-            octoEndpoints += (numConferenceEndpoints - numLocalEndpoints);
 
             int conferenceAudioSenders = 0;
             int conferenceVideoSenders = 0;
 
             for (Endpoint endpoint : conference.getLocalEndpoints())
             {
-                if (endpoint.getAcceptVideo())
-                {
-                    videoChannels++;
-                }
-
-                if (endpoint.isOversending())
-                {
-                    numOversending++;
-                }
                 boolean sendingAudio = endpoint.isSendingAudio();
                 boolean sendingVideo = endpoint.isSendingVideo();
                 if (sendingAudio)
@@ -324,102 +232,11 @@ public class VideobridgeStatistics
                 {
                     conferenceVideoSenders++;
                 }
-                if (!sendingAudio && !sendingVideo && !inactive)
-                {
-                    receiveOnlyEndpoints++;
-                }
-                if (endpoint.hasSuspendedSources())
-                {
-                    endpointsWithSuspendedSources++;
-                }
-                TransceiverStats transceiverStats = endpoint.getTransceiver().getTransceiverStats();
-                IncomingStatisticsSnapshot incomingStats = transceiverStats.getRtpReceiverStats().getIncomingStats();
-                PacketStreamStats.Snapshot incomingPacketStreamStats
-                        = transceiverStats.getRtpReceiverStats().getPacketStreamStats();
-                bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps();
-                packetRateDownload += incomingPacketStreamStats.getPacketRate();
-                conferenceBitrate += incomingPacketStreamStats.getBitrateBps();
-                conferencePacketRate += incomingPacketStreamStats.getPacketRate();
-                for (IncomingSsrcStats.Snapshot ssrcStats : incomingStats.getSsrcStats().values())
-                {
-                    double ssrcJitter = ssrcStats.getJitter();
-                    if (ssrcJitter != 0)
-                    {
-                        // We take the abs because otherwise the
-                        // aggregate makes no sense.
-                        jitterSumMs += Math.abs(ssrcJitter);
-                        jitterCount++;
-                    }
-                }
-
-                PacketStreamStats.Snapshot outgoingStats = transceiverStats.getOutgoingPacketStreamStats();
-                bitrateUploadBps += outgoingStats.getBitrateBps();
-                packetRateUpload += outgoingStats.getPacketRate();
-                conferenceBitrate += outgoingStats.getBitrateBps();
-                conferencePacketRate += outgoingStats.getPacketRate();
-
-                EndpointConnectionStats.Snapshot endpointConnectionStats
-                        = transceiverStats.getEndpointConnectionStats();
-                double endpointRtt = endpointConnectionStats.getRtt();
-                if (endpointRtt > 0)
-                {
-                    rttSumMs += endpointRtt;
-                    rttCount++;
-                }
-
-                incomingPacketsReceived += endpointConnectionStats.getIncomingLossStats().getPacketsReceived();
-                incomingPacketsLost += endpointConnectionStats.getIncomingLossStats().getPacketsLost();
-
-                long endpointOutgoingPacketsReceived
-                        = endpointConnectionStats.getOutgoingLossStats().getPacketsReceived();
-                long endpointOutgoingPacketsLost = endpointConnectionStats.getOutgoingLossStats().getPacketsLost();
-                outgoingPacketsReceived += endpointOutgoingPacketsReceived;
-                outgoingPacketsLost += endpointOutgoingPacketsLost;
-
-                if (!inactive && endpointOutgoingPacketsLost + endpointOutgoingPacketsReceived > 0)
-                {
-                    double endpointOutgoingFractionLost = ((double) endpointOutgoingPacketsLost)
-                            / (endpointOutgoingPacketsLost + endpointOutgoingPacketsReceived);
-                    if (endpointOutgoingFractionLost > 0.1)
-                    {
-                        endpointsWithHighOutgoingLoss++;
-                    }
-                }
-            }
-
-            for (Relay relay : conference.getRelays())
-            {
-                relayBitrateIncomingBps += relay.getIncomingBitrateBps();
-                relayPacketRateIncoming += relay.getIncomingPacketRate();
-                conferenceBitrate += relay.getIncomingBitrateBps();
-                conferencePacketRate += relay.getIncomingPacketRate();
-
-                relayBitrateOutgoingBps += relay.getOutgoingBitrateBps();
-                relayPacketRateOutgoing += relay.getOutgoingPacketRate();
-                conferenceBitrate += relay.getOutgoingBitrateBps();
-                conferencePacketRate += relay.getOutgoingPacketRate();
-
-                /* TODO: report Relay RTT and loss, like we do for Endpoints? */
             }
 
             updateBuckets(audioSendersBuckets, conferenceAudioSenders);
-            numAudioSenders += conferenceAudioSenders;
             updateBuckets(videoSendersBuckets, conferenceVideoSenders);
-            numVideoSenders += conferenceVideoSenders;
-            ConferencePacketStats.stats.addValue(numConferenceEndpoints, conferencePacketRate, conferenceBitrate);
         }
-
-        // JITTER_AGGREGATE
-        double jitterAggregate
-            = jitterCount > 0
-            ? jitterSumMs / jitterCount
-            : 0;
-
-        // RTT_AGGREGATE
-        double rttAggregate
-            = rttCount > 0
-            ? rttSumMs / rttCount
-            : 0;
 
         // CONFERENCE_SIZES
         JSONArray conferenceSizesJson = new JSONArray();
@@ -437,25 +254,6 @@ public class VideobridgeStatistics
             videoSendersJson.add(n);
         }
 
-        double incomingLoss = 0;
-        if (incomingPacketsReceived + incomingPacketsLost > 0)
-        {
-            incomingLoss = ((double) incomingPacketsLost) / (incomingPacketsReceived + incomingPacketsLost);
-        }
-
-        double outgoingLoss = 0;
-        if (outgoingPacketsReceived + outgoingPacketsLost > 0)
-        {
-            outgoingLoss = ((double) outgoingPacketsLost) / (outgoingPacketsReceived + outgoingPacketsLost);
-        }
-
-        double overallLoss = 0;
-        if (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost > 0)
-        {
-            overallLoss = ((double) (outgoingPacketsLost + incomingPacketsLost))
-                    / (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost);
-        }
-
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
         // possible, commit (the new values of) the statistics.
@@ -464,23 +262,21 @@ public class VideobridgeStatistics
         lock.lock();
         try
         {
-            unlockedSetStat(INCOMING_LOSS, incomingLoss);
-            unlockedSetStat(OUTGOING_LOSS, outgoingLoss);
+            unlockedSetStat(INCOMING_LOSS, VideobridgePeriodicMetrics.INSTANCE.getIncomingLoss().get());
+            unlockedSetStat(OUTGOING_LOSS, VideobridgePeriodicMetrics.INSTANCE.getOutgoingLoss().get());
+            unlockedSetStat(OVERALL_LOSS, VideobridgePeriodicMetrics.INSTANCE.getLoss().get());
 
-            unlockedSetStat(OVERALL_LOSS, overallLoss);
-            // The number of active endpoints that have more than 10% loss in the bridge->endpoint direction.
-            unlockedSetStat("endpoints_with_high_outgoing_loss", endpointsWithHighOutgoingLoss);
-            // The number of local (non-octo) active (in a conference where at least one endpoint sends audio or video)
-            // endpoints.
-            unlockedSetStat("local_active_endpoints", numLocalActiveEndpoints);
-            unlockedSetStat(BITRATE_DOWNLOAD, bitrateDownloadBps / 1000 /* kbps */);
-            unlockedSetStat(BITRATE_UPLOAD, bitrateUploadBps / 1000 /* kbps */);
-            unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
-            unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
+            unlockedSetStat(
+                    "endpoints_with_high_outgoing_loss",
+                    VideobridgePeriodicMetrics.INSTANCE.getEndpointsWithHighOutgoingLoss().get());
+            unlockedSetStat("local_active_endpoints", VideobridgePeriodicMetrics.INSTANCE.getActiveEndpoints().get());
+            unlockedSetStat(BITRATE_DOWNLOAD, VideobridgePeriodicMetrics.INSTANCE.getIncomingBitrate().get() / 1000);
+            unlockedSetStat(BITRATE_UPLOAD, VideobridgePeriodicMetrics.INSTANCE.getOutgoingBitrate().get() / 1000);
+            unlockedSetStat(PACKET_RATE_DOWNLOAD, VideobridgePeriodicMetrics.INSTANCE.getIncomingPacketRate().get());
+            unlockedSetStat(PACKET_RATE_UPLOAD, VideobridgePeriodicMetrics.INSTANCE.getOutgoingPacketRate().get());
             unlockedSetStat(TOTAL_AIMD_BWE_EXPIRATIONS, jvbStats.incomingBitrateExpirations.get());
-            // TODO seems broken (I see values of > 11 seconds)
-            unlockedSetStat(JITTER_AGGREGATE, jitterAggregate);
-            unlockedSetStat(RTT_AGGREGATE, rttAggregate);
+            unlockedSetStat(JITTER_AGGREGATE, VideobridgePeriodicMetrics.INSTANCE.getAverageJitter());
+            unlockedSetStat(RTT_AGGREGATE, VideobridgePeriodicMetrics.INSTANCE.getAverageRtt());
             unlockedSetStat(TOTAL_FAILED_CONFERENCES, jvbStats.failedConferences.get());
             unlockedSetStat(TOTAL_PARTIALLY_FAILED_CONFERENCES, jvbStats.partiallyFailedConferences.get());
             unlockedSetStat(TOTAL_CONFERENCES_CREATED, jvbStats.conferencesCreated.get());
@@ -490,7 +286,6 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_ICE_SUCCEEDED_TCP, IceTransport.Companion.getIceSucceededTcp().get());
             unlockedSetStat(TOTAL_ICE_SUCCEEDED_RELAYED, IceTransport.Companion.getIceSucceededRelayed().get());
             unlockedSetStat(TOTAL_CONFERENCE_SECONDS, jvbStats.totalConferenceSeconds.get());
-
             unlockedSetStat(
                     TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS,
                     jvbStats.totalLossControlledParticipantMs.get() / 1000);
@@ -515,22 +310,28 @@ public class VideobridgeStatistics
                 jvbStats.totalVideoStreamMillisecondsReceived.get());
             unlockedSetStat("stress_level", jvbStats.stressLevel.get());
             unlockedSetStat("average_participant_stress", JvbLoadManager.Companion.getAverageParticipantStress());
-            unlockedSetStat("num_eps_oversending", numOversending);
+            unlockedSetStat("num_eps_oversending", VideobridgePeriodicMetrics.INSTANCE.getEndpointsOversending().get());
             unlockedSetStat(CONFERENCES, jvbStats.currentConferences.get());
-            unlockedSetStat(OCTO_CONFERENCES, octoConferences);
-            unlockedSetStat(INACTIVE_CONFERENCES, inactiveConferences);
-            unlockedSetStat(P2P_CONFERENCES, p2pConferences);
-            unlockedSetStat("endpoints", endpoints);
+            unlockedSetStat(OCTO_CONFERENCES, VideobridgePeriodicMetrics.INSTANCE.getConferencesWithRelay().get());
+            unlockedSetStat(INACTIVE_CONFERENCES, VideobridgePeriodicMetrics.INSTANCE.getConferencesInactive().get());
+            unlockedSetStat(P2P_CONFERENCES, VideobridgePeriodicMetrics.INSTANCE.getConferencesP2p().get());
+            unlockedSetStat("endpoints", VideobridgePeriodicMetrics.INSTANCE.getEndpoints().get());
+            unlockedSetStat(PARTICIPANTS, VideobridgePeriodicMetrics.INSTANCE.getEndpoints().get());
             unlockedSetStat("visitors", jvbStats.currentVisitors.get());
-            unlockedSetStat(PARTICIPANTS, endpoints);
-            unlockedSetStat("local_endpoints", localEndpoints);
-            unlockedSetStat(RECEIVE_ONLY_ENDPOINTS, receiveOnlyEndpoints);
-            unlockedSetStat(INACTIVE_ENDPOINTS, inactiveEndpoints);
-            unlockedSetStat(OCTO_ENDPOINTS, octoEndpoints);
-            unlockedSetStat(ENDPOINTS_SENDING_AUDIO, numAudioSenders);
-            unlockedSetStat(ENDPOINTS_SENDING_VIDEO, numVideoSenders);
-            unlockedSetStat(VIDEO_CHANNELS, videoChannels);
-            unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
+            unlockedSetStat("local_endpoints", jvbStats.currentLocalEndpoints.get());
+            unlockedSetStat(
+                    RECEIVE_ONLY_ENDPOINTS,
+                    VideobridgePeriodicMetrics.INSTANCE.getEndpointsReceiveOnly().get());
+            unlockedSetStat(INACTIVE_ENDPOINTS, VideobridgePeriodicMetrics.INSTANCE.getEndpointsInactive().get());
+            unlockedSetStat(OCTO_ENDPOINTS, VideobridgePeriodicMetrics.INSTANCE.getEndpointsRelayed().get());
+            unlockedSetStat(
+                    ENDPOINTS_SENDING_AUDIO,
+                    VideobridgePeriodicMetrics.INSTANCE.getEndpointsSendingAudio().get());
+            unlockedSetStat(
+                    ENDPOINTS_SENDING_VIDEO,
+                    VideobridgePeriodicMetrics.INSTANCE.getEndpointsSendingVideo().get());
+            unlockedSetStat(VIDEO_CHANNELS, VideobridgePeriodicMetrics.INSTANCE.getEndpointsSendingVideo().get());
+            unlockedSetStat(LARGEST_CONFERENCE, VideobridgePeriodicMetrics.INSTANCE.getLargestConference().get());
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
             unlockedSetStat(CONFERENCES_BY_AUDIO_SENDERS, audioSendersJson);
             unlockedSetStat(CONFERENCES_BY_VIDEO_SENDERS, videoSendersJson);
@@ -553,26 +354,28 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get());
             unlockedSetStat(TOTAL_PACKETS_RECEIVED, jvbStats.packetsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT, jvbStats.packetsSent.get());
-
             unlockedSetStat("colibri2", true);
-
             unlockedSetStat(TOTAL_BYTES_RECEIVED_OCTO, jvbStats.totalRelayBytesReceived.get());
             unlockedSetStat(TOTAL_BYTES_SENT_OCTO, jvbStats.totalRelayBytesSent.get());
             unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO, jvbStats.relayPacketsReceived.get());
             unlockedSetStat(TOTAL_PACKETS_SENT_OCTO, jvbStats.relayPacketsSent.get());
-            unlockedSetStat(OCTO_RECEIVE_BITRATE, relayBitrateIncomingBps);
-            unlockedSetStat(OCTO_RECEIVE_PACKET_RATE, relayPacketRateIncoming);
-            unlockedSetStat(OCTO_SEND_BITRATE, relayBitrateOutgoingBps);
-            unlockedSetStat(OCTO_SEND_PACKET_RATE, relayPacketRateOutgoing);
+            unlockedSetStat(OCTO_RECEIVE_BITRATE, VideobridgePeriodicMetrics.INSTANCE.getRelayIncomingBitrate().get());
+            unlockedSetStat(
+                    OCTO_RECEIVE_PACKET_RATE,
+                    VideobridgePeriodicMetrics.INSTANCE.getRelayIncomingPacketRate().get());
+            unlockedSetStat(OCTO_SEND_BITRATE, VideobridgePeriodicMetrics.INSTANCE.getRelayOutgoingBitrate().get());
+            unlockedSetStat(
+                    OCTO_SEND_PACKET_RATE,
+                    VideobridgePeriodicMetrics.INSTANCE.getRelayOutgoingPacketRate().get());
             unlockedSetStat(TOTAL_DOMINANT_SPEAKER_CHANGES, jvbStats.dominantSpeakerChanges.get());
-            unlockedSetStat("endpoints_with_suspended_sources", endpointsWithSuspendedSources);
-
+            unlockedSetStat(
+                    "endpoints_with_suspended_sources",
+                    VideobridgePeriodicMetrics.INSTANCE.getEndpointsWithSuspendedSources().get());
             unlockedSetStat(TIMESTAMP, timestampFormat.format(new Date()));
             if (relayId != null)
             {
                 unlockedSetStat(RELAY_ID, relayId);
             }
-
             unlockedSetStat(MUC_CLIENTS_CONFIGURED, XmppConnection.Companion.getMucClientsConfigured().get());
             unlockedSetStat(MUC_CLIENTS_CONNECTED, XmppConnection.Companion.getMucClientsConnected().get());
             unlockedSetStat(MUCS_CONFIGURED, XmppConnection.Companion.getMucsConfigured().get());

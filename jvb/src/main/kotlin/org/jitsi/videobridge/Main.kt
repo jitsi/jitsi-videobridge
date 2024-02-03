@@ -34,6 +34,7 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.metrics.Metrics
+import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucStatsTransport
 import org.jitsi.videobridge.stats.StatsCollector
@@ -105,6 +106,9 @@ fun main() {
         VersionConfig.config.release,
         Clock.systemUTC()
     ).apply { start() }
+    Metrics.metricsUpdater.addUpdateTask {
+        VideobridgePeriodicMetrics.update(videobridge)
+    }
     val healthChecker = videobridge.jvbHealthChecker
     val statsCollector = StatsCollector(VideobridgeStatistics(videobridge)).apply {
         start()
