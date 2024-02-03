@@ -26,7 +26,6 @@ import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.transport.ice.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.json.simple.*;
 
 import java.text.*;
 import java.util.*;
@@ -48,11 +47,6 @@ public class VideobridgeStatistics
      * in order to represent time and date as <tt>String</tt>.
      */
     private final DateFormat timestampFormat;
-
-    /**
-     * The number of buckets to use for conference sizes.
-     */
-    private static final int CONFERENCE_SIZE_BUCKETS = 22;
 
     /**
      * The currently configured region.
@@ -207,53 +201,6 @@ public class VideobridgeStatistics
     {
         Videobridge.Statistics jvbStats = videobridge.getStatistics();
 
-        int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
-        int[] audioSendersBuckets = new int[CONFERENCE_SIZE_BUCKETS];
-        int[] videoSendersBuckets = new int[CONFERENCE_SIZE_BUCKETS];
-
-        for (Conference conference : videobridge.getConferences())
-        {
-            int numConferenceEndpoints = conference.getEndpointCount();
-
-            updateBuckets(conferenceSizes, numConferenceEndpoints);
-
-            int conferenceAudioSenders = 0;
-            int conferenceVideoSenders = 0;
-
-            for (Endpoint endpoint : conference.getLocalEndpoints())
-            {
-                boolean sendingAudio = endpoint.isSendingAudio();
-                boolean sendingVideo = endpoint.isSendingVideo();
-                if (sendingAudio)
-                {
-                    conferenceAudioSenders++;
-                }
-                if (sendingVideo)
-                {
-                    conferenceVideoSenders++;
-                }
-            }
-
-            updateBuckets(audioSendersBuckets, conferenceAudioSenders);
-            updateBuckets(videoSendersBuckets, conferenceVideoSenders);
-        }
-
-        // CONFERENCE_SIZES
-        JSONArray conferenceSizesJson = new JSONArray();
-        for (int size : conferenceSizes)
-            conferenceSizesJson.add(size);
-
-        JSONArray audioSendersJson = new JSONArray();
-        for (int n : audioSendersBuckets)
-        {
-            audioSendersJson.add(n);
-        }
-        JSONArray videoSendersJson = new JSONArray();
-        for (int n : videoSendersBuckets)
-        {
-            videoSendersJson.add(n);
-        }
-
         // Now that (the new values of) the statistics have been calculated and
         // the risks of the current thread hanging have been reduced as much as
         // possible, commit (the new values of) the statistics.
@@ -332,9 +279,6 @@ public class VideobridgeStatistics
                     VideobridgePeriodicMetrics.INSTANCE.getEndpointsSendingVideo().get());
             unlockedSetStat(VIDEO_CHANNELS, VideobridgePeriodicMetrics.INSTANCE.getEndpointsSendingVideo().get());
             unlockedSetStat(LARGEST_CONFERENCE, VideobridgePeriodicMetrics.INSTANCE.getLargestConference().get());
-            unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
-            unlockedSetStat(CONFERENCES_BY_AUDIO_SENDERS, audioSendersJson);
-            unlockedSetStat(CONFERENCES_BY_VIDEO_SENDERS, videoSendersJson);
             unlockedSetStat(THREADS, ThreadsMetric.INSTANCE.getThreadCount().get());
             unlockedSetStat(SHUTDOWN_IN_PROGRESS, VideobridgeMetrics.INSTANCE.getGracefulShutdown().get());
             if (videobridge.getShutdownState() == ShutdownState.SHUTTING_DOWN)
@@ -391,11 +335,5 @@ public class VideobridgeStatistics
         {
             lock.unlock();
         }
-    }
-
-    private static void updateBuckets(int[] buckets, int n)
-    {
-        int index = Math.min(n, buckets.length - 1);
-        buckets[index]++;
     }
 }
