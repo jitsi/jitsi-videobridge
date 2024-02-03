@@ -18,7 +18,6 @@ package org.jitsi.videobridge.metrics
 import org.jitsi.nlj.rtcp.RembHandler.Companion.endpointsWithSpuriousRemb
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.stats.ConferencePacketStats
-import kotlin.math.abs
 
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer.Companion.instance as metricsContainer
 
@@ -75,10 +74,6 @@ object VideobridgePeriodicMetrics {
     val averageRtt = metricsContainer.registerDoubleGauge(
         "average_rtt",
         "Average RTT across all local endpoints in ms."
-    )
-    val averageJitter = metricsContainer.registerDoubleGauge(
-        "average_jitter",
-        "Average jitter across all local endpoints in ms."
     )
 
     val largestConference = metricsContainer.registerLongGauge(
@@ -183,8 +178,6 @@ object VideobridgePeriodicMetrics {
         // Packets we sent that were reported lost
         var outgoingPacketsLost: Long = 0
 
-        var jitterSumMs = 0.0
-        var jitterCount = 0
         var rttSumMs = 0.0
         var rttCount: Long = 0
         var largestConferenceSize = 0L
@@ -258,14 +251,6 @@ object VideobridgePeriodicMetrics {
                 packetRateDownload += incomingPacketStreamStats.packetRate
                 conferenceBitrate = (conferenceBitrate + incomingPacketStreamStats.getBitrateBps()).toLong()
                 conferencePacketRate += incomingPacketStreamStats.packetRate
-                for ((_, _, _, _, _, _, ssrcJitter) in incomingStats.ssrcStats.values) {
-                    if (ssrcJitter != 0.0) {
-                        // We take the abs because otherwise the
-                        // aggregate makes no sense.
-                        jitterSumMs += abs(ssrcJitter)
-                        jitterCount++
-                    }
-                }
                 bitrateUploadBps += outgoingStats.getBitrateBps()
                 packetRateUpload += outgoingStats.packetRate
                 conferenceBitrate = (conferenceBitrate + outgoingStats.getBitrateBps()).toLong()
@@ -308,9 +293,6 @@ object VideobridgePeriodicMetrics {
             ConferencePacketStats.stats.addValue(numConferenceEndpoints.toInt(), conferencePacketRate, conferenceBitrate)
         }
 
-        // JITTER_AGGREGATE
-        val jitterAggregate: Double = if (jitterCount > 0) jitterSumMs / jitterCount else 0.0
-
         // RTT_AGGREGATE
         val rttAggregate: Double = if (rttCount > 0) rttSumMs / rttCount else 0.0
 
@@ -341,7 +323,6 @@ object VideobridgePeriodicMetrics {
         VideobridgePeriodicMetrics.outgoingBitrate.set(bitrateUploadBps.toLong())
         VideobridgePeriodicMetrics.incomingPacketRate.set(packetRateDownload)
         VideobridgePeriodicMetrics.outgoingPacketRate.set(packetRateUpload)
-        VideobridgePeriodicMetrics.averageJitter.set(jitterAggregate)
         VideobridgePeriodicMetrics.averageRtt.set(rttAggregate)
         VideobridgePeriodicMetrics.largestConference.set(largestConferenceSize)
         VideobridgePeriodicMetrics.endpointsSendingAudio.set(numAudioSenders)
