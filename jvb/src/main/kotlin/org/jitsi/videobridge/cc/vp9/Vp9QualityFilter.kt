@@ -80,7 +80,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     /**
      * Which spatial layers are currently being forwarded.
      */
-    private val layers: Array<Boolean> = Array(MAX_VP9_LAYERS) { false }
+    private val layers = BooleanArray(MAX_VP9_LAYERS)
 
     /**
      * Determines whether to accept or drop a VP9 frame.
@@ -428,6 +428,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     internal fun addDiagnosticContext(pt: DiagnosticContext.TimeSeriesPoint) {
         pt.addField("qf.currentIndex", indexString(currentIndex))
             .addField("qf.internalTargetEncoding", internalTargetEncoding)
+            .addField("qf.internalTargetSpatialId", internalTargetSpatialId)
             .addField("qf.needsKeyframe", needsKeyframe)
             .addField(
                 "qf.mostRecentKeyframeGroupArrivalTimeMs",
@@ -452,8 +453,10 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             debugState["mostRecentKeyframeGroupArrivalTimeMs"] =
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
             debugState["needsKeyframe"] = needsKeyframe
-            debugState["internalTargetIndex"] = internalTargetEncoding
+            debugState["internalTargetEncoding"] = internalTargetEncoding
+            debugState["internalTargetSpatialId"] = internalTargetSpatialId
             debugState["currentIndex"] = indexString(currentIndex)
+            debugState["layersForwarded"] = layers.map { toString().first() }.joinToString(separator = "")
             return debugState
         }
 
