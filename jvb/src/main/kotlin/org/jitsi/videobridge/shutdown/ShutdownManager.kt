@@ -96,6 +96,7 @@ class ShutdownManager(
 
         logger.info("Will shut down in ${config.shuttingDownDelay}")
         state = SHUTTING_DOWN
+        VideobridgeMetrics.shuttingDown.set(true)
         TaskPools.SCHEDULED_POOL.schedule(
             {
                 logger.info("Videobridge is shutting down NOW")

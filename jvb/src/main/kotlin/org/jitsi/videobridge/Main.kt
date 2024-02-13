@@ -36,9 +36,7 @@ import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.metrics.Metrics
 import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
 import org.jitsi.videobridge.rest.root.Application
-import org.jitsi.videobridge.stats.MucStatsTransport
-import org.jitsi.videobridge.stats.StatsCollector
-import org.jitsi.videobridge.stats.VideobridgeStatistics
+import org.jitsi.videobridge.stats.MucPublisher
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
@@ -75,9 +73,7 @@ fun main() {
     // properties were set.
     JitsiConfig.reloadNewConfig()
 
-    val versionService = JvbVersionService().also {
-        logger.info("Starting jitsi-videobridge version ${it.currentVersion}")
-    }
+    logger.info("Starting jitsi-videobridge version ${JvbVersionService.instance.currentVersion}")
 
     startIce4j()
 
@@ -102,7 +98,7 @@ fun main() {
     val videobridge = Videobridge(
         xmppConnection,
         shutdownService,
-        versionService.currentVersion,
+        JvbVersionService.instance.currentVersion,
         VersionConfig.config.release,
         Clock.systemUTC()
     ).apply { start() }
@@ -110,10 +106,11 @@ fun main() {
         VideobridgePeriodicMetrics.update(videobridge)
     }
     val healthChecker = videobridge.jvbHealthChecker
-    val statsCollector = StatsCollector(VideobridgeStatistics(videobridge)).apply {
-        start()
-        addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
-    }
+    val presencePublisher = MucPublisher(
+        TaskPools.SCHEDULED_POOL,
+        XmppClientConnectionConfig.config.presenceInterval,
+        xmppConnection
+    ).apply { start() }
 
     val publicServerConfig = JettyBundleActivatorConfig(
         "org.jitsi.videobridge.rest",
@@ -142,8 +139,7 @@ fun main() {
         val restApp = Application(
             videobridge,
             xmppConnection,
-            statsCollector,
-            versionService.currentVersion,
+            JvbVersionService.instance.currentVersion,
             healthChecker
         )
         createServer(privateServerConfig).also {
@@ -164,8 +160,8 @@ fun main() {
 
     logger.info("Bridge shutting down")
     healthChecker.stop()
+    presencePublisher.stop()
     xmppConnection.stop()
-    statsCollector.stop()
 
     try {
         publicHttpServer?.stop()
