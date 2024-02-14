@@ -57,12 +57,6 @@ public class AdaptiveSourceProjection
      * and its instances for logging output.
      */
     private final Logger logger;
-    /**
-     * The parent logger, so that we can pass it to the next created context
-     * TODO(brian): maybe we should allow a child logger to retrieve its
-     * parent?
-     */
-    private final Logger parentLogger;
 
     /**
      * The main SSRC of the source (if simulcast is used, this is the SSRC
@@ -110,7 +104,6 @@ public class AdaptiveSourceProjection
     {
         targetSsrc = source.getPrimarySSRC();
         this.diagnosticContext = diagnosticContext;
-        this.parentLogger = parentLogger;
         this.logger = parentLogger.createChildLogger(AdaptiveSourceProjection.class.getName(),
             Map.of("targetSsrc", Long.toString(targetSsrc),
                 "srcEpId", Objects.toString(source.getOwner(), "")));
@@ -218,7 +211,7 @@ public class AdaptiveSourceProjection
                     (context == null ? "creating new" : "changing to") +
                     " VP8 context for source packet ssrc " + rtpPacket.getSsrc());
                 context = new VP8AdaptiveSourceProjectionContext(
-                    diagnosticContext, rtpState, parentLogger);
+                    diagnosticContext, rtpState, logger);
             }
             else if (!projectable
                 && (!(context instanceof GenericAdaptiveSourceProjectionContext) ||
@@ -236,7 +229,7 @@ public class AdaptiveSourceProjection
                         ", ssrc " + rtpPacket.getSsrc() +
                         ", hasTL=" + hasTemporalLayer + ", hasPID=" + hasPictureId + ")";
                 });
-                context = new GenericAdaptiveSourceProjectionContext(payloadType, rtpState, parentLogger);
+                context = new GenericAdaptiveSourceProjectionContext(payloadType, rtpState, logger);
             }
 
             // no context switch
@@ -252,7 +245,7 @@ public class AdaptiveSourceProjection
                     (context == null ? "creating new" : "changing to") +
                     " VP9 context for source packet ssrc " + rtpPacket.getSsrc());
                 context = new Vp9AdaptiveSourceProjectionContext(
-                    diagnosticContext, rtpState, parentLogger);
+                    diagnosticContext, rtpState, logger);
             }
 
             return context;
@@ -267,7 +260,7 @@ public class AdaptiveSourceProjection
                     (context == null ? "creating new" : "changing to") +
                     " AV1 DD context for source packet ssrc " + rtpPacket.getSsrc());
                 context = new Av1DDAdaptiveSourceProjectionContext(
-                    diagnosticContext, rtpState, parentLogger);
+                    diagnosticContext, rtpState, logger);
             }
 
             return context;
@@ -281,7 +274,7 @@ public class AdaptiveSourceProjection
                 logger.debug(() -> "adaptive source projection " +
                     (context == null ? "creating new" : "changing to") +
                     " generic context for payload type " + rtpPacket.getPayloadType());
-                context = new GenericAdaptiveSourceProjectionContext(payloadType, rtpState, parentLogger);
+                context = new GenericAdaptiveSourceProjectionContext(payloadType, rtpState, logger);
             }
             return context;
         }
