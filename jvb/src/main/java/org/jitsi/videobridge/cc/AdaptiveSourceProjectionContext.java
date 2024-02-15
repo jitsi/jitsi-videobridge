@@ -19,8 +19,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.rtp.rtcp.*;
 import org.json.simple.*;
 
-import java.util.*;
-
 /**
  * Implementations of this interface are responsible for projecting a specific
  * video source of a specific payload type.
@@ -40,12 +38,11 @@ public interface AdaptiveSourceProjectionContext
     /**
      * Determines whether an RTP packet should be accepted or not.
      *
-     * @param packetInfo the RTP packet to determine whether to accept or not.
-     * @param incomingEncoding The encoding of the incoming packet.
+     * @param packetInfo  the RTP packet to determine whether to accept or not.
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
-    boolean accept(PacketInfo packetInfo, int incomingEncoding, int targetIndex);
+    boolean accept(PacketInfo packetInfo, int targetIndex);
 
     /**
      * @return true if this stream context needs a keyframe in order to either
