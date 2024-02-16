@@ -857,6 +857,52 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
+    @Test
+    fun simulcastToSvcSwitchTest() {
+        val simulcastGenerator = SimulcastVp9PacketGenerator(packetsPerFrame = 3, numEncodings = 3)
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "twoStreamsSwitchingTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Vp9AdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState,
+            logger
+        )
+        val simulcastTargetIndex = getIndex(1, 0, 2)
+        for (i in 0..999) {
+            val packetInfo = simulcastGenerator.nextPacket()
+            val packet = packetInfo.packetAs<Vp9Packet>()
+            val accepted = context.accept(packetInfo, simulcastTargetIndex)
+            Assert.assertTrue(packet.spatialLayerIndex == 0)
+            if (packet.encodingId == 1 || packet.isKeyframe && packet.encodingId < 1) {
+                Assert.assertTrue(accepted)
+                context.rewriteRtp(packetInfo)
+            } else {
+                Assert.assertFalse(accepted)
+            }
+        }
+        val ksvcGenerator =
+            ScalableVp9PacketGenerator(
+                packetsPerFrame = 3,
+                numLayers = 3,
+                initialRtpState = simulcastGenerator.getRtpState()
+            )
+        val svcTargetIndex = getIndex(0, 1, 2)
+        for (i in 0..9999) {
+            val packetInfo = ksvcGenerator.nextPacket()
+            val packet = packetInfo.packetAs<Vp9Packet>()
+            val accepted = context.accept(packetInfo, svcTargetIndex)
+            if (packet.encodingId == 0 &&
+                (packet.spatialLayerIndex == 1 || (packet.isKeyframe && packet.spatialLayerIndex < 1))
+            ) {
+                Assert.assertTrue(accepted)
+                context.rewriteRtp(packetInfo)
+            } else {
+                Assert.assertFalse(accepted)
+            }
+        }
+    }
+
     private fun runLargeDropoutTest(generator: Vp9PacketGenerator, targetIndex: Int) {
         val diagnosticContext = DiagnosticContext()
         diagnosticContext["test"] = Thread.currentThread().stackTrace[2].methodName
@@ -1434,7 +1480,11 @@ class Vp9AdaptiveSourceProjectionTest {
                 rtpPacket.buffer,
                 rtpPacket.payloadOffset,
                 rtpPacket.payloadLength,
-                sid != numLayers - 1
+                if (!isKsvc) {
+                    sid != numLayers - 1
+                } else {
+                    keyframePicture
+                }
             )
 
             Assert.assertTrue(
@@ -1445,7 +1495,7 @@ class Vp9AdaptiveSourceProjectionTest {
                     sid,
                     tid,
                     tid > 0,
-                    sid > 0 && (isKsvc || keyframePicture)
+                    sid > 0 && (!isKsvc || keyframePicture)
                 )
             )
 
@@ -1457,11 +1507,18 @@ class Vp9AdaptiveSourceProjectionTest {
             Assert.assertEquals(endOfFrame, vp9Packet.isEndOfFrame)
             Assert.assertEquals(endOfPicture, vp9Packet.isEndOfPicture)
             Assert.assertEquals(!keyframePicture, vp9Packet.isInterPicturePredicted)
-            Assert.assertEquals(sid != numLayers - 1, vp9Packet.isUpperLevelReference)
+            Assert.assertEquals(
+                if (!isKsvc) {
+                    sid != numLayers - 1
+                } else {
+                    keyframePicture
+                },
+                vp9Packet.isUpperLevelReference
+            )
             Assert.assertEquals(sid, vp9Packet.spatialLayerIndex)
             Assert.assertEquals(tid, vp9Packet.temporalLayerIndex)
             Assert.assertEquals(tid > 0, vp9Packet.isSwitchingUpPoint)
-            Assert.assertEquals(sid > 0 && (isKsvc || keyframePicture), vp9Packet.usesInterLayerDependency)
+            Assert.assertEquals(sid > 0 && (!isKsvc || keyframePicture), vp9Packet.usesInterLayerDependency)
             Assert.assertEquals(keyframePicture && sid == 0, vp9Packet.isKeyframe)
 
             vp9Packet.encodingId = encodingId
