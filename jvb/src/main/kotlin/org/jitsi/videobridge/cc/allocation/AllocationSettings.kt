@@ -16,6 +16,8 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.util.bps
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
@@ -35,7 +37,7 @@ data class AllocationSettings @JvmOverloads constructor(
     val onStageSources: List<String> = emptyList(),
     val selectedSources: List<String> = emptyList(),
     val videoConstraints: Map<String, VideoConstraints> = emptyMap(),
-    val lastN: Int = -1,
+    val lastN: Int = defaultInitialLastN,
     val defaultConstraints: VideoConstraints,
     /** A non-negative value is assumed as the available bandwidth in bps. A negative value is ignored. */
     val assumedBandwidthBps: Long = -1
@@ -52,6 +54,12 @@ data class AllocationSettings @JvmOverloads constructor(
     override fun toString(): String = toJson().toJSONString()
 
     fun getConstraints(endpointId: String) = videoConstraints.getOrDefault(endpointId, defaultConstraints)
+
+    companion object {
+        val defaultInitialLastN: Int by config {
+            "videobridge.cc.initial-last-n".from(JitsiConfig.newConfig)
+        }
+    }
 }
 
 /**
@@ -68,7 +76,7 @@ internal class AllocationSettingsWrapper(
      */
     private var selectedSources = emptyList<String>()
 
-    internal var lastN: Int = -1
+    internal var lastN: Int = AllocationSettings.defaultInitialLastN
 
     private var videoConstraints: Map<String, VideoConstraints> = emptyMap()
 
