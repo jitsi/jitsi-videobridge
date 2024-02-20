@@ -70,13 +70,14 @@ class Av1DDAdaptiveSourceProjectionContext(
      */
     private var lastFrameNumberIndexResumption = -1
 
-    override fun accept(packetInfo: PacketInfo, incomingEncoding: Int, targetIndex: Int): Boolean {
+    override fun accept(packetInfo: PacketInfo, targetIndex: Int): Boolean {
         val packet = packetInfo.packet
 
         if (packet !is Av1DDPacket) {
             logger.warn("Packet is not AV1 DD Packet")
             return false
         }
+        val incomingEncoding = packet.encodingId
 
         /* If insertPacketInMap returns null, this is a very old picture, more than Av1FrameMap.PICTURE_MAP_SIZE old,
            or something is wrong with the stream. */

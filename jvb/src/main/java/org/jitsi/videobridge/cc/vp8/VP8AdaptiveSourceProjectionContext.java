@@ -251,14 +251,13 @@ public class VP8AdaptiveSourceProjectionContext
     /**
      * Determines whether a packet should be accepted or not.
      *
-     * @param packetInfo the RTP packet to determine whether to project or not.
-     * @param incomingEncoding the encoding of the incoming RTP packet
+     * @param packetInfo  the RTP packet to determine whether to project or not.
      * @param targetIndex the target quality index we want to achieve
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean accept(
-        @NotNull PacketInfo packetInfo, int incomingEncoding, int targetIndex)
+        @NotNull PacketInfo packetInfo, int targetIndex)
     {
         if (!(packetInfo.getPacket() instanceof Vp8Packet))
         {
@@ -266,6 +265,7 @@ public class VP8AdaptiveSourceProjectionContext
             return false;
         }
         Vp8Packet vp8Packet = packetInfo.packetAs();
+        int incomingEncoding = vp8Packet.getEncodingId();
 
         VP8FrameMap.FrameInsertionResult result = insertPacketInMap(vp8Packet);
 

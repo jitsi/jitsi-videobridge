@@ -31,7 +31,6 @@ import org.json.simple.*;
 
 import java.lang.*;
 import java.util.*;
-import java.util.stream.*;
 
 /**
  * Filters the packets coming from a specific {@link MediaSourceDesc}
@@ -143,8 +142,7 @@ public class AdaptiveSourceProjection
         // suspended so that it can raise the needsKeyframe flag and also allow
         // it to compute a sequence number delta when the target becomes > -1.
 
-        int encodingId = videoRtpPacket.getEncodingId();
-        if (encodingId == RtpLayerDesc.SUSPENDED_ENCODING_ID)
+        if (videoRtpPacket.getEncodingId() == RtpLayerDesc.SUSPENDED_ENCODING_ID)
         {
             logger.warn(
                 "Dropping an RTP packet, because egress was unable to find " +
@@ -153,7 +151,7 @@ public class AdaptiveSourceProjection
         }
 
         int targetIndexCopy = targetIndex;
-        boolean accept = contextCopy.accept(packetInfo, encodingId, targetIndexCopy);
+        boolean accept = contextCopy.accept(packetInfo, targetIndexCopy);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
