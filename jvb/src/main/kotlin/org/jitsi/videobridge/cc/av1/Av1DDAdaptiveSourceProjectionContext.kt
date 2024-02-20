@@ -99,7 +99,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             val receivedTime = packetInfo.receivedTime
             val acceptResult = av1QualityFilter
                 .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
-            frame.isAccepted = acceptResult.accept && frame.index >= lastFrameNumberIndexResumption
+            frame.isAccepted = acceptResult.accept && frameIsProjectable(frame)
             if (frame.isAccepted) {
                 val projection: Av1DDFrameProjection
                 try {
@@ -228,6 +228,9 @@ class Av1DDAdaptiveSourceProjectionContext(
 
     private fun frameIsNewSsrc(frame: Av1DDFrame): Boolean = lastAv1FrameProjection.av1Frame?.matchesSSRC(frame) != true
 
+    private fun frameIsProjectable(frame: Av1DDFrame): Boolean =
+        frameIsProjectable(frame) || frame.index >= lastFrameNumberIndexResumption
+
     /**
      * Find the previous frame before the given one.
      */
@@ -286,6 +289,7 @@ class Av1DDAdaptiveSourceProjectionContext(
         // We can only switch on packets that carry a scalability structure, which is the first packet of a keyframe
         assert(frame.isKeyframe)
         assert(initialPacket.isStartOfFrame)
+        lastFrameNumberIndexResumption = frame.index
 
         var projectedSeqGap = 1
 
