@@ -229,7 +229,7 @@ class Av1DDAdaptiveSourceProjectionContext(
     private fun frameIsNewSsrc(frame: Av1DDFrame): Boolean = lastAv1FrameProjection.av1Frame?.matchesSSRC(frame) != true
 
     private fun frameIsProjectable(frame: Av1DDFrame): Boolean =
-        frameIsProjectable(frame) || frame.index >= lastFrameNumberIndexResumption
+        frameIsNewSsrc(frame) || frame.index >= lastFrameNumberIndexResumption
 
     /**
      * Find the previous frame before the given one.
