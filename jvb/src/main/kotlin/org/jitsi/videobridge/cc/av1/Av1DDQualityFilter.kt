@@ -416,6 +416,7 @@ internal class Av1DDQualityFilter(
     internal fun addDiagnosticContext(pt: DiagnosticContext.TimeSeriesPoint) {
         pt.addField("qf.currentIndex", Av1DDRtpLayerDesc.indexString(currentIndex))
             .addField("qf.internalTargetEncoding", internalTargetEncoding)
+            .addField("qf.internalTargetDt", internalTargetDt)
             .addField("qf.needsKeyframe", needsKeyframe)
             .addField(
                 "qf.mostRecentKeyframeGroupArrivalTimeMs",
@@ -439,6 +440,7 @@ internal class Av1DDQualityFilter(
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
             debugState["needsKeyframe"] = needsKeyframe
             debugState["internalTargetEncoding"] = internalTargetEncoding
+            debugState["internalTargetDt"] = internalTargetDt
             debugState["currentIndex"] = Av1DDRtpLayerDesc.indexString(currentIndex)
             return debugState
         }

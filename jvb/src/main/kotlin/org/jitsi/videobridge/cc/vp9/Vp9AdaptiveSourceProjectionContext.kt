@@ -131,7 +131,21 @@ class Vp9AdaptiveSourceProjectionContext(
             }
         }
 
-        val accept = frame.isAccepted && frame.projection?.accept(packet) == true
+        val accept = frame.isAccepted &&
+            if (frame.projection?.accept(packet) == true) {
+                true
+            } else {
+                if (frame.projection != null && frame.projection?.closedSeq != -1) {
+                    logger.debug(
+                        "Not accepting $packet: frame projection is closed at ${frame.projection?.closedSeq}"
+                    )
+                } else if (frame.projection == null) {
+                    logger.warn("Not accepting $packet: frame has no projection, even though QF accepted it")
+                } else {
+                    logger.warn("Not accepting $packet, even though frame projection is not closed")
+                }
+                false
+            }
 
         if (timeSeriesLogger.isTraceEnabled) {
             val pt = diagnosticContext.makeTimeSeriesPoint("rtp_vp9")
@@ -139,6 +153,7 @@ class Vp9AdaptiveSourceProjectionContext(
                 .addField("timestamp", packet.timestamp)
                 .addField("seq", packet.sequenceNumber)
                 .addField("pictureId", packet.pictureId)
+                .addField("pictureIdIndex", frame.index)
                 .addField("encoding", incomingEncoding)
                 .addField("spatialLayer", packet.spatialLayerIndex)
                 .addField("temporalLayer", packet.temporalLayerIndex)
@@ -255,7 +270,7 @@ class Vp9AdaptiveSourceProjectionContext(
     }
 
     /**
-     * Create an projection for the first frame after an encoding switch.
+     * Create a projection for the first frame after an encoding switch.
      */
     private fun createEncodingSwitchProjection(
         frame: Vp9Frame,
