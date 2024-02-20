@@ -16,19 +16,13 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.nlj.PacketInfo
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.stats.BucketStats
-import java.time.Clock
-import java.time.Duration
 import java.util.concurrent.atomic.LongAdder
 
 open class DelayStats(thresholds: List<Long> = defaultThresholds) :
     BucketStats(thresholds, "_delay_ms", "_ms") {
 
-    fun addDelay(delay: Duration) {
-        addDelay(delay.toMillis())
-    }
     fun addDelay(delayMs: Long) = addValue(delayMs)
 
     companion object {
@@ -36,16 +30,10 @@ open class DelayStats(thresholds: List<Long> = defaultThresholds) :
     }
 }
 
-class PacketDelayStats(
-    thresholds: List<Long> = defaultThresholds,
-    private val clock: Clock = Clock.systemUTC()
-) : DelayStats(thresholds) {
+class PacketDelayStats(thresholds: List<Long> = defaultThresholds) : DelayStats(thresholds) {
     private val numPacketsWithoutTimestamps = LongAdder()
-    fun addPacket(packetInfo: PacketInfo) {
-        packetInfo.receivedTime?.let { addDelay(Duration.between(it, clock.instant())) } ?: run {
-            numPacketsWithoutTimestamps.increment()
-        }
-    }
+
+    fun addUnknown() = numPacketsWithoutTimestamps.increment()
 
     override fun toJson(format: Format): OrderedJsonObject {
         return super.toJson(format).apply {

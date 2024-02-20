@@ -562,7 +562,7 @@ public class EndpointMessageTransport
 
         Conference conference = endpoint.getConference();
 
-        if (conference == null || conference.isExpired())
+        if (conference.isExpired())
         {
             getLogger().warn("Unable to send EndpointStats, conference is null or expired");
             return null;
