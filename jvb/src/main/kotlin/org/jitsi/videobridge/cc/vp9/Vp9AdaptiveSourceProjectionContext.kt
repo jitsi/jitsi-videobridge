@@ -106,7 +106,7 @@ class Vp9AdaptiveSourceProjectionContext(
             val receivedTime = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
                 .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
-            frame.isAccepted = acceptResult.accept && frame.index >= lastPicIdIndexResumption
+            frame.isAccepted = acceptResult.accept && frameIsProjectable(frame)
             if (frame.isAccepted) {
                 val projection: Vp9FrameProjection
                 try {
@@ -199,6 +199,9 @@ class Vp9AdaptiveSourceProjectionContext(
     }
 
     private fun frameIsNewSsrc(frame: Vp9Frame): Boolean = lastVp9FrameProjection.vp9Frame?.matchesSSRC(frame) != true
+
+    private fun frameIsProjectable(frame: Vp9Frame): Boolean =
+        frameIsNewSsrc(frame) || frame.index >= lastPicIdIndexResumption
 
     /**
      * Find the previous frame before the given one.
