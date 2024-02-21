@@ -21,6 +21,7 @@ import org.jitsi.metaconfig.from
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.utils.logging2.Logger
 import java.util.Date
+import kotlin.io.path.Path
 
 class ToggleablePcapWriter(
     private val parentLogger: Logger,
@@ -36,7 +37,7 @@ class ToggleablePcapWriter(
 
         synchronized(pcapLock) {
             if (pcapWriter == null) {
-                pcapWriter = PcapWriter(parentLogger, "/tmp/$prefix-${Date().toInstant()}.pcap")
+                pcapWriter = PcapWriter(parentLogger, Path(PcapWriter.directory, "$prefix-${Date().toInstant()}.pcap"))
             }
         }
     }
