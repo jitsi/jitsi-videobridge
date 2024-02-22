@@ -718,10 +718,12 @@ private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int)
 }
 
 private fun RtpPacket.getCodecState(): CodecState? {
-    return when (this) {
-        is Vp8Packet -> Vp8CodecState(this)
-        is Vp9Packet -> Vp9CodecState(this)
-        is Av1DDPacket -> Av1DDCodecState(this)
+    return when {
+        this is Vp8Packet && isRewritable() -> Vp8CodecState(this)
+        this is Vp9Packet -> Vp9CodecState(this)
+        this is Av1DDPacket -> Av1DDCodecState(this)
         else -> null
     }
 }
+
+private fun Vp8Packet.isRewritable(): Boolean = hasTL0PICIDX
