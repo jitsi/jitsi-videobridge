@@ -424,16 +424,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreateOnPacket, remappings)
             if (ss != null) {
                 send = ss.rewriteRtp(packet, start, rs)
-                logger.debug { this.toString() }
-                logger.debug {
-                    if (send) {
-                        "Sending packet: ${debugInfo(packet)} source=${rs.props.name} start=$start"
-                    } else {
-                        "Dropping packet from ${rs.props.name}/${packet.ssrc}. waiting for key frame."
-                    }
-                }
-            } else {
-                logger.debug { "Dropping packet from ${rs.props.name}/${packet.ssrc}. source not active." }
             }
         }
 
