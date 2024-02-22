@@ -410,8 +410,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
         val remappings = mutableListOf<SendSource>()
         var send = false
 
-        logger.debug { "Received packet: ${debugInfo(packet)}" }
-
         synchronized(sendSources) {
             var rs = receivedSsrcs.get(packet.ssrc)
             if (rs == null) {
@@ -447,9 +445,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             val rs = receivedSsrcs.get(packet.senderSsrc) ?: return false
             val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreate = false, remappings) ?: return false
             ss.rewriteRtcp(packet)
-            logger.debug {
-                "Received RTCP packet. Translated receive SSRC $senderSsrc to send SSRC ${packet.senderSsrc}."
-            }
             return true
         }
     }
