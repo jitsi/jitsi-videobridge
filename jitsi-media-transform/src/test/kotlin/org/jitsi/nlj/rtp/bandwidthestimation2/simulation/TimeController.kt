@@ -37,10 +37,10 @@ interface TimeController {
     abstract fun advanceTime(duration: Duration)
 }
 
-class GlobalSimulatedTimeController: TimeController {
+class GlobalSimulatedTimeController : TimeController {
     override fun getClock(): Clock = clock
 
-    override fun getScheduledExecutorService(): ScheduledExecutorService  = executorService
+    override fun getScheduledExecutorService(): ScheduledExecutorService = executorService
 
     override fun advanceTime(duration: Duration) = executorService.runUntil(clock.instant() + duration)
 

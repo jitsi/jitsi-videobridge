@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControllerFactoryInterface
@@ -54,8 +56,7 @@ class TransportControllerConfig(
 class CallClientConfig(
     val transport: TransportControllerConfig = TransportControllerConfig(),
     val pacerBurstInterval: Duration = 40.ms
-) {
-}
+)
 
 class VideoStreamConfig(
     val autostart: Boolean = true,

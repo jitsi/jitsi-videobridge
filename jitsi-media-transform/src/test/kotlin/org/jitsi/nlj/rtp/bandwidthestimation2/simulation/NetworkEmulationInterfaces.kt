@@ -26,13 +26,12 @@ import java.net.InetAddress
 
 // Interface for handling IP packets from an emulated network. This is used with
 // EmulatedEndpoint to receive packets on a specific port.
-interface EmulatedNetworkReceiverInterface {
-}
+interface EmulatedNetworkReceiverInterface
 
 // EmulatedEndpoint is an abstraction for network interface on device. Instances
 // of this are created by NetworkEmulationManager::CreateEndpoint and
 // thread safe.
-interface EmulatedEndpoint: EmulatedNetworkReceiverInterface {
+interface EmulatedEndpoint : EmulatedNetworkReceiverInterface {
     fun bindReceiver(desiredPort: Short, receiver: EmulatedNetworkReceiverInterface): Short?
     fun getPeerLocalAddress(): InetAddress
 }

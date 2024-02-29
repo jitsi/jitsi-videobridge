@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// This file uses WebRTC's naming style for enums
+@file:Suppress("ktlint:standard:enum-entry-name-case")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 import org.jitsi.nlj.rtp.RtpExtension
@@ -54,7 +57,7 @@ class VideoStreamPair(
     receiver: CallClient,
     val config: VideoStreamConfig
 ) {
-    val matcher = Any() /* TODO */
+    val matcher = Any() // TODO
     val send = SendVideoStream(sender, config, sender.transport, matcher)
     val receive = ReceiveVideoStream(receiver, config, send, 0, receiver.transport, matcher)
 }

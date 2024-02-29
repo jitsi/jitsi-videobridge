@@ -25,9 +25,9 @@ import java.time.Clock
  */
 abstract class Call {
     class Stats {
-        var sendBandwidthBps = 0       // Estimated available send bandwidth.
-        var maxPaddingBitrateBps = 0   // Cumulative configured max padding.
-        var recvBandwidthBps = 0       // Estimated available receive bandwidth.
+        var sendBandwidthBps = 0 // Estimated available send bandwidth.
+        var maxPaddingBitrateBps = 0 // Cumulative configured max padding.
+        var recvBandwidthBps = 0 // Estimated available receive bandwidth.
         var pacerDealyMs = 0L
         var rttMs = -1L
     }

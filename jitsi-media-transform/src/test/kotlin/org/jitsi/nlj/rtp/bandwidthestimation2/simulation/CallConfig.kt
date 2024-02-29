@@ -21,5 +21,4 @@ package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
  *
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */
-class CallConfig {
-}
+class CallConfig

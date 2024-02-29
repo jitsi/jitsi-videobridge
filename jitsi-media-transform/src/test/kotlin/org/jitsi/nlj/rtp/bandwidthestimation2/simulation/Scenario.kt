@@ -124,11 +124,7 @@ class Scenario(name: String, realTime: Boolean = false) {
         return clientPair
     }
 
-    fun changeRoute(
-        clients: Pair<CallClient, CallClient>,
-        overNodes: List<EmulatedNetworkNode>,
-        overhead: DataSize
-    ) {
+    fun changeRoute(clients: Pair<CallClient, CallClient>, overNodes: List<EmulatedNetworkNode>, overhead: DataSize) {
         val route = networkManager.createRoute(overNodes)
         val port = clients.second.bind(route.to)
         val addr = InetSocketAddress(route.to.getPeerLocalAddress(), port.toInt())
@@ -144,8 +140,8 @@ class Scenario(name: String, realTime: Boolean = false) {
     }
 
     fun every(interval: Duration, function: () -> Unit) {
-        networkManager.timeController().getScheduledExecutorService().
-        scheduleAtFixedRate(function, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS)
+        networkManager.timeController().getScheduledExecutorService()
+            .scheduleAtFixedRate(function, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS)
     }
 
     fun runFor(duration: Duration) {
@@ -168,11 +164,13 @@ class Scenario(name: String, realTime: Boolean = false) {
     }
 
     fun timePrinter(): ColumnPrinter {
-        return ColumnPrinter("time",
+        return ColumnPrinter(
+            "time",
             { sb ->
                 sb.append(String.format("%.3lf", now().toRoundedEpochMilli() / 1000.0))
             },
-            32)
+            32
+        )
     }
 
     fun createPrinter(name: String, interval: Duration, printers: List<ColumnPrinter>): StatesPrinter {

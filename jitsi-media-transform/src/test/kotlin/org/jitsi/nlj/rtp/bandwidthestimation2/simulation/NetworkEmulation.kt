@@ -25,12 +25,11 @@ import java.net.InetAddress
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */
 
-class EmulatedNetworkNode: EmulatedNetworkReceiverInterface {
-}
+class EmulatedNetworkNode : EmulatedNetworkReceiverInterface
 
 class EmulatedEndpointImpl(
     val options: Options
-): EmulatedEndpoint {
+) : EmulatedEndpoint {
     private val logger = createLogger()
 
     private val receiverLock = Any()
@@ -54,7 +53,7 @@ class EmulatedEndpointImpl(
                 // Because client can specify its own port, next_port_ can be already in
                 // use, so we need to find next available port.
                 val portsPoolSize = (UShort.MAX_VALUE - kFirstEphemeralPort.toUShort() + 1U).toInt()
-                for (i in 0 .. portsPoolSize) {
+                for (i in 0..portsPoolSize) {
                     val nextPort = nextPort()
                     if (!portToReceiver.containsKey(nextPort)) {
                         port = nextPort
@@ -76,7 +75,7 @@ class EmulatedEndpointImpl(
             }
             logger.info(
                 "New receiver is binded to endpoint ${options.logName}; id=${options.id} " +
-                "on port ${port.toUShort()}"
+                    "on port ${port.toUShort()}"
             )
             return port
         }
@@ -106,7 +105,6 @@ class EmulatedEndpointImpl(
         // Name of the endpoint used for logging purposes
         val logName = "$ip (${config.name ?: ""})"
     }
-
 
     private class ReceiverBinding(
         val receiver: EmulatedNetworkReceiverInterface,

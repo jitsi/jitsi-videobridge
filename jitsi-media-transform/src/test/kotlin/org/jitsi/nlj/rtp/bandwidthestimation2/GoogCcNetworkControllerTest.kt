@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.FreeSpec
@@ -23,7 +25,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.CallClient
 import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.CallClientConfig
-import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.CallConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.EmulatedNetworkNode
 import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.NetworkSimulationConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.Scenario
@@ -168,15 +169,19 @@ fun packetTransmissionAndFeedbackBlock(
 fun createTransportPacketsFeedback(
     perPacketNetworkDelay: Duration,
     oneWayDelay: Duration,
-    sendTime: Instant): TransportPacketsFeedback {
+    sendTime: Instant
+): TransportPacketsFeedback {
     var delayBuildup = oneWayDelay
     val kFeedbackSize = 3
     val kPayloadSize = 1000L
     val feedback = TransportPacketsFeedback()
     for (i in 0 until kFeedbackSize) {
         val packet = createPacketResult(
-            /*arrival_time=*/sendTime + delayBuildup, sendTime, kPayloadSize,
-        PacedPacketInfo()
+            /*arrival_time=*/
+            sendTime + delayBuildup,
+            sendTime,
+            kPayloadSize,
+            PacedPacketInfo()
         )
         delayBuildup += perPacketNetworkDelay
         feedback.feedbackTime = packet.receiveTime + oneWayDelay
@@ -204,10 +209,17 @@ fun updatesTargetRateBasedOnLinkCapacity(testName: String = "") {
         c.delay = 100.ms
     }
     val truth = s.createPrinter(
-        "send.truth.txt", maxDuration, listOf(sendNet.configPrinter()))
+        "send.truth.txt",
+        maxDuration,
+        listOf(sendNet.configPrinter())
+    )
 
-    val client = createVideoSendingClient(s, config, listOf(sendNet.node()),
-        listOf(retNet.node()))
+    val client = createVideoSendingClient(
+        s,
+        config,
+        listOf(sendNet.node()),
+        listOf(retNet.node())
+    )
 
     truth.printRow()
     s.runFor(25.secs)
@@ -224,11 +236,11 @@ fun updatesTargetRateBasedOnLinkCapacity(testName: String = "") {
     truth.printRow()
     client.targetRate().kbps shouldBe 750.0 plusOrMinus 150.0
 
-    sendNet.updateConfig {  c: NetworkSimulationConfig ->
+    sendNet.updateConfig { c: NetworkSimulationConfig ->
         c.bandwidth = 100.kbps
         c.delay = 200.ms
     }
-    retNet.updateConfig {  c: NetworkSimulationConfig -> c.delay = 200.ms }
+    retNet.updateConfig { c: NetworkSimulationConfig -> c.delay = 200.ms }
 
     truth.printRow()
     s.runFor(50.secs)
@@ -365,7 +377,8 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             update.probeClusterConfigs.isEmpty() shouldBe true
 
             update = controller.onNetworkRouteChange(
-                createRouteChange(currentTime,
+                createRouteChange(
+                    currentTime,
                     kInitialBitrate * 2,
                     Bandwidth.ZERO,
                     kInitialBitrate * 20
@@ -417,11 +430,11 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             )
             val s = Scenario("googcc_unit/cwnd_on_delay", false)
             val sendNet =
-                s.createMutableSimulationNode { c->
+                s.createMutableSimulationNode { c ->
                     c.bandwidth = 1000.kbps
                     c.delay = 100.ms
                 }
-            val retNet = s.createSimulationNode { c-> c.delay = 100.ms }
+            val retNet = s.createSimulationNode { c -> c.delay = 100.ms }
             val config = CallClientConfig()
             config.transport.ccFactory = factory
             // Start high so bandwidth drop has max effect.

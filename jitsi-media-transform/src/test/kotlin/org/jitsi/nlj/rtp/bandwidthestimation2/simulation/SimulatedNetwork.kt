@@ -23,7 +23,6 @@ package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */
 
-
 // BuiltInNetworkBehaviorConfig is a built-in network behavior configuration
 // for built-in network behavior that will be used by WebRTC if no custom
 // NetworkBehaviorInterface is provided.
@@ -46,11 +45,9 @@ class BuiltInNetworkBehaviorConfig(
     var packetOverhead: Int = 0
 )
 
-interface NetworkBehaviorInterface {
+interface NetworkBehaviorInterface
 
-}
-
-interface SimulatedNetworkInterface: NetworkBehaviorInterface {
+interface SimulatedNetworkInterface : NetworkBehaviorInterface {
     // Pauses the network until `until_us`. This affects both delivery (calling
     // DequeueDeliverablePackets before `until_us` results in an empty std::vector
     // of packets) and capacity (the network is paused, so packets are not
@@ -61,11 +58,13 @@ interface SimulatedNetworkInterface: NetworkBehaviorInterface {
 class SimulatedNetwork(
     config: BuiltInNetworkBehaviorConfig,
     randomSeed: Long = 1
-): SimulatedNetworkInterface {
+) : SimulatedNetworkInterface {
     private val configLock = Any()
     private val configState = ConfigState()
 
-    init { setConfig(config) }
+    init {
+        setConfig(config)
+    }
 
     fun setConfig(config: BuiltInNetworkBehaviorConfig) {
         synchronized(configLock) {
@@ -100,11 +99,14 @@ class SimulatedNetwork(
     private class ConfigState {
         // Static link configuration.
         var config = BuiltInNetworkBehaviorConfig()
+
         // The probability to drop the packet if we are currently dropping a
         // burst of packet
         var probLossBursting: Double = 0.0
+
         // The probability to drop a burst of packets.
         var probStartBursting: Double = 0.0
+
         // Used for temporary delay spikes.
         var pauseTransmissionUntilUs: Long = 0
     }

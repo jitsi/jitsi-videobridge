@@ -28,8 +28,7 @@ class ColumnPrinter(
     val headers: String,
     val printer: (StringBuilder) -> Unit,
     val maxLength: Long = 256
-) {
-}
+)
 
 class StatesPrinter(
     val logger: Logger,

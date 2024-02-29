@@ -47,7 +47,7 @@ import java.time.Instant
 // Helper class to capture network controller state.
 class NetworkControlUpdateCache(
     val controller: NetworkControllerInterface
-): NetworkControllerInterface {
+) : NetworkControllerInterface {
     private val updateState = MutableNetworkControlUpdate()
 
     override fun onNetworkAvailability(msg: NetworkAvailability): NetworkControlUpdate {
@@ -112,7 +112,7 @@ class NetworkControlUpdateCache(
 class LoggingNetworkControllerFactory(
     parentLogger: Logger,
     config: TransportControllerConfig
-): NetworkControllerFactoryInterface {
+) : NetworkControllerFactoryInterface {
     private var lastController: NetworkControlUpdateCache? = null
 
     override fun create(config: NetworkControllerConfig): NetworkControllerInterface {
@@ -151,7 +151,6 @@ class CallClient(
     private val call: Call = TODO()
     val transport = NetworkNodeTransport(timeController.getClock())
     private val endpoints = mutableListOf<Pair<EmulatedEndpoint, Short>>()
-
 
     internal val networkControllerFactory = LoggingNetworkControllerFactory(logger, config.transport)
 

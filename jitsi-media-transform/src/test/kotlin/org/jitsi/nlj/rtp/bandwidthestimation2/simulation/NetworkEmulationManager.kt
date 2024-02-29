@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// This file uses WebRTC's naming style for enums
+@file:Suppress("ktlint:standard:enum-entry-name-case", "ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
-import java.net.Inet4Address
 import java.net.InetAddress
 
 /** Test scenario network emulation manager,
@@ -72,18 +74,12 @@ interface NetworkEmulationManager {
     //      and (E3, ..., N2, ..., E4), either N1 != N2 or E2 != E4.
     //      In other words, a network node may not belong to two routes that lead
     //      to the same destination endpoint.
-    fun createRoute(
-        from: EmulatedEndpoint,
-        viaNodes: List<EmulatedNetworkNode>,
-        to: EmulatedEndpoint
-    ): EmulatedRoute;
+    fun createRoute(from: EmulatedEndpoint, viaNodes: List<EmulatedNetworkNode>, to: EmulatedEndpoint): EmulatedRoute
 
     // Creates a route over the given `via_nodes` creating the required endpoints
     // in the process. The returned EmulatedRoute pointer can be used in other
     // calls as a transport route for message or cross traffic.
-    fun createRoute(
-        viaNodes: List<EmulatedNetworkNode>
-    ): EmulatedRoute
+    fun createRoute(viaNodes: List<EmulatedNetworkNode>): EmulatedRoute
 }
 
 class NetworkEmulationManagerImpl() : NetworkEmulationManager {
@@ -105,14 +101,16 @@ class NetworkEmulationManagerImpl() : NetworkEmulationManager {
             "All IPv4 addresses exhausted"
         }
         val res = usedIpAddresses.add(ip)
-        check (res) {
+        check(res) {
             "IP address $ip already in use"
         }
-        val node = EmulatedEndpointImpl(EmulatedEndpointImpl.Options(
-            id = nextNodeId++,
-            ip = ip,
-            config = config
-        ))
+        val node = EmulatedEndpointImpl(
+            EmulatedEndpointImpl.Options(
+                id = nextNodeId++,
+                ip = ip,
+                config = config
+            )
+        )
         endpoints.add(node)
         return node
     }
@@ -160,6 +158,7 @@ class NetworkEmulationManagerImpl() : NetworkEmulationManager {
     companion object {
         // uint32_t representation of 192.168.0.0 address
         const val kMinIPv4Address = 0xC0A80000
+
         // uint32_t representation of 192.168.255.255 address
         const val kMaxIPv4Address = 0xC0A8FFFF
     }
@@ -170,6 +169,7 @@ private fun Long.toInetAddress(): InetAddress {
         (this shl 24).toByte(),
         (this shl 16).toByte(),
         (this shl 8).toByte(),
-        this.toByte())
+        this.toByte()
+    )
     return InetAddress.getByAddress(bytes)
 }

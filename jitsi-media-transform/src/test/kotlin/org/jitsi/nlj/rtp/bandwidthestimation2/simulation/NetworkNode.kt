@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 import org.jitsi.nlj.util.DataSize
@@ -62,8 +64,14 @@ class SimulationNode(
 
     fun configPrinter(): ColumnPrinter {
         return ColumnPrinter("propagation_delay capacity loss_rate", { sb ->
-            sb.append(String.format("%.3lf %.0lf %.2lf", config.delay.toDouble(),
-                config.bandwidth.bps / 8.0, config.lossRate))
+            sb.append(
+                String.format(
+                    "%.3lf %.0lf %.2lf",
+                    config.delay.toDouble(),
+                    config.bandwidth.bps / 8.0,
+                    config.lossRate
+                )
+            )
         })
     }
 
@@ -80,7 +88,7 @@ class SimulationNode(
 class NetworkNodeTransport(
     val senderClock: Clock,
 
-    ) {
+) {
     private val mutex = Any()
     private var endpoint: EmulatedEndpoint? = null
     private var localAddress: InetSocketAddress = InetSocketAddress(0)
