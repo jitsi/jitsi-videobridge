@@ -29,6 +29,7 @@ import org.jitsi.xmpp.mucclient.IQListener
 import org.jitsi.xmpp.mucclient.MucClient
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
 import org.jitsi.xmpp.mucclient.MucClientManager
+import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.ExtensionElement
 import org.jivesoftware.smack.packet.IQ
@@ -184,12 +185,12 @@ class XmppConnection : IQListener {
         }
         // colibri2 requests are logged at the conference level.
         if (iq !is ConferenceModifyIQ) {
-            logger.cdebug { "RECV: ${iq.toXML()}" }
+            logger.cdebug { "RECV: ${iq.toStringOpt()}" }
         }
 
         return when (iq.type) {
             IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient)?.also {
-                logger.cdebug { "SENT: ${it.toXML()}" }
+                logger.cdebug { "SENT: ${it.toStringOpt()}" }
             }
             else -> null
         }
@@ -202,7 +203,7 @@ class XmppConnection : IQListener {
             "Service unavailable"
         )
         val response = when (iq) {
-            is Version -> measureDelay(versionDelayStats, { iq.toXML() }) {
+            is Version -> measureDelay(versionDelayStats, { iq.toStringOpt() }) {
                 handler.versionIqReceived(iq)
             }
             is ConferenceModifyIQ -> {
@@ -215,7 +216,7 @@ class XmppConnection : IQListener {
                 )
                 null
             }
-            is HealthCheckIQ -> measureDelay(healthDelayStats, { iq.toXML() }) {
+            is HealthCheckIQ -> measureDelay(healthDelayStats, { iq.toStringOpt() }) {
                 handler.healthCheckIqReceived(iq)
             }
             else -> createError(

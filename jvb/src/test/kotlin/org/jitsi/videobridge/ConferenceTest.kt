@@ -38,7 +38,7 @@ class ConferenceTest : ConfigTest() {
             with(Conference(videobridge, "id", name, null, false)) {
                 endpointCount shouldBe 0
                 // TODO cover the case when they're true
-                createLocalEndpoint("abcdabcd", true, false, false, false, false)
+                createLocalEndpoint("abcdabcd", true, false, false, false)
                 endpointCount shouldBe 1
                 debugState.shouldBeValidJson()
             }

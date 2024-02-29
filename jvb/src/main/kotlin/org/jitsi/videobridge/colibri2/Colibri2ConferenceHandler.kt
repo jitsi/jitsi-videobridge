@@ -47,6 +47,7 @@ import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jitsi.xmpp.extensions.colibri2.Transport
 import org.jitsi.xmpp.extensions.jingle.RTPHdrExtPacketExtension
 import org.jitsi.xmpp.extensions.jingle.SourceGroupPacketExtension
+import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
@@ -109,7 +110,7 @@ class Colibri2ConferenceHandler(
         val error = createEndpointNotFoundError(conferenceModifyIQ, e.endpointId)
         Pair(error, false)
     } catch (e: FeatureNotImplementedException) {
-        logger.warn("Unsupported request (${e.message}): ${conferenceModifyIQ.toXML()}")
+        logger.warn("Unsupported request (${e.message}): ${conferenceModifyIQ.toStringOpt()}")
         Pair(createFeatureNotImplementedError(conferenceModifyIQ, e.message), false)
     } catch (e: IqProcessingException) {
         // Item not found conditions are assumed to be less critical, as they often happen in case a request
@@ -173,13 +174,15 @@ class Colibri2ConferenceHandler(
                 Condition.bad_request,
                 "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
             )
-            val sourceNames = c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
-            val ssrcRewriting = sourceNames && c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
+            if (!c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)) {
+                throw IqProcessingException(Condition.bad_request, "Source name support is mandatory.")
+            }
+
+            val ssrcRewriting = c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
             val privateAddresses = c2endpoint.hasCapability(Capability.CAP_PRIVATE_ADDRESS_CONNECTIVITY)
             conference.createLocalEndpoint(
                 c2endpoint.id,
                 transport.iceControlling,
-                sourceNames,
                 ssrcRewriting,
                 c2endpoint.mucRole == MUCRole.visitor,
                 privateAddresses
@@ -226,12 +229,12 @@ class Colibri2ConferenceHandler(
             // TODO: support removing payload types/header extensions
             media.payloadTypes.forEach { ptExt ->
                 create(ptExt, media.type)?.let { endpoint.addPayloadType(it) }
-                    ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toXML()}")
+                    ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toStringOpt()}")
             }
 
             media.rtpHdrExts.forEach { rtpHdrExt ->
                 rtpHdrExt.toRtpExtension()?.let { endpoint.addRtpExtension(it) }
-                    ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
+                    ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toStringOpt()}")
             }
 
             endpoint.setExtmapAllowMixed(media.extmapAllowMixed != null)
@@ -317,7 +320,7 @@ class Colibri2ConferenceHandler(
 
     private fun SourceGroupPacketExtension.toSsrcAssociation(): SsrcAssociation? {
         if (sources.size < 2) {
-            logger.warn("Ignoring source group with <2 sources: ${toXML()}")
+            logger.warn("Ignoring source group with <2 sources: ${toStringOpt()}")
             return null
         }
 
@@ -423,12 +426,12 @@ class Colibri2ConferenceHandler(
             // TODO: support removing payload types/header extensions
             media.payloadTypes.forEach { ptExt ->
                 create(ptExt, media.type)?.let { relay.addPayloadType(it) }
-                    ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toXML()}")
+                    ?: logger.warn("Ignoring unrecognized payload type extension: ${ptExt.toStringOpt()}")
             }
 
             media.rtpHdrExts.forEach { rtpHdrExt ->
                 rtpHdrExt.toRtpExtension()?.let { relay.addRtpExtension(it) }
-                    ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toXML()}")
+                    ?: logger.warn("Ignoring unrecognized RTP header extension: ${rtpHdrExt.toStringOpt()}")
             }
 
             relay.setExtmapAllowMixed(media.extmapAllowMixed != null)
@@ -473,7 +476,9 @@ class Colibri2ConferenceHandler(
             it.mediaSources.forEach { m ->
                 if (m.type == MediaType.AUDIO) {
                     if (m.sources.isEmpty()) {
-                        logger.warn("Ignoring audio source ${m.id} in endpoint $id of a relay (no SSRCs): ${toXML()}")
+                        logger.warn(
+                            "Ignoring audio source ${m.id} in endpoint $id of a relay (no SSRCs): ${toStringOpt()}"
+                        )
                     } else {
                         m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id)) }
                     }

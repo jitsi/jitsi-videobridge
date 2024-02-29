@@ -41,6 +41,14 @@ class HealthConfig private constructor() {
         "videobridge.health.sticky-failures".from(JitsiConfig.newConfig)
     }
 
+    val requireStun: Boolean by config {
+        "videobridge.health.require-stun".from(JitsiConfig.newConfig)
+    }
+
+    val requireValidAddress: Boolean by config {
+        "videobridge.health.require-valid-address".from(JitsiConfig.newConfig)
+    }
+
     companion object {
         @JvmField
         val config = HealthConfig()

@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.relay
 
-import org.eclipse.jetty.websocket.api.WriteCallback
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.eclipse.jetty.websocket.core.CloseStatus
@@ -37,6 +36,7 @@ import org.jitsi.videobridge.message.ServerHelloMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.message.VideoTypeMessage
 import org.jitsi.videobridge.websocket.ColibriWebSocket
+import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.json.simple.JSONObject
 import java.lang.ref.WeakReference
 import java.net.URI
@@ -229,10 +229,7 @@ class RelayMessageTransport(
      * @param message the message to send.
      */
     private fun sendMessage(dst: ColibriWebSocket, message: BridgeChannelMessage) {
-        // We'll use the async version of sendString since this may be called
-        // from multiple threads.  It's just fire-and-forget though, so we
-        // don't wait on the result
-        dst.remote?.sendString(message.toJson(), WriteCallback.Adaptor())
+        dst.sendString(message.toJson())
         statisticsSupplier.get().colibriWebSocketMessagesSent.inc()
     }
 
@@ -309,9 +306,11 @@ class RelayMessageTransport(
     override fun webSocketConnected(ws: ColibriWebSocket) {
         synchronized(webSocketSyncRoot) {
             // If we already have a web-socket, discard it and use the new one.
-            if (ws != webSocket && webSocket != null) {
-                logger.info("Replacing an existing websocket.")
-                webSocket?.session?.close(CloseStatus.NORMAL, "replaced")
+            if (ws != webSocket) {
+                if (webSocket != null) {
+                    logger.info("Replacing an existing websocket.")
+                    webSocket?.session?.close(CloseStatus.NORMAL, "replaced")
+                }
                 webSocketLastActive = true
                 webSocket = ws
                 sendMessage(ws, createServerHello())
@@ -494,7 +493,10 @@ class RelayMessageTransport(
         /**
          * The single [WebSocketClient] instance that all [Relay]s use to initiate a web socket connection.
          */
-        val webSocketClient = WebSocketClient().apply { start() }
+        val webSocketClient = WebSocketClient().apply {
+            idleTimeout = WebsocketServiceConfig.config.idleTimeout
+            start()
+        }
 
         /**
          * Reason to use when closing a WS due to the relay being expired.

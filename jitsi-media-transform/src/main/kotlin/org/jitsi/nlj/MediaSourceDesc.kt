@@ -137,13 +137,11 @@ class MediaSourceDesc
     fun getRtpLayerByQualityIdx(idx: Int): RtpLayerDesc? = layersByIndex[idx]
 
     @Synchronized
-    fun findRtpLayerDesc(videoRtpPacket: VideoRtpPacket): RtpLayerDesc? {
+    fun findRtpLayerDescs(videoRtpPacket: VideoRtpPacket): Collection<RtpLayerDesc> {
         if (ArrayUtils.isNullOrEmpty(rtpEncodings)) {
-            return null
+            return emptyList()
         }
-        val encodingId = videoRtpPacket.getEncodingId()
-        val desc = layersById[encodingId]
-        return desc
+        return videoRtpPacket.getEncodingIds().mapNotNull { layersById[it] }
     }
 
     @Synchronized
@@ -188,10 +186,14 @@ class MediaSourceDesc
  */
 fun Array<MediaSourceDesc>.copy() = Array(this.size) { i -> this[i].copy() }
 
-fun Array<MediaSourceDesc>.findRtpLayerDesc(packet: VideoRtpPacket): RtpLayerDesc? {
+fun Array<MediaSourceDesc>.findRtpLayerDescs(packet: VideoRtpPacket): Collection<RtpLayerDesc> {
+    return this.flatMap { it.findRtpLayerDescs(packet) }
+}
+
+fun Array<MediaSourceDesc>.findRtpEncodingId(packet: VideoRtpPacket): Int? {
     for (source in this) {
-        source.findRtpLayerDesc(packet)?.let {
-            return it
+        source.findRtpEncodingDesc(packet.ssrc)?.let {
+            return it.eid
         }
     }
     return null

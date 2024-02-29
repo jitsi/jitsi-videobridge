@@ -15,6 +15,9 @@
  */
 package org.jitsi.nlj.transform.node
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cinfo
@@ -32,12 +35,16 @@ import org.pcap4j.packet.namednumber.IpVersion
 import org.pcap4j.packet.namednumber.UdpPort
 import org.pcap4j.util.MacAddress
 import java.net.Inet4Address
+import java.nio.file.Path
 import java.util.Random
+import kotlin.io.path.Path
 
 class PcapWriter(
     parentLogger: Logger,
-    filePath: String = "/tmp/${Random().nextLong()}.pcap}"
+    filePath: Path = Path(directory, "${Random().nextLong()}.pcap")
 ) : ObserverNode("PCAP writer") {
+    constructor(parentLogger: Logger, filePath: String) : this(parentLogger, Path(filePath))
+
     private val logger = createChildLogger(parentLogger)
     private val lazyHandle = lazy {
         Pcaps.openDead(DataLinkType.EN10MB, 65536)
@@ -46,13 +53,14 @@ class PcapWriter(
 
     private val lazyWriter = lazy {
         logger.cinfo { "Pcap writer writing to file $filePath" }
-        handle.dumpOpen(filePath)
+        handle.dumpOpen(filePath.toString())
     }
 
     private val writer by lazyWriter
 
     companion object {
         private val localhost = Inet4Address.getByName("127.0.0.1") as Inet4Address
+        val directory: String by config("jmt.debug.pcap.directory".from(JitsiConfig.newConfig))
     }
 
     override fun observe(packetInfo: PacketInfo) {

@@ -22,6 +22,7 @@ import org.jitsi.health.HealthChecker
 import org.jitsi.health.Result
 import org.jitsi.videobridge.health.config.HealthConfig.Companion.config
 import org.jitsi.videobridge.ice.Harvesters
+import java.net.InetAddress
 
 class JvbHealthChecker : HealthCheckService {
     private val healthChecker = HealthChecker(
@@ -36,16 +37,33 @@ class JvbHealthChecker : HealthCheckService {
     fun stop() = healthChecker.stop()
 
     private fun check(): Result {
-        if (MappingCandidateHarvesters.stunDiscoveryFailed) {
+        if (config.requireValidAddress && !hasValidAddress()) {
+            return Result(success = false, message = "No valid IP addresses available for harvesting.")
+        }
+        if (config.requireStun && MappingCandidateHarvesters.stunDiscoveryFailed) {
             return Result(success = false, message = "Address discovery through STUN failed")
         }
-        if (!Harvesters.isHealthy()) {
+        if (!Harvesters.INSTANCE.healthy) {
             return Result(success = false, message = "Failed to bind single-port")
         }
 
         // TODO: check if XmppConnection is configured and connected.
 
         return Result(success = true)
+    }
+
+    private fun InetAddress.isValid(): Boolean {
+        return !this.isSiteLocalAddress && !this.isLinkLocalAddress && !this.isLoopbackAddress
+    }
+
+    private fun hasValidAddress(): Boolean {
+        if (Harvesters.INSTANCE.singlePortHarvesters.any { it.localAddress.address.isValid() }) {
+            return true
+        }
+        if (MappingCandidateHarvesters.getHarvesters().any { it.mask?.address?.isValid() == true }) {
+            return true
+        }
+        return false
     }
 
     override val result: Result

@@ -423,12 +423,10 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
             }
             lastTs = f.timestamp
 
-            val packetIndex = RtpLayerDesc.getIndex(f.ssrc.toInt(), f.spatialLayer, f.temporalLayer)
-
             val result = filter.acceptFrame(
                 frame = f,
+                incomingEncoding = f.ssrc.toInt(),
                 externalTargetIndex = targetIndex,
-                incomingIndex = packetIndex,
                 receivedTime = Instant.ofEpochMilli(ms)
             )
             evaluator(f, result)
@@ -445,7 +443,7 @@ private abstract class FrameGenerator : Iterator<Vp9Frame>
 
 /** Generate a non-scalable series of VP9 frames, with a single keyframe at the start. */
 private class SingleLayerFrameGenerator : FrameGenerator() {
-    private val totalPictures = 1000
+    private val totalPictures = 10000
     private var pictureCount = 0
 
     override fun hasNext(): Boolean = pictureCount < totalPictures
@@ -478,7 +476,7 @@ private class SingleLayerFrameGenerator : FrameGenerator() {
 
 /** Generate a temporally-scaled series of VP9 frames, with a single keyframe at the start. */
 private class TemporallyScaledFrameGenerator : FrameGenerator() {
-    private val totalPictures = 1000
+    private val totalPictures = 10000
     private var pictureCount = 0
     private var tl0Count = -1
 
@@ -521,7 +519,7 @@ private class TemporallyScaledFrameGenerator : FrameGenerator() {
 
 /** Generate a spatially-scaled series of VP9 frames, with full spatial dependencies and periodic keyframes. */
 private class SVCFrameGenerator : FrameGenerator() {
-    private val totalPictures = 1000
+    private val totalPictures = 10000
     private var pictureCount = 0
     private var frameCount = 0
     private var tl0Count = -1
@@ -574,7 +572,7 @@ private class SVCFrameGenerator : FrameGenerator() {
 
 /** Generate a spatially-scaled series of VP9 frames, with K-SVC spatial dependencies and periodic keyframes. */
 private class KSVCFrameGenerator : FrameGenerator() {
-    private val totalPictures = 1000
+    private val totalPictures = 10000
     private var pictureCount = 0
     private var frameCount = 0
     private var tl0Count = -1

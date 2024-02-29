@@ -15,14 +15,20 @@
  */
 package org.jitsi.videobridge.stats
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.BridgeJitterStats
 import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.stats.BucketStats
 import org.jitsi.videobridge.Endpoint
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
+import java.time.Clock
+import java.time.Duration
 
 /**
  * Track how long it takes for all RTP and RTCP packets to make their way through the bridge.
@@ -31,18 +37,66 @@ import org.jitsi.videobridge.Endpoint
  * for packets going out to all endpoints.
  */
 object PacketTransitStats {
-    private val rtpPacketDelayStats = PacketDelayStats()
-    private val rtcpPacketDelayStats = PacketDelayStats()
+    private val jsonEnabled: Boolean by config {
+        "videobridge.stats.transit-time.enable-json".from(JitsiConfig.newConfig)
+    }
+    private val prometheusEnabled: Boolean by config {
+        "videobridge.stats.transit-time.enable-prometheus".from(JitsiConfig.newConfig)
+    }
+    private val jitterEnabled: Boolean by config {
+        "videobridge.stats.transit-time.enable-jitter".from(JitsiConfig.newConfig)
+    }
+    private val enabled = jsonEnabled || prometheusEnabled || jitterEnabled
 
-    private val bridgeJitterStats = BridgeJitterStats()
+    private val logger = createLogger()
+    private val clock: Clock = Clock.systemUTC()
+
+    init {
+        logger.info(
+            "Initializing, jsonEnabled=$jsonEnabled, prometheusEnabled=$prometheusEnabled, " +
+                "jitterEnabled=$jitterEnabled"
+        )
+    }
+
+    private val rtpPacketDelayStats = if (jsonEnabled) PacketDelayStats() else null
+    private val rtcpPacketDelayStats = if (jsonEnabled) PacketDelayStats() else null
+    private val prometheusRtpDelayStats = if (prometheusEnabled) {
+        PrometheusPacketDelayStats("rtp_transit_time")
+    } else {
+        null
+    }
+    private val prometheusRtcpDelayStats = if (prometheusEnabled) {
+        PrometheusPacketDelayStats("rtcp_transit_time")
+    } else {
+        null
+    }
+
+    private val bridgeJitterStats = if (jitterEnabled) BridgeJitterStats() else null
 
     @JvmStatic
     fun packetSent(packetInfo: PacketInfo) {
+        if (!enabled) {
+            return
+        }
+
+        val delayMs = packetInfo.receivedTime?.let { Duration.between(it, clock.instant()).toMillis() }
         if (packetInfo.packet.looksLikeRtp()) {
-            rtpPacketDelayStats.addPacket(packetInfo)
-            bridgeJitterStats.packetSent(packetInfo)
+            if (delayMs != null) {
+                rtpPacketDelayStats?.addDelay(delayMs)
+                prometheusRtpDelayStats?.addDelay(delayMs)
+                bridgeJitterStats?.packetSent(packetInfo)
+            } else {
+                rtpPacketDelayStats?.addUnknown()
+                prometheusRtpDelayStats?.addUnknown()
+            }
         } else if (packetInfo.packet.looksLikeRtcp()) {
-            rtcpPacketDelayStats.addPacket(packetInfo)
+            if (delayMs != null) {
+                rtcpPacketDelayStats?.addDelay(delayMs)
+                prometheusRtcpDelayStats?.addDelay(delayMs)
+            } else {
+                rtcpPacketDelayStats?.addUnknown()
+                prometheusRtcpDelayStats?.addUnknown()
+            }
         }
     }
 
@@ -51,16 +105,44 @@ object PacketTransitStats {
         get() {
             val stats = OrderedJsonObject()
             stats["e2e_packet_delay"] = getPacketDelayStats()
-            stats["overall_bridge_jitter"] = bridgeJitterStats.jitter
+            bridgeJitterStats?.let {
+                stats["overall_bridge_jitter"] = it.jitter
+            }
             return stats
         }
 
     @JvmStatic
     val bridgeJitter
-        get() = bridgeJitterStats.jitter
+        get() = bridgeJitterStats?.jitter
 
     private fun getPacketDelayStats() = OrderedJsonObject().apply {
-        put("rtp", rtpPacketDelayStats.toJson(format = BucketStats.Format.CumulativeRight))
-        put("rtcp", rtcpPacketDelayStats.toJson(format = BucketStats.Format.CumulativeRight))
+        rtpPacketDelayStats?.let {
+            put("rtp", it.toJson(format = BucketStats.Format.CumulativeRight))
+        }
+        rtcpPacketDelayStats?.let {
+            put("rtcp", it.toJson(format = BucketStats.Format.CumulativeRight))
+        }
+    }
+}
+
+class PrometheusPacketDelayStats(name: String) {
+    private val histogram = VideobridgeMetricsContainer.instance.registerHistogram(
+        name,
+        "Packet delay stats for $name",
+        0.0,
+        5.0,
+        50.0,
+        500.0
+    )
+    private val numPacketsWithoutTimestamps = VideobridgeMetricsContainer.instance.registerCounter(
+        "${name}_unknown_delay",
+        "Number of packets without an unknown delay ($name)"
+    )
+
+    fun addUnknown() {
+        numPacketsWithoutTimestamps.inc()
+    }
+    fun addDelay(delayMs: Long) {
+        histogram.histogram.observe(delayMs.toDouble())
     }
 }

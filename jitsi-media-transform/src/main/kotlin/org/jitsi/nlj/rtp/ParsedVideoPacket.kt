@@ -25,8 +25,8 @@ abstract class ParsedVideoPacket(
     buffer: ByteArray,
     offset: Int,
     length: Int,
-    encodingIndex: Int?
-) : VideoRtpPacket(buffer, offset, length, encodingIndex) {
+    encodingId: Int
+) : VideoRtpPacket(buffer, offset, length, encodingId) {
 
     abstract val isKeyframe: Boolean
     abstract val isStartOfFrame: Boolean

@@ -34,6 +34,7 @@ import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
+import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
@@ -230,7 +231,7 @@ public class Conference
                 {
                     try
                     {
-                        logger.info("RECV colibri2 request: " + request.getRequest().toXML());
+                        logger.info("RECV colibri2 request: " + XmlStringBuilderUtil.toStringOpt(request.getRequest()));
                         long start = System.currentTimeMillis();
                         Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
                         IQ response = p.getFirst();
@@ -243,9 +244,9 @@ public class Conference
                         if (processingDelay > 100)
                         {
                             logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                                    + totalDelay + " ms): " + request.getRequest().toXML());
+                                    + totalDelay + " ms): " + XmlStringBuilderUtil.toStringOpt(request.getRequest()));
                         }
-                        logger.info("SENT colibri2 response: " + response.toXML());
+                        logger.info("SENT colibri2 response: " + XmlStringBuilderUtil.toStringOpt(response));
                         request.getCallback().invoke(response);
                         if (expire) videobridge.expireConference(this);
                     }
@@ -717,7 +718,6 @@ public class Conference
      * @param iceControlling {@code true} if the ICE agent of this endpoint's
      * transport will be initialized to serve as a controlling ICE agent;
      * otherwise, {@code false}
-     * @param sourceNames whether this endpoint signaled the source names support.
      * @param doSsrcRewriting whether this endpoint signaled SSRC rewriting support.
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
@@ -725,7 +725,6 @@ public class Conference
     public Endpoint createLocalEndpoint(
             String id,
             boolean iceControlling,
-            boolean sourceNames,
             boolean doSsrcRewriting,
             boolean visitor,
             boolean privateAddresses)
@@ -737,7 +736,7 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, sourceNames, doSsrcRewriting, visitor, privateAddresses);
+                id, this, logger, iceControlling, doSsrcRewriting, visitor, privateAddresses);
         videobridge.localEndpointCreated(visitor);
 
         subscribeToEndpointEvents(endpoint);

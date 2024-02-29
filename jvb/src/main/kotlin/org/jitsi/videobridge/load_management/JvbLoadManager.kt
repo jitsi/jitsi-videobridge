@@ -23,20 +23,23 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.Videobridge
+import org.jitsi.videobridge.jvbLastNSingleton
+import org.jitsi.videobridge.util.TaskPools
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.logging.Level
 
-class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
+open class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
     private val jvbLoadThreshold: T,
     private val jvbRecoveryThreshold: T,
-    private val loadReducer: JvbLoadReducer,
+    private val loadReducer: JvbLoadReducer?,
     private val clock: Clock = Clock.systemUTC()
 ) {
-    private val logger = createLogger(minLogLevel = Level.ALL)
-
-    val reducerEnabled: Boolean by config("videobridge.load-management.reducer-enabled".from(JitsiConfig.newConfig))
+    protected val logger = createLogger(minLogLevel = Level.ALL)
 
     private var lastReducerTime: Instant = NEVER
 
@@ -44,31 +47,42 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 
     private var mostRecentLoadMeasurement: T? = null
 
+    private var loadSamplerTask: ScheduledFuture<*>? = null
+
+    protected fun startSampler(sampler: Runnable) {
+        loadSamplerTask = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(sampler, 0, 10, TimeUnit.SECONDS)
+    }
+
+    fun stop() {
+        loadSamplerTask?.cancel(true)
+        loadSamplerTask = null
+    }
+
     fun loadUpdate(loadMeasurement: T) {
         logger.cdebug { "Got a load measurement of $loadMeasurement" }
         mostRecentLoadMeasurement = loadMeasurement
         val now = clock.instant()
         if (loadMeasurement.getLoad() >= jvbLoadThreshold.getLoad()) {
             state = State.OVERLOADED
-            if (reducerEnabled) {
+            loadReducer?.let {
                 logger.info("Load measurement $loadMeasurement is above threshold of $jvbLoadThreshold")
                 if (canRunReducer(now)) {
                     logger.info("Running load reducer")
-                    loadReducer.reduceLoad()
+                    it.reduceLoad()
                     lastReducerTime = now
                 } else {
                     logger.info(
                         "Load reducer ran at $lastReducerTime, which is within " +
-                            "${loadReducer.impactTime()} of now, not running reduce"
+                            "${it.impactTime()} of now, not running reduce"
                     )
                 }
             }
         } else {
             state = State.NOT_OVERLOADED
-            if (reducerEnabled) {
+            loadReducer?.let {
                 if (loadMeasurement.getLoad() < jvbRecoveryThreshold.getLoad()) {
                     if (canRunReducer(now)) {
-                        if (loadReducer.recover()) {
+                        if (it.recover()) {
                             logger.info(
                                 "Recovery ran after a load measurement of $loadMeasurement (which was " +
                                     "below threshold of $jvbRecoveryThreshold) was received"
@@ -80,7 +94,7 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                     } else {
                         logger.cdebug {
                             "Load measurement $loadMeasurement is below recovery threshold, but load reducer " +
-                                "ran at $lastReducerTime, which is within ${loadReducer.impactTime()} of now, " +
+                                "ran at $lastReducerTime, which is within ${it.impactTime()} of now, " +
                                 "not running recover"
                         }
                     }
@@ -95,11 +109,17 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
         put("state", state.toString())
         put("stress", getCurrentStressLevel().toString())
         put("reducer_enabled", reducerEnabled.toString())
-        put("reducer", loadReducer.getStats())
+        loadReducer?.let {
+            put("reducer", it.getStats())
+        }
     }
 
-    private fun canRunReducer(now: Instant): Boolean =
-        Duration.between(lastReducerTime, now) >= loadReducer.impactTime()
+    private fun canRunReducer(now: Instant): Boolean {
+        loadReducer?.let {
+            return Duration.between(lastReducerTime, now) >= it.impactTime()
+        }
+        return false
+    }
 
     enum class State {
         OVERLOADED,
@@ -110,5 +130,70 @@ class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
         val averageParticipantStress: Double by config {
             "videobridge.load-management.average-participant-stress".from(JitsiConfig.newConfig)
         }
+
+        val loadMeasurement: String by config {
+            "videobridge.load-management.load-measurements.load-measurement".from(JitsiConfig.newConfig)
+        }
+
+        val reducerEnabled: Boolean by config("videobridge.load-management.reducer-enabled".from(JitsiConfig.newConfig))
+
+        const val PACKET_RATE_MEASUREMENT = "packet-rate"
+        const val CPU_USAGE_MEASUREMENT = "cpu-usage"
+
+        @JvmStatic
+        fun create(videobridge: Videobridge): JvbLoadManager<*> {
+            val reducer = if (reducerEnabled) LastNReducer({ videobridge.conferences }, jvbLastNSingleton) else null
+
+            return when (loadMeasurement) {
+                PACKET_RATE_MEASUREMENT -> PacketRateLoadManager(
+                    PacketRateMeasurement.loadedThreshold,
+                    PacketRateMeasurement.recoveryThreshold,
+                    reducer,
+                    videobridge
+                )
+                CPU_USAGE_MEASUREMENT -> CpuUsageLoadManager(
+                    CpuMeasurement.loadThreshold,
+                    CpuMeasurement.recoverThreshold,
+                    reducer,
+                    videobridge
+                )
+                else -> throw IllegalArgumentException(
+                    "Invalid configuration for load measurement type: $loadMeasurement"
+                )
+            }
+        }
+    }
+}
+
+class PacketRateLoadManager(
+    loadThreshold: PacketRateMeasurement,
+    recoveryThreshold: PacketRateMeasurement,
+    loadReducer: JvbLoadReducer?,
+    videobridge: Videobridge
+) : JvbLoadManager<PacketRateMeasurement>(loadThreshold, recoveryThreshold, loadReducer) {
+
+    init {
+        val sampler = PacketRateLoadSampler(videobridge) { loadMeasurement ->
+            loadUpdate(loadMeasurement)
+            videobridge.statistics.stressLevel = getCurrentStressLevel()
+        }
+
+        startSampler(sampler)
+    }
+}
+
+class CpuUsageLoadManager(
+    loadThreshold: CpuMeasurement,
+    recoveryThreshold: CpuMeasurement,
+    loadReducer: JvbLoadReducer?,
+    videobridge: Videobridge
+) : JvbLoadManager<CpuMeasurement>(loadThreshold, recoveryThreshold, loadReducer) {
+    init {
+        val sampler = CpuLoadSampler { loadMeasurement ->
+            loadUpdate(loadMeasurement)
+            videobridge.statistics.stressLevel = getCurrentStressLevel()
+        }
+
+        startSampler(sampler)
     }
 }

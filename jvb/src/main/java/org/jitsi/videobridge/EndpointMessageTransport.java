@@ -212,14 +212,7 @@ public class EndpointMessageTransport
      */
     private void sendMessage(ColibriWebSocket dst, BridgeChannelMessage message)
     {
-        RemoteEndpoint remote = dst.getRemote();
-        if (remote != null)
-        {
-            // We'll use the async version of sendString since this may be called
-            // from multiple threads.  It's just fire-and-forget though, so we
-            // don't wait on the result
-            remote.sendString(message.toJson(), new WriteCallback.Adaptor());
-        }
+        dst.sendString(message.toJson());
         statisticsSupplier.get().colibriWebSocketMessagesSent.inc();
     }
 
@@ -569,7 +562,7 @@ public class EndpointMessageTransport
 
         Conference conference = endpoint.getConference();
 
-        if (conference == null || conference.isExpired())
+        if (conference.isExpired())
         {
             getLogger().warn("Unable to send EndpointStats, conference is null or expired");
             return null;

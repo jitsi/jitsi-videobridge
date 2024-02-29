@@ -17,21 +17,22 @@ package org.jitsi.nlj
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
 
 class RtpLayerDescTest : FunSpec({
 
     test("VP8 layer ids") {
         // mostly for documenting the encoding -> index mapping.
         val vp8Layers = arrayOf(
-            RtpLayerDesc(0, 0, 0, 180, 7.5),
-            RtpLayerDesc(0, 1, 0, 180, 15.0),
-            RtpLayerDesc(0, 2, 0, 180, 30.0),
-            RtpLayerDesc(1, 0, 0, 360, 7.5),
-            RtpLayerDesc(1, 1, 0, 360, 15.0),
-            RtpLayerDesc(1, 2, 0, 360, 30.0),
-            RtpLayerDesc(2, 0, 0, 720, 7.5),
-            RtpLayerDesc(2, 1, 0, 720, 15.0),
-            RtpLayerDesc(2, 2, 0, 720, 30.0)
+            VpxRtpLayerDesc(0, 0, 0, 180, 7.5),
+            VpxRtpLayerDesc(0, 1, 0, 180, 15.0),
+            VpxRtpLayerDesc(0, 2, 0, 180, 30.0),
+            VpxRtpLayerDesc(1, 0, 0, 360, 7.5),
+            VpxRtpLayerDesc(1, 1, 0, 360, 15.0),
+            VpxRtpLayerDesc(1, 2, 0, 360, 30.0),
+            VpxRtpLayerDesc(2, 0, 0, 720, 7.5),
+            VpxRtpLayerDesc(2, 1, 0, 720, 15.0),
+            VpxRtpLayerDesc(2, 2, 0, 720, 30.0)
         )
 
         vp8Layers[0].index shouldBe 0
@@ -58,15 +59,15 @@ class RtpLayerDescTest : FunSpec({
     test("VP9 layer ids") {
         // same here, mostly for documenting the encoding -> index mapping.
         val vp9Layers = arrayOf(
-            RtpLayerDesc(0, 0, 0, 180, 7.5),
-            RtpLayerDesc(0, 1, 0, 180, 15.0),
-            RtpLayerDesc(0, 2, 0, 180, 30.0),
-            RtpLayerDesc(0, 0, 1, 360, 7.5),
-            RtpLayerDesc(0, 1, 1, 360, 15.0),
-            RtpLayerDesc(0, 2, 1, 360, 30.0),
-            RtpLayerDesc(0, 0, 2, 720, 7.5),
-            RtpLayerDesc(0, 1, 2, 720, 15.0),
-            RtpLayerDesc(0, 2, 2, 720, 30.0)
+            VpxRtpLayerDesc(0, 0, 0, 180, 7.5),
+            VpxRtpLayerDesc(0, 1, 0, 180, 15.0),
+            VpxRtpLayerDesc(0, 2, 0, 180, 30.0),
+            VpxRtpLayerDesc(0, 0, 1, 360, 7.5),
+            VpxRtpLayerDesc(0, 1, 1, 360, 15.0),
+            VpxRtpLayerDesc(0, 2, 1, 360, 30.0),
+            VpxRtpLayerDesc(0, 0, 2, 720, 7.5),
+            VpxRtpLayerDesc(0, 1, 2, 720, 15.0),
+            VpxRtpLayerDesc(0, 2, 2, 720, 30.0)
         )
 
         vp9Layers[0].index shouldBe 0

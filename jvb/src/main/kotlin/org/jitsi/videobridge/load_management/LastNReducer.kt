@@ -71,7 +71,7 @@ class LastNReducer(
             .asSequence()
             .filterIsInstance<Endpoint>()
             .map {
-                it.numForwardedEndpoints()
+                it.numForwardedSources()
             }
             .maxOrNull()
     }

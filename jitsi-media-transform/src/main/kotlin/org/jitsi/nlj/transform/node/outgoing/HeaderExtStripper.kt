@@ -17,30 +17,41 @@ package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.RtpExtensionType
+import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.transform.node.ModifierNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 
 /**
- * Strip all hop-by-hop header extensions.  Currently this leaves only ssrc-audio-level and video-orientation.
+ * Strip all hop-by-hop header extensions.  Currently this leaves ssrc-audio-level and video-orientation,
+ * plus the AV1 dependency descriptor if the packet is an Av1DDPacket.
  */
 class HeaderExtStripper(
     streamInformationStore: ReadOnlyStreamInformationStore
 ) : ModifierNode("Strip header extensions") {
     private var retainedExts: Set<Int> = emptySet()
+    private var retainedExtsWithAv1DD: Set<Int> = emptySet()
 
     init {
         retainedExtTypes.forEach { rtpExtensionType ->
             streamInformationStore.onRtpExtensionMapping(rtpExtensionType) {
-                it?.let { retainedExts = retainedExts.plus(it) }
+                it?.let {
+                    retainedExts = retainedExts.plus(it)
+                    retainedExtsWithAv1DD = retainedExtsWithAv1DD.plus(it)
+                }
             }
+        }
+        streamInformationStore.onRtpExtensionMapping(RtpExtensionType.AV1_DEPENDENCY_DESCRIPTOR) {
+            it?.let { retainedExtsWithAv1DD = retainedExtsWithAv1DD.plus(it) }
         }
     }
 
     override fun modify(packetInfo: PacketInfo): PacketInfo {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
 
-        rtpPacket.removeHeaderExtensionsExcept(retainedExts)
+        val retained = if (rtpPacket is Av1DDPacket) retainedExtsWithAv1DD else retainedExts
+
+        rtpPacket.removeHeaderExtensionsExcept(retained)
 
         return packetInfo
     }

@@ -19,7 +19,6 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.PacketInfo.Companion.ENABLE_PAYLOAD_VERIFICATION
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.event.EventEmitter
@@ -59,7 +58,6 @@ internal class PacketHandler(
     private var firstMedia: Instant? = null
 
     private val numDroppedPacketsUnknownSsrc = AtomicInteger(0)
-    private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
 
     /**
      * The [AdaptiveSourceProjection]s that this instance is managing, keyed
@@ -158,7 +156,6 @@ internal class PacketHandler(
                 {
                     eventEmitter.fireEvent { keyframeNeeded(endpointID, source.primarySSRC) }
                 },
-                payloadTypes,
                 logger
             )
             logger.debug { "new source projection for $source" }
@@ -172,10 +169,6 @@ internal class PacketHandler(
     }
 
     fun timeSinceFirstMedia(): Duration = firstMedia?.let { Duration.between(it, clock.instant()) } ?: Duration.ZERO
-
-    fun addPayloadType(payloadType: PayloadType) {
-        payloadTypes[payloadType.pt] = payloadType
-    }
 
     val debugState: JSONObject
         get() = JSONObject().apply {

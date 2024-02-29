@@ -108,7 +108,7 @@ inline fun <T> withLastNConfig(config: String, block: () -> T): T {
  */
 private fun createMockConference(vararg epNumForwardedVideo: Int): Conference {
     val eps = epNumForwardedVideo.map {
-        mockk<Endpoint> { every { numForwardedEndpoints() } returns it }
+        mockk<Endpoint> { every { numForwardedSources() } returns it }
     }.toList<AbstractEndpoint>()
     return mockk {
         every { endpoints } returns eps

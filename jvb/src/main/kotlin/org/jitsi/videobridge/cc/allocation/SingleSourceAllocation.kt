@@ -18,7 +18,6 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.VideoType
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -63,7 +62,7 @@ internal class SingleSourceAllocation(
                 .addField("remote_endpoint_id", endpointId)
             for ((l, bitrate) in layers.layers) {
                 ratesTimeSeriesPoint.addField(
-                    "${indexString(l.index)}_${l.height}p_${l.frameRate}fps_bps",
+                    "${l.indexString()}_${l.height}p_${l.frameRate}fps_bps",
                     bitrate
                 )
             }

@@ -137,6 +137,7 @@ class TlsClientImpl(
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
+        logger.cinfo { "Negotiated DTLS version ${context.securityParameters.negotiatedVersion}" }
         context.resumableSession?.let { newSession ->
 
             session?.let { existingSession ->
@@ -163,13 +164,7 @@ class TlsClientImpl(
         )
     }
 
-    override fun notifyServerVersion(serverVersion: ProtocolVersion?) {
-        super.notifyServerVersion(serverVersion)
-
-        logger.cinfo { "Negotiated DTLS version $serverVersion" }
-    }
-
-    override fun getSupportedVersions(): Array<ProtocolVersion> = arrayOf<ProtocolVersion>(ProtocolVersion.DTLSv12)
+    override fun getSupportedVersions(): Array<ProtocolVersion> = arrayOf(ProtocolVersion.DTLSv12)
 
     override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) =
         logger.notifyAlertRaised(alertLevel, alertDescription, message, cause)

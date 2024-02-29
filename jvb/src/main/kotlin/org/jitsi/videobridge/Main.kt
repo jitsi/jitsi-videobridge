@@ -77,6 +77,9 @@ fun main() {
 
     startIce4j()
 
+    // Initialize, binding on the main ICE port.
+    Harvesters.init()
+
     XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.config.jidCacheSize)
     PacketQueue.setEnableStatisticsDefault(true)
 
@@ -218,5 +221,5 @@ private fun startIce4j() {
 
 private fun stopIce4j() {
     // Shut down harvesters.
-    Harvesters.closeStaticConfiguration()
+    Harvesters.close()
 }

@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.cc;
 
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.format.*;
 import org.jitsi.rtp.rtcp.*;
 import org.json.simple.*;
 
@@ -39,12 +38,11 @@ public interface AdaptiveSourceProjectionContext
     /**
      * Determines whether an RTP packet should be accepted or not.
      *
-     * @param packetInfo the RTP packet to determine whether to accept or not.
-     * @param incomingIndex the quality index of the incoming RTP packet.
+     * @param packetInfo  the RTP packet to determine whether to accept or not.
      * @param targetIndex the target quality index
      * @return true if the packet should be accepted, false otherwise.
      */
-    boolean accept(PacketInfo packetInfo, int incomingIndex, int targetIndex);
+    boolean accept(PacketInfo packetInfo, int targetIndex);
 
     /**
      * @return true if this stream context needs a keyframe in order to either
@@ -80,12 +78,6 @@ public interface AdaptiveSourceProjectionContext
      * timestamp and other RTP-level details.
      */
     RtpState getRtpState();
-
-    /**
-     * @return the {@link PayloadType} of the RTP packets that this context
-     * processes.
-     */
-    PayloadType getPayloadType();
 
     /**
      * Gets a JSON representation of the parts of this object's state that

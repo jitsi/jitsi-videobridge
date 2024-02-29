@@ -20,9 +20,9 @@ import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.MapperFeature
@@ -50,11 +50,9 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = LastNMessage::class, name = LastNMessage.TYPE),
     JsonSubTypes.Type(value = DominantSpeakerMessage::class, name = DominantSpeakerMessage.TYPE),
     JsonSubTypes.Type(value = EndpointConnectionStatusMessage::class, name = EndpointConnectionStatusMessage.TYPE),
-    JsonSubTypes.Type(value = ForwardedEndpointsMessage::class, name = ForwardedEndpointsMessage.TYPE),
     JsonSubTypes.Type(value = ForwardedSourcesMessage::class, name = ForwardedSourcesMessage.TYPE),
     JsonSubTypes.Type(value = VideoSourcesMap::class, name = VideoSourcesMap.TYPE),
     JsonSubTypes.Type(value = AudioSourcesMap::class, name = AudioSourcesMap.TYPE),
-    JsonSubTypes.Type(value = SenderVideoConstraintsMessage::class, name = SenderVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = SenderSourceConstraintsMessage::class, name = SenderSourceConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
@@ -86,6 +84,7 @@ sealed class BridgeChannelMessage {
     companion object {
         private val mapper = jacksonObjectMapper().apply {
             enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+            enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
         }
 
         @JvmStatic
@@ -114,11 +113,9 @@ open class MessageHandler {
             is LastNMessage -> lastN(message)
             is DominantSpeakerMessage -> dominantSpeaker(message)
             is EndpointConnectionStatusMessage -> endpointConnectionStatus(message)
-            is ForwardedEndpointsMessage -> forwardedEndpoints(message)
             is ForwardedSourcesMessage -> forwardedSources(message)
             is VideoSourcesMap -> videoSourcesMap(message)
             is AudioSourcesMap -> audioSourcesMap(message)
-            is SenderVideoConstraintsMessage -> senderVideoConstraints(message)
             is SenderSourceConstraintsMessage -> senderSourceConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
@@ -141,11 +138,9 @@ open class MessageHandler {
     open fun lastN(message: LastNMessage) = unhandledMessageReturnNull(message)
     open fun dominantSpeaker(message: DominantSpeakerMessage) = unhandledMessageReturnNull(message)
     open fun endpointConnectionStatus(message: EndpointConnectionStatusMessage) = unhandledMessageReturnNull(message)
-    open fun forwardedEndpoints(message: ForwardedEndpointsMessage) = unhandledMessageReturnNull(message)
     open fun forwardedSources(message: ForwardedSourcesMessage) = unhandledMessageReturnNull(message)
     open fun videoSourcesMap(message: VideoSourcesMap) = unhandledMessageReturnNull(message)
     open fun audioSourcesMap(message: AudioSourcesMap) = unhandledMessageReturnNull(message)
-    open fun senderVideoConstraints(message: SenderVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun senderSourceConstraints(message: SenderSourceConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
@@ -309,22 +304,6 @@ class EndpointConnectionStatusMessage(
 }
 
 /**
- * A message sent from the bridge to a client, indicating the set of endpoints that are currently being forwarded.
- */
-@Deprecated("Use ForwardedSourcesMessage", ReplaceWith("ForwardedSourcesMessage"), DeprecationLevel.WARNING)
-class ForwardedEndpointsMessage(
-    /**
-     * The set of endpoints for which the bridge is currently sending video.
-     */
-    @get:JsonProperty("lastNEndpoints")
-    val forwardedEndpoints: Collection<String>
-) : BridgeChannelMessage() {
-    companion object {
-        const val TYPE = "LastNEndpointsChangeEvent"
-    }
-}
-
-/**
  * A message sent from the bridge to a client, indicating the set of media sources that are currently being forwarded.
  */
 class ForwardedSourcesMessage(
@@ -387,32 +366,6 @@ class AudioSourcesMap(
 ) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "AudioSourcesMap"
-    }
-}
-
-/**
- * A message sent from the bridge to a client (sender), indicating constraints for the sender's video streams.
- *
- * TODO: consider and adjust the format of videoConstraints. Do we need all of the VideoConstraints fields? Document.
- * TODO: update https://github.com/jitsi/jitsi-videobridge/blob/master/doc/constraints.md before removing.
- */
-@Deprecated("", ReplaceWith("SenderSourceConstraints"), DeprecationLevel.WARNING)
-class SenderVideoConstraintsMessage(val videoConstraints: VideoConstraints) : BridgeChannelMessage() {
-    constructor(maxHeight: Int) : this(VideoConstraints(maxHeight))
-
-    /**
-     * Serialize manually because it's faster than Jackson.
-     *
-     * We use the "idealHeight" format that the jitsi-meet client expects.
-     */
-    override fun createJson(): String =
-        """{"colibriClass":"$TYPE", "videoConstraints":{"idealHeight":${videoConstraints.idealHeight}}}"""
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class VideoConstraints(val idealHeight: Int)
-
-    companion object {
-        const val TYPE = "SenderVideoConstraints"
     }
 }
 
@@ -480,11 +433,7 @@ class RemoveReceiverMessage(
 
 class ReceiverVideoConstraintsMessage(
     val lastN: Int? = null,
-    @Deprecated("", ReplaceWith("selectedSources"), DeprecationLevel.WARNING)
-    val selectedEndpoints: List<String>? = null,
     val selectedSources: List<String>? = null,
-    @Deprecated("", ReplaceWith("onStageSources"), DeprecationLevel.WARNING)
-    val onStageEndpoints: List<String>? = null,
     val onStageSources: List<String>? = null,
     val defaultConstraints: VideoConstraints? = null,
     val constraints: Map<String, VideoConstraints>? = null,
@@ -529,6 +478,7 @@ class SourceVideoTypeMessage(
 /**
  * A signaling the type of video stream an endpoint has available.
  */
+@Deprecated("", ReplaceWith("SourceVideoTypeMessage"), DeprecationLevel.WARNING)
 class VideoTypeMessage(
     val videoType: VideoType,
     /**

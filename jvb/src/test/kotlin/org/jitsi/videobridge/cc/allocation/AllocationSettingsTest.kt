@@ -24,13 +24,11 @@ class AllocationSettingsTest : ShouldSpec() {
         context("computeVideoConstraints") {
             context("With client which supports source names") {
                 context("no conversion from endpoint to source takes place") {
-                    val allocationSettings = AllocationSettingsWrapper(true)
+                    val allocationSettings = AllocationSettingsWrapper()
                     allocationSettings.setBandwidthAllocationSettings(
                         ReceiverVideoConstraintsMessage(
                             onStageSources = listOf("S1", "S2"),
-                            onStageEndpoints = listOf("E1", "E2"),
                             selectedSources = listOf("S3", "S4"),
-                            selectedEndpoints = listOf("E3", "E4"),
                             constraints = mapOf(
                                 "S1" to VideoConstraints(720),
                                 "E1" to VideoConstraints(360)
@@ -48,48 +46,6 @@ class AllocationSettingsTest : ShouldSpec() {
                         "S1" to VideoConstraints(720),
                         // There's no error when endpoint is used in constraint
                         "E1" to VideoConstraints(360)
-                    )
-                }
-            }
-            context("With client which doesn't support source names") {
-                context("Converts onStageEndpoints to onStageSources") {
-                    val allocationSettings = AllocationSettingsWrapper(false)
-                    allocationSettings.setBandwidthAllocationSettings(
-                        ReceiverVideoConstraintsMessage(
-                            onStageEndpoints = listOf("A", "C")
-                        )
-                    )
-
-                    allocationSettings.get().onStageEndpoints shouldBe emptyList()
-                    allocationSettings.get().onStageSources shouldBe listOf("A-v0", "C-v0")
-                }
-                context("Converts selectedEndpoints to selectedSources") {
-                    val allocationSettings = AllocationSettingsWrapper(false)
-                    allocationSettings.setBandwidthAllocationSettings(
-                        ReceiverVideoConstraintsMessage(
-                            selectedEndpoints = listOf("A", "C")
-                        )
-                    )
-
-                    allocationSettings.get().selectedEndpoints shouldBe emptyList()
-                    allocationSettings.get().selectedSources shouldBe listOf("A-v0", "C-v0")
-                }
-                context("Converts endpoints based constraints to source based ones") {
-                    val allocationSettings = AllocationSettingsWrapper(false)
-                    allocationSettings.setBandwidthAllocationSettings(
-                        ReceiverVideoConstraintsMessage(
-                            constraints = mapOf(
-                                "A" to VideoConstraints(720, 15.0),
-                                "B" to VideoConstraints(360, 24.0),
-                                "C" to VideoConstraints(180, 30.0)
-                            )
-                        )
-                    )
-
-                    allocationSettings.get().videoConstraints shouldBe mapOf(
-                        "A-v0" to VideoConstraints(720, 15.0),
-                        "B-v0" to VideoConstraints(360, 24.0),
-                        "C-v0" to VideoConstraints(180, 30.0)
                     )
                 }
             }

@@ -17,10 +17,12 @@ package org.jitsi.videobridge.xmpp;
 
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.rtp.codec.vpx.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
+import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.parts.*;
 import org.jxmpp.util.*;
@@ -79,7 +81,7 @@ public class MediaSourceFactory
         return secondarySsrcTypeMap;
     }
 
-    private static final RtpLayerDesc[] noDependencies = new RtpLayerDesc[0];
+    private static final VpxRtpLayerDesc[] noDependencies = new VpxRtpLayerDesc[0];
 
     /*
      * Creates layers for an encoding.
@@ -92,8 +94,8 @@ public class MediaSourceFactory
     private static RtpLayerDesc[] createRTPLayerDescs(
         int spatialLen, int temporalLen, int encodingIdx, int height)
     {
-        RtpLayerDesc[] rtpLayers
-            = new RtpLayerDesc[spatialLen * temporalLen];
+        VpxRtpLayerDesc[] rtpLayers
+            = new VpxRtpLayerDesc[spatialLen * temporalLen];
 
         for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
         {
@@ -104,11 +106,11 @@ public class MediaSourceFactory
                 int idx = idx(spatialIdx, temporalIdx,
                     temporalLen);
 
-                RtpLayerDesc[] dependencies;
+                VpxRtpLayerDesc[] dependencies;
                 if (spatialIdx > 0 && temporalIdx > 0)
                 {
                     // this layer depends on spatialIdx-1 and temporalIdx-1.
-                    dependencies = new RtpLayerDesc[]{
+                    dependencies = new VpxRtpLayerDesc[]{
                         rtpLayers[
                             idx(spatialIdx, temporalIdx - 1,
                                 temporalLen)],
@@ -120,7 +122,7 @@ public class MediaSourceFactory
                 else if (spatialIdx > 0)
                 {
                     // this layer depends on spatialIdx-1.
-                    dependencies = new RtpLayerDesc[]
+                    dependencies = new VpxRtpLayerDesc[]
                         {rtpLayers[
                             idx(spatialIdx - 1, temporalIdx,
                                 temporalLen)]};
@@ -128,7 +130,7 @@ public class MediaSourceFactory
                 else if (temporalIdx > 0)
                 {
                     // this layer depends on temporalIdx-1.
-                    dependencies = new RtpLayerDesc[]
+                    dependencies = new VpxRtpLayerDesc[]
                         {rtpLayers[
                             idx(spatialIdx, temporalIdx - 1,
                                 temporalLen)]};
@@ -143,13 +145,11 @@ public class MediaSourceFactory
                 int spatialId = spatialLen > 1 ? spatialIdx : -1;
 
                 rtpLayers[idx]
-                    = new RtpLayerDesc(encodingIdx,
+                    = new VpxRtpLayerDesc(encodingIdx,
                     temporalId, spatialId, height, frameRate, dependencies);
 
                 frameRate *= 2;
             }
-
-
         }
         return rtpLayers;
     }
@@ -402,7 +402,7 @@ public class MediaSourceFactory
             logger.warn(
                 "Unprocessed source groups: " +
                     sourceGroupsCopy.stream()
-                        .map(e -> e.toXML(XmlEnvironment.EMPTY).toString())
+                        .map(XmlStringBuilderUtil::toStringOpt)
                         .reduce(String::concat));
         }
 

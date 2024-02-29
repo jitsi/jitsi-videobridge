@@ -28,14 +28,14 @@
         <kotest.version>5.7.2</kotest.version>
         <junit.version>5.10.0</junit.version>
         <jitsi.utils.version>1.0-127-g6c65524</jitsi.utils.version>
-        <jicoco.version>1.1-127-gf49982f</jicoco.version>
+        <jicoco.version>1.1-132-g906f995</jicoco.version>
         <mockk.version>1.13.8</mockk.version>
         <ktlint-maven-plugin.version>3.0.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
         <spotbugs.version>4.6.0</spotbugs.version>
         <jersey.version>3.0.10</jersey.version>
         <jackson.version>2.12.4</jackson.version>
-        <bouncycastle.version>1.70</bouncycastle.version>
+        <bouncycastle.version>1.77</bouncycastle.version>
         <prometheus.version>0.16.0</prometheus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -106,12 +106,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-63-g9fe2d69</version>
+                <version>3.0-68-gd289f12</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-76-ge98f8af</version>
+                <version>1.0-78-g62d03d4</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -114,37 +114,21 @@ class TlsServerImpl(
             (context.crypto as BcTlsCrypto),
             PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
             certificateInfo.certificate,
-            /* For DTLS 1.0 support (needed for Jigasi) we can't set this to sha256 fixed */
-            if (TlsUtils.isSignatureAlgorithmsExtensionAllowed(context.serverVersion)) {
-                SignatureAndHashAlgorithm(
-                    HashAlgorithm.sha256,
-                    SignatureAlgorithm.ecdsa
-                )
-            } else {
-                null
-            }
+            SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa)
         )
     }
 
     override fun getCertificateRequest(): CertificateRequest {
         val signatureAlgorithms = Vector<SignatureAndHashAlgorithm>(1)
         signatureAlgorithms.add(SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa))
-        return when (context.clientVersion) {
-            ProtocolVersion.DTLSv12 -> {
-                CertificateRequest(
-                    shortArrayOf(ClientCertificateType.ecdsa_sign),
-                    signatureAlgorithms,
-                    null
-                )
-            }
-            else -> throw DtlsUtils.DtlsException("Unsupported version: ${context.clientVersion}")
-        }
+        return CertificateRequest(shortArrayOf(ClientCertificateType.ecdsa_sign), signatureAlgorithms, null)
     }
 
     override fun getHandshakeTimeoutMillis(): Int = DtlsUtils.config.handshakeTimeout.toMillis().toInt()
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
+        logger.cinfo { "Negotiated DTLS version ${context.securityParameters.negotiatedVersion}" }
         context.resumableSession?.let { newSession ->
             val newSessionIdHex = ByteBuffer.wrap(newSession.sessionID).toHex()
 
@@ -182,18 +166,11 @@ class TlsServerImpl(
         notifyClientCertificateReceived(clientCertificate)
     }
 
-    override fun notifyClientVersion(clientVersion: ProtocolVersion?) {
-        super.notifyClientVersion(clientVersion)
-
-        logger.cinfo { "Negotiated DTLS version $clientVersion" }
-    }
-
     override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) =
         logger.notifyAlertRaised(alertLevel, alertDescription, message, cause)
 
     override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) =
         logger.notifyAlertReceived(alertLevel, alertDescription)
 
-    override fun getSupportedVersions(): Array<ProtocolVersion> =
-        ProtocolVersion.DTLSv12.downTo(ProtocolVersion.DTLSv10)
+    override fun getSupportedVersions(): Array<ProtocolVersion> = arrayOf(ProtocolVersion.DTLSv12)
 }

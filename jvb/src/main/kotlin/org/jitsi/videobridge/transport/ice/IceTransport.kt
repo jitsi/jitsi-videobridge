@@ -40,6 +40,7 @@ import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceCandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceRtcpmuxPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
+import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.io.IOException
@@ -204,7 +205,7 @@ class IceTransport @JvmOverloads constructor(
             logger.info("Starting the Agent without remote candidates.")
             iceAgent.startConnectivityEstablishment()
         } else {
-            logger.cdebug { "Not starting ICE, no ufrag and pwd yet. ${transportPacketExtension.toXML()}" }
+            logger.cdebug { "Not starting ICE, no ufrag and pwd yet. ${transportPacketExtension.toStringOpt()}" }
         }
     }
 
@@ -392,11 +393,10 @@ class IceTransport @JvmOverloads constructor(
 
     companion object {
         fun appendHarvesters(iceAgent: Agent) {
-            Harvesters.initializeStaticConfiguration()
-            Harvesters.tcpHarvester?.let {
+            Harvesters.INSTANCE.tcpHarvester?.let {
                 iceAgent.addCandidateHarvester(it)
             }
-            Harvesters.singlePortHarvesters?.forEach(iceAgent::addCandidateHarvester)
+            Harvesters.INSTANCE.singlePortHarvesters.forEach(iceAgent::addCandidateHarvester)
         }
 
         /**
