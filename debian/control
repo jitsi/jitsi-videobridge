@@ -9,7 +9,7 @@ Homepage: https://jitsi.org/videobridge
 
 Package: jitsi-videobridge2
 Replaces: jitsi-videobridge
-Conflicts: jitsi-videobridge (<= 1400-1)
+Conflicts: jitsi-videobridge (<= 1400-1), java21-runtime, java21-runtime-headless
 Architecture: all
 Pre-Depends: java11-runtime-headless | java11-runtime, libssl3 | libssl1.1
 Depends: ${misc:Depends}, procps, uuid-runtime, ruby-hocon
