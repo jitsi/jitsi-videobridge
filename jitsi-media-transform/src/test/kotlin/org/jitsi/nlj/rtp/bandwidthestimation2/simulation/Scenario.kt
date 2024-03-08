@@ -54,6 +54,7 @@ class Scenario(name: String, realTime: Boolean = false) {
     private val printers = mutableListOf<StatesPrinter>()
 
     private var startTime = Instant.MAX
+    private val taskQueue = networkManager.timeController().getTaskQueueFactory().createTaskQueue()
 
     fun createSimulationNode(config: NetworkSimulationConfig): EmulatedNetworkNode {
         return networkManager.createEmulatedNode(SimulationNode.createBehavior(config))
@@ -127,7 +128,7 @@ class Scenario(name: String, realTime: Boolean = false) {
     fun changeRoute(clients: Pair<CallClient, CallClient>, overNodes: List<EmulatedNetworkNode>, overhead: DataSize) {
         val route = networkManager.createRoute(overNodes)
         val port = clients.second.bind(route.to)
-        val addr = InetSocketAddress(route.to.getPeerLocalAddress(), port.toInt())
+        val addr = InetSocketAddress(route.to.getPeerLocalAddress(), port.toUShort().toInt())
         clients.first.transport.connect(route.from, addr, overhead)
     }
 
@@ -140,7 +141,7 @@ class Scenario(name: String, realTime: Boolean = false) {
     }
 
     fun every(interval: Duration, function: () -> Unit) {
-        networkManager.timeController().getScheduledExecutorService()
+        taskQueue
             .scheduleAtFixedRate(function, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS)
     }
 

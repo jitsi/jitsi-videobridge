@@ -18,13 +18,13 @@ package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControllerFactoryInterface
 import java.time.Duration
 
-/** Test scenario call config,
- * based on WebRTC call/call_config.{h,cc} in
+/** Test scenario RTP transport config,
+ * based on WebRTC call/rtp_transport_config.{h,cc} in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  *
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */
-class CallConfig {
+class RtpTransportConfig {
     // Bitrate config used until valid bitrate estimates are calculated. Also
     // used to cap total bitrate used. This comes from the remote connection.
     var bitrateConfig = BitrateConstraints()
@@ -39,6 +39,11 @@ class CallConfig {
     var pacerBurstInterval: Duration? = null
 
     fun extractTransportConfig(): RtpTransportConfig {
-        return RtpTransportConfig()
+        return RtpTransportConfig().also {
+            it.bitrateConfig = bitrateConfig
+            it.networkControllerFactory = networkControllerFactory
+            it.taskQueueFactory = taskQueueFactory
+            it.pacerBurstInterval = pacerBurstInterval
+        }
     }
 }

@@ -90,7 +90,7 @@ class NetworkEmulationManagerImpl() : NetworkEmulationManager {
     }
 
     override fun createEmulatedNode(networkBehavior: NetworkBehaviorInterface): EmulatedNetworkNode {
-        val node = EmulatedNetworkNode()
+        val node = EmulatedNetworkNode(clock, taskQueue)
         networkNodes.add(node)
         return node
     }
@@ -109,7 +109,8 @@ class NetworkEmulationManagerImpl() : NetworkEmulationManager {
                 id = nextNodeId++,
                 ip = ip,
                 config = config
-            )
+            ),
+            taskQueue
         )
         endpoints.add(node)
         return node
@@ -126,7 +127,18 @@ class NetworkEmulationManagerImpl() : NetworkEmulationManager {
         viaNodes: List<EmulatedNetworkNode>,
         to: EmulatedEndpoint
     ): EmulatedRoute {
-        TODO("Not yet implemented")
+        require(viaNodes.isNotEmpty())
+        (from as EmulatedEndpointImpl).router.setReceiver(to.getPeerLocalAddress(), viaNodes[0])
+        var curNode = viaNodes[0]
+        for (i in 1 until viaNodes.size) {
+            curNode.router.setReceiver(to.getPeerLocalAddress(), viaNodes[i])
+            curNode = viaNodes[i]
+        }
+        curNode.router.setReceiver(to.getPeerLocalAddress(), to)
+
+        val route = EmulatedRoute(from, viaNodes, to as EmulatedEndpointImpl, false)
+        routes.add(route)
+        return route
     }
 
     private fun getNextIpv4Address(): InetAddress? {
@@ -151,9 +163,13 @@ class NetworkEmulationManagerImpl() : NetworkEmulationManager {
     private val usedIpAddresses = mutableSetOf<InetAddress>()
 
     private val timeController = GlobalSimulatedTimeController()
+    private val clock = timeController.getClock()
 
     private val endpoints = mutableListOf<EmulatedEndpoint>()
     private val networkNodes = mutableListOf<EmulatedNetworkNode>()
+    private val routes = mutableListOf<EmulatedRoute>()
+
+    val taskQueue = timeController.getTaskQueueFactory().createTaskQueue()
 
     companion object {
         // uint32_t representation of 192.168.0.0 address

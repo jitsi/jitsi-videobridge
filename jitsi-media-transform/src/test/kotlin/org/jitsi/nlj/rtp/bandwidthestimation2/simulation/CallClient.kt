@@ -44,6 +44,32 @@ import java.time.Instant
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */
 
+private fun createCall(
+    timeController: TimeController,
+    config: CallClientConfig,
+    networkControllerFactory: LoggingNetworkControllerFactory,
+    // audioState: AudioState
+): Call {
+    val callConfig = CallConfig().apply {
+        bitrateConfig.maxBitrateBps = config.transport.rates.maxRate.bps.toInt()
+        bitrateConfig.minBitrateBps = config.transport.rates.minRate.bps.toInt()
+        bitrateConfig.startBitrateBps = config.transport.rates.startRate.bps.toInt()
+        taskQueueFactory = timeController.getTaskQueueFactory()
+        this.networkControllerFactory = networkControllerFactory
+        // TODO audioState?
+        pacerBurstInterval = config.pacerBurstInterval
+    }
+    val clock = timeController.getClock()
+    return Call.create(
+        callConfig,
+        clock,
+        RtpTransportControllerSendFactory().create(
+            callConfig.extractTransportConfig(),
+            clock
+        )
+    )
+}
+
 // Helper class to capture network controller state.
 class NetworkControlUpdateCache(
     val controller: NetworkControllerInterface
@@ -148,11 +174,11 @@ class CallClient(
     }
     private val clock = timeController.getClock()
 
-    private val call: Call = TODO()
+    internal val networkControllerFactory = LoggingNetworkControllerFactory(logger, config.transport)
+
+    private val call: Call = createCall(timeController, config, networkControllerFactory)
     val transport = NetworkNodeTransport(timeController.getClock())
     private val endpoints = mutableListOf<Pair<EmulatedEndpoint, Short>>()
-
-    internal val networkControllerFactory = LoggingNetworkControllerFactory(logger, config.transport)
 
     fun getStats(): Call.Stats {
         return call.getStats()

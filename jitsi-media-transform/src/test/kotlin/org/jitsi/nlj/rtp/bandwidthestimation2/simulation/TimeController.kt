@@ -30,17 +30,19 @@ import java.util.concurrent.ScheduledExecutorService
  */
 
 interface TimeController {
-    abstract fun getClock(): Clock
+    fun getClock(): Clock
 
-    abstract fun getScheduledExecutorService(): ScheduledExecutorService
+    fun getTaskQueueFactory(): TaskQueueFactory
 
-    abstract fun advanceTime(duration: Duration)
+    fun advanceTime(duration: Duration)
 }
 
 class GlobalSimulatedTimeController : TimeController {
     override fun getClock(): Clock = clock
 
-    override fun getScheduledExecutorService(): ScheduledExecutorService = executorService
+    override fun getTaskQueueFactory(): TaskQueueFactory = object : TaskQueueFactory() {
+        override fun createTaskQueue(): ScheduledExecutorService = executorService
+    }
 
     override fun advanceTime(duration: Duration) = executorService.runUntil(clock.instant() + duration)
 

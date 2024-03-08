@@ -13,13 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("ktlint:standard:property-naming")
+
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
-/** Test scenario RTP Transport Controller Send Interface,
- * based on WebRTC call/rtp_transport_controller_send_interface.{h,cc} in
+/** Test scenario bitrate constraints,
+ * based on WebRTC api/transport/bitrate_settings.{h,cc} in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  *
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */
+class BitrateConstraints {
+    var minBitrateBps: Int = 0
+    var startBitrateBps: Int = kDefaultStartBitrateBps
+    var maxBitrateBps: Int = -1
 
-abstract class RtpTransportControllerSendInterface
+    companion object {
+        const val kDefaultStartBitrateBps = 300000
+    }
+}

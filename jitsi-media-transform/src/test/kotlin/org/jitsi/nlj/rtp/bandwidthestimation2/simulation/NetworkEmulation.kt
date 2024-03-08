@@ -17,6 +17,8 @@ package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 import org.jitsi.utils.logging2.createLogger
 import java.net.InetAddress
+import java.time.Clock
+import java.util.concurrent.ScheduledExecutorService
 
 /** Test scenario network emulator,
  * based on WebRTC test/network/network_emulation.{h,cc} in
@@ -25,10 +27,29 @@ import java.net.InetAddress
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */
 
-class EmulatedNetworkNode : EmulatedNetworkReceiverInterface
+class EmulatedNetworkNode(
+    val clock: Clock,
+    val taskQueue: ScheduledExecutorService
+) : EmulatedNetworkReceiverInterface {
+    val router = NetworkRouterNode(taskQueue)
+}
+
+class NetworkRouterNode(val taskQueue: ScheduledExecutorService) : EmulatedNetworkReceiverInterface {
+    private val routing = mutableMapOf<InetAddress, EmulatedNetworkReceiverInterface>()
+
+    fun setReceiver(destIp: InetAddress, receiver: EmulatedNetworkReceiverInterface) {
+        // TODO run on task queue?
+        val curReceiver = routing[destIp]
+        check(curReceiver == null || curReceiver == receiver) {
+            "Routing for destIp=$destIp already exists"
+        }
+        routing[destIp] = receiver
+    }
+}
 
 class EmulatedEndpointImpl(
-    val options: Options
+    val options: Options,
+    val taskQueue: ScheduledExecutorService
 ) : EmulatedEndpoint {
     private val logger = createLogger()
 
@@ -37,6 +58,8 @@ class EmulatedEndpointImpl(
     private var nextPort = kFirstEphemeralPort
 
     private val portToReceiver = mutableMapOf<Short, ReceiverBinding>()
+
+    val router = NetworkRouterNode(taskQueue)
 
     override fun bindReceiver(desiredPort: Short, receiver: EmulatedNetworkReceiverInterface): Short? {
         return bindReceiverInternal(desiredPort, receiver, isOneShot = false)
@@ -60,13 +83,12 @@ class EmulatedEndpointImpl(
                         break
                     }
                 }
-                assert(port != 0.toShort()) {
-                    "Can't find free port for receiver in endpoint ${options.logName}; id = ${options.id}"
-                }
-                return null
+            }
+            assert(port != 0.toShort()) {
+                "Can't find free port for receiver in endpoint ${options.logName}; id = ${options.id}"
             }
             val result = portToReceiver.put(port, ReceiverBinding(receiver, isOneShot))
-            if (result == null) {
+            if (result != null) {
                 logger.info(
                     "Can't bind receiver to used port ${port.toUShort()} in endpoint ${options.logName}; " +
                         "id=${options.id}"

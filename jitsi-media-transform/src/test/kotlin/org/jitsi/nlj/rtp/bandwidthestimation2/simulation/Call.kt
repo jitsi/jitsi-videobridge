@@ -38,10 +38,33 @@ abstract class Call {
 
     companion object {
         fun create(config: CallConfig): Call {
-            TODO()
+            val clock = Clock.systemUTC()
+            return create(
+                config,
+                clock,
+                RtpTransportControllerSendFactory().create(
+                    config.extractTransportConfig(),
+                    clock
+                )
+            )
         }
-        fun create(config: CallConfig, clock: Clock, transportControllerSend: RtpTransportControllerSendInterface) {
-            TODO()
+        fun create(
+            config: CallConfig,
+            clock: Clock,
+            transportControllerSend: RtpTransportControllerSendInterface
+        ): Call {
+            return InternalCall(clock, config, transportControllerSend, config.taskQueueFactory!!)
         }
+    }
+}
+
+private class InternalCall(
+    clock: Clock,
+    config: CallConfig,
+    transportSend: RtpTransportControllerSendInterface,
+    taskQueueFactory: TaskQueueFactory
+) : Call() {
+    override fun getStats(): Stats {
+        TODO("Not yet implemented")
     }
 }
