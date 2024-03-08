@@ -77,15 +77,21 @@ enum class PayloadTypeEncoding {
     H264,
     RED,
     RTX,
-    OPUS;
+    OPUS,
+    TELEPHONE_EVENT;
 
     companion object {
+        private const val TEL_EVENT_TEXT = "telephone-event"
+
         /**
          * [valueOf] does not allow for case-insensitivity and can't be overridden, so this
          * method should be used when creating an instance of this enum from a string
          */
         fun createFrom(value: String): PayloadTypeEncoding {
             return try {
+                if (value.lowercase() == TEL_EVENT_TEXT) {
+                    return TELEPHONE_EVENT
+                }
                 valueOf(value.uppercase())
             } catch (e: IllegalArgumentException) {
                 return OTHER
@@ -94,7 +100,11 @@ enum class PayloadTypeEncoding {
     }
 
     override fun toString(): String = with(StringBuffer()) {
-        append(super.toString())
+        if (super.equals(TELEPHONE_EVENT)) {
+            append(TEL_EVENT_TEXT)
+        } else {
+            append(super.toString())
+        }
         toString()
     }
 }
@@ -144,6 +154,12 @@ class OpusPayloadType(
     pt: Byte,
     parameters: PayloadTypeParams = ConcurrentHashMap()
 ) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, parameters = parameters)
+
+class TelephoneEventPayloadType(
+    pt: Byte,
+    clockRate: Int,
+    parameters: PayloadTypeParams = ConcurrentHashMap()
+) : AudioPayloadType(pt, PayloadTypeEncoding.TELEPHONE_EVENT, clockRate, parameters)
 
 class AudioRedPayloadType(
     pt: Byte,
