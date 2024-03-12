@@ -379,6 +379,11 @@ class Transceiver(
         return rtpReceiver.isFeatureEnabled(feature)
     }
 
+    fun setPcapRecording(mode: String?, contextId: String?) {
+        rtpReceiver.setPcapRecording(mode, contextId)
+        rtpSender.setPcapRecording(mode, contextId)
+    }
+
     companion object {
         init {
 //            Node.plugins.add(BufferTracePlugin)

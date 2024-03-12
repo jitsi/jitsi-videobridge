@@ -47,6 +47,7 @@ abstract class RtpSender :
     abstract fun setFeature(feature: Features, enabled: Boolean)
     abstract fun isFeatureEnabled(feature: Features): Boolean
     abstract fun tearDown()
+    abstract fun setPcapRecording(mode: String?, contextId: String?)
 
     abstract val bandwidthEstimator: BandwidthEstimator
 }
