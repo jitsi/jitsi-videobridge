@@ -37,8 +37,11 @@ object VideobridgeMetrics {
     /** The currently configured region, if any. */
     val regionInfo = if (RelayConfig.config.region != null) {
         VideobridgeMetricsContainer.instance.registerInfo(
-            ColibriStatsExtension.REGION, "The currently configured region.",
+            ColibriStatsExtension.REGION,
+            "The currently configured region.",
             RelayConfig.config.region!!
         )
-    } else null
+    } else {
+        null
+    }
 }

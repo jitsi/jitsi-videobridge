@@ -18,7 +18,6 @@ package org.jitsi.videobridge.metrics
 import org.jitsi.nlj.rtcp.RembHandler.Companion.endpointsWithSpuriousRemb
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.stats.ConferencePacketStats
-
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer.Companion.instance as metricsContainer
 
 /**
@@ -244,7 +243,8 @@ object VideobridgePeriodicMetrics {
                 if (endpoint.hasSuspendedSources()) {
                     endpointsWithSuspendedSources++
                 }
-                val (endpointConnectionStats, rtpReceiverStats, _, outgoingStats) = endpoint.transceiver.getTransceiverStats()
+                val (endpointConnectionStats, rtpReceiverStats, _, outgoingStats) =
+                    endpoint.transceiver.getTransceiverStats()
                 val incomingStats = rtpReceiverStats.incomingStats
                 val incomingPacketStreamStats = rtpReceiverStats.packetStreamStats
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps()
@@ -267,8 +267,10 @@ object VideobridgePeriodicMetrics {
                 outgoingPacketsReceived += endpointOutgoingPacketsReceived
                 outgoingPacketsLost += endpointOutgoingPacketsLost
                 if (!inactive && endpointOutgoingPacketsLost + endpointOutgoingPacketsReceived > 0) {
-                    val endpointOutgoingFractionLost = (endpointOutgoingPacketsLost.toDouble()
-                            / (endpointOutgoingPacketsLost + endpointOutgoingPacketsReceived))
+                    val endpointOutgoingFractionLost = (
+                        endpointOutgoingPacketsLost.toDouble() /
+                            (endpointOutgoingPacketsLost + endpointOutgoingPacketsReceived)
+                        )
                     if (endpointOutgoingFractionLost > 0.1) {
                         endpointsWithHighOutgoingLoss++
                     }
@@ -290,7 +292,11 @@ object VideobridgePeriodicMetrics {
             numAudioSenders += conferenceAudioSenders
             videoSendersList.add(conferenceVideoSenders)
             numVideoSenders += conferenceVideoSenders
-            ConferencePacketStats.stats.addValue(numConferenceEndpoints.toInt(), conferencePacketRate, conferenceBitrate)
+            ConferencePacketStats.stats.addValue(
+                numConferenceEndpoints.toInt(),
+                conferencePacketRate,
+                conferenceBitrate
+            )
         }
 
         // RTT_AGGREGATE
@@ -306,8 +312,10 @@ object VideobridgePeriodicMetrics {
         }
         var overallLoss = 0.0
         if (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost > 0) {
-            overallLoss = ((outgoingPacketsLost + incomingPacketsLost).toDouble()
-                    / (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost))
+            overallLoss = (
+                (outgoingPacketsLost + incomingPacketsLost).toDouble() /
+                    (incomingPacketsReceived + incomingPacketsLost + outgoingPacketsReceived + outgoingPacketsLost)
+                )
         }
 
         // TODO LOCK

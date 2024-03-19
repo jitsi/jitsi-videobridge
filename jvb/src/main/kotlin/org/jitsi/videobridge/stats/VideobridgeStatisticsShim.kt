@@ -28,14 +28,47 @@ import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension
-import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.*
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.BITRATE_DOWNLOAD
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.BITRATE_UPLOAD
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.DRAIN
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.ENDPOINTS_SENDING_AUDIO
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.ENDPOINTS_SENDING_VIDEO
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.INACTIVE_CONFERENCES
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.INACTIVE_ENDPOINTS
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.LARGEST_CONFERENCE
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.OCTO_CONFERENCES
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.OCTO_ENDPOINTS
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.OCTO_RECEIVE_BITRATE
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.OCTO_RECEIVE_PACKET_RATE
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.OCTO_SEND_BITRATE
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.OCTO_SEND_PACKET_RATE
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.P2P_CONFERENCES
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.PACKET_RATE_DOWNLOAD
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.PACKET_RATE_UPLOAD
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.PARTICIPANTS
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.RECEIVE_ONLY_ENDPOINTS
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.REGION
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.RELAY_ID
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.RELEASE
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.RTT_AGGREGATE
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.SHUTDOWN_IN_PROGRESS
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.Stat
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.THREADS
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TIMESTAMP
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_FAILED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED_TCP
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.VERSION
 import org.json.simple.JSONObject
 import java.text.SimpleDateFormat
-import java.util.*
-
+import java.util.Date
+import java.util.TimeZone
 
 object VideobridgeStatisticsShim {
-    fun getStatsJson(): JSONObject { return JSONObject()
+    fun getStatsJson() = JSONObject().apply {
+        getStats().forEach { (k, v) ->
+            this[k] = v
+        }
     }
 
     /**

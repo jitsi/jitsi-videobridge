@@ -33,7 +33,6 @@ class StatsTest : JerseyTest() {
     private val baseUrl = "/colibri/stats"
 
     override fun configure(): Application {
-
         enable(TestProperties.LOG_TRAFFIC)
         enable(TestProperties.DUMP_ENTITY)
         return object : ResourceConfig() {
@@ -50,7 +49,7 @@ class StatsTest : JerseyTest() {
         val resp = target(baseUrl).request().get()
         resp.status shouldBe HttpStatus.OK_200
         resp.mediaType shouldBe MediaType.APPLICATION_JSON_TYPE
-        //resp.getResultAsJson() shouldBe mapOf("stat1" to "value1", "stat2" to "value2")
+        // resp.getResultAsJson() shouldBe mapOf("stat1" to "value1", "stat2" to "value2")
     }
 
     private fun Response.getResultAsJson(): JSONObject {
