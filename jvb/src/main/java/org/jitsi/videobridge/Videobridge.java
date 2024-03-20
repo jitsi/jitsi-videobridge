@@ -792,24 +792,6 @@ public class Videobridge
         public AtomicLong totalBytesSent = new AtomicLong();
 
         /**
-         * The total number of RTP packets received in conferences on this
-         * videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public CounterMetric packetsReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "packets_received",
-                "Number of RTP packets received in conferences on this videobridge.");
-
-        /**
-         * The total number of RTP packets sent in conferences on this
-         * videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public CounterMetric packetsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "packets_sent",
-                "Number of RTP packets sent in conferences on this videobridge.");
-
-        /**
          * The total number of bytes received by relays in RTP packets in conferences on
          * this videobridge. Note that this is only updated when conferences
          * expire.
@@ -823,112 +805,12 @@ public class Videobridge
          */
         public AtomicLong totalRelayBytesSent = new AtomicLong();
 
-        /**
-         * The total number of RTP packets received by relays in conferences on this
-         * videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public CounterMetric relayPacketsReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "relay_packets_received",
-                "Number of RTP packets received by relays in conferences on this videobridge.");
-
-        /**
-         * The total number of RTP packets sent by relays in conferences on this
-         * videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public CounterMetric relayPacketsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "relay_packets_sent",
-                "Number of RTP packets sent by relays in conferences on this videobridge.");
-        /**
-         * The total number of endpoints created.
-         */
-        public CounterMetric totalEndpoints = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "endpoints",
-                "The total number of endpoints created.");
-
-        /**
-         * The total number of visitor endpoints.
-         */
-        public CounterMetric totalVisitors = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "visitors",
-                "The total number of visitor endpoints created.");
-
-        /**
-         * The number of endpoints which had not established an endpoint
-         * message transport even after some delay.
-         */
-        public CounterMetric numEndpointsNoMessageTransportAfterDelay = VideobridgeMetricsContainer.getInstance()
-                .registerCounter("endpoints_no_message_transport_after_delay",
-                "Number of endpoints which had not established a relay message transport even after some delay.");
-
-        /**
-         * The total number of relays created.
-         */
-        public CounterMetric totalRelays = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "relays",
-                "The total number of relays created.");
-
-        /**
-         * The number of relays which had not established a relay
-         * message transport even after some delay.
-         */
-        public CounterMetric numRelaysNoMessageTransportAfterDelay = VideobridgeMetricsContainer.getInstance()
-                .registerCounter("relays_no_message_transport_after_delay",
-                "Number of relays which had not established a relay message transport even after some delay.");
-
-        /**
-         * The total number of times the dominant speaker in any conference
-         * changed.
-         */
-        public CounterMetric dominantSpeakerChanges = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "dominant_speaker_changes",
-                "Number of times the dominant speaker in any conference changed.");
-
-        /**
-         * Number of endpoints whose ICE connection was established, but DTLS
-         * wasn't (at the time of expiration).
-         */
-        public CounterMetric endpointsDtlsFailed = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "endpoints_dtls_failed",
-                "Number of endpoints whose ICE connection was established, but DTLS wasn't (at time of expiration).");
-
-        /**
-         * The stress level for this bridge
-         */
-        public DoubleGaugeMetric stressLevel = VideobridgeMetricsContainer.getInstance().registerDoubleGauge(
-                "stress",
-                "Current stress (between 0 and 1)."
-        );
-
         /** Distribution of energy scores for discarded audio packets  */
         public BucketStats tossedPacketsEnergy = new BucketStats(
                 Stream.iterate(0L, n -> n + 1).limit(17)
                         .map(w -> Math.max(8 * w - 1, 0))
                         .collect(Collectors.toList()),
                 "", "");
-
-        /** Number of preemptive keyframe requests that were sent. */
-        public CounterMetric preemptiveKeyframeRequestsSent = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "preemptive_keyframe_requests_sent",
-                "Number of preemptive keyframe requests that were sent.");
-
-        /** Number of preemptive keyframe requests that were not sent because no endpoints were in stage view. */
-        public CounterMetric preemptiveKeyframeRequestsSuppressed = VideobridgeMetricsContainer.getInstance()
-                .registerCounter("preemptive_keyframe_requests_suppressed",
-                "Number of preemptive keyframe requests that were not sent because no endpoints were in stage view.");
-
-        /** The total number of keyframes that were received (updated on endpoint expiration). */
-        public CounterMetric keyframesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "keyframes_received",
-                "Number of keyframes that were received (updated on endpoint expiration).");
-
-        /**
-         * The total number of times the layering of an incoming video stream changed (updated on endpoint expiration).
-         */
-        public CounterMetric layeringChangesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "layering_changes_received",
-                "Number of times the layering of an incoming video stream changed (updated on endpoint expiration).");
 
         /**
          * The total duration, in milliseconds, of video streams (SSRCs) that were received. For example, if an

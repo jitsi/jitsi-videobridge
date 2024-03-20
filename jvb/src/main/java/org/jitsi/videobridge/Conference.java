@@ -478,7 +478,7 @@ public class Conference
 
             if (dominantSpeakerChanged && !silence)
             {
-                getVideobridge().getStatistics().dominantSpeakerChanges.inc();
+                VideobridgeMetrics.dominantSpeakerChanges.inc();
                 if (getEndpointCount() > 2)
                 {
                     maybeSendKeyframeRequest(recentSpeakers.get(0));
@@ -527,10 +527,10 @@ public class Conference
         {
             // If all other endpoints are in tile view, there is no switch to anticipate. Don't trigger an unnecessary
             // keyframe.
-            getVideobridge().getStatistics().preemptiveKeyframeRequestsSuppressed.inc();
+            VideobridgeMetrics.preemptiveKeyframeRequestsSuppressed.inc();
             return;
         }
-        getVideobridge().getStatistics().preemptiveKeyframeRequestsSent.inc();
+        VideobridgeMetrics.preemptiveKeyframeRequestsSent.inc();
 
         double senderRtt = getRtt(dominantSpeaker);
         double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getId());
@@ -626,15 +626,15 @@ public class Conference
 
         videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
         videobridgeStatistics.totalBytesSent.addAndGet(statistics.totalBytesSent.get());
-        videobridgeStatistics.packetsReceived.addAndGet(statistics.totalPacketsReceived.get());
-        videobridgeStatistics.packetsSent.addAndGet(statistics.totalPacketsSent.get());
+        VideobridgeMetrics.packetsReceived.addAndGet(statistics.totalPacketsReceived.get());
+        VideobridgeMetrics.packetsSent.addAndGet(statistics.totalPacketsSent.get());
 
         videobridgeStatistics.totalRelayBytesReceived.addAndGet(statistics.totalRelayBytesReceived.get());
         videobridgeStatistics.totalRelayBytesSent.addAndGet(statistics.totalRelayBytesSent.get());
-        videobridgeStatistics.relayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
-        videobridgeStatistics.relayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
+        VideobridgeMetrics.relayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
+        VideobridgeMetrics.relayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
 
-        videobridgeStatistics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
+        VideobridgeMetrics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
 
         logger.info("expire_conf,duration=" + durationSeconds);
     }

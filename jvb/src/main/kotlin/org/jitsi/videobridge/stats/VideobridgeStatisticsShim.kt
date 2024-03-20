@@ -61,9 +61,15 @@ import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_CONFERENCES
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_CONFERENCES_CREATED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DATA_CHANNEL_MESSAGES_SENT
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DOMINANT_SPEAKER_CHANGES
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_FAILED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED_TCP
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_RECEIVED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_RECEIVED_OCTO
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_SENT
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_SENT_OCTO
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PARTICIPANTS
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.VERSION
 import org.json.simple.JSONObject
 import java.text.SimpleDateFormat
@@ -141,15 +147,21 @@ object VideobridgeStatisticsShim {
             put(TOTAL_CONFERENCES_CREATED, VideobridgeMetrics.conferencesCreated.get())
             put(TOTAL_CONFERENCES_COMPLETED, VideobridgeMetrics.conferencesCompleted.get())
 //            put(TOTAL_CONFERENCE_SECONDS, jvbStats.totalConferenceSeconds.get())
-//            put(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get())
-//            put("total_visitors", jvbStats.totalVisitors.get())
-//            put(EPS_NO_MSG_TRANSPORT_AFTER_DELAY, jvbStats.numEndpointsNoMessageTransportAfterDelay.get())
-//            put("total_relays", jvbStats.totalRelays.get())
-//            put("num_relays_no_msg_transport_after_delay", jvbStats.numRelaysNoMessageTransportAfterDelay.get())
-//            put("total_keyframes_received", jvbStats.keyframesReceived.get())
-//            put("total_layering_changes_received", jvbStats.layeringChangesReceived.get())
+            put(TOTAL_PARTICIPANTS, VideobridgeMetrics.totalEndpoints.get())
+            put("total_visitors", VideobridgeMetrics.totalVisitors.get())
+            put(
+                "num_eps_no_msg_transport_after_delay",
+                VideobridgeMetrics.numEndpointsNoMessageTransportAfterDelay.get()
+            )
+            put("total_relays", VideobridgeMetrics.totalRelays.get())
+            put(
+                "num_relays_no_msg_transport_after_delay",
+                VideobridgeMetrics.numRelaysNoMessageTransportAfterDelay.get()
+            )
+            put("total_keyframes_received", VideobridgeMetrics.keyframesReceived.get())
+            put("total_layering_changes_received", VideobridgeMetrics.layeringChangesReceived.get())
 //            put("total_video_stream_milliseconds_received", jvbStats.totalVideoStreamMillisecondsReceived.get())
-//            put("stress_level", jvbStats.stressLevel.get());
+            put("stress_level", VideobridgeMetrics.stressLevel.get())
 //            put(CONFERENCES, jvbStats.currentConferences.get())
 //            put("visitors", jvbStats.currentVisitors.get())
 //            put("local_endpoints", jvbStats.currentLocalEndpoints.get())
@@ -158,17 +170,17 @@ object VideobridgeStatisticsShim {
             put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED, VideobridgeMetrics.colibriWebSocketMessagesReceived.get())
             put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT, VideobridgeMetrics.colibriWebSocketMessagesSent.get())
 //            put(TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get())
-//            put("dtls_failed_endpoints", jvbStats.endpointsDtlsFailed.get())
+            put("dtls_failed_endpoints", VideobridgeMetrics.endpointsDtlsFailed.get())
 //            put(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get())
-//            put(TOTAL_PACKETS_RECEIVED, jvbStats.packetsReceived.get())
-//            put(TOTAL_PACKETS_SENT, jvbStats.packetsSent.get())
+            put(TOTAL_PACKETS_RECEIVED, VideobridgeMetrics.packetsReceived.get())
+            put(TOTAL_PACKETS_SENT, VideobridgeMetrics.packetsSent.get())
 //            put(TOTAL_BYTES_RECEIVED_OCTO, jvbStats.totalRelayBytesReceived.get())
 //            put(TOTAL_BYTES_SENT_OCTO, jvbStats.totalRelayBytesSent.get())
-//            put(TOTAL_PACKETS_RECEIVED_OCTO, jvbStats.relayPacketsReceived.get())
-//            put(TOTAL_PACKETS_SENT_OCTO, jvbStats.relayPacketsSent.get())
-//            put(TOTAL_DOMINANT_SPEAKER_CHANGES, jvbStats.dominantSpeakerChanges.get());
-//            put("preemptive_kfr_sent", jvbStats.preemptiveKeyframeRequestsSent.get())
-//            put("preemptive_kfr_suppressed", jvbStats.preemptiveKeyframeRequestsSuppressed.get())
+            put(TOTAL_PACKETS_RECEIVED_OCTO, VideobridgeMetrics.relayPacketsReceived.get())
+            put(TOTAL_PACKETS_SENT_OCTO, VideobridgeMetrics.relayPacketsSent.get())
+            put(TOTAL_DOMINANT_SPEAKER_CHANGES, VideobridgeMetrics.dominantSpeakerChanges.get())
+            put("preemptive_kfr_sent", VideobridgeMetrics.preemptiveKeyframeRequestsSent.get())
+            put("preemptive_kfr_suppressed", VideobridgeMetrics.preemptiveKeyframeRequestsSuppressed.get())
 
             put(TOTAL_ICE_FAILED, IceTransport.iceFailed.get())
             put(TOTAL_ICE_SUCCEEDED, IceTransport.iceSucceeded.get())

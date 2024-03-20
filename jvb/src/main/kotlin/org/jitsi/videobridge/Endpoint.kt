@@ -64,6 +64,7 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.RelayedEndpoint
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
@@ -316,9 +317,9 @@ class Endpoint @JvmOverloads constructor(
         setupIceTransport()
         setupDtlsTransport()
 
-        conference.videobridge.statistics.totalEndpoints.inc()
+        VideobridgeMetrics.totalEndpoints.inc()
         if (visitor) {
-            conference.videobridge.statistics.totalVisitors.inc()
+            VideobridgeMetrics.totalVisitors.inc()
         }
 
         logger.info("Created new endpoint, iceControlling=$iceControlling")
@@ -667,7 +668,7 @@ class Endpoint @JvmOverloads constructor(
                 if (!isExpired) {
                     if (!messageTransport.isConnected) {
                         logger.error("EndpointMessageTransport still not connected.")
-                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.inc()
+                        VideobridgeMetrics.numEndpointsNoMessageTransportAfterDelay.inc()
                     }
                 }
             },
@@ -1007,13 +1008,13 @@ class Endpoint @JvmOverloads constructor(
             totalPacketsSent.addAndGet(outgoingStats.packets)
         }
 
+        VideobridgeMetrics.keyframesReceived.addAndGet(
+            transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong()
+        )
+        VideobridgeMetrics.layeringChangesReceived.addAndGet(
+            transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
+        )
         conference.videobridge.statistics.apply {
-            val bweStats = transceiverStats.bandwidthEstimatorStats
-            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
-            layeringChangesReceived.addAndGet(
-                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
-            )
-
             val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
                 it.mediaType == MediaType.VIDEO
             }.sumOf { it.durationActive }
