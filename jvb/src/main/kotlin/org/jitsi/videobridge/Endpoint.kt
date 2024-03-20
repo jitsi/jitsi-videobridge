@@ -227,7 +227,6 @@ class Endpoint @JvmOverloads constructor(
      */
     override val messageTransport = EndpointMessageTransport(
         this,
-        { conference.videobridge.statistics },
         conference,
         logger
     )

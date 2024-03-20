@@ -103,7 +103,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Supplier
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -263,7 +262,6 @@ class Relay @JvmOverloads constructor(
      */
     private val messageTransport = RelayMessageTransport(
         this,
-        Supplier { conference.videobridge.statistics },
         conference,
         logger
     )

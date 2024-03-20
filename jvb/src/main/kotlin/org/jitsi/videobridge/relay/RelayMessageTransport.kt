@@ -21,7 +21,6 @@ import org.eclipse.jetty.websocket.core.CloseStatus
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.VersionConfig
-import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.datachannel.DataChannel
 import org.jitsi.videobridge.datachannel.DataChannelStack.DataChannelMessageListener
 import org.jitsi.videobridge.datachannel.protocol.DataChannelMessage
@@ -44,7 +43,6 @@ import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Supplier
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -53,7 +51,6 @@ import java.util.function.Supplier
  */
 class RelayMessageTransport(
     private val relay: Relay,
-    private val statisticsSupplier: Supplier<Videobridge.Statistics>,
     private val eventHandler: EndpointMessageTransportEventHandler,
     parentLogger: Logger
 ) : AbstractEndpointMessageTransport(parentLogger), ColibriWebSocket.EventHandler, DataChannelMessageListener {

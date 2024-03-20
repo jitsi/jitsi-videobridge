@@ -72,7 +72,6 @@ object VideobridgeMetrics {
         "Number of messages sent via the data channels of the endpoints of this conference."
     )
 
-
     /** The currently configured region, if any. */
     val regionInfo = if (RelayConfig.config.region != null) {
         VideobridgeMetricsContainer.instance.registerInfo(
