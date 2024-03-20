@@ -1014,12 +1014,10 @@ class Endpoint @JvmOverloads constructor(
         VideobridgeMetrics.layeringChangesReceived.addAndGet(
             transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
         )
-        conference.videobridge.statistics.apply {
-            val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
-                it.mediaType == MediaType.VIDEO
-            }.sumOf { it.durationActive }
-            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideo.toMillis())
-        }
+        val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
+            it.mediaType == MediaType.VIDEO
+        }.sumOf { it.durationActive }
+        VideobridgeMetrics.totalVideoStreamMillisecondsReceived.add(durationActiveVideo.toMillis())
 
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring an endpoint with ICE connected, but not DTLS.")

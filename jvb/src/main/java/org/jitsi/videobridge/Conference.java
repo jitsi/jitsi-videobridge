@@ -619,22 +619,20 @@ public class Conference
     {
         long durationSeconds = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
 
-        Videobridge.Statistics videobridgeStatistics = getVideobridge().getStatistics();
+        VideobridgeMetrics.conferencesCompleted.inc();
+        VideobridgeMetrics.totalConferenceSeconds.add(durationSeconds);
 
-        VideobridgeMetrics.conferencesCompleted.incAndGet();
-        videobridgeStatistics.totalConferenceSeconds.addAndGet(durationSeconds);
+        VideobridgeMetrics.totalBytesReceived.add(statistics.totalBytesReceived.get());
+        VideobridgeMetrics.totalBytesSent.add(statistics.totalBytesSent.get());
+        VideobridgeMetrics.packetsReceived.add(statistics.totalPacketsReceived.get());
+        VideobridgeMetrics.packetsSent.add(statistics.totalPacketsSent.get());
 
-        videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
-        videobridgeStatistics.totalBytesSent.addAndGet(statistics.totalBytesSent.get());
-        VideobridgeMetrics.packetsReceived.addAndGet(statistics.totalPacketsReceived.get());
-        VideobridgeMetrics.packetsSent.addAndGet(statistics.totalPacketsSent.get());
+        VideobridgeMetrics.totalRelayBytesReceived.add(statistics.totalRelayBytesReceived.get());
+        VideobridgeMetrics.totalRelayBytesSent.add(statistics.totalRelayBytesSent.get());
+        VideobridgeMetrics.relayPacketsReceived.add(statistics.totalRelayPacketsReceived.get());
+        VideobridgeMetrics.relayPacketsSent.add(statistics.totalRelayPacketsSent.get());
 
-        videobridgeStatistics.totalRelayBytesReceived.addAndGet(statistics.totalRelayBytesReceived.get());
-        videobridgeStatistics.totalRelayBytesSent.addAndGet(statistics.totalRelayBytesSent.get());
-        VideobridgeMetrics.relayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
-        VideobridgeMetrics.relayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
-
-        VideobridgeMetrics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
+        VideobridgeMetrics.endpointsDtlsFailed.add(statistics.dtlsFailedEndpoints.get());
 
         logger.info("expire_conf,duration=" + durationSeconds);
     }
@@ -1247,7 +1245,7 @@ public class Conference
             return false;
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
             return false;
-        videobridge.getStatistics().tossedPacketsEnergy.addValue(ranking.energyScore);
+        VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;
     }
 
@@ -1406,17 +1404,6 @@ public class Conference
          * conference. Note that this is only updated when relays expire.
          */
         public AtomicLong totalRelayPacketsSent = new AtomicLong();
-
-        /**
-         * Whether at least one endpoint in this conference failed ICE.
-         */
-        public boolean hasIceFailedEndpoint = false;
-
-        /**
-         * Whether at least one endpoint in this conference completed ICE
-         * successfully.
-         */
-        public boolean hasIceSucceededEndpoint = false;
 
         /**
          * Number of endpoints whose ICE connection was established, but DTLS

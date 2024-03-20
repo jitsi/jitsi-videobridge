@@ -186,6 +186,60 @@ object VideobridgeMetrics {
         "Current number of conferences."
     )
 
+    @JvmField
+    val totalConferenceSeconds = metricsContainer.registerCounter(
+        "conference_seconds",
+        "The total duration in seconds of all completed conferences."
+    )
+
+    @JvmField
+    val totalBytesReceived = metricsContainer.registerCounter(
+        "bytes_received",
+        "The total number of bytes received in RTP packets."
+    )
+
+    @JvmField
+    val totalBytesSent = metricsContainer.registerCounter(
+        "bytes_sent",
+        "The total number of bytes sent in RTP packets."
+    )
+
+    @JvmField
+    val totalRelayBytesReceived = metricsContainer.registerCounter(
+        "relay_bytes_received",
+        "The total number of bytes received by relays in RTP packets."
+    )
+
+    @JvmField
+    val totalRelayBytesSent = metricsContainer.registerCounter(
+        "relay_bytes_sent",
+        "The total number of bytes sent to relays in RTP packets."
+    )
+
+    /**
+     * The total duration, in milliseconds, of video streams (SSRCs) that were received. For example, if an
+     * endpoint sends simulcast with 3 SSRCs for 1 minute it would contribute a total of 3 minutes. Suspended
+     * streams do not contribute to this duration.
+     *
+     * This is updated on endpoint expiration.
+     */
+    @JvmField
+    val totalVideoStreamMillisecondsReceived = metricsContainer.registerCounter(
+        "video_milliseconds_received",
+        "Total duration of video received, in milliseconds (each SSRC counts separately)."
+    )
+
+    private val tossedPacketsEnergyBuckets =
+        listOf(0, 7, 15, 23, 31, 39, 47, 55, 63, 71, 79, 87, 95, 103, 111, 119, 127).map { it.toDouble() }
+            .toDoubleArray()
+
+    @JvmField
+    val tossedPacketsEnergy = metricsContainer.registerHistogram(
+        "tossed_packets_energy",
+        "Distribution of energy scores for discarded audio packets.",
+        *tossedPacketsEnergyBuckets
+    )
+
     /** The currently configured region, if any. */
     val regionInfo = if (RelayConfig.config.region != null) {
         metricsContainer.registerInfo(

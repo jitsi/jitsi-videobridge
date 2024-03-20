@@ -767,55 +767,6 @@ public class Videobridge
      */
     public static class Statistics
     {
-        /**
-         * The total duration in seconds of all completed conferences on this
-         * {@link Videobridge}.
-         */
-        public AtomicLong totalConferenceSeconds = new AtomicLong();
-
-        /**
-         * The total number of bytes received in RTP packets in conferences on
-         * this videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public AtomicLong totalBytesReceived = new AtomicLong();
-
-        /**
-         * The total number of bytes sent in RTP packets in conferences on
-         * this videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public AtomicLong totalBytesSent = new AtomicLong();
-
-        /**
-         * The total number of bytes received by relays in RTP packets in conferences on
-         * this videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public AtomicLong totalRelayBytesReceived = new AtomicLong();
-
-        /**
-         * The total number of bytes sent by relays in RTP packets in conferences on
-         * this videobridge. Note that this is only updated when conferences
-         * expire.
-         */
-        public AtomicLong totalRelayBytesSent = new AtomicLong();
-
-        /** Distribution of energy scores for discarded audio packets  */
-        public BucketStats tossedPacketsEnergy = new BucketStats(
-                Stream.iterate(0L, n -> n + 1).limit(17)
-                        .map(w -> Math.max(8 * w - 1, 0))
-                        .collect(Collectors.toList()),
-                "", "");
-
-        /**
-         * The total duration, in milliseconds, of video streams (SSRCs) that were received. For example, if an
-         * endpoint sends simulcast with 3 SSRCs for 1 minute it would contribute a total of 3 minutes. Suspended
-         * streams do not contribute to this duration.
-         *
-         * This is updated on endpoint expiration.
-         */
-        public AtomicLong totalVideoStreamMillisecondsReceived = new AtomicLong();
     }
 
     private static class ConferenceNotFoundException extends Exception {}

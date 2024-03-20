@@ -56,10 +56,15 @@ import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.SHUTDOWN_IN_PROGR
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.Stat
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.THREADS
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TIMESTAMP
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_BYTES_RECEIVED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_BYTES_RECEIVED_OCTO
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_BYTES_SENT
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_BYTES_SENT_OCTO
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_CONFERENCES_COMPLETED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_CONFERENCES_CREATED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_CONFERENCE_SECONDS
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DATA_CHANNEL_MESSAGES_SENT
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DOMINANT_SPEAKER_CHANGES
@@ -147,7 +152,7 @@ object VideobridgeStatisticsShim {
 
             put(TOTAL_CONFERENCES_CREATED, VideobridgeMetrics.conferencesCreated.get())
             put(TOTAL_CONFERENCES_COMPLETED, VideobridgeMetrics.conferencesCompleted.get())
-//            put(TOTAL_CONFERENCE_SECONDS, jvbStats.totalConferenceSeconds.get())
+            put(TOTAL_CONFERENCE_SECONDS, VideobridgeMetrics.totalConferenceSeconds.get())
             put(TOTAL_PARTICIPANTS, VideobridgeMetrics.totalEndpoints.get())
             put("total_visitors", VideobridgeMetrics.totalVisitors.get())
             put(
@@ -161,7 +166,10 @@ object VideobridgeStatisticsShim {
             )
             put("total_keyframes_received", VideobridgeMetrics.keyframesReceived.get())
             put("total_layering_changes_received", VideobridgeMetrics.layeringChangesReceived.get())
-//            put("total_video_stream_milliseconds_received", jvbStats.totalVideoStreamMillisecondsReceived.get())
+            put(
+                "total_video_stream_milliseconds_received",
+                VideobridgeMetrics.totalVideoStreamMillisecondsReceived.get()
+            )
             put("stress_level", VideobridgeMetrics.stressLevel.get())
             put(CONFERENCES, VideobridgeMetrics.currentConferences.get())
             put("visitors", VideobridgeMetrics.currentVisitors.get())
@@ -170,13 +178,13 @@ object VideobridgeStatisticsShim {
             put(TOTAL_DATA_CHANNEL_MESSAGES_SENT, VideobridgeMetrics.dataChannelMessagesSent.get())
             put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED, VideobridgeMetrics.colibriWebSocketMessagesReceived.get())
             put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT, VideobridgeMetrics.colibriWebSocketMessagesSent.get())
-//            put(TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get())
+            put(TOTAL_BYTES_RECEIVED, VideobridgeMetrics.totalBytesReceived.get())
             put("dtls_failed_endpoints", VideobridgeMetrics.endpointsDtlsFailed.get())
-//            put(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get())
+            put(TOTAL_BYTES_SENT, VideobridgeMetrics.totalBytesSent.get())
             put(TOTAL_PACKETS_RECEIVED, VideobridgeMetrics.packetsReceived.get())
             put(TOTAL_PACKETS_SENT, VideobridgeMetrics.packetsSent.get())
-//            put(TOTAL_BYTES_RECEIVED_OCTO, jvbStats.totalRelayBytesReceived.get())
-//            put(TOTAL_BYTES_SENT_OCTO, jvbStats.totalRelayBytesSent.get())
+            put(TOTAL_BYTES_RECEIVED_OCTO, VideobridgeMetrics.totalRelayBytesReceived.get())
+            put(TOTAL_BYTES_SENT_OCTO, VideobridgeMetrics.totalRelayBytesSent.get())
             put(TOTAL_PACKETS_RECEIVED_OCTO, VideobridgeMetrics.relayPacketsReceived.get())
             put(TOTAL_PACKETS_SENT_OCTO, VideobridgeMetrics.relayPacketsSent.get())
             put(TOTAL_DOMINANT_SPEAKER_CHANGES, VideobridgeMetrics.dominantSpeakerChanges.get())
