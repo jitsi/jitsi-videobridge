@@ -19,13 +19,11 @@ import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.health.Result;
-import org.jitsi.metrics.*;
 import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
-import org.jitsi.utils.stats.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
@@ -49,8 +47,6 @@ import org.jxmpp.stringprep.*;
 
 import java.time.*;
 import java.util.*;
-import java.util.concurrent.atomic.*;
-import java.util.stream.*;
 
 import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.*;
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
@@ -103,11 +99,6 @@ public class Videobridge
      */
     @NotNull
     private final Clock clock;
-
-    /**
-     * A class that holds some instance statistics.
-     */
-    private final Statistics statistics = new Statistics();
 
     /**
      * Thread that checks expiration for conferences, contents, channels and
@@ -298,16 +289,6 @@ public class Videobridge
     private String generateConferenceID()
     {
         return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
-    }
-
-    /**
-     * Gets the statistics of this instance.
-     *
-     * @return the statistics of this instance.
-     */
-    public Statistics getStatistics()
-    {
-        return statistics;
     }
 
     /**
