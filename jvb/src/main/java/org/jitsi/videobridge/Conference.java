@@ -136,11 +136,6 @@ public class Conference
     private final Videobridge videobridge;
 
     /**
-     * Holds conference statistics.
-     */
-    private final Statistics statistics = new Statistics();
-
-    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -313,16 +308,6 @@ public class Conference
         {
             return new NoOpDiagnosticContext();
         }
-    }
-
-    /**
-     * Gets the statistics of this {@link Conference}.
-     *
-     * @return the statistics of this {@link Conference}.
-     */
-    public Statistics getStatistics()
-    {
-        return statistics;
     }
 
     /**
@@ -621,18 +606,6 @@ public class Conference
 
         VideobridgeMetrics.conferencesCompleted.inc();
         VideobridgeMetrics.totalConferenceSeconds.add(durationSeconds);
-
-        VideobridgeMetrics.totalBytesReceived.add(statistics.totalBytesReceived.get());
-        VideobridgeMetrics.totalBytesSent.add(statistics.totalBytesSent.get());
-        VideobridgeMetrics.packetsReceived.add(statistics.totalPacketsReceived.get());
-        VideobridgeMetrics.packetsSent.add(statistics.totalPacketsSent.get());
-
-        VideobridgeMetrics.totalRelayBytesReceived.add(statistics.totalRelayBytesReceived.get());
-        VideobridgeMetrics.totalRelayBytesSent.add(statistics.totalRelayBytesSent.get());
-        VideobridgeMetrics.relayPacketsReceived.add(statistics.totalRelayPacketsReceived.get());
-        VideobridgeMetrics.relayPacketsSent.add(statistics.totalRelayPacketsSent.get());
-
-        VideobridgeMetrics.endpointsDtlsFailed.add(statistics.dtlsFailedEndpoints.get());
 
         logger.info("expire_conf,duration=" + durationSeconds);
     }
@@ -1302,7 +1275,6 @@ public class Conference
             debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
-            debugState.put("statistics", statistics.getJson());
             //debugState.put("encodingsManager", encodingsManager.getDebugState());
         }
 
@@ -1357,78 +1329,6 @@ public class Conference
      */
     public static class Statistics
     {
-        /**
-         * The total number of bytes received in RTP packets in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalBytesReceived = new AtomicLong();
-
-        /**
-         * The total number of bytes sent in RTP packets in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalBytesSent = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalPacketsReceived = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalPacketsSent = new AtomicLong();
-
-        /**
-         * The total number of bytes received in RTP packets in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayBytesReceived = new AtomicLong();
-
-        /**
-         * The total number of bytes sent in RTP packets in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayBytesSent = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayPacketsReceived = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayPacketsSent = new AtomicLong();
-
-        /**
-         * Number of endpoints whose ICE connection was established, but DTLS
-         * wasn't (at the time of expiration).
-         */
-        public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
-
-        /**
-         * Gets a snapshot of this object's state as JSON.
-         */
-        @SuppressWarnings("unchecked")
-        private JSONObject getJson()
-        {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("total_bytes_received", totalBytesReceived.get());
-            jsonObject.put("total_bytes_sent", totalBytesSent.get());
-            jsonObject.put("total_packets_received", totalPacketsReceived.get());
-            jsonObject.put("total_packets_sent", totalPacketsSent.get());
-            jsonObject.put("total_relay_bytes_received", totalRelayBytesReceived.get());
-            jsonObject.put("total_relay_bytes_sent", totalRelayBytesSent.get());
-            jsonObject.put("total_relay_packets_received", totalRelayPacketsReceived.get());
-            jsonObject.put("total_relay_packets_sent", totalRelayPacketsSent.get());
-            jsonObject.put("dtls_failed_endpoints", dtlsFailedEndpoints.get());
-            return jsonObject;
-        }
     }
 
     /**

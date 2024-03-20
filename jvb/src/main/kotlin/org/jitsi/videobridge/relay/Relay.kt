@@ -1053,7 +1053,6 @@ class Relay @JvmOverloads constructor(
      * expires.
      */
     private fun updateStatsOnExpire() {
-        val conferenceStats = conference.statistics
         val transceiverStats = transceiver.getTransceiverStats()
 
         // Add stats from the local transceiver
@@ -1065,12 +1064,10 @@ class Relay @JvmOverloads constructor(
         statistics.bytesSent.getAndAdd(outgoingStats.bytes)
         statistics.packetsSent.getAndAdd(outgoingStats.packets)
 
-        conferenceStats.apply {
-            totalRelayBytesReceived.addAndGet(statistics.bytesReceived.get())
-            totalRelayPacketsReceived.addAndGet(statistics.packetsReceived.get())
-            totalRelayBytesSent.addAndGet(statistics.bytesSent.get())
-            totalRelayPacketsSent.addAndGet(statistics.packetsSent.get())
-        }
+        VideobridgeMetrics.totalRelayBytesReceived.add(statistics.bytesReceived.get())
+        VideobridgeMetrics.totalRelayBytesSent.add(statistics.bytesSent.get())
+        VideobridgeMetrics.relayPacketsReceived.add(statistics.packetsReceived.get())
+        VideobridgeMetrics.relayPacketsSent.add(statistics.packetsSent.get())
 
         VideobridgeMetrics.keyframesReceived.addAndGet(
             transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong()

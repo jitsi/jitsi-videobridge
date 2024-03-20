@@ -996,18 +996,14 @@ class Endpoint @JvmOverloads constructor(
      * expires.
      */
     private fun updateStatsOnExpire() {
-        val conferenceStats = conference.statistics
         val transceiverStats = transceiver.getTransceiverStats()
 
-        conferenceStats.apply {
-            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
-            val outgoingStats = transceiverStats.outgoingPacketStreamStats
-            totalBytesReceived.addAndGet(incomingStats.bytes)
-            totalPacketsReceived.addAndGet(incomingStats.packets)
-            totalBytesSent.addAndGet(outgoingStats.bytes)
-            totalPacketsSent.addAndGet(outgoingStats.packets)
-        }
-
+        val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
+        val outgoingStats = transceiverStats.outgoingPacketStreamStats
+        VideobridgeMetrics.totalBytesReceived.add(incomingStats.bytes)
+        VideobridgeMetrics.totalBytesSent.add(outgoingStats.bytes)
+        VideobridgeMetrics.packetsReceived.addAndGet(incomingStats.packets)
+        VideobridgeMetrics.packetsSent.addAndGet(outgoingStats.packets)
         VideobridgeMetrics.keyframesReceived.addAndGet(
             transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong()
         )
@@ -1021,7 +1017,7 @@ class Endpoint @JvmOverloads constructor(
 
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring an endpoint with ICE connected, but not DTLS.")
-            conferenceStats.dtlsFailedEndpoints.incrementAndGet()
+            VideobridgeMetrics.endpointsDtlsFailed.inc()
         }
     }
 
