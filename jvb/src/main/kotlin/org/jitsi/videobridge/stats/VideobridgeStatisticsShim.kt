@@ -55,6 +55,12 @@ import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.SHUTDOWN_IN_PROGR
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.Stat
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.THREADS
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TIMESTAMP
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_CONFERENCES_COMPLETED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_CONFERENCES_CREATED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DATA_CHANNEL_MESSAGES_SENT
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_FAILED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED_TCP
@@ -132,8 +138,8 @@ object VideobridgeStatisticsShim {
             put(OCTO_SEND_PACKET_RATE, VideobridgePeriodicMetrics.relayOutgoingPacketRate.get())
             put("endpoints_with_suspended_sources", VideobridgePeriodicMetrics.endpointsWithSuspendedSources.get())
 
-//            put(TOTAL_CONFERENCES_CREATED, jvbStats.conferencesCreated.get())
-//            put(TOTAL_CONFERENCES_COMPLETED, jvbStats.conferencesCompleted.get())
+            put(TOTAL_CONFERENCES_CREATED, VideobridgeMetrics.conferencesCreated.get())
+            put(TOTAL_CONFERENCES_COMPLETED, VideobridgeMetrics.conferencesCompleted.get())
 //            put(TOTAL_CONFERENCE_SECONDS, jvbStats.totalConferenceSeconds.get())
 //            put(TOTAL_PARTICIPANTS, jvbStats.totalEndpoints.get())
 //            put("total_visitors", jvbStats.totalVisitors.get())
@@ -147,10 +153,10 @@ object VideobridgeStatisticsShim {
 //            put(CONFERENCES, jvbStats.currentConferences.get())
 //            put("visitors", jvbStats.currentVisitors.get())
 //            put("local_endpoints", jvbStats.currentLocalEndpoints.get())
-//            put(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED, jvbStats.dataChannelMessagesReceived.get())
-//            put(TOTAL_DATA_CHANNEL_MESSAGES_SENT, jvbStats.dataChannelMessagesSent.get())
-//            put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED, jvbStats.colibriWebSocketMessagesReceived.get())
-//            put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT, jvbStats.colibriWebSocketMessagesSent.get())
+            put(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED, VideobridgeMetrics.dataChannelMessagesReceived.get())
+            put(TOTAL_DATA_CHANNEL_MESSAGES_SENT, VideobridgeMetrics.dataChannelMessagesSent.get())
+            put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED, VideobridgeMetrics.colibriWebSocketMessagesReceived.get())
+            put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT, VideobridgeMetrics.colibriWebSocketMessagesSent.get())
 //            put(TOTAL_BYTES_RECEIVED, jvbStats.totalBytesReceived.get())
 //            put("dtls_failed_endpoints", jvbStats.endpointsDtlsFailed.get())
 //            put(TOTAL_BYTES_SENT, jvbStats.totalBytesSent.get())

@@ -15,16 +15,18 @@
  */
 package org.jitsi.videobridge.metrics
 
+import org.jitsi.metrics.CounterMetric
 import org.jitsi.videobridge.VideobridgeConfig
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer.Companion.instance as metricsContainer
 
 object VideobridgeMetrics {
-    val gracefulShutdown = VideobridgeMetricsContainer.instance.registerBooleanMetric(
+    val gracefulShutdown = metricsContainer.registerBooleanMetric(
         "graceful_shutdown",
         "Whether the bridge is in graceful shutdown mode (not accepting new conferences)."
     )
-    val shuttingDown = VideobridgeMetricsContainer.instance.registerBooleanMetric(
+    val shuttingDown = metricsContainer.registerBooleanMetric(
         "shutting_down",
         "Whether the bridge is shutting down."
     )
@@ -33,6 +35,43 @@ object VideobridgeMetrics {
         "Whether the bridge is in drain shutdown mode.",
         VideobridgeConfig.initialDrainMode
     )
+
+    @JvmField
+    val conferencesCompleted = metricsContainer.registerCounter(
+        "conferences_completed",
+        "The total number of conferences completed/expired on the Videobridge."
+    )
+
+    @JvmField
+    var conferencesCreated = metricsContainer.registerCounter(
+        "conferences_created",
+        "The total number of conferences created on the Videobridge."
+    )
+
+    @JvmField
+    var dataChannelMessagesReceived = metricsContainer.registerCounter(
+        "data_channel_messages_received",
+        "Number of messages received from the data channels of the endpoints of this conference."
+    )
+
+    @JvmField
+    var dataChannelMessagesSent = metricsContainer.registerCounter(
+        "data_channel_messages_sent",
+        "Number of messages sent via the data channels of the endpoints of this conference."
+    )
+
+    @JvmField
+    var colibriWebSocketMessagesReceived: CounterMetric = metricsContainer.registerCounter(
+        "colibri_web_socket_messages_received",
+        "Number of messages received from the data channels of the endpoints of this conference."
+    )
+
+    @JvmField
+    var colibriWebSocketMessagesSent = metricsContainer.registerCounter(
+        "colibri_web_socket_messages_sent",
+        "Number of messages sent via the data channels of the endpoints of this conference."
+    )
+
 
     /** The currently configured region, if any. */
     val regionInfo = if (RelayConfig.config.region != null) {

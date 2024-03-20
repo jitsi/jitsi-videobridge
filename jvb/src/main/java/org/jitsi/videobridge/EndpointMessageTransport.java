@@ -22,6 +22,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.message.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.websocket.*;
 import org.json.simple.*;
@@ -202,7 +203,7 @@ public class EndpointMessageTransport
     private void sendMessage(DataChannel dst, BridgeChannelMessage message)
     {
         dst.sendString(message.toJson());
-        statisticsSupplier.get().dataChannelMessagesSent.inc();
+        VideobridgeMetrics.dataChannelMessagesSent.inc();
     }
 
     /**
@@ -213,14 +214,14 @@ public class EndpointMessageTransport
     private void sendMessage(ColibriWebSocket dst, BridgeChannelMessage message)
     {
         dst.sendString(message.toJson());
-        statisticsSupplier.get().colibriWebSocketMessagesSent.inc();
+        VideobridgeMetrics.colibriWebSocketMessagesSent.inc();
     }
 
     @Override
     public void onDataChannelMessage(DataChannelMessage dataChannelMessage)
     {
         webSocketLastActive = false;
-        statisticsSupplier.get().dataChannelMessagesReceived.inc();
+        VideobridgeMetrics.dataChannelMessagesReceived.inc();
 
         if (dataChannelMessage instanceof DataChannelStringMessage)
         {
@@ -406,7 +407,7 @@ public class EndpointMessageTransport
             return;
         }
 
-        statisticsSupplier.get().colibriWebSocketMessagesReceived.inc();
+        VideobridgeMetrics.colibriWebSocketMessagesReceived.inc();
 
         webSocketLastActive = true;
         onMessage(ws, message);

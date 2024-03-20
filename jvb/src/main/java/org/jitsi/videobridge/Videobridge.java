@@ -772,58 +772,10 @@ public class Videobridge
     public static class Statistics
     {
         /**
-         * The cumulative/total number of conferences completed/expired on this
-         * {@link Videobridge}.
-         */
-        public CounterMetric conferencesCompleted = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "conferences_completed",
-                "The total number of conferences completed/expired on the Videobridge.");
-
-        /**
-         * The cumulative/total number of conferences created on this
-         * {@link Videobridge}.
-         */
-        public CounterMetric conferencesCreated = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "conferences_created",
-                "The total number of conferences created on the Videobridge.");
-
-        /**
          * The total duration in seconds of all completed conferences on this
          * {@link Videobridge}.
          */
         public AtomicLong totalConferenceSeconds = new AtomicLong();
-
-        /**
-         * The total number of messages received from the data channels of
-         * the endpoints of this conference.
-         */
-        public CounterMetric dataChannelMessagesReceived = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "data_channel_messages_received",
-                "Number of messages received from the data channels of the endpoints of this conference.");
-
-        /**
-         * The total number of messages sent via the data channels of the
-         * endpoints of this conference.
-         */
-        public CounterMetric dataChannelMessagesSent = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "data_channel_messages_sent",
-                "Number of messages sent via the data channels of the endpoints of this conference.");
-
-        /**
-         * The total number of messages received from the data channels of
-         * the endpoints of this conference.
-         */
-        public CounterMetric colibriWebSocketMessagesReceived = VideobridgeMetricsContainer.getInstance()
-                .registerCounter("colibri_web_socket_messages_received",
-                        "Number of messages received from the data channels of the endpoints of this conference.");
-
-        /**
-         * The total number of messages sent via the data channels of the
-         * endpoints of this conference.
-         */
-        public CounterMetric colibriWebSocketMessagesSent = VideobridgeMetricsContainer.getInstance().registerCounter(
-                "colibri_web_socket_messages_sent",
-                "Number of messages sent via the data channels of the endpoints of this conference.");
 
         /**
          * The total number of bytes received in RTP packets in conferences on

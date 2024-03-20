@@ -35,6 +35,7 @@ import org.jitsi.videobridge.message.EndpointStats
 import org.jitsi.videobridge.message.ServerHelloMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
 import org.jitsi.videobridge.message.VideoTypeMessage
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.json.simple.JSONObject
@@ -220,7 +221,7 @@ class RelayMessageTransport(
      */
     private fun sendMessage(dst: DataChannel, message: BridgeChannelMessage) {
         dst.sendString(message.toJson())
-        statisticsSupplier.get().dataChannelMessagesSent.inc()
+        VideobridgeMetrics.dataChannelMessagesSent.inc()
     }
 
     /**
@@ -230,12 +231,12 @@ class RelayMessageTransport(
      */
     private fun sendMessage(dst: ColibriWebSocket, message: BridgeChannelMessage) {
         dst.sendString(message.toJson())
-        statisticsSupplier.get().colibriWebSocketMessagesSent.inc()
+        VideobridgeMetrics.colibriWebSocketMessagesSent.inc()
     }
 
     override fun onDataChannelMessage(dataChannelMessage: DataChannelMessage?) {
         webSocketLastActive = false
-        statisticsSupplier.get().dataChannelMessagesReceived.inc()
+        VideobridgeMetrics.dataChannelMessagesReceived.inc()
         if (dataChannelMessage is DataChannelStringMessage) {
             onMessage(dataChannel.get(), dataChannelMessage.data)
         }
@@ -378,7 +379,7 @@ class RelayMessageTransport(
             logger.warn("Received text from an unknown web socket.")
             return
         }
-        statisticsSupplier.get().colibriWebSocketMessagesReceived.inc()
+        VideobridgeMetrics.colibriWebSocketMessagesReceived.inc()
         webSocketLastActive = true
         onMessage(ws, message)
     }

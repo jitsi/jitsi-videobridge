@@ -30,6 +30,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.colibri2.*;
 import org.jitsi.videobridge.message.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -283,8 +284,7 @@ public class Conference
 
         }, 3, 3, TimeUnit.SECONDS);
 
-        Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
-        videobridgeStatistics.conferencesCreated.inc();
+        VideobridgeMetrics.conferencesCreated.inc();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
     }
@@ -621,7 +621,7 @@ public class Conference
 
         Videobridge.Statistics videobridgeStatistics = getVideobridge().getStatistics();
 
-        videobridgeStatistics.conferencesCompleted.incAndGet();
+        VideobridgeMetrics.conferencesCompleted.incAndGet();
         videobridgeStatistics.totalConferenceSeconds.addAndGet(durationSeconds);
 
         videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
