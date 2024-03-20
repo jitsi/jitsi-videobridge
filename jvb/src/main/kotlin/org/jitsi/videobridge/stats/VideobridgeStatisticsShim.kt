@@ -113,7 +113,7 @@ object VideobridgeStatisticsShim {
             put(BITRATE_UPLOAD, VideobridgePeriodicMetrics.outgoingBitrate.get() / 1000)
             put(PACKET_RATE_DOWNLOAD, VideobridgePeriodicMetrics.incomingPacketRate.get())
             put(PACKET_RATE_UPLOAD, VideobridgePeriodicMetrics.outgoingPacketRate.get())
-            put(RTT_AGGREGATE, VideobridgePeriodicMetrics.averageRtt)
+            put(RTT_AGGREGATE, VideobridgePeriodicMetrics.averageRtt.get())
             put("num_eps_oversending", VideobridgePeriodicMetrics.endpointsOversending.get())
             put(OCTO_CONFERENCES, VideobridgePeriodicMetrics.conferencesWithRelay.get())
             put(INACTIVE_CONFERENCES, VideobridgePeriodicMetrics.conferencesInactive.get())

@@ -138,17 +138,21 @@ object VideobridgePeriodicMetrics {
         "Number of conferences with one or more relays."
     )
 
+    private val conferenceSizeBuckets = (0..20).map { it.toDouble() }.toList().toDoubleArray()
     val conferencesBySize = metricsContainer.registerHistogram(
         "conferences_by_size",
-        "Histogram of conferences by total number of endpoints."
+        "Histogram of conferences by total number of endpoints.",
+        *conferenceSizeBuckets
     )
     val conferencesByAudioSender = metricsContainer.registerHistogram(
         "conferences_by_audio_sender",
-        "Histogram of conferences by number of local endpoints sending audio."
+        "Histogram of conferences by number of local endpoints sending audio.",
+        *conferenceSizeBuckets
     )
     val conferencesByVideoSender = metricsContainer.registerHistogram(
         "conferences_by_video_sender",
-        "Histogram of conferences by number of local endpoints sending video."
+        "Histogram of conferences by number of local endpoints sending video.",
+        *conferenceSizeBuckets
     )
 
     fun update(videobridge: Videobridge) {

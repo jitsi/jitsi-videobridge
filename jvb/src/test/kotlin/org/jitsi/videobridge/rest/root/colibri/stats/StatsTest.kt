@@ -20,7 +20,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import jakarta.ws.rs.core.Application
 import jakarta.ws.rs.core.MediaType
-import jakarta.ws.rs.core.Response
 import org.eclipse.jetty.http.HttpStatus
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.test.JerseyTest
@@ -44,17 +43,10 @@ class StatsTest : JerseyTest() {
 
     @Test
     fun testGetStats() {
-        val fakeStats = mutableMapOf<String, Any>("stat1" to "value1", "stat2" to "value2")
-
         val resp = target(baseUrl).request().get()
         resp.status shouldBe HttpStatus.OK_200
         resp.mediaType shouldBe MediaType.APPLICATION_JSON_TYPE
-        // resp.getResultAsJson() shouldBe mapOf("stat1" to "value1", "stat2" to "value2")
-    }
-
-    private fun Response.getResultAsJson(): JSONObject {
-        val obj = JSONParser().parse(readEntity(String::class.java))
-        obj.shouldBeInstanceOf<JSONObject>()
-        return obj
+        val parsed = JSONParser().parse(resp.readEntity(String::class.java))
+        parsed.shouldBeInstanceOf<JSONObject>()
     }
 }
