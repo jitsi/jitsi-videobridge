@@ -30,6 +30,7 @@ import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.BITRATE_DOWNLOAD
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.BITRATE_UPLOAD
+import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.CONFERENCES
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.DRAIN
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.ENDPOINTS_SENDING_AUDIO
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.ENDPOINTS_SENDING_VIDEO
@@ -162,9 +163,9 @@ object VideobridgeStatisticsShim {
             put("total_layering_changes_received", VideobridgeMetrics.layeringChangesReceived.get())
 //            put("total_video_stream_milliseconds_received", jvbStats.totalVideoStreamMillisecondsReceived.get())
             put("stress_level", VideobridgeMetrics.stressLevel.get())
-//            put(CONFERENCES, jvbStats.currentConferences.get())
-//            put("visitors", jvbStats.currentVisitors.get())
-//            put("local_endpoints", jvbStats.currentLocalEndpoints.get())
+            put(CONFERENCES, VideobridgeMetrics.currentConferences.get())
+            put("visitors", VideobridgeMetrics.currentVisitors.get())
+            put("local_endpoints", VideobridgeMetrics.currentLocalEndpoints.get())
             put(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED, VideobridgeMetrics.dataChannelMessagesReceived.get())
             put(TOTAL_DATA_CHANNEL_MESSAGES_SENT, VideobridgeMetrics.dataChannelMessagesSent.get())
             put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED, VideobridgeMetrics.colibriWebSocketMessagesReceived.get())

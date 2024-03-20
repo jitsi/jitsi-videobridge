@@ -168,6 +168,24 @@ object VideobridgeMetrics {
         "Number of times the layering of an incoming video stream changed (updated on endpoint expiration)."
     )
 
+    @JvmField
+    val currentLocalEndpoints = metricsContainer.registerLongGauge(
+        "local_endpoints",
+        "Number of local endpoints that exist currently."
+    )
+
+    @JvmField
+    val currentVisitors = metricsContainer.registerLongGauge(
+        "current_visitors",
+        "Number of visitor endpoints."
+    )
+
+    @JvmField
+    val currentConferences = metricsContainer.registerLongGauge(
+        "conferences",
+        "Current number of conferences."
+    )
+
     /** The currently configured region, if any. */
     val regionInfo = if (RelayConfig.config.region != null) {
         metricsContainer.registerInfo(

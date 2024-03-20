@@ -194,7 +194,7 @@ public class Videobridge
                 {
                     conference = new Conference(this, id, name, meetingId, isRtcStatsEnabled);
                     conferencesById.put(id, conference);
-                    statistics.currentConferences.inc();
+                    VideobridgeMetrics.currentConferences.inc();
 
                     if (meetingId != null)
                     {
@@ -210,19 +210,19 @@ public class Videobridge
 
     void localEndpointCreated(boolean visitor)
     {
-        statistics.currentLocalEndpoints.inc();
+        VideobridgeMetrics.currentLocalEndpoints.inc();
         if (visitor)
         {
-            statistics.currentVisitors.inc();
+            VideobridgeMetrics.currentVisitors.inc();
         }
     }
 
     void localEndpointExpired(boolean visitor)
     {
-        long remainingEndpoints = statistics.currentLocalEndpoints.decAndGet();
+        long remainingEndpoints = VideobridgeMetrics.currentLocalEndpoints.decAndGet();
         if (visitor)
         {
-            statistics.currentVisitors.dec();
+            VideobridgeMetrics.currentVisitors.dec();
         }
 
         if (remainingEndpoints < 0)
@@ -275,7 +275,7 @@ public class Videobridge
             if (conference.equals(conferencesById.get(id)))
             {
                 conferencesById.remove(id);
-                statistics.currentConferences.dec();
+                VideobridgeMetrics.currentConferences.dec();
 
                 if (meetingId != null)
                 {
@@ -471,7 +471,7 @@ public class Videobridge
     public void shutdown(boolean graceful)
     {
         shutdownManager.initiateShutdown(graceful);
-        shutdownManager.maybeShutdown(statistics.currentLocalEndpoints.get());
+        shutdownManager.maybeShutdown(VideobridgeMetrics.currentLocalEndpoints.get());
     }
 
     /**
@@ -737,10 +737,6 @@ public class Videobridge
                     System.getProperty("os.name")
                 );
 
-            // to, from and packetId are set by the caller.
-            // versionResult.setTo(versionRequest.getFrom());
-            // versionResult.setFrom(versionRequest.getTo());
-            // versionResult.setPacketID(versionRequest.getPacketID());
             versionResult.setType(IQ.Type.result);
 
             return versionResult;
@@ -820,30 +816,6 @@ public class Videobridge
          * This is updated on endpoint expiration.
          */
         public AtomicLong totalVideoStreamMillisecondsReceived = new AtomicLong();
-
-        /**
-         * Number of local endpoints that exist currently.
-         */
-        public LongGaugeMetric currentLocalEndpoints = VideobridgeMetricsContainer.getInstance().registerLongGauge(
-                "local_endpoints",
-                "Number of local endpoints that exist currently."
-        );
-
-        /**
-         * Number of visitor endpoints that exist currently.
-         */
-        public LongGaugeMetric currentVisitors = VideobridgeMetricsContainer.getInstance().registerLongGauge(
-                "current_visitors",
-                "Number of visitor endpoints."
-        );
-
-        /**
-         * Current number of conferences.
-         */
-        public LongGaugeMetric currentConferences = VideobridgeMetricsContainer.getInstance().registerLongGauge(
-                "conferences",
-                "Current number of conferences."
-        );
     }
 
     private static class ConferenceNotFoundException extends Exception {}
