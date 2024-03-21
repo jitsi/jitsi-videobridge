@@ -29,7 +29,8 @@ object Metrics {
 
     /** Updating the metrics shouldn't block anywhere, but use a separate executor just in case. */
     private val executor = Executors.newSingleThreadScheduledExecutor(
-        CustomizableThreadFactory("MetricsUpdater-scheduled", false))
+        CustomizableThreadFactory("MetricsUpdater-scheduled", false)
+    )
     val metricsUpdater = MetricsUpdater(executor, interval)
 
     /**
