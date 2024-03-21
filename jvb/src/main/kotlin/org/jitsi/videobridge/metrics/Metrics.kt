@@ -18,15 +18,30 @@ package org.jitsi.videobridge.metrics
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metrics.MetricsUpdater
-import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.utils.concurrent.CustomizableThreadFactory
 import java.time.Duration
+import java.util.concurrent.Executors
 
 object Metrics {
     private val interval: Duration by config {
         "videobridge.stats.interval".from(JitsiConfig.newConfig)
     }
-    val metricsUpdater = MetricsUpdater(TaskPools.SCHEDULED_POOL, interval)
+
+    /** Updating the metrics shouldn't block anywhere, but use a separate executor just in case. */
+    private val executor = Executors.newSingleThreadScheduledExecutor(
+        CustomizableThreadFactory("MetricsUpdater-scheduled", false))
+    val metricsUpdater = MetricsUpdater(executor, interval)
+
+    /**
+     * The lock which is used when metrics are updated or queried. The [MetricsUpdater] internally uses itself as the
+     * lock, so we reuse it here.
+     */
+    val lock: Any
+        get() = metricsUpdater
 
     fun start() = metricsUpdater.addUpdateTask { ThreadsMetric.update() }
-    fun stop() = metricsUpdater.stop()
+    fun stop() {
+        metricsUpdater.stop()
+        executor.shutdown()
+    }
 }

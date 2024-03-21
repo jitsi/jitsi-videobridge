@@ -20,6 +20,7 @@ import org.jitsi.videobridge.EndpointConnectionStatusMonitor
 import org.jitsi.videobridge.VersionConfig
 import org.jitsi.videobridge.health.JvbHealthChecker
 import org.jitsi.videobridge.load_management.JvbLoadManager
+import org.jitsi.videobridge.metrics.Metrics
 import org.jitsi.videobridge.metrics.ThreadsMetric
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
@@ -82,6 +83,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
 
+/**
+ * A shim layer which translates the Prometheus metrics (from [VideobridgeMetricsContainer]) to the legacy
+ * [ColibriStatsExtension] suitable to be added to XMPP presence or converted to JSON for the response to the legacy
+ * /colibri/stats
+ */
 object VideobridgeStatisticsShim {
     fun getStatsJson() = JSONObject().apply {
         getStats().forEach { (k, v) ->
@@ -120,7 +126,7 @@ object VideobridgeStatisticsShim {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
-    private fun getStats(): Map<String, Any> {
+    private fun getStats(): Map<String, Any> = synchronized(Metrics.lock) {
         return buildMap {
             put("incoming_loss", VideobridgePeriodicMetrics.incomingLoss.get())
             put("outgoing_loss", VideobridgePeriodicMetrics.outgoingLoss.get())
