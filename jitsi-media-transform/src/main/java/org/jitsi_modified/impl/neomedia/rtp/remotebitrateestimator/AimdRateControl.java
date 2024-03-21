@@ -64,11 +64,6 @@ class AimdRateControl
 
     private boolean bitrateIsInitialized;
 
-    /**
-     * the number of time we've expired the initial incoming estimate.
-     */
-    private int incomingBitrateExpirations = 0;
-
     private long currentBitrateBps;
 
     private final RateControlInput currentInput
@@ -352,14 +347,6 @@ class AimdRateControl
     }
 
     /**
-     * @return the number of time we've expired the initial incoming estimate.
-     */
-    public int getIncomingEstimateExpirations()
-    {
-        return incomingBitrateExpirations;
-    }
-
-    /**
      * Returns <tt>true</tt> if there is a valid estimate of the incoming
      * bitrate, <tt>false</tt> otherwise.
      *
@@ -465,8 +452,6 @@ class AimdRateControl
                     {
                         timeFirstIncomingEstimate = -1L;
                     }
-
-                    incomingBitrateExpirations++;
                 }
                 else if (timeSinceFirstIncomingEstimate > kInitializationTimeMs
                     && input.incomingBitRate > 0L)

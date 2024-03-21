@@ -33,10 +33,10 @@ import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.ice.Harvesters
+import org.jitsi.videobridge.metrics.Metrics
+import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
 import org.jitsi.videobridge.rest.root.Application
-import org.jitsi.videobridge.stats.MucStatsTransport
-import org.jitsi.videobridge.stats.StatsCollector
-import org.jitsi.videobridge.stats.VideobridgeStatistics
+import org.jitsi.videobridge.stats.MucPublisher
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
@@ -67,13 +67,13 @@ fun main() {
     //  to be passed.
     System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.JavaUtilLog")
 
+    Metrics.start()
+
     // Reload the Typesafe config used by ice4j, because the original was initialized before the new system
     // properties were set.
     JitsiConfig.reloadNewConfig()
 
-    val versionService = JvbVersionService().also {
-        logger.info("Starting jitsi-videobridge version ${it.currentVersion}")
-    }
+    logger.info("Starting jitsi-videobridge version ${JvbVersionService.instance.currentVersion}")
 
     startIce4j()
 
@@ -98,15 +98,19 @@ fun main() {
     val videobridge = Videobridge(
         xmppConnection,
         shutdownService,
-        versionService.currentVersion,
+        JvbVersionService.instance.currentVersion,
         VersionConfig.config.release,
         Clock.systemUTC()
     ).apply { start() }
-    val healthChecker = videobridge.jvbHealthChecker
-    val statsCollector = StatsCollector(VideobridgeStatistics(videobridge, xmppConnection)).apply {
-        start()
-        addTransport(MucStatsTransport(xmppConnection), XmppClientConnectionConfig.config.presenceInterval.toMillis())
+    Metrics.metricsUpdater.addUpdateTask {
+        VideobridgePeriodicMetrics.update(videobridge)
     }
+    val healthChecker = videobridge.jvbHealthChecker
+    val presencePublisher = MucPublisher(
+        TaskPools.SCHEDULED_POOL,
+        XmppClientConnectionConfig.config.presenceInterval,
+        xmppConnection
+    ).apply { start() }
 
     val publicServerConfig = JettyBundleActivatorConfig(
         "org.jitsi.videobridge.rest",
@@ -135,8 +139,7 @@ fun main() {
         val restApp = Application(
             videobridge,
             xmppConnection,
-            statsCollector,
-            versionService.currentVersion,
+            JvbVersionService.instance.currentVersion,
             healthChecker
         )
         createServer(privateServerConfig).also {
@@ -157,8 +160,8 @@ fun main() {
 
     logger.info("Bridge shutting down")
     healthChecker.stop()
+    presencePublisher.stop()
     xmppConnection.stop()
-    statsCollector.stop()
 
     try {
         publicHttpServer?.stop()
@@ -168,6 +171,7 @@ fun main() {
     }
     videobridge.stop()
     stopIce4j()
+    Metrics.stop()
 
     TaskPools.SCHEDULED_POOL.shutdownNow()
     TaskPools.CPU_POOL.shutdownNow()

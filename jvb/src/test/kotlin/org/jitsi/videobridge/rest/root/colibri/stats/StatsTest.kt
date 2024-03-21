@@ -18,34 +18,24 @@ package org.jitsi.videobridge.rest.root.colibri.stats
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.every
-import io.mockk.mockk
 import jakarta.ws.rs.core.Application
 import jakarta.ws.rs.core.MediaType
-import jakarta.ws.rs.core.Response
 import org.eclipse.jetty.http.HttpStatus
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.test.JerseyTest
 import org.glassfish.jersey.test.TestProperties
-import org.jitsi.videobridge.rest.MockBinder
-import org.jitsi.videobridge.stats.StatsCollector
-import org.jitsi.videobridge.stats.VideobridgeStatistics
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.junit.Test
 
 class StatsTest : JerseyTest() {
-    private lateinit var statsCollector: StatsCollector
     private val baseUrl = "/colibri/stats"
 
     override fun configure(): Application {
-        statsCollector = mockk()
-
         enable(TestProperties.LOG_TRAFFIC)
         enable(TestProperties.DUMP_ENTITY)
         return object : ResourceConfig() {
             init {
-                register(MockBinder(statsCollector, StatsCollector::class.java))
                 register(Stats::class.java)
             }
         }
@@ -53,20 +43,10 @@ class StatsTest : JerseyTest() {
 
     @Test
     fun testGetStats() {
-        val fakeStats = mutableMapOf<String, Any>("stat1" to "value1", "stat2" to "value2")
-        val videobridgeStatistics = mockk<VideobridgeStatistics>()
-        every { videobridgeStatistics.stats } returns fakeStats
-        every { statsCollector.statistics } returns videobridgeStatistics
-
         val resp = target(baseUrl).request().get()
         resp.status shouldBe HttpStatus.OK_200
         resp.mediaType shouldBe MediaType.APPLICATION_JSON_TYPE
-        resp.getResultAsJson() shouldBe mapOf("stat1" to "value1", "stat2" to "value2")
-    }
-
-    private fun Response.getResultAsJson(): JSONObject {
-        val obj = JSONParser().parse(readEntity(String::class.java))
-        obj.shouldBeInstanceOf<JSONObject>()
-        return obj
+        val parsed = JSONParser().parse(resp.readEntity(String::class.java))
+        parsed.shouldBeInstanceOf<JSONObject>()
     }
 }

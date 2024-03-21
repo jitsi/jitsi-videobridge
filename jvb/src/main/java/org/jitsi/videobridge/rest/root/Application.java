@@ -35,7 +35,6 @@ public class Application extends ResourceConfig
     public Application(
             Videobridge videobridge,
             XmppConnection xmppConnection,
-            StatsCollector statsCollector,
             @NotNull Version version,
             @NotNull JvbHealthChecker healthChecker)
 
@@ -44,7 +43,6 @@ public class Application extends ResourceConfig
             new ServiceBinder(
                 videobridge,
                 xmppConnection,
-                statsCollector,
                 healthChecker
             )
         );

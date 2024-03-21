@@ -51,6 +51,7 @@ class JvbVersionService : VersionService {
         private const val DEFAULT_MAJOR_VERSION = 2
         private const val DEFAULT_MINOR_VERSION = 1
         private val defaultBuildId: String? = null
+        val instance = JvbVersionService()
     }
 }
 

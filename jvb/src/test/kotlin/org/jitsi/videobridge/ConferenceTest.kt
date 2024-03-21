@@ -16,7 +16,6 @@
 package org.jitsi.videobridge
 
 import io.kotest.matchers.shouldBe
-import io.mockk.every
 import io.mockk.mockk
 import org.jitsi.ConfigTest
 import org.json.simple.JSONObject
@@ -27,9 +26,7 @@ import org.jxmpp.jid.impl.JidCreate
  * This is a high-level test for [Conference] and related functionality.
  */
 class ConferenceTest : ConfigTest() {
-    private val videobridge = mockk<Videobridge>(relaxed = true) {
-        every { statistics } returns Videobridge.Statistics()
-    }
+    private val videobridge = mockk<Videobridge>(relaxed = true)
 
     init {
         val name = JidCreate.entityBareFrom("roomName@somedomain.com")

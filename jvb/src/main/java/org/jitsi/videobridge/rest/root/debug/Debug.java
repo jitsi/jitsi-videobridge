@@ -24,6 +24,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
@@ -390,7 +391,7 @@ public class Debug
                 return ConferencePacketStats.stats.toJson().toJSONString();
             }
             case TOSSED_PACKET_STATS: {
-                return videobridge.getStatistics().tossedPacketsEnergy.toJson().toJSONString();
+                return VideobridgeMetrics.tossedPacketsEnergy.get().toJSONString();
             }
             default: {
                 throw new NotFoundException();

@@ -76,6 +76,7 @@ import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.DataChannelHandler
 import org.jitsi.videobridge.sctp.SctpHandler
@@ -103,7 +104,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.Supplier
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -263,7 +263,6 @@ class Relay @JvmOverloads constructor(
      */
     private val messageTransport = RelayMessageTransport(
         this,
-        Supplier { conference.videobridge.statistics },
         conference,
         logger
     )
@@ -273,7 +272,7 @@ class Relay @JvmOverloads constructor(
         setupIceTransport()
         setupDtlsTransport()
 
-        conference.videobridge.statistics.totalRelays.inc()
+        VideobridgeMetrics.totalRelays.inc()
     }
 
     fun getMessageTransport(): RelayMessageTransport = messageTransport
@@ -362,7 +361,6 @@ class Relay @JvmOverloads constructor(
         iceTransport.eventHandler = object : IceTransport.EventHandler {
             override fun connected() {
                 logger.info("ICE connected")
-                eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         packetInfo.addEvent(SRTP_QUEUE_ENTRY_EVENT)
@@ -373,9 +371,7 @@ class Relay @JvmOverloads constructor(
                 TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake)
             }
 
-            override fun failed() {
-                eventEmitter.fireEvent { iceFailed() }
-            }
+            override fun failed() {}
 
             override fun consentUpdated(time: Instant) {
                 transceiver.packetIOActivity.lastIceActivityInstant = time
@@ -911,7 +907,7 @@ class Relay @JvmOverloads constructor(
                 if (!expired) {
                     if (!messageTransport.isConnected) {
                         logger.error("RelayMessageTransport still not connected.")
-                        conference.videobridge.statistics.numRelaysNoMessageTransportAfterDelay.inc()
+                        VideobridgeMetrics.numRelaysNoMessageTransportAfterDelay.inc()
                     }
                 }
             },
@@ -1057,7 +1053,6 @@ class Relay @JvmOverloads constructor(
      * expires.
      */
     private fun updateStatsOnExpire() {
-        val conferenceStats = conference.statistics
         val transceiverStats = transceiver.getTransceiverStats()
 
         // Add stats from the local transceiver
@@ -1069,25 +1064,21 @@ class Relay @JvmOverloads constructor(
         statistics.bytesSent.getAndAdd(outgoingStats.bytes)
         statistics.packetsSent.getAndAdd(outgoingStats.packets)
 
-        conferenceStats.apply {
-            totalRelayBytesReceived.addAndGet(statistics.bytesReceived.get())
-            totalRelayPacketsReceived.addAndGet(statistics.packetsReceived.get())
-            totalRelayBytesSent.addAndGet(statistics.bytesSent.get())
-            totalRelayPacketsSent.addAndGet(statistics.packetsSent.get())
-        }
+        VideobridgeMetrics.totalRelayBytesReceived.add(statistics.bytesReceived.get())
+        VideobridgeMetrics.totalRelayBytesSent.add(statistics.bytesSent.get())
+        VideobridgeMetrics.relayPacketsReceived.add(statistics.packetsReceived.get())
+        VideobridgeMetrics.relayPacketsSent.add(statistics.packetsSent.get())
 
-        conference.videobridge.statistics.apply {
-            /* TODO: should these be separate stats from the endpoint stats? */
-            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
-            layeringChangesReceived.addAndGet(
-                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
-            )
-
-            val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
-                it.mediaType == MediaType.VIDEO
-            }.sumOf { it.durationActive }
-            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideo.toMillis())
-        }
+        VideobridgeMetrics.keyframesReceived.addAndGet(
+            transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong()
+        )
+        VideobridgeMetrics.layeringChangesReceived.addAndGet(
+            transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
+        )
+        val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
+            it.mediaType == MediaType.VIDEO
+        }.sumOf { it.durationActive }
+        VideobridgeMetrics.totalVideoStreamMillisecondsReceived.add(durationActiveVideo.toMillis())
     }
 
     fun expire() {

@@ -26,6 +26,7 @@ import org.jitsi.config.withNewConfig
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.shutdown.ShutdownConfig
 import org.jitsi.videobridge.shutdown.ShutdownState
 import org.jitsi.videobridge.util.TaskPools
@@ -45,7 +46,7 @@ class VideobridgeTest : ShouldSpec() {
     override suspend fun afterAny(testCase: TestCase, result: TestResult) = super.afterAny(testCase, result).also {
         TaskPools.resetScheduledPool()
         // we need this to test shutdown behavior since metrics are preserved across tests
-        videobridge.statistics.currentLocalEndpoints.set(0)
+        VideobridgeMetrics.currentLocalEndpoints.set(0)
     }
 
     init {

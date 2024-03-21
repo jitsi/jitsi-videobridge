@@ -18,10 +18,22 @@ package org.jitsi.videobridge.metrics
 import org.jitsi.metrics.MetricsContainer
 
 /**
- * `VideobridgeMetricsContainer` gathers and exports metrics
- * from a [Videobridge][org.jitsi.videobridge.Videobridge] instance.
+ * The [MetricsContainer] instance for jitsi-videobridge where all Prometheus metrics are registered.
  */
 class VideobridgeMetricsContainer private constructor() : MetricsContainer(namespace = "jitsi_jvb") {
+
+    /** Acquire Metrics.lock to make sure we don't race with the updater. */
+    override fun getPrometheusMetrics(contentType: String): String {
+        synchronized(Metrics.lock) {
+            return super.getPrometheusMetrics(contentType)
+        }
+    }
+
+    /** Acquire Metrics.lock to make sure we don't race with the updater. */
+    override val jsonString: String
+        get() = synchronized(Metrics.lock) {
+            super.jsonString
+        }
 
     companion object {
         /**

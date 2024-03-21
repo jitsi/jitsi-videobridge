@@ -64,6 +64,7 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.RelayedEndpoint
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
@@ -227,7 +228,6 @@ class Endpoint @JvmOverloads constructor(
      */
     override val messageTransport = EndpointMessageTransport(
         this,
-        { conference.videobridge.statistics },
         conference,
         logger
     )
@@ -317,9 +317,9 @@ class Endpoint @JvmOverloads constructor(
         setupIceTransport()
         setupDtlsTransport()
 
-        conference.videobridge.statistics.totalEndpoints.inc()
+        VideobridgeMetrics.totalEndpoints.inc()
         if (visitor) {
-            conference.videobridge.statistics.totalVisitors.inc()
+            VideobridgeMetrics.totalVisitors.inc()
         }
 
         logger.info("Created new endpoint, iceControlling=$iceControlling")
@@ -370,7 +370,6 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.eventHandler = object : IceTransport.EventHandler {
             override fun connected() {
                 logger.info("ICE connected")
-                eventEmitter.fireEvent { iceSucceeded() }
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
                         packetInfo.addEvent(SRTP_QUEUE_ENTRY_EVENT)
@@ -382,7 +381,6 @@ class Endpoint @JvmOverloads constructor(
             }
 
             override fun failed() {
-                eventEmitter.fireEvent { iceFailed() }
             }
 
             override fun consentUpdated(time: Instant) {
@@ -670,7 +668,7 @@ class Endpoint @JvmOverloads constructor(
                 if (!isExpired) {
                     if (!messageTransport.isConnected) {
                         logger.error("EndpointMessageTransport still not connected.")
-                        conference.videobridge.statistics.numEndpointsNoMessageTransportAfterDelay.inc()
+                        VideobridgeMetrics.numEndpointsNoMessageTransportAfterDelay.inc()
                     }
                 }
             },
@@ -998,51 +996,28 @@ class Endpoint @JvmOverloads constructor(
      * expires.
      */
     private fun updateStatsOnExpire() {
-        val conferenceStats = conference.statistics
         val transceiverStats = transceiver.getTransceiverStats()
 
-        conferenceStats.apply {
-            val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
-            val outgoingStats = transceiverStats.outgoingPacketStreamStats
-            totalBytesReceived.addAndGet(incomingStats.bytes)
-            totalPacketsReceived.addAndGet(incomingStats.packets)
-            totalBytesSent.addAndGet(outgoingStats.bytes)
-            totalPacketsSent.addAndGet(outgoingStats.packets)
-        }
-
-        conference.videobridge.statistics.apply {
-            val bweStats = transceiverStats.bandwidthEstimatorStats
-            bweStats.getNumber("incomingEstimateExpirations")?.toLong()?.let {
-                incomingBitrateExpirations.addAndGet(it)
-            }
-            keyframesReceived.addAndGet(transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong())
-            layeringChangesReceived.addAndGet(
-                transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
-            )
-
-            val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
-                it.mediaType == MediaType.VIDEO
-            }.sumOf { it.durationActive }
-            totalVideoStreamMillisecondsReceived.addAndGet(durationActiveVideo.toMillis())
-        }
-
-        run {
-            val bweStats = transceiverStats.bandwidthEstimatorStats
-            val lossLimitedMs = bweStats.getNumber("lossLimitedMs")?.toLong() ?: return@run
-            val lossDegradedMs = bweStats.getNumber("lossDegradedMs")?.toLong() ?: return@run
-            val lossFreeMs = bweStats.getNumber("lossFreeMs")?.toLong() ?: return@run
-
-            val participantMs = lossFreeMs + lossDegradedMs + lossLimitedMs
-            conference.videobridge.statistics.apply {
-                totalLossControlledParticipantMs.addAndGet(participantMs)
-                totalLossLimitedParticipantMs.addAndGet(lossLimitedMs)
-                totalLossDegradedParticipantMs.addAndGet(lossDegradedMs)
-            }
-        }
+        val incomingStats = transceiverStats.rtpReceiverStats.packetStreamStats
+        val outgoingStats = transceiverStats.outgoingPacketStreamStats
+        VideobridgeMetrics.totalBytesReceived.add(incomingStats.bytes)
+        VideobridgeMetrics.totalBytesSent.add(outgoingStats.bytes)
+        VideobridgeMetrics.packetsReceived.addAndGet(incomingStats.packets)
+        VideobridgeMetrics.packetsSent.addAndGet(outgoingStats.packets)
+        VideobridgeMetrics.keyframesReceived.addAndGet(
+            transceiverStats.rtpReceiverStats.videoParserStats.numKeyframes.toLong()
+        )
+        VideobridgeMetrics.layeringChangesReceived.addAndGet(
+            transceiverStats.rtpReceiverStats.videoParserStats.numLayeringChanges.toLong()
+        )
+        val durationActiveVideo = transceiverStats.rtpReceiverStats.incomingStats.ssrcStats.values.filter {
+            it.mediaType == MediaType.VIDEO
+        }.sumOf { it.durationActive }
+        VideobridgeMetrics.totalVideoStreamMillisecondsReceived.add(durationActiveVideo.toMillis())
 
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring an endpoint with ICE connected, but not DTLS.")
-            conferenceStats.dtlsFailedEndpoints.incrementAndGet()
+            VideobridgeMetrics.endpointsDtlsFailed.inc()
         }
     }
 

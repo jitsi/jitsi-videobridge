@@ -329,8 +329,6 @@ abstract class AbstractEndpoint protected constructor(
     }
 
     interface EventHandler {
-        fun iceSucceeded()
-        fun iceFailed()
         fun sourcesChanged()
     }
 }
