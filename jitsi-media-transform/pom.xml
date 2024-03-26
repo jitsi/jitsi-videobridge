@@ -46,6 +46,11 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>jicoco-metrics</artifactId>
+            <version>${jicoco.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-metaconfig</artifactId>
         </dependency>
         <dependency>
