@@ -51,7 +51,7 @@ class Harvesters private constructor(
             val tcpHarvester: TcpHarvester? = if (IceConfig.config.tcpEnabled) {
                 val port = IceConfig.config.tcpPort
                 try {
-                    TcpHarvester(IceConfig.config.port, IceConfig.config.iceSslTcp).apply {
+                    TcpHarvester(port, IceConfig.config.iceSslTcp).apply {
                         logger.info("Initialized TCP harvester on port $port, ssltcp=${IceConfig.config.iceSslTcp}")
                         IceConfig.config.tcpMappedPort?.let { mappedPort ->
                             logger.info("Adding mapped port $mappedPort")
