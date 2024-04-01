@@ -23,7 +23,7 @@ import java.time.Duration
 import java.util.concurrent.Executors
 
 object Metrics {
-    private val interval: Duration by config {
+    val interval: Duration by config {
         "videobridge.stats.interval".from(JitsiConfig.newConfig)
     }
 
