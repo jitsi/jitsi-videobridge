@@ -322,8 +322,6 @@ object VideobridgePeriodicMetrics {
                 )
         }
 
-        // TODO LOCK
-
         VideobridgePeriodicMetrics.incomingLoss.set(incomingLoss)
         VideobridgePeriodicMetrics.outgoingLoss.set(outgoingLoss)
         VideobridgePeriodicMetrics.loss.set(overallLoss)

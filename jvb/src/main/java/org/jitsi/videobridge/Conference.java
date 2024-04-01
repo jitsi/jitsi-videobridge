@@ -1325,13 +1325,6 @@ public class Conference
     }
 
     /**
-     * Holds conference statistics.
-     */
-    public static class Statistics
-    {
-    }
-
-    /**
      * This is a no-op diagnostic context (one that will record nothing) meant
      * to disable logging of time-series for health checks.
      */
