@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.stats
 
-import org.jitsi.videobridge.stats.config.StatsManagerConfig
+import org.jitsi.videobridge.metrics.Metrics
 import org.json.simple.JSONArray
 import org.json.simple.JSONObject
 import java.util.concurrent.atomic.AtomicLong
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
  * the rates passed to [addValue] to number of packets and bytes.
  */
 class ConferencePacketStats private constructor() {
-    private val periodSeconds = StatsManagerConfig.config.interval.toMillis().toDouble() / 1000
+    private val periodSeconds = Metrics.interval.toMillis().toDouble() / 1000
 
     /** Maps a conference size to a [Stats] instance that sums the added packet and bit rates. */
     private val stats: Map<Int, Stats> = mutableMapOf<Int, Stats>().apply {

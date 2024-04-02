@@ -30,6 +30,7 @@ import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.colibri2.*;
 import org.jitsi.videobridge.message.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -133,11 +134,6 @@ public class Conference
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
     private final Videobridge videobridge;
-
-    /**
-     * Holds conference statistics.
-     */
-    private final Statistics statistics = new Statistics();
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -283,8 +279,7 @@ public class Conference
 
         }, 3, 3, TimeUnit.SECONDS);
 
-        Videobridge.Statistics videobridgeStatistics = videobridge.getStatistics();
-        videobridgeStatistics.conferencesCreated.inc();
+        VideobridgeMetrics.conferencesCreated.inc();
         epConnectionStatusMonitor = new EndpointConnectionStatusMonitor(this, TaskPools.SCHEDULED_POOL, logger);
         epConnectionStatusMonitor.start();
     }
@@ -313,16 +308,6 @@ public class Conference
         {
             return new NoOpDiagnosticContext();
         }
-    }
-
-    /**
-     * Gets the statistics of this {@link Conference}.
-     *
-     * @return the statistics of this {@link Conference}.
-     */
-    public Statistics getStatistics()
-    {
-        return statistics;
     }
 
     /**
@@ -478,7 +463,7 @@ public class Conference
 
             if (dominantSpeakerChanged && !silence)
             {
-                getVideobridge().getStatistics().dominantSpeakerChanges.inc();
+                VideobridgeMetrics.dominantSpeakerChanges.inc();
                 if (getEndpointCount() > 2)
                 {
                     maybeSendKeyframeRequest(recentSpeakers.get(0));
@@ -527,10 +512,10 @@ public class Conference
         {
             // If all other endpoints are in tile view, there is no switch to anticipate. Don't trigger an unnecessary
             // keyframe.
-            getVideobridge().getStatistics().preemptiveKeyframeRequestsSuppressed.inc();
+            VideobridgeMetrics.preemptiveKeyframeRequestsSuppressed.inc();
             return;
         }
-        getVideobridge().getStatistics().preemptiveKeyframeRequestsSent.inc();
+        VideobridgeMetrics.preemptiveKeyframeRequestsSent.inc();
 
         double senderRtt = getRtt(dominantSpeaker);
         double maxReceiveRtt = getMaxReceiverRtt(dominantSpeaker.getId());
@@ -619,42 +604,10 @@ public class Conference
     {
         long durationSeconds = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
 
-        Videobridge.Statistics videobridgeStatistics = getVideobridge().getStatistics();
+        VideobridgeMetrics.conferencesCompleted.inc();
+        VideobridgeMetrics.totalConferenceSeconds.add(durationSeconds);
 
-        videobridgeStatistics.conferencesCompleted.incAndGet();
-        videobridgeStatistics.totalConferenceSeconds.addAndGet(durationSeconds);
-
-        videobridgeStatistics.totalBytesReceived.addAndGet(statistics.totalBytesReceived.get());
-        videobridgeStatistics.totalBytesSent.addAndGet(statistics.totalBytesSent.get());
-        videobridgeStatistics.packetsReceived.addAndGet(statistics.totalPacketsReceived.get());
-        videobridgeStatistics.packetsSent.addAndGet(statistics.totalPacketsSent.get());
-
-        videobridgeStatistics.totalRelayBytesReceived.addAndGet(statistics.totalRelayBytesReceived.get());
-        videobridgeStatistics.totalRelayBytesSent.addAndGet(statistics.totalRelayBytesSent.get());
-        videobridgeStatistics.relayPacketsReceived.addAndGet(statistics.totalRelayPacketsReceived.get());
-        videobridgeStatistics.relayPacketsSent.addAndGet(statistics.totalRelayPacketsSent.get());
-
-        boolean hasFailed = statistics.hasIceFailedEndpoint && !statistics.hasIceSucceededEndpoint;
-        boolean hasPartiallyFailed = statistics.hasIceFailedEndpoint && statistics.hasIceSucceededEndpoint;
-
-        videobridgeStatistics.endpointsDtlsFailed.addAndGet(statistics.dtlsFailedEndpoints.get());
-
-        if (hasPartiallyFailed)
-        {
-            videobridgeStatistics.partiallyFailedConferences.incAndGet();
-        }
-
-        if (hasFailed)
-        {
-            videobridgeStatistics.failedConferences.incAndGet();
-        }
-
-        if (logger.isInfoEnabled())
-        {
-            logger.info("expire_conf,duration=" + durationSeconds +
-                    ",has_failed=" + hasFailed +
-                    ",has_partially_failed=" + hasPartiallyFailed);
-        }
+        logger.info("expire_conf,duration=" + durationSeconds);
     }
 
     /**
@@ -739,7 +692,7 @@ public class Conference
                 id, this, logger, iceControlling, doSsrcRewriting, visitor, privateAddresses);
         videobridge.localEndpointCreated(visitor);
 
-        subscribeToEndpointEvents(endpoint);
+        endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
 
         addEndpoints(Collections.singleton(endpoint));
 
@@ -760,30 +713,6 @@ public class Conference
         relaysById.put(id, relay);
 
         return relay;
-    }
-
-    private void subscribeToEndpointEvents(Endpoint endpoint)
-    {
-        endpoint.addEventHandler(new AbstractEndpoint.EventHandler()
-        {
-            @Override
-            public void iceSucceeded()
-            {
-                getStatistics().hasIceSucceededEndpoint = true;
-            }
-
-            @Override
-            public void iceFailed()
-            {
-                getStatistics().hasIceFailedEndpoint = true;
-            }
-
-            @Override
-            public void sourcesChanged()
-            {
-                endpointSourcesChanged(endpoint);
-            }
-        });
     }
 
     /**
@@ -1289,7 +1218,7 @@ public class Conference
             return false;
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
             return false;
-        videobridge.getStatistics().tossedPacketsEnergy.addValue(ranking.energyScore);
+        VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;
     }
 
@@ -1346,7 +1275,6 @@ public class Conference
             debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
             debugState.put("speechActivity", speechActivity.getDebugState());
-            debugState.put("statistics", statistics.getJson());
             //debugState.put("encodingsManager", encodingsManager.getDebugState());
         }
 
@@ -1394,98 +1322,6 @@ public class Conference
     @NotNull public EncodingsManager getEncodingsManager()
     {
         return encodingsManager;
-    }
-
-    /**
-     * Holds conference statistics.
-     */
-    public static class Statistics
-    {
-        /**
-         * The total number of bytes received in RTP packets in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalBytesReceived = new AtomicLong();
-
-        /**
-         * The total number of bytes sent in RTP packets in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalBytesSent = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalPacketsReceived = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in channels in this
-         * conference. Note that this is only updated when channels expire.
-         */
-        public AtomicLong totalPacketsSent = new AtomicLong();
-
-        /**
-         * The total number of bytes received in RTP packets in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayBytesReceived = new AtomicLong();
-
-        /**
-         * The total number of bytes sent in RTP packets in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayBytesSent = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayPacketsReceived = new AtomicLong();
-
-        /**
-         * The total number of RTP packets received in relays in this
-         * conference. Note that this is only updated when relays expire.
-         */
-        public AtomicLong totalRelayPacketsSent = new AtomicLong();
-
-        /**
-         * Whether at least one endpoint in this conference failed ICE.
-         */
-        public boolean hasIceFailedEndpoint = false;
-
-        /**
-         * Whether at least one endpoint in this conference completed ICE
-         * successfully.
-         */
-        public boolean hasIceSucceededEndpoint = false;
-
-        /**
-         * Number of endpoints whose ICE connection was established, but DTLS
-         * wasn't (at the time of expiration).
-         */
-        public AtomicInteger dtlsFailedEndpoints = new AtomicInteger();
-
-        /**
-         * Gets a snapshot of this object's state as JSON.
-         */
-        @SuppressWarnings("unchecked")
-        private JSONObject getJson()
-        {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("total_bytes_received", totalBytesReceived.get());
-            jsonObject.put("total_bytes_sent", totalBytesSent.get());
-            jsonObject.put("total_packets_received", totalPacketsReceived.get());
-            jsonObject.put("total_packets_sent", totalPacketsSent.get());
-            jsonObject.put("total_relay_bytes_received", totalRelayBytesReceived.get());
-            jsonObject.put("total_relay_bytes_sent", totalRelayBytesSent.get());
-            jsonObject.put("total_relay_packets_received", totalRelayPacketsReceived.get());
-            jsonObject.put("total_relay_packets_sent", totalRelayPacketsSent.get());
-            jsonObject.put("has_failed_endpoint", hasIceFailedEndpoint);
-            jsonObject.put("has_succeeded_endpoint", hasIceSucceededEndpoint);
-            jsonObject.put("dtls_failed_endpoints", dtlsFailedEndpoints.get());
-            return jsonObject;
-        }
     }
 
     /**

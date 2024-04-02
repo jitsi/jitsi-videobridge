@@ -20,6 +20,7 @@ import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.Companion.config
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
@@ -66,6 +67,7 @@ class XmppConnection : IQListener {
             }
 
             config.clientConfigs.forEach { cfg -> mucClientManager.addMucClient(cfg) }
+            org.jitsi.videobridge.metrics.Metrics.metricsUpdater.addUpdateTask { updateMetrics() }
         } else {
             logger.info("Already started")
         }
@@ -75,6 +77,13 @@ class XmppConnection : IQListener {
         if (running.compareAndSet(true, false)) {
             mucClientManager.stop()
         }
+    }
+
+    fun updateMetrics() {
+        mucClientsConfigured.set(mucClientManager.clientCount)
+        mucClientsConnected.set(mucClientManager.clientConnectedCount)
+        mucsConfigured.set(mucClientManager.mucCount)
+        mucsJoined.set(mucClientManager.mucJoinedCount)
     }
 
     /**
@@ -288,6 +297,23 @@ class XmppConnection : IQListener {
         private val colibriDelayStats = DelayStats(delayThresholds)
         private val healthDelayStats = DelayStats(delayThresholds)
         private val versionDelayStats = DelayStats(delayThresholds)
+
+        val mucClientsConfigured = VideobridgeMetricsContainer.instance.registerLongGauge(
+            "muc_clients_configured",
+            "Number of MUC clients that are configured."
+        )
+        val mucClientsConnected = VideobridgeMetricsContainer.instance.registerLongGauge(
+            "muc_clients_connected",
+            "Number of MUC clients that are connected."
+        )
+        val mucsConfigured = VideobridgeMetricsContainer.instance.registerLongGauge(
+            "mucs_connected",
+            "Number of MUCs that are configured."
+        )
+        val mucsJoined = VideobridgeMetricsContainer.instance.registerLongGauge(
+            "mucs_joined",
+            "Number of MUCs that are joined."
+        )
 
         @JvmStatic
         fun getStatsJson(): OrderedJsonObject = OrderedJsonObject().apply {

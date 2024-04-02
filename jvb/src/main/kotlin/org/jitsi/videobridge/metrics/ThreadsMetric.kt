@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2024 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.videobridge.metrics
 
-package org.jitsi.videobridge.rest.root.colibri.stats;
+import java.lang.management.ManagementFactory
 
-import org.jitsi.videobridge.rest.*;
-import org.jitsi.videobridge.rest.annotations.*;
-import org.jitsi.videobridge.stats.*;
-
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.*;
-
-@Path("/colibri/stats")
-@EnabledByConfig(RestApis.COLIBRI)
-public class Stats
-{
-    @GET
-    @Produces(MediaType.APPLICATION_JSON)
-    public String getStats()
-    {
-        return VideobridgeStatisticsShim.INSTANCE.getStatsJson().toJSONString();
+object ThreadsMetric {
+    fun update() {
+        threadCount.set(ManagementFactory.getThreadMXBean().threadCount.toLong())
     }
+
+    val threadCount = VideobridgeMetricsContainer.instance.registerLongGauge(
+        "thread_count",
+        "Current number of JVM threads."
+    )
 }
