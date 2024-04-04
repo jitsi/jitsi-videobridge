@@ -43,12 +43,25 @@ class RtpParser(
         }
 
         val rtpPacket = when (payloadType.mediaType) {
-            MediaType.AUDIO -> when (payloadType.encoding) {
-                RED -> packet.toOtherType(::RedAudioRtpPacket)
-                else -> packet.toOtherType(::AudioRtpPacket)
+            MediaType.AUDIO -> try {
+                when (payloadType.encoding) {
+                    RED -> packet.toOtherType(::RedAudioRtpPacket)
+                    else -> packet.toOtherType(::AudioRtpPacket)
+                }
+            } catch (e: Exception) {
+                logger.info("Dropping audio packet due to parse failure: ${e.message}")
+                return null
             }
-            MediaType.VIDEO -> packet.toOtherType(::VideoRtpPacket)
-            else -> throw Exception("Unrecognized media type: '${payloadType.mediaType}'")
+            MediaType.VIDEO -> try {
+                packet.toOtherType(::VideoRtpPacket)
+            } catch (e: Exception) {
+                logger.info("Dropping video packet due to parse failure: ${e.message}")
+                return null
+            }
+            else -> {
+                logger.info("Dropping packet with unrecognized media type: '${payloadType.mediaType}'")
+                return null
+            }
         }
         packetInfo.packet = rtpPacket
         if (rtpPacket.extensionsProfileType == 0xC0DE || rtpPacket.extensionsProfileType == 0xC2DE) {
