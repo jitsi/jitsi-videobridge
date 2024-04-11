@@ -320,6 +320,10 @@ class Transceiver(
         rtpReceiver.forceMuteVideo(shouldMute)
     }
 
+    fun getReceiverPcapNode() = rtpReceiver.getPcapNode()
+
+    fun getSenderPcapNode() = rtpSender.getPcapNode()
+
     /**
      * Get stats about this transceiver's pipeline nodes
      */

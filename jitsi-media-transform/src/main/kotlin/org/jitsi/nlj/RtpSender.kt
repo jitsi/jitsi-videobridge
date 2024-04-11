@@ -22,6 +22,7 @@ import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 
 /**
@@ -46,6 +47,7 @@ abstract class RtpSender :
     abstract fun addLossListener(lossListener: LossListener)
     abstract fun setFeature(feature: Features, enabled: Boolean)
     abstract fun isFeatureEnabled(feature: Features): Boolean
+    abstract fun getPcapNode(): Node
     abstract fun tearDown()
 
     abstract val bandwidthEstimator: BandwidthEstimator

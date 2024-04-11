@@ -312,6 +312,8 @@ class RtpSenderImpl(
         addJson("Bandwidth Estimation", bandwidthEstimator.getStats().toJson())
     }
 
+    override fun getPcapNode(): Node = toggleablePcapWriter.newObserverNode()
+
     override fun stop() {
         running = false
     }

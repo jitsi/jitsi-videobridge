@@ -33,6 +33,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.NEVER
@@ -287,6 +288,14 @@ class Endpoint @JvmOverloads constructor(
         recurringRunnableExecutor.registerRecurringRunnable(it)
     }
 
+    private val receivePcap = transceiver.getReceiverPcapNode()
+    private val sendPcap = transceiver.getSenderPcapNode()
+
+    private val sctpPipeline = pipeline {
+        receivePcap
+        sctpHandler
+    }
+
     /**
      * Manages remapping of video SSRCs when enabled.
      */
@@ -522,7 +531,7 @@ class Endpoint @JvmOverloads constructor(
      */
     // TODO(brian): change sctp handler to take buf, off, len
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
-        sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
+        sctpPipeline.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
     private fun effectiveVideoConstraintsChanged(
         oldEffectiveConstraints: EffectiveConstraintsMap,
@@ -577,6 +586,7 @@ class Endpoint @JvmOverloads constructor(
         // Create the SctpManager and provide it a method for sending SCTP data
         sctpManager = SctpManager(
             { data, offset, length ->
+                sendPcap.processPacket(PacketInfo(UnparsedPacket(data, offset, length)))
                 dtlsTransport.sendDtlsData(data, offset, length)
                 0
             },

@@ -151,6 +151,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
         tccGenerator.addLossListener(lossListener)
     }
 
+    override fun getPcapNode() = toggleablePcapWriter.newObserverNode()
+
     companion object {
         val queueErrorCounter = CountingErrorHandler()
 
