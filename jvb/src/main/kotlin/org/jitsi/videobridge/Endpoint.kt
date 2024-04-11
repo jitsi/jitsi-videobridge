@@ -292,8 +292,8 @@ class Endpoint @JvmOverloads constructor(
     private val sendPcap = transceiver.getSenderPcapNode()
 
     private val sctpPipeline = pipeline {
-        receivePcap
-        sctpHandler
+        node(receivePcap)
+        node(sctpHandler)
     }
 
     /**
