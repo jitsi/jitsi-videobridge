@@ -61,7 +61,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
                     stats.rtcpPacketReceived(rrPacket, clock.instant())
                     context("the rtt") {
                         should("be updated correctly") {
-                            mostRecentPublishedRtt shouldBe(10.0 plusOrMinus .1)
+                            mostRecentPublishedRtt shouldBe (10.0 plusOrMinus .1)
                         }
                     }
                 }
@@ -78,7 +78,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
                         stats.rtcpPacketReceived(rrPacket, clock.instant())
                         context("the rtt") {
                             should("be updated correctly") {
-                                mostRecentPublishedRtt shouldBe(10.0.plusOrMinus(.1))
+                                mostRecentPublishedRtt shouldBe (10.0.plusOrMinus(.1))
                             }
                         }
                     }
@@ -124,7 +124,7 @@ class EndpointConnectionStatsTest : ShouldSpec() {
 
             context("the rtt") {
                 should("be updated correctly") {
-                    mostRecentPublishedRtt shouldBe(10.0.plusOrMinus(.1))
+                    mostRecentPublishedRtt shouldBe (10.0.plusOrMinus(.1))
                 }
             }
         }
