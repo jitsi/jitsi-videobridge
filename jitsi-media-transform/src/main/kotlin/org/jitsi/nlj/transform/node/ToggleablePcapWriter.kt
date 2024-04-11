@@ -25,7 +25,8 @@ import kotlin.io.path.Path
 
 class ToggleablePcapWriter(
     private val parentLogger: Logger,
-    private val prefix: String
+    private val prefix: String,
+    private val outgoing: Boolean
 ) {
     private var pcapWriter: PcapWriter? = null
     private val pcapLock = Any()
@@ -37,7 +38,11 @@ class ToggleablePcapWriter(
 
         synchronized(pcapLock) {
             if (pcapWriter == null) {
-                pcapWriter = PcapWriter(parentLogger, Path(PcapWriter.directory, "$prefix-${Date().toInstant()}.pcap"))
+                pcapWriter = PcapWriter(
+                    parentLogger,
+                    Path(PcapWriter.directory, "$prefix-${Date().toInstant()}.pcap"),
+                    outgoing
+                )
             }
         }
     }

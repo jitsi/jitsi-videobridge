@@ -45,7 +45,8 @@ class DtlsTest : ShouldSpec() {
     init {
         val dtlsServer = DtlsStack(logger).apply { actAsServer() }
         val dtlsClient = DtlsStack(logger).apply { actAsClient() }
-        val pcapWriter = if (pcapEnabled) PcapWriter(logger, "/tmp/dtls-test.pcap") else null
+        // TODO: should mark the two directions of DTLS traffic separately in the PCAP
+        val pcapWriter = if (pcapEnabled) PcapWriter(logger, "/tmp/dtls-test.pcap", true) else null
 
         dtlsClient.remoteFingerprints = mapOf(
             dtlsServer.localFingerprintHashFunction to dtlsServer.localFingerprint

@@ -107,7 +107,7 @@ class RtpSenderImpl(
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
     private val srtcpEncryptWrapper = SrtcpEncryptNode()
-    private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-tx")
+    private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-tx", outgoing = true)
     private val outgoingPacketCache = PacketCacher()
     private val absSendTime = AbsSendTime(streamInformationStore)
     private val statsTracker = OutgoingStatisticsTracker()

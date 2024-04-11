@@ -139,7 +139,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             }
         })
     }
-    private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx")
+    private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx", outgoing = false)
     private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
     private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
 
