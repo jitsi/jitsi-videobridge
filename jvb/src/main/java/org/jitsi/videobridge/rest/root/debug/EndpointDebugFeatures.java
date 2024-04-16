@@ -18,8 +18,8 @@ package org.jitsi.videobridge.rest.root.debug;
 
 public enum EndpointDebugFeatures
 {
-    PCAP_DUMP("pcap-dump");
-
+    PCAP_DUMP("pcap-dump"),
+    SCTP_PCAP_DUMP("sctp-pcap-dump");
 
     private final String value;
 

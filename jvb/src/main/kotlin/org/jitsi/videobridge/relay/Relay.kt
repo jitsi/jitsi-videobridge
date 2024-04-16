@@ -35,6 +35,8 @@ import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.nlj.transform.node.ToggleablePcapWriter
+import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.LocalSsrcAssociation
@@ -167,6 +169,16 @@ class Relay @JvmOverloads constructor(
 
     private val sctpHandler = SctpHandler()
     private val dataChannelHandler = DataChannelHandler()
+
+    private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-sctp")
+    private val sctpRecvPcap = toggleablePcapWriter.newObserverNode(outbound = false)
+    private val sctpSendPcap =
+        toggleablePcapWriter.newObserverNode(outbound = true) as ToggleablePcapWriter.PcapWriterNode
+
+    private val sctpPipeline = pipeline {
+        node(sctpRecvPcap)
+        node(sctpHandler)
+    }
 
     private val iceTransport = IceTransport(
         id = id,
@@ -447,6 +459,7 @@ class Relay @JvmOverloads constructor(
         // Create the SctpManager and provide it a method for sending SCTP data
         val sctpManager = SctpManager(
             { data, offset, length ->
+                sctpSendPcap.observe(data, offset, length)
                 dtlsTransport.sendDtlsData(data, offset, length)
                 0
             },
@@ -626,12 +639,19 @@ class Relay @JvmOverloads constructor(
                 }
                 senders.values.forEach { s -> s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled) }
             }
+            EndpointDebugFeatures.SCTP_PCAP_DUMP ->
+                if (enabled) {
+                    toggleablePcapWriter.enable()
+                } else {
+                    toggleablePcapWriter.disable()
+                }
         }
     }
 
     fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
         return when (feature) {
             EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
+            EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
         }
     }
 
@@ -738,7 +758,7 @@ class Relay @JvmOverloads constructor(
      */
     // TODO(brian): change sctp handler to take buf, off, len
     fun dtlsAppPacketReceived(data: ByteArray, off: Int, len: Int) =
-        sctpHandler.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
+        sctpPipeline.processPacket(PacketInfo(UnparsedPacket(data, off, len)))
 
     /**
      * Return the newly created endpoint, or null if an endpoint with that ID already existed. Note that the new
