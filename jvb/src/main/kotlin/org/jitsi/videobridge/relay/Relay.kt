@@ -172,8 +172,7 @@ class Relay @JvmOverloads constructor(
 
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-sctp")
     private val sctpRecvPcap = toggleablePcapWriter.newObserverNode(outbound = false)
-    private val sctpSendPcap =
-        toggleablePcapWriter.newObserverNode(outbound = true) as ToggleablePcapWriter.PcapWriterNode
+    private val sctpSendPcap = toggleablePcapWriter.newObserverNode(outbound = true)
 
     private val sctpPipeline = pipeline {
         node(sctpRecvPcap)
