@@ -68,12 +68,15 @@ class PcapWriter(
         val directory: String by config("jmt.debug.pcap.directory".from(JitsiConfig.newConfig))
     }
 
-    fun observe(packetInfo: PacketInfo, outbound: Boolean) {
+    fun observe(packetInfo: PacketInfo, outbound: Boolean) =
+        observe(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length, outbound)
+
+    fun observe(buffer: ByteArray, offset: Int, length: Int, outbound: Boolean) {
         val udpPayload = UnknownPacket.Builder()
         // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
         // only exactly what we want to write
-        val subBuf = ByteArray(packetInfo.packet.length)
-        System.arraycopy(packetInfo.packet.buffer, packetInfo.packet.offset, subBuf, 0, packetInfo.packet.length)
+        val subBuf = ByteArray(length)
+        System.arraycopy(buffer, offset, subBuf, 0, length)
         udpPayload.rawData(subBuf)
         val srchost: Inet4Address
         val dsthost: Inet4Address
