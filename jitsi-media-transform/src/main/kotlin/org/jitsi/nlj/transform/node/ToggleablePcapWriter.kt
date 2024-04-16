@@ -55,7 +55,7 @@ class ToggleablePcapWriter(
 
     private inner class PcapWriterNode(name: String) : ObserverNode(name) {
         override fun observe(packetInfo: PacketInfo) {
-            pcapWriter?.processPacket(packetInfo)
+            pcapWriter?.observe(packetInfo)
         }
 
         override fun trace(f: () -> Unit) = f.invoke()

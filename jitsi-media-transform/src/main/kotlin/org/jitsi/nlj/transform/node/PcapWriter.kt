@@ -42,7 +42,7 @@ import kotlin.io.path.Path
 class PcapWriter(
     parentLogger: Logger,
     filePath: Path = Path(directory, "${Random().nextLong()}.pcap")
-) : ObserverNode("PCAP writer") {
+) {
     constructor(parentLogger: Logger, filePath: String) : this(parentLogger, Path(filePath))
 
     private val logger = createChildLogger(parentLogger)
@@ -63,7 +63,7 @@ class PcapWriter(
         val directory: String by config("jmt.debug.pcap.directory".from(JitsiConfig.newConfig))
     }
 
-    override fun observe(packetInfo: PacketInfo) {
+    fun observe(packetInfo: PacketInfo) {
         val udpPayload = UnknownPacket.Builder()
         // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
         // only exactly what we want to write
@@ -98,8 +98,6 @@ class PcapWriter(
 
         writer.dump(eth)
     }
-
-    override fun trace(f: () -> Unit) = f.invoke()
 
     fun close() {
         if (lazyWriter.isInitialized() && writer.isOpen) {
