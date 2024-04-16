@@ -147,7 +147,7 @@ class RtpSenderImpl(
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
             node(HeaderExtEncoder(streamInformationStore, logger))
-            node(toggleablePcapWriter.newObserverNode())
+            node(toggleablePcapWriter.newObserverNode(outbound = true))
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
@@ -181,7 +181,7 @@ class RtpSenderImpl(
                 packetInfo
             }
             node(rtcpSrUpdater)
-            node(toggleablePcapWriter.newObserverNode())
+            node(toggleablePcapWriter.newObserverNode(outbound = true))
             node(srtcpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })

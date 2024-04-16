@@ -57,7 +57,7 @@ class DtlsTest : ShouldSpec() {
         // The DTLS server's send is wired directly to the DTLS client's receive
         dtlsServer.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
             override fun sendData(data: ByteArray, off: Int, len: Int) {
-                pcapWriter?.observe(PacketInfo(UnparsedPacket(data, off, len)))
+                pcapWriter?.observe(PacketInfo(UnparsedPacket(data, off, len)), outbound = false)
                 dtlsClient.processIncomingProtocolData(data, off, len)
             }
         }
@@ -79,7 +79,7 @@ class DtlsTest : ShouldSpec() {
         // The DTLS client's send is wired directly to the DTLS server's receive
         dtlsClient.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
             override fun sendData(data: ByteArray, off: Int, len: Int) {
-                pcapWriter?.observe(PacketInfo(UnparsedPacket(data, off, len)))
+                pcapWriter?.observe(PacketInfo(UnparsedPacket(data, off, len)), outbound = true)
                 dtlsServer.processIncomingProtocolData(data, off, len)
             }
         }
