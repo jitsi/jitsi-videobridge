@@ -63,7 +63,7 @@ class PcapWriter(
         private val remotehost = Inet4Address.getByName("192.0.2.0") as Inet4Address
 
         private val localport = UdpPort(123, "blah")
-        private val remoteport = UdpPort(123, "blah")
+        private val remoteport = UdpPort(456, "blah")
 
         val directory: String by config("jmt.debug.pcap.directory".from(JitsiConfig.newConfig))
     }
@@ -90,8 +90,8 @@ class PcapWriter(
         } else {
             srchost = remotehost
             srcport = remoteport
-            dsthost = remotehost
-            dstport = remoteport
+            dsthost = localhost
+            dstport = localport
         }
 
         val udp = UdpPacket.Builder()
