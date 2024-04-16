@@ -28,6 +28,7 @@ import org.jitsi.videobridge.cc.allocation.ReceiverConstraintsMap
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.json.simple.JSONObject
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -60,7 +61,7 @@ abstract class AbstractEndpoint protected constructor(
     /**
      * The map of source name -> ReceiverConstraintsMap.
      */
-    private val receiverVideoConstraints = mutableMapOf<String, ReceiverConstraintsMap>()
+    private val receiverVideoConstraints = ConcurrentHashMap<String, ReceiverConstraintsMap>()
 
     /**
      * The statistics id of this <tt>Endpoint</tt>.
