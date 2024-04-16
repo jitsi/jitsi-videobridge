@@ -79,7 +79,7 @@ class Vp8Packet private constructor(
 
     val hasTL0PICIDX = DePacketizer.VP8PayloadDescriptor.hasTL0PICIDX(buffer, payloadOffset, payloadLength)
 
-    @field:Suppress("ktlint:standard:property-naming")
+    @field:Suppress("ktlint:standard:property-naming", "ktlint:standard:backing-property-naming")
     private var _TL0PICIDX = TL0PICIDX
         ?: DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
 

@@ -184,13 +184,13 @@ class RtpHeaderTest : ShouldSpec() {
         context("csrcs") {
             context("get") {
                 should("work correctly") {
-                    RtpHeader.getCsrcs(headerData, 0) shouldContainInOrder(listOf<Long>(123456, 45678))
+                    RtpHeader.getCsrcs(headerData, 0) shouldContainInOrder (listOf<Long>(123456, 45678))
                 }
             }
             context("set") {
                 should("work correctly") {
                     RtpHeader.setCsrcs(headerData, 0, listOf<Long>(2468, 1357))
-                    RtpHeader.getCsrcs(headerData, 0) shouldContainInOrder(listOf<Long>(2468, 1357))
+                    RtpHeader.getCsrcs(headerData, 0) shouldContainInOrder (listOf<Long>(2468, 1357))
                 }
             }
         }

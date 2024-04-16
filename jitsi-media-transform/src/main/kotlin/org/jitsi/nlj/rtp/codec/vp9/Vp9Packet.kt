@@ -99,7 +99,7 @@ class Vp9Packet private constructor(
     val isInterPicturePredicted =
         DePacketizer.VP9PayloadDescriptor.isInterPicturePredicted(buffer, payloadOffset, payloadLength)
 
-    @field:Suppress("ktlint:standard:property-naming")
+    @field:Suppress("ktlint:standard:property-naming", "ktlint:standard:backing-property-naming")
     private var _TL0PICIDX =
         TL0PICIDX ?: DePacketizer.VP9PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
 

@@ -30,7 +30,7 @@
         <jitsi.utils.version>1.0-127-g6c65524</jitsi.utils.version>
         <jicoco.version>1.1-140-g8f45a9f</jicoco.version>
         <mockk.version>1.13.8</mockk.version>
-        <ktlint-maven-plugin.version>3.0.0</ktlint-maven-plugin.version>
+        <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
         <spotbugs.version>4.6.0</spotbugs.version>
         <jersey.version>3.0.10</jersey.version>
