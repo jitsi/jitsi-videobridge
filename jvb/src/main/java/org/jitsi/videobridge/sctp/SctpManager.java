@@ -62,7 +62,7 @@ public class SctpManager
             classLogger.info("Initializing Sctp4j");
             // "If UDP encapsulation is not necessary, the UDP port has to be set to 0"
             // All our SCTP is encapsulated in DTLS, we don't use direct UDP encapsulation.
-            Sctp4j.init(0, config.getDebugMask());
+            Sctp4j.init(0);
         }
         else
         {
