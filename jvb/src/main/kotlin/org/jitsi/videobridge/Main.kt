@@ -42,7 +42,6 @@ import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
-import org.jxmpp.stringprep.XmppStringPrepUtil
 import java.time.Clock
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
@@ -80,7 +79,7 @@ fun main() {
     // Initialize, binding on the main ICE port.
     Harvesters.init()
 
-    XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.config.jidCacheSize)
+    org.jitsi.videobridge.xmpp.Smack.initialize()
     PacketQueue.setEnableStatisticsDefault(true)
 
     // Trigger an exception early in case the DTLS cipher suites are misconfigured

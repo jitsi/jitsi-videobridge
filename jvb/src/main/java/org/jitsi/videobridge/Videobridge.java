@@ -33,13 +33,9 @@ import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.xmpp.extensions.*;
-import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.health.*;
-import org.jitsi.xmpp.extensions.jingle.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -500,47 +496,6 @@ public class Videobridge
         UlimitCheck.printUlimits();
 
         videobridgeExpireThread.start();
-
-        // <force-shutdown>
-        ForcefulShutdownIqProvider.registerIQProvider();
-
-        // <graceful-shutdown>
-        GracefulShutdownIqProvider.registerIQProvider();
-
-        // <stats>
-        new ColibriStatsIqProvider(); // registers itself with Smack
-
-        // ICE-UDP <transport>
-        ProviderManager.addExtensionProvider(
-                IceUdpTransportPacketExtension.ELEMENT,
-                IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(IceUdpTransportPacketExtension.class));
-
-        // ICE-UDP <candidate xmlns=urn:xmpp:jingle:transports:ice-udp:1">
-        DefaultPacketExtensionProvider<IceCandidatePacketExtension> iceCandidatePacketExtensionProvider
-                = new DefaultPacketExtensionProvider<>(IceCandidatePacketExtension.class);
-        ProviderManager.addExtensionProvider(
-                IceCandidatePacketExtension.ELEMENT,
-                IceCandidatePacketExtension.NAMESPACE,
-                iceCandidatePacketExtensionProvider);
-
-        // ICE <rtcp-mux/>
-        ProviderManager.addExtensionProvider(
-                IceRtcpmuxPacketExtension.ELEMENT,
-                IceRtcpmuxPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(IceRtcpmuxPacketExtension.class));
-
-        // DTLS-SRTP <fingerprint>
-        ProviderManager.addExtensionProvider(
-                DtlsFingerprintPacketExtension.ELEMENT,
-                DtlsFingerprintPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(DtlsFingerprintPacketExtension.class));
-
-        // Health-check
-        HealthCheckIQProvider.registerIQProvider();
-
-        // Colibri2
-        IqProviderUtils.registerProviders();
     }
 
     /**
