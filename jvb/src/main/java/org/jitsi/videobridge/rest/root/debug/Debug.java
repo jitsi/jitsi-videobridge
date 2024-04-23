@@ -370,7 +370,7 @@ public class Debug
                 return ByteBufferPool.getStatsJson().toJSONString();
             }
             case QUEUE_STATS: {
-                return videobridge.getQueueStats().toJSONString();
+                return QueueStats.getQueueStats().toJSONString();
             }
             case TRANSIT_STATS: {
                 return PacketTransitStats.getStatsJson().toJSONString();

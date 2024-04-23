@@ -19,16 +19,13 @@ import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.health.Result;
-import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.metrics.*;
-import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
@@ -560,68 +557,6 @@ public class Videobridge
         }
 
         return debugState;
-    }
-
-    /**
-     * Gets statistics for the different {@code PacketQueue}s that this bridge
-     * uses.
-     * TODO: is there a better place for this?
-     */
-    @SuppressWarnings("unchecked")
-    public JSONObject getQueueStats()
-    {
-        JSONObject queueStats = new JSONObject();
-
-        queueStats.put(
-            "srtp_send_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(Endpoint.queueErrorCounter,
-                "Endpoint-outgoing-packet-queue"));
-        queueStats.put(
-            "relay_srtp_send_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(Relay.queueErrorCounter,
-                "Relay-outgoing-packet-queue"));
-        queueStats.put(
-            "relay_endpoint_sender_srtp_send_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(RelayEndpointSender.queueErrorCounter,
-                "RelayEndpointSender-outgoing-packet-queue"));
-        queueStats.put(
-            "rtp_receiver_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter(),
-                "rtp-receiver-incoming-packet-queue"));
-        queueStats.put(
-            "rtp_sender_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter(),
-                "rtp-sender-incoming-packet-queue"));
-        queueStats.put(
-            "colibri_queue",
-            QueueStatistics.Companion.getStatistics().get("colibri-queue")
-        );
-
-        queueStats.put(
-            AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID,
-            getJsonFromQueueStatisticsAndErrorHandler(
-                    null,
-                    AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID));
-
-        return queueStats;
-    }
-
-    private OrderedJsonObject getJsonFromQueueStatisticsAndErrorHandler(
-            CountingErrorHandler countingErrorHandler,
-            String queueName)
-    {
-        OrderedJsonObject json = (OrderedJsonObject)QueueStatistics.Companion.getStatistics().get(queueName);
-        if (countingErrorHandler != null)
-        {
-            if (json == null)
-            {
-                json = new OrderedJsonObject();
-                json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
-            }
-            json.put("exceptions", countingErrorHandler.getNumExceptions());
-        }
-
-        return json;
     }
 
     @NotNull
