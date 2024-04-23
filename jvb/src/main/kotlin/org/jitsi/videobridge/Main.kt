@@ -101,7 +101,8 @@ fun main() {
         shutdownService,
         JvbVersionService.instance.currentVersion,
         Clock.systemUTC()
-    ).apply { start() }
+    )
+    val videobridgeExpireThread = VideobridgeExpireThread(videobridge)
     Metrics.metricsUpdater.addUpdateTask {
         VideobridgePeriodicMetrics.update(videobridge)
     }
@@ -169,6 +170,7 @@ fun main() {
     } catch (t: Throwable) {
         logger.error("Error shutting down http servers", t)
     }
+    videobridgeExpireThread.stop()
     videobridge.stop()
     stopIce4j()
     Metrics.stop()

@@ -94,12 +94,6 @@ public class Videobridge
     private final Clock clock;
 
     /**
-     * Thread that checks expiration for conferences, contents, channels and
-     * execute expire procedure for any of them.
-     */
-    private final VideobridgeExpireThread videobridgeExpireThread;
-
-    /**
      * The {@link JvbLoadManager} instance used for this bridge.
      */
     @NotNull
@@ -133,7 +127,6 @@ public class Videobridge
         @NotNull Clock clock)
     {
         this.clock = clock;
-        videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = JvbLoadManager.create(this);
         if (xmppConnection != null)
         {
@@ -486,19 +479,10 @@ public class Videobridge
     }
 
     /**
-     * Starts this {@link Videobridge}.
-     */
-    void start()
-    {
-        videobridgeExpireThread.start();
-    }
-
-    /**
      * Stops this {@link Videobridge}.
      */
     void stop()
     {
-        videobridgeExpireThread.stop();
         jvbLoadManager.stop();
     }
 
