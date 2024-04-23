@@ -99,7 +99,6 @@ fun main() {
         xmppConnection,
         shutdownService,
         JvbVersionService.instance.currentVersion,
-        VersionConfig.config.release,
         Clock.systemUTC()
     ).apply { start() }
     Metrics.metricsUpdater.addUpdateTask {

@@ -113,7 +113,6 @@ public class Videobridge
     private final JvbLoadManager<?> jvbLoadManager;
 
     @NotNull private final Version version;
-    @Nullable private final String releaseId;
 
     @NotNull private final ShutdownManager shutdownManager;
 
@@ -138,7 +137,6 @@ public class Videobridge
         @Nullable XmppConnection xmppConnection,
         @NotNull ShutdownServiceImpl shutdownService,
         @NotNull Version version,
-        @Nullable String releaseId,
         @NotNull Clock clock)
     {
         this.clock = clock;
@@ -149,7 +147,6 @@ public class Videobridge
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
         this.version = version;
-        this.releaseId = releaseId;
         this.shutdownManager = new ShutdownManager(shutdownService, logger);
         jvbHealthChecker.start();
     }
@@ -497,10 +494,8 @@ public class Videobridge
 
     /**
      * Starts this {@link Videobridge}.
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
-    public void start()
+    void start()
     {
         UlimitCheck.printUlimits();
 
@@ -550,10 +545,8 @@ public class Videobridge
 
     /**
      * Stops this {@link Videobridge}.
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
-    public void stop()
+    void stop()
     {
         videobridgeExpireThread.stop();
         jvbLoadManager.stop();
@@ -682,15 +675,6 @@ public class Videobridge
         return version;
     }
 
-    /**
-     * Get the release ID of this videobridge.
-     * @return The release ID. Returns null if not in use.
-     */
-    public @Nullable String getReleaseId()
-    {
-        return releaseId;
-    }
-
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
     {
         @Override
@@ -731,15 +715,6 @@ public class Videobridge
                         StanzaError.from(StanzaError.Condition.internal_server_error, result.getMessage()).build());
             }
         }
-    }
-
-    /**
-     * Basic statistics/metrics about the videobridge like cumulative/total
-     * number of channels created, cumulative/total number of channels failed,
-     * etc.
-     */
-    public static class Statistics
-    {
     }
 
     private static class ConferenceNotFoundException extends Exception {}
