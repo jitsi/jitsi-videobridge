@@ -74,7 +74,7 @@ public class Videobridge
 
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their local IDs.
-     *
+     * <p/>
      * TODO: The only remaining uses of this ID are for the HTTP debug interface and the colibri WebSocket conference
      * identifier. This should be replaced with meetingId (while making sure jvb-rtcstats-push doesn't break).
      */
@@ -90,7 +90,7 @@ public class Videobridge
 
     /**
      * The clock to use, pluggable for testing purposes.
-     *
+     * <p/>
      * Note that currently most code uses the system clock directly.
      */
     @NotNull
