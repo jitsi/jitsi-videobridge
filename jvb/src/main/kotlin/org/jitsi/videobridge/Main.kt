@@ -38,6 +38,7 @@ import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucPublisher
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.util.UlimitCheck
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.xmpp.XmppConnection
@@ -74,6 +75,7 @@ fun main() {
 
     logger.info("Starting jitsi-videobridge version ${JvbVersionService.instance.currentVersion}")
 
+    UlimitCheck.printUlimits()
     startIce4j()
 
     // Initialize, binding on the main ICE port.

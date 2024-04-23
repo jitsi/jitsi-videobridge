@@ -490,8 +490,6 @@ public class Videobridge
      */
     void start()
     {
-        UlimitCheck.printUlimits();
-
         videobridgeExpireThread.start();
     }
 
