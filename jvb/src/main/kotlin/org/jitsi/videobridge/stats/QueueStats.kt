@@ -27,11 +27,7 @@ import org.jitsi.videobridge.relay.RelayEndpointSender
 import org.json.simple.JSONObject
 
 object QueueStats {
-    /**
-     * Gets statistics for the different `PacketQueue`s that this bridge
-     * uses.
-     * TODO: is there a better place for this?
-     */
+    /** Gets statistics for the different `PacketQueue`s that this bridge uses. */
     @JvmStatic
     fun getQueueStats() = JSONObject().apply {
         this["srtp_send_queue"] = getJsonFromQueueStatisticsAndErrorHandler(
