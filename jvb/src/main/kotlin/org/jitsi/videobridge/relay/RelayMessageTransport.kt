@@ -340,6 +340,13 @@ class RelayMessageTransport(
                 webSocket = null
                 webSocketLastActive = false
                 logger.debug { "Web socket closed, statusCode $statusCode ( $reason)." }
+                // 1000 is normal, 1001 is e.g. a tab closing. 1005 is "No Status Rcvd" and we see the majority of
+                // sockets close this way.
+                if (statusCode == 1000 || statusCode == 1001 || statusCode == 1005) {
+                    VideobridgeMetrics.colibriWebSocketCloseNormal.inc()
+                } else {
+                    VideobridgeMetrics.colibriWebSocketCloseAbnormal.inc()
+                }
             }
         }
 
@@ -350,8 +357,10 @@ class RelayMessageTransport(
         }
     }
 
-    override fun webSocketError(ws: ColibriWebSocket, cause: Throwable) =
+    override fun webSocketError(ws: ColibriWebSocket, cause: Throwable) {
         logger.error("Colibri websocket error: ${cause.message}")
+        VideobridgeMetrics.colibriWebSocketErrors.inc()
+    }
 
     /**
      * {@inheritDoc}

@@ -73,6 +73,24 @@ object VideobridgeMetrics {
     )
 
     @JvmField
+    val colibriWebSocketCloseNormal = metricsContainer.registerCounter(
+        "colibri_web_socket_close_normal",
+        "Number of times a colibri web socket was closed normally."
+    )
+
+    @JvmField
+    val colibriWebSocketCloseAbnormal = metricsContainer.registerCounter(
+        "colibri_web_socket_close_abnormal",
+        "Number of times a colibri web socket was closed abnormally."
+    )
+
+    @JvmField
+    val colibriWebSocketErrors = metricsContainer.registerCounter(
+        "colibri_web_socket_error",
+        "Number of times a colibri web socket reported an error."
+    )
+
+    @JvmField
     val packetsReceived = metricsContainer.registerCounter(
         "packets_received",
         "Number of RTP packets received in conferences on this videobridge."
