@@ -353,9 +353,18 @@ public class EndpointMessageTransport
                 webSocket = null;
                 webSocketLastActive = false;
                 getLogger().info(() -> "Websocket closed, statusCode " + statusCode + " ( " + reason + ").");
+                // 1000 is normal, 1001 is e.g. a tab closing. 1005 is "No Status Rcvd" and we see the majority of
+                // sockets close this way.
+                if (statusCode == 1000 || statusCode == 1001 || statusCode == 1005)
+                {
+                    VideobridgeMetrics.colibriWebSocketCloseNormal.inc();
+                }
+                else
+                {
+                    VideobridgeMetrics.colibriWebSocketCloseAbnormal.inc();
+                }
             }
         }
-
     }
 
     /**
@@ -365,6 +374,7 @@ public class EndpointMessageTransport
     public void webSocketError(ColibriWebSocket ws, Throwable cause)
     {
         getLogger().error("Colibri websocket error: " +  cause.getMessage());
+        VideobridgeMetrics.colibriWebSocketErrors.inc();
     }
 
     /**
