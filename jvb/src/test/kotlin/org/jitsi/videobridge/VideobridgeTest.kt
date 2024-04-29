@@ -37,7 +37,7 @@ class VideobridgeTest : ShouldSpec() {
 
     private val shutdownService: ShutdownServiceImpl = mockk(relaxed = true)
     private val fakeExecutor = FakeScheduledExecutorService()
-    private val videobridge = Videobridge(null, shutdownService, mockk(), null, fakeExecutor.clock)
+    private val videobridge = Videobridge(null, shutdownService, mockk(), fakeExecutor.clock)
 
     override suspend fun beforeAny(testCase: TestCase) = super.beforeAny(testCase).also {
         TaskPools.SCHEDULED_POOL = fakeExecutor

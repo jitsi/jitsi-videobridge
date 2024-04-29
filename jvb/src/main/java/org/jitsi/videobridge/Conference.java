@@ -565,7 +565,7 @@ public class Conference
      * respective <tt>Channel</tt>s. Releases the resources acquired by this
      * instance throughout its life time and prepares it to be garbage
      * collected.
-     *
+     * <p/>
      * NOTE: this should _only_ be called by the Conference "manager" (in this
      * case, Videobridge).  If you need to expire a Conference from elsewhere, use
      * {@link Videobridge#expireConference(Conference)}

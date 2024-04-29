@@ -19,27 +19,20 @@ import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.health.Result;
-import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
-import org.jitsi.utils.queue.*;
 import org.jitsi.utils.version.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.metrics.*;
-import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.xmpp.extensions.*;
-import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.health.*;
-import org.jitsi.xmpp.extensions.jingle.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smack.provider.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
@@ -78,7 +71,7 @@ public class Videobridge
 
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their local IDs.
-     *
+     * <p/>
      * TODO: The only remaining uses of this ID are for the HTTP debug interface and the colibri WebSocket conference
      * identifier. This should be replaced with meetingId (while making sure jvb-rtcstats-push doesn't break).
      */
@@ -94,17 +87,11 @@ public class Videobridge
 
     /**
      * The clock to use, pluggable for testing purposes.
-     *
+     * <p/>
      * Note that currently most code uses the system clock directly.
      */
     @NotNull
     private final Clock clock;
-
-    /**
-     * Thread that checks expiration for conferences, contents, channels and
-     * execute expire procedure for any of them.
-     */
-    private final VideobridgeExpireThread videobridgeExpireThread;
 
     /**
      * The {@link JvbLoadManager} instance used for this bridge.
@@ -113,7 +100,6 @@ public class Videobridge
     private final JvbLoadManager<?> jvbLoadManager;
 
     @NotNull private final Version version;
-    @Nullable private final String releaseId;
 
     @NotNull private final ShutdownManager shutdownManager;
 
@@ -138,18 +124,15 @@ public class Videobridge
         @Nullable XmppConnection xmppConnection,
         @NotNull ShutdownServiceImpl shutdownService,
         @NotNull Version version,
-        @Nullable String releaseId,
         @NotNull Clock clock)
     {
         this.clock = clock;
-        videobridgeExpireThread = new VideobridgeExpireThread(this);
         jvbLoadManager = JvbLoadManager.create(this);
         if (xmppConnection != null)
         {
             xmppConnection.setEventHandler(new XmppConnectionEventHandler());
         }
         this.version = version;
-        this.releaseId = releaseId;
         this.shutdownManager = new ShutdownManager(shutdownService, logger);
         jvbHealthChecker.start();
     }
@@ -496,74 +479,10 @@ public class Videobridge
     }
 
     /**
-     * Starts this {@link Videobridge}.
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its tests.
-     */
-    public void start()
-    {
-        UlimitCheck.printUlimits();
-
-        videobridgeExpireThread.start();
-
-        // <force-shutdown>
-        ForcefulShutdownIqProvider.registerIQProvider();
-
-        // <graceful-shutdown>
-        GracefulShutdownIqProvider.registerIQProvider();
-
-        // <stats>
-        new ColibriStatsIqProvider(); // registers itself with Smack
-
-        // ICE-UDP <transport>
-        ProviderManager.addExtensionProvider(
-                IceUdpTransportPacketExtension.ELEMENT,
-                IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(IceUdpTransportPacketExtension.class));
-
-        // RAW-UDP <candidate xmlns=urn:xmpp:jingle:transports:raw-udp:1>
-        DefaultPacketExtensionProvider<UdpCandidatePacketExtension> udpCandidatePacketExtensionProvider
-                = new DefaultPacketExtensionProvider<>(UdpCandidatePacketExtension.class);
-        ProviderManager.addExtensionProvider(
-                UdpCandidatePacketExtension.ELEMENT,
-                UdpCandidatePacketExtension.NAMESPACE,
-                udpCandidatePacketExtensionProvider);
-
-        // ICE-UDP <candidate xmlns=urn:xmpp:jingle:transports:ice-udp:1">
-        DefaultPacketExtensionProvider<IceCandidatePacketExtension> iceCandidatePacketExtensionProvider
-                = new DefaultPacketExtensionProvider<>(IceCandidatePacketExtension.class);
-        ProviderManager.addExtensionProvider(
-                IceCandidatePacketExtension.ELEMENT,
-                IceCandidatePacketExtension.NAMESPACE,
-                iceCandidatePacketExtensionProvider);
-
-        // ICE <rtcp-mux/>
-        ProviderManager.addExtensionProvider(
-                IceRtcpmuxPacketExtension.ELEMENT,
-                IceRtcpmuxPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(IceRtcpmuxPacketExtension.class));
-
-        // DTLS-SRTP <fingerprint>
-        ProviderManager.addExtensionProvider(
-                DtlsFingerprintPacketExtension.ELEMENT,
-                DtlsFingerprintPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(DtlsFingerprintPacketExtension.class));
-
-        // Health-check
-        HealthCheckIQProvider.registerIQProvider();
-
-        // Colibri2
-        IqProviderUtils.registerProviders();
-    }
-
-    /**
      * Stops this {@link Videobridge}.
-     *
-     * NOTE: we have to make this public so Jicofo can call it from its tests.
      */
-    public void stop()
+    void stop()
     {
-        videobridgeExpireThread.stop();
         jvbLoadManager.stop();
     }
 
@@ -622,81 +541,10 @@ public class Videobridge
         return debugState;
     }
 
-    /**
-     * Gets statistics for the different {@code PacketQueue}s that this bridge
-     * uses.
-     * TODO: is there a better place for this?
-     */
-    @SuppressWarnings("unchecked")
-    public JSONObject getQueueStats()
-    {
-        JSONObject queueStats = new JSONObject();
-
-        queueStats.put(
-            "srtp_send_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(Endpoint.queueErrorCounter,
-                "Endpoint-outgoing-packet-queue"));
-        queueStats.put(
-            "relay_srtp_send_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(Relay.queueErrorCounter,
-                "Relay-outgoing-packet-queue"));
-        queueStats.put(
-            "relay_endpoint_sender_srtp_send_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(RelayEndpointSender.queueErrorCounter,
-                "RelayEndpointSender-outgoing-packet-queue"));
-        queueStats.put(
-            "rtp_receiver_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(RtpReceiverImpl.Companion.getQueueErrorCounter(),
-                "rtp-receiver-incoming-packet-queue"));
-        queueStats.put(
-            "rtp_sender_queue",
-            getJsonFromQueueStatisticsAndErrorHandler(RtpSenderImpl.Companion.getQueueErrorCounter(),
-                "rtp-sender-incoming-packet-queue"));
-        queueStats.put(
-            "colibri_queue",
-            QueueStatistics.Companion.getStatistics().get("colibri-queue")
-        );
-
-        queueStats.put(
-            AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID,
-            getJsonFromQueueStatisticsAndErrorHandler(
-                    null,
-                    AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID));
-
-        return queueStats;
-    }
-
-    private OrderedJsonObject getJsonFromQueueStatisticsAndErrorHandler(
-            CountingErrorHandler countingErrorHandler,
-            String queueName)
-    {
-        OrderedJsonObject json = (OrderedJsonObject)QueueStatistics.Companion.getStatistics().get(queueName);
-        if (countingErrorHandler != null)
-        {
-            if (json == null)
-            {
-                json = new OrderedJsonObject();
-                json.put("dropped_packets", countingErrorHandler.getNumPacketsDropped());
-            }
-            json.put("exceptions", countingErrorHandler.getNumExceptions());
-        }
-
-        return json;
-    }
-
     @NotNull
     public Version getVersion()
     {
         return version;
-    }
-
-    /**
-     * Get the release ID of this videobridge.
-     * @return The release ID. Returns null if not in use.
-     */
-    public @Nullable String getReleaseId()
-    {
-        return releaseId;
     }
 
     private class XmppConnectionEventHandler implements XmppConnection.EventHandler
@@ -739,15 +587,6 @@ public class Videobridge
                         StanzaError.from(StanzaError.Condition.internal_server_error, result.getMessage()).build());
             }
         }
-    }
-
-    /**
-     * Basic statistics/metrics about the videobridge like cumulative/total
-     * number of channels created, cumulative/total number of channels failed,
-     * etc.
-     */
-    public static class Statistics
-    {
     }
 
     private static class ConferenceNotFoundException extends Exception {}

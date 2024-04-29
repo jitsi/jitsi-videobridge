@@ -38,11 +38,11 @@ import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucPublisher
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.util.UlimitCheck
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
-import org.jxmpp.stringprep.XmppStringPrepUtil
 import java.time.Clock
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
@@ -75,12 +75,13 @@ fun main() {
 
     logger.info("Starting jitsi-videobridge version ${JvbVersionService.instance.currentVersion}")
 
+    UlimitCheck.printUlimits()
     startIce4j()
 
     // Initialize, binding on the main ICE port.
     Harvesters.init()
 
-    XmppStringPrepUtil.setMaxCacheSizes(XmppClientConnectionConfig.config.jidCacheSize)
+    org.jitsi.videobridge.xmpp.Smack.initialize()
     PacketQueue.setEnableStatisticsDefault(true)
 
     // Trigger an exception early in case the DTLS cipher suites are misconfigured
@@ -99,9 +100,9 @@ fun main() {
         xmppConnection,
         shutdownService,
         JvbVersionService.instance.currentVersion,
-        VersionConfig.config.release,
         Clock.systemUTC()
-    ).apply { start() }
+    )
+    val videobridgeExpireThread = VideobridgeExpireThread(videobridge)
     Metrics.metricsUpdater.addUpdateTask {
         VideobridgePeriodicMetrics.update(videobridge)
     }
@@ -169,6 +170,7 @@ fun main() {
     } catch (t: Throwable) {
         logger.error("Error shutting down http servers", t)
     }
+    videobridgeExpireThread.stop()
     videobridge.stop()
     stopIce4j()
     Metrics.stop()
