@@ -25,26 +25,33 @@ import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer.Companion.insta
 class JvmMetrics private constructor() {
     val logger = createLogger()
 
+    private val gcType = ManagementFactory.getGarbageCollectorMXBeans().firstOrNull()?.name.let {
+        when {
+            it?.contains("shenandoah", ignoreCase = true) == true -> GcType.Shenandoah
+            it?.contains("zgc", ignoreCase = true) == true -> GcType.Zgc
+            it?.contains("g1", ignoreCase = true) == true -> GcType.G1
+            else -> GcType.Other
+        }
+    }.also {
+        logger.info("Detected GC type $it")
+    }
+
     fun update() {
         threadCount.set(ManagementFactory.getThreadMXBean().threadCount.toLong())
-        ManagementFactory.getGarbageCollectorMXBeans().forEach { gc ->
-            if (gc.name.lowercase().contains("g1 young")) {
-                g1YoungTime.set(gc.collectionTime)
-                g1YoungCount.set(gc.collectionCount)
-            } else if (gc.name.lowercase().contains("g1 old")) {
-                g1OldTime.set(gc.collectionTime)
-                g1OldCount.set(gc.collectionCount)
-            }
-            ManagementFactory.getMemoryPoolMXBeans().toSet().forEach { b ->
-                if (b.name.lowercase().contains("g1 old")) {
-                    logger.info("${b.name} ${b.memoryManagerNames.joinToString { "," }}....${b.usage}")
-                    g1OldUsage.set(b.usage.used)
-                    g1OldCapacity.set(b.usage.max)
-                }
-            }
-        }
+        gcCount.set(
+            ManagementFactory.getGarbageCollectorMXBeans().sumOf { it.collectionCount }
+        )
+        gcTime.set(
+            ManagementFactory.getGarbageCollectorMXBeans().sumOf { it.collectionTime }
+        )
         (ManagementFactory.getOperatingSystemMXBean() as? UnixOperatingSystemMXBean)?.let {
             openFdCount.set(it.openFileDescriptorCount)
+        }
+        if (gcType != GcType.Other) {
+            ManagementFactory.getMemoryPoolMXBeans().find { it.name == gcType.memoryPoolName }?.let {
+                heapUsed.set(it.usage.used)
+                heapCommitted.set(it.usage.committed)
+            }
         }
     }
 
@@ -53,34 +60,24 @@ class JvmMetrics private constructor() {
         "Current number of JVM threads."
     )
 
-    private val g1YoungCount = metricsContainer.registerLongGauge(
-        "jvm_g1_young_count",
-        "Collection count for the G1 young generation."
+    private val gcCount = metricsContainer.registerLongGauge(
+        "jvm_gc_count",
+        "Garbage collection count."
     )
 
-    private val g1YoungTime = metricsContainer.registerLongGauge(
-        "jvm_g1_young_time",
-        "Collection time for the young G1 generation."
+    private val gcTime = metricsContainer.registerLongGauge(
+        "jvm_gc_time",
+        "Garbage collection time."
     )
 
-    private val g1OldCount = metricsContainer.registerLongGauge(
-        "jvm_g1_old_count",
-        "Collection count for the G1 old generation."
+    private val heapCommitted = metricsContainer.registerLongGauge(
+        "jvm_heap_committed",
+        "Capacity of the main memory pool for the heap (GC type specific)."
     )
 
-    private val g1OldTime = metricsContainer.registerLongGauge(
-        "jvm_g1_old_time",
-        "Collection time for the G1 old generation."
-    )
-
-    private val g1OldCapacity = metricsContainer.registerLongGauge(
-        "jvm_g1_old_capacity",
-        "Capacity of the G1 Old memory pool."
-    )
-
-    private val g1OldUsage = metricsContainer.registerLongGauge(
-        "jvm_g1_old_usage",
-        "Usage of the G1 Old memory pool."
+    private val heapUsed = metricsContainer.registerLongGauge(
+        "jvm_heap_used",
+        "Usage of the main memory pool for the heap (GC type specific)."
     )
 
     private val openFdCount = metricsContainer.registerLongGauge(
@@ -88,14 +85,22 @@ class JvmMetrics private constructor() {
         "Number of open file descriptors."
     )
 
+    private enum class GcType(
+        /** The name of the memory pool we're interested with this type of GC */
+        val memoryPoolName: String?
+    ) {
+        G1("G1 Old Gen"),
+        Zgc("ZHeap"),
+        Shenandoah("Shenandoah"),
+        Other(null)
+    }
+
     companion object {
         val enable: Boolean by config {
             "videobridge.stats.jvm.enabled".from(JitsiConfig.newConfig)
         }
 
         val INSTANCE = if (enable) JvmMetrics() else null
-        fun update() {
-            INSTANCE?.update()
-        }
+        fun update() = INSTANCE?.update()
     }
 }
