@@ -33,7 +33,7 @@ abstract class ColibriQueue(packetHandler: PacketHandler<XmppConnection.ColibriR
         TaskPools.IO_POOL,
         // TODO: using the Videobridge clock breaks tests somehow
         Clock.systemUTC(),
-        // Allow running tasks to complete (so we can close the queue from within the task.
+        // Allow running tasks to complete (so we can close the queue from within the task).
         false,
     ) {
     init {
