@@ -219,10 +219,7 @@ public class Conference
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
-        colibriQueue = new PacketQueue<>(
-                Integer.MAX_VALUE,
-                true,
-                "colibri-queue",
+        colibriQueue = new ColibriQueue(
                 request ->
                 {
                     try
@@ -256,12 +253,10 @@ public class Conference
                                         e.getMessage()));
                     }
                     return true;
-                },
-                TaskPools.IO_POOL,
-                Clock.systemUTC(), // TODO: using the Videobridge clock breaks tests somehow
-                /* Allow running tasks to complete (so we can close the queue from within the task. */
-                false
-        );
+                }
+        )
+        {
+        };
 
         speechActivity = new ConferenceSpeechActivity(new SpeechActivityListener());
         updateLastNEndpointsFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(() -> {

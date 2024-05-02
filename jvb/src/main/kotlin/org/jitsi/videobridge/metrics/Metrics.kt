@@ -44,6 +44,7 @@ object Metrics {
         if (JvmMetrics.enable) {
             metricsUpdater.addUpdateTask { JvmMetrics.update() }
         }
+        QueueMetrics.init()
     }
     fun stop() {
         metricsUpdater.stop()

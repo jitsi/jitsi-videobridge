@@ -37,6 +37,8 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.videobridge.TransportConfig
+import org.jitsi.videobridge.metrics.QueueMetrics
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
@@ -163,11 +165,29 @@ class RelayEndpointSender(
     }
 
     companion object {
-        /**
-         * Count the number of dropped packets and exceptions.
-         */
+        private val droppedPacketsMetric = VideobridgeMetricsContainer.instance.registerCounter(
+            "relay_endpoint_srtp_send_queue_dropped_packets",
+            "Number of packets dropped out of the Relay SRTP send queue."
+        )
+
+        private val exceptionsMetric = VideobridgeMetricsContainer.instance.registerCounter(
+            "relay_endpoint_srtp_send_queue_exceptions",
+            "Number of exceptions from the Relay SRTP send queue."
+        )
+
+        /** Count the number of dropped packets and exceptions. */
         @JvmField
-        val queueErrorCounter = CountingErrorHandler()
+        val queueErrorCounter = object : CountingErrorHandler() {
+            override fun packetDropped() = super.packetDropped().also {
+                droppedPacketsMetric.inc()
+                QueueMetrics.droppedPackets.inc()
+            }
+
+            override fun packetHandlingFailed(t: Throwable?) = super.packetHandlingFailed(t).also {
+                exceptionsMetric.inc()
+                QueueMetrics.exceptions.inc()
+            }
+        }
 
         private const val SRTP_QUEUE_ENTRY_EVENT = "Entered RelayEndpointSender SRTP sender outgoing queue"
     }
