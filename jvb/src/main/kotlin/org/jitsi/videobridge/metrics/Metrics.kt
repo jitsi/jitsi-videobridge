@@ -40,7 +40,12 @@ object Metrics {
     val lock: Any
         get() = metricsUpdater
 
-    fun start() = metricsUpdater.addUpdateTask { ThreadsMetric.update() }
+    fun start() {
+        if (JvmMetrics.enable) {
+            metricsUpdater.addUpdateTask { JvmMetrics.update() }
+        }
+        QueueMetrics.init()
+    }
     fun stop() {
         metricsUpdater.stop()
         executor.shutdown()

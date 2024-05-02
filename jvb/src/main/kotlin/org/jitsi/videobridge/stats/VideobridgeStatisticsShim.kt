@@ -20,8 +20,8 @@ import org.jitsi.videobridge.EndpointConnectionStatusMonitor
 import org.jitsi.videobridge.VersionConfig
 import org.jitsi.videobridge.health.JvbHealthChecker
 import org.jitsi.videobridge.load_management.JvbLoadManager
+import org.jitsi.videobridge.metrics.JvmMetrics
 import org.jitsi.videobridge.metrics.Metrics
-import org.jitsi.videobridge.metrics.ThreadsMetric
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
 import org.jitsi.videobridge.relay.RelayConfig
@@ -204,7 +204,9 @@ object VideobridgeStatisticsShim {
 
             put("average_participant_stress", JvbLoadManager.averageParticipantStress)
 
-            put(THREADS, ThreadsMetric.threadCount.get())
+            JvmMetrics.INSTANCE?.threadCount?.let {
+                put(THREADS, it.get())
+            }
 
             put(SHUTDOWN_IN_PROGRESS, VideobridgeMetrics.gracefulShutdown.get())
             put("shutting_down", VideobridgeMetrics.shuttingDown.get())

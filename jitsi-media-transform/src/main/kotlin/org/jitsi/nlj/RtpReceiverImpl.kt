@@ -152,7 +152,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     companion object {
-        val queueErrorCounter = CountingErrorHandler()
+        var queueErrorCounter = CountingErrorHandler()
 
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP receiver incoming queue"

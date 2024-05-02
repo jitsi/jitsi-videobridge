@@ -66,7 +66,9 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
+import org.jitsi.videobridge.metrics.QueueMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.RelayedEndpoint
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
@@ -1109,11 +1111,28 @@ class Endpoint @JvmOverloads constructor(
          */
         private const val OPEN_DATA_CHANNEL_LOCALLY = false
 
-        /**
-         * Count the number of dropped packets and exceptions.
-         */
+        private val droppedPacketsMetric = VideobridgeMetricsContainer.instance.registerCounter(
+            "srtp_send_queue_dropped_packets",
+            "Number of packets dropped out of the Endpoint SRTP send queue."
+        )
+
+        private val exceptionsMetric = VideobridgeMetricsContainer.instance.registerCounter(
+            "srtp_send_queue_exceptions",
+            "Number of exceptions from the Endpoint SRTP send queue."
+        )
+
+        /** Count the number of dropped packets and exceptions. */
         @JvmField
-        val queueErrorCounter = CountingErrorHandler()
+        val queueErrorCounter = object : CountingErrorHandler() {
+            override fun packetDropped() = super.packetDropped().also {
+                droppedPacketsMetric.inc()
+                QueueMetrics.droppedPackets.inc()
+            }
+            override fun packetHandlingFailed(t: Throwable?) = super.packetHandlingFailed(t).also {
+                exceptionsMetric.inc()
+                QueueMetrics.exceptions.inc()
+            }
+        }
 
         /**
          * The executor which runs bandwidth probing.

@@ -324,7 +324,7 @@ class RtpSenderImpl(
     }
 
     companion object {
-        val queueErrorCounter = CountingErrorHandler()
+        var queueErrorCounter = CountingErrorHandler()
 
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"

@@ -16,10 +16,13 @@
 package org.jitsi.videobridge
 
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
 import org.jitsi.videobridge.message.MessageHandler
+import org.jitsi.videobridge.metrics.QueueMetrics
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
 import java.io.IOException
@@ -31,7 +34,7 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
 
     abstract val isConnected: Boolean
 
-    private val incomingMessageQueue: PacketQueue<MessageAndSource> = PacketQueue(
+    private val incomingMessageQueue: PacketQueue<MessageAndSource> = PacketQueue<MessageAndSource>(
         50,
         true,
         INCOMING_MESSAGE_QUEUE_ID,
@@ -47,7 +50,7 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
         },
         TaskPools.IO_POOL,
         Clock.systemUTC()
-    )
+    ).apply { setErrorHandler(queueErrorCounter) }
 
     /**
      * Fires the message transport ready event for the associated endpoint.
@@ -97,5 +100,23 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
 
     companion object {
         const val INCOMING_MESSAGE_QUEUE_ID = "bridge-channel-message-incoming-queue"
+        private val droppedPacketsMetric = VideobridgeMetricsContainer.instance.registerCounter(
+            "endpoint_receive_message_queue_dropped_packets",
+            "Number of packets dropped out of the Endpoint receive message queue."
+        )
+        private val exceptionsMetric = VideobridgeMetricsContainer.instance.registerCounter(
+            "endpoint_receive_message_queue_exceptions",
+            "Number of exceptions from the Endpoint receive message queue."
+        )
+        val queueErrorCounter = object : CountingErrorHandler() {
+            override fun packetDropped() = super.packetDropped().also {
+                droppedPacketsMetric.inc()
+                QueueMetrics.droppedPackets.inc()
+            }
+            override fun packetHandlingFailed(t: Throwable?) = super.packetHandlingFailed(t).also {
+                exceptionsMetric.inc()
+                QueueMetrics.exceptions.inc()
+            }
+        }
     }
 }
