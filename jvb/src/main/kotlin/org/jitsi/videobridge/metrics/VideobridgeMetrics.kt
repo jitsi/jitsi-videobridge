@@ -268,4 +268,11 @@ object VideobridgeMetrics {
     } else {
         null
     }
+
+    /** Just set once to allow detection of restarts */
+    private val startupTime = metricsContainer.registerLongGauge(
+        "startup_time",
+        "The startup time of the service.",
+        System.currentTimeMillis()
+    )
 }
