@@ -25,16 +25,16 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * A node which can be placed in the pipeline to cache SCTP packets until
- * the SCTPManager is ready to handle them.
+ * the DcSctpTransport is ready to handle them.
  */
 class DcSctpHandler : ConsumerNode("SCTP handler") {
-    private val sctpManagerLock = Any()
+    private val sctpTransportLock = Any()
     private var sctpTransport: DcSctpTransport? = null
     private val numCachedSctpPackets = AtomicLong(0)
     private val cachedSctpPackets = LinkedBlockingQueue<PacketInfo>(100)
 
     override fun consume(packetInfo: PacketInfo) {
-        synchronized(sctpManagerLock) {
+        synchronized(sctpTransportLock) {
             if (SctpConfig.config.enabled) {
                 sctpTransport?.handleIncomingSctp(packetInfo) ?: run {
                     numCachedSctpPackets.incrementAndGet()
@@ -48,18 +48,18 @@ class DcSctpHandler : ConsumerNode("SCTP handler") {
         addNumber("num_cached_packets", numCachedSctpPackets.get())
     }
 
-    fun setSctpTransport(sctpManager: DcSctpTransport) {
+    fun setSctpTransport(sctpTransport: DcSctpTransport) {
         // Submit this to the pool since we wait on the lock and process any
         // cached packets here as well
         TaskPools.IO_POOL.execute {
-            // We grab the lock here so that we can set the SCTP manager and
+            // We grab the lock here so that we can set the SCTP transport and
             // process any previously-cached packets as an atomic operation.
             // It also prevents another thread from coming in via
             // #doProcessPackets and processing packets at the same time in
             // another thread, which would be a problem.
-            synchronized(sctpManagerLock) {
-                this.sctpTransport = sctpManager
-                cachedSctpPackets.forEach { sctpManager.handleIncomingSctp(it) }
+            synchronized(sctpTransportLock) {
+                this.sctpTransport = sctpTransport
+                cachedSctpPackets.forEach { sctpTransport.handleIncomingSctp(it) }
                 cachedSctpPackets.clear()
             }
         }
