@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.sctp
+package org.jitsi.videobridge.dcsctp
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.util.TaskPools
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicLong
@@ -26,16 +27,16 @@ import java.util.concurrent.atomic.AtomicLong
  * A node which can be placed in the pipeline to cache SCTP packets until
  * the SCTPManager is ready to handle them.
  */
-class SctpHandler : ConsumerNode("SCTP handler") {
+class DcSctpHandler : ConsumerNode("SCTP handler") {
     private val sctpManagerLock = Any()
-    private var sctpManager: SctpManager? = null
+    private var sctpTransport: DcSctpTransport? = null
     private val numCachedSctpPackets = AtomicLong(0)
     private val cachedSctpPackets = LinkedBlockingQueue<PacketInfo>(100)
 
     override fun consume(packetInfo: PacketInfo) {
         synchronized(sctpManagerLock) {
             if (SctpConfig.config.enabled) {
-                sctpManager?.handleIncomingSctp(packetInfo) ?: run {
+                sctpTransport?.handleIncomingSctp(packetInfo) ?: run {
                     numCachedSctpPackets.incrementAndGet()
                     cachedSctpPackets.add(packetInfo)
                 }
@@ -47,7 +48,7 @@ class SctpHandler : ConsumerNode("SCTP handler") {
         addNumber("num_cached_packets", numCachedSctpPackets.get())
     }
 
-    fun setSctpManager(sctpManager: SctpManager) {
+    fun setSctpTransport(sctpManager: DcSctpTransport) {
         // Submit this to the pool since we wait on the lock and process any
         // cached packets here as well
         TaskPools.IO_POOL.execute {
@@ -57,7 +58,7 @@ class SctpHandler : ConsumerNode("SCTP handler") {
             // #doProcessPackets and processing packets at the same time in
             // another thread, which would be a problem.
             synchronized(sctpManagerLock) {
-                this.sctpManager = sctpManager
+                this.sctpTransport = sctpManager
                 cachedSctpPackets.forEach { sctpManager.handleIncomingSctp(it) }
                 cachedSctpPackets.clear()
             }

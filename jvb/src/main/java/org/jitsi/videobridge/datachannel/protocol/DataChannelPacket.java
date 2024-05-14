@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.datachannel.protocol;
 
 import org.jetbrains.annotations.*;
+import org.jitsi.dcsctp4j.DcSctpMessage;
 import org.jitsi.rtp.*;
 
 /**
@@ -36,6 +37,13 @@ public class DataChannelPacket extends Packet
         super(data, offset, length);
         this.sid = sid;
         this.ppid = ppid;
+    }
+
+    public DataChannelPacket(DcSctpMessage message)
+    {
+        super(message.getPayload(), 0, message.getPayload().length);
+        this.sid = message.getStreamID();
+        this.ppid = message.getPpid();
     }
 
     /**

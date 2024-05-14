@@ -26,11 +26,11 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
+import org.jitsi.videobridge.dcsctp.DcSctpTransport
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.sctp.SctpConfig
-import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
@@ -203,7 +203,7 @@ class Colibri2ConferenceHandler(
                             "Unsupported SCTP role: ${sctp.role}"
                         )
                     }
-                    if (sctp.port != null && sctp.port != SctpManager.DEFAULT_SCTP_PORT) {
+                    if (sctp.port != null && sctp.port != DcSctpTransport.DEFAULT_SCTP_PORT) {
                         throw IqProcessingException(
                             Condition.bad_request,
                             "Specific SCTP port requested, not supported."
@@ -260,7 +260,7 @@ class Colibri2ConferenceHandler(
             if (c2endpoint.transport?.sctp != null) {
                 transBuilder.setSctp(
                     Sctp.Builder()
-                        .setPort(SctpManager.DEFAULT_SCTP_PORT)
+                        .setPort(DcSctpTransport.DEFAULT_SCTP_PORT)
                         .setRole(Sctp.Role.SERVER)
                         .build()
                 )
@@ -392,7 +392,7 @@ class Colibri2ConferenceHandler(
                     "SCTP support is not configured"
                 )
             }
-            if (sctp.port != null && sctp.port != SctpManager.DEFAULT_SCTP_PORT) {
+            if (sctp.port != null && sctp.port != DcSctpTransport.DEFAULT_SCTP_PORT) {
                 throw IqProcessingException(
                     Condition.bad_request,
                     "Specific SCTP port requested, not supported."
@@ -414,7 +414,7 @@ class Colibri2ConferenceHandler(
                 }
                 transBuilder.setSctp(
                     Sctp.Builder()
-                        .setPort(SctpManager.DEFAULT_SCTP_PORT)
+                        .setPort(DcSctpTransport.DEFAULT_SCTP_PORT)
                         .setRole(role)
                         .build()
                 )
