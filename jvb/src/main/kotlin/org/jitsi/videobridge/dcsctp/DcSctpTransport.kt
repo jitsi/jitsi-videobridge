@@ -22,6 +22,7 @@ import org.jitsi.dcsctp4j.DcSctpSocketInterface
 import org.jitsi.dcsctp4j.SendOptions
 import org.jitsi.dcsctp4j.Timeout
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.util.TaskPools
@@ -46,6 +47,29 @@ class DcSctpTransport(
     fun handleIncomingSctp(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
         socket.receivePacket(packet.getBuffer(), packet.getOffset(), packet.getLength())
+    }
+
+    fun getDebugState(): OrderedJsonObject {
+        val metrics = socket.metrics
+        return OrderedJsonObject().apply {
+            if (metrics != null) {
+                put("tx_packets_count", metrics.txPacketsCount)
+                put("tx_messages_count", metrics.txMessagesCount)
+                put("rtx_packets_count", metrics.rtxPacketsCount)
+                put("rtx_bytes_count", metrics.rtxBytesCount)
+                put("cwnd_bytes", metrics.cwndBytes)
+                put("srtt_ms", metrics.srttMs)
+                put("unack_data_count", metrics.unackDataCount)
+                put("rx_packets_count", metrics.rxPacketsCount)
+                put("rx_messages_count", metrics.rxMessagesCount)
+                put("peer_rwnd_bytes", metrics.peerRwndBytes)
+                put("peer_implementation", metrics.peerImplementation.name)
+                put("uses_message_interleaving", metrics.usesMessageInterleaving())
+                put("uses_zero_checksum", metrics.usesZeroChecksum())
+                put("negotiated_maximum_incoming_streams", metrics.negotiatedMaximumIncomingStreams)
+                put("negotiated_maximum_outgoing_streams", metrics.negotiatedMaximumOutgoingStreams)
+            }
+        }
     }
 
     companion object {

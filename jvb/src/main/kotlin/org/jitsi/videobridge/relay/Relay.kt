@@ -342,6 +342,9 @@ class Relay @JvmOverloads constructor(
                 endpointSenders[s.id] = s.getDebugState()
             }
             put("senders", endpointSenders)
+            sctpTransport?.let {
+                put("sctp", it.getDebugState())
+            }
         }
 
     private fun setupIceTransport() {

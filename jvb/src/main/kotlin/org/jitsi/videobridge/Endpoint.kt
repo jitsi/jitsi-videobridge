@@ -970,6 +970,9 @@ class Endpoint @JvmOverloads constructor(
                 put("audioSsrcs", audioSsrcs.getDebugState())
                 put("videoSsrcs", videoSsrcs.getDebugState())
             }
+            sctpTransport?.let {
+                put("sctp", it.getDebugState())
+            }
         }
 
     override fun expire() {
