@@ -41,7 +41,6 @@ class DcSctpTransport(
 
     fun start(callbacks: DcSctpSocketCallbacks, options: DcSctpOptions = DEFAULT_SOCKET_OPTIONS) {
         socket = factory.create(name, callbacks, null, options)
-        socket.connect()
     }
 
     fun handleIncomingSctp(packetInfo: PacketInfo) {
