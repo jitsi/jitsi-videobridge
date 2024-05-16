@@ -1117,7 +1117,7 @@ class Relay @JvmOverloads constructor(
 
         override fun OnConnected() {
             logger.info("SCTP connection is ready, creating the Data channel stack")
-            dataChannelStack = DataChannelStack(
+            val dataChannelStack = DataChannelStack(
                 { data, sid, ppid ->
                     val message = DcSctpMessage(sid.toShort(), ppid, data.array())
                     val status = sctpTransport?.socket?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
@@ -1130,16 +1130,17 @@ class Relay @JvmOverloads constructor(
                 },
                 logger
             )
+            this@Relay.dataChannelStack = dataChannelStack
             // This handles if the remote side will be opening the data channel
-            dataChannelStack!!.onDataChannelStackEvents { dataChannel ->
+            dataChannelStack.onDataChannelStackEvents { dataChannel ->
                 logger.info("Remote side opened a data channel.")
                 messageTransport.setDataChannel(dataChannel)
             }
-            dataChannelHandler.setDataChannelStack(dataChannelStack!!)
+            dataChannelHandler.setDataChannelStack(dataChannelStack)
             if (sctpRole == Sctp.Role.CLIENT) {
                 // This logic is for opening the data channel locally
                 logger.info("Will open the data channel.")
-                val dataChannel = dataChannelStack!!.createDataChannel(
+                val dataChannel = dataChannelStack.createDataChannel(
                     DataChannelProtocolConstants.RELIABLE,
                     0,
                     0,
