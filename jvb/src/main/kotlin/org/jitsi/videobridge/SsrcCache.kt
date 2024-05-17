@@ -349,6 +349,18 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
     }
 
     /**
+     * Remove all send sources owned by [owner]. Does not signal anything to the client, as only additions need to be
+     * signaled.
+     */
+    fun removeByOwner(owner: String) {
+        synchronized(sendSources) {
+            sendSources.values.removeIf { sendSource ->
+                sendSource.props.owner == owner
+            }
+        }
+    }
+
+    /**
      * Assign send SSRCs to the given sources. Any remapped SSRCs will be notified to the client.
      */
     fun activate(sources: List<MediaSourceDesc>) {
