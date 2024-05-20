@@ -65,7 +65,6 @@ import org.jitsi.videobridge.cc.allocation.EffectiveConstraintsMap
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
-import org.jitsi.videobridge.datachannel.protocol.DataChannelProtocolConstants
 import org.jitsi.videobridge.dcsctp.DcSctpBaseCallbacks
 import org.jitsi.videobridge.dcsctp.DcSctpHandler
 import org.jitsi.videobridge.dcsctp.DcSctpTransport
@@ -652,21 +651,8 @@ class Endpoint @JvmOverloads constructor(
                     messageTransport.setDataChannel(dataChannel)
                 }
                 dataChannelHandler.setDataChannelStack(dataChannelStack!!)
-                if (OPEN_DATA_CHANNEL_LOCALLY) {
-                    // This logic is for opening the data channel locally
-                    logger.info("Will open the data channel.")
-                    val dataChannel = dataChannelStack!!.createDataChannel(
-                        DataChannelProtocolConstants.RELIABLE,
-                        0,
-                        0,
-                        0,
-                        "default"
-                    )
-                    messageTransport.setDataChannel(dataChannel)
-                    dataChannel.open()
-                } else {
-                    logger.info("Will wait for the remote side to open the data channel.")
-                }
+
+                logger.info("Will wait for the remote side to open the data channel.")
             }
 
             override fun onDisconnected() {
@@ -1142,12 +1128,6 @@ class Endpoint @JvmOverloads constructor(
     }
 
     companion object {
-        /**
-         * Whether or not the bridge should be the peer which opens the data channel
-         * (as opposed to letting the far peer/client open it).
-         */
-        private const val OPEN_DATA_CHANNEL_LOCALLY = false
-
         private val droppedPacketsMetric = VideobridgeMetricsContainer.instance.registerCounter(
             "srtp_send_queue_dropped_packets",
             "Number of packets dropped out of the Endpoint SRTP send queue."
@@ -1260,21 +1240,7 @@ class Endpoint @JvmOverloads constructor(
                 messageTransport.setDataChannel(dataChannel)
             }
             dataChannelHandler.setDataChannelStack(dataChannelStack)
-            if (OPEN_DATA_CHANNEL_LOCALLY) {
-                // This logic is for opening the data channel locally
-                logger.info("Will open the data channel.")
-                val dataChannel = dataChannelStack.createDataChannel(
-                    DataChannelProtocolConstants.RELIABLE,
-                    0,
-                    0,
-                    0,
-                    "default"
-                )
-                messageTransport.setDataChannel(dataChannel)
-                dataChannel.open()
-            } else {
-                logger.info("Will wait for the remote side to open the data channel.")
-            }
+            logger.info("Will wait for the remote side to open the data channel.")
         }
 
         override fun OnClosed() {
