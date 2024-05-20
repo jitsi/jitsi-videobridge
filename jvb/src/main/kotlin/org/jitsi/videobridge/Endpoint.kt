@@ -1191,23 +1191,32 @@ class Endpoint @JvmOverloads constructor(
 
     private inner class SctpCallbacks(transport: DcSctpTransport) : DcSctpBaseCallbacks(transport) {
         override fun sendPacketWithStatus(packet: ByteArray): SendPacketStatus {
-            val newBuf = ByteBufferPool.getBuffer(packet.size)
-            System.arraycopy(packet, 0, newBuf, 0, packet.size)
+            try {
+                val newBuf = ByteBufferPool.getBuffer(packet.size)
+                System.arraycopy(packet, 0, newBuf, 0, packet.size)
 
-            sctpSendPcap.observe(newBuf, 0, packet.size)
-            dtlsTransport.sendDtlsData(newBuf, 0, packet.size)
+                sctpSendPcap.observe(newBuf, 0, packet.size)
+                dtlsTransport.sendDtlsData(newBuf, 0, packet.size)
 
-            return SendPacketStatus.kSuccess
+                return SendPacketStatus.kSuccess
+            } catch (e: Throwable) {
+                logger.warn("Exception sending SCTP packet", e)
+                return SendPacketStatus.kError
+            }
         }
 
         override fun OnMessageReceived(message: DcSctpMessage) {
-            // We assume all data coming over SCTP will be datachannel data
-            val dataChannelPacket = DataChannelPacket(message)
-            // Post the rest of the task here because the current context is
-            // holding a lock inside the SctpSocket which can cause a deadlock
-            // if two endpoints are trying to send datachannel messages to one
-            // another (with stats broadcasting it can happen often)
-            incomingDataChannelMessagesQueue.add(PacketInfo(dataChannelPacket))
+            try {
+                // We assume all data coming over SCTP will be datachannel data
+                val dataChannelPacket = DataChannelPacket(message)
+                // Post the rest of the task here because the current context is
+                // holding a lock inside the SctpSocket which can cause a deadlock
+                // if two endpoints are trying to send datachannel messages to one
+                // another (with stats broadcasting it can happen often)
+                incomingDataChannelMessagesQueue.add(PacketInfo(dataChannelPacket))
+            } catch (e: Throwable) {
+                logger.warn("Exception processing SCTP message", e)
+            }
         }
 
         override fun OnError(error: ErrorKind, message: String) {
@@ -1219,28 +1228,32 @@ class Endpoint @JvmOverloads constructor(
         }
 
         override fun OnConnected() {
-            logger.info("SCTP connection is ready, creating the Data channel stack")
-            val dataChannelStack = DataChannelStack(
-                { data, sid, ppid ->
-                    val message = DcSctpMessage(sid.toShort(), ppid, data.array())
-                    val status = sctpTransport?.socket?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
-                    return@DataChannelStack if (status == SendStatus.kSuccess) {
-                        0
-                    } else {
-                        logger.error("Error sending to SCTP: $status")
-                        -1
-                    }
-                },
-                logger
-            )
-            this@Endpoint.dataChannelStack = dataChannelStack
-            // This handles if the remote side will be opening the data channel
-            dataChannelStack.onDataChannelStackEvents { dataChannel ->
-                logger.info("Remote side opened a data channel.")
-                messageTransport.setDataChannel(dataChannel)
+            try {
+                logger.info("SCTP connection is ready, creating the Data channel stack")
+                val dataChannelStack = DataChannelStack(
+                    { data, sid, ppid ->
+                        val message = DcSctpMessage(sid.toShort(), ppid, data.array())
+                        val status = sctpTransport?.socket?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
+                        return@DataChannelStack if (status == SendStatus.kSuccess) {
+                            0
+                        } else {
+                            logger.error("Error sending to SCTP: $status")
+                            -1
+                        }
+                    },
+                    logger
+                )
+                this@Endpoint.dataChannelStack = dataChannelStack
+                // This handles if the remote side will be opening the data channel
+                dataChannelStack.onDataChannelStackEvents { dataChannel ->
+                    logger.info("Remote side opened a data channel.")
+                    messageTransport.setDataChannel(dataChannel)
+                }
+                dataChannelHandler.setDataChannelStack(dataChannelStack)
+                logger.info("Will wait for the remote side to open the data channel.")
+            } catch (e: Throwable) {
+                logger.warn("Exception processing SCTP connected event", e)
             }
-            dataChannelHandler.setDataChannelStack(dataChannelStack)
-            logger.info("Will wait for the remote side to open the data channel.")
         }
 
         override fun OnClosed() {

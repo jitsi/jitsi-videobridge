@@ -140,13 +140,17 @@ abstract class DcSctpBaseCallbacks(
         private var scheduledFuture: ScheduledFuture<*>? = null
         private var future: Future<*>? = null
         override fun start(duration: Long, timeoutId: Long) {
-            this.timeoutId = timeoutId
-            scheduledFuture = TaskPools.SCHEDULED_POOL.schedule({
-                /* Execute it on the IO_POOL, because a timer may trigger sending new SCTP packets. */
-                future = TaskPools.IO_POOL.submit {
-                    transport.socket.handleTimeout(timeoutId)
-                }
-            }, duration, TimeUnit.MILLISECONDS)
+            try {
+                this.timeoutId = timeoutId
+                scheduledFuture = TaskPools.SCHEDULED_POOL.schedule({
+                    /* Execute it on the IO_POOL, because a timer may trigger sending new SCTP packets. */
+                    future = TaskPools.IO_POOL.submit {
+                        transport.socket.handleTimeout(timeoutId)
+                    }
+                }, duration, TimeUnit.MILLISECONDS)
+            } catch (e: Throwable) {
+                transport.logger.warn("Exception scheduling DCSCTP timeout", e)
+            }
         }
 
         override fun stop() {
