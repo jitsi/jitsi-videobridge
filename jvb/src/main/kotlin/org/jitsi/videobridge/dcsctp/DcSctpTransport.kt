@@ -29,6 +29,7 @@ import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.util.TaskPools
 import java.time.Clock
 import java.time.Instant
+import java.util.concurrent.Future
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
@@ -134,20 +135,25 @@ abstract class DcSctpBaseCallbacks(
         transport.logger.info("Surprising SCTP callback: incoming streams ${incomingStreams.joinToString()} reset")
     }
 
-    private inner class ATimeout : Timeout, Runnable {
+    private inner class ATimeout : Timeout {
         private var timeoutId: Long = 0
-        private var future: ScheduledFuture<*>? = null
+        private var scheduledFuture: ScheduledFuture<*>? = null
+        private var future: Future<*>? = null
         override fun start(duration: Long, timeoutId: Long) {
             this.timeoutId = timeoutId
-            future = TaskPools.SCHEDULED_POOL.schedule(this, duration, TimeUnit.MILLISECONDS)
+            scheduledFuture = TaskPools.SCHEDULED_POOL.schedule({
+                /* Execute it on the IO_POOL, because a timer may trigger sending new SCTP packets. */
+                future = TaskPools.IO_POOL.submit {
+                    transport.socket.handleTimeout(timeoutId)
+                }
+            }, duration, TimeUnit.MILLISECONDS)
         }
 
         override fun stop() {
+            scheduledFuture?.cancel(false)
             future?.cancel(false)
-        }
-
-        override fun run() {
-            transport.socket.handleTimeout(timeoutId)
+            scheduledFuture = null
+            future = null
         }
     }
 }
