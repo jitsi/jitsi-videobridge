@@ -25,6 +25,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.util.TaskPools
 import java.time.Clock
 import java.time.Instant
@@ -72,19 +73,28 @@ class DcSctpTransport(
     }
 
     companion object {
-        private val factory = DcSctpSocketFactory()
+        private val factory by lazy {
+            check(SctpConfig.config.enabled()) { "SCTP is disabled in configuration" }
+            DcSctpSocketFactory()
+        }
 
         /* Copying value set by Chrome's dcsctp_transport. */
         const val DEFAULT_MAX_TIMER_DURATION = 3000L
 
-        val DEFAULT_SOCKET_OPTIONS = DcSctpOptions().apply {
-            maxTimerBackoffDuration = DEFAULT_MAX_TIMER_DURATION
-            // TODO add a config options for this.
-            zeroChecksumAlternateErrorDetectionMethod =
-                DcSctpOptions.ZeroChecksumAlternateErrorDetectionMethod_LowerLayerDtls
+        val DEFAULT_SOCKET_OPTIONS by lazy {
+            check(SctpConfig.config.enabled()) { "SCTP is disabled in configuration" }
+            DcSctpOptions().apply {
+                maxTimerBackoffDuration = DEFAULT_MAX_TIMER_DURATION
+                // TODO add a config options for this.
+                zeroChecksumAlternateErrorDetectionMethod =
+                    DcSctpOptions.ZeroChecksumAlternateErrorDetectionMethod_LowerLayerDtls
+            }
         }
 
-        val DEFAULT_SEND_OPTIONS = SendOptions()
+        val DEFAULT_SEND_OPTIONS by lazy {
+            check(SctpConfig.config.enabled()) { "SCTP is disabled in configuration" }
+            SendOptions()
+        }
 
         const val DEFAULT_SCTP_PORT: Int = 5000
     }
