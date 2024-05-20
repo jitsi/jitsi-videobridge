@@ -940,6 +940,15 @@ class Endpoint @JvmOverloads constructor(
         return false
     }
 
+    override fun otherEndpointExpired(expired: AbstractEndpoint) = super.otherEndpointExpired(expired).also {
+        if (doSsrcRewriting) {
+            // Remove the expired endpoint's sources. We don't want duplicate entries in case the endpoint is
+            // re-created (e.g. after an ICE restart).
+            audioSsrcs.removeByOwner(expired.id)
+            videoSsrcs.removeByOwner(expired.id)
+        }
+    }
+
     fun setLastN(lastN: Int) {
         bitrateController.lastN = lastN
     }

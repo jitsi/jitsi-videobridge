@@ -296,6 +296,11 @@ abstract class AbstractEndpoint protected constructor(
         }
     }
 
+    /** Notify this endpoint that another endpoint expired */
+    open fun otherEndpointExpired(expired: AbstractEndpoint) {
+        removeReceiver(expired.id)
+    }
+
     /**
      * Notifies this instance that the specified receiver no longer wants or
      * needs to receive anything from the endpoint attached to this
