@@ -85,9 +85,6 @@ class DcSctpTransport(
             check(SctpConfig.config.enabled()) { "SCTP is disabled in configuration" }
             DcSctpOptions().apply {
                 maxTimerBackoffDuration = DEFAULT_MAX_TIMER_DURATION
-                // TODO add a config options for this.
-                zeroChecksumAlternateErrorDetectionMethod =
-                    DcSctpOptions.ZeroChecksumAlternateErrorDetectionMethod_LowerLayerDtls
             }
         }
 
