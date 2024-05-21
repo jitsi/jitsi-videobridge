@@ -31,9 +31,9 @@ import org.jitsi.utils.logging2.createChildLogger
  * from frames, and also diagnoses packet format variants that the Jitsi videobridge won't be able to route.
  */
 class Vp9Parser(
-    sources: Array<MediaSourceDesc>,
+    source: MediaSourceDesc,
     parentLogger: Logger
-) : VideoCodecParser(sources) {
+) : VideoCodecParser(source) {
     private val logger = createChildLogger(parentLogger)
 
     private val pictureIdState = StateChangeLogger("missing picture id", logger)
@@ -58,13 +58,13 @@ class Vp9Parser(
                 }
                 numSpatialLayers = packetSpatialLayers
             }
-            findSourceDescAndRtpEncodingDesc(vp9Packet)?.let { (src, enc) ->
+            findRtpEncodingDesc(vp9Packet)?.let { enc ->
                 vp9Packet.getScalabilityStructure(eid = enc.eid)?.let {
-                    src.setEncodingLayers(it.layers, vp9Packet.ssrc)
+                    source.setEncodingLayers(it.layers, vp9Packet.ssrc)
                 }
-                for (otherEnc in src.rtpEncodings) {
+                for (otherEnc in source.rtpEncodings) {
                     if (!ssrcsSeen.contains(otherEnc.primarySSRC)) {
-                        src.setEncodingLayers(emptyArray(), otherEnc.primarySSRC)
+                        source.setEncodingLayers(emptyArray(), otherEnc.primarySSRC)
                     }
                 }
             }
