@@ -19,6 +19,7 @@ package org.jitsi.videobridge.sctp;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.dcsctp.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.sctp4j.*;
 
@@ -54,7 +55,7 @@ public class SctpManager
     /**
      * We always use symmetric ports with SCTP (local port = remote port).
      */
-    public static int DEFAULT_SCTP_PORT = 5000;
+    public static int DEFAULT_SCTP_PORT = DcSctpTransport.DEFAULT_SCTP_PORT;
     static
     {
         if (config.enabled())

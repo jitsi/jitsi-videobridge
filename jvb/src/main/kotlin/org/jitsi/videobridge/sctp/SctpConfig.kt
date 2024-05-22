@@ -20,9 +20,15 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 
 class SctpConfig private constructor() {
+    /** Whether SCTP should be signaled or used when signaled to us */
     val enabled: Boolean by config { "videobridge.sctp.enabled".from(JitsiConfig.newConfig) }
-
     fun enabled() = enabled
+
+    /**
+     * If [enabled], whether to use the usrsctp based implementation. Otherwise, the new dcsctp implementation will be
+     * used.
+     */
+    val useUsrSctp: Boolean by config { "videobridge.sctp.use-usrsctp".from(JitsiConfig.newConfig) }
 
     companion object {
         @JvmField
