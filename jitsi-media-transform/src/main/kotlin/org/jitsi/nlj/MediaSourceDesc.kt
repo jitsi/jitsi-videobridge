@@ -19,6 +19,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.ArrayUtils
 import java.util.Collections
 import java.util.NavigableMap
@@ -189,6 +190,12 @@ fun Array<MediaSourceDesc>.copy() = Array(this.size) { i -> this[i].copy() }
 fun Array<MediaSourceDesc>.findRtpLayerDescs(packet: VideoRtpPacket): Collection<RtpLayerDesc> {
     return this.flatMap { it.findRtpLayerDescs(packet) }
 }
+
+fun Array<MediaSourceDesc>.findRtpSource(ssrc: Long): MediaSourceDesc? {
+    return this.find { it.matches(ssrc) }
+}
+
+fun Array<MediaSourceDesc>.findRtpSource(packet: RtpPacket): MediaSourceDesc? = findRtpSource(packet.ssrc)
 
 fun Array<MediaSourceDesc>.findRtpEncodingId(packet: VideoRtpPacket): Int? {
     for (source in this) {

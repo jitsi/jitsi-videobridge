@@ -36,10 +36,10 @@ import org.jitsi.utils.logging2.createChildLogger
  * won't be able to route.
  */
 class Av1DDParser(
-    sources: Array<MediaSourceDesc>,
+    source: MediaSourceDesc,
     parentLogger: Logger,
     private val diagnosticContext: DiagnosticContext
-) : VideoCodecParser(sources) {
+) : VideoCodecParser(source) {
     private val logger = createChildLogger(parentLogger)
 
     /** History of AV1 templates. */
@@ -121,13 +121,13 @@ class Av1DDParser(
                         "now 0x${Integer.toHexString(activeDecodeTargets)}.  Updating layering."
                 }
 
-                findSourceDescAndRtpEncodingDesc(av1Packet)?.let { (src, enc) ->
+                findRtpEncodingDesc(av1Packet)?.let { enc ->
                     av1Packet.getScalabilityStructure(eid = enc.eid)?.let {
-                        src.setEncodingLayers(it.layers, av1Packet.ssrc)
+                        source.setEncodingLayers(it.layers, av1Packet.ssrc)
                     }
-                    for (otherEnc in src.rtpEncodings) {
+                    for (otherEnc in source.rtpEncodings) {
                         if (!ddStateHistory.keys.contains(otherEnc.primarySSRC)) {
-                            src.setEncodingLayers(emptyArray(), otherEnc.primarySSRC)
+                            source.setEncodingLayers(emptyArray(), otherEnc.primarySSRC)
                         }
                     }
                 }
