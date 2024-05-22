@@ -69,6 +69,10 @@ class Vp8Packet private constructor(
         /** This uses [get] rather than initialization because [isMarked] is a var. */
         get() = isMarked
 
+    override fun meetsRoutingNeeds(): Boolean {
+        return hasPictureId && hasTemporalLayerIndex
+    }
+
     val hasTemporalLayerIndex =
         DePacketizer.VP8PayloadDescriptor.hasTemporalLayerIndex(buffer, payloadOffset, payloadLength)
 

@@ -19,7 +19,6 @@ package org.jitsi.nlj.rtp.codec
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingDesc
-import org.jitsi.nlj.findRtpLayerDescs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 
 /**

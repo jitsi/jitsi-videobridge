@@ -22,6 +22,7 @@ import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.findRtpSource
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
+import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
 import org.jitsi.nlj.rtp.codec.av1.Av1DDParser
@@ -76,25 +77,17 @@ class VideoParser(
         val parsedPacket = try {
             when {
                 payloadType is Vp8PayloadType -> {
-                    val vp8Packet = packetInfo.packet.toOtherType(::Vp8Packet)
-                    packetInfo.packet = vp8Packet
-                    packetInfo.resetPayloadVerification()
-
-                    videoCodecParser = checkParserType<Vp8Parser>(packetInfo) { source ->
+                    val (vp8Packet, parser) = parseNormalPayload<Vp8Parser>(packetInfo, ::Vp8Packet) { source ->
                         Vp8Parser(source, logger)
                     }
-
+                    videoCodecParser = parser
                     vp8Packet
                 }
                 payloadType is Vp9PayloadType -> {
-                    val vp9Packet = packetInfo.packet.toOtherType(::Vp9Packet)
-                    packetInfo.packet = vp9Packet
-                    packetInfo.resetPayloadVerification()
-
-                    videoCodecParser = checkParserType<Vp9Parser>(packetInfo) { source ->
+                    val (vp9Packet, parser) = parseNormalPayload<Vp9Parser>(packetInfo, ::Vp9Packet) { source ->
                         Vp9Parser(source, logger)
                     }
-
+                    videoCodecParser = parser
                     vp9Packet
                 }
                 av1DDExtId != null && packet.getHeaderExtension(av1DDExtId) != null -> {
@@ -123,7 +116,6 @@ class VideoParser(
                             }
                         }
                         packetInfo.layeringChanged = true
-                        videoCodecParser = null
                     }
                     return packetInfo
                 }
@@ -152,6 +144,42 @@ class VideoParser(
         }
 
         return packetInfo
+    }
+
+    /** A normal payload is one where we choose the subclass of the ParsedVideoPacket and VideoCodecParser
+     * based on the payload type, as opposed to the header extension (like AV1).  If the packet doesn't
+     * satisfy [ParsedVideoPacket.meetsRoutingNeeds] but it has an AV1 DD header extension, we will parse
+     * this packet as AV1 rather than as its normal type.
+     * */
+    private inline fun <reified T : VideoCodecParser> parseNormalPayload(
+        packetInfo: PacketInfo,
+        otherTypeCreator: (ByteArray, Int, Int) -> ParsedVideoPacket,
+        parserConstructor: (MediaSourceDesc) -> T
+    ): Pair<ParsedVideoPacket?, VideoCodecParser?> {
+        val parsedPacket = packetInfo.packet.toOtherType(otherTypeCreator)
+        if (!parsedPacket.meetsRoutingNeeds()) {
+            // See if we can parse this packet as AV1
+            val packet = packetInfo.packetAs<RtpPacket>()
+            val av1DDExtId = this.av1DDExtId // So null checks work
+            if (av1DDExtId != null && packet.getHeaderExtension(av1DDExtId) != null) {
+                val parser = checkParserType<Av1DDParser>(packetInfo) { source ->
+                    Av1DDParser(source, logger, diagnosticContext)
+                }
+
+                val av1DDPacket = parser?.createFrom(packet, av1DDExtId)?.also {
+                    packetInfo.packet = it
+                    packetInfo.resetPayloadVerification()
+                }
+
+                return Pair(av1DDPacket, parser)
+            }
+        }
+        packetInfo.packet = parsedPacket
+        packetInfo.resetPayloadVerification()
+
+        val parser = checkParserType<T>(packetInfo, parserConstructor)
+
+        return Pair(parsedPacket, parser)
     }
 
     private inline fun <reified T : VideoCodecParser> checkParserType(
