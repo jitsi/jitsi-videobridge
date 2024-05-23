@@ -182,7 +182,7 @@ class Av1DDAdaptiveSourceProjectionContext(
         } else {
             frame.frameInfo?.dtisPresent ?: emptySet()
         }
-        val chainsToCheck = dtsToCheck.map { structure.decodeTargetInfo[it].protectedBy }.toSet()
+        val chainsToCheck = dtsToCheck.mapNotNull { structure.decodeTargetProtectedBy.getOrNull(it) }.toSet()
         return map.nextFrameWith(frame) {
             if (it.isAccepted) return@nextFrameWith false
             if (it.frameInfo == null) {
@@ -197,8 +197,8 @@ class Av1DDAdaptiveSourceProjectionContext(
     private fun Av1DDFrame.partOfActiveChain(chainIdx: Int): Boolean {
         val structure = structure ?: return false
         val frameInfo = frameInfo ?: return false
-        for (i in structure.decodeTargetInfo.indices) {
-            if (structure.decodeTargetInfo[i].protectedBy != chainIdx) {
+        for (i in structure.decodeTargetProtectedBy.indices) {
+            if (structure.decodeTargetProtectedBy[i] != chainIdx) {
                 continue
             }
             if (frameInfo.dti[i] == DTI.NOT_PRESENT || frameInfo.dti[i] == DTI.DISCARDABLE) {
