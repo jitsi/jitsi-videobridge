@@ -627,6 +627,7 @@ class Av1DependencyDescriptorReader(
          */
         templateCnt = 0
         templateInfo.clear()
+        decodeTargetProtectedBy.clear()
         decodeTargetLayers.clear()
         maxRenderResolutions.clear()
     }
