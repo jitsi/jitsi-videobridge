@@ -284,7 +284,8 @@ fun Int.bitsForFdiff() = when {
 class Av1TemplateDependencyStructure(
     var templateIdOffset: Int,
     val templateInfo: List<FrameInfo>,
-    val decodeTargetInfo: List<DecodeTargetInfo>,
+    val decodeTargetProtectedBy: List<Int>,
+    val decodeTargetLayers: List<DecodeTargetLayer>,
     val maxRenderResolutions: List<Resolution>,
     val maxSpatialId: Int,
     val maxTemporalId: Int
@@ -293,7 +294,7 @@ class Av1TemplateDependencyStructure(
         get() = templateInfo.size
 
     val decodeTargetCount
-        get() = decodeTargetInfo.size
+        get() = decodeTargetLayers.size
 
     val chainCount: Int =
         templateInfo.first().chains.size
@@ -327,8 +328,8 @@ class Av1TemplateDependencyStructure(
             // TemplateChains
             length += nsBits(decodeTargetCount + 1, chainCount)
             if (chainCount > 0) {
-                decodeTargetInfo.forEach {
-                    length += nsBits(chainCount, it.protectedBy)
+                decodeTargetProtectedBy.forEach {
+                    length += nsBits(chainCount, it)
                 }
                 length += templateCount * chainCount * 4
             }
@@ -343,7 +344,8 @@ class Av1TemplateDependencyStructure(
             templateIdOffset,
             // These objects are not mutable so it's safe to copy them by reference
             templateInfo,
-            decodeTargetInfo,
+            decodeTargetProtectedBy,
+            decodeTargetLayers,
             maxRenderResolutions,
             maxSpatialId,
             maxTemporalId
@@ -412,8 +414,8 @@ class Av1TemplateDependencyStructure(
 
     private fun writeTemplateChains(writer: BitWriter) {
         writer.writeNs(decodeTargetCount + 1, chainCount)
-        decodeTargetInfo.forEach {
-            writer.writeNs(chainCount, it.protectedBy)
+        decodeTargetProtectedBy.forEach {
+            writer.writeNs(chainCount, it)
         }
         templateInfo.forEach { t ->
             t.chains.forEach { chain ->
@@ -461,7 +463,8 @@ class Av1TemplateDependencyStructure(
         return OrderedJsonObject().apply {
             put("templateIdOffset", templateIdOffset)
             put("templateInfo", templateInfo.toIndexedMap())
-            put("decodeTargetInfo", decodeTargetInfo.toIndexedMap())
+            put("decodeTargetProtectedBy", decodeTargetProtectedBy.toIndexedMap())
+            put("decodeTargetLayers", decodeTargetLayers.toIndexedMap())
             if (maxRenderResolutions.isNotEmpty()) {
                 put("maxRenderResolutions", maxRenderResolutions.toIndexedMap())
             }
@@ -612,7 +615,8 @@ class Av1DependencyDescriptorReader(
     /* Data for template dependency structure */
     private var templateIdOffset: Int = 0
     private val templateInfo = mutableListOf<TemplateFrameInfo>()
-    private val decodeTargetInfo = mutableListOf<DecodeTargetInfo>()
+    private val decodeTargetProtectedBy = mutableListOf<Int>()
+    private val decodeTargetLayers = mutableListOf<DecodeTargetLayer>()
     private val maxRenderResolutions = mutableListOf<Resolution>()
 
     private var dtCnt = 0
@@ -623,7 +627,8 @@ class Av1DependencyDescriptorReader(
          */
         templateCnt = 0
         templateInfo.clear()
-        decodeTargetInfo.clear()
+        decodeTargetProtectedBy.clear()
+        decodeTargetLayers.clear()
         maxRenderResolutions.clear()
     }
 
@@ -650,7 +655,8 @@ class Av1DependencyDescriptorReader(
         return Av1TemplateDependencyStructure(
             templateIdOffset,
             templateInfo.toList(),
-            decodeTargetInfo.toList(),
+            decodeTargetProtectedBy.toList(),
+            decodeTargetLayers.toList(),
             maxRenderResolutions.toList(),
             maxSpatialId,
             maxTemporalId
@@ -733,7 +739,7 @@ class Av1DependencyDescriptorReader(
         val chainCount = reader.ns(dtCnt + 1)
         if (chainCount != 0) {
             for (dtIndex in 0 until dtCnt) {
-                decodeTargetInfo.add(dtIndex, DecodeTargetInfo(reader.ns(chainCount)))
+                decodeTargetProtectedBy.add(dtIndex, reader.ns(chainCount))
             }
             for (templateIndex in 0 until templateCnt) {
                 for (chainIndex in 0 until chainCount) {
@@ -764,10 +770,9 @@ class Av1DependencyDescriptorReader(
                     }
                 }
             }
-            decodeTargetInfo[dtIndex].spatialId = spatialId
-            decodeTargetInfo[dtIndex].temporalId = temporalId
+            decodeTargetLayers.add(dtIndex, DecodeTargetLayer(spatialId, temporalId))
         }
-        check(decodeTargetInfo.size == dtCnt)
+        check(decodeTargetLayers.size == dtCnt)
     }
 
     private fun readRenderResolutions() {
@@ -843,16 +848,12 @@ class TemplateFrameInfo(
     override val chains: MutableList<Int> = mutableListOf()
 ) : FrameInfo(spatialId, temporalId, dti, fdiff, chains)
 
-class DecodeTargetInfo(
-    val protectedBy: Int
+class DecodeTargetLayer(
+    val spatialId: Int,
+    val temporalId: Int
 ) : JSONAware {
-    /** Todo: only want to be able to set these from the constructor */
-    var spatialId: Int = -1
-    var temporalId: Int = -1
-
     override fun toJSONString(): String {
         return OrderedJsonObject().apply {
-            put("protectedBy", protectedBy)
             put("spatialId", spatialId)
             put("temporalId", temporalId)
         }.toJSONString()

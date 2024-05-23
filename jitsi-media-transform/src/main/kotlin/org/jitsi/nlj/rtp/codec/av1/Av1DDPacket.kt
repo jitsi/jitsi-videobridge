@@ -193,7 +193,7 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
 
     val layers = ArrayList<Av1DDRtpLayerDesc>()
 
-    structure.decodeTargetInfo.forEachIndexed { i, dt ->
+    structure.decodeTargetLayers.forEachIndexed { i, dt ->
         if (!activeDecodeTargetsBitmask.containsDecodeTarget(i)) {
             return@forEachIndexed
         }
