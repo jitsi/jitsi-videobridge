@@ -135,11 +135,11 @@ class VideoParser(
          * so the count is correct. */
         /* Alternately we could keep track of keyframes we've already seen, by timestamp, but that seems unnecessary. */
         if (parsedPacket != null && parsedPacket.isKeyframe && parsedPacket.isStartOfFrame) {
-            logger.cdebug { "Received a keyframe for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
+            logger.cdebug { "Received a keyframe for ssrc ${packet.ssrc} at seq ${packet.sequenceNumber}" }
             stats.numKeyframes++
         }
         if (packetInfo.layeringChanged) {
-            logger.cdebug { "Layering structure changed for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
+            logger.cdebug { "Layering structure changed for ssrc ${packet.ssrc} at seq ${packet.sequenceNumber}" }
             stats.numLayeringChanges++
         }
 
@@ -196,8 +196,8 @@ class VideoParser(
             ?: // VideoQualityLayerLookup will drop this packet later, so no need to warn about it now
             return null
         logger.cdebug {
-            "Creating new ${T::class.java} for source ${source.sourceName}, " +
-                "current videoCodecParser is ${parser?.javaClass}"
+            "Creating new ${T::class.java.simpleName} for source ${source.sourceName}, " +
+                "current videoCodecParser is ${parser?.javaClass?.simpleName}"
         }
         resetSource(source)
         packetInfo.layeringChanged = true
