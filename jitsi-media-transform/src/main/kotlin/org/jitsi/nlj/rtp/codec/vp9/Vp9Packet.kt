@@ -68,6 +68,12 @@ class Vp9Packet private constructor(
     override val isEndOfFrame: Boolean =
         isEndOfFrame ?: DePacketizer.VP9PayloadDescriptor.isEndOfFrame(buffer, payloadOffset, payloadLength)
 
+    override fun meetsRoutingNeeds(): Boolean {
+        // Question: should we include hasLayerIndices here?  I.e. if we get a VP9 packet with an AV1 DD and
+        // a VP9 picture ID, but no VP9 layer indices, are we better off parsing it as VP9 or AV1?
+        return hasPictureId
+    }
+
     override val layerIds: Collection<Int>
         get() = if (hasLayerIndices) {
             listOf(RtpLayerDesc.getIndex(0, spatialLayerIndex, temporalLayerIndex))

@@ -98,6 +98,9 @@ class Av1DDPacket : ParsedVideoPacket {
     override val isEndOfFrame: Boolean
         get() = statelessDescriptor.endOfFrame
 
+    override fun meetsRoutingNeeds(): Boolean =
+        true // If it didn't parse as AV1 we would have failed in the constructor
+
     override val layerIds: Collection<Int>
         get() = frameInfo?.dtisPresent
             ?: run { super.layerIds }
