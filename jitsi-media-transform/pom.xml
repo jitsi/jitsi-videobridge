@@ -94,7 +94,7 @@
         <dependency>
             <groupId>io.pkts</groupId>
             <artifactId>pkts-core</artifactId>
-            <version>3.0.3</version>
+            <version>3.0.10</version>
             <scope>test</scope>
         </dependency>
         <dependency>
