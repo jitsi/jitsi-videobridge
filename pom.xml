@@ -33,7 +33,7 @@
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
         <spotbugs.version>4.6.0</spotbugs.version>
-        <jersey.version>3.0.10</jersey.version>
+        <jersey.version>3.1.7</jersey.version>
         <jackson.version>2.12.4</jackson.version>
         <bouncycastle.version>1.77</bouncycastle.version>
         <prometheus.version>0.16.0</prometheus.version>
