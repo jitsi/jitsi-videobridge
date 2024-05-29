@@ -17,7 +17,7 @@
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
-    <slf4j.version>1.7.32</slf4j.version>
+    <slf4j.version>2.0.13</slf4j.version>
   </properties>
 
   <profiles>
