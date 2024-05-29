@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directories: 
+      - "rtp"
+      - "jitsi-media-transform"
+      - "jvb"
+    schedule:
+      interval: "weekly"
