@@ -295,17 +295,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      */
     private var remapCount = 0
 
-    companion object {
-        /**
-         * Print packet fields relevant to rewriting mode.
-         */
-        private fun debugInfo(packet: RtpPacket): String {
-            val codecState = packet.getCodecState()
-            val codecInfo = codecState?.toString() ?: ""
-            return "ssrc=${packet.ssrc} seq=${packet.sequenceNumber} ts=${packet.timestamp}" + codecInfo
-        }
-    }
-
     /**
      * Find the properties of the source indicated by the given SSRC. Returns null if not found.
      */
@@ -319,7 +308,6 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
     /**
      * Assign a group of send SSRCs to use for the specified source.
      * If remapping the send SSRCs from another source, transfer RTP state from the old source.
-     * Collect any remapped sources into the provided list.
      * Returns null if no current mapping exists and allowCreate is false.
      * Otherwise, returns the send source information to use.
      */
@@ -327,10 +315,11 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
         ssrc: Long,
         props: SourceDesc,
         allowCreate: Boolean,
-        remappings: MutableList<SendSource>
+        /* Collect remapped sources into this list, if provided. */
+        remappings: MutableList<SendSource>? = null
     ): SendSource? {
         /* Moves to end of LRU when found. */
-        var sendSource = sendSources.get(ssrc)
+        var sendSource = sendSources[ssrc]
 
         if (sendSource == null) {
             if (!allowCreate) {
@@ -341,9 +330,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
                 sendSource = SendSource(props, eldest.value.send1, eldest.value.send2)
                 logger.debug { "Remapping SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                 /* Request new deltas on next sent packet */
-                receivedSsrcs.get(props.ssrc1)?.hasDeltas = false
+                receivedSsrcs[props.ssrc1]?.hasDeltas = false
                 if (props.ssrc2 != -1L) {
-                    receivedSsrcs.get(props.ssrc2)?.hasDeltas = false
+                    receivedSsrcs[props.ssrc2]?.hasDeltas = false
                 }
                 ++remapCount
             } else {
@@ -352,11 +341,23 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
                 sendSource = SendSource(props, ssrc1, ssrc2)
                 logger.debug { "Added send SSRC: ${props.ssrc1}->$sendSource" }
             }
-            sendSources.put(ssrc, sendSource)
-            remappings.add(sendSource)
+            sendSources[ssrc] = sendSource
+            remappings?.add(sendSource)
         }
 
         return sendSource
+    }
+
+    /**
+     * Remove all send sources owned by [owner]. Does not signal anything to the client, as only additions need to be
+     * signaled.
+     */
+    fun removeByOwner(owner: String) {
+        synchronized(sendSources) {
+            sendSources.values.removeIf { sendSource ->
+                sendSource.props.owner == owner
+            }
+        }
     }
 
     /**
@@ -370,7 +371,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             touches the already active sources, to prevent them from being
             bumped out of the LRU by earlier elements of the list. */
             sources.filter { source ->
-                sendSources.get(source.primarySSRC) == null
+                sendSources[source.primarySSRC] == null
             }.forEach { source ->
                 getSendSource(source.primarySSRC, SourceDesc(source), allowCreate = true, remappings)
             }
@@ -411,11 +412,11 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
         var send = false
 
         synchronized(sendSources) {
-            var rs = receivedSsrcs.get(packet.ssrc)
+            var rs = receivedSsrcs[packet.ssrc]
             if (rs == null) {
                 val props = findSourceProps(packet.ssrc) ?: return false
                 rs = ReceiveSsrc(props)
-                receivedSsrcs.put(packet.ssrc, rs)
+                receivedSsrcs[packet.ssrc] = rs
                 logger.debug { "Added receive SSRC: ${packet.ssrc}" }
             }
 
@@ -437,13 +438,10 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      * For packets in the same direction as media flow; feedback messages handled separately.
      */
     fun rewriteRtcp(packet: RtcpPacket): Boolean {
-        val remappings = mutableListOf<SendSource>() // unused
-        val senderSsrc = packet.senderSsrc
-
         synchronized(sendSources) {
             /* Don't activate a source on RTCP. */
-            val rs = receivedSsrcs.get(packet.senderSsrc) ?: return false
-            val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreate = false, remappings) ?: return false
+            val rs = receivedSsrcs[packet.senderSsrc] ?: return false
+            val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreate = false) ?: return false
             ss.rewriteRtcp(packet)
             return true
         }

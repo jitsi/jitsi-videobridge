@@ -69,6 +69,10 @@ class Vp8Packet private constructor(
         /** This uses [get] rather than initialization because [isMarked] is a var. */
         get() = isMarked
 
+    override fun meetsRoutingNeeds(): Boolean {
+        return hasPictureId && hasTemporalLayerIndex
+    }
+
     val hasTemporalLayerIndex =
         DePacketizer.VP8PayloadDescriptor.hasTemporalLayerIndex(buffer, payloadOffset, payloadLength)
 
@@ -79,7 +83,7 @@ class Vp8Packet private constructor(
 
     val hasTL0PICIDX = DePacketizer.VP8PayloadDescriptor.hasTL0PICIDX(buffer, payloadOffset, payloadLength)
 
-    @field:Suppress("ktlint:standard:property-naming")
+    @field:Suppress("ktlint:standard:property-naming", "ktlint:standard:backing-property-naming")
     private var _TL0PICIDX = TL0PICIDX
         ?: DePacketizer.VP8PayloadDescriptor.getTL0PICIDX(buffer, payloadOffset, payloadLength)
 

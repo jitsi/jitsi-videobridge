@@ -19,7 +19,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
-import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.SUSPENDED_DT
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
@@ -108,7 +107,7 @@ internal class Av1DDQualityFilter(
         val accept = doAcceptFrame(frame, incomingEncoding, externalTargetIndex, receivedTime)
         val currentDt = getDtFromIndex(currentIndex)
         val mark = currentDt != SUSPENDED_DT &&
-            (frame.frameInfo?.spatialId == frame.structure?.decodeTargetInfo?.get(currentDt)?.spatialId)
+            (frame.frameInfo?.spatialId == frame.structure?.decodeTargetLayers?.get(currentDt)?.spatialId)
         val isResumption = (prevIndex == SUSPENDED_INDEX && currentIndex != SUSPENDED_INDEX)
         if (isResumption) {
             check(accept) {

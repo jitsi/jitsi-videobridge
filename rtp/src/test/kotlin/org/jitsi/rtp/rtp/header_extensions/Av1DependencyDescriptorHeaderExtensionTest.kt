@@ -68,6 +68,11 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
         "8700ed80e3061eaa82804028280514d14134518010a091889a09409fc059c13fc0b3c0"
     )
 
+    /* The header Chrome 126 generates for VP8 keyframes when AV1 DD is enabled for VP8.  It has no chains. */
+    val descNoChains = parseHexBinary(
+        "8000138002044eaaaf2860414d34538a0940413fc0b3c0"
+    )
+
     init {
         context("AV1 Dependency Descriptors") {
             context("a descriptor with a single-layer dependency structure") {
@@ -542,6 +547,62 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val buf = ByteArray(lds.encodedLength)
                     lds.write(buf, 0, buf.size)
                     buf shouldBe descS3T3
+                }
+            }
+            context("A descriptor with no chains") {
+                val ldsr = Av1DependencyDescriptorReader(descNoChains, 0, descNoChains.size)
+                val lds = ldsr.parse(null)
+                should("be parsed properly") {
+                    lds.startOfFrame shouldBe true
+                    lds.endOfFrame shouldBe false
+                    lds.frameNumber shouldBe 0x0013
+                    lds.activeDecodeTargetsBitmask shouldBe 0x7
+
+                    val structure = lds.newTemplateDependencyStructure
+                    structure shouldNotBe null
+                    structure!!.decodeTargetCount shouldBe 3
+                    structure.maxTemporalId shouldBe 2
+                    structure.maxSpatialId shouldBe 0
+                }
+                should("calculate correct frame info") {
+                    val ldsi = lds.frameInfo
+                    ldsi.spatialId shouldBe 0
+                    ldsi.temporalId shouldBe 0
+                }
+                should("calculate correctly whether layer switching needs keyframes") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    val fromS = 0
+                    for (fromT in 0..2) {
+                        val fromDT = 3 * fromS + fromT
+                        val toS = 0
+                        for (toT in 0..2) {
+                            val toDT = 3 * toS + toT
+                            /* With this structure you can switch down spatial layers, or to other temporal
+                             * layers within the same spatial layer, without a keyframe; but switching up
+                             * spatial layers needs a keyframe.
+                             */
+                            withClue("from DT $fromDT to DT $toDT") {
+                                structure.canSwitchWithoutKeyframe(
+                                    fromDt = fromDT,
+                                    toDt = toDT
+                                ) shouldBe true
+                            }
+                        }
+                    }
+                }
+                should("calculate DTI bitmasks corresponding to a given DT") {
+                    val structure = lds.newTemplateDependencyStructure!!
+                    structure.getDtBitmaskForDt(0) shouldBe 0b001
+                    structure.getDtBitmaskForDt(1) shouldBe 0b011
+                    structure.getDtBitmaskForDt(2) shouldBe 0b111
+                }
+                should("Calculate its own length properly") {
+                    lds.encodedLength shouldBe descNoChains.size
+                }
+                should("Be re-encoded to the same bytes") {
+                    val buf = ByteArray(lds.encodedLength)
+                    lds.write(buf, 0, buf.size)
+                    buf shouldBe descNoChains
                 }
             }
         }

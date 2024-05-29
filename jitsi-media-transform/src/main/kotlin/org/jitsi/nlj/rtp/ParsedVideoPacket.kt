@@ -31,4 +31,10 @@ abstract class ParsedVideoPacket(
     abstract val isKeyframe: Boolean
     abstract val isStartOfFrame: Boolean
     abstract val isEndOfFrame: Boolean
+
+    /** Whether the packet meets the needs of the routing infrastructure.
+     * If a packet could be parsed more than one way (e.g. it is VP8 or VP9 but also has an AV1 DD)
+     * this will let us choose which parse to prefer.
+     */
+    abstract fun meetsRoutingNeeds(): Boolean
 }

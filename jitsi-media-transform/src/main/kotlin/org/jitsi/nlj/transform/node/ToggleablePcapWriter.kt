@@ -51,11 +51,15 @@ class ToggleablePcapWriter(
 
     fun isEnabled(): Boolean = pcapWriter != null
 
-    fun newObserverNode(): Node = PcapWriterNode("Toggleable pcap writer: $prefix")
+    fun newObserverNode(outbound: Boolean) = PcapWriterNode("Toggleable pcap writer: $prefix", outbound)
 
-    private inner class PcapWriterNode(name: String) : ObserverNode(name) {
+    inner class PcapWriterNode(name: String, val outbound: Boolean) : ObserverNode(name) {
         override fun observe(packetInfo: PacketInfo) {
-            pcapWriter?.processPacket(packetInfo)
+            pcapWriter?.observe(packetInfo, outbound)
+        }
+
+        fun observe(buffer: ByteArray, offset: Int, length: Int) {
+            pcapWriter?.observe(buffer, offset, length, outbound)
         }
 
         override fun trace(f: () -> Unit) = f.invoke()

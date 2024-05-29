@@ -22,6 +22,7 @@ import org.jitsi.health.HealthChecker
 import org.jitsi.health.Result
 import org.jitsi.videobridge.health.config.HealthConfig.Companion.config
 import org.jitsi.videobridge.ice.Harvesters
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import java.net.InetAddress
 
 class JvbHealthChecker : HealthCheckService {
@@ -30,11 +31,15 @@ class JvbHealthChecker : HealthCheckService {
         config.timeout,
         config.maxCheckDuration,
         config.stickyFailures,
-        healthCheckFunc = ::check
+        healthCheckFunc = ::checkAndUpdateMetric
     )
 
     fun start() = healthChecker.start()
     fun stop() = healthChecker.stop()
+
+    private fun checkAndUpdateMetric(): Result = check().also {
+        healthyMetric.set(it.success)
+    }
 
     private fun check(): Result {
         if (config.requireValidAddress && !hasValidAddress()) {
@@ -68,4 +73,12 @@ class JvbHealthChecker : HealthCheckService {
 
     override val result: Result
         get() = healthChecker.result
+
+    companion object {
+        val healthyMetric = VideobridgeMetricsContainer.instance.registerBooleanMetric(
+            "healthy",
+            "Whether the Videobridge instance is healthy or not.",
+            true
+        )
+    }
 }

@@ -19,7 +19,6 @@ package org.jitsi.nlj.rtp.codec
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingDesc
-import org.jitsi.nlj.findRtpLayerDescs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 
 /**
@@ -29,27 +28,16 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
  * and verify stream consistency.
  */
 abstract class VideoCodecParser(
-    var sources: Array<MediaSourceDesc>
+    var source: MediaSourceDesc
 ) {
     abstract fun parse(packetInfo: PacketInfo)
 
     protected fun findRtpEncodingDesc(packet: VideoRtpPacket): RtpEncodingDesc? {
-        for (source in sources) {
-            source.findRtpEncodingDesc(packet.ssrc)?.let {
-                return it
-            }
+        source.findRtpEncodingDesc(packet.ssrc)?.let {
+            return it
         }
         return null
     }
 
-    protected fun findSourceDescAndRtpEncodingDesc(packet: VideoRtpPacket): Pair<MediaSourceDesc, RtpEncodingDesc>? {
-        for (source in sources) {
-            source.findRtpEncodingDesc(packet.ssrc)?.let {
-                return Pair(source, it)
-            }
-        }
-        return null
-    }
-
-    protected fun findRtpLayerDescs(packet: VideoRtpPacket) = sources.findRtpLayerDescs(packet)
+    protected fun findRtpLayerDescs(packet: VideoRtpPacket) = source.findRtpLayerDescs(packet)
 }

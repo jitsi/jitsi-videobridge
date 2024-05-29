@@ -42,7 +42,7 @@ import kotlin.io.path.Path
 class PcapWriter(
     parentLogger: Logger,
     filePath: Path = Path(directory, "${Random().nextLong()}.pcap")
-) : ObserverNode("PCAP writer") {
+) {
     constructor(parentLogger: Logger, filePath: String) : this(parentLogger, Path(filePath))
 
     private val logger = createChildLogger(parentLogger)
@@ -60,28 +60,52 @@ class PcapWriter(
 
     companion object {
         private val localhost = Inet4Address.getByName("127.0.0.1") as Inet4Address
+        private val remotehost = Inet4Address.getByName("192.0.2.0") as Inet4Address
+
+        private val localport = UdpPort(123, "blah")
+        private val remoteport = UdpPort(456, "blah")
+
         val directory: String by config("jmt.debug.pcap.directory".from(JitsiConfig.newConfig))
     }
 
-    override fun observe(packetInfo: PacketInfo) {
+    fun observe(packetInfo: PacketInfo, outbound: Boolean) =
+        observe(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length, outbound)
+
+    fun observe(buffer: ByteArray, offset: Int, length: Int, outbound: Boolean) {
         val udpPayload = UnknownPacket.Builder()
         // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
         // only exactly what we want to write
-        val subBuf = ByteArray(packetInfo.packet.length)
-        System.arraycopy(packetInfo.packet.buffer, packetInfo.packet.offset, subBuf, 0, packetInfo.packet.length)
+        val subBuf = ByteArray(length)
+        System.arraycopy(buffer, offset, subBuf, 0, length)
         udpPayload.rawData(subBuf)
+        val srchost: Inet4Address
+        val dsthost: Inet4Address
+        val srcport: UdpPort
+        val dstport: UdpPort
+        if (outbound) {
+            srchost = localhost
+            srcport = localport
+            dsthost = remotehost
+            dstport = remoteport
+        } else {
+            srchost = remotehost
+            srcport = remoteport
+            dsthost = localhost
+            dstport = localport
+        }
+
         val udp = UdpPacket.Builder()
-            .srcPort(UdpPort(123, "blah"))
-            .dstPort(UdpPort(456, "blah"))
-            .srcAddr(localhost)
-            .dstAddr(localhost)
+            .srcPort(srcport)
+            .dstPort(dstport)
+            .srcAddr(srchost)
+            .dstAddr(dsthost)
             .correctChecksumAtBuild(true)
             .correctLengthAtBuild(true)
             .payloadBuilder(udpPayload)
 
         val ipPacket = IpV4Packet.Builder()
-            .srcAddr(localhost)
-            .dstAddr(localhost)
+            .srcAddr(srchost)
+            .dstAddr(dsthost)
             .protocol(IpNumber.UDP)
             .version(IpVersion.IPV4)
             .tos(IpV4Rfc1349Tos.newInstance(0))
@@ -98,8 +122,6 @@ class PcapWriter(
 
         writer.dump(eth)
     }
-
-    override fun trace(f: () -> Unit) = f.invoke()
 
     fun close() {
         if (lazyWriter.isInitialized() && writer.isOpen) {

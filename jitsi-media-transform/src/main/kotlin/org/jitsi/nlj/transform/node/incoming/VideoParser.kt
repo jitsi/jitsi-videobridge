@@ -19,8 +19,10 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
+import org.jitsi.nlj.findRtpSource
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
+import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
 import org.jitsi.nlj.rtp.codec.av1.Av1DDParser
@@ -55,7 +57,7 @@ class VideoParser(
 
     private var av1DDExtId: Int? = null
 
-    private var videoCodecParser: VideoCodecParser? = null
+    private val videoCodecParsers = mutableMapOf<Long, VideoCodecParser>()
 
     init {
         streamInformationStore.onRtpExtensionMapping(RtpExtensionType.AV1_DEPENDENCY_DESCRIPTOR) {
@@ -71,63 +73,49 @@ class VideoParser(
             stats.numPacketsDroppedUnknownPt++
             return null
         }
+        val videoCodecParser: VideoCodecParser?
         val parsedPacket = try {
             when {
                 payloadType is Vp8PayloadType -> {
-                    val vp8Packet = packetInfo.packet.toOtherType(::Vp8Packet)
-                    packetInfo.packet = vp8Packet
-                    packetInfo.resetPayloadVerification()
-
-                    if (videoCodecParser !is Vp8Parser) {
-                        logger.cdebug {
-                            "Creating new VP8Parser, current videoCodecParser is ${videoCodecParser?.javaClass}"
-                        }
-                        resetSources()
-                        packetInfo.layeringChanged = true
-                        videoCodecParser = Vp8Parser(sources, logger)
+                    val (vp8Packet, parser) = parseNormalPayload<Vp8Parser>(packetInfo, ::Vp8Packet) { source ->
+                        Vp8Parser(source, logger)
                     }
+                    videoCodecParser = parser
                     vp8Packet
                 }
                 payloadType is Vp9PayloadType -> {
-                    val vp9Packet = packetInfo.packet.toOtherType(::Vp9Packet)
-                    packetInfo.packet = vp9Packet
-                    packetInfo.resetPayloadVerification()
-
-                    if (videoCodecParser !is Vp9Parser) {
-                        logger.cdebug {
-                            "Creating new VP9Parser, current videoCodecParser is ${videoCodecParser?.javaClass}"
-                        }
-                        resetSources()
-                        packetInfo.layeringChanged = true
-                        videoCodecParser = Vp9Parser(sources, logger)
+                    val (vp9Packet, parser) = parseNormalPayload<Vp9Parser>(packetInfo, ::Vp9Packet) { source ->
+                        Vp9Parser(source, logger)
                     }
+                    videoCodecParser = parser
                     vp9Packet
                 }
                 av1DDExtId != null && packet.getHeaderExtension(av1DDExtId) != null -> {
-                    if (videoCodecParser !is Av1DDParser) {
-                        logger.cdebug {
-                            "Creating new Av1DDParser, current videoCodecParser is ${videoCodecParser?.javaClass}"
-                        }
-                        resetSources()
-                        packetInfo.layeringChanged = true
-                        videoCodecParser = Av1DDParser(sources, logger, diagnosticContext)
+                    videoCodecParser = checkParserType<Av1DDParser>(packetInfo) { source ->
+                        Av1DDParser(source, logger, diagnosticContext)
                     }
 
-                    val av1DDPacket = (videoCodecParser as Av1DDParser).createFrom(packet, av1DDExtId)
-                    packetInfo.packet = av1DDPacket
-                    packetInfo.resetPayloadVerification()
+                    val av1DDPacket = videoCodecParser?.createFrom(packet, av1DDExtId)?.also {
+                        packetInfo.packet = it
+                        packetInfo.resetPayloadVerification()
+                    }
 
                     av1DDPacket
                 }
                 else -> {
-                    if (videoCodecParser != null) {
+                    val curParser = videoCodecParsers[packet.ssrc]
+                    if (curParser != null) {
                         logger.cdebug {
                             "Removing videoCodecParser on ${payloadType.javaClass} packet, " +
-                                "current videoCodecParser is ${videoCodecParser?.javaClass}"
+                                "current videoCodecParser is ${curParser.javaClass}"
                         }
-                        resetSources()
+                        sources.findRtpSource(packet)?.let { source ->
+                            resetSource(source)
+                            source.rtpEncodings.forEach {
+                                videoCodecParsers.remove(it.primarySSRC)
+                            }
+                        }
                         packetInfo.layeringChanged = true
-                        videoCodecParser = null
                     }
                     return packetInfo
                 }
@@ -146,16 +134,79 @@ class VideoParser(
         /* Some codecs mark keyframes in every packet of the keyframe - only count the start of the frame,
          * so the count is correct. */
         /* Alternately we could keep track of keyframes we've already seen, by timestamp, but that seems unnecessary. */
-        if (parsedPacket.isKeyframe && parsedPacket.isStartOfFrame) {
-            logger.cdebug { "Received a keyframe for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
+        if (parsedPacket != null && parsedPacket.isKeyframe && parsedPacket.isStartOfFrame) {
+            logger.cdebug { "Received a keyframe for ssrc ${packet.ssrc} at seq ${packet.sequenceNumber}" }
             stats.numKeyframes++
         }
         if (packetInfo.layeringChanged) {
-            logger.cdebug { "Layering structure changed for ssrc ${packet.ssrc} ${packet.sequenceNumber}" }
+            logger.cdebug { "Layering structure changed for ssrc ${packet.ssrc} at seq ${packet.sequenceNumber}" }
             stats.numLayeringChanges++
         }
 
         return packetInfo
+    }
+
+    /** A normal payload is one where we choose the subclass of the ParsedVideoPacket and VideoCodecParser
+     * based on the payload type, as opposed to the header extension (like AV1).  If the packet doesn't
+     * satisfy [ParsedVideoPacket.meetsRoutingNeeds] but it has an AV1 DD header extension, we will parse
+     * this packet as AV1 rather than as its normal type.
+     * */
+    private inline fun <reified T : VideoCodecParser> parseNormalPayload(
+        packetInfo: PacketInfo,
+        otherTypeCreator: (ByteArray, Int, Int) -> ParsedVideoPacket,
+        parserConstructor: (MediaSourceDesc) -> T
+    ): Pair<ParsedVideoPacket?, VideoCodecParser?> {
+        val parsedPacket = packetInfo.packet.toOtherType(otherTypeCreator)
+        if (!parsedPacket.meetsRoutingNeeds()) {
+            // See if we can parse this packet as AV1
+            val packet = packetInfo.packetAs<RtpPacket>()
+            val av1DDExtId = this.av1DDExtId // So null checks work
+            if (av1DDExtId != null && packet.getHeaderExtension(av1DDExtId) != null) {
+                val parser = checkParserType<Av1DDParser>(packetInfo) { source ->
+                    Av1DDParser(source, logger, diagnosticContext)
+                }
+
+                val av1DDPacket = parser?.createFrom(packet, av1DDExtId)?.also {
+                    packetInfo.packet = it
+                    packetInfo.resetPayloadVerification()
+                }
+
+                return Pair(av1DDPacket, parser)
+            }
+        }
+        packetInfo.packet = parsedPacket
+        packetInfo.resetPayloadVerification()
+
+        val parser = checkParserType<T>(packetInfo, parserConstructor)
+
+        return Pair(parsedPacket, parser)
+    }
+
+    private inline fun <reified T : VideoCodecParser> checkParserType(
+        packetInfo: PacketInfo,
+        constructor: (MediaSourceDesc) -> T
+    ): T? {
+        val packet = packetInfo.packetAs<RtpPacket>()
+        val parser = videoCodecParsers[packet.ssrc]
+        if (parser is T) {
+            return parser
+        }
+
+        val source = sources.findRtpSource(packet)
+            ?: // VideoQualityLayerLookup will drop this packet later, so no need to warn about it now
+            return null
+        logger.cdebug {
+            "Creating new ${T::class.java.simpleName} for source ${source.sourceName}, " +
+                "current videoCodecParser is ${parser?.javaClass?.simpleName}"
+        }
+        resetSource(source)
+        packetInfo.layeringChanged = true
+        val newParser = constructor(source)
+        source.rtpEncodings.forEach {
+            videoCodecParsers[it.primarySSRC] = newParser
+        }
+
+        return newParser
     }
 
     override fun handleEvent(event: Event) {
@@ -163,24 +214,28 @@ class VideoParser(
             is SetMediaSourcesEvent -> {
                 sources = event.mediaSourceDescs
                 signaledSources = event.signaledMediaSourceDescs
-                videoCodecParser?.sources = sources
+                val ssrcsSeen = mutableSetOf<Long>()
+                sources.forEach { source ->
+                    source.rtpEncodings.forEach {
+                        videoCodecParsers[it.primarySSRC]?.source = source
+                        ssrcsSeen.add(it.primarySSRC)
+                    }
+                }
+                videoCodecParsers.keys.removeIf { !ssrcsSeen.contains(it) }
             }
         }
         super.handleEvent(event)
     }
 
-    private fun resetSources() {
-        logger.cdebug { "Resetting sources to signaled sources: ${signaledSources.joinToString(separator = "\n")}" }
-        for (signaledSource in signaledSources) {
-            for (source in sources) {
-                if (source.primarySSRC != signaledSource.primarySSRC) {
-                    continue
-                }
-                for (signaledEncoding in signaledSource.rtpEncodings) {
-                    source.setEncodingLayers(signaledEncoding.layers, signaledEncoding.primarySSRC)
-                }
-                break
-            }
+    private fun resetSource(source: MediaSourceDesc) {
+        val signaledSource = signaledSources.findRtpSource(source.primarySSRC)
+        if (signaledSource == null) {
+            logger.warn("Unable to find signaled source corresponding to ${source.primarySSRC}")
+            return
+        }
+        logger.cdebug { "Resetting source ${source.sourceName} to signaled source: $signaledSource" }
+        for (signaledEncoding in signaledSource.rtpEncodings) {
+            source.setEncodingLayers(signaledEncoding.layers, signaledEncoding.primarySSRC)
         }
     }
 

@@ -110,7 +110,6 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
         "GoogleCcEstimator",
         getCurrentBw(now)
     ).apply {
-        addNumber("incomingEstimateExpirations", bitrateEstimatorAbsSendTime.incomingEstimateExpirations)
         bitrateEstimatorAbsSendTime.statistics?.run {
             addNumber("delayBasedEstimatorOffset", offset)
             addNumber("delayBasedEstimatorThreshold", threshold)

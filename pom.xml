@@ -23,14 +23,14 @@
     <packaging>pom</packaging>
 
     <properties>
-        <jetty.version>11.0.14</jetty.version>
+        <jetty.version>11.0.20</jetty.version>
         <kotlin.version>1.9.10</kotlin.version>
         <kotest.version>5.7.2</kotest.version>
         <junit.version>5.10.0</junit.version>
-        <jitsi.utils.version>1.0-127-g6c65524</jitsi.utils.version>
-        <jicoco.version>1.1-132-g906f995</jicoco.version>
+        <jitsi.utils.version>1.0-131-ge0b9606</jitsi.utils.version>
+        <jicoco.version>1.1-140-g8f45a9f</jicoco.version>
         <mockk.version>1.13.8</mockk.version>
-        <ktlint-maven-plugin.version>3.0.0</ktlint-maven-plugin.version>
+        <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
         <spotbugs.version>4.6.0</spotbugs.version>
         <jersey.version>3.0.10</jersey.version>
@@ -106,12 +106,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-68-gd289f12</version>
+                <version>3.0-69-ga53b402</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-78-g62d03d4</version>
+                <version>1.0-80-g0ce9883</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

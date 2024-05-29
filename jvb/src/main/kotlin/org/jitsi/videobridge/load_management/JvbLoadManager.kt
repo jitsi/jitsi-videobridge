@@ -25,6 +25,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.jvbLastNSingleton
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.util.TaskPools
 import java.time.Clock
 import java.time.Duration
@@ -175,7 +176,7 @@ class PacketRateLoadManager(
     init {
         val sampler = PacketRateLoadSampler(videobridge) { loadMeasurement ->
             loadUpdate(loadMeasurement)
-            videobridge.statistics.stressLevel = getCurrentStressLevel()
+            VideobridgeMetrics.stressLevel.set(getCurrentStressLevel())
         }
 
         startSampler(sampler)
@@ -191,7 +192,7 @@ class CpuUsageLoadManager(
     init {
         val sampler = CpuLoadSampler { loadMeasurement ->
             loadUpdate(loadMeasurement)
-            videobridge.statistics.stressLevel = getCurrentStressLevel()
+            VideobridgeMetrics.stressLevel.set(getCurrentStressLevel())
         }
 
         startSampler(sampler)

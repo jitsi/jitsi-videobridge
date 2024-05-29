@@ -173,6 +173,7 @@ open class RtpPacket(
     private val headerExtensionParser
         get() = HeaderExtensionHelpers.getHeaderExtensionParser(extensionsProfileType)
 
+    @field:Suppress("ktlint:standard:backing-property-naming")
     private val _encodedHeaderExtensions: EncodedHeaderExtensions = EncodedHeaderExtensions()
     private val encodedHeaderExtensions: EncodedHeaderExtensions
         get() {

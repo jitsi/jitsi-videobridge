@@ -30,9 +30,9 @@ import org.jitsi.utils.logging2.createChildLogger
  * from frames, and also diagnoses packet format variants that the Jitsi videobridge won't be able to route.
  */
 class Vp8Parser(
-    sources: Array<MediaSourceDesc>,
+    source: MediaSourceDesc,
     parentLogger: Logger
-) : VideoCodecParser(sources) {
+) : VideoCodecParser(source) {
     private val logger = createChildLogger(parentLogger)
 
     // Consistency
