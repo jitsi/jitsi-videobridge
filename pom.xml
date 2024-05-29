@@ -25,7 +25,7 @@
     <properties>
         <jetty.version>11.0.21</jetty.version>
         <kotlin.version>1.9.10</kotlin.version>
-        <kotest.version>5.7.2</kotest.version>
+        <kotest.version>5.9.0</kotest.version>
         <junit.version>5.10.0</junit.version>
         <jitsi.utils.version>1.0-131-ge0b9606</jitsi.utils.version>
         <jicoco.version>1.1-140-g8f45a9f</jicoco.version>
