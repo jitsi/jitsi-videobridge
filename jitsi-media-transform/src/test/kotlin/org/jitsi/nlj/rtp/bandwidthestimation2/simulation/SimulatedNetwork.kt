@@ -17,7 +17,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 /** Test scenario simulated network,
  * based on WebRTC call/simulated_network.{h,cc} and
- * api/test/simulated_network.{h,cc} in
+ * api/test/simulated_network.h in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  *
  * Only those features used by GoogCcNetworkControllerTest are implemented.

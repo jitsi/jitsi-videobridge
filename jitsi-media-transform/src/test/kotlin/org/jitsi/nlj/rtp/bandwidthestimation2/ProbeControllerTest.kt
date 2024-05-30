@@ -37,9 +37,15 @@ val kMaxBitrate = 10000.bps
 val kExponentialProbingTimeout = 5.secs
 
 val kAlrProbeInterval = 5.secs
-val kAlrEndedTimeout = 3.secs
-val kBitrateDropTimeout = 5.secs
+private val kAlrEndedTimeout = 3.secs
+private val kBitrateDropTimeout = 5.secs
 
+/** Unit tests for ProbeController,
+ * based on WebRTC modules/congestion_controller/goog_cc/probe_controller_unittest.cc in
+ * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ *
+ * Field trial settings have been generally removed, set to their default settings.
+ */
 class ProbeControllerTest : FreeSpec() {
     class ProbeControllerFixture(
         val config: ProbeControllerConfig = ProbeControllerConfig()

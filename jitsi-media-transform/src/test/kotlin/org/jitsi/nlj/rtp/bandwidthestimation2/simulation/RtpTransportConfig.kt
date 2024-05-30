@@ -19,7 +19,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControllerFactoryInterface
 import java.time.Duration
 
 /** Test scenario RTP transport config,
- * based on WebRTC call/rtp_transport_config.{h,cc} in
+ * based on WebRTC call/rtp_transport_config.h in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  *
  * Only those features used by GoogCcNetworkControllerTest are implemented.

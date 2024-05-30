@@ -20,7 +20,7 @@ import org.jitsi.utils.logging2.Logger
 import java.time.Duration
 
 /** Base type for network controller,
- * based on WebRTC api/transport/network_controller.h in
+ * based on WebRTC api/transport/network_control.h in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  */
 
