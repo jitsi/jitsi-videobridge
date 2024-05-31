@@ -176,6 +176,8 @@ class AimdRateControlTest : FreeSpec() {
         // Skipped: EstimateDoesNotIncreaseInAlr: uses field trial WebRTC-DontIncreaseDelayBasedBweInAlr/Enabled/
         // Skipped: SetEstimateIncreaseBweInAlr: uses field trial WebRTC-DontIncreaseDelayBasedBweInAlr/Enabled/
         // Skipped: SetEstimateUpperLimitedByNetworkEstimate: uses setNetworkStateEstimate
+        // Skipped: SetEstimateUpperLimitedByCurrentBitrateIfNetworkEstimateIsLow: uses setNetworkStateEstimate
+        // Skipped: SetEstimateDefaultNotUpperLimitedByCurrentBitrateIfNetworkEstimateIsLow: uses setNetworkStateEstimate
         // Skipped: SetEstimateLowerLimitedByNetworkEstimate: uses setNetworkStateEstimate
         // Skipped: SetEstimateIgnoredIfLowerThanNetworkEstimateAndCurrent: uses setNetworkStateEstimate
         // Skipped: EstimateIncreaseWhileNotInAlr: uses field trial WebRTC-DontIncreaseDelayBasedBweInAlr/Enabled/

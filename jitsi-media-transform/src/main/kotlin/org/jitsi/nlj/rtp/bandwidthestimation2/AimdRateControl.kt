@@ -78,6 +78,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
 
     // Only tested when networkEstimate != null
     // private val disableEstimateBoundedIncrease: Boolean = false
+    // private val useCurrentEstimateAsMinUpperBound = false
 
     private val initialBackoffInterval: Duration? = null
     private val linkCapacityFix: Boolean = false
