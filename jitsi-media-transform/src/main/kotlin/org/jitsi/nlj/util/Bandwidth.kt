@@ -27,6 +27,8 @@ import kotlin.math.round
 value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
 
     constructor(bps: Double) : this(bps.toLong())
+    val bytesPerSec: Double
+        get() = bps.toDouble() / 8
     val kbps: Double
         get() = bps.toDouble() / 1000
     val mbps: Double
@@ -98,6 +100,8 @@ value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
 
 val Int.bps: Bandwidth
     get() = Bandwidth(this.toDouble())
+val Int.bytesPerSec: Bandwidth
+    get() = Bandwidth(this.toDouble() * 8)
 val Int.kbps: Bandwidth
     get() = Bandwidth(this.toDouble() * 1000)
 val Int.mbps: Bandwidth
@@ -105,6 +109,8 @@ val Int.mbps: Bandwidth
 
 val Float.bps: Bandwidth
     get() = Bandwidth(this.toDouble())
+val Float.bytesPerSec: Bandwidth // Bytes per second
+    get() = Bandwidth(this.toDouble() * 8)
 val Float.kbps: Bandwidth
     get() = Bandwidth(this.toDouble() * 1000)
 val Float.mbps: Bandwidth
@@ -112,6 +118,8 @@ val Float.mbps: Bandwidth
 
 val Double.bps: Bandwidth
     get() = Bandwidth(this)
+val Double.bytesPerSec: Bandwidth // Bytes per second
+    get() = Bandwidth(this * 8)
 val Double.kbps: Bandwidth
     get() = Bandwidth(this * 1000)
 val Double.mbps: Bandwidth
@@ -119,6 +127,8 @@ val Double.mbps: Bandwidth
 
 val Long.bps: Bandwidth
     get() = Bandwidth(this.toDouble())
+val Long.bytesPerSec: Bandwidth // Bytes per second
+    get() = Bandwidth(this.toDouble() * 8)
 val Long.kbps: Bandwidth
     get() = Bandwidth(this.toDouble() * 1000)
 val Long.mbps: Bandwidth
