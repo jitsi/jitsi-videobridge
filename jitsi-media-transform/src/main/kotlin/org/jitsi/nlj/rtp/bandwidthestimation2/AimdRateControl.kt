@@ -80,9 +80,6 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     // private val disableEstimateBoundedIncrease: Boolean = false
     // private val useCurrentEstimateAsMinUpperBound = false
 
-    private val initialBackoffInterval: Duration? = null
-    private val linkCapacityFix: Boolean = false
-
     private var lastDecrease: Bandwidth? = null
 
     fun setStartBitrate(startBitrate: Bandwidth) {
@@ -124,19 +121,8 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     }
 
     fun initialTimeToReduceFurther(atTime: Instant): Boolean {
-        if (initialBackoffInterval == null) {
-            return validEstimate() &&
-                timeToReduceFurther(atTime, latestEstimate() / 2 - 1.bps)
-        }
-        // TODO(terelius): We could use the RTT (clamped to suitable limits) instead
-        //  of a fixed bitrate_reduction_interval.
-        // TODO this is dead code because we're not using the initialBackoffInterval field trial
-        if (timeLastBitrateDecrease == NEVER ||
-            Duration.between(timeLastBitrateDecrease, atTime) >= initialBackoffInterval
-        ) {
-            return true
-        }
-        return false
+        return validEstimate() &&
+            timeToReduceFurther(atTime, latestEstimate() / 2 - 1.bps)
     }
 
     fun latestEstimate() = currentBitrate
@@ -274,7 +260,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
                 // Set bit rate to something slightly lower than the measured throughput
                 // to get rid of any self-induced delay.
                 decreasedBitrate = estimatedThroughput * beta
-                if (decreasedBitrate > currentBitrate && !linkCapacityFix) {
+                if (decreasedBitrate > currentBitrate) {
                     // TODO(terelius): The link_capacity estimate may be based on old
                     // throughput measurements. Relying on them may lead to unnecessary
                     // BWE drops.

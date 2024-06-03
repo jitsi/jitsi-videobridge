@@ -21,7 +21,9 @@ import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.equals.shouldNotBeEqual
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeInRange
+import io.kotest.matchers.longs.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import org.jitsi.nlj.util.kbps
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
@@ -138,7 +140,7 @@ class DelayBasedBweTest : FreeSpec() {
             val test = OneDelayBasedBweTest(logger, diagnosticContext)
             val defaultInterval = test.bitrateEstimator.getExpectedBwePeriod()
             defaultInterval.toMillis() shouldBeGreaterThan 0
-            test.capacityDropTestHelper(1, true, 333, 0)
+            test.capacityDropTestHelper(1, true, 533, 0)
             val interval = test.bitrateEstimator.getExpectedBwePeriod()
             interval.toMillis() shouldBeGreaterThan 0
             interval shouldNotBeEqual defaultInterval
@@ -161,12 +163,12 @@ class DelayBasedBweTest : FreeSpec() {
 
         "RateIncreaseRtpTimestamps" {
             val test = OneDelayBasedBweTest(logger, diagnosticContext)
-            test.rateIncreaseRtpTimestampsTestHelper(622)
+            test.rateIncreaseRtpTimestampsTestHelper(617)
         }
 
         "CapacityDropOneStream" {
             val test = OneDelayBasedBweTest(logger, diagnosticContext)
-            test.capacityDropTestHelper(1, false, 300, 0)
+            test.capacityDropTestHelper(1, false, 500, 0)
         }
 
         "CapacityDropPosOffsetChange" {
@@ -181,7 +183,7 @@ class DelayBasedBweTest : FreeSpec() {
 
         "CapacityDropOneStreamWrap" {
             val test = OneDelayBasedBweTest(logger, diagnosticContext)
-            test.capacityDropTestHelper(1, true, 300, 0)
+            test.capacityDropTestHelper(1, true, 533, 0)
         }
 
         "TestTimestampGrouping" {
@@ -204,6 +206,41 @@ class DelayBasedBweTest : FreeSpec() {
             // to the wrap, but a big difference in arrival time, if streams aren't
             // properly timed out.
             test.testWrappingHelper(10 * 64)
+        }
+
+        "TestInitialOveruse" {
+            val test = OneDelayBasedBweTest(logger, diagnosticContext)
+            val kStartBitrate = 300.kbps
+            val kInitialCapacity = 200.kbps
+            // High FPS to ensure that we send a lot of packets in a short time.
+            val kFps = 90
+
+            test.streamGenerator.addStream(RtpStream(kFps, kStartBitrate.bps))
+            test.streamGenerator.setCapacityBps(kInitialCapacity.bps)
+
+            // Needed to initialize the AimdRateControl.
+            test.bitrateEstimator.setStartBitrate(kStartBitrate)
+
+            // Produce 40 frames (in 1/3 second) and give them to the estimator.
+            var bitrateBps = kStartBitrate.bps
+            var seenOveruse = false
+            for (i in 0 until 40) {
+                val overuse = test.generateAndProcessFrame(bitrateBps)
+                if (overuse) {
+                    test.bitrateObserver.updated shouldBe true
+                    test.bitrateObserver.latestBitrate shouldBeLessThanOrEqual kInitialCapacity.bps
+                    test.bitrateObserver.latestBitrate shouldBeGreaterThan (0.8 * kInitialCapacity.bps).toLong()
+                    bitrateBps = test.bitrateObserver.latestBitrate
+                    seenOveruse = true
+                    break
+                } else if (test.bitrateObserver.updated) {
+                    bitrateBps = test.bitrateObserver.latestBitrate
+                    test.bitrateObserver.reset()
+                }
+            }
+            seenOveruse shouldBe true
+            test.bitrateObserver.latestBitrate shouldBeLessThanOrEqual kInitialCapacity.bps
+            test.bitrateObserver.latestBitrate shouldBeGreaterThan (0.8 * kInitialCapacity.bps).toLong()
         }
     }
 

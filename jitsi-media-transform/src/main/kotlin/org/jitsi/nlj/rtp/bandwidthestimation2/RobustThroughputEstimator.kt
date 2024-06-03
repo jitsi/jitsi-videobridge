@@ -186,7 +186,7 @@ class RobustThroughputEstimator(val settings: RobustThroughputEstimatorSettings)
 
         check(firstSendTime.isFinite())
         check(lastSendTime.isFinite())
-        val sendDuration = Duration.between(firstSendTime, lastSendTime)
+        val sendDuration = Duration.between(firstSendTime, lastSendTime).coerceAtLeast(1.ms)
 
         return min(sendSize.per(sendDuration), recvSize.per(recvDuration))
     }
