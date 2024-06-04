@@ -479,7 +479,6 @@ class ProbeController(
         val pendingProbes = mutableListOf<ProbeClusterConfig>()
         for (b in bitratesToProbe) {
             assert(b != Bandwidth.ZERO)
-
             var bitrate = min(b, estimateCappedBitrate)
             if (bitrate > maxProbeBitrate) {
                 bitrate = maxProbeBitrate

@@ -416,7 +416,6 @@ class GoogCcNetworkController(
             report,
             result.delayDetectorState,
             probeBitrate,
-            Bandwidth.INFINITY,
             alrStartTime != null
         )
         if (result.updated) {

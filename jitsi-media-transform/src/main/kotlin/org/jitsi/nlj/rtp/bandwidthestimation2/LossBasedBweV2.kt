@@ -123,7 +123,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var currentState = LossBasedState.kDelayBasedEstimate
     private var probeBitrate = Bandwidth.INFINITY
     private var delayBasedEstimate = Bandwidth.INFINITY
-    private var upperLinkCapacity = Bandwidth.INFINITY
     private var lastProbeTimestamp = Instant.MIN
 
     init {
@@ -223,11 +222,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         delayBasedEstimate: Bandwidth,
         delayDetectorState: BandwidthUsage,
         probeBitrate: Bandwidth?,
-        upperLinkCapacity: Bandwidth,
         inAlr: Boolean
     ) {
         this.delayBasedEstimate = delayBasedEstimate
-        this.upperLinkCapacity = upperLinkCapacity
         if (!isEnabled()) {
             logger.warn("The estimator must be enabled before it can be used.")
             return
@@ -381,7 +378,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val slopeOfBweHighLossFunc: Double = 1000.0,
         val probeIntegrationEnabled: Boolean = false,
         val probeExpiration: Duration = 10.secs,
-        val boundByUpperLinkCapacityWhenLossLimited: Boolean = true,
         val notUseAckedRateInAlr: Boolean = false
     ) {
         fun isValid(): Boolean {
@@ -815,13 +811,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
         }
 
-        if (isBandwidthLimitedDueToLoss()) {
-            if (isValid(upperLinkCapacity) &&
-                config.boundByUpperLinkCapacityWhenLossLimited
-            ) {
-                instantLimit = min(instantLimit, upperLinkCapacity)
-            }
-        }
         cachedInstantUpperBound = instantLimit
     }
 

@@ -636,7 +636,12 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate shouldBeGreaterThan 500.bps * 1.5 * 1.5
         }
 
-        /* Skipping tests involving network state */
+        /* Skipping tests involving network state:
+         * "PeriodicProbeAtUpperNetworkStateEstimate",
+         * "LimitProbeAtUpperNetworkStateEstimateIfLossBasedLimited",
+         * "AlrProbesLimitedByNetworkStateEstimate",
+         * "CanSetLongerProbeDurationAfterNetworkStateEstimate"
+         */
 
         "ProbeInAlrIfLossBasedIncreasing" {
             val fixture = ProbeControllerFixture(
@@ -756,7 +761,13 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
         }
 
-        /* Skipping tests with network_state */
+        /* Skipping tests with network_state:
+         * "ProbeFurtherWhenLossBasedIsSameAsDelayBasedEstimate",
+         * "ProbeIfEstimateLowerThanNetworkStateEstimate",
+         * "DontProbeFurtherWhenLossLimited",
+         * "ProbeFurtherWhenDelayBasedLimited",
+         * "ProbeFurtherIfNetworkStateEstimateIncreaseAfterProbeSent",
+         */
 
         "SkipAlrProbeIfEstimateLargerThanMaxProbe" {
             val fixture = ProbeControllerFixture(
@@ -814,7 +825,12 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe false
         }
 
-        /* Skipping tests with network_state */
+        /* Skipping tests with network_state:
+         * "SkipNetworkStateProbeIfEstimateLargerThanMaxProbe",
+         * "SendsProbeIfNetworkStateEstimateLowerThanMaxProbe",
+         * "ProbeNotLimitedByNetworkStateEsimateIfLowerThantCurrent",
+         * "DontProbeIfDelayIncreased",
+         * "DontProbeIfHighRtt" */
     }
 
     companion object {

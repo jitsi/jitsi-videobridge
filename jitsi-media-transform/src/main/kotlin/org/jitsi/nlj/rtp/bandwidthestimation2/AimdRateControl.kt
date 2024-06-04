@@ -30,7 +30,6 @@ import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.per
 import org.jitsi.nlj.util.times
 import org.jitsi.nlj.util.toDouble
-import org.jitsi.nlj.util.toRoundedMillis
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.times
@@ -133,7 +132,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
         // TODO(bugs.webrtc.org/9379): The comment above doesn't match to the code.
         if (!bitrateIsInitialized) {
             val kInitializionTime = 5.secs
-            check(kBitrateWindowMs <= kInitializionTime.toRoundedMillis())
+            check(kBitrateWindow <= kInitializionTime)
             if (timeFirstThroughputEstimate == NEVER) {
                 if (input.estimatedThroughput != null) {
                     timeFirstThroughputEstimate = atTime

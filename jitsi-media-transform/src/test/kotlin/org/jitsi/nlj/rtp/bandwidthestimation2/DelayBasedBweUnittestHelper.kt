@@ -176,6 +176,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
     val streamGenerator = StreamGenerator(1e6.toLong(), clock.instant().toEpochMicro())
 
     var arrivalTimeOffsetMs: Long = 0L
+    var nextSequenceNumber: Long = 0
     var firstUpdate: Boolean = true
 
     fun addDefaultStream() {
@@ -202,6 +203,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         packet.sentPacket.sendTime = sendTime
         packet.sentPacket.size = payloadSize.bytes
         packet.sentPacket.pacingInfo = pacingInfo
+        packet.sentPacket.sequenceNumber = nextSequenceNumber++
         if (packet.sentPacket.pacingInfo.probeClusterId != PacedPacketInfo.kNotAProbe) {
             probeBitrateEstimator.handleProbeAndEstimateBitrate(packet)
         }

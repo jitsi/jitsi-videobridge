@@ -68,7 +68,7 @@ class FeedbackGenerator {
 /**
  * Unit tests of AcknowledgedBitrateEstimator.
  *
- * Based on WebRTC modules/congestion_controller/goog_cc/robust_bitrate_estimator_unittest.cc in
+ * Based on WebRTC modules/congestion_controller/goog_cc/robust_throughput_estimator_unittest.cc in
  * WebRTC tag branch-heads/6422 (Chromium 125)
  */
 class RobustThroughputEstimatorTest : FreeSpec() {

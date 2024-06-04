@@ -21,6 +21,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
+import org.jitsi.utils.secs
 
 /** Common defines for bandwidth estimation,
  * based on WebRTC modules/remote_bitrate_estimator/{include/bwe_defines.h,bwe_defines.cc} in
@@ -29,7 +30,7 @@ import org.jitsi.nlj.util.bps
 
 val kCongestionControllerMinBitrate = 5000.bps
 
-val kBitrateWindowMs = 1000L
+val kBitrateWindow = 1.secs
 
 /**
  * Input to Rate Control.
