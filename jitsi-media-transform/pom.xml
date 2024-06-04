@@ -240,6 +240,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                    <systemPropertyVariables>
+                        <kotest.framework.classpath.scanning.autoscan.disable>true</kotest.framework.classpath.scanning.autoscan.disable>
+                    </systemPropertyVariables>
                     <excludes>
                         <!-- init() currently throws an exception -->
                         <exclude>DtlsStackTest.*</exclude>
