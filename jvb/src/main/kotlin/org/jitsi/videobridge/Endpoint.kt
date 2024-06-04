@@ -1176,9 +1176,11 @@ class Endpoint @JvmOverloads constructor(
         private val epTimeout = 2.mins
 
         private val timelineCounter = AtomicLong()
-        private val TIMELINE_FRACTION = 10000L
+        private val timelineFraction: Long by config {
+            "jmt.debug.packet-timeline.log-fraction".from(JitsiConfig.newConfig)
+        }
 
-        fun logTimeline() = timelineCounter.getAndIncrement() % TIMELINE_FRACTION == 0L
+        fun logTimeline() = timelineCounter.getAndIncrement() % timelineFraction == 0L
 
         private const val SRTP_QUEUE_ENTRY_EVENT = "Entered Endpoint SRTP sender outgoing queue"
         private const val SRTP_QUEUE_EXIT_EVENT = "Exited Endpoint SRTP sender outgoing queue"
