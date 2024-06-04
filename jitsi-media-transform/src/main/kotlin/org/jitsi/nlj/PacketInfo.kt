@@ -16,7 +16,10 @@
 package org.jitsi.nlj
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.rtp.Packet
+import org.jitsi.utils.logging2.createLogger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -93,7 +96,7 @@ open class PacketInfo @JvmOverloads constructor(
     var receivedTime: Instant? = null
         set(value) {
             field = value
-            if (ENABLE_TIMELINE && timeline.referenceTime == null) {
+            if (enableTimeline && timeline.referenceTime == null) {
                 timeline.referenceTime = value
             }
         }
@@ -121,7 +124,7 @@ open class PacketInfo @JvmOverloads constructor(
      * The payload verification string for the packet, or 'null' if payload verification is disabled. Calculating the
      * it is expensive, thus we only do it when the flag is enabled.
      */
-    var payloadVerification = if (ENABLE_PAYLOAD_VERIFICATION) packet.payloadVerification else null
+    var payloadVerification = if (enablePayloadVerification) packet.payloadVerification else null
 
     /**
      * Re-calculates the expected payload verification string. This should be called any time that the code
@@ -129,7 +132,7 @@ open class PacketInfo @JvmOverloads constructor(
      * it with a new type (parsing), or intentionally modifies the payload (SRTP)).
      */
     fun resetPayloadVerification() {
-        payloadVerification = if (ENABLE_PAYLOAD_VERIFICATION) packet.payloadVerification else null
+        payloadVerification = if (enablePayloadVerification) packet.payloadVerification else null
     }
 
     /**
@@ -145,7 +148,7 @@ open class PacketInfo @JvmOverloads constructor(
      * will be copied for the cloned PacketInfo).
      */
     fun clone(): PacketInfo {
-        val clone = if (ENABLE_TIMELINE) {
+        val clone = if (enableTimeline) {
             PacketInfo(packet.clone(), originalLength, timeline.clone())
         } else {
             // If the timeline isn't enabled, we can just share the same one.
@@ -164,7 +167,7 @@ open class PacketInfo @JvmOverloads constructor(
     }
 
     fun addEvent(desc: String) {
-        if (ENABLE_TIMELINE) {
+        if (enableTimeline) {
             timeline.addEvent(desc)
         }
     }
@@ -209,14 +212,28 @@ open class PacketInfo @JvmOverloads constructor(
     }
 
     companion object {
-        // TODO: we could make this a public var to allow changing this at runtime
-        private const val ENABLE_TIMELINE = false
+        private val enableTimeline: Boolean by config {
+            "jmt.debug.packet-timeline.enabled".from(JitsiConfig.newConfig)
+        }
+
+        private val enablePayloadVerificationDefault: Boolean by config {
+            "jmt.debug.payload-verification.enabled".from(JitsiConfig.newConfig)
+        }
 
         /**
          * If this is enabled all [Node]s will verify that the payload didn't unexpectedly change. This is expensive.
          */
         @field:Suppress("ktlint:standard:property-naming")
-        var ENABLE_PAYLOAD_VERIFICATION = false
+        var enablePayloadVerification = enablePayloadVerificationDefault
+
+        init {
+            if (enableTimeline) {
+                createLogger().info("Packet timeline is enabled.")
+            }
+            if (enablePayloadVerification) {
+                createLogger().info("Payload verification is enabled.")
+            }
+        }
     }
 }
 

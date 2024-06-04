@@ -38,7 +38,7 @@ class PayloadVerificationPlugin {
         fun getStatsJson() = JSONObject().apply { this["num_payload_verification_failures"] = numFailures.get() }
 
         override fun observe(after: Node, packetInfo: PacketInfo) {
-            if (PacketInfo.ENABLE_PAYLOAD_VERIFICATION &&
+            if (PacketInfo.enablePayloadVerification &&
                 packetInfo.payloadVerification != null
             ) {
                 val expected = packetInfo.payloadVerification
