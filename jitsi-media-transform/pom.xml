@@ -337,9 +337,6 @@
     <profiles>
         <profile>
             <id>coverage</id>
-            <properties>
-                <jacoco.version>0.8.12</jacoco.version>
-            </properties>
             <build>
                 <plugins>
                     <plugin>
