@@ -115,15 +115,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var cachedInstantUpperBound: Bandwidth? = null
     private val instantUpperBoundTemporalWeights = MutableList(config.observationWindowSize) { 0.0 }
     private val temporalWeights = MutableList(config.observationWindowSize) { 0.0 }
-    private val delayDetectorStates = ArrayDeque<BandwidthUsage>()
     private var recoveringAfterLossTimestamp = Instant.MIN
     private var bandwidthLimitInCurrentWindow = Bandwidth.INFINITY
     private var minBitrate = 1.kbps
     private var maxBitrate = Bandwidth.INFINITY
     private var currentState = LossBasedState.kDelayBasedEstimate
-    private var probeBitrate = Bandwidth.INFINITY
     private var delayBasedEstimate = Bandwidth.INFINITY
-    private var lastProbeTimestamp = Instant.MIN
 
     init {
         if (!config.enabled) {
@@ -213,13 +210,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
-    fun updateBandwidthEstimate(
-        packetResults: List<PacketResult>,
-        delayBasedEstimate: Bandwidth,
-        delayDetectorState: BandwidthUsage,
-        probeBitrate: Bandwidth?,
-        inAlr: Boolean
-    ) {
+    fun updateBandwidthEstimate(packetResults: List<PacketResult>, delayBasedEstimate: Bandwidth, inAlr: Boolean) {
         this.delayBasedEstimate = delayBasedEstimate
         if (!isEnabled()) {
             logger.warn("The estimator must be enabled before it can be used.")
@@ -231,11 +222,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             return
         }
 
-        if (!pushBackObservation(packetResults, delayDetectorState)) {
+        if (!pushBackObservation(packetResults)) {
             return
         }
-
-        setProbeBitrate(probeBitrate)
 
         if (!isValid(currentEstimate.lossLimitedBandwidth)) {
             if (!isValid(delayBasedEstimate)) {
@@ -283,9 +272,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
 
             val increasingWhenLossLimited = isEstimateIncreasingWhenLossLimited(bestCandidate)
-            // Bound the best candidate by the acked bitrate unless there is a recent
-            // probe result.
-            if (increasingWhenLossLimited && !isValid(this.probeBitrate) && isValid(acknowledgedBitrate)) {
+            // Bound the best candidate by the acked bitrate.
+            if (increasingWhenLossLimited && isValid(acknowledgedBitrate)) {
                 bestCandidate.lossLimitedBandwidth =
                     if (isValid(bestCandidate.lossLimitedBandwidth)) {
                         min(
@@ -306,17 +294,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             currentState = LossBasedState.kDecreasing
         } else if (bestCandidate.lossLimitedBandwidth >= delayBasedEstimate) {
             currentState = LossBasedState.kDelayBasedEstimate
-        }
-
-        // Use probe bitrate as the estimate limit when probes are requested.
-        if (config.probeIntegrationEnabled && isValid(this.probeBitrate) &&
-            isRequestingProbe()
-        ) {
-            if (lastProbeTimestamp + config.probeExpiration >=
-                lastSendTimeMostRecentObservation
-            ) {
-                bestCandidate.lossLimitedBandwidth = min(this.probeBitrate, bestCandidate.lossLimitedBandwidth)
-            }
         }
 
         currentEstimate = bestCandidate
@@ -375,8 +352,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val instantUpperBoundLossOffset: Double = 0.05,
         val temporalWeightFactor: Double = 0.9,
         val bandwidthBackoffLowerBoundFactor: Double = 1.0,
-        val trendlineIntegrationEnabled: Boolean = false,
-        val trendlineObservationsWindowSize: Int = 20,
         val maxIncreaseFactor: Double = 1.3,
         val delayedIncreaseWindow: Duration = 300.ms,
         val useAckedBitrateOnlyWhenOverusing: Boolean = false,
@@ -384,8 +359,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val highLossRateThreshold: Double = 1.0,
         val bandwidthCapAtHighLossRate: Bandwidth = 500.kbps,
         val slopeOfBweHighLossFunc: Double = 1000.0,
-        val probeIntegrationEnabled: Boolean = false,
-        val probeExpiration: Duration = 10.secs,
         val notUseAckedRateInAlr: Boolean = true,
         val useInStartPhase: Boolean = false
     ) {
@@ -520,10 +493,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 )
                 valid = false
             }
-            if (trendlineObservationsWindowSize < 1) {
-                logger.warn("The trendline window size must be at least 1: $trendlineObservationsWindowSize")
-                valid = false
-            }
             if (maxIncreaseFactor <= 0.0) {
                 logger.warn("The maximum increase factor must be positive: $maxIncreaseFactor")
                 valid = false
@@ -593,13 +562,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             candidateBandwidthUpperBound = bandwidthLimitInCurrentWindow
         }
 
-        if (config.trendlineIntegrationEnabled) {
-            candidateBandwidthUpperBound = min(getInstantUpperBound(), candidateBandwidthUpperBound)
-            if (isValid(delayBasedEstimate)) {
-                candidateBandwidthUpperBound = min(delayBasedEstimate, candidateBandwidthUpperBound)
-            }
-        }
-
         if (acknowledgedBitrate == null) {
             return candidateBandwidthUpperBound
         }
@@ -620,17 +582,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun getCandidates(inAlr: Boolean): List<ChannelParameters> {
         val bandwidths = mutableListOf<Bandwidth>()
-        val canIncreaseBitrate = trendlineEsimateAllowBitrateIncrease()
         for (candidateFactor in config.candidateFactors) {
-            if (!canIncreaseBitrate && candidateFactor > 1.0) {
-                continue
-            }
             bandwidths.add(currentEstimate.lossLimitedBandwidth * candidateFactor)
         }
 
         if (acknowledgedBitrate != null &&
-            config.appendAcknowledgedRateCandidate &&
-            trendlineEsimateAllowEmergencyBackoff()
+            config.appendAcknowledgedRateCandidate
         ) {
             if (!(config.notUseAckedRateInAlr && inAlr)) {
                 bandwidths.add(acknowledgedBitrate!! * config.bandwidthBackoffLowerBoundFactor)
@@ -638,7 +595,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         if (isValid(delayBasedEstimate) && config.appendDelayBasedEstimateCandidate) {
-            if (canIncreaseBitrate && delayBasedEstimate > currentEstimate.lossLimitedBandwidth) {
+            if (delayBasedEstimate > currentEstimate.lossLimitedBandwidth) {
                 bandwidths.add(delayBasedEstimate)
             }
         }
@@ -648,14 +605,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val candidates = mutableListOf<ChannelParameters>()
         for (i in bandwidths.indices) {
             val candidate = currentEstimate.copy()
-            if (config.trendlineIntegrationEnabled) {
-                candidate.lossLimitedBandwidth = min(bandwidths[i], candidateBandwidthUpperBound)
-            } else {
-                candidate.lossLimitedBandwidth = min(
-                    bandwidths[i],
-                    max(currentEstimate.lossLimitedBandwidth, candidateBandwidthUpperBound)
-                )
-            }
+            candidate.lossLimitedBandwidth = min(
+                bandwidths[i],
+                max(currentEstimate.lossLimitedBandwidth, candidateBandwidthUpperBound)
+            )
             candidate.inherentLoss = getFeasibleInherentLoss(candidate)
             candidates.add(candidate)
         }
@@ -844,48 +797,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
-    /** Returns false if there exists a kBwOverusing or kBwUnderusing in the window. */
-    private fun trendlineEsimateAllowBitrateIncrease(): Boolean {
-        if (!config.trendlineIntegrationEnabled) {
-            return true
-        }
-
-        for (detectorState in delayDetectorStates) {
-            if (detectorState == BandwidthUsage.kBwOverusing ||
-                detectorState == BandwidthUsage.kBwUnderusing
-            ) {
-                return false
-            }
-        }
-        return true
-    }
-
-    /** Returns true if there exists an overusing state in the window. */
-    private fun trendlineEsimateAllowEmergencyBackoff(): Boolean {
-        if (!config.trendlineIntegrationEnabled) {
-            return true
-        }
-
-        if (!config.useAckedBitrateOnlyWhenOverusing) {
-            return true
-        }
-
-        for (detectorState in delayDetectorStates) {
-            if (detectorState == BandwidthUsage.kBwOverusing) {
-                return true
-            }
-        }
-
-        return false
-    }
-
     /** Returns false if no observation was created. */
-    private fun pushBackObservation(packetResults: List<PacketResult>, delayDetectorState: BandwidthUsage): Boolean {
-        delayDetectorStates.addFirst(delayDetectorState)
-        if (delayDetectorStates.size > config.trendlineObservationsWindowSize) {
-            delayDetectorStates.removeLast()
-        }
-
+    private fun pushBackObservation(packetResults: List<PacketResult>): Boolean {
         if (packetResults.isEmpty()) {
             return false
         }
@@ -905,11 +818,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val observationDuration = Duration.between(lastSendTimeMostRecentObservation, lastSendTime)
         // Too small to be meaningful.
         if (observationDuration <= Duration.ZERO ||
-            observationDuration < config.observationDurationLowerBound &&
-            (
-                delayDetectorState != BandwidthUsage.kBwOverusing ||
-                    !config.trendlineIntegrationEnabled
-                )
+            observationDuration < config.observationDurationLowerBound
         ) {
             return false
         }
@@ -946,17 +855,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun isBandwidthLimitedDueToLoss(): Boolean {
         return currentState != LossBasedState.kDelayBasedEstimate
-    }
-
-    private fun setProbeBitrate(probeBitrate: Bandwidth?) {
-        if (probeBitrate != null && isValid(probeBitrate)) {
-            this.probeBitrate = probeBitrate
-            lastProbeTimestamp = lastSendTimeMostRecentObservation
-        }
-    }
-
-    private fun isRequestingProbe(): Boolean {
-        return currentState == LossBasedState.kIncreasing
     }
 
     companion object {

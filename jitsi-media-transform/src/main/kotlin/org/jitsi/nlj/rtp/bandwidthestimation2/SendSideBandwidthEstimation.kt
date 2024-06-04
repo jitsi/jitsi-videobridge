@@ -464,8 +464,6 @@ class SendSideBandwidthEstimation(
         lossBasedBandwidthEstimatorV2.updateBandwidthEstimate(
             report.packetFeedbacks,
             delayBasedLimit,
-            delayDetectorState,
-            probeBitrate,
             inAlr
         )
         updateEstimate(report.feedbackTime)
