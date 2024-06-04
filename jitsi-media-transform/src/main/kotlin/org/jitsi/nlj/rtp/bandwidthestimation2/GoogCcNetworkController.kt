@@ -122,7 +122,7 @@ class GoogCcNetworkController(
         update.probeClusterConfigs.addAll(probes)
 
         if (rateControlSettings.useCongestionWindow() &&
-            lastPacketReceivedTime.isFinite() && !feedbackMaxRtts.isEmpty()
+            !feedbackMaxRtts.isEmpty()
         ) {
             updateCongestionWindowSize()
         }
@@ -590,7 +590,6 @@ class GoogCcNetworkController(
 
     private var lastEstimatedFractionLoss: UByte? = 0u
     private var lastEstimatedRoundTripTime = maxDuration
-    private var lastPacketReceivedTime = Instant.MIN
 
     private var pacingFactor = config.streamBasedConfig.pacingFactor ?: kDefaultPaceMultiplier
     private var minTotalAllocatedBitrate = config.streamBasedConfig.minTotalAllocatedBitrate ?: Bandwidth.ZERO

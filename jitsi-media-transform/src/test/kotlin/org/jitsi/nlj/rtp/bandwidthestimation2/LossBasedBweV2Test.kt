@@ -39,7 +39,7 @@ import java.time.Instant
 
 /**
  * Unit tests for Loss-Based BWE,
- * based on WebRTC modules/congestion_controller/goog_cc/delay_based_bwe_unittest.cc in
+ * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2_test.cc in
  * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
  *
  */
@@ -174,7 +174,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     100.kbps,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 100.kbps
@@ -189,7 +188,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     100.kbps,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 100.kbps
@@ -208,7 +206,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -228,7 +225,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 lossBasedBandwidthEstimator.isReady() shouldBe false
@@ -258,7 +254,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -283,7 +278,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -298,7 +292,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -324,7 +317,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -333,7 +325,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -348,7 +339,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -357,7 +347,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -378,7 +367,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -402,7 +390,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 Bandwidth.INFINITY,
                 BandwidthUsage.kBwUnderusing,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThanOrEqualTo 600.kbps
@@ -411,7 +398,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 Bandwidth.INFINITY,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThanOrEqualTo 600.kbps
@@ -435,7 +421,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -447,7 +432,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     500.kbps,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 // If the delay based estimate is not infinity, then loss based estimate is
@@ -480,7 +464,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwOverusing,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 // Update estimate again when network is continuously overusing, and 100%
@@ -490,7 +473,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwOverusing,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 // The estimate bitrate now is backed off based on acked bitrate.
@@ -514,7 +496,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -526,7 +507,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
 
@@ -552,7 +532,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 val estimate1 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
@@ -561,7 +540,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 val estimate2 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
@@ -586,7 +564,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 val estimate1 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
@@ -595,7 +572,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     Bandwidth.INFINITY,
                     BandwidthUsage.kBwUnderusing,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 val estimate2 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
@@ -622,7 +598,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 Bandwidth.INFINITY,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             val estimate1 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
@@ -632,7 +607,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 Bandwidth.INFINITY,
                 BandwidthUsage.kBwOverusing,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             val estimate2 = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
@@ -655,7 +629,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe delayBasedEstimate
@@ -664,7 +637,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     null,
-                    Bandwidth.INFINITY,
                     false
                 )
                 lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe delayBasedEstimate
@@ -697,7 +669,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             val resultAtLoss = lossBasedBandwidthEstimator.getLossBasedResult()
@@ -712,7 +683,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -747,7 +717,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
@@ -762,7 +731,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDelayBasedEstimate
@@ -777,7 +745,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDelayBasedEstimate
@@ -808,7 +775,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
@@ -823,7 +789,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldNotBe LossBasedState.kDelayBasedEstimate
@@ -853,7 +818,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -866,7 +830,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -893,7 +856,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
                 // Increase the acknowledged bitrate to make sure that the estimate is not
@@ -904,7 +866,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
 
@@ -917,7 +878,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
                 // The latest estimate is the same as the previous estimate since the sent
@@ -945,7 +905,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
                 // Increase the acknowledged bitrate to make sure that the estimate is not
@@ -956,7 +915,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
 
@@ -969,7 +927,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
                 lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThanOrEqualTo
@@ -999,7 +956,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1010,7 +966,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1043,7 +998,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1054,7 +1008,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1087,7 +1040,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1098,7 +1050,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1134,7 +1085,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1147,7 +1097,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeEstimate,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1159,7 +1108,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
                 val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
@@ -1195,7 +1143,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1208,7 +1155,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeEstimate,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1220,7 +1166,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
             }
@@ -1232,159 +1177,12 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
             // Probe result is expired after 10s.
             val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
             resultAfterRecovery.bandwidthEstimate shouldBeGreaterThan probeEstimate
-        }
-
-        // If BoundByUpperLinkCapacityWhenLossLimited is enabled, the estimate is
-        // bounded by the upper link capacity when bandwidth is loss limited.
-        "BoundEstimateByUpperLinkCapacityWhenLossLimited" {
-            val config = LossBasedBweV2.Config(
-                enabled = true,
-                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
-                appendAcknowledgedRateCandidate = true,
-                observationWindowSize = 2,
-                observationDurationLowerBound = 200.ms,
-                instantUpperBoundBandwidthBalance = 10000.kbps,
-                appendDelayBasedEstimateCandidate = true,
-                maxIncreaseFactor = 1000.0,
-                bandwidthRampupUpperBoundFactor = 2.0,
-                boundByUpperLinkCapacityWhenLossLimited = true
-            )
-            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-            val delayBasedEstimate = 5000.kbps
-            val ackedRate = 300.kbps
-            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
-            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
-
-            // Create some loss to create the loss limited scenario.
-            val enoughFeedback1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
-            lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                enoughFeedback1,
-                delayBasedEstimate,
-                BandwidthUsage.kBwNormal,
-                probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
-                inAlr = false
-            )
-
-            // Network recovers after loss
-            val upperLinkCapacity = 10.kbps
-            val enoughFeedback2 =
-                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
-            lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                enoughFeedback2,
-                delayBasedEstimate,
-                BandwidthUsage.kBwNormal,
-                probeBitrate = null,
-                upperLinkCapacity,
-                inAlr = false
-            )
-
-            val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
-            resultAfterRecovery.bandwidthEstimate shouldBe upperLinkCapacity
-        }
-
-        // If BoundByUpperLinkCapacityWhenLossLimited is enabled, the estimate is not
-        // bounded by the upper link capacity when bandwidth is not loss limited.
-        "NotBoundEstimateByUpperLinkCapacityWhenNotLossLimited" {
-            val config = LossBasedBweV2.Config(
-                enabled = true,
-                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
-                appendAcknowledgedRateCandidate = true,
-                observationWindowSize = 2,
-                observationDurationLowerBound = 200.ms,
-                instantUpperBoundBandwidthBalance = 10000.kbps,
-                appendDelayBasedEstimateCandidate = true,
-                maxIncreaseFactor = 1000.0,
-                bandwidthRampupUpperBoundFactor = 2.0,
-                boundByUpperLinkCapacityWhenLossLimited = true
-            )
-            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-            val delayBasedEstimate = 5000.kbps
-            val ackedRate = 300.kbps
-            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
-            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
-
-            // Create a normal network without loss
-            val enoughFeedback1 = createPacketResultsWithReceivedPackets(Instant.EPOCH)
-            lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                enoughFeedback1,
-                delayBasedEstimate,
-                BandwidthUsage.kBwNormal,
-                probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
-                inAlr = false
-            )
-
-            val upperLinkCapacity = 10.kbps
-            val enoughFeedback2 =
-                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
-            lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                enoughFeedback2,
-                delayBasedEstimate,
-                BandwidthUsage.kBwNormal,
-                probeBitrate = null,
-                upperLinkCapacity,
-                inAlr = false
-            )
-
-            val lossBasedResult = lossBasedBandwidthEstimator.getLossBasedResult()
-            lossBasedResult.bandwidthEstimate shouldBeGreaterThan upperLinkCapacity
-        }
-
-        // If BoundByUpperLinkCapacityWhenLossLimited is disabled, the estimate is not
-        // bounded by the upper link capacity.
-        "NotBoundEstimateByUpperLinkCapacity" {
-            val config = LossBasedBweV2.Config(
-                enabled = true,
-                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
-                appendAcknowledgedRateCandidate = true,
-                observationWindowSize = 2,
-                observationDurationLowerBound = 200.ms,
-                instantUpperBoundBandwidthBalance = 10000.kbps,
-                appendDelayBasedEstimateCandidate = true,
-                maxIncreaseFactor = 1000.0,
-                bandwidthRampupUpperBoundFactor = 2.0,
-                boundByUpperLinkCapacityWhenLossLimited = false
-            )
-            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
-            val delayBasedEstimate = 5000.kbps
-            val ackedRate = 300.kbps
-            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
-            lossBasedBandwidthEstimator.setAcknowledgedBitrate(ackedRate)
-
-            // Create some loss to create the loss limited scenario.
-            val enoughFeedback1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
-            lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                enoughFeedback1,
-                delayBasedEstimate,
-                BandwidthUsage.kBwNormal,
-                probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
-                inAlr = false
-            )
-
-            // Network recovers after loss
-            val upperLinkCapacity = 10.kbps
-            val enoughFeedback2 =
-                createPacketResultsWithReceivedPackets(Instant.EPOCH + kObservationDurationLowerBound)
-            lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                enoughFeedback2,
-                delayBasedEstimate,
-                BandwidthUsage.kBwNormal,
-                probeBitrate = null,
-                upperLinkCapacity,
-                inAlr = false
-            )
-
-            val resultAfterRecovery = lossBasedBandwidthEstimator.getLossBasedResult()
-            resultAfterRecovery.bandwidthEstimate shouldBeGreaterThan upperLinkCapacity
         }
 
         "StricterBoundUsingHighLossRateThresholdAt10pLossRate" {
@@ -1412,7 +1210,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1423,7 +1220,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1457,7 +1253,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1468,7 +1263,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1502,7 +1296,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1513,7 +1306,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1547,7 +1339,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1563,7 +1354,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1574,7 +1364,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
@@ -1594,7 +1383,6 @@ class LossBasedBweV2Test : FreeSpec() {
                     delayBasedEstimate = Bandwidth.INFINITY,
                     BandwidthUsage.kBwNormal,
                     probeBitrate = null,
-                    upperLinkCapacity = Bandwidth.INFINITY,
                     inAlr = false
                 )
 
@@ -1610,8 +1398,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 observationWindowSize = 2,
                 appendDelayBasedEstimateCandidate = true,
                 instantUpperBoundBandwidthBalance = 100.kbps,
-                observationDurationLowerBound = 200.ms,
-                notUseAckedRateInAlr = true
+                observationDurationLowerBound = 200.ms
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -1626,7 +1413,6 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = true
             )
 
@@ -1644,8 +1430,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 observationWindowSize = 2,
                 appendDelayBasedEstimateCandidate = true,
                 instantUpperBoundBandwidthBalance = 100.kbps,
-                observationDurationLowerBound = 200.ms,
-                notUseAckedRateInAlr = true
+                observationDurationLowerBound = 200.ms
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -1660,12 +1445,41 @@ class LossBasedBweV2Test : FreeSpec() {
                 delayBasedEstimate,
                 BandwidthUsage.kBwNormal,
                 probeBitrate = null,
-                upperLinkCapacity = Bandwidth.INFINITY,
                 inAlr = false
             )
 
             // Make sure that the estimate decreases but higher than acked rate.
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe ackedRate
+        }
+
+        "NotReadyToUseInStartPhase" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                useInStartPhase = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            // Make sure that the estimator is not ready to use in start phase because of
+            // lacking TWCC feedback.
+            lossBasedBandwidthEstimator.readyToUseInStartPhase() shouldBe false
+        }
+
+        "ReadyToUseInStartPhase" {
+            val config = LossBasedBweV2.Config(
+                enabled = true,
+                observationDurationLowerBound = 200.ms,
+                useInStartPhase = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val enoughFeedback = createPacketResultsWith100pLossRate(Instant.EPOCH)
+
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback,
+                delayBasedEstimate = 600.kbps,
+                BandwidthUsage.kBwNormal,
+                probeBitrate = null,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.readyToUseInStartPhase() shouldBe true
         }
     }
 }

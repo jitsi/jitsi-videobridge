@@ -73,7 +73,13 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     var rtt: Duration = kDefaultRtt
 
     // TODO: field trials: remove code that checks these
+
+    // Allow the delay based estimate to only increase as long as application
+    // limited region (alr) is not detected.
     private val noBitrateIncreaseInAlr: Boolean = false
+
+    // If true, subtract an additional 5kbps when backing off.
+    private val subtractAdditionalBackoffTerm: Boolean = true
 
     // Only tested when networkEstimate != null
     // private val disableEstimateBoundedIncrease: Boolean = false
@@ -259,6 +265,9 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
                 // Set bit rate to something slightly lower than the measured throughput
                 // to get rid of any self-induced delay.
                 decreasedBitrate = estimatedThroughput * beta
+                if (decreasedBitrate > 5.kbps && subtractAdditionalBackoffTerm) {
+                    decreasedBitrate -= 5.kbps
+                }
                 if (decreasedBitrate > currentBitrate) {
                     // TODO(terelius): The link_capacity estimate may be based on old
                     // throughput measurements. Relying on them may lead to unnecessary

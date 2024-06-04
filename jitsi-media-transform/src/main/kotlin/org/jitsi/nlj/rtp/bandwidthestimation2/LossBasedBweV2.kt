@@ -154,6 +154,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             numObservations > 0
     }
 
+    fun readyToUseInStartPhase(): Boolean {
+        return isReady() && config.useInStartPhase
+    }
+
     /** Returns [Bandwidth.INFINITY] if no BWE can be calculated. */
     fun getLossBasedResult(): Result {
         val result = Result()
@@ -192,14 +196,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             this.acknowledgedBitrate = acknowledgedBitrate
         } else {
             logger.warn("The acknowledged bitrate must be finite: $acknowledgedBitrate")
-        }
-    }
-
-    fun setBandwidthEstimate(bandwidthEstimate: Bandwidth) {
-        if (isValid(bandwidthEstimate)) {
-            currentEstimate.lossLimitedBandwidth = bandwidthEstimate
-        } else {
-            logger.warn("The bandwidth estimate must be finite: $bandwidthEstimate")
         }
     }
 
@@ -242,8 +238,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         setProbeBitrate(probeBitrate)
 
         if (!isValid(currentEstimate.lossLimitedBandwidth)) {
-            logger.debug("The estimator must be initialized before it can be used.")
-            return
+            if (!isValid(delayBasedEstimate)) {
+                logger.warn("The delay based estimate must be finite: $delayBasedEstimate.")
+                return
+            }
+            currentEstimate.lossLimitedBandwidth = delayBasedEstimate
         }
 
         var bestCandidate = currentEstimate
@@ -333,6 +332,15 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
+    // For unit testing only
+    fun setBandwidthEstimate(bandwidthEstimate: Bandwidth) {
+        if (isValid(bandwidthEstimate)) {
+            currentEstimate.lossLimitedBandwidth = bandwidthEstimate
+        } else {
+            logger.warn("The bandwidth estimate must be finite: $bandwidthEstimate")
+        }
+    }
+
     private data class ChannelParameters(
         var inherentLoss: Double = 0.0,
         var lossLimitedBandwidth: Bandwidth = Bandwidth.MINUS_INFINITY
@@ -378,7 +386,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val slopeOfBweHighLossFunc: Double = 1000.0,
         val probeIntegrationEnabled: Boolean = false,
         val probeExpiration: Duration = 10.secs,
-        val notUseAckedRateInAlr: Boolean = false
+        val notUseAckedRateInAlr: Boolean = true,
+        val useInStartPhase: Boolean = false
     ) {
         fun isValid(): Boolean {
             if (!enabled) {

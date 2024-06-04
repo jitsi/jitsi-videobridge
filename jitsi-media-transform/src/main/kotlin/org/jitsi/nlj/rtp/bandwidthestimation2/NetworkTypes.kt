@@ -20,6 +20,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.per
 import java.time.Duration
@@ -93,14 +94,14 @@ data class PacedPacketInfo(
     val probeClusterMinBytes: Int = -1
 ) {
     // TODO(srte): Move probing info to a separate, optional struct.
-    var sendBitrateBps = -1
+    var sendBitrate = 0.bps
     var probeClusterBytesSent = 0
 
     override operator fun equals(other: Any?): Boolean {
         if (other !is PacedPacketInfo) {
             return false
         }
-        return sendBitrateBps == other.sendBitrateBps &&
+        return sendBitrate == other.sendBitrate &&
             probeClusterId == other.probeClusterId &&
             probeClusterMinProbes == other.probeClusterMinProbes &&
             probeClusterMinBytes == other.probeClusterMinBytes

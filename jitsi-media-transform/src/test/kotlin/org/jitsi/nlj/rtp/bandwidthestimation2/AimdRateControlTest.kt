@@ -115,17 +115,22 @@ class AimdRateControlTest : FreeSpec() {
             aimdRateControl.getExpectedBandwidthPeriod() shouldNotBe kDefaultPeriod
         }
 
-        "ExpectedPeriodAfter20kbpsDropAnd5kbpsIncrease" {
+        "ExpectedPeriodAfterTypicalDrop" {
             val aimdRateControl = AimdRateControl()
-            val kInitialBitrate = 110_000.bps
+            // The rate increase at 216 kbps should be 12 kbps. If we drop from
+            // 216 + 4*12 = 264 kbps, it should take 4 seconds to recover. Since we
+            // back off to 0.85*acked_rate-5kbps, the acked bitrate needs to be 260
+            // kbps to end up at 216 kbps.
+            val kInitialBitrate = 264_000.bps
+            val kUpdatedBitrate = 216_000.bps
+            val kAckedBitrate =
+                (kUpdatedBitrate + 5_000.bps) / kFractionAfterOveruse
             var now = kInitialTime
             aimdRateControl.setEstimate(kInitialBitrate, now)
             now += 100.ms
-            // Make the bitrate drop by 20 kbps to get to 90 kbps.
-            // The rate increase at 90 kbps should be 5 kbps, so the period should be 4 s.
-            val kAckedBitrate = (kInitialBitrate - 20_000.bps) / kFractionAfterOveruse
             aimdRateControl.update(RateControlInput(BandwidthUsage.kBwOverusing, kAckedBitrate), now)
-            aimdRateControl.getNearMaxIncreaseRateBpsPerSecond() shouldBe 5_000.0
+            aimdRateControl.latestEstimate() shouldBe kUpdatedBitrate
+            aimdRateControl.getNearMaxIncreaseRateBpsPerSecond() shouldBe 12_000
             aimdRateControl.getExpectedBandwidthPeriod() shouldBe 4.secs
         }
 

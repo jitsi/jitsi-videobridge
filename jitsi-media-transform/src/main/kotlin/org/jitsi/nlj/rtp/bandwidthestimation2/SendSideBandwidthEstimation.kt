@@ -252,7 +252,9 @@ class SendSideBandwidthEstimation(
 
         // We trust the REMB and/or delay-based estimate during the first 2 seconds if
         // we haven't had any packet loss reported, to allow startup bitrate probing.
-        if (lastFractionLoss.toUInt() == 0u && isInStartPhase(atTime)) {
+        if (lastFractionLoss.toUInt() == 0u && isInStartPhase(atTime) &&
+            !lossBasedBandwidthEstimatorV2.readyToUseInStartPhase()
+        ) {
             var newBitrate = currentTarget
             // TODO(srte): We should not allow the new_bitrate to be larger than the
             // receiver limit here.
@@ -262,7 +264,6 @@ class SendSideBandwidthEstimation(
             if (delayBasedLimit.isFinite()) {
                 newBitrate = max(delayBasedLimit, newBitrate)
             }
-            lossBasedBandwidthEstimatorV2.setBandwidthEstimate(newBitrate)
 
             if (newBitrate != currentTarget) {
                 minBitrateHistory.clear()
