@@ -24,10 +24,17 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Collections
+import java.util.concurrent.ConcurrentLinkedQueue
 
 @SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 class EventTimeline(
-    private val timeline: MutableList<Pair<String, Duration>> = mutableListOf(),
+    /**
+     * We want this thread safe, because while PacketInfo objects are only handled by a single thread at a time,
+     * [StatsKeepingNode] may add an "exit" event after the packets has been added to another queue potentially handled
+     * by a different thread. This is not critical as it only affects the timeline and the result is just some "exit"
+     * events missing from the trace logs.
+     */
+    private val timeline: ConcurrentLinkedQueue<Pair<String, Duration>> = ConcurrentLinkedQueue(),
     private val clock: Clock = Clock.systemUTC()
 ) : Iterable<Pair<String, Duration>> {
     /**
@@ -36,6 +43,9 @@ class EventTimeline(
      * all other times are represented as deltas from this 0.
      */
     var referenceTime: Instant? = null
+
+    val size: Int
+        get() = timeline.size
 
     fun addEvent(desc: String) {
         val now = clock.instant()
@@ -46,7 +56,7 @@ class EventTimeline(
     }
 
     fun clone(): EventTimeline {
-        val clone = EventTimeline(timeline.toMutableList())
+        val clone = EventTimeline(ConcurrentLinkedQueue(timeline))
         clone.referenceTime = referenceTime
         return clone
     }
