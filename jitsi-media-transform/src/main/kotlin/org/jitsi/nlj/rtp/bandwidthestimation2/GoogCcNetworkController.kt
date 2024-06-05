@@ -551,7 +551,7 @@ class GoogCcNetworkController(
     private val safeResetOnRouteChange = false
     private val safeResetAcknowledgedRate = false
     private val useMinAllocatableAsLowerBound = true
-    private val limitProbesLowerThanThroughputEstimate = false
+    private val limitProbesLowerThanThroughputEstimate = true
     private val rateControlSettings = googCcConfig.rateControlSettings
 
     private val probeController = ProbeController(logger, diagnosticContext)
