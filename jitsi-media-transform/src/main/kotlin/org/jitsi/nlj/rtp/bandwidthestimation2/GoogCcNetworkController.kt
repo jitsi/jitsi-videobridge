@@ -466,6 +466,7 @@ class GoogCcNetworkController(
         val fractionLoss = bandwidthEstimation.fractionLoss()
         val roundTripTime = bandwidthEstimation.roundTripTime()
         val lossBasedTargetRate = bandwidthEstimation.targetRate()
+        val lossBasedState = bandwidthEstimation.lossBasedState()
         var pushbackTargetRate = lossBasedTargetRate
 
         /* TODO: plotting */
@@ -484,6 +485,7 @@ class GoogCcNetworkController(
         stableTargetRate = min(stableTargetRate, pushbackTargetRate)
 
         if (lossBasedTargetRate != lastLossBasedTargetRate ||
+            lossBasedState != lastLossBasedState ||
             fractionLoss != lastEstimatedFractionLoss ||
             roundTripTime != lastEstimatedRoundTripTime ||
             pushbackTargetRate != lastPushbackTargetRate ||
@@ -494,6 +496,7 @@ class GoogCcNetworkController(
             lastEstimatedFractionLoss = fractionLoss
             lastEstimatedRoundTripTime = roundTripTime
             lastStableTargetRate = stableTargetRate
+            lastLossBasedState = lossBasedState
 
             alrDetector.setEstimatedBitrate(lossBasedTargetRate.bps.toInt())
 
@@ -537,7 +540,12 @@ class GoogCcNetworkController(
         // Pacing rate is based on target rate before congestion window pushback,
         // because we don't want to build queues in the pacer when pushback occurs.
         val pacingRate = max(minTotalAllocatedBitrate, lastLossBasedTargetRate) * pacingFactor
-        val paddingRate = min(maxPaddingRate, lastPushbackTargetRate)
+        var paddingRate = if (lastLossBasedState == LossBasedState.kIncreaseUsingPadding) {
+            max(maxPaddingRate, lastLossBasedTargetRate)
+        } else {
+            maxPaddingRate
+        }
+        paddingRate = min(paddingRate, lastPushbackTargetRate)
         val msg = PacerConfig()
         msg.atTime = atTime
         msg.timeWindow = 1.secs
@@ -586,6 +594,7 @@ class GoogCcNetworkController(
     private var lastLossBasedTargetRate = config.constraints.startingRate!!
     private var lastPushbackTargetRate = lastLossBasedTargetRate
     private var lastStableTargetRate = lastLossBasedTargetRate
+    private var lastLossBasedState: LossBasedState = LossBasedState.kDelayBasedEstimate
 
     private var lastEstimatedFractionLoss: UByte? = 0u
     private var lastEstimatedRoundTripTime = maxDuration
@@ -631,10 +640,15 @@ class GoogCcNetworkController(
 
             return when (lossBasedState) {
                 LossBasedState.kDecreasing ->
+                    // Probes may not be sent in this state.
+                    BandwidthLimitedCause.kLossLimitedBwe
+                LossBasedState.kIncreaseUsingPadding ->
+                    // Probes may not be sent in this state.
                     BandwidthLimitedCause.kLossLimitedBwe
                 LossBasedState.kIncreasing ->
+                    // Probes may be sent in this state.
                     BandwidthLimitedCause.kLossLimitedBweIncreasing
-                else ->
+                LossBasedState.kDelayBasedEstimate ->
                     BandwidthLimitedCause.kDelayBasedLimited
             }
         }

@@ -47,6 +47,11 @@ import kotlin.time.times
  */
 enum class LossBasedState {
     kIncreasing,
+
+    // TODO(bugs.webrtc.org/12707): Remove one of the increasing states once we
+    // have decided if padding is usefull for ramping up when BWE is loss
+    // limited.
+    kIncreaseUsingPadding,
     kDecreasing,
     kDelayBasedEstimate
 }
