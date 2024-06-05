@@ -19,8 +19,9 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
-class PacketInfoTest : ShouldSpec(){
+class PacketInfoTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
+
     init {
         context("EventTimeline test") {
             val timeline = EventTimeline().apply {

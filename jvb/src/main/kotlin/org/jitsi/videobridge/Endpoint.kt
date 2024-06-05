@@ -512,14 +512,14 @@ class Endpoint @JvmOverloads constructor(
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
-        PacketTransitStats.packetSent(packetInfo)
 
+        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        PacketTransitStats.packetSent(packetInfo)
+        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         packetInfo.sent()
         if (timelineLogger.isTraceEnabled && logTimeline()) {
             timelineLogger.trace { packetInfo.timeline.toString() }
         }
-        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
-        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
     }
 
