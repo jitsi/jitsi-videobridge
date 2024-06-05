@@ -87,7 +87,7 @@ open class PacketInfo @JvmOverloads constructor(
     var packet: Packet,
     /** The original length of the packet, i.e. before decryption.  Stays unchanged even if the packet is updated. */
     val originalLength: Int = packet.length,
-    val timeline: EventTimeline = EventTimeline()
+    val timeline: EventTimeline? = if (enableTimeline) EventTimeline() else null
 ) {
     /**
      * An explicit tag for when this packet was originally received (assuming it
@@ -96,7 +96,7 @@ open class PacketInfo @JvmOverloads constructor(
     var receivedTime: Instant? = null
         set(value) {
             field = value
-            if (enableTimeline && timeline.referenceTime == null) {
+            if (timeline != null && timeline.referenceTime == null) {
                 timeline.referenceTime = value
             }
         }
@@ -148,13 +148,7 @@ open class PacketInfo @JvmOverloads constructor(
      * will be copied for the cloned PacketInfo).
      */
     fun clone(): PacketInfo {
-        val clone = if (enableTimeline) {
-            PacketInfo(packet.clone(), originalLength, timeline.clone())
-        } else {
-            // If the timeline isn't enabled, we can just share the same one.
-            // (This would change if we allowed enabling the timeline at runtime)
-            PacketInfo(packet.clone(), originalLength, timeline)
-        }
+        val clone = PacketInfo(packet.clone(), originalLength, timeline?.clone())
         clone.receivedTime = receivedTime
         clone.originalHadCryptex = originalHadCryptex
         clone.shouldDiscard = shouldDiscard
@@ -166,11 +160,7 @@ open class PacketInfo @JvmOverloads constructor(
         return clone
     }
 
-    fun addEvent(desc: String) {
-        if (enableTimeline) {
-            timeline.addEvent(desc)
-        }
-    }
+    fun addEvent(desc: String) = timeline?.addEvent(desc)
 
     /**
      * The list of pending actions, or [null] if none.
