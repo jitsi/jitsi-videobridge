@@ -148,7 +148,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
      */
     fun isReady(): Boolean {
         return isEnabled() && isValid(currentEstimate.lossLimitedBandwidth) &&
-            numObservations > 0
+            numObservations >= config.minNumObservations
     }
 
     fun readyToUseInStartPhase(): Boolean {
@@ -166,7 +166,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 if (!isValid(currentEstimate.lossLimitedBandwidth)) {
                     logger.warn("The estimator must be initialized before it can be used.")
                 }
-                if (numObservations <= 0) {
+                if (numObservations <= config.minNumObservations) {
                     logger.warn("The estimator must receive enough loss statistics before it can be used.")
                 }
             }
@@ -360,7 +360,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val bandwidthCapAtHighLossRate: Bandwidth = 500.kbps,
         val slopeOfBweHighLossFunc: Double = 1000.0,
         val notUseAckedRateInAlr: Boolean = true,
-        val useInStartPhase: Boolean = false
+        val useInStartPhase: Boolean = false,
+        val minNumObservations: Int = 3
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -503,6 +504,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
             if (highLossRateThreshold <= 0.0 || highLossRateThreshold > 1.0) {
                 logger.warn("The high loss rate threshold must be in (0, 1]: $highLossRateThreshold")
+                valid = false
+            }
+            if (minNumObservations <= 0) {
+                logger.warn("The min number of observations must be positive: $minNumObservations")
+                valid = false
             }
 
             return valid
