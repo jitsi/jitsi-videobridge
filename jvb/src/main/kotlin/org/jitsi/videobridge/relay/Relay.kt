@@ -766,16 +766,14 @@ class Relay @JvmOverloads constructor(
 
     fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
+
+        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
         PacketTransitStats.packetSent(packetInfo)
-
+        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         packetInfo.sent()
-
         if (timelineLogger.isTraceEnabled && Endpoint.logTimeline()) {
             timelineLogger.trace { packetInfo.timeline.toString() }
         }
-
-        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
-        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
     }
 
