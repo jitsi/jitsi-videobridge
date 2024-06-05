@@ -520,8 +520,7 @@ class GoogCcNetworkController(
                 getBandwidthLimitedCause(
                     bandwidthEstimation.lossBasedState(),
                     bandwidthEstimation.isRttAboveLimit(),
-                    delayBasedBwe.lastState(),
-                    probeController.dontProbeIfDelayIncreased()
+                    delayBasedBwe.lastState()
                 ),
                 atTime
             )
@@ -620,21 +619,19 @@ class GoogCcNetworkController(
         private fun getBandwidthLimitedCause(
             lossBasedState: LossBasedState,
             isRttAboveLimit: Boolean,
-            bandwidthUsage: BandwidthUsage,
-            notProbeIfDelayIncreased: Boolean
+            bandwidthUsage: BandwidthUsage
         ): BandwidthLimitedCause {
-            if (notProbeIfDelayIncreased) {
-                if (bandwidthUsage == BandwidthUsage.kBwOverusing ||
-                    bandwidthUsage == BandwidthUsage.kBwUnderusing
-                ) {
-                    return BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased
-                } else if (isRttAboveLimit) {
-                    return BandwidthLimitedCause.kRttBasedBackOffHighRtt
-                }
+            if (bandwidthUsage == BandwidthUsage.kBwOverusing ||
+                bandwidthUsage == BandwidthUsage.kBwUnderusing
+            ) {
+                return BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased
+            } else if (isRttAboveLimit) {
+                return BandwidthLimitedCause.kRttBasedBackOffHighRtt
             }
+
             return when (lossBasedState) {
                 LossBasedState.kDecreasing ->
-                    BandwidthLimitedCause.kLossLimitedBweDecreasing
+                    BandwidthLimitedCause.kLossLimitedBwe
                 LossBasedState.kIncreasing ->
                     BandwidthLimitedCause.kLossLimitedBweIncreasing
                 else ->

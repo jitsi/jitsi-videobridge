@@ -597,9 +597,7 @@ class ProbeControllerTest : FreeSpec() {
 
         "LimitAlrProbeWhenLossBasedBweLimited" {
             val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    limitProbeTargetRateToLossBwe = true
-                )
+                config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
             probeController.enablePeriodicAlrProbing(true)
@@ -645,9 +643,7 @@ class ProbeControllerTest : FreeSpec() {
 
         "ProbeInAlrIfLossBasedIncreasing" {
             val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    limitProbeTargetRateToLossBwe = true
-                )
+                config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
@@ -673,9 +669,7 @@ class ProbeControllerTest : FreeSpec() {
 
         "ProbeFurtherInAlrIfLossBasedIncreasing" {
             val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    limitProbeTargetRateToLossBwe = true
-                )
+                config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
@@ -709,17 +703,14 @@ class ProbeControllerTest : FreeSpec() {
 
         "NotProbeWhenInAlrIfLossBasedDecreases" {
             val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    networkStateEstimateProbingInterval = 5.secs,
-                    limitProbeTargetRateToLossBwe = true
-                )
+                config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probeController.enablePeriodicAlrProbing(true)
             probes = probeController.setEstimatedBitrate(
                 kStartBitrate,
-                BandwidthLimitedCause.kLossLimitedBweDecreasing,
+                BandwidthLimitedCause.kLossLimitedBwe,
                 fixture.currentTime()
             )
 
@@ -737,16 +728,14 @@ class ProbeControllerTest : FreeSpec() {
 
         "NotProbeIfLossBasedIncreasingOutsideAlr" {
             val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    limitProbeTargetRateToLossBwe = true
-                )
+                config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probeController.enablePeriodicAlrProbing(true)
             probes = probeController.setEstimatedBitrate(
                 kStartBitrate,
-                BandwidthLimitedCause.kLossLimitedBweDecreasing,
+                BandwidthLimitedCause.kLossLimitedBwe,
                 fixture.currentTime()
             )
 

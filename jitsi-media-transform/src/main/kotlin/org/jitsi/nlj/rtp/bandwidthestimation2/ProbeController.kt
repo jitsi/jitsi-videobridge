@@ -104,14 +104,10 @@ class ProbeControllerConfig(
     val minProbePacketsSent: Int = 5,
     // The minimum probing duration.
     val minProbeDuration: Duration = 15.ms,
-    // Periodically probe when bandwidth estimate is loss limited.
-    val limitProbeTargetRateToLossBwe: Boolean = false,
     val lossLimitedProbeScale: Double = 1.5,
     // Dont send a probe if min(estimate, network state estimate) is larger than
     // this fraction of the set max bitrate.
     val skipIfEstimateLargerThanFractionOfMax: Double = 0.0,
-    // Do not send probes if either overusing/underusing network or high rtt.
-    val notProbeIfDelayIncreased: Boolean = false
 )
 
 /* Reason that bandwidth estimate is limited. Bandwidth estimate can be limited
@@ -120,7 +116,7 @@ class ProbeControllerConfig(
  */
 enum class BandwidthLimitedCause {
     kLossLimitedBweIncreasing,
-    kLossLimitedBweDecreasing,
+    kLossLimitedBwe,
     kDelayBasedLimited,
     kDelayBasedLimitedDelayIncreased,
     kRttBasedBackOffHighRtt
@@ -406,9 +402,6 @@ class ProbeController(
         return mutableListOf()
     }
 
-    /** Gets the value of field trial not_probe_if_delay_increased. */
-    fun dontProbeIfDelayIncreased() = config.notProbeIfDelayIncreased
-
     private enum class State {
         /** Initial state where no probing has been triggrered yet */
         kInit,
@@ -452,26 +445,20 @@ class ProbeController(
         }
 
         var estimateCappedBitrate = Bandwidth.INFINITY
-        if (config.limitProbeTargetRateToLossBwe) {
-            when (bandwidthLimitedCause) {
-                BandwidthLimitedCause.kLossLimitedBweDecreasing ->
-                    // If bandwidth estimate is decreasing because of packet loss, do not
-                    // send probes.
-                    return mutableListOf()
-                BandwidthLimitedCause.kLossLimitedBweIncreasing ->
-                    estimateCappedBitrate =
-                        min(maxProbeBitrate, estimatedBitrate * config.lossLimitedProbeScale)
-                BandwidthLimitedCause.kDelayBasedLimited ->
-                    Unit
-                else ->
-                    Unit
+        when (bandwidthLimitedCause) {
+            BandwidthLimitedCause.kRttBasedBackOffHighRtt,
+            BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased,
+            BandwidthLimitedCause.kLossLimitedBwe -> {
+                logger.info { "Not sending probe in bandwidth limited state." }
+                return mutableListOf()
             }
-        }
-        if (config.notProbeIfDelayIncreased &&
-            bandwidthLimitedCause == BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased ||
-            bandwidthLimitedCause == BandwidthLimitedCause.kRttBasedBackOffHighRtt
-        ) {
-            return mutableListOf()
+            BandwidthLimitedCause.kLossLimitedBweIncreasing ->
+                estimateCappedBitrate =
+                    min(maxProbeBitrate, estimatedBitrate * config.lossLimitedProbeScale)
+            BandwidthLimitedCause.kDelayBasedLimited ->
+                Unit
+            else ->
+                Unit
         }
 
         /* Skipping use of networkEstimate */
