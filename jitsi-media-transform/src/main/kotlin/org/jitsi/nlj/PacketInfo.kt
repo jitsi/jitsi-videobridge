@@ -24,7 +24,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.Collections
-import java.util.concurrent.ConcurrentLinkedQueue
 
 @SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 class EventTimeline(
@@ -34,9 +33,12 @@ class EventTimeline(
      * by a different thread. This is not critical as it only affects the timeline and the result is just some "exit"
      * events missing from the trace logs.
      */
-    private val timeline: ConcurrentLinkedQueue<Pair<String, Duration>> = ConcurrentLinkedQueue(),
+    timelineArg: MutableList<Pair<String, Duration>> = mutableListOf(),
     private val clock: Clock = Clock.systemUTC()
 ) : Iterable<Pair<String, Duration>> {
+
+    private val timeline: MutableList<Pair<String, Duration>> = Collections.synchronizedList(timelineArg)
+
     /**
      * The [referenceTime] refers to the first timestamp we have
      * in the timeline.  In the timeline this is used as time "0" and
@@ -56,7 +58,7 @@ class EventTimeline(
     }
 
     fun clone(): EventTimeline {
-        val clone = EventTimeline(ConcurrentLinkedQueue(timeline))
+        val clone = EventTimeline(timeline.toMutableList())
         clone.referenceTime = referenceTime
         return clone
     }
@@ -77,7 +79,9 @@ class EventTimeline(
         return with(StringBuffer()) {
             referenceTime?.let {
                 append("Reference time: $referenceTime; ")
-                append(timeline.joinToString(separator = "; "))
+                synchronized(timeline) {
+                    append(timeline.joinToString(separator = "; "))
+                }
             } ?: run {
                 append("[No timeline]")
             }
