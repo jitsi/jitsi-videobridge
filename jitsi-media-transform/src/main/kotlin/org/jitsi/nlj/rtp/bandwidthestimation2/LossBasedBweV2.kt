@@ -37,6 +37,7 @@ import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.time.times
 
 /** Loss-based bandwidth estimation,
  * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2.{h,cc} in
@@ -113,6 +114,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var lastSendTimeMostRecentObservation = Instant.MAX
     private var lastTimeEstimateReduced = Instant.MIN
     private var cachedInstantUpperBound: Bandwidth? = null
+    private var cachedInstantLowerBound: Bandwidth? = null
     private val instantUpperBoundTemporalWeights = MutableList(config.observationWindowSize) { 0.0 }
     private val temporalWeights = MutableList(config.observationWindowSize) { 0.0 }
     private var recoveringAfterLossTimestamp = Instant.MIN
@@ -181,9 +183,15 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         result.bandwidthEstimate =
             if (isValid(delayBasedEstimate)) {
-                minOf(currentEstimate.lossLimitedBandwidth, getInstantUpperBound(), delayBasedEstimate)
+                max(
+                    getInstantLowerBound(),
+                    minOf(currentEstimate.lossLimitedBandwidth, getInstantUpperBound(), delayBasedEstimate)
+                )
             } else {
-                min(currentEstimate.lossLimitedBandwidth, getInstantUpperBound())
+                max(
+                    getInstantLowerBound(),
+                    min(currentEstimate.lossLimitedBandwidth, getInstantUpperBound())
+                )
             }
         return result
     }
@@ -191,6 +199,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     fun setAcknowledgedBitrate(acknowledgedBitrate: Bandwidth) {
         if (isValid(acknowledgedBitrate)) {
             this.acknowledgedBitrate = acknowledgedBitrate
+            calculateInstantLowerBound()
         } else {
             logger.warn("The acknowledged bitrate must be finite: $acknowledgedBitrate")
         }
@@ -199,6 +208,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     fun setMinMaxBitrate(minBitrate: Bandwidth, maxBitrate: Bandwidth) {
         if (isValid(minBitrate)) {
             this.minBitrate = minBitrate
+            calculateInstantLowerBound()
         } else {
             logger.warn("The min bitrate must be finite: $minBitrate")
         }
@@ -361,7 +371,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val slopeOfBweHighLossFunc: Double = 1000.0,
         val notUseAckedRateInAlr: Boolean = true,
         val useInStartPhase: Boolean = false,
-        val minNumObservations: Int = 3
+        val minNumObservations: Int = 3,
+        val lowerBoundByAckedRateFactor: Double = 0.0
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -508,6 +519,13 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
             if (minNumObservations <= 0) {
                 logger.warn("The min number of observations must be positive: $minNumObservations")
+                valid = false
+            }
+            if (lowerBoundByAckedRateFactor < 0.0) {
+                logger.warn(
+                    "The estimate lower bound by acknowledged rate factor must be non-negative: " +
+                        lowerBoundByAckedRateFactor
+                )
                 valid = false
             }
 
@@ -780,6 +798,23 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         cachedInstantUpperBound = instantLimit
+    }
+
+    private fun getInstantLowerBound(): Bandwidth {
+        return cachedInstantLowerBound ?: Bandwidth.ZERO
+    }
+
+    private fun calculateInstantLowerBound() {
+        var instanceLowerBound = Bandwidth.ZERO
+        if (isValid(acknowledgedBitrate) &&
+            config.lowerBoundByAckedRateFactor > 0.0
+        ) {
+            instanceLowerBound = acknowledgedBitrate!! * config.lowerBoundByAckedRateFactor
+        }
+        if (isValid(minBitrate)) {
+            instanceLowerBound = max(instanceLowerBound, minBitrate)
+        }
+        cachedInstantLowerBound = instanceLowerBound
     }
 
     private fun calculateTemporalWeights() {

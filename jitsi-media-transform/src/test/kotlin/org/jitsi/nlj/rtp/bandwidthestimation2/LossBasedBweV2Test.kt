@@ -1091,5 +1091,51 @@ class LossBasedBweV2Test : FreeSpec() {
             )
             lossBasedBandwidthEstimator.readyToUseInStartPhase() shouldBe true
         }
+
+        "BoundEstimateByAckedRate" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                lowerBoundByAckedRateFactor = 1.0
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(500.kbps)
+
+            val enoughFeedback100pLossRate = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback100pLossRate,
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 500.kbps
+        }
+
+        "NotBoundEstimateByAckedRate" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                lowerBoundByAckedRateFactor = 0.0
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(500.kbps)
+
+            val enoughFeedback100pLossRate = createPacketResultsWith100pLossRate(Instant.EPOCH)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                enoughFeedback100pLossRate,
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan 500.kbps
+        }
     }
 }
