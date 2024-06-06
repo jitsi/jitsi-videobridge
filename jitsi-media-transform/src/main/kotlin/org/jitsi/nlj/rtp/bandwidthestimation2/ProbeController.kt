@@ -133,7 +133,7 @@ class ProbeController(
 ) {
     private val logger = parentLogger.createChildLogger(javaClass.name)
 
-    private var networkAvailable = true
+    private var networkAvailable = false
     private var bandwidthLimitedCause = BandwidthLimitedCause.kDelayBasedLimited
     private var state = State.kInit
     private var minBitrateToProbeFurther = Bandwidth.INFINITY

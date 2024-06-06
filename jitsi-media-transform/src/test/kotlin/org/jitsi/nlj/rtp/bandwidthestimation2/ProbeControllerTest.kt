@@ -59,17 +59,29 @@ class ProbeControllerTest : FreeSpec() {
     }
 
     init {
-        "InitiatesProbingAtStart" {
+        "InitiatesProbingAfterSetBitrates" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+
+            val probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThanOrEqual 2
+        }
+
+        "InitiatesProbingWhenNetworkAvailable" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
 
-            val probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.isEmpty() shouldBe true
+            probes = probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true))
             probes.size shouldBeGreaterThanOrEqual 2
         }
 
         "SetsDefaultTargetDurationAndTargetProbeCount" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBeGreaterThanOrEqual 2
 
@@ -85,6 +97,7 @@ class ProbeControllerTest : FreeSpec() {
                 )
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBeGreaterThanOrEqual 2
 
@@ -114,6 +127,7 @@ class ProbeControllerTest : FreeSpec() {
                 )
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBeGreaterThanOrEqual 2
             probes[0].targetDataRate shouldBe kStartBitrate * 2
@@ -128,6 +142,7 @@ class ProbeControllerTest : FreeSpec() {
                 )
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 1
             probes[0].targetDataRate shouldBe kStartBitrate * 2
@@ -136,6 +151,7 @@ class ProbeControllerTest : FreeSpec() {
         "InitiatesProbingOnMaxBitrateIncrease" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             // Long enough to time out exponential probing.
             fixture.advanceTime(kExponentialProbingTimeout)
@@ -158,6 +174,7 @@ class ProbeControllerTest : FreeSpec() {
         "ProbesOnMaxAllocatedBitrateIncreaseOnlyWhenInAlr" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
                 kMaxBitrate - 1.bps,
@@ -195,6 +212,7 @@ class ProbeControllerTest : FreeSpec() {
                 )
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
                 kMaxBitrate - 1.bps,
@@ -215,6 +233,7 @@ class ProbeControllerTest : FreeSpec() {
         "InitiatesProbingOnMaxBitrateIncreaseAtMaxBitrate" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             // Long enough to time out exponential probing.
             fixture.advanceTime(kExponentialProbingTimeout)
@@ -242,6 +261,7 @@ class ProbeControllerTest : FreeSpec() {
         "TestExponentialProbing" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
 
             // Repeated probe should only be sent when estimated bitrate climbs above
@@ -265,6 +285,7 @@ class ProbeControllerTest : FreeSpec() {
         "TestExponentialProbingTimeout" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             // Advance far enough to cause a time out in waiting for probing result.
             fixture.advanceTime(kExponentialProbingTimeout)
@@ -281,6 +302,7 @@ class ProbeControllerTest : FreeSpec() {
         "RequestProbeInAlr" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBeGreaterThanOrEqual 2
             probes = probeController.setEstimatedBitrate(
@@ -306,6 +328,7 @@ class ProbeControllerTest : FreeSpec() {
         "RequestProbeWhenAlrEndedRecently" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 2
             probes = probeController.setEstimatedBitrate(
@@ -333,6 +356,7 @@ class ProbeControllerTest : FreeSpec() {
         "RequestProbeWhenAlrNotEndedRecently" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 2
             probes = probeController.setEstimatedBitrate(
@@ -359,6 +383,7 @@ class ProbeControllerTest : FreeSpec() {
         "RequestProbeWhenBweDropNotRecent" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 2
             probes = probeController.setEstimatedBitrate(
@@ -383,6 +408,7 @@ class ProbeControllerTest : FreeSpec() {
         "PeriodicProbing" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             probeController.enablePeriodicAlrProbing(true)
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 2
@@ -427,6 +453,7 @@ class ProbeControllerTest : FreeSpec() {
         "PeriodicProbingAfterReset" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val alrStartTime = fixture.currentTime()
 
             probeController.setAlrStartTimeMs(alrStartTime.toEpochMilli())
@@ -481,6 +508,7 @@ class ProbeControllerTest : FreeSpec() {
         "TestExponentialProbingOverflow" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val kMbpsMultiplier = 1000.kbps
             var probes = probeController.setBitrates(
                 kMinBitrate,
@@ -508,6 +536,7 @@ class ProbeControllerTest : FreeSpec() {
         "TestAllocatedBitrateCap" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val kMbpsMultiplier = 1000.kbps
             val kMaxBitrate = kMbpsMultiplier * 100
             var probes = probeController.setBitrates(
@@ -562,6 +591,7 @@ class ProbeControllerTest : FreeSpec() {
                 )
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, 5000.kbps, fixture.currentTime())
             probes.size shouldBe 2
             probes[0].targetDataRate.bps shouldBe 600
@@ -600,6 +630,7 @@ class ProbeControllerTest : FreeSpec() {
                 config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             probeController.enablePeriodicAlrProbing(true)
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes = probeController.setEstimatedBitrate(
@@ -646,6 +677,7 @@ class ProbeControllerTest : FreeSpec() {
                 config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probeController.enablePeriodicAlrProbing(true)
             probes = probeController.setEstimatedBitrate(
@@ -672,6 +704,7 @@ class ProbeControllerTest : FreeSpec() {
                 config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probeController.enablePeriodicAlrProbing(true)
             probes = probeController.setEstimatedBitrate(
@@ -706,6 +739,7 @@ class ProbeControllerTest : FreeSpec() {
                 config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probeController.enablePeriodicAlrProbing(true)
             probes = probeController.setEstimatedBitrate(
@@ -731,6 +765,7 @@ class ProbeControllerTest : FreeSpec() {
                 config = ProbeControllerConfig()
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probeController.enablePeriodicAlrProbing(true)
             probes = probeController.setEstimatedBitrate(
@@ -765,6 +800,7 @@ class ProbeControllerTest : FreeSpec() {
                 )
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             probeController.enablePeriodicAlrProbing(true)
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.isEmpty() shouldBe false
@@ -788,6 +824,7 @@ class ProbeControllerTest : FreeSpec() {
                 )
             )
             val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             probeController.enablePeriodicAlrProbing(true)
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.isEmpty() shouldBe false

@@ -315,7 +315,14 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             val fixture = NetworkControllerTextFixture()
             val controller = fixture.createController()
 
-            val update = controller.onProcessInterval(ProcessInterval(atTime = Instant.ofEpochMilli(123456)))
+            var update =
+                controller.onNetworkAvailability(
+                    NetworkAvailability(
+                        atTime = Instant.ofEpochMilli(123456),
+                        networkAvailable = true
+                    )
+                )
+            update = controller.onProcessInterval(ProcessInterval(atTime = Instant.ofEpochMilli(123456)))
 
             update.targetRate!!.targetRate shouldBe kInitialBitrate
             update.pacerConfig!!.dataRate() shouldBe kInitialBitrate * kDefaultPacingRate
@@ -327,7 +334,9 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             val fixture = NetworkControllerTextFixture()
             val controller = fixture.createController()
             var currentTime = Instant.ofEpochMilli(123)
-            var update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+            var update =
+                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
+            update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
             update = controller.onRemoteBitrateReport(
                 RemoteBitrateReport(receiveTime = currentTime, bandwidth = kInitialBitrate * 2)
             )
@@ -346,12 +355,29 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             update.pacerConfig!!.dataRate() shouldBe kInitialBitrate * kDefaultPacingRate
         }
 
-        "ProbeOnRouteChange" {
+        "OnNetworkRouteChanged" {
             val fixture = NetworkControllerTextFixture()
             val controller = fixture.createController()
             val currentTime = Instant.ofEpochMilli(123)
+            var update =
+                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
             val newBitrate = 200000.bps
-            var update = controller.onNetworkRouteChange(createRouteChange(currentTime, newBitrate))
+            update = controller.onNetworkRouteChange(createRouteChange(currentTime, newBitrate))
+            update.targetRate!!.targetRate shouldBe newBitrate
+            update.pacerConfig!!.dataRate() shouldBe newBitrate * kDefaultPacingRate
+            update.probeClusterConfigs.size shouldBe 2
+        }
+
+        "ProbeOnRouteChange" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+            var currentTime = Instant.ofEpochMilli(123)
+            val newBitrate = 200000.bps
+            var update =
+                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
+            currentTime += 1.secs
+
+            update = controller.onNetworkRouteChange(createRouteChange(currentTime, newBitrate))
             update.targetRate!!.targetRate shouldBe newBitrate
             update.pacerConfig!!.dataRate() shouldBe newBitrate * kDefaultPacingRate
             update.probeClusterConfigs.size shouldBe 2
@@ -401,6 +427,8 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             val controller = fixture.createController()
             val kRunTimeMs = 6000L
             val currentTime = Ref(Instant.ofEpochMilli(123))
+            var update =
+                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime.v, networkAvailable = true))
 
             // The test must run and insert packets/feedback long enough that the
             // BWE computes a valid estimate. This is first done in an environment which
