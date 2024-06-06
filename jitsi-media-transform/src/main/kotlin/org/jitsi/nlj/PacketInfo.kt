@@ -37,7 +37,7 @@ class EventTimeline(
     private val clock: Clock = Clock.systemUTC()
 ) : Iterable<Pair<String, Duration>> {
 
-    private val timeline: MutableList<Pair<String, Duration>> = Collections.synchronizedList(timelineArg)
+    private val timeline = Collections.synchronizedList(timelineArg)
 
     /**
      * The [referenceTime] refers to the first timestamp we have
@@ -58,7 +58,7 @@ class EventTimeline(
     }
 
     fun clone(): EventTimeline {
-        val clone = EventTimeline(timeline.toMutableList())
+        val clone = EventTimeline(timeline.toMutableList(), clock)
         clone.referenceTime = referenceTime
         return clone
     }
