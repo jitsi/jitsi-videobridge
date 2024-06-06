@@ -285,14 +285,13 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             // Bound the best candidate by the acked bitrate.
             if (increasingWhenLossLimited && isValid(acknowledgedBitrate)) {
                 bestCandidate.lossLimitedBandwidth =
-                    if (isValid(bestCandidate.lossLimitedBandwidth)) {
+                    max(
+                        currentBestEstimate.lossLimitedBandwidth,
                         min(
                             bestCandidate.lossLimitedBandwidth,
                             acknowledgedBitrate!! * config.bandwidthRampupUpperBoundFactor
                         )
-                    } else {
-                        acknowledgedBitrate!! * config.bandwidthRampupUpperBoundFactor
-                    }
+                    )
             }
         }
 
@@ -902,12 +901,15 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 oldEstimate = lossBasedResult.bandwidthEstimate,
                 newEstimate = boundedBandwidthEstimate
             ) &&
-            boundedBandwidthEstimate < delayBasedEstimate
+            boundedBandwidthEstimate < delayBasedEstimate &&
+            boundedBandwidthEstimate < maxBitrate
         ) {
             lossBasedResult.state = LossBasedState.kIncreasing
-        } else if (boundedBandwidthEstimate < delayBasedEstimate) {
+        } else if (boundedBandwidthEstimate < delayBasedEstimate &&
+            boundedBandwidthEstimate < maxBitrate
+        ) {
             lossBasedResult.state = LossBasedState.kDecreasing
-        } else if (boundedBandwidthEstimate >= delayBasedEstimate) {
+        } else {
             lossBasedResult.state = LossBasedState.kDelayBasedEstimate
         }
         lossBasedResult.bandwidthEstimate = boundedBandwidthEstimate
