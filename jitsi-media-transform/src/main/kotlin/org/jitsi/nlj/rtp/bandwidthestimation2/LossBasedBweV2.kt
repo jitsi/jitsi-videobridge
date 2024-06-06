@@ -362,7 +362,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val bandwidthBackoffLowerBoundFactor: Double = 1.0,
         val maxIncreaseFactor: Double = 1.3,
         val delayedIncreaseWindow: Duration = 300.ms,
-        val useAckedBitrateOnlyWhenOverusing: Boolean = false,
         val notIncreaseIfInherentLossLessThanAverageLoss: Boolean = true,
         val highLossRateThreshold: Double = 1.0,
         val bandwidthCapAtHighLossRate: Bandwidth = 500.kbps,
