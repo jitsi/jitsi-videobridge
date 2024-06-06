@@ -368,7 +368,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val notUseAckedRateInAlr: Boolean = true,
         val useInStartPhase: Boolean = false,
         val minNumObservations: Int = 3,
-        val lowerBoundByAckedRateFactor: Double = 0.0
+        val lowerBoundByAckedRateFactor: Double = 0.0,
+        val usePaddingForIncrease: Boolean = false
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -904,7 +905,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             boundedBandwidthEstimate < delayBasedEstimate &&
             boundedBandwidthEstimate < maxBitrate
         ) {
-            lossBasedResult.state = LossBasedState.kIncreasing
+            lossBasedResult.state = if (config.usePaddingForIncrease) {
+                LossBasedState.kIncreaseUsingPadding
+            } else {
+                LossBasedState.kIncreasing
+            }
         } else if (boundedBandwidthEstimate < delayBasedEstimate &&
             boundedBandwidthEstimate < maxBitrate
         ) {
@@ -920,7 +925,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             oldEstimate < newEstimate ||
                 (
                     oldEstimate == newEstimate &&
-                        lossBasedResult.state == LossBasedState.kIncreasing
+                        (
+                            lossBasedResult.state == LossBasedState.kIncreasing ||
+                                lossBasedResult.state == LossBasedState.kIncreaseUsingPadding
+                            )
                     )
             ) &&
             isInLossLimitedState()
