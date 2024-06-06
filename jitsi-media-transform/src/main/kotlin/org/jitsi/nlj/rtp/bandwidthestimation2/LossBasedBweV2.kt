@@ -37,7 +37,6 @@ import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.time.times
 
 /** Loss-based bandwidth estimation,
  * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2.{h,cc} in
@@ -111,7 +110,7 @@ private fun getLossProbability(inherentLoss_: Double, lossLimitedBandwidth: Band
 class LossBasedBweV2(configIn: Config = defaultConfig) {
     private val config = configIn.copy()
     private var acknowledgedBitrate: Bandwidth? = null
-    private var currentEstimate: ChannelParameters =
+    private var currentBestEstimate: ChannelParameters =
         ChannelParameters(inherentLoss = config.initialInherentLossEstimate)
     private var numObservations = 0
     private val observations = MutableList(config.observationWindowSize) { Observation() }
@@ -126,8 +125,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var bandwidthLimitInCurrentWindow = Bandwidth.INFINITY
     private var minBitrate = 1.kbps
     private var maxBitrate = Bandwidth.INFINITY
-    private var currentState = LossBasedState.kDelayBasedEstimate
     private var delayBasedEstimate = Bandwidth.INFINITY
+    private var lossBasedResult = Result()
 
     init {
         if (!config.enabled) {
@@ -143,7 +142,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         calculateTemporalWeights()
     }
 
-    class Result(
+    data class Result(
         var bandwidthEstimate: Bandwidth = Bandwidth.ZERO,
         var state: LossBasedState = LossBasedState.kDelayBasedEstimate
     )
@@ -154,7 +153,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
      initialized with a BWE and then has received enough `PacketResult`s.
      */
     fun isReady(): Boolean {
-        return isEnabled() && isValid(currentEstimate.lossLimitedBandwidth) &&
+        return isEnabled() &&
+            isValid(currentBestEstimate.lossLimitedBandwidth) &&
             numObservations >= config.minNumObservations
     }
 
@@ -164,13 +164,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     /** Returns [Bandwidth.INFINITY] if no BWE can be calculated. */
     fun getLossBasedResult(): Result {
-        val result = Result()
-        result.state = currentState
         if (!isReady()) {
             if (!isEnabled()) {
                 logger.warn("The estimator must be enabled before it can be used.")
             } else {
-                if (!isValid(currentEstimate.lossLimitedBandwidth)) {
+                if (!isValid(currentBestEstimate.lossLimitedBandwidth)) {
                     logger.warn("The estimator must be initialized before it can be used.")
                 }
                 if (numObservations <= config.minNumObservations) {
@@ -178,27 +176,16 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 }
             }
 
-            result.bandwidthEstimate = if (isValid(delayBasedEstimate)) {
-                delayBasedEstimate
-            } else {
-                Bandwidth.INFINITY
-            }
-            return result
+            return Result(
+                bandwidthEstimate = if (isValid(delayBasedEstimate)) {
+                    delayBasedEstimate
+                } else {
+                    Bandwidth.INFINITY
+                },
+                state = LossBasedState.kDelayBasedEstimate
+            )
         }
-
-        result.bandwidthEstimate =
-            if (isValid(delayBasedEstimate)) {
-                max(
-                    getInstantLowerBound(),
-                    minOf(currentEstimate.lossLimitedBandwidth, getInstantUpperBound(), delayBasedEstimate)
-                )
-            } else {
-                max(
-                    getInstantLowerBound(),
-                    min(currentEstimate.lossLimitedBandwidth, getInstantUpperBound())
-                )
-            }
-        return result
+        return lossBasedResult.copy()
     }
 
     fun setAcknowledgedBitrate(acknowledgedBitrate: Bandwidth) {
@@ -241,15 +228,19 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             return
         }
 
-        if (!isValid(currentEstimate.lossLimitedBandwidth)) {
+        if (!isValid(currentBestEstimate.lossLimitedBandwidth)) {
             if (!isValid(delayBasedEstimate)) {
                 logger.warn("The delay based estimate must be finite: $delayBasedEstimate.")
                 return
             }
-            currentEstimate.lossLimitedBandwidth = delayBasedEstimate
+            currentBestEstimate.lossLimitedBandwidth = delayBasedEstimate
+            lossBasedResult = Result(
+                bandwidthEstimate = delayBasedEstimate,
+                state = LossBasedState.kDelayBasedEstimate
+            )
         }
 
-        var bestCandidate = currentEstimate
+        var bestCandidate = currentBestEstimate
         var objectiveMax = -Double.MAX_VALUE
         for (candidate in getCandidates(inAlr)) {
             newtonsMethodUpdate(candidate)
@@ -261,7 +252,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
         }
 
-        if (bestCandidate.lossLimitedBandwidth < currentEstimate.lossLimitedBandwidth) {
+        if (bestCandidate.lossLimitedBandwidth < currentBestEstimate.lossLimitedBandwidth) {
             lastTimeEstimateReduced = lastSendTimeMostRecentObservation
         }
 
@@ -269,12 +260,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         // inherent loss.
         if (getAverageReportedLossRatio() > bestCandidate.inherentLoss &&
             config.notIncreaseIfInherentLossLessThanAverageLoss &&
-            currentEstimate.lossLimitedBandwidth < bestCandidate.lossLimitedBandwidth
+            currentBestEstimate.lossLimitedBandwidth < bestCandidate.lossLimitedBandwidth
         ) {
-            bestCandidate.lossLimitedBandwidth = currentEstimate.lossLimitedBandwidth
+            bestCandidate.lossLimitedBandwidth = currentBestEstimate.lossLimitedBandwidth
         }
 
-        if (isBandwidthLimitedDueToLoss()) {
+        if (isInLossLimitedState()) {
             // Bound the estimate increase if:
             // 1. The estimate has been increased for less than
             // `delayed_increase_window` ago, and
@@ -286,7 +277,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 bestCandidate.lossLimitedBandwidth = bandwidthLimitInCurrentWindow
             }
 
-            val increasingWhenLossLimited = isEstimateIncreasingWhenLossLimited(bestCandidate)
+            val increasingWhenLossLimited =
+                isEstimateIncreasingWhenLossLimited(
+                    oldEstimate = currentBestEstimate.lossLimitedBandwidth,
+                    newEstimate = bestCandidate.lossLimitedBandwidth
+                )
             // Bound the best candidate by the acked bitrate.
             if (increasingWhenLossLimited && isValid(acknowledgedBitrate)) {
                 bestCandidate.lossLimitedBandwidth =
@@ -301,25 +296,19 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
         }
 
-        if (isEstimateIncreasingWhenLossLimited(bestCandidate) &&
-            bestCandidate.lossLimitedBandwidth < delayBasedEstimate
-        ) {
-            currentState = LossBasedState.kIncreasing
-        } else if (bestCandidate.lossLimitedBandwidth < delayBasedEstimate) {
-            currentState = LossBasedState.kDecreasing
-        } else if (bestCandidate.lossLimitedBandwidth >= delayBasedEstimate) {
-            currentState = LossBasedState.kDelayBasedEstimate
-        }
+        currentBestEstimate = bestCandidate
+        updateResult()
 
-        currentEstimate = bestCandidate
-
-        if (isBandwidthLimitedDueToLoss() &&
+        if (isInLossLimitedState() &&
             recoveringAfterLossTimestamp.isInfinite() ||
             recoveringAfterLossTimestamp + config.delayedIncreaseWindow <
             lastSendTimeMostRecentObservation
         ) {
             bandwidthLimitInCurrentWindow =
-                max(kCongestionControllerMinBitrate, currentEstimate.lossLimitedBandwidth * config.maxIncreaseFactor)
+                max(
+                    kCongestionControllerMinBitrate,
+                    currentBestEstimate.lossLimitedBandwidth * config.maxIncreaseFactor
+                )
             recoveringAfterLossTimestamp = lastSendTimeMostRecentObservation
         }
     }
@@ -327,7 +316,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     // For unit testing only
     fun setBandwidthEstimate(bandwidthEstimate: Bandwidth) {
         if (isValid(bandwidthEstimate)) {
-            currentEstimate.lossLimitedBandwidth = bandwidthEstimate
+            currentBestEstimate.lossLimitedBandwidth = bandwidthEstimate
+            lossBasedResult = Result(
+                bandwidthEstimate = bandwidthEstimate,
+                state = LossBasedState.kDelayBasedEstimate
+            )
         } else {
             logger.warn("The bandwidth estimate must be finite: $bandwidthEstimate")
         }
@@ -587,7 +580,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun getCandidateBandwidthUpperBound(): Bandwidth {
         var candidateBandwidthUpperBound = maxBitrate
-        if (isBandwidthLimitedDueToLoss() && isValid(bandwidthLimitInCurrentWindow)) {
+        if (isInLossLimitedState() && isValid(bandwidthLimitInCurrentWindow)) {
             candidateBandwidthUpperBound = bandwidthLimitInCurrentWindow
         }
 
@@ -612,7 +605,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private fun getCandidates(inAlr: Boolean): List<ChannelParameters> {
         val bandwidths = mutableListOf<Bandwidth>()
         for (candidateFactor in config.candidateFactors) {
-            bandwidths.add(currentEstimate.lossLimitedBandwidth * candidateFactor)
+            bandwidths.add(currentBestEstimate.lossLimitedBandwidth * candidateFactor)
         }
 
         if (acknowledgedBitrate != null &&
@@ -624,7 +617,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         if (isValid(delayBasedEstimate) && config.appendDelayBasedEstimateCandidate) {
-            if (delayBasedEstimate > currentEstimate.lossLimitedBandwidth) {
+            if (delayBasedEstimate > currentBestEstimate.lossLimitedBandwidth) {
                 bandwidths.add(delayBasedEstimate)
             }
         }
@@ -633,10 +626,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         val candidates = mutableListOf<ChannelParameters>()
         for (i in bandwidths.indices) {
-            val candidate = currentEstimate.copy()
+            val candidate = currentBestEstimate.copy()
             candidate.lossLimitedBandwidth = min(
                 bandwidths[i],
-                max(currentEstimate.lossLimitedBandwidth, candidateBandwidthUpperBound)
+                max(currentBestEstimate.lossLimitedBandwidth, candidateBandwidthUpperBound)
             )
             candidate.inherentLoss = getFeasibleInherentLoss(candidate)
             candidates.add(candidate)
@@ -888,19 +881,52 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         return true
     }
 
-    private fun isEstimateIncreasingWhenLossLimited(bestCandidate: ChannelParameters): Boolean {
-        return (
-            currentEstimate.lossLimitedBandwidth < bestCandidate.lossLimitedBandwidth ||
-                (
-                    currentEstimate.lossLimitedBandwidth == bestCandidate.lossLimitedBandwidth &&
-                        currentState == LossBasedState.kIncreasing
-                    )
+    private fun updateResult() {
+        var boundedBandwidthEstimate = Bandwidth.INFINITY
+        boundedBandwidthEstimate = if (isValid(delayBasedEstimate)) {
+            max(
+                getInstantLowerBound(),
+                minOf(
+                    currentBestEstimate.lossLimitedBandwidth,
+                    getInstantUpperBound(),
+                    delayBasedEstimate
+                )
+            )
+        } else {
+            max(
+                getInstantLowerBound(),
+                min(currentBestEstimate.lossLimitedBandwidth, getInstantUpperBound())
+            )
+        }
+
+        if (isEstimateIncreasingWhenLossLimited(
+                oldEstimate = lossBasedResult.bandwidthEstimate,
+                newEstimate = boundedBandwidthEstimate
             ) &&
-            isBandwidthLimitedDueToLoss()
+            boundedBandwidthEstimate < delayBasedEstimate
+        ) {
+            lossBasedResult.state = LossBasedState.kIncreasing
+        } else if (boundedBandwidthEstimate < delayBasedEstimate) {
+            lossBasedResult.state = LossBasedState.kDecreasing
+        } else if (boundedBandwidthEstimate >= delayBasedEstimate) {
+            lossBasedResult.state = LossBasedState.kDelayBasedEstimate
+        }
+        lossBasedResult.bandwidthEstimate = boundedBandwidthEstimate
     }
 
-    private fun isBandwidthLimitedDueToLoss(): Boolean {
-        return currentState != LossBasedState.kDelayBasedEstimate
+    private fun isEstimateIncreasingWhenLossLimited(oldEstimate: Bandwidth, newEstimate: Bandwidth): Boolean {
+        return (
+            oldEstimate < newEstimate ||
+                (
+                    oldEstimate == newEstimate &&
+                        lossBasedResult.state == LossBasedState.kIncreasing
+                    )
+            ) &&
+            isInLossLimitedState()
+    }
+
+    private fun isInLossLimitedState(): Boolean {
+        return lossBasedResult.state != LossBasedState.kDelayBasedEstimate
     }
 
     companion object {
