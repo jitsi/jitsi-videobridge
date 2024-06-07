@@ -20,6 +20,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.isFinite
 import org.jitsi.nlj.util.isInfinite
 import org.jitsi.nlj.util.kbps
@@ -133,8 +134,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var maxBitrate = Bandwidth.INFINITY
     private var delayBasedEstimate = Bandwidth.INFINITY
     private var lossBasedResult = Result()
-    private var lastHoldTimestamp = Instant.MIN
-    private var holdDuration = kInitHoldDuration
+    private var lastHoldInfo = HoldInfo(duration = kInitHoldDuration)
     private var lastPaddingInfo = PaddingInfo()
 
     init {
@@ -311,7 +311,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                     bestCandidate.lossLimitedBandwidth == currentBestEstimate.lossLimitedBandwidth
                 ) {
                     bestCandidate.lossLimitedBandwidth =
-                        currentBestEstimate.lossLimitedBandwidth + 1.kbps
+                        currentBestEstimate.lossLimitedBandwidth + 1.bps
                 }
             }
         }
@@ -582,6 +582,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         var paddingRate = Bandwidth.MINUS_INFINITY
         var paddingTimestamp = Instant.MIN
     }
+
+    private class HoldInfo(
+        var timestamp: Instant = Instant.MIN,
+        var duration: Duration = Duration.ZERO,
+        var rate: Bandwidth = Bandwidth.INFINITY
+    )
 
     /** Returns `0.0` if not enough loss statistics have been received. */
     private fun getAverageReportedLossRatio(): Double {
@@ -1005,15 +1011,13 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         if (lossBasedResult.state == LossBasedState.kDecreasing &&
-            lastHoldTimestamp > lastSendTimeMostRecentObservation &&
+            lastHoldInfo.timestamp > lastSendTimeMostRecentObservation &&
             boundedBandwidthEstimate < delayBasedEstimate
         ) {
-            // BWE is not allowed to increase during the HOLD duration. The purpose of
+            // BWE is not allowed to increase above the HOLD rate. The purpose of
             // HOLD is to not immediately ramp up BWE to a rate that may cause loss.
-            lossBasedResult.bandwidthEstimate = min(
-                lossBasedResult.bandwidthEstimate,
-                boundedBandwidthEstimate
-            )
+            lossBasedResult.bandwidthEstimate =
+                min(lastHoldInfo.rate, boundedBandwidthEstimate)
             return
         }
 
@@ -1043,16 +1047,24 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             if (lossBasedResult.state != LossBasedState.kDecreasing &&
                 config.holdDurationFactor > 0
             ) {
-                logger.info { "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: $holdDuration" }
-                lastHoldTimestamp =
-                    lastSendTimeMostRecentObservation + holdDuration
-                holdDuration = min(kMaxHoldDuration, holdDuration * config.holdDurationFactor)
+                logger.info {
+                    "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: ${lastHoldInfo.duration}"
+                }
+                lastHoldInfo = HoldInfo(
+                    timestamp = lastSendTimeMostRecentObservation + lastHoldInfo.duration,
+                    duration = min(kMaxHoldDuration, lastHoldInfo.duration * config.holdDurationFactor),
+                    rate = boundedBandwidthEstimate
+                )
             }
             lossBasedResult.state = LossBasedState.kDecreasing
         } else {
-            // Reset the HOLD duration if delay based estimate works to avoid getting
+            // Reset the HOLD info if delay based estimate works to avoid getting
             // stuck in low bitrate.
-            holdDuration = kInitHoldDuration
+            lastHoldInfo = HoldInfo(
+                timestamp = Instant.MIN,
+                duration = kInitHoldDuration,
+                rate = Bandwidth.INFINITY
+            )
             lossBasedResult.state = LossBasedState.kDelayBasedEstimate
         }
         lossBasedResult.bandwidthEstimate = boundedBandwidthEstimate

@@ -27,6 +27,7 @@ import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
+import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.div
 import org.jitsi.nlj.util.kbps
@@ -672,7 +673,7 @@ class LossBasedBweV2Test : FreeSpec() {
 
             result.state shouldBe LossBasedState.kIncreasing
             // The estimate increases by 1kbps.
-            result.bandwidthEstimate shouldBe estimate1 + 1.kbps
+            result.bandwidthEstimate shouldBe estimate1 + 1.bps
         }
 
         // After loss based bwe backs off, the next estimate is capped by
@@ -1519,7 +1520,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 minNumObservations = 1,
                 observationWindowSize = 2,
 
-                holdDurationFactor = 3.0
+                holdDurationFactor = 10.0
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1529,7 +1530,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
-            var estimate = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
+            val estimate = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
 
             // During the hold duration, e.g. first 300ms, the estimate cannot increase.
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
@@ -1562,31 +1563,43 @@ class LossBasedBweV2Test : FreeSpec() {
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
-            estimate = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
+            val estimateAtHold = lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate
 
-            // During the hold duration, e.g. next 900ms, the estimate cannot increase.
+            // In the hold duration, e.g. next 3s, the estimate cannot increase above the
+            // hold rate. Get some lost packets to get lower estimate than the HOLD rate.
             for (i in 4..6) {
                 lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                    createPacketResultsWithReceivedPackets(
+                    createPacketResultsWith100pLossRate(
                         Instant.EPOCH + kObservationDurationLowerBound * i
                     ),
                     delayBasedEstimate = Bandwidth.INFINITY,
                     inAlr = false
                 )
                 lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
-                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe estimate
+                lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan estimate
             }
 
-            // After the hold duration, the estimate can increase again.
-            lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                createPacketResultsWithReceivedPackets(
-                    Instant.EPOCH + kObservationDurationLowerBound * 7
-                ),
-                delayBasedEstimate = Bandwidth.INFINITY,
-                inAlr = false
-            )
-            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kIncreasing
-            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThanOrEqualTo estimate
+            var feedbackId = 7
+            while (lossBasedBandwidthEstimator.getLossBasedResult().state != LossBasedState.kIncreasing) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWithReceivedPackets(
+                        Instant.EPOCH + kObservationDurationLowerBound * feedbackId
+                    ),
+                    delayBasedEstimate = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                if (lossBasedBandwidthEstimator.getLossBasedResult().state == LossBasedState.kDecreasing) {
+                    // In the hold duration, the estimate can not go higher than estimate at
+                    // hold.
+                    lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThanOrEqualTo
+                        estimateAtHold
+                } else if (lossBasedBandwidthEstimator.getLossBasedResult().state == LossBasedState.kIncreasing) {
+                    // After the hold duration, the estimate can increase again.
+                    lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThan
+                        estimateAtHold
+                }
+                feedbackId++
+            }
         }
 
         "EndHoldDurationIfDelayBasedEstimateWorks" {
