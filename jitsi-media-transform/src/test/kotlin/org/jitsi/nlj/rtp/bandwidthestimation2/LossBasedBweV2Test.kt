@@ -1378,6 +1378,60 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kIncreaseUsingPadding
         }
 
+        "DecreaseToAckedCandidateIfPaddingInAlr" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                paddingDuration = 1000.ms,
+                // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
+                instantUpperBoundBandwidthBalance = 10000.kbps
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(1000.kbps)
+            var feedbackId = 0
+            while (lossBasedBandwidthEstimator.getLossBasedResult().state !=
+                LossBasedState.kDecreasing
+            ) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWith100pLossRate(
+                        Instant.EPOCH + kObservationDurationLowerBound * feedbackId
+                    ),
+                    delayBasedEstimate = Bandwidth.INFINITY,
+                    inAlr = true
+                )
+                feedbackId++
+            }
+
+            while (lossBasedBandwidthEstimator.getLossBasedResult().state !=
+                LossBasedState.kIncreaseUsingPadding
+            ) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWithReceivedPackets(
+                        Instant.EPOCH + kObservationDurationLowerBound * feedbackId
+                    ),
+                    delayBasedEstimate = Bandwidth.INFINITY,
+                    inAlr = true
+                )
+                feedbackId++
+            }
+
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThan 900.kbps
+
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(100.kbps)
+            // Padding is sent now, create some lost packets.
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith100pLossRate(
+                    Instant.EPOCH + kObservationDurationLowerBound * feedbackId
+                ),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = true
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 100.kbps
+        }
+
         "DecreaseAfterPadding" {
             val config = LossBasedBweV2.Config(
                 /* ShortObservationConfig */

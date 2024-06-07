@@ -670,7 +670,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         if (acknowledgedBitrate != null &&
             config.appendAcknowledgedRateCandidate
         ) {
-            if (!(config.notUseAckedRateInAlr && inAlr)) {
+            if (!(config.notUseAckedRateInAlr && inAlr) ||
+                (
+                    config.paddingDuration > Duration.ZERO &&
+                        lastPaddingInfo.paddingTimestamp + config.paddingDuration >= lastSendTimeMostRecentObservation
+                    )
+            ) {
                 bandwidths.add(acknowledgedBitrate!! * config.bandwidthBackoffLowerBoundFactor)
             }
         }
