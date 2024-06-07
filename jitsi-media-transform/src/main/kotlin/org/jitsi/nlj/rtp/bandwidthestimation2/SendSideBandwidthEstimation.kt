@@ -184,7 +184,7 @@ class SendSideBandwidthEstimation(
     private val lowLossThreshold: Float = kDefaultLowLossThreshold
     private val highLossThreshold: Float = kDefaultHighLossThreshold
     private val bitrateThreshold: Bandwidth = kDefaultBitrateThreshold
-    private val lossBasedBandwidthEstimatorV2 = LossBasedBweV2().apply {
+    private var lossBasedBandwidthEstimatorV2 = LossBasedBweV2().apply {
         setMinMaxBitrate(minBitrateConfigured, maxBitrateConfigured)
     }
     private var lossBasedState: LossBasedState = LossBasedState.kDelayBasedEstimate
@@ -211,6 +211,9 @@ class SendSideBandwidthEstimation(
         umaUpdateState = UmaState.kNoUpdate
         umaRttState = UmaState.kNoUpdate
         lastRtcEventLog = Instant.MIN
+        if (lossBasedBandwidthEstimatorV2.useInStartPhase()) {
+            lossBasedBandwidthEstimatorV2 = LossBasedBweV2()
+        }
     }
 
     fun targetRate(): Bandwidth {

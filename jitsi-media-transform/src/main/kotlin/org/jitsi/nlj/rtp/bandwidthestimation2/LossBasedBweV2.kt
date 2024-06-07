@@ -171,6 +171,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         return isReady() && config.useInStartPhase
     }
 
+    fun useInStartPhase(): Boolean {
+        return config.useInStartPhase
+    }
+
     /** Returns [Bandwidth.INFINITY] if no BWE can be calculated. */
     fun getLossBasedResult(): Result {
         if (!isReady()) {
