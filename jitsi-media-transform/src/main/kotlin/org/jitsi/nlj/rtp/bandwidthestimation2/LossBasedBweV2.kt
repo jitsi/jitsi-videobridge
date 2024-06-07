@@ -301,6 +301,14 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                             acknowledgedBitrate!! * config.bandwidthRampupUpperBoundFactor
                         )
                     )
+                // Increase current estimate by at least 1kbps to make sure that the state
+                // will be switched to kIncreasing, thus padding is triggered.
+                if (lossBasedResult.state == LossBasedState.kDecreasing &&
+                    bestCandidate.lossLimitedBandwidth == currentBestEstimate.lossLimitedBandwidth
+                ) {
+                    bestCandidate.lossLimitedBandwidth =
+                        currentBestEstimate.lossLimitedBandwidth + 1.kbps
+                }
             }
         }
 

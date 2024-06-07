@@ -629,6 +629,52 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldNotBe LossBasedState.kDelayBasedEstimate
         }
 
+        // Ensure that the state can switch to kIncrease even when the bandwidth is
+        // bounded by acked bitrate.
+        "EnsureIncreaseEvenIfAckedBitrateBound" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                lossThresholdOfHighBandwidthPreference = 0.99,
+                bandwidthRampupUpperBoundFactor = 1.2,
+                // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
+                instantUpperBoundBandwidthBalance = 10000.kbps
+            )
+            val enoughFeedback1 =
+                createPacketResultsWith100pLossRate(Instant.EPOCH)
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val delayBasedEstimate = 5000.kbps
+
+            lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(300.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(enoughFeedback1, delayBasedEstimate, inAlr = false)
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            var result = lossBasedBandwidthEstimator.getLossBasedResult()
+            val estimate1 = result.bandwidthEstimate
+            estimate1.kbps shouldBeLessThan 600.0
+
+            // Set a low acked bitrate.
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(estimate1 / 2)
+
+            var feedbackCount = 1
+            while (feedbackCount < 5 && result.state != LossBasedState.kIncreasing) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWithReceivedPackets(
+                        Instant.EPOCH + kObservationDurationLowerBound * feedbackCount++
+                    ),
+                    delayBasedEstimate,
+                    inAlr = false
+                )
+                result = lossBasedBandwidthEstimator.getLossBasedResult()
+            }
+
+            result.state shouldBe LossBasedState.kIncreasing
+            // The estimate increases by 1kbps.
+            result.bandwidthEstimate shouldBe estimate1 + 1.kbps
+        }
+
         // After loss based bwe backs off, the next estimate is capped by
         // a factor of acked bitrate.
         "IncreaseByFactorOfAckedBitrateAfterLossBasedBweBacksOff" {
@@ -674,7 +720,7 @@ class LossBasedBweV2Test : FreeSpec() {
 
             result.bandwidthEstimate shouldBe estimate1 * 0.9 * 1.2
 
-            // But if acked bitrate decrease, BWE does not decrease when there is no
+            // But if acked bitrate decreases, BWE does not decrease when there is no
             // loss.
             lossBasedBandwidthEstimator.setAcknowledgedBitrate(estimate1 * 0.9)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
