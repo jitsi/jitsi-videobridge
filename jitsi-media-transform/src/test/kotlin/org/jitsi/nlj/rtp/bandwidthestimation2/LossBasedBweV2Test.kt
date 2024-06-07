@@ -31,7 +31,9 @@ import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.div
 import org.jitsi.nlj.util.kbps
 import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import org.jitsi.utils.times
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -1311,7 +1313,7 @@ class LossBasedBweV2Test : FreeSpec() {
                 minNumObservations = 1,
                 observationWindowSize = 2,
 
-                usePaddingForIncrease = true
+                paddingDuration = 1000.ms
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1328,6 +1330,60 @@ class LossBasedBweV2Test : FreeSpec() {
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kIncreaseUsingPadding
+        }
+
+        "DecreaseAfterPadding" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                paddingDuration = 1000.ms,
+                bandwidthRampupUpperBoundFactor = 2.0
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
+            var acknowledgedBitrate = 51.kbps
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(acknowledgedBitrate)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe acknowledgedBitrate
+
+            acknowledgedBitrate = 26.kbps
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(acknowledgedBitrate)
+            var feedbackId = 1
+            while (lossBasedBandwidthEstimator.getLossBasedResult().state != LossBasedState.kIncreaseUsingPadding) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWithReceivedPackets(
+                        Instant.EPOCH + kObservationDurationLowerBound * feedbackId
+                    ),
+                    delayBasedEstimate = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                feedbackId++
+            }
+
+            val estimateIncreased = Instant.EPOCH + kObservationDurationLowerBound * feedbackId
+            // The state is kIncreaseUsingPadding for a while without changing the
+            // estimate, which is limited by 2 * acked rate.
+            while (lossBasedBandwidthEstimator.getLossBasedResult().state == LossBasedState.kIncreaseUsingPadding) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWithReceivedPackets(
+                        Instant.EPOCH + kObservationDurationLowerBound * feedbackId
+                    ),
+                    delayBasedEstimate = Bandwidth.INFINITY,
+                    inAlr = false
+                )
+                feedbackId++
+            }
+
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            val startDecreasing = Instant.EPOCH + kObservationDurationLowerBound * (feedbackId - 1)
+            Duration.between(estimateIncreased, startDecreasing) shouldBe 1.secs
         }
 
         "IncreaseEstimateIfNotHold" {

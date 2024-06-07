@@ -134,6 +134,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var lossBasedResult = Result()
     private var lastHoldTimestamp = Instant.MIN
     private var holdDuration = kInitHoldDuration
+    private var lastPaddingInfo = PaddingInfo()
 
     init {
         if (!config.enabled) {
@@ -377,9 +378,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val useInStartPhase: Boolean = false,
         val minNumObservations: Int = 3,
         val lowerBoundByAckedRateFactor: Double = 0.0,
-        val usePaddingForIncrease: Boolean = false,
         val holdDurationFactor: Double = 0.0,
-        val useByteLossRate: Boolean = false
+        val useByteLossRate: Boolean = false,
+        val paddingDuration: Duration = Duration.ZERO
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -562,6 +563,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         var numLostPackets = 0
         var size = DataSize.ZERO
         var lostSize = DataSize.ZERO
+    }
+
+    private class PaddingInfo {
+        var paddingRate = Bandwidth.MINUS_INFINITY
+        var paddingTimestamp = Instant.MIN
     }
 
     /** Returns `0.0` if not enough loss statistics have been received. */
@@ -997,10 +1003,18 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 oldEstimate = lossBasedResult.bandwidthEstimate,
                 newEstimate = boundedBandwidthEstimate
             ) &&
+            canKeepIncreasingState(boundedBandwidthEstimate) &&
             boundedBandwidthEstimate < delayBasedEstimate &&
             boundedBandwidthEstimate < maxBitrate
         ) {
-            lossBasedResult.state = if (config.usePaddingForIncrease) {
+            if (config.paddingDuration > Duration.ZERO &&
+                boundedBandwidthEstimate > lastPaddingInfo.paddingRate
+            ) {
+                // Start a new padding duration.
+                lastPaddingInfo.paddingRate = boundedBandwidthEstimate
+                lastPaddingInfo.paddingTimestamp = lastSendTimeMostRecentObservation
+            }
+            lossBasedResult.state = if (config.paddingDuration > Duration.ZERO) {
                 LossBasedState.kIncreaseUsingPadding
             } else {
                 LossBasedState.kIncreasing
@@ -1042,6 +1056,21 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun isInLossLimitedState(): Boolean {
         return lossBasedResult.state != LossBasedState.kDelayBasedEstimate
+    }
+
+    private fun canKeepIncreasingState(estimate: Bandwidth): Boolean {
+        if (config.paddingDuration == Duration.ZERO ||
+            lossBasedResult.state != LossBasedState.kIncreaseUsingPadding
+        ) {
+            return true
+        }
+
+        // Keep using the kIncreaseUsingPadding if either the state has been
+        // kIncreaseUsingPadding for less than kPaddingDuration or the estimate
+        // increases.
+        return lastPaddingInfo.paddingTimestamp + config.paddingDuration >=
+            lastSendTimeMostRecentObservation ||
+            lastPaddingInfo.paddingRate < estimate
     }
 
     companion object {
