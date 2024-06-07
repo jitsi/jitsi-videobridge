@@ -728,7 +728,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                                 ((observation.size - observation.lostSize).kiloBytes) / (1.0 - lossProbability)
                             )
                         )
-                derivatives.second +=
+                derivatives.second -=
                     temporalWeight *
                     (
                         (
