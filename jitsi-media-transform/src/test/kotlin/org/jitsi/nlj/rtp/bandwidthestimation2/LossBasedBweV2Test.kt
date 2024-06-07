@@ -25,6 +25,7 @@ import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.div
@@ -42,6 +43,7 @@ import java.time.Instant
 val kObservationDurationLowerBound = 250.ms
 val kDelayedIncreaseWindow = 300.ms
 const val kMaxIncreaseFactor = 1.5
+const val kPacketSize = 15_000
 
 private fun config(enabled: Boolean, valid: Boolean): LossBasedBweV2.Config {
     return LossBasedBweV2.Config(
@@ -70,8 +72,8 @@ private fun config(enabled: Boolean, valid: Boolean): LossBasedBweV2.Config {
 
 private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }
-    enoughFeedback[0].sentPacket.size = 15_000.bytes
-    enoughFeedback[1].sentPacket.size = 15_000.bytes
+    enoughFeedback[0].sentPacket.size = kPacketSize.bytes
+    enoughFeedback[1].sentPacket.size = kPacketSize.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
     enoughFeedback[1].sentPacket.sendTime = firstPacketTimestamp + kObservationDurationLowerBound
     enoughFeedback[0].receiveTime = firstPacketTimestamp + kObservationDurationLowerBound
@@ -80,23 +82,27 @@ private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant
     return enoughFeedback
 }
 
-private fun createPacketResultsWith10pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
+private fun createPacketResultsWith10pPacketLossRate(
+    firstPacketTimestamp: Instant,
+    lostPacketSize: DataSize = kPacketSize.bytes
+): List<PacketResult> {
     val enoughFeedback = List(10) { PacketResult() }
-    enoughFeedback[0].sentPacket.size = 15_000.bytes
+    enoughFeedback[0].sentPacket.size = kPacketSize.bytes
 
     for (i in enoughFeedback.indices) {
-        enoughFeedback[i].sentPacket.size = 15_000.bytes
+        enoughFeedback[i].sentPacket.size = kPacketSize.bytes
         enoughFeedback[i].sentPacket.sendTime = firstPacketTimestamp + kObservationDurationLowerBound * i
         enoughFeedback[i].receiveTime = firstPacketTimestamp + kObservationDurationLowerBound * (i + 1)
     }
     enoughFeedback[9].receiveTime = NEVER
+    enoughFeedback[9].sentPacket.size = lostPacketSize
     return enoughFeedback
 }
 
-private fun createPacketResultsWith50pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
+private fun createPacketResultsWith50pPacketLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }
-    enoughFeedback[0].sentPacket.size = 15_000.bytes
-    enoughFeedback[1].sentPacket.size = 15_000.bytes
+    enoughFeedback[0].sentPacket.size = kPacketSize.bytes
+    enoughFeedback[1].sentPacket.size = kPacketSize.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
     enoughFeedback[1].sentPacket.sendTime = firstPacketTimestamp + kObservationDurationLowerBound
     enoughFeedback[0].receiveTime = firstPacketTimestamp + kObservationDurationLowerBound
@@ -106,8 +112,8 @@ private fun createPacketResultsWith50pLossRate(firstPacketTimestamp: Instant): L
 
 private fun createPacketResultsWith100pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }
-    enoughFeedback[0].sentPacket.size = 15_000.bytes
-    enoughFeedback[1].sentPacket.size = 15_000.bytes
+    enoughFeedback[0].sentPacket.size = kPacketSize.bytes
+    enoughFeedback[1].sentPacket.size = kPacketSize.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
     enoughFeedback[1].sentPacket.sendTime = firstPacketTimestamp + kObservationDurationLowerBound
     enoughFeedback[0].receiveTime = NEVER
@@ -358,7 +364,7 @@ class LossBasedBweV2Test : FreeSpec() {
         "UseAckedBitrateForEmegencyBackOff" {
             // Create two packet results, first packet has 50% loss rate, second packet
             // has 100% loss rate.
-            val enoughFeedback1 = createPacketResultsWith50pLossRate(Instant.EPOCH)
+            val enoughFeedback1 = createPacketResultsWith50pPacketLossRate(Instant.EPOCH)
             val enoughFeedback2 = createPacketResultsWith100pLossRate(
                 Instant.EPOCH + kObservationDurationLowerBound * 2
             )
@@ -681,9 +687,12 @@ class LossBasedBweV2Test : FreeSpec() {
 
         "EstimateBitrateIsBoundedDuringDelayedWindowAfterLossBasedBweBacksOff" {
             val enoughFeedback1 = createPacketResultsWithReceivedPackets(Instant.EPOCH)
-            val enoughFeedback2 = createPacketResultsWith50pLossRate(Instant.EPOCH + kDelayedIncreaseWindow - 2.ms)
-            val enoughFeedback3 =
-                createPacketResultsWithReceivedPackets(Instant.EPOCH + kDelayedIncreaseWindow - 1.ms)
+            val enoughFeedback2 = createPacketResultsWith50pPacketLossRate(
+                Instant.EPOCH + kDelayedIncreaseWindow - 2.ms
+            )
+            val enoughFeedback3 = createPacketResultsWithReceivedPackets(
+                Instant.EPOCH + kDelayedIncreaseWindow - 1.ms
+            )
             val config = config(enabled = true, valid = true)
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             val delayBasedEstimate = 5000.kbps
@@ -771,7 +780,7 @@ class LossBasedBweV2Test : FreeSpec() {
 
             lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
 
-            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pPacketLossRate(Instant.EPOCH)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss1,
                 delayBasedEstimate = Bandwidth.INFINITY,
@@ -779,7 +788,7 @@ class LossBasedBweV2Test : FreeSpec() {
             )
 
             val enoughFeedback10pLoss2 =
-                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+                createPacketResultsWith10pPacketLossRate(Instant.EPOCH + kObservationDurationLowerBound)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss2,
                 delayBasedEstimate = Bandwidth.INFINITY,
@@ -804,7 +813,7 @@ class LossBasedBweV2Test : FreeSpec() {
 
             lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
 
-            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pPacketLossRate(Instant.EPOCH)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss1,
                 delayBasedEstimate,
@@ -812,7 +821,7 @@ class LossBasedBweV2Test : FreeSpec() {
             )
 
             val enoughFeedback10pLoss2 =
-                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+                createPacketResultsWith10pPacketLossRate(Instant.EPOCH + kObservationDurationLowerBound)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss2,
                 delayBasedEstimate,
@@ -837,7 +846,7 @@ class LossBasedBweV2Test : FreeSpec() {
 
             lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
 
-            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pPacketLossRate(Instant.EPOCH)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss1,
                 delayBasedEstimate,
@@ -845,7 +854,7 @@ class LossBasedBweV2Test : FreeSpec() {
             )
 
             val enoughFeedback10pLoss2 =
-                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+                createPacketResultsWith10pPacketLossRate(Instant.EPOCH + kObservationDurationLowerBound)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss2,
                 delayBasedEstimate,
@@ -870,7 +879,7 @@ class LossBasedBweV2Test : FreeSpec() {
             val delayBasedEstimate = 5000.kbps
             lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
 
-            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pPacketLossRate(Instant.EPOCH)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss1,
                 delayBasedEstimate,
@@ -878,7 +887,7 @@ class LossBasedBweV2Test : FreeSpec() {
             )
 
             val enoughFeedback10pLoss2 =
-                createPacketResultsWith10pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+                createPacketResultsWith10pPacketLossRate(Instant.EPOCH + kObservationDurationLowerBound)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss2,
                 delayBasedEstimate,
@@ -903,7 +912,7 @@ class LossBasedBweV2Test : FreeSpec() {
             val delayBasedEstimate = 5000.kbps
             lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
 
-            val enoughFeedback50pLoss1 = createPacketResultsWith50pLossRate(Instant.EPOCH)
+            val enoughFeedback50pLoss1 = createPacketResultsWith50pPacketLossRate(Instant.EPOCH)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback50pLoss1,
                 delayBasedEstimate,
@@ -911,7 +920,7 @@ class LossBasedBweV2Test : FreeSpec() {
             )
 
             val enoughFeedback50pLoss2 =
-                createPacketResultsWith50pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH + kObservationDurationLowerBound)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback50pLoss2,
                 delayBasedEstimate,
@@ -1163,7 +1172,7 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.setBandwidthEstimate(500.kbps)
             lossBasedBandwidthEstimator.setAcknowledgedBitrate(500.kbps)
 
-            val enoughFeedback10pLoss1 = createPacketResultsWith10pLossRate(Instant.EPOCH)
+            val enoughFeedback10pLoss1 = createPacketResultsWith10pPacketLossRate(Instant.EPOCH)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback10pLoss1,
                 delayBasedEstimate = Bandwidth.INFINITY,
@@ -1191,7 +1200,7 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.setAcknowledgedBitrate(1.kbps)
 
             // Network has a high loss to create a loss scenario.
-            val enoughFeedback50pLoss1 = createPacketResultsWith50pLossRate(Instant.EPOCH)
+            val enoughFeedback50pLoss1 = createPacketResultsWith50pPacketLossRate(Instant.EPOCH)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback50pLoss1,
                 delayBasedEstimate = Bandwidth.INFINITY,
@@ -1203,7 +1212,7 @@ class LossBasedBweV2Test : FreeSpec() {
             // Network still has a high loss, but better acked rate.
             lossBasedBandwidthEstimator.setAcknowledgedBitrate(200.kbps)
             val enoughFeedback50pLoss2 =
-                createPacketResultsWith50pLossRate(Instant.EPOCH + kObservationDurationLowerBound)
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH + kObservationDurationLowerBound)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 enoughFeedback50pLoss2,
                 delayBasedEstimate = Bandwidth.INFINITY,
@@ -1270,7 +1279,9 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 1000.kbps
 
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                packetResults = createPacketResultsWith50pLossRate(Instant.EPOCH + kObservationDurationLowerBound),
+                packetResults = createPacketResultsWith50pPacketLossRate(
+                    Instant.EPOCH + kObservationDurationLowerBound
+                ),
                 delayBasedEstimate = 2000.kbps,
                 inAlr = false
             )
@@ -1305,7 +1316,7 @@ class LossBasedBweV2Test : FreeSpec() {
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                createPacketResultsWith50pLossRate(Instant.EPOCH),
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH),
                 delayBasedEstimate = Bandwidth.INFINITY,
                 inAlr = false
             )
@@ -1330,7 +1341,7 @@ class LossBasedBweV2Test : FreeSpec() {
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                createPacketResultsWith50pLossRate(Instant.EPOCH),
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH),
                 delayBasedEstimate = Bandwidth.INFINITY,
                 inAlr = false
             )
@@ -1357,7 +1368,7 @@ class LossBasedBweV2Test : FreeSpec() {
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                createPacketResultsWith50pLossRate(Instant.EPOCH),
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH),
                 delayBasedEstimate = Bandwidth.INFINITY,
                 inAlr = false
             )
@@ -1388,7 +1399,7 @@ class LossBasedBweV2Test : FreeSpec() {
 
             // Get another 50p packet loss.
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                createPacketResultsWith50pLossRate(
+                createPacketResultsWith50pPacketLossRate(
                     Instant.EPOCH + kObservationDurationLowerBound * 3
                 ),
                 delayBasedEstimate = Bandwidth.INFINITY,
@@ -1433,7 +1444,7 @@ class LossBasedBweV2Test : FreeSpec() {
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
-                createPacketResultsWith50pLossRate(Instant.EPOCH),
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH),
                 delayBasedEstimate = Bandwidth.INFINITY,
                 inAlr = false
             )
@@ -1447,6 +1458,27 @@ class LossBasedBweV2Test : FreeSpec() {
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDelayBasedEstimate
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe estimate + 10.kbps
+        }
+
+        "UseByteLossRate" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                useByteLossRate = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(500.kbps)
+            // Create packet feedback having 10% packet loss but more than 50% byte loss.
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith10pPacketLossRate(Instant.EPOCH, (kPacketSize * 20).bytes),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            // The estimate is bounded by the instant upper bound due to high loss.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan 150.kbps
         }
     }
 }

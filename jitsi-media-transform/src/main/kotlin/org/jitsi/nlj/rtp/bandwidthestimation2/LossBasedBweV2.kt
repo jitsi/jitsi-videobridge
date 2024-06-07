@@ -68,6 +68,7 @@ private class PacketResultsSummary {
     var numPackets = 0
     var numLostPackets = 0
     var totalSize = DataSize.ZERO
+    var lostSize = DataSize.ZERO
     var firstSendTime = Instant.MAX
     var lastSendTime = Instant.MIN
 }
@@ -79,6 +80,7 @@ private fun getPacketResultsSummary(packetResults: List<PacketResult>): PacketRe
     for (packet in packetResults) {
         if (!packet.isReceived()) {
             packetResultsSummary.numLostPackets++
+            packetResultsSummary.lostSize += packet.sentPacket.size
         }
         packetResultsSummary.totalSize += packet.sentPacket.size
         packetResultsSummary.firstSendTime = min(packetResultsSummary.firstSendTime, packet.sentPacket.sendTime)
@@ -376,7 +378,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val minNumObservations: Int = 3,
         val lowerBoundByAckedRateFactor: Double = 0.0,
         val usePaddingForIncrease: Boolean = false,
-        val holdDurationFactor: Double = 0.0
+        val holdDurationFactor: Double = 0.0,
+        val useByteLossRate: Boolean = false
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -547,6 +550,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         var numLostPackets = 0
         var numReceivedPackets = 0
         var sendingRate = Bandwidth.MINUS_INFINITY
+        var size = DataSize.ZERO
+        var lostSize = DataSize.ZERO
         var id = -1
 
         fun isInitialized() = id != -1
@@ -556,10 +561,19 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         var numPackets = 0
         var numLostPackets = 0
         var size = DataSize.ZERO
+        var lostSize = DataSize.ZERO
     }
 
     /** Returns `0.0` if not enough loss statistics have been received. */
     private fun getAverageReportedLossRatio(): Double {
+        return if (config.useByteLossRate) {
+            getAverageReportedByteLossRatio()
+        } else {
+            getAverageReportedPacketLossRatio()
+        }
+    }
+
+    private fun getAverageReportedPacketLossRatio(): Double {
         if (numObservations <= 0) {
             return 0.0
         }
@@ -582,6 +596,26 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         return numLostPackets / numPackets
+    }
+
+    private fun getAverageReportedByteLossRatio(): Double {
+        if (numObservations <= 0) {
+            return 0.0
+        }
+
+        var totalBytes = DataSize.ZERO
+        var lostBytes = DataSize.ZERO
+        for (observation in observations) {
+            if (!observation.isInitialized()) {
+                continue
+            }
+
+            val instantTemporalWeight =
+                instantUpperBoundTemporalWeights[(numObservations - 1)] - observation.id
+            totalBytes += observation.size * instantTemporalWeight
+            lostBytes += observation.lostSize * instantTemporalWeight
+        }
+        return lostBytes / totalBytes
     }
 
     private fun getCandidateBandwidthUpperBound(): Bandwidth {
@@ -666,21 +700,40 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
             val temporalWeight = temporalWeights[(numObservations - 1) - observation.id]
 
-            derivatives.first +=
-                temporalWeight *
-                (
-                    (observation.numLostPackets / lossProbability) -
-                        (observation.numReceivedPackets / (1.0 - lossProbability))
-                    )
-            derivatives.second -=
-                temporalWeight *
-                (
-                    (observation.numLostPackets / lossProbability.pow(2)) +
+            if (config.useByteLossRate) {
+                derivatives.first +=
+                    temporalWeight *
+                    (
                         (
-                            observation.numReceivedPackets /
-                                (1.0 - lossProbability).pow(2)
+                            observation.lostSize.kiloBytes / lossProbability -
+                                ((observation.size - observation.lostSize).kiloBytes) / (1.0 - lossProbability)
                             )
-                    )
+                        )
+                derivatives.second +=
+                    temporalWeight *
+                    (
+                        (
+                            observation.lostSize.kiloBytes / lossProbability.pow(2) +
+                                (observation.size - observation.lostSize).kiloBytes / (1.0 - lossProbability).pow(2)
+                            )
+                        )
+            } else {
+                derivatives.first +=
+                    temporalWeight *
+                    (
+                        (observation.numLostPackets / lossProbability) -
+                            (observation.numReceivedPackets / (1.0 - lossProbability))
+                        )
+                derivatives.second -=
+                    temporalWeight *
+                    (
+                        (observation.numLostPackets / lossProbability.pow(2)) +
+                            (
+                                observation.numReceivedPackets /
+                                    (1.0 - lossProbability).pow(2)
+                                )
+                        )
+            }
         }
 
         if (derivatives.second >= 0.0) {
@@ -751,14 +804,27 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
             val temporalWeight = temporalWeights[(numObservations - 1) - observation.id]
 
-            objective +=
-                temporalWeight *
-                (
-                    (observation.numLostPackets * ln(lossProbability)) +
-                        (observation.numReceivedPackets * ln(1.0 - lossProbability))
-                    )
-            objective +=
-                temporalWeight * highBandwidthBias * observation.numPackets
+            if (config.useByteLossRate) {
+                objective +=
+                    temporalWeight *
+                    (
+                        (observation.lostSize.kiloBytes * ln(lossProbability)) +
+                            (
+                                (observation.size - observation.lostSize).kiloBytes * ln(1.0 - lossProbability)
+                                )
+                        )
+                objective +=
+                    temporalWeight * highBandwidthBias * observation.size.kiloBytes
+            } else {
+                objective +=
+                    temporalWeight *
+                    (
+                        (observation.numLostPackets * ln(lossProbability)) +
+                            (observation.numReceivedPackets * ln(1.0 - lossProbability))
+                        )
+                objective +=
+                    temporalWeight * highBandwidthBias * observation.numPackets
+            }
         }
 
         return objective
@@ -859,6 +925,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         partialObservation.numPackets += packetResultsSummary.numPackets
         partialObservation.numLostPackets += packetResultsSummary.numLostPackets
         partialObservation.size += packetResultsSummary.totalSize
+        partialObservation.lostSize += packetResultsSummary.lostSize
 
         // This is the first packet report we have received.
         if (!isValid(lastSendTimeMostRecentObservation)) {
@@ -883,6 +950,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             observation.numPackets - observation.numLostPackets
         observation.sendingRate =
             getSendingRate(partialObservation.size.per(observationDuration))
+        observation.lostSize = partialObservation.lostSize
+        observation.size = partialObservation.size
         observation.id = numObservations++
         observations[observation.id % config.observationWindowSize] =
             observation
