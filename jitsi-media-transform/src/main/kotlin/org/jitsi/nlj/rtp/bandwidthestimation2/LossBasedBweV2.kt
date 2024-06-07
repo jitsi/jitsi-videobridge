@@ -57,6 +57,7 @@ enum class LossBasedState {
 }
 
 private val kInitHoldDuration = 300.ms
+private val kMaxHoldDuration = 60.secs
 
 private fun isValid(datarate: Bandwidth?): Boolean {
     return datarate?.isFinite() ?: false
@@ -1028,7 +1029,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 logger.info { "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: $holdDuration" }
                 lastHoldTimestamp =
                     lastSendTimeMostRecentObservation + holdDuration
-                holdDuration = holdDuration * config.holdDurationFactor
+                holdDuration = min(kMaxHoldDuration, holdDuration * config.holdDurationFactor)
             }
             lossBasedResult.state = LossBasedState.kDecreasing
         } else {
