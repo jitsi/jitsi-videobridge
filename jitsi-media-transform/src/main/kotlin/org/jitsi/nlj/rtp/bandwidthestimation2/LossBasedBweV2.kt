@@ -351,6 +351,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val newtonStepSize: Double = 0.75,
         val appendAcknowledgedRateCandidate: Boolean = true,
         val appendDelayBasedEstimateCandidate: Boolean = true,
+        val appendUpperBoundCandidateInAlr: Boolean = false,
         val observationDurationLowerBound: Duration = 250.ms,
         val observationWindowSize: Int = 20,
         val sendingRateSmoothingFactor: Double = 0.0,
@@ -619,6 +620,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             if (delayBasedEstimate > currentBestEstimate.lossLimitedBandwidth) {
                 bandwidths.add(delayBasedEstimate)
             }
+        }
+
+        if (inAlr && config.appendUpperBoundCandidateInAlr &&
+            currentBestEstimate.lossLimitedBandwidth > getInstantUpperBound()
+        ) {
+            bandwidths.add(getInstantUpperBound())
         }
 
         val candidateBandwidthUpperBound = getCandidateBandwidthUpperBound()
