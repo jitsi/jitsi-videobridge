@@ -26,6 +26,7 @@ import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.per
+import org.jitsi.nlj.util.times
 import org.jitsi.utils.div
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
@@ -54,6 +55,8 @@ enum class LossBasedState {
     kDecreasing,
     kDelayBasedEstimate
 }
+
+private val kInitHoldDuration = 300.ms
 
 private fun isValid(datarate: Bandwidth?): Boolean {
     return datarate?.isFinite() ?: false
@@ -127,6 +130,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var maxBitrate = Bandwidth.INFINITY
     private var delayBasedEstimate = Bandwidth.INFINITY
     private var lossBasedResult = Result()
+    private var lastHoldTimestamp = Instant.MIN
+    private var holdDuration = kInitHoldDuration
 
     init {
         if (!config.enabled) {
@@ -370,7 +375,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val useInStartPhase: Boolean = false,
         val minNumObservations: Int = 3,
         val lowerBoundByAckedRateFactor: Double = 0.0,
-        val usePaddingForIncrease: Boolean = false
+        val usePaddingForIncrease: Boolean = false,
+        val holdDurationFactor: Double = 0.0
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -905,6 +911,19 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             )
         }
 
+        if (lossBasedResult.state == LossBasedState.kDecreasing &&
+            lastHoldTimestamp > lastSendTimeMostRecentObservation &&
+            boundedBandwidthEstimate < delayBasedEstimate
+        ) {
+            // BWE is not allowed to increase during the HOLD duration. The purpose of
+            // HOLD is to not immediately ramp up BWE to a rate that may cause loss.
+            lossBasedResult.bandwidthEstimate = min(
+                lossBasedResult.bandwidthEstimate,
+                boundedBandwidthEstimate
+            )
+            return
+        }
+
         if (isEstimateIncreasingWhenLossLimited(
                 oldEstimate = lossBasedResult.bandwidthEstimate,
                 newEstimate = boundedBandwidthEstimate
@@ -920,8 +939,19 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         } else if (boundedBandwidthEstimate < delayBasedEstimate &&
             boundedBandwidthEstimate < maxBitrate
         ) {
+            if (lossBasedResult.state != LossBasedState.kDecreasing &&
+                config.holdDurationFactor > 0
+            ) {
+                logger.info { "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: $holdDuration" }
+                lastHoldTimestamp =
+                    lastSendTimeMostRecentObservation + holdDuration
+                holdDuration = holdDuration * config.holdDurationFactor
+            }
             lossBasedResult.state = LossBasedState.kDecreasing
         } else {
+            // Reset the HOLD duration if delay based estimate works to avoid getting
+            // stuck in low bitrate.
+            holdDuration = kInitHoldDuration
             lossBasedResult.state = LossBasedState.kDelayBasedEstimate
         }
         lossBasedResult.bandwidthEstimate = boundedBandwidthEstimate
