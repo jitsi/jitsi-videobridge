@@ -39,7 +39,7 @@ import kotlin.math.roundToInt
 fun createSimulationConfig(config: NetworkSimulationConfig): BuiltInNetworkBehaviorConfig {
     val simConfig = BuiltInNetworkBehaviorConfig()
     simConfig.linkCapacityKbps = config.bandwidth?.kbps?.roundToInt() ?: 0
-    simConfig.lossPercent = (config.lossRate * 100).toInt()
+    simConfig.lossPercent = config.lossRate * 100
     simConfig.queueDelayMs = config.delay.toRoundedMillis().toInt()
     simConfig.delayStandardDeviationMs = config.delayStdDev.toRoundedMillis().toInt()
     simConfig.packetOverhead = config.packetOverhead.bytes.roundToInt()

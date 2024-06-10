@@ -35,8 +35,8 @@ class BuiltInNetworkBehaviorConfig(
     var delayStandardDeviationMs: Int = 0,
     // Link capacity in kbps.
     var linkCapacityKbps: Int = 0,
-    // Random packet loss.
-    var lossPercent: Int = 0,
+    // Random packet loss, range 0 to 100.
+    var lossPercent: Double = 0.0,
     // If packets are allowed to be reordered.
     var allowReordering: Boolean = false,
     // The average length of a burst of lost packets.
