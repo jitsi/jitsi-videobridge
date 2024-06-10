@@ -297,12 +297,19 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 )
             // Bound the best candidate by the acked bitrate.
             if (increasingWhenLossLimited && isValid(acknowledgedBitrate)) {
+                val rampupFactor = if (isValid(lastHoldInfo.rate) &&
+                    acknowledgedBitrate!! < lastHoldInfo.rate * config.bandwidthRampupHoldThreshold
+                ) {
+                    config.bandwidthRampupUpperBoundFactorInHold
+                } else {
+                    config.bandwidthRampupUpperBoundFactor
+                }
                 bestCandidate.lossLimitedBandwidth =
                     max(
                         currentBestEstimate.lossLimitedBandwidth,
                         min(
                             bestCandidate.lossLimitedBandwidth,
-                            acknowledgedBitrate!! * config.bandwidthRampupUpperBoundFactor
+                            acknowledgedBitrate!! * rampupFactor
                         )
                     )
                 // Increase current estimate by at least 1kbps to make sure that the state
@@ -357,6 +364,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     data class Config(
         var enabled: Boolean = true,
         val bandwidthRampupUpperBoundFactor: Double = 1000000.0,
+        val bandwidthRampupUpperBoundFactorInHold: Double = 1000000.0,
+        val bandwidthRampupHoldThreshold: Double = 1.3,
         val rampupAccelerationMaxFactor: Double = 0.0,
         val rampupAccelerationMaxoutTime: Duration = 60.secs,
         val candidateFactors: DoubleArray = doubleArrayOf(1.02, 1.0, 0.95),
@@ -406,6 +415,21 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                 )
                 valid = false
             }
+            if (bandwidthRampupUpperBoundFactorInHold <= 1.0) {
+                logger.warn(
+                    "The bandwidth rampup upper bound factor in hold must be greater than 1: " +
+                        bandwidthRampupUpperBoundFactorInHold
+                )
+                valid = false
+            }
+            if (bandwidthRampupHoldThreshold < 0.0) {
+                logger.warn(
+                    "The bandwidth rampup hold threshold must be non-negative.: " +
+                        bandwidthRampupHoldThreshold
+                )
+                valid = false
+            }
+
             if (rampupAccelerationMaxFactor < 0.0) {
                 logger.warn("The rampup acceleration max factor must be non-negative.: $rampupAccelerationMaxFactor")
                 valid = false
