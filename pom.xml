@@ -34,7 +34,7 @@
         <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
         <spotbugs.version>4.6.0</spotbugs.version>
         <jersey.version>3.1.7</jersey.version>
-        <jackson.version>2.12.4</jackson.version>
+        <jackson.version>2.17.1</jackson.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <prometheus.version>0.16.0</prometheus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
