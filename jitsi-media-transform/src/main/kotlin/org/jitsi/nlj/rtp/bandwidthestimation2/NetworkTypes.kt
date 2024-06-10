@@ -171,9 +171,7 @@ class PacketResult {
  */
 class TransportPacketsFeedback {
     var feedbackTime: Instant = NEVER
-    var firstUnackedSendTime: Instant = NEVER
     var dataInFlight: DataSize = DataSize.ZERO
-    var priorInFlight: DataSize = DataSize.ZERO
     var packetFeedbacks: MutableList<PacketResult> = ArrayList()
 
     /** Arrival times for messages without send times information */
