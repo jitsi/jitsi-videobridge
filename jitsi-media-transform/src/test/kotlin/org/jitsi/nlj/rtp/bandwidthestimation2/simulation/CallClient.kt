@@ -57,7 +57,6 @@ private fun createCall(
         taskQueueFactory = timeController.getTaskQueueFactory()
         this.networkControllerFactory = networkControllerFactory
         // TODO audioState?
-        pacerBurstInterval = config.pacerBurstInterval
     }
     val clock = timeController.getClock()
     return Call.create(

@@ -83,7 +83,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
 
     // Only tested when networkEstimate != null
     // private val disableEstimateBoundedIncrease: Boolean = false
-    // private val useCurrentEstimateAsMinUpperBound = false
+    // private val useCurrentEstimateAsMinUpperBound = true
 
     private var lastDecrease: Bandwidth? = null
 

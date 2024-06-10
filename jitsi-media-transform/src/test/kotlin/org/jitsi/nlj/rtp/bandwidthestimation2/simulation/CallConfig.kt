@@ -16,7 +16,6 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 import org.jitsi.nlj.rtp.bandwidthestimation2.NetworkControllerFactoryInterface
-import java.time.Duration
 
 /** Test scenario call config,
  * based on WebRTC call/call_config.{h,cc} in
@@ -34,9 +33,6 @@ class CallConfig {
 
     // Network controller factory to use for this call.
     var networkControllerFactory: NetworkControllerFactoryInterface? = null
-
-    // The burst interval of the pacer, see TaskQueuePacedSender constructor.
-    var pacerBurstInterval: Duration? = null
 
     fun extractTransportConfig(): RtpTransportConfig {
         return RtpTransportConfig()
