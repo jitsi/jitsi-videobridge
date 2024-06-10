@@ -31,7 +31,7 @@ import java.time.Instant
  * modules/remote_bitrate_estimator/inter_arrival.
  * *
  * Based on WebRTC modules/congestion_controller/goog_cc/inter_arrival_delta.{h,cc} in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ * WebRTC tag branch-heads/6422 (Chromium 125).
  */
 class InterArrivalDelta(
     private val sendTimeGroupLength: Duration

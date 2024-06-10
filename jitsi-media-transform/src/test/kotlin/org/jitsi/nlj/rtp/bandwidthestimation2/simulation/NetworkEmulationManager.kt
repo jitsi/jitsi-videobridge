@@ -23,7 +23,7 @@ import java.net.InetAddress
 /** Test scenario network emulation manager,
  * based on WebRTC api/test/network_emulation_manager.{h,cc}
  * and test/network/network_emulation_manager.{h,cc} in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ * WebRTC tag branch-heads/6422 (Chromium 125).
  *
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */

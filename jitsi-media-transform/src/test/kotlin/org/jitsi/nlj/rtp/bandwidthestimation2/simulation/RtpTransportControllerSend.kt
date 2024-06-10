@@ -17,7 +17,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 /** Test scenario RTP Transport Controller Send,
  * based on WebRTC call/rtp_transport_controller_send.{h,cc} in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ * WebRTC tag branch-heads/6422 (Chromium 125).
  *
  * Only those features used by GoogCcNetworkControllerTest are implemented.
  */

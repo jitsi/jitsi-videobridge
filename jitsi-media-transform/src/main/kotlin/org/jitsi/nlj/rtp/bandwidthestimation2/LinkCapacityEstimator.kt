@@ -22,7 +22,7 @@ import kotlin.math.sqrt
 
 /** Link capacity estimator,
  * based on WebRTC modules/congestion_controller/goog_cc/link_capacity_estimator.{h,cc} in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ * WebRTC tag branch-heads/6422 (Chromium 125).
  */
 class LinkCapacityEstimator {
     private var estimateKbps: Double? = null

@@ -21,7 +21,7 @@ import java.time.Duration
 
 /** Base type for network controller,
  * based on WebRTC api/transport/network_control.h in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ * WebRTC tag branch-heads/6422 (Chromium 125).
  */
 
 /** Configuration sent to factory create function. The parameters here are

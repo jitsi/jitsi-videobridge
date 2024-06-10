@@ -44,7 +44,7 @@ import java.util.*
 
 /** Tests of GoogCcNetworkController,
  * based on WebRTC modules/congestion_controller/goog_cc/goog_cc_network_control_unittest.cc in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ * WebRTC tag branch-heads/6422 (Chromium 125).
  */
 
 // Count dips from a constant high bandwidth level within a short window.

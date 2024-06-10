@@ -22,7 +22,7 @@ import org.jitsi.nlj.util.bytes
  * Unit tests for CongestionWindowPushbackController.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/congestion_window_pushback_controller_unittest.cc in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21, skipping tests of field trials.
+ * WebRTC tag branch-heads/6422 (Chromium 125), skipping tests of field trials.
  */
 class CongestionWindowPushbackControllerTest : FreeSpec() {
     init {

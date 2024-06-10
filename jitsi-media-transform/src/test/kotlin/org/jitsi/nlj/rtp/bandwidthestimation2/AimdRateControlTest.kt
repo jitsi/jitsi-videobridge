@@ -32,7 +32,7 @@ import java.time.Instant
  * Unit tests of AimdRateControl
  *
  * Based on WebRTC modules/remote_bitrate_estimator/aimd_rate_control_unittest.cc in
- * WebRTC 8284f2b4e8670529d039a8b6c73ec5f1d760bd21.
+ * WebRTC tag branch-heads/6422 (Chromium 125).
  */
 
 val kInitialTime = Instant.ofEpochMilli(123_456)
