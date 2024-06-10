@@ -323,13 +323,100 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
         }
 
-        currentBestEstimate = bestCandidate
-        updateResult()
+        var boundedBandwidthEstimate = Bandwidth.INFINITY
+        boundedBandwidthEstimate = if (isValid(delayBasedEstimate)) {
+            max(
+                getInstantLowerBound(),
+                minOf(
+                    bestCandidate.lossLimitedBandwidth,
+                    getInstantUpperBound(),
+                    delayBasedEstimate
+                )
+            )
+        } else {
+            max(
+                getInstantLowerBound(),
+                min(bestCandidate.lossLimitedBandwidth, getInstantUpperBound())
+            )
+        }
+        if (config.boundBestCandidate &&
+            boundedBandwidthEstimate < bestCandidate.lossLimitedBandwidth
+        ) {
+            logger.info {
+                "Resetting loss based BWE to $boundedBandwidthEstimate due to loss.  Avg loss rate: " +
+                    getAverageReportedLossRatio()
+            }
+            currentBestEstimate.lossLimitedBandwidth = boundedBandwidthEstimate
+            currentBestEstimate.inherentLoss = 0.0
+        } else {
+            currentBestEstimate = bestCandidate
+        }
+
+        if (lossBasedResult.state == LossBasedState.kDecreasing &&
+            lastHoldInfo.timestamp > lastSendTimeMostRecentObservation &&
+            boundedBandwidthEstimate < delayBasedEstimate
+        ) {
+            // BWE is not allowed to increase above the HOLD rate. The purpose of
+            // HOLD is to not immediately ramp up BWE to a rate that may cause loss.
+            lossBasedResult.bandwidthEstimate =
+                min(lastHoldInfo.rate, boundedBandwidthEstimate)
+            return
+        }
+
+        if (isEstimateIncreasingWhenLossLimited(
+                oldEstimate = lossBasedResult.bandwidthEstimate,
+                newEstimate = boundedBandwidthEstimate
+            ) &&
+            canKeepIncreasingState(boundedBandwidthEstimate) &&
+            boundedBandwidthEstimate < delayBasedEstimate &&
+            boundedBandwidthEstimate < maxBitrate
+        ) {
+            if (config.paddingDuration > Duration.ZERO &&
+                boundedBandwidthEstimate > lastPaddingInfo.paddingRate
+            ) {
+                // Start a new padding duration.
+                lastPaddingInfo.paddingRate = boundedBandwidthEstimate
+                lastPaddingInfo.paddingTimestamp = lastSendTimeMostRecentObservation
+            }
+            lossBasedResult.state = if (config.paddingDuration > Duration.ZERO) {
+                LossBasedState.kIncreaseUsingPadding
+            } else {
+                LossBasedState.kIncreasing
+            }
+        } else if (boundedBandwidthEstimate < delayBasedEstimate &&
+            boundedBandwidthEstimate < maxBitrate
+        ) {
+            if (lossBasedResult.state != LossBasedState.kDecreasing &&
+                config.holdDurationFactor > 0
+            ) {
+                logger.info {
+                    "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: ${lastHoldInfo.duration}"
+                }
+                lastHoldInfo = HoldInfo(
+                    timestamp = lastSendTimeMostRecentObservation + lastHoldInfo.duration,
+                    duration = min(kMaxHoldDuration, lastHoldInfo.duration * config.holdDurationFactor),
+                    rate = boundedBandwidthEstimate
+                )
+            }
+            lossBasedResult.state = LossBasedState.kDecreasing
+        } else {
+            // Reset the HOLD info if delay based estimate works to avoid getting
+            // stuck in low bitrate.
+            lastHoldInfo = HoldInfo(
+                timestamp = Instant.MIN,
+                duration = kInitHoldDuration,
+                rate = Bandwidth.INFINITY
+            )
+            lossBasedResult.state = LossBasedState.kDelayBasedEstimate
+        }
+        lossBasedResult.bandwidthEstimate = boundedBandwidthEstimate
 
         if (isInLossLimitedState() &&
-            recoveringAfterLossTimestamp.isInfinite() ||
-            recoveringAfterLossTimestamp + config.delayedIncreaseWindow <
-            lastSendTimeMostRecentObservation
+            (
+                recoveringAfterLossTimestamp.isInfinite() ||
+                    recoveringAfterLossTimestamp + config.delayedIncreaseWindow <
+                    lastSendTimeMostRecentObservation
+                )
         ) {
             bandwidthLimitInCurrentWindow =
                 max(
@@ -399,7 +486,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val lowerBoundByAckedRateFactor: Double = 0.0,
         val holdDurationFactor: Double = 0.0,
         val useByteLossRate: Boolean = false,
-        val paddingDuration: Duration = Duration.ZERO
+        val paddingDuration: Duration = Duration.ZERO,
+        val boundBestCandidate: Boolean = false
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -994,84 +1082,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         calculateInstantUpperBound()
         return true
-    }
-
-    private fun updateResult() {
-        var boundedBandwidthEstimate = Bandwidth.INFINITY
-        boundedBandwidthEstimate = if (isValid(delayBasedEstimate)) {
-            max(
-                getInstantLowerBound(),
-                minOf(
-                    currentBestEstimate.lossLimitedBandwidth,
-                    getInstantUpperBound(),
-                    delayBasedEstimate
-                )
-            )
-        } else {
-            max(
-                getInstantLowerBound(),
-                min(currentBestEstimate.lossLimitedBandwidth, getInstantUpperBound())
-            )
-        }
-
-        if (lossBasedResult.state == LossBasedState.kDecreasing &&
-            lastHoldInfo.timestamp > lastSendTimeMostRecentObservation &&
-            boundedBandwidthEstimate < delayBasedEstimate
-        ) {
-            // BWE is not allowed to increase above the HOLD rate. The purpose of
-            // HOLD is to not immediately ramp up BWE to a rate that may cause loss.
-            lossBasedResult.bandwidthEstimate =
-                min(lastHoldInfo.rate, boundedBandwidthEstimate)
-            return
-        }
-
-        if (isEstimateIncreasingWhenLossLimited(
-                oldEstimate = lossBasedResult.bandwidthEstimate,
-                newEstimate = boundedBandwidthEstimate
-            ) &&
-            canKeepIncreasingState(boundedBandwidthEstimate) &&
-            boundedBandwidthEstimate < delayBasedEstimate &&
-            boundedBandwidthEstimate < maxBitrate
-        ) {
-            if (config.paddingDuration > Duration.ZERO &&
-                boundedBandwidthEstimate > lastPaddingInfo.paddingRate
-            ) {
-                // Start a new padding duration.
-                lastPaddingInfo.paddingRate = boundedBandwidthEstimate
-                lastPaddingInfo.paddingTimestamp = lastSendTimeMostRecentObservation
-            }
-            lossBasedResult.state = if (config.paddingDuration > Duration.ZERO) {
-                LossBasedState.kIncreaseUsingPadding
-            } else {
-                LossBasedState.kIncreasing
-            }
-        } else if (boundedBandwidthEstimate < delayBasedEstimate &&
-            boundedBandwidthEstimate < maxBitrate
-        ) {
-            if (lossBasedResult.state != LossBasedState.kDecreasing &&
-                config.holdDurationFactor > 0
-            ) {
-                logger.info {
-                    "Switch to HOLD. Bounded BWE: $boundedBandwidthEstimate, duration: ${lastHoldInfo.duration}"
-                }
-                lastHoldInfo = HoldInfo(
-                    timestamp = lastSendTimeMostRecentObservation + lastHoldInfo.duration,
-                    duration = min(kMaxHoldDuration, lastHoldInfo.duration * config.holdDurationFactor),
-                    rate = boundedBandwidthEstimate
-                )
-            }
-            lossBasedResult.state = LossBasedState.kDecreasing
-        } else {
-            // Reset the HOLD info if delay based estimate works to avoid getting
-            // stuck in low bitrate.
-            lastHoldInfo = HoldInfo(
-                timestamp = Instant.MIN,
-                duration = kInitHoldDuration,
-                rate = Bandwidth.INFINITY
-            )
-            lossBasedResult.state = LossBasedState.kDelayBasedEstimate
-        }
-        lossBasedResult.bandwidthEstimate = boundedBandwidthEstimate
     }
 
     private fun isEstimateIncreasingWhenLossLimited(oldEstimate: Bandwidth, newEstimate: Bandwidth): Boolean {

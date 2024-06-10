@@ -22,6 +22,7 @@ import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.Bandwidth
@@ -1233,6 +1234,46 @@ class LossBasedBweV2Test : FreeSpec() {
                 inAlr = false
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kIncreaseUsingPadding
+        }
+
+        "BestCandidateResetsToUpperBoundInFieldTrial" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                paddingDuration = 1000.ms,
+                boundBestCandidate = true
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = true
+            )
+            val resultAfterLoss = lossBasedBandwidthEstimator.getLossBasedResult()
+            resultAfterLoss.state shouldBe LossBasedState.kDecreasing
+
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWithReceivedPackets(
+                    Instant.EPOCH + kObservationDurationLowerBound
+                ),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = true
+            )
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWithReceivedPackets(
+                    Instant.EPOCH + kObservationDurationLowerBound * 2
+                ),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = true
+            )
+            // After a BWE decrease due to large loss, BWE is expected to ramp up slowly
+            // and follow the acked bitrate.
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kIncreaseUsingPadding
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate.kbps shouldBe
+                (resultAfterLoss.bandwidthEstimate.kbps plusOrMinus 100.0)
         }
 
         "DecreaseToAckedCandidateIfPaddingInAlr" {
