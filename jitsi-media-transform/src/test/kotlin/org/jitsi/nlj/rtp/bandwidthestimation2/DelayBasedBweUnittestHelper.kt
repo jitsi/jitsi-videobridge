@@ -77,7 +77,7 @@ class RtpStream(
     // Generates a new frame for this stream. If called too soon after the
     // previous frame, no frame will be generated. The frame is split into
     // packets.
-    fun generateFrame(timeNowUs: Long, packets: MutableList<PacketResult>): Long {
+    fun generateFrame(timeNowUs: Long, nextSequenceNumber: Ref<Long>, packets: MutableList<PacketResult>): Long {
         if (timeNowUs < nextRtpTime) {
             return nextRtpTime
         }
@@ -88,6 +88,7 @@ class RtpStream(
             val packet = PacketResult()
             packet.sentPacket.sendTime = instantOfEpochMicro(timeNowUs + kSendSideOffsetUs)
             packet.sentPacket.size = payloadSize.bytes
+            packet.sentPacket.sequenceNumber = nextSequenceNumber.v++
             packets.add(packet)
         }
         nextRtpTime = timeNowUs + (1000000 + fps / 2) / fps
@@ -144,11 +145,11 @@ class StreamGenerator(
 
     // TODO(holmer): Break out the channel simulation part from this class to make
     //  it possible to simulate different types of channels.
-    fun generateFrame(packets: MutableList<PacketResult>, timeNowUs: Long): Long {
+    fun generateFrame(packets: MutableList<PacketResult>, nextSequenceNumber: Ref<Long>, timeNowUs: Long): Long {
         check(packets.isEmpty())
         check(capacity > 0)
         var it = streams.minByOrNull { it.nextRtpTime }
-        it!!.generateFrame(timeNowUs, packets)
+        it!!.generateFrame(timeNowUs, nextSequenceNumber, packets)
         for (packet in packets) {
             val capacityBpus = capacity / 1000
             val requiredNetworkTimeUs =
@@ -176,7 +177,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
     val streamGenerator = StreamGenerator(1e6.toLong(), clock.instant().toEpochMicro())
 
     var arrivalTimeOffsetMs: Long = 0L
-    var nextSequenceNumber: Long = 0
+    var nextSequenceNumber: Ref<Long> = Ref(0)
     var firstUpdate: Boolean = true
 
     fun addDefaultStream() {
@@ -203,7 +204,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         packet.sentPacket.sendTime = sendTime
         packet.sentPacket.size = payloadSize.bytes
         packet.sentPacket.pacingInfo = pacingInfo
-        packet.sentPacket.sequenceNumber = nextSequenceNumber++
+        packet.sentPacket.sequenceNumber = nextSequenceNumber.v++
         if (packet.sentPacket.pacingInfo.probeClusterId != PacedPacketInfo.kNotAProbe) {
             probeBitrateEstimator.handleProbeAndEstimateBitrate(packet)
         }
@@ -233,7 +234,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
         streamGenerator.setBitrateBps(bitrateBps)
         val packets = ArrayList<PacketResult>()
 
-        val nextTimeUs = streamGenerator.generateFrame(packets, clock.instant().toEpochMicro())
+        val nextTimeUs = streamGenerator.generateFrame(packets, nextSequenceNumber, clock.instant().toEpochMicro())
         if (packets.isEmpty()) {
             return false
         }
