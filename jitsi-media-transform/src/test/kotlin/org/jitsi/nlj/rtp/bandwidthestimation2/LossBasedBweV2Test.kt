@@ -1499,6 +1499,36 @@ class LossBasedBweV2Test : FreeSpec() {
             }
         }
 
+        "HoldRateNotLowerThanAckedRate" {
+            val config = LossBasedBweV2.Config(
+                /* ShortObservationConfig */
+                minNumObservations = 1,
+                observationWindowSize = 2,
+
+                holdDurationFactor = 10.0,
+                lowerBoundByAckedRateFactor = 1.0
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith50pPacketLossRate(Instant.EPOCH),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            // During the hold duration, hold rate is not lower than the acked rate.
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(1000.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith50pPacketLossRate(
+                    Instant.EPOCH + kObservationDurationLowerBound
+                ),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 1000.kbps
+        }
+
         "EndHoldDurationIfDelayBasedEstimateWorks" {
             val config = LossBasedBweV2.Config(
                 /* ShortObservationConfig */

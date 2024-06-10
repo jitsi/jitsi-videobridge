@@ -356,6 +356,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             lastHoldInfo.timestamp > lastSendTimeMostRecentObservation &&
             boundedBandwidthEstimate < delayBasedEstimate
         ) {
+            // Ensure that acked rate is the lower bound of HOLD rate
+            if (config.lowerBoundByAckedRateFactor > 0.0) {
+                lastHoldInfo.rate =
+                    max(getInstantLowerBound(), lastHoldInfo.rate)
+            }
             // BWE is not allowed to increase above the HOLD rate. The purpose of
             // HOLD is to not immediately ramp up BWE to a rate that may cause loss.
             lossBasedResult.bandwidthEstimate =
@@ -773,6 +778,14 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     }
 
     private fun getCandidates(inAlr: Boolean): List<ChannelParameters> {
+        val bestEstimate = currentBestEstimate.copy()
+        // Ensure that acked rate is the lower bound of best estimate.
+        if (config.lowerBoundByAckedRateFactor > 0.0 &&
+            isValid(bestEstimate.lossLimitedBandwidth)
+        ) {
+            bestEstimate.lossLimitedBandwidth =
+                max(getInstantLowerBound(), bestEstimate.lossLimitedBandwidth)
+        }
         val bandwidths = mutableListOf<Bandwidth>()
         for (candidateFactor in config.candidateFactors) {
             bandwidths.add(currentBestEstimate.lossLimitedBandwidth * candidateFactor)
@@ -792,13 +805,13 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
 
         if (isValid(delayBasedEstimate) && config.appendDelayBasedEstimateCandidate) {
-            if (delayBasedEstimate > currentBestEstimate.lossLimitedBandwidth) {
+            if (delayBasedEstimate > bestEstimate.lossLimitedBandwidth) {
                 bandwidths.add(delayBasedEstimate)
             }
         }
 
         if (inAlr && config.appendUpperBoundCandidateInAlr &&
-            currentBestEstimate.lossLimitedBandwidth > getInstantUpperBound()
+            bestEstimate.lossLimitedBandwidth > getInstantUpperBound()
         ) {
             bandwidths.add(getInstantUpperBound())
         }
@@ -807,10 +820,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         val candidates = mutableListOf<ChannelParameters>()
         for (i in bandwidths.indices) {
-            val candidate = currentBestEstimate.copy()
+            val candidate = bestEstimate.copy()
             candidate.lossLimitedBandwidth = min(
                 bandwidths[i],
-                max(currentBestEstimate.lossLimitedBandwidth, candidateBandwidthUpperBound)
+                max(bestEstimate.lossLimitedBandwidth, candidateBandwidthUpperBound)
             )
             candidate.inherentLoss = getFeasibleInherentLoss(candidate)
             candidates.add(candidate)
