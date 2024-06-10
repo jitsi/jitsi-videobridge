@@ -77,6 +77,7 @@ class ProbeControllerConfig(
     val secondExponentialProbeScale: Double? = 6.0,
     val furtherExponentialProbeScale: Double = 2.0,
     val furtherProbeThreshold: Double = 0.7,
+    val abortFurtherProbeIfMaxLowerThanCurrent: Boolean = false,
 
     // Configures how often we send ALR probes and how big they are.
     val alrProbingInterval: Duration = 5.secs,
@@ -291,7 +292,15 @@ class ProbeController(
 
         if (state == State.kWaitingForProbingResult) {
             // Continue probing if probing results indicate channel has greater
-            // capacity.
+            // capacity unless we already reached the needed bitrate.
+            if (config.abortFurtherProbeIfMaxLowerThanCurrent &&
+                bitrate > maxBitrate ||
+                maxTotalAllocatedBitrate != Bandwidth.ZERO &&
+                bitrate > maxTotalAllocatedBitrate * 2
+            ) {
+                // No need to continue probing
+                minBitrateToProbeFurther = Bandwidth.INFINITY
+            }
             val networkStateEstimateProbeFurtherLimit =
                 /* Skipping networkEstimate */
                 Bandwidth.INFINITY

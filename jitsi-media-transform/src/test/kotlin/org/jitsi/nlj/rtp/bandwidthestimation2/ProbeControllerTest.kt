@@ -319,6 +319,31 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate.bps shouldBe 2 * 1800
         }
 
+        "ExponentialProbingStopIfMaxAllocatedBitrateLow" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(
+                    abortFurtherProbeIfMaxLowerThanCurrent = true
+                )
+            )
+            val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
+
+            // Repeated probe normally is sent when estimated bitrate climbs above
+            // 0.7 * 6 * kStartBitrate = 1260. But since allocated bitrate i slow, expect
+            // exponential probing to stop.
+            probes = probeController.onMaxTotalAllocatedBitrate(kStartBitrate, fixture.currentTime())
+            probes.isEmpty() shouldBe true
+
+            probes = probeController.setEstimatedBitrate(
+                1800.bps,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            probes.isEmpty() shouldBe true
+        }
+
         "TestExponentialProbingTimeout" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
