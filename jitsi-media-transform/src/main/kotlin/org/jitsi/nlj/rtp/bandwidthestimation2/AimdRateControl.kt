@@ -78,9 +78,6 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     // limited region (alr) is not detected.
     private val noBitrateIncreaseInAlr: Boolean = false
 
-    // If true, subtract an additional 5kbps when backing off.
-    private val subtractAdditionalBackoffTerm: Boolean = true
-
     // Only tested when networkEstimate != null
     // private val disableEstimateBoundedIncrease: Boolean = false
     // private val useCurrentEstimateAsMinUpperBound = true
@@ -265,7 +262,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
                 // Set bit rate to something slightly lower than the measured throughput
                 // to get rid of any self-induced delay.
                 decreasedBitrate = estimatedThroughput * beta
-                if (decreasedBitrate > 5.kbps && subtractAdditionalBackoffTerm) {
+                if (decreasedBitrate > 5.kbps) {
                     decreasedBitrate -= 5.kbps
                 }
                 if (decreasedBitrate > currentBitrate) {
