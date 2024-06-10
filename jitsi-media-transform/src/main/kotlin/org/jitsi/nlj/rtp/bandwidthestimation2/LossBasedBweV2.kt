@@ -350,6 +350,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             currentBestEstimate.inherentLoss = 0.0
         } else {
             currentBestEstimate = bestCandidate
+            if (config.lowerBoundByAckedRateFactor > 0.0) {
+                currentBestEstimate.lossLimitedBandwidth =
+                    max(currentBestEstimate.lossLimitedBandwidth, getInstantLowerBound())
+            }
         }
 
         if (lossBasedResult.state == LossBasedState.kDecreasing &&
@@ -779,13 +783,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun getCandidates(inAlr: Boolean): List<ChannelParameters> {
         val bestEstimate = currentBestEstimate.copy()
-        // Ensure that acked rate is the lower bound of best estimate.
-        if (config.lowerBoundByAckedRateFactor > 0.0 &&
-            isValid(bestEstimate.lossLimitedBandwidth)
-        ) {
-            bestEstimate.lossLimitedBandwidth =
-                max(getInstantLowerBound(), bestEstimate.lossLimitedBandwidth)
-        }
         val bandwidths = mutableListOf<Bandwidth>()
         for (candidateFactor in config.candidateFactors) {
             bandwidths.add(currentBestEstimate.lossLimitedBandwidth * candidateFactor)

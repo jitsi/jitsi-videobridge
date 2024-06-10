@@ -1484,6 +1484,52 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 1000.kbps
         }
 
+        "EstimateNotLowerThanAckedRate" {
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    lowerBoundByAckedRateFactor = 1.0
+                )
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith100pLossRate(Instant.EPOCH),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan 1000.kbps
+
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(1000.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith50pPacketLossRate(
+                    Instant.EPOCH + kObservationDurationLowerBound
+                ),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe 1000.kbps
+
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(1000.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWithReceivedPackets(
+                    Instant.EPOCH + kObservationDurationLowerBound * 2
+                ),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.setAcknowledgedBitrate(1000.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWithReceivedPackets(
+                    Instant.EPOCH + kObservationDurationLowerBound * 3
+                ),
+                delayBasedEstimate = Bandwidth.INFINITY,
+                inAlr = false
+            )
+
+            // Verify that the estimate recovers from the acked rate.
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeGreaterThan 1000.kbps
+        }
+
         "EndHoldDurationIfDelayBasedEstimateWorks" {
             val config = shortObservationConfig(
                 LossBasedBweV2.Config(
