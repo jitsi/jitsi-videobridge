@@ -74,6 +74,13 @@ private fun config(enabled: Boolean, valid: Boolean): LossBasedBweV2.Config {
     )
 }
 
+private fun shortObservationConfig(config: LossBasedBweV2.Config = LossBasedBweV2.Config()): LossBasedBweV2.Config {
+    return config.copy(
+        minNumObservations = 1,
+        observationWindowSize = 2
+    )
+}
+
 private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }
     enoughFeedback[0].sentPacket.size = kPacketSize.bytes
@@ -503,15 +510,13 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "IncreaseByMaxIncreaseFactorAfterLossBasedBweBacksOff" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
-                instantUpperBoundBandwidthBalance = 10000.kbps,
-                maxIncreaseFactor = 1.5,
-                notIncreaseIfInherentLossLessThanAverageLoss = false
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    candidateFactors = doubleArrayOf(1.2, 1.0, 0.5),
+                    instantUpperBoundBandwidthBalance = 10000.kbps,
+                    maxIncreaseFactor = 1.5,
+                    notIncreaseIfInherentLossLessThanAverageLoss = false
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             val delayBasedEstimate = 5000.kbps
@@ -545,16 +550,14 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "LossBasedStateIsDelayBasedEstimateAfterNetworkRecovering" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                candidateFactors = doubleArrayOf(100.0, 1.0, 0.5),
-                observationDurationLowerBound = 200.ms,
-                instantUpperBoundBandwidthBalance = 10000.kbps,
-                maxIncreaseFactor = 100.0,
-                notIncreaseIfInherentLossLessThanAverageLoss = false
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    candidateFactors = doubleArrayOf(100.0, 1.0, 0.5),
+                    observationDurationLowerBound = 200.ms,
+                    instantUpperBoundBandwidthBalance = 10000.kbps,
+                    maxIncreaseFactor = 100.0,
+                    notIncreaseIfInherentLossLessThanAverageLoss = false
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             val delayBasedEstimate = 600.kbps
@@ -597,14 +600,12 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "LossBasedStateIsNotDelayBasedEstimateIfDelayBasedEstimateInfinite" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                candidateFactors = doubleArrayOf(100.0, 1.0, 0.5),
-                instantUpperBoundBandwidthBalance = 10000.kbps,
-                maxIncreaseFactor = 100.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    candidateFactors = doubleArrayOf(100.0, 1.0, 0.5),
+                    instantUpperBoundBandwidthBalance = 10000.kbps,
+                    maxIncreaseFactor = 100.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(600.kbps)
@@ -634,15 +635,13 @@ class LossBasedBweV2Test : FreeSpec() {
         // Ensure that the state can switch to kIncrease even when the bandwidth is
         // bounded by acked bitrate.
         "EnsureIncreaseEvenIfAckedBitrateBound" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                lossThresholdOfHighBandwidthPreference = 0.99,
-                bandwidthRampupUpperBoundFactor = 1.2,
-                // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
-                instantUpperBoundBandwidthBalance = 10000.kbps
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    lossThresholdOfHighBandwidthPreference = 0.99,
+                    bandwidthRampupUpperBoundFactor = 1.2,
+                    // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
+                    instantUpperBoundBandwidthBalance = 10000.kbps
+                )
             )
             val enoughFeedback1 =
                 createPacketResultsWith100pLossRate(Instant.EPOCH)
@@ -680,15 +679,13 @@ class LossBasedBweV2Test : FreeSpec() {
         // After loss based bwe backs off, the next estimate is capped by
         // a factor of acked bitrate.
         "IncreaseByFactorOfAckedBitrateAfterLossBasedBweBacksOff" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                lossThresholdOfHighBandwidthPreference = 0.99,
-                bandwidthRampupUpperBoundFactor = 1.2,
-                // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
-                instantUpperBoundBandwidthBalance = 10000.kbps
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    lossThresholdOfHighBandwidthPreference = 0.99,
+                    bandwidthRampupUpperBoundFactor = 1.2,
+                    // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
+                    instantUpperBoundBandwidthBalance = 10000.kbps
+                )
             )
             val enoughFeedback1 = createPacketResultsWith100pLossRate(Instant.EPOCH)
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
@@ -818,13 +815,11 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "NotIncreaseIfInherentLossLessThanAverageLoss" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                candidateFactors = doubleArrayOf(1.2),
-                notIncreaseIfInherentLossLessThanAverageLoss = true
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    candidateFactors = doubleArrayOf(1.2),
+                    notIncreaseIfInherentLossLessThanAverageLoss = true
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
 
@@ -850,13 +845,11 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "SelectHighBandwidthCandidateIfLossRateIsLessThanThreshold" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                lossThresholdOfHighBandwidthPreference = 0.20,
-                notIncreaseIfInherentLossLessThanAverageLoss = false
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    lossThresholdOfHighBandwidthPreference = 0.20,
+                    notIncreaseIfInherentLossLessThanAverageLoss = false
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             val delayBasedEstimate = 5000.kbps
@@ -884,12 +877,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "SelectLowBandwidthCandidateIfLossRateIsIsHigherThanThreshold" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                lossThresholdOfHighBandwidthPreference = 0.05
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    lossThresholdOfHighBandwidthPreference = 0.05
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             val delayBasedEstimate = 5000.kbps
@@ -932,12 +923,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "NotBackOffToAckedRateInAlr" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                instantUpperBoundBandwidthBalance = 100.kbps
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    instantUpperBoundBandwidthBalance = 100.kbps
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -960,12 +949,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "BackOffToAckedRateIfNotInAlr" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                instantUpperBoundBandwidthBalance = 100.kbps
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    instantUpperBoundBandwidthBalance = 100.kbps
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -986,12 +973,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "NotReadyToUseInStartPhase" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                useInStartPhase = true
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    useInStartPhase = true
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             // Make sure that the estimator is not ready to use in start phase because of
@@ -1000,12 +985,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "ReadyToUseInStartPhase" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                useInStartPhase = true
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    useInStartPhase = true
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             val enoughFeedback = createPacketResultsWith100pLossRate(Instant.EPOCH)
@@ -1019,12 +1002,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "BoundEstimateByAckedRate" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                lowerBoundByAckedRateFactor = 1.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    lowerBoundByAckedRateFactor = 1.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -1042,12 +1023,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "NotBoundEstimateByAckedRate" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                lowerBoundByAckedRateFactor = 0.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    lowerBoundByAckedRateFactor = 0.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -1065,13 +1044,11 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "HasDecreaseStateBecauseOfUpperBound" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                candidateFactors = doubleArrayOf(1.0),
-                instantUpperBoundBandwidthBalance = 10.kbps
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    candidateFactors = doubleArrayOf(1.0),
+                    instantUpperBoundBandwidthBalance = 10.kbps
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -1092,13 +1069,11 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "HasIncreaseStateBecauseOfLowerBound" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                candidateFactors = doubleArrayOf(1.0),
-                lowerBoundByAckedRateFactor = 10.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    candidateFactors = doubleArrayOf(1.0),
+                    lowerBoundByAckedRateFactor = 10.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000000.kbps)
@@ -1132,12 +1107,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "EstimateIncreaseSlowlyFromInstantUpperBoundInAlrIfFieldTrial" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                appendUpperBoundCandidateInAlr = true
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    appendUpperBoundCandidateInAlr = true
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(1000.kbps)
@@ -1166,11 +1139,7 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "HasDelayBasedStateIfLossBasedBweIsMax" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2
-            )
+            val config = shortObservationConfig()
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setMinMaxBitrate(10.kbps, 1000.kbps)
 
@@ -1212,12 +1181,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "IncreaseUsingPaddingStateIfFieldTrial" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                paddingDuration = 1000.ms
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    paddingDuration = 1000.ms
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1237,13 +1204,11 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "BestCandidateResetsToUpperBoundInFieldTrial" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                paddingDuration = 1000.ms,
-                boundBestCandidate = true
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    paddingDuration = 1000.ms,
+                    boundBestCandidate = true
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1277,14 +1242,12 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "DecreaseToAckedCandidateIfPaddingInAlr" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                paddingDuration = 1000.ms,
-                // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
-                instantUpperBoundBandwidthBalance = 10000.kbps
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    paddingDuration = 1000.ms,
+                    // Set InstantUpperBoundBwBalance high to disable InstantUpperBound cap.
+                    instantUpperBoundBandwidthBalance = 10000.kbps
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(1000.kbps)
@@ -1331,13 +1294,11 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "DecreaseAfterPadding" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                paddingDuration = 1000.ms,
-                bandwidthRampupUpperBoundFactor = 2.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    paddingDuration = 1000.ms,
+                    bandwidthRampupUpperBoundFactor = 2.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1385,12 +1346,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "IncreaseEstimateIfNotHold" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                holdDurationFactor = 0.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    holdDurationFactor = 0.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1412,12 +1371,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "IncreaseEstimateAfterHoldDuration" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                holdDurationFactor = 10.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    holdDurationFactor = 10.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1500,13 +1457,11 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "HoldRateNotLowerThanAckedRate" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                holdDurationFactor = 10.0,
-                lowerBoundByAckedRateFactor = 1.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    holdDurationFactor = 10.0,
+                    lowerBoundByAckedRateFactor = 1.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1530,12 +1485,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "EndHoldDurationIfDelayBasedEstimateWorks" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                holdDurationFactor = 3.0
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    holdDurationFactor = 3.0
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(2500.kbps)
@@ -1557,12 +1510,10 @@ class LossBasedBweV2Test : FreeSpec() {
         }
 
         "UseByteLossRate" {
-            val config = LossBasedBweV2.Config(
-                /* ShortObservationConfig */
-                minNumObservations = 1,
-                observationWindowSize = 2,
-
-                useByteLossRate = true
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    useByteLossRate = true
+                )
             )
             val lossBasedBandwidthEstimator = LossBasedBweV2(config)
             lossBasedBandwidthEstimator.setBandwidthEstimate(500.kbps)
