@@ -1573,5 +1573,43 @@ class LossBasedBweV2Test : FreeSpec() {
             // The estimate is bounded by the instant upper bound due to high loss.
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan 150.kbps
         }
+
+        "PaceAtLossBasedEstimate" {
+            val config = shortObservationConfig(
+                LossBasedBweV2.Config(
+                    paceAtLossBasedEstimate = true,
+                    paddingDuration = 1000.ms
+                )
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            lossBasedBandwidthEstimator.setBandwidthEstimate(1000.kbps)
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWithReceivedPackets(Instant.EPOCH),
+                delayBasedEstimate = 1000.kbps,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDelayBasedEstimate
+            lossBasedBandwidthEstimator.paceAtLossBasedEstimate() shouldBe false
+
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith100pLossRate(
+                    Instant.EPOCH + kObservationDurationLowerBound
+                ),
+                delayBasedEstimate = 1000.kbps,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            lossBasedBandwidthEstimator.paceAtLossBasedEstimate() shouldBe true
+
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWithReceivedPackets(
+                    Instant.EPOCH + kObservationDurationLowerBound * 2
+                ),
+                delayBasedEstimate = 1000.kbps,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kIncreaseUsingPadding
+            lossBasedBandwidthEstimator.paceAtLossBasedEstimate() shouldBe true
+        }
     }
 }

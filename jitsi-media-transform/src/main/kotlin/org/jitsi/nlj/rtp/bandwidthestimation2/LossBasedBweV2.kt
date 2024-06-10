@@ -436,6 +436,11 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
+    fun paceAtLossBasedEstimate(): Boolean {
+        return config.paceAtLossBasedEstimate &&
+            lossBasedResult.state != LossBasedState.kDelayBasedEstimate
+    }
+
     // For unit testing only
     fun setBandwidthEstimate(bandwidthEstimate: Bandwidth) {
         if (isValid(bandwidthEstimate)) {
@@ -496,7 +501,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val holdDurationFactor: Double = 0.0,
         val useByteLossRate: Boolean = false,
         val paddingDuration: Duration = Duration.ZERO,
-        val boundBestCandidate: Boolean = false
+        val boundBestCandidate: Boolean = false,
+        val paceAtLossBasedEstimate: Boolean = false
     ) {
         fun isValid(): Boolean {
             if (!enabled) {

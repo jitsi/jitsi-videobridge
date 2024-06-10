@@ -472,6 +472,10 @@ class SendSideBandwidthEstimation(
         updateEstimate(report.feedbackTime)
     }
 
+    fun paceAtLossBasedEstimate(): Boolean {
+        return lossBasedBandwidthEstimatorV2.paceAtLossBasedEstimate()
+    }
+
     private fun isInStartPhase(atTime: Instant): Boolean {
         return firstReportTime.isInfinite() ||
             Duration.between(firstReportTime, atTime) <= kStartPhase
