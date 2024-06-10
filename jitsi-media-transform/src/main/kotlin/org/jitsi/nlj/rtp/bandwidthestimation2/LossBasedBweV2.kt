@@ -384,9 +384,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val maxIncreaseFactor: Double = 1.3,
         val delayedIncreaseWindow: Duration = 300.ms,
         val notIncreaseIfInherentLossLessThanAverageLoss: Boolean = true,
-        val highLossRateThreshold: Double = 1.0,
-        val bandwidthCapAtHighLossRate: Bandwidth = 500.kbps,
-        val slopeOfBweHighLossFunc: Double = 1000.0,
         val notUseAckedRateInAlr: Boolean = true,
         val useInStartPhase: Boolean = false,
         val minNumObservations: Int = 3,
@@ -532,10 +529,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             }
             if (delayedIncreaseWindow <= Duration.ZERO) {
                 logger.warn("The delayed increase window must be positive: $delayedIncreaseWindow")
-                valid = false
-            }
-            if (highLossRateThreshold <= 0.0 || highLossRateThreshold > 1.0) {
-                logger.warn("The high loss rate threshold must be in (0, 1]: $highLossRateThreshold")
                 valid = false
             }
             if (minNumObservations <= 0) {
@@ -888,19 +881,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                     averageReportedLossRatio -
                         config.instantUpperBoundLossOffset
                     )
-            if (averageReportedLossRatio > config.highLossRateThreshold) {
-                instantLimit = min(
-                    instantLimit,
-                    (
-                        max(
-                            minBitrate.kbps.toLong().toDouble(),
-                            config.bandwidthCapAtHighLossRate.kbps.toLong().toDouble() -
-                                config.slopeOfBweHighLossFunc *
-                                averageReportedLossRatio
-                        )
-                        ).kbps
-                )
-            }
         }
 
         cachedInstantUpperBound = instantLimit
