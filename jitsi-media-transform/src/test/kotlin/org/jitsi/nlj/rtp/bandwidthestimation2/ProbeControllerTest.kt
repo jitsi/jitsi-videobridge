@@ -205,6 +205,43 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
         }
 
+        "ProbesOnMaxAllocatedBitrateLimitedByCurrentBwe" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(
+                    allocationProbeLimitByCurrentScale = 1.5
+                )
+            )
+            kMaxBitrate shouldBeGreaterThan kStartBitrate * 1.5
+            val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes = probeController.setEstimatedBitrate(
+                kStartBitrate,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+
+            // Wait long enough to time out exponential probing.
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probes = probeController.process(fixture.currentTime())
+            probes.isEmpty() shouldBe true
+
+            // Probe when in alr.
+            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
+            probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate, fixture.currentTime())
+            probes.size shouldBe 1
+            probes[0].targetDataRate shouldBe kStartBitrate * 1.5
+
+            // Continue probing if probe succeeds.
+            probes = probeController.setEstimatedBitrate(
+                kStartBitrate * 1.5,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            probes.size shouldBe 1
+            probes[0].targetDataRate shouldBeGreaterThan kStartBitrate * 1.5
+        }
+
         "CanDisableProbingOnMaxTotalAllocatedBitrateIncrease" {
             val fixture = ProbeControllerFixture(
                 config = ProbeControllerConfig(

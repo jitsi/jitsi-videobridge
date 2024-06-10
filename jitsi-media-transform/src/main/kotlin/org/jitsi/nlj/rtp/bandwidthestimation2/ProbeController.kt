@@ -97,8 +97,7 @@ class ProbeControllerConfig(
     val probeOnMaxAllocatedBitrateChange: Boolean = true,
     val firstAllocationProbeScale: Double? = 1.0,
     val secondAllocationProbeScale: Double? = 2.0,
-    val allocationAllowFurtherProbing: Boolean = false,
-    val allocationProbeMax: Bandwidth = Bandwidth.INFINITY,
+    val allocationProbeLimitByCurrentScale: Double? = null,
 
     // The minimum number probing packets used.
     val minProbePacketsSent: Int = 5,
@@ -222,17 +221,29 @@ class ProbeController(
                 return mutableListOf()
             }
             var firstProbeRate = maxTotalAllocatedBitrate * config.firstAllocationProbeScale
-            val probeCap = config.allocationProbeMax
-            firstProbeRate = min(firstProbeRate, probeCap)
+            val currentBweLimit = if (config.allocationProbeLimitByCurrentScale == null) {
+                Bandwidth.INFINITY
+            } else {
+                estimatedBitrate * config.allocationProbeLimitByCurrentScale
+            }
+            var limitedByCurrentBwe = currentBweLimit < firstProbeRate
+            if (limitedByCurrentBwe) {
+                firstProbeRate = currentBweLimit
+            }
+
             val probes = mutableListOf(firstProbeRate)
-            if (config.secondAllocationProbeScale != null) {
+            if (!limitedByCurrentBwe && config.secondAllocationProbeScale != null) {
                 var secondProbeRate = maxTotalAllocatedBitrate * config.secondAllocationProbeScale
-                secondProbeRate = min(secondProbeRate, probeCap)
+                limitedByCurrentBwe = currentBweLimit < secondProbeRate
+                if (limitedByCurrentBwe) {
+                    secondProbeRate = currentBweLimit
+                }
                 if (secondProbeRate > firstProbeRate) {
                     probes.add(secondProbeRate)
                 }
             }
-            return initiateProbing(atTime, probes, config.allocationAllowFurtherProbing)
+            val allowFurtherProbing = limitedByCurrentBwe
+            return initiateProbing(atTime, probes, allowFurtherProbing)
         }
         this.maxTotalAllocatedBitrate = maxTotalAllocatedBitrate
         return mutableListOf()
