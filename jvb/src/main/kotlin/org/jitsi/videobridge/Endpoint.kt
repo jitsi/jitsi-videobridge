@@ -512,14 +512,14 @@ class Endpoint @JvmOverloads constructor(
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
-        PacketTransitStats.packetSent(packetInfo)
 
+        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        PacketTransitStats.packetSent(packetInfo)
+        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         packetInfo.sent()
         if (timelineLogger.isTraceEnabled && logTimeline()) {
             timelineLogger.trace { packetInfo.timeline.toString() }
         }
-        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
-        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
     }
 
@@ -1176,9 +1176,11 @@ class Endpoint @JvmOverloads constructor(
         private val epTimeout = 2.mins
 
         private val timelineCounter = AtomicLong()
-        private val TIMELINE_FRACTION = 10000L
+        private val timelineFraction: Long by config {
+            "jmt.debug.packet-timeline.log-fraction".from(JitsiConfig.newConfig)
+        }
 
-        fun logTimeline() = timelineCounter.getAndIncrement() % TIMELINE_FRACTION == 0L
+        fun logTimeline() = timelineCounter.getAndIncrement() % timelineFraction == 0L
 
         private const val SRTP_QUEUE_ENTRY_EVENT = "Entered Endpoint SRTP sender outgoing queue"
         private const val SRTP_QUEUE_EXIT_EVENT = "Exited Endpoint SRTP sender outgoing queue"
