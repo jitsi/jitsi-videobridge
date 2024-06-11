@@ -514,6 +514,7 @@ class Endpoint @JvmOverloads constructor(
         packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
 
         iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        packetInfo.addEvent(SENT_OVER_ICE_TRANSPORT_EVENT)
         PacketTransitStats.packetSent(packetInfo)
         ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         packetInfo.sent()
@@ -1184,6 +1185,7 @@ class Endpoint @JvmOverloads constructor(
 
         private const val SRTP_QUEUE_ENTRY_EVENT = "Entered Endpoint SRTP sender outgoing queue"
         private const val SRTP_QUEUE_EXIT_EVENT = "Exited Endpoint SRTP sender outgoing queue"
+        private const val SENT_OVER_ICE_TRANSPORT_EVENT = "Sent over the ICE transport"
 
         private val statsFilterThreshold: Int by config {
             "videobridge.stats-filter-threshold".from(JitsiConfig.newConfig)
