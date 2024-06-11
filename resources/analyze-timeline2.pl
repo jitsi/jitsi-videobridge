@@ -25,9 +25,6 @@ through all local endpoints and relays, checks whether they "want" the packet, a
 the clone on the sender queue (see Conference#sendOut). This workload scales with the number of local endpoits and relays,
 and in a large conference is the most computationally expensive.
 
-Note that currently Endpoint#send(PacketInfo) contains code for SSRC rewriting and a transformation from the BitrateController.
-This can be offloaded to the sender queue and we plan to do so soon.
-
 4.Sender Queue: From the time the Receiver Pipeline thread places the packet on the Sender Queue, to the time another CPU thread
 removes it from the queue and starts executing the Sender Pipeline.
 
