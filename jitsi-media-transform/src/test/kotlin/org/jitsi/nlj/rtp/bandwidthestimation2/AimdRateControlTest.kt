@@ -23,6 +23,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
+import org.jitsi.nlj.util.times
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration
@@ -84,7 +85,7 @@ class AimdRateControlTest : FreeSpec() {
                 now += 100.ms
             }
             aimdRateControl.validEstimate() shouldBe true
-            aimdRateControl.latestEstimate() shouldBe kAckedBitrate * 1.5 + 10_000.bps
+            aimdRateControl.latestEstimate() shouldBe 1.5 * kAckedBitrate + 10_000.bps
         }
 
         "BweLimitedByDecreasingAckedBitrate" {
@@ -104,7 +105,7 @@ class AimdRateControlTest : FreeSpec() {
             )
             val newEstimate = aimdRateControl.latestEstimate()
             newEstimate shouldBe prevEstimate
-            newEstimate.bps shouldBeInRange ((kAckedBitrate * 1.5 + 10_000.bps).bps plusOrMinus 2_000)
+            newEstimate.bps shouldBeInRange ((1.5 * kAckedBitrate + 10_000.bps).bps plusOrMinus 2_000)
         }
 
         "DefaultPeriodUntilFirstOveruse" {

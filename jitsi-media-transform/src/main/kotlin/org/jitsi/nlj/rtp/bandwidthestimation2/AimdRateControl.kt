@@ -119,7 +119,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
         if (validEstimate()) {
             // TODO(terelius/holmer): Investigate consequences of increasing
             // the threshold to 0.95 * LatestEstimate().
-            val threshold = latestEstimate() * 0.5
+            val threshold = 0.5 * latestEstimate()
             return estimatedThroughput < threshold
         }
         return false
@@ -224,7 +224,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
                 // bitrate increases. We allow a bit more lag at very low rates to not too
                 // easily get stuck if the encoder produces uneven outputs.
 
-                var increaseLimit = estimatedThroughput * 1.5 + 10.kbps
+                var increaseLimit = 1.5 * estimatedThroughput + 10.kbps
                 if (sendSide && inAlr && noBitrateIncreaseInAlr) {
                     // TODO this is dead code because we're not using the noBitrateIncreaseInAlr field trial
                     // Do not increase the delay based estimate in alr since the estimator

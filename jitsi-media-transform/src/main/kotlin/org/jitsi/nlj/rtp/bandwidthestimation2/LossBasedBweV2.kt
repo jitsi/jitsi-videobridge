@@ -298,7 +298,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             // Bound the best candidate by the acked bitrate.
             if (increasingWhenLossLimited && isValid(acknowledgedBitrate)) {
                 val rampupFactor = if (isValid(lastHoldInfo.rate) &&
-                    acknowledgedBitrate!! < lastHoldInfo.rate * config.bandwidthRampupHoldThreshold
+                    acknowledgedBitrate!! < config.bandwidthRampupHoldThreshold * lastHoldInfo.rate
                 ) {
                     config.bandwidthRampupUpperBoundFactorInHold
                 } else {
@@ -309,7 +309,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
                         currentBestEstimate.lossLimitedBandwidth,
                         min(
                             bestCandidate.lossLimitedBandwidth,
-                            acknowledgedBitrate!! * rampupFactor
+                            rampupFactor * acknowledgedBitrate!!
                         )
                     )
                 // Increase current estimate by at least 1kbps to make sure that the state
@@ -781,7 +781,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             val rampupAcceleration = config.rampupAccelerationMaxFactor *
                 (timeSinceBandwidthReduced / config.rampupAccelerationMaxoutTime)
 
-            candidateBandwidthUpperBound += acknowledgedBitrate!! * rampupAcceleration
+            candidateBandwidthUpperBound += rampupAcceleration * acknowledgedBitrate!!
         }
 
         return candidateBandwidthUpperBound
@@ -791,7 +791,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val bestEstimate = currentBestEstimate.copy()
         val bandwidths = mutableListOf<Bandwidth>()
         for (candidateFactor in config.candidateFactors) {
-            bandwidths.add(currentBestEstimate.lossLimitedBandwidth * candidateFactor)
+            bandwidths.add(candidateFactor * currentBestEstimate.lossLimitedBandwidth)
         }
 
         if (acknowledgedBitrate != null &&
@@ -992,8 +992,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val sendingRatePreviousObservation =
             mostRecentObservation.sendingRate
 
-        return sendingRatePreviousObservation * config.sendingRateSmoothingFactor +
-            instantaneousSendingRate * (1.0 - config.sendingRateSmoothingFactor)
+        return config.sendingRateSmoothingFactor * sendingRatePreviousObservation +
+            (1.0 - config.sendingRateSmoothingFactor) * instantaneousSendingRate
     }
 
     private fun getInstantUpperBound(): Bandwidth {
@@ -1023,7 +1023,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         if (isValid(acknowledgedBitrate) &&
             config.lowerBoundByAckedRateFactor > 0.0
         ) {
-            instanceLowerBound = acknowledgedBitrate!! * config.lowerBoundByAckedRateFactor
+            instanceLowerBound = config.lowerBoundByAckedRateFactor * acknowledgedBitrate!!
         }
         if (isValid(minBitrate)) {
             instanceLowerBound = max(instanceLowerBound, minBitrate)

@@ -22,6 +22,7 @@ import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.per
+import org.jitsi.nlj.util.times
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.secs
 import java.time.Duration
@@ -125,9 +126,9 @@ class ProbeBitrateEstimator {
         // If we're receiving at significantly lower bitrate than we were sending at,
         // it suggests that we've found the true capacity of the link. In this case,
         // set the target bitrate slightly lower to not immediately overuse.
-        if (receiveRate < sendRate * kMinRatioForUnsaturatedLink) {
+        if (receiveRate < kMinRatioForUnsaturatedLink * sendRate) {
             check(sendRate > receiveRate)
-            res = receiveRate * kTargetUtilizationFraction
+            res = kTargetUtilizationFraction * receiveRate
         }
         /* TODO: timeseries log */
         estimatedDataRate = res

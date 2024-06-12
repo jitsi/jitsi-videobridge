@@ -271,9 +271,9 @@ class ProbeController(
 
         // When probing at 1.8 Mbps ( 6x 300), this represents a threshold of
         // 1.2 Mbps to continue probing.
-        val probes = mutableListOf(startBitrate * config.firstExponentialProbeScale)
+        val probes = mutableListOf(config.firstExponentialProbeScale * startBitrate)
         if (config.secondExponentialProbeScale != null && config.secondExponentialProbeScale > 0.0) {
-            probes.add(startBitrate * config.secondExponentialProbeScale)
+            probes.add(config.secondExponentialProbeScale * startBitrate)
         }
         return initiateProbing(atTime, probes, true)
     }
@@ -284,7 +284,7 @@ class ProbeController(
         atTime: Instant
     ): MutableList<ProbeClusterConfig> {
         this.bandwidthLimitedCause = bandwidthLimitedCause
-        if (bitrate < estimatedBitrate * kBitrateDropThreshold) {
+        if (bitrate < kBitrateDropThreshold * estimatedBitrate) {
             timeOfLastLargeDrop = atTime
             bitrateBeforeLastLargeDrop = estimatedBitrate
         }
@@ -296,7 +296,7 @@ class ProbeController(
             if (config.abortFurtherProbeIfMaxLowerThanCurrent &&
                 bitrate > maxBitrate ||
                 maxTotalAllocatedBitrate != Bandwidth.ZERO &&
-                bitrate > maxTotalAllocatedBitrate * 2
+                bitrate > 2 * maxTotalAllocatedBitrate
             ) {
                 // No need to continue probing
                 minBitrateToProbeFurther = Bandwidth.INFINITY
@@ -312,7 +312,7 @@ class ProbeController(
             if (bitrate > minBitrateToProbeFurther &&
                 bitrate <= networkStateEstimateProbeFurtherLimit
             ) {
-                return initiateProbing(atTime, listOf(bitrate * config.furtherExponentialProbeScale), true)
+                return initiateProbing(atTime, listOf(config.furtherExponentialProbeScale * bitrate), true)
             }
         }
         return mutableListOf()
@@ -348,8 +348,8 @@ class ProbeController(
             )
         if (inAlr || alrEndedRecently || inRapidRecoveryExperiment) {
             if (state == State.kProbingComplete) {
-                val suggestedProbe = bitrateBeforeLastLargeDrop * kProbeFractionAfterDrop
-                val minExpectedProbeResult = suggestedProbe * (1 - kProbeUncertainty)
+                val suggestedProbe = kProbeFractionAfterDrop * bitrateBeforeLastLargeDrop
+                val minExpectedProbeResult = (1 - kProbeUncertainty) * suggestedProbe
                 val timeSinceDrop = Duration.between(timeOfLastLargeDrop, atTime)
                 val timeSinceProbe = Duration.between(lastBweDropProbingTime, atTime)
                 if (minExpectedProbeResult > estimatedBitrate &&
@@ -446,7 +446,7 @@ class ProbeController(
             } else {
                 min(maxTotalAllocatedBitrate, maxBitrate)
             }
-            if (min(networkEstimate, estimatedBitrate) > maxProbeRate * config.skipIfEstimateLargerThanFractionOfMax) {
+            if (min(networkEstimate, estimatedBitrate) > config.skipIfEstimateLargerThanFractionOfMax * maxProbeRate) {
                 state = State.kProbingComplete
                 minBitrateToProbeFurther = Bandwidth.INFINITY
                 return mutableListOf()

@@ -45,8 +45,11 @@ val maxDuration = Duration.ofSeconds(Long.MAX_VALUE, 999_999_999)
 fun Duration.isFinite() = this != minDuration && this != maxDuration
 
 operator fun Duration.times(other: Double): Duration = durationOfDoubleSeconds((toDouble() * other))
+operator fun Double.times(other: Duration): Duration = durationOfDoubleSeconds(other.toDouble() * this)
 
 operator fun Duration.times(other: Long): Duration = this.multipliedBy(other)
+operator fun Int.times(other: Duration): Duration = other.multipliedBy(this.toLong())
+operator fun Long.times(other: Duration): Duration = other.multipliedBy(this)
 
 operator fun Duration.div(other: Double): Duration = durationOfDoubleSeconds(toDouble() / other)
 

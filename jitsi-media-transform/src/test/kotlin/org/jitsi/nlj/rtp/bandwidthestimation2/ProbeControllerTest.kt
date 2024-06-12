@@ -22,6 +22,7 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
+import org.jitsi.nlj.util.times
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
@@ -211,7 +212,7 @@ class ProbeControllerTest : FreeSpec() {
                     allocationProbeLimitByCurrentScale = 1.5
                 )
             )
-            kMaxBitrate shouldBeGreaterThan kStartBitrate * 1.5
+            kMaxBitrate shouldBeGreaterThan 1.5 * kStartBitrate
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
@@ -230,16 +231,16 @@ class ProbeControllerTest : FreeSpec() {
             probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
             probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe kStartBitrate * 1.5
+            probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
 
             // Continue probing if probe succeeds.
             probes = probeController.setEstimatedBitrate(
-                kStartBitrate * 1.5,
+                1.5 * kStartBitrate,
                 BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBeGreaterThan kStartBitrate * 1.5
+            probes[0].targetDataRate shouldBeGreaterThan 1.5 * kStartBitrate
         }
 
         "CanDisableProbingOnMaxTotalAllocatedBitrateIncrease" {
@@ -558,9 +559,9 @@ class ProbeControllerTest : FreeSpec() {
             // However, the bitrate constraints may change.
             probeController.reset(fixture.currentTime())
             probeController.setBitrates(
-                kMinBitrate * 2,
-                kStartBitrate * 2,
-                kMaxBitrate * 2,
+                2 * kMinBitrate,
+                2 * kStartBitrate,
+                2 * kMaxBitrate,
                 fixture.currentTime()
             ).isEmpty() shouldBe true
             fixture.advanceTime(10.secs)
@@ -574,21 +575,21 @@ class ProbeControllerTest : FreeSpec() {
             val kMbpsMultiplier = 1000.kbps
             var probes = probeController.setBitrates(
                 kMinBitrate,
-                kMbpsMultiplier * 10,
-                kMbpsMultiplier * 100,
+                10 * kMbpsMultiplier,
+                100 * kMbpsMultiplier,
                 fixture.currentTime()
             )
             // Verify that probe bitrate is capped at the specified max bitrate.
             probes = probeController.setEstimatedBitrate(
-                kMbpsMultiplier * 60,
+                60 * kMbpsMultiplier,
                 BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe kMbpsMultiplier * 100
+            probes[0].targetDataRate shouldBe 100 * kMbpsMultiplier
             // Verify that repeated probes aren't sent.
             probes = probeController.setEstimatedBitrate(
-                kMbpsMultiplier * 100,
+                100 * kMbpsMultiplier,
                 BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
@@ -600,10 +601,10 @@ class ProbeControllerTest : FreeSpec() {
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             val kMbpsMultiplier = 1000.kbps
-            val kMaxBitrate = kMbpsMultiplier * 100
+            val kMaxBitrate = 100 * kMbpsMultiplier
             var probes = probeController.setBitrates(
                 kMinBitrate,
-                kMbpsMultiplier * 10,
+                10 * kMbpsMultiplier,
                 kMaxBitrate,
                 fixture.currentTime()
             )
@@ -621,7 +622,7 @@ class ProbeControllerTest : FreeSpec() {
             )
 
             // Set a max allocated bitrate below the current estimate.
-            val maxAllocated = estimatedBitrate - kMbpsMultiplier * 1
+            val maxAllocated = estimatedBitrate - 1 * kMbpsMultiplier
             probes = probeController.onMaxTotalAllocatedBitrate(maxAllocated, fixture.currentTime())
             probes.isEmpty() shouldBe true
 
@@ -629,7 +630,7 @@ class ProbeControllerTest : FreeSpec() {
             fixture.advanceTime(5.secs)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe maxAllocated * 2
+            probes[0].targetDataRate shouldBe 2 * maxAllocated
 
             // Remove allocation limit.
             probeController.onMaxTotalAllocatedBitrate(Bandwidth.ZERO, fixture.currentTime())
@@ -714,17 +715,17 @@ class ProbeControllerTest : FreeSpec() {
             fixture.advanceTime(6.secs)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe 500.bps * 1.5
+            probes[0].targetDataRate shouldBe 1.5 * 500.bps
 
             probes = probeController.setEstimatedBitrate(
-                500.bps * 1.5,
+                1.5 * 500.bps,
                 BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
             fixture.advanceTime(6.secs)
             probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe false
-            probes[0].targetDataRate shouldBeGreaterThan 500.bps * 1.5 * 1.5
+            probes[0].targetDataRate shouldBeGreaterThan 1.5 * 1.5 * 500.bps
         }
 
         /* Skipping tests involving network state:
@@ -758,7 +759,7 @@ class ProbeControllerTest : FreeSpec() {
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe kStartBitrate * 1.5
+            probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
         }
 
         "ProbeFurtherInAlrIfLossBasedIncreasing" {
@@ -785,15 +786,15 @@ class ProbeControllerTest : FreeSpec() {
             fixture.advanceTime(kAlrProbeInterval + 1.ms)
             probes = probeController.process(fixture.currentTime())
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe kStartBitrate * 1.5
+            probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
 
             probes = probeController.setEstimatedBitrate(
-                kStartBitrate * 1.5,
+                1.5 * kStartBitrate,
                 BandwidthLimitedCause.kLossLimitedBweIncreasing,
                 fixture.currentTime()
             )
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe kStartBitrate * 1.5 * 1.5
+            probes[0].targetDataRate shouldBe 1.5 * 1.5 * kStartBitrate
         }
 
         "NotProbeWhenInAlrIfLossBasedDecreases" {
@@ -875,7 +876,7 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
 
             // But if the max rate increase, A new probe is sent.
-            probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate * 2, fixture.currentTime())
+            probes = probeController.setBitrates(kMinBitrate, kStartBitrate, 2 * kMaxBitrate, fixture.currentTime())
             probes.isEmpty() shouldBe false
         }
 

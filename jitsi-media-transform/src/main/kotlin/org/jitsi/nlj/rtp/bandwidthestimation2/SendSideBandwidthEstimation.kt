@@ -289,8 +289,8 @@ class SendSideBandwidthEstimation(
             return
         }
 
-        val timeSinceLossPacketResport = Duration.between(lastLossPacketReport, atTime)
-        if (timeSinceLossPacketResport < kMaxRtcpFeedbackInterval * 1.2) {
+        val timeSinceLossPacketReport = Duration.between(lastLossPacketReport, atTime)
+        if (timeSinceLossPacketReport < 1.2 * kMaxRtcpFeedbackInterval) {
             // We only care about loss above a given bitrate threshold.
             val loss = lastFractionLoss.toFloat() / 256f
             // We only make decisions based on loss when the bitrate is above a

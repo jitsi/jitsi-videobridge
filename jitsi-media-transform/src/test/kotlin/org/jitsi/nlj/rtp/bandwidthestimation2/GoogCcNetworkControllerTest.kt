@@ -34,6 +34,7 @@ import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.maxDuration
+import org.jitsi.nlj.util.times
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
@@ -362,20 +363,6 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             var update =
                 controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
             val newBitrate = 200000.bps
-            update = controller.onNetworkRouteChange(createRouteChange(currentTime, newBitrate))
-            update.targetRate!!.targetRate shouldBe newBitrate
-            update.pacerConfig!!.dataRate() shouldBe newBitrate * kDefaultPacingRate
-            update.probeClusterConfigs.size shouldBe 2
-        }
-
-        "ProbeOnRouteChange" {
-            val fixture = NetworkControllerTextFixture()
-            val controller = fixture.createController()
-            var currentTime = Instant.ofEpochMilli(123)
-            val newBitrate = 200000.bps
-            var update =
-                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
-            currentTime += 1.secs
 
             update = controller.onNetworkRouteChange(createRouteChange(currentTime, newBitrate))
             update.targetRate!!.targetRate shouldBe newBitrate
@@ -392,6 +379,27 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             update.probeClusterConfigs.size shouldBe 2
         }
 
+        "ProbeOnRouteChange" {
+            val fixture = NetworkControllerTextFixture()
+            val controller = fixture.createController()
+            var currentTime = Instant.ofEpochMilli(123)
+            var update =
+                controller.onNetworkAvailability(NetworkAvailability(atTime = currentTime, networkAvailable = true))
+            currentTime += 1.secs
+
+            update = controller.onNetworkRouteChange(
+                createRouteChange(currentTime, 2 * kInitialBitrate, Bandwidth.ZERO, 20 * kInitialBitrate)
+            )
+
+            update.pacerConfig shouldNotBe null
+            update.targetRate!!.targetRate shouldBe kInitialBitrate * 2
+            update.probeClusterConfigs.size shouldBe 2
+            update.probeClusterConfigs[0].targetDataRate shouldBe kInitialBitrate * 6
+            update.probeClusterConfigs[1].targetDataRate shouldBe kInitialBitrate * 12
+
+            update = controller.onProcessInterval(ProcessInterval(atTime = currentTime))
+        }
+
         "ProbeAfterRouteChangeWhenTransportWritable" {
             val fixture = NetworkControllerTextFixture()
             val controller = fixture.createController()
@@ -405,9 +413,9 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             update = controller.onNetworkRouteChange(
                 createRouteChange(
                     currentTime,
-                    kInitialBitrate * 2,
+                    2 * kInitialBitrate,
                     Bandwidth.ZERO,
-                    kInitialBitrate * 20
+                    20 * kInitialBitrate
                 )
             )
             // Transport is not writable. So not point in sending a probe.

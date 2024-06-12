@@ -98,6 +98,9 @@ value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
     }
 }
 
+operator fun Double.times(other: Bandwidth): Bandwidth = Bandwidth(round(this * other.bps.toDouble()))
+operator fun Int.times(other: Bandwidth): Bandwidth = Bandwidth(this * other.bps)
+
 val Int.bps: Bandwidth
     get() = Bandwidth(this.toDouble())
 val Int.bytesPerSec: Bandwidth
