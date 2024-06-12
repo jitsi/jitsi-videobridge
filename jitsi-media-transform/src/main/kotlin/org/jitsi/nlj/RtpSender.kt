@@ -48,5 +48,10 @@ abstract class RtpSender :
     abstract fun isFeatureEnabled(feature: Features): Boolean
     abstract fun tearDown()
 
+    /**
+     * An optional function to be executed for each RTP packet, as the first step of the send pipeline.
+     */
+    var preProcesor: ((PacketInfo) -> PacketInfo?)? = null
+
     abstract val bandwidthEstimator: BandwidthEstimator
 }

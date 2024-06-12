@@ -108,7 +108,7 @@ class Transceiver(
      */
     fun isReceivingVideo(): Boolean = rtpReceiver.isReceivingVideo()
 
-    private val rtpSender: RtpSender = RtpSenderImpl(
+    val rtpSender: RtpSender = RtpSenderImpl(
         id,
         rtcpEventNotifier,
         senderExecutor,
