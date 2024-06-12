@@ -17,6 +17,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.toDouble
 import org.jitsi.nlj.util.toEpochMicro
@@ -85,6 +86,7 @@ class SimulationNode(
     }
 }
 
+@SuppressFBWarnings("URF_UNREAD_FIELD")
 class NetworkNodeTransport(
     val senderClock: Clock,
 

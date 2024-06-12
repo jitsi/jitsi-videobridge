@@ -18,6 +18,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
@@ -64,6 +65,8 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
     private var rateControlState: RateControlState = RateControlState.kRcHold
 
     private var timeLastBitrateChange: Instant = NEVER
+
+    @SuppressFBWarnings("URF_UNREAD_FIELD")
     private var timeLastBitrateDecrease: Instant = NEVER
     private var timeFirstThroughputEstimate: Instant = NEVER
 

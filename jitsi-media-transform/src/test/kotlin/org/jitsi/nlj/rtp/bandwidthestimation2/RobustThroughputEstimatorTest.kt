@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
@@ -71,6 +72,7 @@ class FeedbackGenerator {
  * Based on WebRTC modules/congestion_controller/goog_cc/robust_throughput_estimator_unittest.cc in
  * WebRTC tag branch-heads/6422 (Chromium 125)
  */
+@SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
 class RobustThroughputEstimatorTest : FreeSpec() {
     init {
         "DefaultEnabled" {
