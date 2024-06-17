@@ -41,6 +41,7 @@ import org.jitsi.nlj.transform.node.PacketStreamStatsNode
 import org.jitsi.nlj.transform.node.SrtcpEncryptNode
 import org.jitsi.nlj.transform.node.SrtpEncryptNode
 import org.jitsi.nlj.transform.node.ToggleablePcapWriter
+import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtEncoder
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtStripper
@@ -140,6 +141,12 @@ class RtpSenderImpl(
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         outgoingRtpRoot = pipeline {
+            node(object : TransformerNode("Pre-processor") {
+                override fun transform(packetInfo: PacketInfo): PacketInfo? {
+                    return preProcesor?.invoke(packetInfo) ?: packetInfo
+                }
+                override fun trace(f: () -> Unit) {}
+            })
             node(AudioRedHandler(streamInformationStore, logger))
             node(HeaderExtStripper(streamInformationStore))
             node(outgoingPacketCache)

@@ -297,6 +297,42 @@ class Endpoint @JvmOverloads constructor(
         addEndpointConnectionStatsListener(rttListener)
         setLocalSsrc(MediaType.AUDIO, conference.localAudioSsrc)
         setLocalSsrc(MediaType.VIDEO, conference.localVideoSsrc)
+        rtpSender.preProcesor = { packetInfo -> preProcess(packetInfo) }
+    }
+
+    /**
+     * Perform processing of the packet before it goes through the rest of the [transceiver] send pipeline:
+     * 1. Update the bitrate controller state and apply the source projection logic
+     * 2. Perform SSRC re-writing if [doSsrcRewriting] is set.
+     */
+    private fun preProcess(packetInfo: PacketInfo): PacketInfo? {
+        when (val packet = packetInfo.packet) {
+            is VideoRtpPacket -> {
+                if (!bitrateController.transformRtp(packetInfo)) {
+                    logger.warn("Dropping a packet which was supposed to be accepted:$packet")
+                    return null
+                }
+                // The original packet was transformed in place.
+                if (doSsrcRewriting) {
+                    val start = packet !is ParsedVideoPacket || (packet.isKeyframe && packet.isStartOfFrame)
+                    if (!videoSsrcs.rewriteRtp(packet, start)) {
+                        return null
+                    }
+                }
+            }
+            is AudioRtpPacket -> if (doSsrcRewriting) audioSsrcs.rewriteRtp(packet)
+            is RtcpSrPacket -> {
+                // Allow the BC to update the timestamp (in place).
+                bitrateController.transformRtcp(packet)
+                if (doSsrcRewriting) {
+                    // Just check both tables instead of looking up the type first.
+                    if (!videoSsrcs.rewriteRtcp(packet) && !audioSsrcs.rewriteRtcp(packet)) {
+                        return null
+                    }
+                }
+            }
+        }
+        return packetInfo
     }
 
     private val bandwidthProbing = BandwidthProbing(
@@ -512,14 +548,15 @@ class Endpoint @JvmOverloads constructor(
 
     private fun doSendSrtp(packetInfo: PacketInfo): Boolean {
         packetInfo.addEvent(SRTP_QUEUE_EXIT_EVENT)
-        PacketTransitStats.packetSent(packetInfo)
 
+        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
+        packetInfo.addEvent(SENT_OVER_ICE_TRANSPORT_EVENT)
+        PacketTransitStats.packetSent(packetInfo)
+        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         packetInfo.sent()
         if (timelineLogger.isTraceEnabled && logTimeline()) {
             timelineLogger.trace { packetInfo.timeline.toString() }
         }
-        iceTransport.send(packetInfo.packet.buffer, packetInfo.packet.offset, packetInfo.packet.length)
-        ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
         return true
     }
 
@@ -889,40 +926,7 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    override fun send(packetInfo: PacketInfo) {
-        when (val packet = packetInfo.packet) {
-            is VideoRtpPacket -> {
-                if (bitrateController.transformRtp(packetInfo)) {
-                    // The original packet was transformed in place.
-                    if (doSsrcRewriting) {
-                        val start = packet !is ParsedVideoPacket || (packet.isKeyframe && packet.isStartOfFrame)
-                        if (!videoSsrcs.rewriteRtp(packet, start)) {
-                            return
-                        }
-                    }
-                    transceiver.sendPacket(packetInfo)
-                } else {
-                    logger.warn("Dropping a packet which was supposed to be accepted:$packet")
-                }
-                return
-            }
-            is AudioRtpPacket -> if (doSsrcRewriting) audioSsrcs.rewriteRtp(packet)
-            is RtcpSrPacket -> {
-                // Allow the BC to update the timestamp (in place).
-                bitrateController.transformRtcp(packet)
-                if (doSsrcRewriting) {
-                    // Just check both tables instead of looking up the type first.
-                    if (!videoSsrcs.rewriteRtcp(packet) && !audioSsrcs.rewriteRtcp(packet)) {
-                        return
-                    }
-                }
-                logger.trace {
-                    "relaying an sr from ssrc=${packet.senderSsrc}, timestamp=${packet.senderInfo.rtpTimestamp}"
-                }
-            }
-        }
-        transceiver.sendPacket(packetInfo)
-    }
+    override fun send(packetInfo: PacketInfo) = transceiver.sendPacket(packetInfo)
 
     /**
      * To find out whether the endpoint should be expired, we check the activity timestamps from the transceiver.
@@ -1176,12 +1180,15 @@ class Endpoint @JvmOverloads constructor(
         private val epTimeout = 2.mins
 
         private val timelineCounter = AtomicLong()
-        private val TIMELINE_FRACTION = 10000L
+        private val timelineFraction: Long by config {
+            "jmt.debug.packet-timeline.log-fraction".from(JitsiConfig.newConfig)
+        }
 
-        fun logTimeline() = timelineCounter.getAndIncrement() % TIMELINE_FRACTION == 0L
+        fun logTimeline() = timelineCounter.getAndIncrement() % timelineFraction == 0L
 
         private const val SRTP_QUEUE_ENTRY_EVENT = "Entered Endpoint SRTP sender outgoing queue"
         private const val SRTP_QUEUE_EXIT_EVENT = "Exited Endpoint SRTP sender outgoing queue"
+        private const val SENT_OVER_ICE_TRANSPORT_EVENT = "Sent over the ICE transport"
 
         private val statsFilterThreshold: Int by config {
             "videobridge.stats-filter-threshold".from(JitsiConfig.newConfig)

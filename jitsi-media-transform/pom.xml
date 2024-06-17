@@ -22,7 +22,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>jitsi-srtp</artifactId>
-            <version>1.1-16-g7fbe7e3</version>
+            <version>1.1-18-g98e4c5d</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -94,7 +94,7 @@
         <dependency>
             <groupId>io.pkts</groupId>
             <artifactId>pkts-core</artifactId>
-            <version>3.0.3</version>
+            <version>3.0.10</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -174,7 +174,7 @@
                 <!-- To try and get both java and kotlin sources in the sources jar -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>
@@ -238,8 +238,11 @@
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.0</version>
+                <version>3.2.5</version>
                 <configuration>
+                    <systemPropertyVariables>
+                        <kotest.framework.classpath.scanning.autoscan.disable>true</kotest.framework.classpath.scanning.autoscan.disable>
+                    </systemPropertyVariables>
                     <excludes>
                         <!-- init() currently throws an exception -->
                         <exclude>DtlsStackTest.*</exclude>
@@ -285,7 +288,7 @@
           <plugin>
               <groupId>com.github.spotbugs</groupId>
               <artifactId>spotbugs-maven-plugin</artifactId>
-              <version>4.7.0.0</version>
+              <version>4.8.5.0</version>
               <configuration>
                   <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
                   <includeTests>true</includeTests>

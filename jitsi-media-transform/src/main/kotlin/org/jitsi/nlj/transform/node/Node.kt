@@ -144,15 +144,15 @@ sealed class Node(
             if (enable) {
                 PLUGINS_ENABLED = true
                 plugins.add(PayloadVerificationPlugin)
-                PacketInfo.ENABLE_PAYLOAD_VERIFICATION = true
+                PacketInfo.enablePayloadVerification = true
             } else {
                 plugins.remove(PayloadVerificationPlugin)
                 PLUGINS_ENABLED = plugins.isNotEmpty()
-                PacketInfo.ENABLE_PAYLOAD_VERIFICATION = false
+                PacketInfo.enablePayloadVerification = false
             }
         }
 
-        fun isPayloadVerificationEnabled(): Boolean = PacketInfo.ENABLE_PAYLOAD_VERIFICATION
+        fun isPayloadVerificationEnabled(): Boolean = PacketInfo.enablePayloadVerification
 
         fun enableNodeTracing(enable: Boolean) {
             TRACE_ENABLED = enable

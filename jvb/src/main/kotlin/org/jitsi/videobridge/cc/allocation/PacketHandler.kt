@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc.allocation
 
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.PacketInfo.Companion.ENABLE_PAYLOAD_VERIFICATION
+import org.jitsi.nlj.PacketInfo.Companion.enablePayloadVerification
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -83,7 +83,7 @@ internal class PacketHandler(
             adaptiveSourceProjection.rewriteRtp(packetInfo)
 
             // The rewriteRtp operation must not modify the VP8 payload.
-            if (ENABLE_PAYLOAD_VERIFICATION) {
+            if (enablePayloadVerification) {
                 val expected = packetInfo.payloadVerification
                 val actual = videoPacket.payloadVerification
                 if ("" != expected && expected != actual) {

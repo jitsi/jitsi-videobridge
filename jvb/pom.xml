@@ -17,7 +17,7 @@
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
-    <slf4j.version>1.7.32</slf4j.version>
+    <slf4j.version>2.0.13</slf4j.version>
   </properties>
 
   <profiles>
@@ -61,7 +61,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>32.0.0-jre</version>
+      <version>33.2.0-jre</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -86,7 +86,7 @@
     <dependency>
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
-      <version>23.0.0</version>
+      <version>24.1.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
     <dependency>
@@ -208,7 +208,7 @@
     <dependency>
       <groupId>io.sentry</groupId>
       <artifactId>sentry</artifactId>
-      <version>5.3.0</version>
+      <version>7.9.0</version>
       <scope>runtime</scope>
     </dependency>
     <!-- test -->
@@ -464,17 +464,18 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.2</version>
+        <version>3.2.5</version>
         <configuration>
           <systemPropertyVariables>
             <java.util.logging.config.file>${project.basedir}/lib/logging.properties</java.util.logging.config.file>
+            <kotest.framework.classpath.scanning.autoscan.disable>true</kotest.framework.classpath.scanning.autoscan.disable>
           </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.7.0.0</version>
+        <version>4.8.5.0</version>
         <configuration>
           <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
           <includeTests>true</includeTests>
@@ -514,7 +515,7 @@
          -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.2.0</version>
+        <version>3.4.1</version>
         <configuration>
           <archive>
             <manifest>
@@ -534,7 +535,7 @@
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
             <artifactId>checkstyle</artifactId>
-            <version>9.1</version>
+            <version>10.17.0</version>
           </dependency>
         </dependencies>
         <executions>

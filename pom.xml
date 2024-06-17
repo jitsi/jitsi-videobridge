@@ -23,19 +23,19 @@
     <packaging>pom</packaging>
 
     <properties>
-        <jetty.version>11.0.20</jetty.version>
-        <kotlin.version>1.9.10</kotlin.version>
-        <kotest.version>5.7.2</kotest.version>
-        <junit.version>5.10.0</junit.version>
-        <jitsi.utils.version>1.0-131-ge0b9606</jitsi.utils.version>
+        <jetty.version>11.0.21</jetty.version>
+        <kotlin.version>2.0.0</kotlin.version>
+        <kotest.version>5.9.1</kotest.version>
+        <junit.version>5.10.2</junit.version>
+        <jitsi.utils.version>1.0-132-g83984af</jitsi.utils.version>
         <jicoco.version>1.1-140-g8f45a9f</jicoco.version>
-        <mockk.version>1.13.8</mockk.version>
+        <mockk.version>1.13.11</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
-        <maven-shade-plugin.version>3.5.1</maven-shade-plugin.version>
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
         <spotbugs.version>4.6.0</spotbugs.version>
-        <jersey.version>3.0.10</jersey.version>
-        <jackson.version>2.12.4</jackson.version>
-        <bouncycastle.version>1.77</bouncycastle.version>
+        <jersey.version>3.1.7</jersey.version>
+        <jackson.version>2.17.1</jackson.version>
+        <bouncycastle.version>1.78.1</bouncycastle.version>
         <prometheus.version>0.16.0</prometheus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -45,7 +45,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0-M3</version>
+                <version>3.5.0</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
