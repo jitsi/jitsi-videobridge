@@ -86,6 +86,11 @@ class DcSctpTransport(
             check(SctpConfig.config.enabled()) { "SCTP is disabled in configuration" }
             DcSctpOptions().apply {
                 maxTimerBackoffDuration = DEFAULT_MAX_TIMER_DURATION
+                // Because we're making retransmits faster, we need to allow unlimited retransmits
+                // or SCTP can time out (which we don't handle).  Peer connection timeouts are handled at
+                // a higher layer.
+                maxRetransmissions = null
+                maxInitRetransmits = null
             }
         }
 
@@ -127,7 +132,9 @@ abstract class DcSctpBaseCallbacks(
     }
 
     override fun OnStreamsResetPerformed(outgoingStreams: ShortArray) {
-        transport.logger.info("Surprising SCTP callback: outgoing streams ${outgoingStreams.joinToString()} reset")
+        // This is normal following a call to close(), which is a hard-close (as opposed to shutdown() which is
+        // soft-close)
+        transport.logger.info("Outgoing streams ${outgoingStreams.joinToString()} reset")
     }
 
     override fun OnIncomingStreamsReset(incomingStreams: ShortArray) {
