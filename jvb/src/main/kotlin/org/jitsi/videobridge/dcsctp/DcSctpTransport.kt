@@ -27,6 +27,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.util.TaskPools
+import java.lang.ref.WeakReference
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.Future
@@ -109,7 +110,7 @@ abstract class DcSctpBaseCallbacks(
 ) : DcSctpSocketCallbacks {
     /* Methods we can usefully implement for every JVB socket */
     override fun createTimeout(p0: DcSctpSocketCallbacks.DelayPrecision): Timeout {
-        return ATimeout()
+        return ATimeout(transport)
     }
 
     override fun Now(): Instant {
@@ -142,7 +143,11 @@ abstract class DcSctpBaseCallbacks(
         transport.logger.info("Surprising SCTP callback: incoming streams ${incomingStreams.joinToString()} reset")
     }
 
-    private inner class ATimeout : Timeout {
+    private class ATimeout(transport: DcSctpTransport) : Timeout {
+        // This holds a weak reference to the transport, to break JNI reference cycles
+        private val weakTransport = WeakReference(transport)
+        private val transport: DcSctpTransport?
+            get() = weakTransport.get()
         private var timeoutId: Long = 0
         private var scheduledFuture: ScheduledFuture<*>? = null
         private var future: Future<*>? = null
@@ -152,11 +157,11 @@ abstract class DcSctpBaseCallbacks(
                 scheduledFuture = TaskPools.SCHEDULED_POOL.schedule({
                     /* Execute it on the IO_POOL, because a timer may trigger sending new SCTP packets. */
                     future = TaskPools.IO_POOL.submit {
-                        transport.socket.handleTimeout(timeoutId)
+                        transport?.socket?.handleTimeout(timeoutId)
                     }
                 }, duration, TimeUnit.MILLISECONDS)
             } catch (e: Throwable) {
-                transport.logger.warn("Exception scheduling DCSCTP timeout", e)
+                transport?.logger?.warn("Exception scheduling DCSCTP timeout", e)
             }
         }
 
