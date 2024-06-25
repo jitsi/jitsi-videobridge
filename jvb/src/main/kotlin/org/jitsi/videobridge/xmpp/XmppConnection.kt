@@ -145,6 +145,7 @@ class XmppConnection : IQListener {
             }
         }
 
+        logger.info("Adding MucClient for ${config.id}")
         mucClientManager.addMucClient(config)
         return true
     }
@@ -179,10 +180,13 @@ class XmppConnection : IQListener {
      * returns {@code false}.
      */
     fun removeMucClient(jsonObject: JSONObject): Boolean {
-        if (jsonObject["id"] !is String) {
+        val id = jsonObject["id"]
+        if (id !is String) {
+            logger.info("Invalid ID: $id")
             return false
         }
-        return mucClientManager.removeMucClient(jsonObject["id"] as String)
+        logger.info("Removing muc client $id")
+        return mucClientManager.removeMucClient(id)
     }
 
     /**
