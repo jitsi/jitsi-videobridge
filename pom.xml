@@ -106,12 +106,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ice4j</artifactId>
-                <version>3.0-69-ga53b402</version>
+                <version>3.0-72-g824cd4b</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-80-g0ce9883</version>
+                <version>1.0-81-g3816e5a</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

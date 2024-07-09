@@ -24,5 +24,10 @@ class VideobridgeConfig private constructor() {
         val initialDrainMode: Boolean by config {
             "videobridge.initial-drain-mode".from(JitsiConfig.newConfig)
         }
+
+        @JvmStatic
+        val redactRemoteAddresses: Boolean by config {
+            "videobridge.redact-remote-addresses".from(JitsiConfig.newConfig)
+        }
     }
 }

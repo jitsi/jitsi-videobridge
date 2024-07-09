@@ -224,7 +224,13 @@ public class Conference
                 {
                     try
                     {
-                        logger.info("RECV colibri2 request: " + XmlStringBuilderUtil.toStringOpt(request.getRequest()));
+                        logger.info( () -> {
+                            String reqStr = XmlStringBuilderUtil.toStringOpt(request.getRequest());
+                            if (VideobridgeConfig.getRedactRemoteAddresses()) {
+                                reqStr = RedactColibriIp.Companion.redact(reqStr);
+                            }
+                            return "RECV colibri2 request: " + reqStr;
+                        });
                         long start = System.currentTimeMillis();
                         Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
                         IQ response = p.getFirst();
@@ -236,8 +242,12 @@ public class Conference
                         request.getTotalDelayStats().addDelay(totalDelay);
                         if (processingDelay > 100)
                         {
+                            String reqStr = XmlStringBuilderUtil.toStringOpt(request.getRequest());
+                            if (VideobridgeConfig.getRedactRemoteAddresses()) {
+                                reqStr = RedactColibriIp.Companion.redact(reqStr);
+                            }
                             logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                                    + totalDelay + " ms): " + XmlStringBuilderUtil.toStringOpt(request.getRequest()));
+                                    + totalDelay + " ms): " + reqStr);
                         }
                         logger.info("SENT colibri2 response: " + XmlStringBuilderUtil.toStringOpt(response));
                         request.getCallback().invoke(response);
