@@ -226,7 +226,8 @@ public class Conference
                     {
                         logger.info( () -> {
                             String reqStr = XmlStringBuilderUtil.toStringOpt(request.getRequest());
-                            if (VideobridgeConfig.getRedactRemoteAddresses()) {
+                            if (VideobridgeConfig.getRedactRemoteAddresses())
+                            {
                                 reqStr = RedactColibriIp.Companion.redact(reqStr);
                             }
                             return "RECV colibri2 request: " + reqStr;
@@ -243,7 +244,8 @@ public class Conference
                         if (processingDelay > 100)
                         {
                             String reqStr = XmlStringBuilderUtil.toStringOpt(request.getRequest());
-                            if (VideobridgeConfig.getRedactRemoteAddresses()) {
+                            if (VideobridgeConfig.getRedactRemoteAddresses())
+                            {
                                 reqStr = RedactColibriIp.Companion.redact(reqStr);
                             }
                             logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
