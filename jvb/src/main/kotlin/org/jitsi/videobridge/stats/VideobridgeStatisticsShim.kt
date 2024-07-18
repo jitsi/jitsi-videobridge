@@ -71,7 +71,6 @@ import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DATA_CHANNE
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_DOMINANT_SPEAKER_CHANGES
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_FAILED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED
-import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_ICE_SUCCEEDED_TCP
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_RECEIVED
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_RECEIVED_OCTO
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_SENT
@@ -199,7 +198,6 @@ object VideobridgeStatisticsShim {
 
             put(TOTAL_ICE_FAILED, IceTransport.iceFailed.get())
             put(TOTAL_ICE_SUCCEEDED, IceTransport.iceSucceeded.get())
-            put(TOTAL_ICE_SUCCEEDED_TCP, IceTransport.iceSucceededTcp.get())
             put("total_ice_succeeded_relayed", IceTransport.iceSucceededRelayed.get())
 
             put("average_participant_stress", JvbLoadManager.averageParticipantStress)

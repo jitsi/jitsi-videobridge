@@ -121,7 +121,6 @@ connection.
 * `total_ice_failed` - total number of endpoints which failed to establish an ICE connection.
 * `total_ice_succeeded` - total number of endpoints which successfully established an ICE connection.
 * `total_ice_succeeded_relayed` - total number of endpoints which connected through a TURN relay (currently broken).
-* `total_ice_succeeded_tcp` - total number of endpoints which connected through via ICE/TCP (currently broken).
 * `total_packets_dropped_octo` - total number of packets dropped on the `octo` channel.
 * `total_packets_received` - total number of RTP packets received.
 * `total_packets_received_octo` - total number packets received on the `octo` channel.

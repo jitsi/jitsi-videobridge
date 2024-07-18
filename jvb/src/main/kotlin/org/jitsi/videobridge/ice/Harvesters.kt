@@ -16,21 +16,15 @@
 package org.jitsi.videobridge.ice
 
 import org.ice4j.ice.harvest.SinglePortUdpHarvester
-import org.ice4j.ice.harvest.TcpHarvester
 import org.jitsi.utils.logging2.createLogger
-import java.io.IOException
 
-class Harvesters private constructor(
-    val tcpHarvester: TcpHarvester?,
-    val singlePortHarvesters: List<SinglePortUdpHarvester>
-) {
+class Harvesters private constructor(val singlePortHarvesters: List<SinglePortUdpHarvester>) {
     /* We're unhealthy if there are no single port harvesters. */
     val healthy: Boolean
         get() = singlePortHarvesters.isNotEmpty()
 
     private fun close() {
         singlePortHarvesters.forEach { it.close() }
-        tcpHarvester?.close()
     }
 
     companion object {
@@ -48,25 +42,8 @@ class Harvesters private constructor(
             if (singlePortHarvesters.isEmpty()) {
                 logger.warn("No single-port harvesters created.")
             }
-            val tcpHarvester: TcpHarvester? = if (IceConfig.config.tcpEnabled) {
-                val port = IceConfig.config.tcpPort
-                try {
-                    TcpHarvester(port, IceConfig.config.iceSslTcp).apply {
-                        logger.info("Initialized TCP harvester on port $port, ssltcp=${IceConfig.config.iceSslTcp}")
-                        IceConfig.config.tcpMappedPort?.let { mappedPort ->
-                            logger.info("Adding mapped port $mappedPort")
-                            addMappedPort(mappedPort)
-                        }
-                    }
-                } catch (ioe: IOException) {
-                    logger.warn("Failed to initialize TCP harvester on port $port")
-                    null
-                }
-            } else {
-                null
-            }
 
-            Harvesters(tcpHarvester, singlePortHarvesters)
+            Harvesters(singlePortHarvesters)
         }
     }
 }
