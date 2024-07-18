@@ -131,8 +131,7 @@ class IceTransport @JvmOverloads constructor(
         logger.addContext("local_ufrag", it.localUfrag)
     }
 
-    // TODO: Do we still need the id here now that we have logContext?
-    private val iceStream = iceAgent.createMediaStream("stream-$id").apply {
+    private val iceStream = iceAgent.createMediaStream("stream").apply {
         addPairChangeListener(iceStreamPairChangedListener)
     }
 
