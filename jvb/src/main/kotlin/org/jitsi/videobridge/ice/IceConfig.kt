@@ -25,40 +25,6 @@ import org.jitsi.metaconfig.optionalconfig
 
 class IceConfig private constructor() {
     /**
-     * Is ICE/TCP enabled.
-     */
-    val tcpEnabled: Boolean by config {
-        // The old property is named 'disable', while the new one
-        // is 'enable', so invert the old value
-        "org.jitsi.videobridge.DISABLE_TCP_HARVESTER".from(JitsiConfig.legacyConfig).transformedBy { !it }
-        "videobridge.ice.tcp.enabled".from(JitsiConfig.newConfig)
-    }
-
-    /**
-     * The ICE/TCP port.
-     */
-    val tcpPort: Int by config {
-        "org.jitsi.videobridge.TCP_HARVESTER_PORT".from(JitsiConfig.legacyConfig)
-        "videobridge.ice.tcp.port".from(JitsiConfig.newConfig)
-    }
-
-    /**
-     * The additional port to advertise, or null if none is configured.
-     */
-    val tcpMappedPort: Int? by optionalconfig {
-        "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT".from(JitsiConfig.legacyConfig)
-        "videobridge.ice.tcp.mapped-port".from(JitsiConfig.newConfig)
-    }
-
-    /**
-     * Whether ICE/TCP should use "ssltcp" or not.
-     */
-    val iceSslTcp: Boolean by config {
-        "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP".from(JitsiConfig.legacyConfig)
-        "videobridge.ice.tcp.ssltcp".from(JitsiConfig.newConfig)
-    }
-
-    /**
      * The ICE UDP port.
      */
     val port: Int by config {
