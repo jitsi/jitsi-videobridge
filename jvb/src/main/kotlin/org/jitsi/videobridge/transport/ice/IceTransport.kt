@@ -228,9 +228,13 @@ class IceTransport @JvmOverloads constructor(
                 break
             }
             packetStats.numPacketsReceived.increment()
-            incomingDataHandler?.dataReceived(receiveBuf, packet.offset, packet.length, receivedTime) ?: run {
-                logger.cdebug { "Data handler is null, dropping data" }
-                packetStats.numIncomingPacketsDroppedNoHandler.increment()
+            try {
+                incomingDataHandler?.dataReceived(receiveBuf, packet.offset, packet.length, receivedTime) ?: run {
+                    logger.cdebug { "Data handler is null, dropping data" }
+                    packetStats.numIncomingPacketsDroppedNoHandler.increment()
+                }
+            } catch (e: Throwable) {
+                logger.error("Uncaught exception processing packet", e)
             }
         }
         logger.info("No longer running, stopped reading packets")
