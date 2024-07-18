@@ -188,7 +188,7 @@ class RelayedEndpoint(
         rtpReceiver.setSrtpTransformers(srtpTransformers)
     }
 
-    override fun handleIncomingPacket(packetInfo: RelayedPacketInfo) = rtpReceiver.processPacket(packetInfo)
+    override fun handleIncomingPacket(packetInfo: RelayedPacketInfo) = rtpReceiver.enqueuePacket(packetInfo)
 
     fun setFeature(feature: Features, enabled: Boolean) {
         rtpReceiver.setFeature(feature, enabled)
