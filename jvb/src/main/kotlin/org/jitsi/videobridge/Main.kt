@@ -37,6 +37,7 @@ import org.jitsi.videobridge.metrics.Metrics
 import org.jitsi.videobridge.metrics.VideobridgePeriodicMetrics
 import org.jitsi.videobridge.rest.root.Application
 import org.jitsi.videobridge.stats.MucPublisher
+import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.UlimitCheck
 import org.jitsi.videobridge.version.JvbVersionService
@@ -77,6 +78,8 @@ fun main() {
 
     UlimitCheck.printUlimits()
     startIce4j()
+
+    setupBufferPools()
 
     // Initialize, binding on the main ICE port.
     Harvesters.init()
@@ -228,4 +231,12 @@ private fun startIce4j() {
 private fun stopIce4j() {
     // Shut down harvesters.
     Harvesters.close()
+}
+
+/** Configure our libraries to use JVB's global [ByteBufferPool] */
+private fun setupBufferPools() {
+    org.jitsi.rtp.util.BufferPool.getArray = { ByteBufferPool.getBuffer(it) }
+    org.jitsi.rtp.util.BufferPool.returnArray = { ByteBufferPool.returnBuffer(it) }
+    org.jitsi.nlj.util.BufferPool.getBuffer = { ByteBufferPool.getBuffer(it) }
+    org.jitsi.nlj.util.BufferPool.returnBuffer = { ByteBufferPool.returnBuffer(it) }
 }
