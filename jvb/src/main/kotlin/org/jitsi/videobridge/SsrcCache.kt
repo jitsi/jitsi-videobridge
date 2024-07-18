@@ -411,23 +411,28 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
         val remappings = mutableListOf<SendSource>()
         var send = false
 
-        synchronized(sendSources) {
-            var rs = receivedSsrcs[packet.ssrc]
-            if (rs == null) {
-                val props = findSourceProps(packet.ssrc) ?: return false
-                rs = ReceiveSsrc(props)
-                receivedSsrcs[packet.ssrc] = rs
-                logger.debug { "Added receive SSRC: ${packet.ssrc}" }
+        try {
+            synchronized(sendSources) {
+                var rs = receivedSsrcs[packet.ssrc]
+                if (rs == null) {
+                    val props = findSourceProps(packet.ssrc) ?: return false
+                    rs = ReceiveSsrc(props)
+                    receivedSsrcs[packet.ssrc] = rs
+                    logger.debug { "Added receive SSRC: ${packet.ssrc}" }
+                }
+
+                val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreateOnPacket, remappings)
+                if (ss != null) {
+                    send = ss.rewriteRtp(packet, start, rs)
+                }
             }
 
-            val ss = getSendSource(rs.props.ssrc1, rs.props, allowCreateOnPacket, remappings)
-            if (ss != null) {
-                send = ss.rewriteRtp(packet, start, rs)
+            if (remappings.isNotEmpty()) {
+                notifyMappings(remappings)
             }
-        }
-
-        if (remappings.isNotEmpty()) {
-            notifyMappings(remappings)
+        } catch (e: Exception) {
+            logger.error("Error rewriting SSRC", e)
+            send = false
         }
 
         return send
