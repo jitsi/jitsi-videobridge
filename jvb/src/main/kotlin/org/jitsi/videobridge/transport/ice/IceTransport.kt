@@ -136,14 +136,8 @@ class IceTransport @JvmOverloads constructor(
         addPairChangeListener(iceStreamPairChangedListener)
     }
 
-    private val iceComponent = iceAgent.createComponent(
-        iceStream,
-        IceConfig.config.keepAliveStrategy,
-        IceConfig.config.useComponentSocket
-    )
-
+    private val iceComponent = iceAgent.createComponent(iceStream, IceConfig.config.keepAliveStrategy, true)
     private val packetStats = PacketStats()
-
     val icePassword: String
         get() = iceAgent.localPassword
 
@@ -263,7 +257,6 @@ class IceTransport @JvmOverloads constructor(
     }
 
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
-        put("useComponentSocket", IceConfig.config.useComponentSocket)
         put("keepAliveStrategy", IceConfig.config.keepAliveStrategy.toString())
         put("nominationStrategy", IceConfig.config.nominationStrategy.toString())
         put("advertisePrivateCandidates", IceConfig.config.advertisePrivateCandidates)

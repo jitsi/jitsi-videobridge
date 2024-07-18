@@ -83,14 +83,6 @@ class IceConfig private constructor() {
             .convertFrom<String> { KeepAliveStrategy.fromString(it) }
     }
 
-    /**
-     * Whether the ice4j "component socket" mode is used.
-     */
-    val useComponentSocket: Boolean by config {
-        "org.jitsi.videobridge.USE_COMPONENT_SOCKET".from(JitsiConfig.legacyConfig)
-        "videobridge.ice.use-component-socket".from(JitsiConfig.newConfig)
-    }
-
     val resolveRemoteCandidates: Boolean by config(
         "videobridge.ice.resolve-remote-candidates".from(JitsiConfig.newConfig)
     )
