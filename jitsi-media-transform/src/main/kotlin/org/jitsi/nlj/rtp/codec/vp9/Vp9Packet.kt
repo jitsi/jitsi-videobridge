@@ -260,6 +260,13 @@ class Vp9Packet private constructor(
             if (off == -1) {
                 return null
             }
+
+            val isSwitchingUpPoint = DePacketizer.VP9PayloadDescriptor
+                .isSwitchingUpPoint(buffer, payloadOffset, payloadLength)
+
+            val isFlexibleMode = DePacketizer.VP9PayloadDescriptor
+                .isFlexibleMode(buffer, payloadOffset, payloadLength)
+
             val ssHeader = buffer[off].toInt()
 
             val numSpatial = ((ssHeader and 0xE0) shr 5) + 1
@@ -300,6 +307,14 @@ class Vp9Packet private constructor(
                     }
                 }
                 groupSize
+            } else if (isFlexibleMode && isSwitchingUpPoint) {
+                // In flexible mode (chrome version 125+) if we have only one temporal layer with id=0,
+                // received client rendering video stream in 8 fps only.
+                val numTemporal = 3
+                for (tid in 0 until numTemporal) {
+                    tlCounts[tid]++
+                }
+                numTemporal
             } else {
                 tlCounts[0] = 1
                 1
