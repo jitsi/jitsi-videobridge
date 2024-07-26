@@ -70,19 +70,21 @@ constructor(
     }
 
     /**
-     * Clone an existing layer desc, inheriting its statistics,
+     * Clone an existing layer desc, inheriting its statistics if [inherit],
      * modifying only specific values.
      */
-    override fun copy(height: Int) = VpxRtpLayerDesc(
+    override fun copy(height: Int, tid: Int, inherit: Boolean) = VpxRtpLayerDesc(
         eid = this.eid,
-        tid = this.tid,
+        tid = tid,
         sid = this.sid,
         height = height,
         frameRate = this.frameRate,
         dependencyLayers = this.dependencyLayers,
         softDependencyLayers = this.softDependencyLayers
     ).also {
-        it.inheritFrom(this)
+        if (inherit) {
+            it.inheritFrom(this)
+        }
     }
 
     /**

@@ -82,6 +82,30 @@ class Vp9Parser(
             }
         }
 
+        if (vp9Packet.isFlexibleMode && findRtpLayerDescs(vp9Packet).isEmpty()) {
+            val layers = source.getEncodingLayers(vp9Packet.ssrc).toMutableList()
+            /* In flexible mode, the number of temporal layers isn't announced in the keyframe.
+             * Thus, add temporal layer information to the source's encoding layers as we see packets with
+             * temporal layers.
+             */
+            var changed = false
+            for (tid in 1..vp9Packet.temporalLayerIndex) {
+                val layer = layers.find { it.sid == vp9Packet.spatialLayerIndex && it.tid == tid }
+                if (layer == null) {
+                    val prevLayer = layers.find { it.sid == vp9Packet.spatialLayerIndex && it.tid == tid - 1 }
+                    if (prevLayer != null) {
+                        val newLayer = prevLayer.copy(tid = tid, inherit = false)
+                        layers.add(newLayer)
+                        changed = true
+                    }
+                }
+            }
+            if (changed) {
+                source.setEncodingLayers(layers.toTypedArray(), vp9Packet.ssrc)
+                packetInfo.layeringChanged = true
+            }
+        }
+
         pictureIdState.setState(vp9Packet.hasPictureId, vp9Packet) {
             "Packet Data: ${vp9Packet.toHex(80)}"
         }

@@ -56,7 +56,7 @@ constructor(
      */
     val frameRate: Double,
 ) {
-    abstract fun copy(height: Int = this.height): RtpLayerDesc
+    abstract fun copy(height: Int = this.height, tid: Int = this.tid, inherit: Boolean = true): RtpLayerDesc
 
     /**
      * The [BitrateTracker] instance used to calculate the receiving bitrate of this RTP layer.
