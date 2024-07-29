@@ -150,8 +150,9 @@ class MediaSourceDesc
 
     @Synchronized
     fun getEncodingLayers(ssrc: Long): Array<RtpLayerDesc> {
-        return Array(layers.size) { i ->
-            layers[i].copy()
+        val enc = findRtpEncodingDesc(ssrc) ?: return emptyArray()
+        return Array(enc.layers.size) { i ->
+            enc.layers[i].copy()
         }
     }
 
