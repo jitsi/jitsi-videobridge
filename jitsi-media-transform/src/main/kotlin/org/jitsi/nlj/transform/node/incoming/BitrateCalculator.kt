@@ -56,7 +56,13 @@ class VideoBitrateCalculator(
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         val now = clock.millis()
-        mediaSourceDescs.findRtpLayerDescs(videoRtpPacket).forEach {
+        val layerDescs = mediaSourceDescs.findRtpLayerDescs(videoRtpPacket)
+
+        if (layerDescs.isEmpty()) {
+            logger.warn("No layer found for packet $videoRtpPacket")
+        }
+
+        layerDescs.forEach {
             if (it.updateBitrate(videoRtpPacket.length.bytes, now)) {
                 /* When a layer is started when it was previously inactive,
                  * we want to recalculate bandwidth allocation.

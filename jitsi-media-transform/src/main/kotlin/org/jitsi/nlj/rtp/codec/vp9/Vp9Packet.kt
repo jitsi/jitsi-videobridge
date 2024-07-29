@@ -96,6 +96,9 @@ class Vp9Packet private constructor(
     val hasExtendedPictureId =
         DePacketizer.VP9PayloadDescriptor.hasExtendedPictureId(buffer, payloadOffset, payloadLength)
 
+    val isFlexibleMode =
+        DePacketizer.VP9PayloadDescriptor.isFlexibleMode(buffer, payloadOffset, payloadLength)
+
     val hasScalabilityStructure =
         DePacketizer.VP9PayloadDescriptor.hasScalabilityStructure(buffer, payloadOffset, payloadLength)
 

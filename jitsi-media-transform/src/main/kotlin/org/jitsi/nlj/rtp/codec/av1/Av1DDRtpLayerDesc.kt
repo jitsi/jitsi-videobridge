@@ -52,7 +52,12 @@ class Av1DDRtpLayerDesc(
      */
     frameRate: Double,
 ) : RtpLayerDesc(eid, tid, sid, height, frameRate) {
-    override fun copy(height: Int): RtpLayerDesc = Av1DDRtpLayerDesc(eid, dt, tid, sid, height, frameRate)
+    override fun copy(height: Int, tid: Int, inherit: Boolean): RtpLayerDesc =
+        Av1DDRtpLayerDesc(eid, dt, tid, sid, height, frameRate).also {
+            if (inherit) {
+                it.inheritFrom(this)
+            }
+        }
 
     override val layerId = dt
     override val index = getIndex(eid, dt)
