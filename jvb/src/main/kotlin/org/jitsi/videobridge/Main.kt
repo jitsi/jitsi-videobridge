@@ -19,6 +19,7 @@ package org.jitsi.videobridge
 import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
+import org.ice4j.util.Buffer
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.MetaconfigLogger
@@ -29,6 +30,8 @@ import org.jitsi.rest.createServer
 import org.jitsi.rest.enableCors
 import org.jitsi.rest.isEnabled
 import org.jitsi.rest.servletContextHandler
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.queue.PacketQueue
@@ -239,4 +242,13 @@ private fun setupBufferPools() {
     org.jitsi.rtp.util.BufferPool.returnArray = { ByteBufferPool.returnBuffer(it) }
     org.jitsi.nlj.util.BufferPool.getBuffer = { ByteBufferPool.getBuffer(it) }
     org.jitsi.nlj.util.BufferPool.returnBuffer = { ByteBufferPool.returnBuffer(it) }
+    org.ice4j.util.BufferPool.getBuffer = { len ->
+        val b = ByteBufferPool.getBuffer(len)
+        Buffer(b, 0, b.size)
+    }
+    org.ice4j.util.BufferPool.returnBuffer = { ByteBufferPool.returnBuffer(it.buffer) }
+    org.ice4j.ice.harvest.AbstractUdpListener.BYTES_TO_LEAVE_AT_START_OF_PACKET =
+        RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET
+    org.ice4j.ice.harvest.AbstractUdpListener.BYTES_TO_LEAVE_AT_END_OF_PACKET =
+        Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
 }
