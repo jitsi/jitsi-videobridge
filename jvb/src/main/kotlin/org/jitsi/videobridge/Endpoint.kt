@@ -165,7 +165,7 @@ class Endpoint @JvmOverloads constructor(
 
     /* TODO: do we ever want to support useUniquePort for an Endpoint? */
     private val iceTransport = IceTransport(id, iceControlling, false, supportsPrivateAddresses, logger)
-    private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.endpoint }
+    private val dtlsTransport = DtlsTransport(logger, id).also { it.cryptex = CryptexConfig.endpoint }
 
     private var cryptex: Boolean = CryptexConfig.endpoint
 
@@ -409,8 +409,7 @@ class Endpoint @JvmOverloads constructor(
             override fun dataReceived(buffer: Buffer) {
                 if (looksLikeDtls(buffer.buffer, buffer.offset, buffer.length)) {
                     // DTLS transport is responsible for making its own copy, because it will manage its own buffers
-                    // TODO: place on a queue, we can't risk blocking the ice4j thread.
-                    dtlsTransport.dtlsDataReceived(buffer.buffer, buffer.offset, buffer.length)
+                    dtlsTransport.enqueueBuffer(buffer)
                 } else {
                     val pktInfo =
                         PacketInfo(UnparsedPacket(buffer.buffer, buffer.offset, buffer.length)).apply {

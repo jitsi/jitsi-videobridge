@@ -220,7 +220,7 @@ class Relay @JvmOverloads constructor(
         clock = clock
     )
 
-    private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.relay }
+    private val dtlsTransport = DtlsTransport(logger, id).also { it.cryptex = CryptexConfig.relay }
 
     private var cryptex = CryptexConfig.relay
 
@@ -369,10 +369,8 @@ class Relay @JvmOverloads constructor(
                 // DTLS data will be handled by the DtlsTransport, but SRTP data can go
                 // straight to the transceiver
                 if (looksLikeDtls(buffer.buffer, buffer.offset, buffer.length)) {
-                    // DTLS transport is responsible for making its own copy, because it will manage its own
-                    // buffers
-                    // TODO: place on a queue, we can't risk blocking the ice4j thread.
-                    dtlsTransport.dtlsDataReceived(buffer.buffer, buffer.offset, buffer.length)
+                    // DTLS transport is responsible for making its own copy, because it will manage its own buffers
+                    dtlsTransport.enqueueBuffer(buffer)
                 } else {
                     val pktInfo =
                         RelayedPacketInfo(
