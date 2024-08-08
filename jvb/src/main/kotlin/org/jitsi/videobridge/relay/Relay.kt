@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.ice4j.util.Buffer
 import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.ErrorKind
 import org.jitsi.dcsctp4j.SendPacketStatus
@@ -47,7 +48,6 @@ import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.sumOf
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
@@ -365,26 +365,21 @@ class Relay @JvmOverloads constructor(
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
-            override fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant) {
+            override fun dataReceived(buffer: Buffer) {
                 // DTLS data will be handled by the DtlsTransport, but SRTP data can go
                 // straight to the transceiver
-                if (looksLikeDtls(data, offset, length)) {
+                if (looksLikeDtls(buffer.buffer, buffer.offset, buffer.length)) {
                     // DTLS transport is responsible for making its own copy, because it will manage its own
                     // buffers
-                    dtlsTransport.dtlsDataReceived(data, offset, length)
+                    // TODO: place on a queue, we can't risk blocking the ice4j thread.
+                    dtlsTransport.dtlsDataReceived(buffer.buffer, buffer.offset, buffer.length)
                 } else {
-                    val copy = ByteBufferPool.getBuffer(
-                        length +
-                            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
-                            Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
-                    )
-                    System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
                     val pktInfo =
                         RelayedPacketInfo(
-                            UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length),
+                            UnparsedPacket(buffer.buffer, buffer.offset, buffer.length),
                             meshId
                         ).apply {
-                            this.receivedTime = receivedTime
+                            this.receivedTime = buffer.receivedTime
                         }
                     handleMediaPacket(pktInfo)
                 }
@@ -399,7 +394,6 @@ class Relay @JvmOverloads constructor(
                         outgoingSrtpPacketQueue.add(packetInfo)
                     }
                 })
-                TaskPools.IO_POOL.execute(iceTransport::startReadingData)
                 TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake)
             }
 

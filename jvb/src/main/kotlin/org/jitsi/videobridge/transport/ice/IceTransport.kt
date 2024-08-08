@@ -27,7 +27,10 @@ import org.ice4j.ice.IceProcessingState
 import org.ice4j.ice.LocalCandidate
 import org.ice4j.ice.RemoteCandidate
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
-import org.ice4j.socket.SocketClosedException
+import org.ice4j.util.Buffer
+import org.ice4j.util.BufferHandler
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -36,6 +39,8 @@ import org.jitsi.videobridge.ice.Harvesters
 import org.jitsi.videobridge.ice.IceConfig
 import org.jitsi.videobridge.ice.TransportUtils
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
+import org.jitsi.videobridge.util.ByteBufferPool
+import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceCandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceRtcpmuxPacketExtension
@@ -62,7 +67,7 @@ class IceTransport @JvmOverloads constructor(
      * Whether the ICE agent created by this transport should use
      * unique local ports, rather than the configured port.
      */
-    useUniquePort: Boolean,
+    val useUniquePort: Boolean,
     /**
      * Use private addresses for this [IceTransport] even if [IceConfig.advertisePrivateCandidates] is false.
      */
@@ -73,14 +78,9 @@ class IceTransport @JvmOverloads constructor(
     private val logger = createChildLogger(parentLogger)
 
     /**
-     * The handler which will be invoked when data is received.  The handler
-     * does *not* own the buffer passed to it, so a copy must be made if it wants
-     * to use the data after the handler call finishes.  This field should be
-     * set by some other entity which wishes to handle the incoming data
+     * The handler which will be invoked when data is received.
+     * This field should be set by some other entity which wishes to handle the incoming data
      * received over the ICE connection.
-     * NOTE: we don't create a packet in [IceTransport] because
-     * RTP packets want space before and after and [IceTransport]
-     * has no notion of what kind of data is contained within the buffer.
      */
     @JvmField
     var incomingDataHandler: IncomingDataHandler? = null
@@ -135,7 +135,16 @@ class IceTransport @JvmOverloads constructor(
         addPairChangeListener(iceStreamPairChangedListener)
     }
 
-    private val iceComponent = iceAgent.createComponent(iceStream, IceConfig.config.keepAliveStrategy, true)
+    private val iceComponent = iceAgent.createComponent(iceStream, IceConfig.config.keepAliveStrategy, false).apply {
+        setBufferCallback(object : BufferHandler {
+            override fun handleBuffer(buffer: Buffer) {
+                incomingDataHandler?.dataReceived(buffer) ?: run {
+                    packetStats.numIncomingPacketsDroppedNoHandler.increment()
+                    ByteBufferPool.returnBuffer(buffer.buffer)
+                }
+            }
+        })
+    }
     private val packetStats = PacketStats()
     val icePassword: String
         get() = iceAgent.localPassword
@@ -204,7 +213,7 @@ class IceTransport @JvmOverloads constructor(
 
     fun startReadingData() {
         logger.cdebug { "Starting to read incoming data" }
-        val socket = iceComponent.socket
+        val socket = iceComponent.selectedPair.iceSocketWrapper
         val receiveBuf = ByteArray(1500)
         val packet = DatagramPacket(receiveBuf, 0, receiveBuf.size)
         var receivedTime: Instant
@@ -213,16 +222,25 @@ class IceTransport @JvmOverloads constructor(
             try {
                 socket.receive(packet)
                 receivedTime = clock.instant()
-            } catch (e: SocketClosedException) {
-                logger.info("Socket closed, stopping reader")
-                break
             } catch (e: IOException) {
                 logger.warn("Stopping reader", e)
                 break
             }
             packetStats.numPacketsReceived.increment()
             try {
-                incomingDataHandler?.dataReceived(receiveBuf, packet.offset, packet.length, receivedTime) ?: run {
+                val b = ByteBufferPool.getBuffer(
+                    RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET + packet.length + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
+                )
+                System.arraycopy(
+                    packet.data,
+                    packet.offset,
+                    b,
+                    RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET,
+                    packet.length
+                )
+                val buffer = Buffer(b, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, packet.length, receivedTime)
+
+                incomingDataHandler?.dataReceived(buffer) ?: run {
                     logger.cdebug { "Data handler is null, dropping data" }
                     packetStats.numIncomingPacketsDroppedNoHandler.increment()
                 }
@@ -239,7 +257,7 @@ class IceTransport @JvmOverloads constructor(
     fun send(data: ByteArray, off: Int, length: Int) {
         if (running.get()) {
             try {
-                iceComponent.socket.send(DatagramPacket(data, off, length))
+                iceComponent.send(data, off, length)
                 packetStats.numPacketsSent.increment()
             } catch (e: IOException) {
                 logger.error("Error sending packet", e)
@@ -344,6 +362,13 @@ class IceTransport @JvmOverloads constructor(
             transition.completed() -> {
                 if (iceConnected.compareAndSet(false, true)) {
                     eventHandler?.connected()
+                    if (useUniquePort) {
+                        // ice4j's push API only works with the single port harvester. With unique ports we still need
+                        // to read from the socket.
+                        TaskPools.IO_POOL.submit {
+                            startReadingData()
+                        }
+                    }
                     if (iceComponent.selectedPair.remoteCandidate.type == CandidateType.RELAYED_CANDIDATE ||
                         iceComponent.selectedPair.localCandidate.type == CandidateType.RELAYED_CANDIDATE
                     ) {
@@ -435,7 +460,7 @@ class IceTransport @JvmOverloads constructor(
          * Notify the handler that data was received (contained
          * within [data] at [offset] with [length]) at [receivedTime]
          */
-        fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant)
+        fun dataReceived(buffer: Buffer)
     }
 
     interface EventHandler {
