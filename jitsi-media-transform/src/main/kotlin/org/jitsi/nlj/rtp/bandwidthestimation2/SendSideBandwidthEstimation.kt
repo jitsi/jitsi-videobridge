@@ -46,7 +46,6 @@ import kotlin.math.min
  * Field trial settings have been generally removed, set to their default settings.
  */
 class LinkCapacityTracker {
-    private val trackingRate: Duration = 10.secs
     private var capacityEstimateBps = 0.0
     private var lastLinkCapcityUpdate = Instant.MIN
     private var lastDelayBasedEstimate = Bandwidth.INFINITY
@@ -73,7 +72,7 @@ class LinkCapacityTracker {
         if (acknowledgedTarget.bps > capacityEstimateBps) {
             val alpha = if (lastLinkCapcityUpdate.isFinite() && atTime.isFinite()) {
                 val delta = Duration.between(lastLinkCapcityUpdate, atTime)
-                exp(-(delta / trackingRate))
+                exp(-(delta / 10.secs))
             } else {
                 0.0
             }
