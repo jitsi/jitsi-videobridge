@@ -16,7 +16,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 
 /** Test scenario simulated network,
- * based on WebRTC call/simulated_network.{h,cc} and
+ * based on WebRTC test/network/simulated_network.{h,cc} and
  * api/test/simulated_network.h in
  * WebRTC tag branch-heads/6422 (Chromium 125).
  *
