@@ -432,20 +432,54 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate.bps shouldBe 2 * kStartBitrate.bps
         }
 
-        "TestExponentialProbingTimeout" {
+        "InitialProbingTimeout" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
             // Advance far enough to cause a time out in waiting for probing result.
             fixture.advanceTime(kExponentialProbingTimeout)
             probes = probeController.process(fixture.currentTime())
-
+            probes.isEmpty() shouldBe true
             probes = probeController.setEstimatedBitrate(
                 1800.bps,
                 BandwidthLimitedCause.kDelayBasedLimited,
                 fixture.currentTime()
             )
+            probes.isEmpty() shouldBe true
+        }
+
+        "InitialProbingRetriedAfterTimeoutIfFirstProbeToMaxBitrateAndBweNotUpdated" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+            probeController.setFirstProbeToMaxBitrate(true)
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
+            // Advance far enough to cause a time out in waiting for probing result.
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probes = probeController.process(fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
+        }
+
+        "InitialProbingNotRetriedAfterTimeoutIfFirstProbeAndBweUpdated" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+            probeController.setFirstProbeToMaxBitrate(true)
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
+            fixture.advanceTime(700.ms)
+            probes = probeController.setEstimatedBitrate(
+                180.bps,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            probes.isEmpty() shouldBe true
+            // Advance far enough to cause a time out in waiting for probing result.
+            fixture.advanceTime(kExponentialProbingTimeout)
+            probes = probeController.process(fixture.currentTime())
             probes.isEmpty() shouldBe true
         }
 

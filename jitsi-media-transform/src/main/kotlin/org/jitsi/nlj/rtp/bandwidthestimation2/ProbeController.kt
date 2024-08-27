@@ -436,6 +436,15 @@ class ProbeController(
     fun process(atTime: Instant): MutableList<ProbeClusterConfig> {
         if (Duration.between(timeLastProbingInitiated, atTime) > kMaxWaitingTimeForProbingResult) {
             if (state == State.kWaitingForProbingResult) {
+                // If the initial probe timed out, and the estimate has not changed by
+                // other means, (likely because normal media packets are not being sent
+                // yet), then send a probe again.
+                if (waitingForInitialProbeResult &&
+                    estimatedBitrate == startBitrate && firstProbeToMaxBitrate
+                ) {
+                    updateState(State.kInit)
+                    return initiateExponentialProbing(atTime)
+                }
                 logger.info("kWaitingForProbingResult: timeout")
                 updateState(State.kProbingComplete)
             }
