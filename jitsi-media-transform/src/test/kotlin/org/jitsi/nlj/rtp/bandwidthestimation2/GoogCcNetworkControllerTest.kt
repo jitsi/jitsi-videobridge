@@ -452,7 +452,8 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             targetBitrateAfterDelay!! shouldBeLessThan targetBitrateBeforeDelay!!
         }
 
-        /* Skipping PaceAtMaxOfLowerLinkCapacityAndBwe - depends on field trial */
+        /* Skipping PaceAtMaxOfLowerLinkCapacityAndBwe - depends on link estimators */
+        /* Skipping LimitPacingFactorToUpperLinkCapacity - depends on link estimators. */
 
         "CongestionWindowPushbackOnNetworkDelay".config(enabled = false) { // Implementation not yet complete
             val factory = GoogCcNetworkControllerFactory(
