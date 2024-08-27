@@ -54,6 +54,11 @@ class BitrateAllocationLimits(
 class StreamsConfig(
     val atTime: Instant = Instant.MAX,
     val requestsAlrProbing: Boolean? = null,
+    // If `initial_probe_to_max_bitrate` is set to true, the first probe
+    // may probe up to the max configured bitrate and can ignore
+    // max_total_allocated_bitrate.
+    val initialProbeToMaxBitrate: Boolean? = null,
+
     val pacingFactor: Double? = null,
 
     // TODO(srte): Use BitrateAllocationLimits here.

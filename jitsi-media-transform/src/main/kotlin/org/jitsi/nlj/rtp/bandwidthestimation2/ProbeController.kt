@@ -134,6 +134,8 @@ class ProbeController(
     private val logger = parentLogger.createChildLogger(javaClass.name)
 
     private var networkAvailable = false
+    private var waitingForInitialProbeResult = false
+    private var firstProbeToMaxBitrate = false
     private var bandwidthLimitedCause = BandwidthLimitedCause.kDelayBasedLimited
     private var state = State.kInit
     private var minBitrateToProbeFurther = Bandwidth.INFINITY
@@ -264,6 +266,20 @@ class ProbeController(
         return mutableListOf()
     }
 
+    private fun updateState(newState: State) {
+        when (newState) {
+            State.kInit ->
+                state = State.kInit
+            State.kWaitingForProbingResult ->
+                state = State.kWaitingForProbingResult
+            State.kProbingComplete -> {
+                state = State.kProbingComplete
+                waitingForInitialProbeResult = false
+                minBitrateToProbeFurther = Bandwidth.INFINITY
+            }
+        }
+    }
+
     private fun initiateExponentialProbing(atTime: Instant): MutableList<ProbeClusterConfig> {
         assert(networkAvailable)
         assert(state == State.kInit)
@@ -275,6 +291,8 @@ class ProbeController(
         if (config.secondExponentialProbeScale != null && config.secondExponentialProbeScale > 0.0) {
             probes.add(config.secondExponentialProbeScale * startBitrate)
         }
+        waitingForInitialProbeResult = true
+
         return initiateProbing(atTime, probes, true)
     }
 
@@ -293,10 +311,13 @@ class ProbeController(
         if (state == State.kWaitingForProbingResult) {
             // Continue probing if probing results indicate channel has greater
             // capacity unless we already reached the needed bitrate.
-            if (config.abortFurtherProbeIfMaxLowerThanCurrent &&
-                bitrate > maxBitrate ||
-                maxTotalAllocatedBitrate != Bandwidth.ZERO &&
-                bitrate > 2 * maxTotalAllocatedBitrate
+            if (config.abortFurtherProbeIfMaxLowerThanCurrent && (
+                    bitrate > maxBitrate || (
+                        maxTotalAllocatedBitrate != Bandwidth.ZERO &&
+                            !(waitingForInitialProbeResult && firstProbeToMaxBitrate) &&
+                            bitrate > 2 * maxTotalAllocatedBitrate
+                        )
+                    )
             ) {
                 // No need to continue probing
                 minBitrateToProbeFurther = Bandwidth.INFINITY
@@ -320,6 +341,12 @@ class ProbeController(
 
     fun enablePeriodicAlrProbing(enable: Boolean) {
         enablePeriodicAlrProbing = enable
+    }
+
+    // The first initial probe ignores allocated bitrate constraints and probe up
+    // to max configured bitrate configured via SetBitrates.
+    fun setFirstProbeToMaxBitrate(firstProbeToMaxBitrate: Boolean) {
+        this.firstProbeToMaxBitrate = firstProbeToMaxBitrate
     }
 
     fun setAlrStartTimeMs(alrStartTimeMs: Long?) {
@@ -377,6 +404,7 @@ class ProbeController(
     fun reset(atTime: Instant) {
         bandwidthLimitedCause = BandwidthLimitedCause.kDelayBasedLimited
         state = State.kInit
+        waitingForInitialProbeResult = false
         minBitrateToProbeFurther = Bandwidth.INFINITY
         timeLastProbingInitiated = Instant.MIN
         estimatedBitrate = Bandwidth.ZERO
@@ -409,8 +437,7 @@ class ProbeController(
         if (Duration.between(timeLastProbingInitiated, atTime) > kMaxWaitingTimeForProbingResult) {
             if (state == State.kWaitingForProbingResult) {
                 logger.info("kWaitingForProbingResult: timeout")
-                state = State.kProbingComplete
-                minBitrateToProbeFurther = Bandwidth.INFINITY
+                updateState(State.kProbingComplete)
             }
         }
         if (estimatedBitrate == Bandwidth.ZERO || state != State.kProbingComplete) {
@@ -447,14 +474,15 @@ class ProbeController(
                 min(maxTotalAllocatedBitrate, maxBitrate)
             }
             if (min(networkEstimate, estimatedBitrate) > config.skipIfEstimateLargerThanFractionOfMax * maxProbeRate) {
-                state = State.kProbingComplete
-                minBitrateToProbeFurther = Bandwidth.INFINITY
+                updateState(State.kProbingComplete)
                 return mutableListOf()
             }
         }
 
         var maxProbeBitrate = maxBitrate
-        if (maxTotalAllocatedBitrate > Bandwidth.ZERO) {
+        if (maxTotalAllocatedBitrate > Bandwidth.ZERO &&
+            !(firstProbeToMaxBitrate && waitingForInitialProbeResult)
+        ) {
             // If a max allocated bitrate has been configured, allow probing up to 2x
             // that rate. This allows some overhead to account for bursty streams,
             // which otherwise would have to ramp up when the overshoot is already in
@@ -505,13 +533,12 @@ class ProbeController(
         }
         timeLastProbingInitiated = now
         if (probeFurther) {
-            state = State.kWaitingForProbingResult
+            updateState(State.kWaitingForProbingResult)
             // Dont expect probe results to be larger than a fraction of the actual
             // probe rate.
             minBitrateToProbeFurther = min(estimateCappedBitrate, bitratesToProbe.last() * config.furtherProbeThreshold)
         } else {
-            state = State.kProbingComplete
-            minBitrateToProbeFurther = Bandwidth.INFINITY
+            updateState(State.kProbingComplete)
         }
         return pendingProbes
     }

@@ -320,6 +320,36 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate.bps shouldBe 2 * 1800
         }
 
+        "ExponentialProbingStopIfMaxBitrateLow" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(
+                    abortFurtherProbeIfMaxLowerThanCurrent = true
+                )
+            )
+            val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
+
+            // Repeated probe normally is sent when estimated bitrate climbs above
+            // 0.7 * 6 * kStartBitrate = 1260. But since max bitrate is low, expect
+            // exponential probing to stop.
+            probes = probeController.setBitrates(
+                kMinBitrate,
+                kStartBitrate,
+                maxBitrate = kStartBitrate,
+                fixture.currentTime()
+            )
+            probes.isEmpty() shouldBe true
+
+            probes = probeController.setEstimatedBitrate(
+                1800.bps,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            probes.isEmpty() shouldBe true
+        }
+
         "ExponentialProbingStopIfMaxAllocatedBitrateLow" {
             val fixture = ProbeControllerFixture(
                 config = ProbeControllerConfig(
@@ -343,6 +373,63 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
             probes.isEmpty() shouldBe true
+        }
+
+        "InitialProbingIgnoreLowMaxAllocatedbitrateIfSetFirstProbeToMaxBitrate" {
+            val fixture = ProbeControllerFixture(
+                config = ProbeControllerConfig(
+                    abortFurtherProbeIfMaxLowerThanCurrent = true
+                )
+            )
+            val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
+            probeController.setFirstProbeToMaxBitrate(true)
+
+            // Repeated probe is sent when estimated bitrate climbs above
+            // 0.7 * 6 * kStartBitrate = 1260. During the initial probe, we ignore the
+            // allocation limit and probe up to the max.
+            probes = probeController.onMaxTotalAllocatedBitrate(kStartBitrate, fixture.currentTime())
+            probes.isEmpty() shouldBe true
+
+            probes = probeController.setEstimatedBitrate(
+                1800.bps,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            probes.size shouldBe 1
+            probes[0].targetDataRate.bps shouldBe 2 * 1800
+
+            probes = probeController.setEstimatedBitrate(
+                probes[0].targetDataRate,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            probes.size shouldBe 1
+        }
+
+        "InitialProbingToLowMaxAllocatedbitrateIfNotSetFirstProbeToMaxBitrate" {
+            val fixture = ProbeControllerFixture()
+            val probeController = fixture.createController()
+            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
+            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
+            probes.size shouldBeGreaterThan 0
+
+            // Repeated probe is sent when estimated bitrate climbs above
+            // 0.7 * 6 * kStartBitrate = 1260.
+            probes = probeController.onMaxTotalAllocatedBitrate(kStartBitrate, fixture.currentTime())
+            probes.isEmpty() shouldBe true
+
+            // If the inital probe result is received, a new probe is sent at 2x the
+            // needed max bitrate.
+            probes = probeController.setEstimatedBitrate(
+                1800.bps,
+                BandwidthLimitedCause.kDelayBasedLimited,
+                fixture.currentTime()
+            )
+            probes.size shouldBe 1
+            probes[0].targetDataRate.bps shouldBe 2 * kStartBitrate.bps
         }
 
         "TestExponentialProbingTimeout" {
