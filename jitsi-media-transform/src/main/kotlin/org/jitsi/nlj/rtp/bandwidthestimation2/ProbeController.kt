@@ -78,6 +78,7 @@ class ProbeControllerConfig(
     val furtherExponentialProbeScale: Double = 2.0,
     val furtherProbeThreshold: Double = 0.7,
     val abortFurtherProbeIfMaxLowerThanCurrent: Boolean = false,
+    val repeatedInitialProbingDuration: Duration = 5.secs,
 
     // Configures how often we send ALR probes and how big they are.
     val alrProbingInterval: Duration = 5.secs,
@@ -85,7 +86,7 @@ class ProbeControllerConfig(
 
     // Configures how often we send probes if NetworkStateEstimate is available.
     val networkStateEstimateProbingInterval: Duration = maxDuration,
-    // Periodically probe as long as the the ratio beteeen current estimate and
+    // Periodically probe as long as the ratio between current estimate and
     // NetworkStateEstimate is lower then this.
     val probeIfEstimateLowerThanNetworkStateEstimateRatio: Double = 0.0,
     val estimateLowerThanNetworkStateProbingInterval: Duration = 3.secs,
@@ -105,7 +106,7 @@ class ProbeControllerConfig(
     // The minimum probing duration.
     val minProbeDuration: Duration = 15.ms,
     val lossLimitedProbeScale: Double = 1.5,
-    // Dont send a probe if min(estimate, network state estimate) is larger than
+    // Don't send a probe if min(estimate, network state estimate) is larger than
     // this fraction of the set max bitrate.
     val skipIfEstimateLargerThanFractionOfMax: Double = 0.0,
 )
@@ -135,7 +136,8 @@ class ProbeController(
 
     private var networkAvailable = false
     private var waitingForInitialProbeResult = false
-    private var firstProbeToMaxBitrate = false
+    private var repeatedInitialProbingEnabled = false
+    private var lastAllowedRepeatedInitialProbe = Instant.MIN
     private var bandwidthLimitedCause = BandwidthLimitedCause.kDelayBasedLimited
     private var state = State.kInit
     private var minBitrateToProbeFurther = Bandwidth.INFINITY
@@ -292,6 +294,13 @@ class ProbeController(
             probes.add(config.secondExponentialProbeScale * startBitrate)
         }
         waitingForInitialProbeResult = true
+        if (repeatedInitialProbingEnabled) {
+            lastAllowedRepeatedInitialProbe =
+                atTime + config.repeatedInitialProbingDuration
+            logger.info {
+                "Repeated initial probing enabled, last allowed probe: $lastAllowedRepeatedInitialProbe now: $atTime"
+            }
+        }
 
         return initiateProbing(atTime, probes, true)
     }
@@ -314,7 +323,10 @@ class ProbeController(
             if (config.abortFurtherProbeIfMaxLowerThanCurrent && (
                     bitrate > maxBitrate || (
                         maxTotalAllocatedBitrate != Bandwidth.ZERO &&
-                            !(waitingForInitialProbeResult && firstProbeToMaxBitrate) &&
+                            !(
+                                waitingForInitialProbeResult &&
+                                    repeatedInitialProbingEnabled
+                                ) &&
                             bitrate > 2 * maxTotalAllocatedBitrate
                         )
                     )
@@ -343,10 +355,11 @@ class ProbeController(
         enablePeriodicAlrProbing = enable
     }
 
-    // The first initial probe ignores allocated bitrate constraints and probe up
-    // to max configured bitrate configured via SetBitrates.
-    fun setFirstProbeToMaxBitrate(firstProbeToMaxBitrate: Boolean) {
-        this.firstProbeToMaxBitrate = firstProbeToMaxBitrate
+    // Probes are sent periodically every 1s during the first 5s after the network
+    // becomes available. The probes ignores allocated bitrate constraints and
+    // probe up to max configured bitrate configured via SetBitrates.
+    fun enableRepeatedInitialProbing(enable: Boolean) {
+        repeatedInitialProbingEnabled = enable
     }
 
     fun setAlrStartTimeMs(alrStartTimeMs: Long?) {
@@ -433,24 +446,31 @@ class ProbeController(
         return false
     }
 
+    private fun timeForNextRepeatedInitialProbe(atTime: Instant): Boolean {
+        if (state != State.kWaitingForProbingResult &&
+            lastAllowedRepeatedInitialProbe > atTime
+        ) {
+            val nextProbeTime = timeLastProbingInitiated + kMaxWaitingTimeForProbingResult
+            if (atTime >= nextProbeTime) {
+                return true
+            }
+        }
+        return false
+    }
+
     fun process(atTime: Instant): MutableList<ProbeClusterConfig> {
         if (Duration.between(timeLastProbingInitiated, atTime) > kMaxWaitingTimeForProbingResult) {
             if (state == State.kWaitingForProbingResult) {
-                // If the initial probe timed out, and the estimate has not changed by
-                // other means, (likely because normal media packets are not being sent
-                // yet), then send a probe again.
-                if (waitingForInitialProbeResult &&
-                    estimatedBitrate == startBitrate && firstProbeToMaxBitrate
-                ) {
-                    updateState(State.kInit)
-                    return initiateExponentialProbing(atTime)
-                }
                 logger.info("kWaitingForProbingResult: timeout")
                 updateState(State.kProbingComplete)
             }
         }
         if (estimatedBitrate == Bandwidth.ZERO || state != State.kProbingComplete) {
             return mutableListOf()
+        }
+        if (timeForNextRepeatedInitialProbe(atTime)) {
+            waitingForInitialProbeResult = true
+            return initiateProbing(atTime, listOf(estimatedBitrate * config.firstExponentialProbeScale), true)
         }
         if (timeForAlrProbe(atTime) || timeForNetworkStateProbe(atTime)) {
             return initiateProbing(atTime, listOf(estimatedBitrate * config.alrProbeScale), true)
@@ -490,7 +510,7 @@ class ProbeController(
 
         var maxProbeBitrate = maxBitrate
         if (maxTotalAllocatedBitrate > Bandwidth.ZERO &&
-            !(firstProbeToMaxBitrate && waitingForInitialProbeResult)
+            !(repeatedInitialProbingEnabled && waitingForInitialProbeResult)
         ) {
             // If a max allocated bitrate has been configured, allow probing up to 2x
             // that rate. This allows some overhead to account for bursty streams,

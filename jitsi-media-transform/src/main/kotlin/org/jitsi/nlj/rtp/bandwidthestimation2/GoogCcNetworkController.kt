@@ -104,9 +104,9 @@ class GoogCcNetworkController(
             if (initialConfig!!.streamBasedConfig.requestsAlrProbing != null) {
                 probeController.enablePeriodicAlrProbing(initialConfig!!.streamBasedConfig.requestsAlrProbing!!)
             }
-            if (initialConfig!!.streamBasedConfig.initialProbeToMaxBitrate != null) {
-                probeController.setFirstProbeToMaxBitrate(
-                    initialConfig!!.streamBasedConfig.initialProbeToMaxBitrate!!
+            if (initialConfig!!.streamBasedConfig.enableRepeatedInitialProbing != null) {
+                probeController.enableRepeatedInitialProbing(
+                    initialConfig!!.streamBasedConfig.enableRepeatedInitialProbing!!
                 )
             }
             val totalBitrate = initialConfig!!.streamBasedConfig.maxTotalAllocatedBitrate

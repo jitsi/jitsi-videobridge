@@ -17,6 +17,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.util.Bandwidth
@@ -375,17 +376,13 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
         }
 
-        "InitialProbingIgnoreLowMaxAllocatedbitrateIfSetFirstProbeToMaxBitrate" {
-            val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    abortFurtherProbeIfMaxLowerThanCurrent = true
-                )
-            )
+        "RepeatedInitialProbingIgnoreLowMaxAllocatedbitrate" {
+            val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBeGreaterThan 0
-            probeController.setFirstProbeToMaxBitrate(true)
+            probeController.enableRepeatedInitialProbing(true)
 
             // Repeated probe is sent when estimated bitrate climbs above
             // 0.7 * 6 * kStartBitrate = 1260. During the initial probe, we ignore the
@@ -409,7 +406,7 @@ class ProbeControllerTest : FreeSpec() {
             probes.size shouldBe 1
         }
 
-        "InitialProbingToLowMaxAllocatedbitrateIfNotSetFirstProbeToMaxBitrate" {
+        "InitialProbingToLowMaxAllocatedbitrate" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
@@ -450,37 +447,31 @@ class ProbeControllerTest : FreeSpec() {
             probes.isEmpty() shouldBe true
         }
 
-        "InitialProbingRetriedAfterTimeoutIfFirstProbeToMaxBitrateAndBweNotUpdated" {
+        "RepeatedInitialProbingSendsNewProbeAfterTimeout" {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
-            probeController.setFirstProbeToMaxBitrate(true)
+            probeController.enableRepeatedInitialProbing(true)
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
             var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
             probes.size shouldBeGreaterThan 0
-            // Advance far enough to cause a time out in waiting for probing result.
-            fixture.advanceTime(kExponentialProbingTimeout)
-            probes = probeController.process(fixture.currentTime())
-            probes.size shouldBeGreaterThan 0
-        }
-
-        "InitialProbingNotRetriedAfterTimeoutIfFirstProbeAndBweUpdated" {
-            val fixture = ProbeControllerFixture()
-            val probeController = fixture.createController()
-            probeController.setFirstProbeToMaxBitrate(true)
-            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
-            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
-            probes.size shouldBeGreaterThan 0
-            fixture.advanceTime(700.ms)
-            probes = probeController.setEstimatedBitrate(
-                180.bps,
-                BandwidthLimitedCause.kDelayBasedLimited,
-                fixture.currentTime()
+            val startTime = fixture.currentTime()
+            var lastProbeTime = fixture.currentTime()
+            while (fixture.currentTime() < startTime + 5.secs) {
+                fixture.advanceTime(100.ms)
+                probes = probeController.process(fixture.currentTime())
+                if (probes.isNotEmpty()) {
+                    // Expect a probe every second.
+                    Duration.between(lastProbeTime, fixture.currentTime()) shouldBe (1.1).secs
+                    lastProbeTime = fixture.currentTime()
+                } else {
+                    Duration.between(lastProbeTime, fixture.currentTime()) shouldBeLessThan (1.1).secs
+                }
+            }
+            fixture.advanceTime(
+                1.secs
             )
-            probes.isEmpty() shouldBe true
-            // Advance far enough to cause a time out in waiting for probing result.
-            fixture.advanceTime(kExponentialProbingTimeout)
-            probes = probeController.process(fixture.currentTime())
-            probes.isEmpty() shouldBe true
+            // After 5s, repeated initial probing stops.
+            probeController.process(fixture.currentTime()).isEmpty() shouldBe true
         }
 
         "RequestProbeInAlr" {
