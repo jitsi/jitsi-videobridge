@@ -33,8 +33,8 @@ class BuiltInNetworkBehaviorConfig(
     var queueDelayMs: Int = 0,
     // Standard deviation of the extra delay.
     var delayStandardDeviationMs: Int = 0,
-    // Link capacity in kbps.
-    var linkCapacityKbps: Int = 0,
+    // Link capacity in kbps. Negative number is treated as infinite capacity.
+    var linkCapacityKbps: Int = -1,
     // Random packet loss, range 0 to 100.
     var lossPercent: Double = 0.0,
     // If packets are allowed to be reordered.
