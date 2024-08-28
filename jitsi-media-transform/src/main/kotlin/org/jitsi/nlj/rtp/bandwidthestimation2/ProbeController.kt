@@ -33,7 +33,7 @@ import java.time.Instant
 
 /** Probe controller,
  * based on WebRTC modules/congestion_controller/goog_cc/probe_controller.{h,cc} in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/6613 (Chromium 128).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */

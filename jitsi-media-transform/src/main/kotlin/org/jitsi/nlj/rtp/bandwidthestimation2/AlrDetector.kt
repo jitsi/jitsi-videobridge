@@ -19,7 +19,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
  * An Application-limited region detector.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/alr_detector.{h,cc} in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/6613 (Chromium 128).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */

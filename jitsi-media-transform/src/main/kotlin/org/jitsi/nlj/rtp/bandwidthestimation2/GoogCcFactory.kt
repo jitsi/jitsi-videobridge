@@ -20,7 +20,7 @@ import java.time.Duration
 
 /** Google CC Network Controller Factory,
  * based on WebRTC api/transport/goog_cc_factory.{h,cc} in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/6613 (Chromium 128).
  *
  * Field trial settings have been generally removed, set to their default settings, and features not used in
  * Chrome have been removed.

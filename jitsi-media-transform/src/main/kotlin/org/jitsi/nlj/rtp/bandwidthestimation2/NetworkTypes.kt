@@ -29,7 +29,7 @@ import java.time.Instant
 
 /** Common network types used for bandwidth estimation,
  * based on WebRTC api/transport/network_types.{h,cc} in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/6613 (Chromium 128).
  */
 
 /* Configuration */

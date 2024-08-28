@@ -33,7 +33,7 @@ import java.util.*
  * Basic implementation to estimate bitrate of probes.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/probe_bitrate_estimator.{h,cc} in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/6613 (Chromium 128).
  */
 class ProbeBitrateEstimator {
     // TODO: pass parent logger in so we have log contexts
