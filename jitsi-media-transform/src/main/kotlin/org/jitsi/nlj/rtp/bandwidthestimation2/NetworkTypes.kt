@@ -23,6 +23,7 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.per
+import org.jitsi.utils.ms
 import java.time.Duration
 import java.time.Instant
 
@@ -228,7 +229,12 @@ class PacerConfig {
 class ProbeClusterConfig {
     var atTime = Instant.MAX
     var targetDataRate = Bandwidth.ZERO
+
+    // Duration of a probe.
     var targetDuration = Duration.ZERO
+
+    // Delta time between sent bursts of packets during probe.
+    var minProbeDelta = 2.ms
     var targetProbeCount = 0
     var id = 0
 }

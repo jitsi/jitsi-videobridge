@@ -78,12 +78,17 @@ class ProbeControllerConfig(
     val furtherExponentialProbeScale: Double = 2.0,
     val furtherProbeThreshold: Double = 0.7,
     val abortFurtherProbeIfMaxLowerThanCurrent: Boolean = false,
-    val repeatedInitialProbingDuration: Duration = 5.secs,
 
+    val repeatedInitialProbingTimePeriod: Duration = 5.secs,
+    // The minimum probing duration of an individual probe during
+    // the repeated_initial_probing_time_period.
+    val initialProbeDuration: Duration = 100.ms,
+    // Delta time between sent bursts of packets in a probe during
+    // the repeated_initial_probing_time_period.
+    val initialMinProbeDelta: Duration = 20.ms,
     // Configures how often we send ALR probes and how big they are.
     val alrProbingInterval: Duration = 5.secs,
     val alrProbeScale: Double = 2.0,
-
     // Configures how often we send probes if NetworkStateEstimate is available.
     val networkStateEstimateProbingInterval: Duration = maxDuration,
     // Periodically probe as long as the ratio between current estimate and
@@ -105,6 +110,8 @@ class ProbeControllerConfig(
     val minProbePacketsSent: Int = 5,
     // The minimum probing duration.
     val minProbeDuration: Duration = 15.ms,
+    // Delta time between sent bursts of packets in a probe.
+    val minProbeDelta: Duration = 2.ms,
     val lossLimitedProbeScale: Double = 1.5,
     // Don't send a probe if min(estimate, network state estimate) is larger than
     // this fraction of the set max bitrate.
@@ -135,7 +142,6 @@ class ProbeController(
     private val logger = parentLogger.createChildLogger(javaClass.name)
 
     private var networkAvailable = false
-    private var waitingForInitialProbeResult = false
     private var repeatedInitialProbingEnabled = false
     private var lastAllowedRepeatedInitialProbe = Instant.MIN
     private var bandwidthLimitedCause = BandwidthLimitedCause.kDelayBasedLimited
@@ -250,6 +256,10 @@ class ProbeController(
             val allowFurtherProbing = limitedByCurrentBwe
             return initiateProbing(atTime, probes, allowFurtherProbing)
         }
+        if (maxTotalAllocatedBitrate != Bandwidth.ZERO) {
+            lastAllowedRepeatedInitialProbe = atTime
+        }
+
         this.maxTotalAllocatedBitrate = maxTotalAllocatedBitrate
         return mutableListOf()
     }
@@ -276,7 +286,6 @@ class ProbeController(
                 state = State.kWaitingForProbingResult
             State.kProbingComplete -> {
                 state = State.kProbingComplete
-                waitingForInitialProbeResult = false
                 minBitrateToProbeFurther = Bandwidth.INFINITY
             }
         }
@@ -293,10 +302,9 @@ class ProbeController(
         if (config.secondExponentialProbeScale != null && config.secondExponentialProbeScale > 0.0) {
             probes.add(config.secondExponentialProbeScale * startBitrate)
         }
-        waitingForInitialProbeResult = true
-        if (repeatedInitialProbingEnabled) {
+        if (repeatedInitialProbingEnabled && maxTotalAllocatedBitrate == Bandwidth.ZERO) {
             lastAllowedRepeatedInitialProbe =
-                atTime + config.repeatedInitialProbingDuration
+                atTime + config.repeatedInitialProbingTimePeriod
             logger.info {
                 "Repeated initial probing enabled, last allowed probe: $lastAllowedRepeatedInitialProbe now: $atTime"
             }
@@ -323,10 +331,6 @@ class ProbeController(
             if (config.abortFurtherProbeIfMaxLowerThanCurrent && (
                     bitrate > maxBitrate || (
                         maxTotalAllocatedBitrate != Bandwidth.ZERO &&
-                            !(
-                                waitingForInitialProbeResult &&
-                                    repeatedInitialProbingEnabled
-                                ) &&
                             bitrate > 2 * maxTotalAllocatedBitrate
                         )
                     )
@@ -356,8 +360,10 @@ class ProbeController(
     }
 
     // Probes are sent periodically every 1s during the first 5s after the network
-    // becomes available. The probes ignores allocated bitrate constraints and
-    // probe up to max configured bitrate configured via SetBitrates.
+    // becomes available or until OnMaxTotalAllocatedBitrate is invoked with a
+    // none zero max_total_allocated_bitrate (there are active streams being
+    // sent.) Probe rate is up to max configured bitrate configured via
+    // SetBitrates.
     fun enableRepeatedInitialProbing(enable: Boolean) {
         repeatedInitialProbingEnabled = enable
     }
@@ -411,13 +417,13 @@ class ProbeController(
 
     /**
      * Resets the ProbeController to a state equivalent to as if it was just
-     * created EXCEPT for `enable_periodic_alr_probing_` and
-     * `network_available_`.
+     * created EXCEPT for configuration settings like
+     * `enable_periodic_alr_probing_` `network_available_` and
+     * `max_total_allocated_bitrate_`.
      */
     fun reset(atTime: Instant) {
         bandwidthLimitedCause = BandwidthLimitedCause.kDelayBasedLimited
         state = State.kInit
-        waitingForInitialProbeResult = false
         minBitrateToProbeFurther = Bandwidth.INFINITY
         timeLastProbingInitiated = Instant.MIN
         estimatedBitrate = Bandwidth.ZERO
@@ -428,7 +434,6 @@ class ProbeController(
         alrEndTime = null
         timeOfLastLargeDrop = now
         bitrateBeforeLastLargeDrop = Bandwidth.ZERO
-        maxTotalAllocatedBitrate = Bandwidth.ZERO
     }
 
     private fun timeForAlrProbe(atTime: Instant): Boolean {
@@ -458,6 +463,24 @@ class ProbeController(
         return false
     }
 
+    private fun createProbeClusterConfig(atTime: Instant, bitrate: Bandwidth): ProbeClusterConfig {
+        val config = ProbeClusterConfig()
+        config.atTime = atTime
+        config.targetDataRate = bitrate
+        if (atTime < lastAllowedRepeatedInitialProbe) {
+            config.targetDuration = this.config.initialProbeDuration
+            config.minProbeDelta = this.config.initialMinProbeDelta
+        } else {
+            config.targetDuration = this.config.minProbeDuration
+            config.minProbeDelta = this.config.minProbeDelta
+        }
+        config.targetProbeCount = this.config.minProbePacketsSent
+        config.id = nextProbeClusterId
+        nextProbeClusterId++
+        maybeLogProbeClusterCreated(diagnosticContext, config)
+        return config
+    }
+
     fun process(atTime: Instant): MutableList<ProbeClusterConfig> {
         if (Duration.between(timeLastProbingInitiated, atTime) > kMaxWaitingTimeForProbingResult) {
             if (state == State.kWaitingForProbingResult) {
@@ -469,7 +492,6 @@ class ProbeController(
             return mutableListOf()
         }
         if (timeForNextRepeatedInitialProbe(atTime)) {
-            waitingForInitialProbeResult = true
             return initiateProbing(atTime, listOf(estimatedBitrate * config.firstExponentialProbeScale), true)
         }
         if (timeForAlrProbe(atTime) || timeForNetworkStateProbe(atTime)) {
@@ -509,9 +531,7 @@ class ProbeController(
         }
 
         var maxProbeBitrate = maxBitrate
-        if (maxTotalAllocatedBitrate > Bandwidth.ZERO &&
-            !(repeatedInitialProbingEnabled && waitingForInitialProbeResult)
-        ) {
+        if (maxTotalAllocatedBitrate > Bandwidth.ZERO) {
             // If a max allocated bitrate has been configured, allow probing up to 2x
             // that rate. This allows some overhead to account for bursty streams,
             // which otherwise would have to ramp up when the overshoot is already in
@@ -526,7 +546,7 @@ class ProbeController(
             BandwidthLimitedCause.kRttBasedBackOffHighRtt,
             BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased,
             BandwidthLimitedCause.kLossLimitedBwe -> {
-                logger.info { "Not sending probe in bandwidth limited state." }
+                logger.info { "Not sending probe in bandwidth limited state. $bandwidthLimitedCause" }
                 return mutableListOf()
             }
             BandwidthLimitedCause.kLossLimitedBweIncreasing ->
@@ -549,16 +569,7 @@ class ProbeController(
                 probeFurther = false
             }
 
-            val config = ProbeClusterConfig()
-            config.atTime = now
-            config.targetDataRate = bitrate
-            config.targetDuration = this.config.minProbeDuration
-
-            config.targetProbeCount = this.config.minProbePacketsSent
-            config.id = nextProbeClusterId
-            nextProbeClusterId++
-            maybeLogProbeClusterCreated(diagnosticContext, config)
-            pendingProbes.add(config)
+            pendingProbes.add(createProbeClusterConfig(now, bitrate))
         }
         timeLastProbingInitiated = now
         if (probeFurther) {
