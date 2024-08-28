@@ -51,6 +51,8 @@ val kDelayedIncreaseWindow = 300.ms
 const val kMaxIncreaseFactor = 1.5
 const val kPacketSize = 15_000
 
+private var transportSequenceNumber = 0L
+
 private fun config(enabled: Boolean, valid: Boolean): LossBasedBweV2.Config {
     return LossBasedBweV2.Config(
         enabled = enabled,
@@ -85,6 +87,8 @@ private fun shortObservationConfig(config: LossBasedBweV2.Config = LossBasedBweV
 
 private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }
+    enoughFeedback[0].sentPacket.sequenceNumber = transportSequenceNumber++
+    enoughFeedback[1].sentPacket.sequenceNumber = transportSequenceNumber++
     enoughFeedback[0].sentPacket.size = kPacketSize.bytes
     enoughFeedback[1].sentPacket.size = kPacketSize.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
@@ -100,9 +104,9 @@ private fun createPacketResultsWith10pPacketLossRate(
     lostPacketSize: DataSize = kPacketSize.bytes
 ): List<PacketResult> {
     val enoughFeedback = List(10) { PacketResult() }
-    enoughFeedback[0].sentPacket.size = kPacketSize.bytes
 
     for (i in enoughFeedback.indices) {
+        enoughFeedback[i].sentPacket.sequenceNumber = transportSequenceNumber++
         enoughFeedback[i].sentPacket.size = kPacketSize.bytes
         enoughFeedback[i].sentPacket.sendTime = firstPacketTimestamp + i * kObservationDurationLowerBound
         enoughFeedback[i].receiveTime = firstPacketTimestamp + (i + 1) * kObservationDurationLowerBound
@@ -114,6 +118,8 @@ private fun createPacketResultsWith10pPacketLossRate(
 
 private fun createPacketResultsWith50pPacketLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }
+    enoughFeedback[0].sentPacket.sequenceNumber = transportSequenceNumber++
+    enoughFeedback[1].sentPacket.sequenceNumber = transportSequenceNumber++
     enoughFeedback[0].sentPacket.size = kPacketSize.bytes
     enoughFeedback[1].sentPacket.size = kPacketSize.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
@@ -125,6 +131,8 @@ private fun createPacketResultsWith50pPacketLossRate(firstPacketTimestamp: Insta
 
 private fun createPacketResultsWith100pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }
+    enoughFeedback[0].sentPacket.sequenceNumber = transportSequenceNumber++
+    enoughFeedback[1].sentPacket.sequenceNumber = transportSequenceNumber++
     enoughFeedback[0].sentPacket.size = kPacketSize.bytes
     enoughFeedback[1].sentPacket.size = kPacketSize.bytes
     enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
@@ -1612,6 +1620,55 @@ class LossBasedBweV2Test : FreeSpec() {
             )
             lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kIncreaseUsingPadding
             lossBasedBandwidthEstimator.paceAtLossBasedEstimate() shouldBe true
+        }
+
+        "EstimateDoesNotBackOffDueToPacketReorderingBetweenFeedback" {
+            val config = shortObservationConfig()
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val kStartBitrate = 2500.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(kStartBitrate)
+
+            val feedback1 = List(3) { PacketResult() }
+            feedback1[0].sentPacket.sequenceNumber = 1
+            feedback1[0].sentPacket.size = kPacketSize.bytes
+            feedback1[0].sentPacket.sendTime = Instant.EPOCH
+            feedback1[0].receiveTime = feedback1[0].sentPacket.sendTime + 10.ms
+            feedback1[1].sentPacket.sequenceNumber = 2
+            feedback1[1].sentPacket.size = kPacketSize.bytes
+            feedback1[1].sentPacket.sendTime = Instant.EPOCH
+            // Lost or reordered
+            feedback1[1].receiveTime = Instant.MAX
+
+            feedback1[2].sentPacket.sequenceNumber = 3
+            feedback1[2].sentPacket.size = kPacketSize.bytes
+            feedback1[2].sentPacket.sendTime = Instant.EPOCH
+            feedback1[2].receiveTime = feedback1[2].sentPacket.sendTime + 10.ms
+
+            val feedback2 = List(3) { PacketResult() }
+            feedback2[0].sentPacket.sequenceNumber = 2
+            feedback2[0].sentPacket.size = kPacketSize.bytes
+            feedback2[0].sentPacket.sendTime = Instant.EPOCH
+            feedback2[0].receiveTime = feedback1[0].sentPacket.sendTime + 10.ms
+            feedback2[1].sentPacket.sequenceNumber = 4
+            feedback2[1].sentPacket.size = kPacketSize.bytes
+            feedback2[1].sentPacket.sendTime = Instant.EPOCH
+            feedback2[1].receiveTime = Instant.MAX
+            feedback2[2].sentPacket.sequenceNumber = 5
+            feedback2[2].sentPacket.size = kPacketSize.bytes
+            feedback2[2].sentPacket.sendTime = Instant.EPOCH
+            feedback2[2].receiveTime = feedback1[2].sentPacket.sendTime + 10.ms
+
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                feedback1,
+                delayBasedEstimate = kStartBitrate,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                feedback2,
+                delayBasedEstimate = kStartBitrate,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe kStartBitrate
         }
     }
 }

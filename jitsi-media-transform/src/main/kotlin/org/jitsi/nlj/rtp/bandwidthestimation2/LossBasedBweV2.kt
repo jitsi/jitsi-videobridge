@@ -66,32 +66,6 @@ private fun isValid(datarate: Bandwidth?): Boolean {
 
 private fun isValid(timestamp: Instant) = timestamp.isFinite()
 
-private class PacketResultsSummary {
-    var numPackets = 0
-    var numLostPackets = 0
-    var totalSize = DataSize.ZERO
-    var lostSize = DataSize.ZERO
-    var firstSendTime = Instant.MAX
-    var lastSendTime = Instant.MIN
-}
-
-private fun getPacketResultsSummary(packetResults: List<PacketResult>): PacketResultsSummary {
-    val packetResultsSummary = PacketResultsSummary()
-
-    packetResultsSummary.numPackets = packetResults.size
-    for (packet in packetResults) {
-        if (!packet.isReceived()) {
-            packetResultsSummary.numLostPackets++
-            packetResultsSummary.lostSize += packet.sentPacket.size
-        }
-        packetResultsSummary.totalSize += packet.sentPacket.size
-        packetResultsSummary.firstSendTime = min(packetResultsSummary.firstSendTime, packet.sentPacket.sendTime)
-        packetResultsSummary.lastSendTime = max(packetResultsSummary.lastSendTime, packet.sentPacket.sendTime)
-    }
-
-    return packetResultsSummary
-}
-
 private fun getLossProbability(inherentLoss_: Double, lossLimitedBandwidth: Bandwidth, sendingRate: Bandwidth): Double {
     if (inherentLoss_ < 0.0 || inherentLoss_ > 1.0) {
         LossBasedBweV2.logger.warn("The inherent loss must be in [0,1]: $inherentLoss_")
@@ -693,9 +667,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private class PartialObservation {
         var numPackets = 0
-        var numLostPackets = 0
+        val lostPackets = HashMap<Long, DataSize>()
         var size = DataSize.ZERO
-        var lostSize = DataSize.ZERO
     }
 
     private class PaddingInfo {
@@ -1058,19 +1031,25 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             return false
         }
 
-        val packetResultsSummary = getPacketResultsSummary(packetResults)
-
-        partialObservation.numPackets += packetResultsSummary.numPackets
-        partialObservation.numLostPackets += packetResultsSummary.numLostPackets
-        partialObservation.size += packetResultsSummary.totalSize
-        partialObservation.lostSize += packetResultsSummary.lostSize
+        partialObservation.numPackets += packetResults.size
+        var lastSendTime = Instant.MIN
+        var firstSendTime = Instant.MAX
+        for (packet in packetResults) {
+            if (packet.isReceived()) {
+                partialObservation.lostPackets.remove(packet.sentPacket.sequenceNumber)
+            } else {
+                partialObservation.lostPackets[packet.sentPacket.sequenceNumber] = packet.sentPacket.size
+            }
+            partialObservation.size += packet.sentPacket.size
+            lastSendTime = max(lastSendTime, packet.sentPacket.sendTime)
+            firstSendTime = min(firstSendTime, packet.sentPacket.sendTime)
+        }
 
         // This is the first packet report we have received.
         if (!isValid(lastSendTimeMostRecentObservation)) {
-            lastSendTimeMostRecentObservation = packetResultsSummary.firstSendTime
+            lastSendTimeMostRecentObservation = firstSendTime
         }
 
-        val lastSendTime = packetResultsSummary.lastSendTime
         val observationDuration = Duration.between(lastSendTimeMostRecentObservation, lastSendTime)
         // Too small to be meaningful.
         if (observationDuration <= Duration.ZERO ||
@@ -1083,12 +1062,14 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         val observation = Observation()
         observation.numPackets = partialObservation.numPackets
-        observation.numLostPackets = partialObservation.numLostPackets
+        observation.numLostPackets = partialObservation.lostPackets.size
         observation.numReceivedPackets =
             observation.numPackets - observation.numLostPackets
         observation.sendingRate =
             getSendingRate(partialObservation.size.per(observationDuration))
-        observation.lostSize = partialObservation.lostSize
+        for ((_, packetSize) in partialObservation.lostPackets) {
+            observation.lostSize += packetSize
+        }
         observation.size = partialObservation.size
         observation.id = numObservations++
         observations[observation.id % config.observationWindowSize] =
