@@ -151,7 +151,6 @@ class TrendlineEstimator : DelayIncreaseDetectorInterface {
         }
         val modifiedTrend = min(numOfDeltas, kMinNumDeltas) * trend * thresholdGain
         prevModifiedTrend = modifiedTrend
-        // TODO: timeseries logger: nowMs, modifiedTrend, trend
         if (modifiedTrend > threshold) {
             if (timeOverUsing == -1.0) {
                 // Initialize the timer. Assume that we've been
