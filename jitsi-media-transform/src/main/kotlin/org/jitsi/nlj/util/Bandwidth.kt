@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.utils.toRoundedMicros
 import java.text.DecimalFormat
 import java.time.Duration
 import kotlin.math.round

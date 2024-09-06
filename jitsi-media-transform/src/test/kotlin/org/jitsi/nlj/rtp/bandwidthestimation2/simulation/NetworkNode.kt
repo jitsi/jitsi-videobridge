@@ -20,8 +20,8 @@ package org.jitsi.nlj.rtp.bandwidthestimation2.simulation
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.toDouble
-import org.jitsi.nlj.util.toEpochMicro
-import org.jitsi.nlj.util.toRoundedMillis
+import org.jitsi.utils.toEpochMicro
+import org.jitsi.utils.toRoundedMillis
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress

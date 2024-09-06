@@ -27,10 +27,10 @@ import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.minDuration
 import org.jitsi.nlj.util.times
-import org.jitsi.nlj.util.toRoundedMillis
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.utils.toRoundedMillis
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.roundToLong
