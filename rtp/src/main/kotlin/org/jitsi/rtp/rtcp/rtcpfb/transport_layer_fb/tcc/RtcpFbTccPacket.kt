@@ -424,8 +424,23 @@ class RtcpFbTccPacket(
 
     val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
+    fun GetPacketStatusCount(): Int {
+        return num_seq_no_
+    }
+
     fun BaseTime(): Instant {
         return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
+    }
+
+    fun GetBaseDelta(prev_timestamp: Instant): Duration {
+        var delta = Duration.between(BaseTime(), prev_timestamp)
+        // Compensate for wrap around
+        if ((delta - kTimeWrapPeriod).abs() < delta.abs()) {
+            delta -= kTimeWrapPeriod
+        } else if ((delta + kTimeWrapPeriod).abs() < delta.abs()) {
+            delta += kTimeWrapPeriod
+        }
+        return delta
     }
 
     override fun iterator(): Iterator<PacketReport> = packets_.iterator()
