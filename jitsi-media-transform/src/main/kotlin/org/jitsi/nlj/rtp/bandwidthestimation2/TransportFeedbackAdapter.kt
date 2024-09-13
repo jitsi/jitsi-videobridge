@@ -17,7 +17,6 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.nlj.util.bytes
@@ -60,7 +59,7 @@ class InFlightBytesTracker {
         if (packet.sent.sendTime.isInfinite()) {
             return
         }
-        check(packet.sent.size >= inFlightData)
+        check(packet.sent.size <= inFlightData)
         inFlightData -= packet.sent.size
     }
 
@@ -69,7 +68,6 @@ class InFlightBytesTracker {
     var inFlightData: DataSize = DataSize.ZERO
 }
 
-@SuppressFBWarnings("URF_UNREAD_FIELD") // TODO: code incomplete
 class TransportFeedbackAdapter(
     parentLogger: Logger
 ) {
@@ -146,12 +144,6 @@ class TransportFeedbackAdapter(
         return msg
     }
 
-    private enum class SendTimeHistoryStatus {
-        kNotAdded,
-        kOk,
-        kDuplicate
-    }
-
     private fun processTransportFeedbackInner(
         feedback: RtcpFbTccPacket,
         feedbackReceiveTime: Instant
@@ -177,6 +169,8 @@ class TransportFeedbackAdapter(
         packetResultVector.ensureCapacity(feedback.GetPacketStatusCount())
 
         var failedLookups = 0
+
+        var deltaSinceBase = Duration.ZERO
 
         feedback.forEach { report ->
             val seqNum = seqNumUnwrapper.update(report.seqNum).toLong()
@@ -204,7 +198,8 @@ class TransportFeedbackAdapter(
             }
 
             if (report is ReceivedPacketReport) {
-                packetFeedback.receiveTime = currentOffset + report.deltaDuration
+                deltaSinceBase += report.deltaDuration
+                packetFeedback.receiveTime = currentOffset + deltaSinceBase
                 history.remove(seqNum)
             }
             val result = PacketResult()

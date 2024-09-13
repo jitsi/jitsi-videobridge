@@ -16,6 +16,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.NEVER
+import java.time.Instant
 
 /** Sent packet info,
  * based loosely on WebRTC rtc_base/network/sent_packet.{h,cc} in
@@ -23,14 +24,14 @@ import org.jitsi.nlj.util.NEVER
  * stripped down to only the fields needed.
  */
 
-class PacketInfo {
-    var includedInFeedback: Boolean = false
-    var includedInAllocation: Boolean = false
+class PacketInfo(
+    var includedInFeedback: Boolean = false,
+    var includedInAllocation: Boolean = false,
     var packetSizeBytes: Long = 0
-}
+)
 
-class SentPacketInfo {
-    var packetId = -1
-    var sendTime = NEVER
-    val info = PacketInfo()
-}
+class SentPacketInfo(
+    var packetId: Int = -1,
+    var sendTime: Instant = NEVER,
+    val info: PacketInfo = PacketInfo(),
+)
