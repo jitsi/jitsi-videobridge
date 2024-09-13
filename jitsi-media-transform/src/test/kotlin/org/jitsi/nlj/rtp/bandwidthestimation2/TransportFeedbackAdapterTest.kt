@@ -20,9 +20,11 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.util.bytes
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.time.FakeClock
+import org.jitsi.utils.times
 import java.time.Duration
 import java.time.Instant
 
@@ -125,6 +127,124 @@ class TransportFeedbackAdapterTest : FreeSpec() {
 
             val result = test.adapter.processTransportFeedback(feedbackPacket, test.clock.instant())
             comparePacketFeedbackVectors(packets, result!!.packetFeedbacks)
+        }
+
+        "FeedbackVectorReportsUnreceived" {
+            val test = OneTransportFeedbackAdapterTest()
+            val sentPackets = listOf(
+                createPacket(100, 220, 0, 1500, kPacingInfo0),
+                createPacket(110, 210, 1, 1500, kPacingInfo0),
+                createPacket(120, 220, 2, 1500, kPacingInfo0),
+                createPacket(130, 230, 3, 1500, kPacingInfo0),
+                createPacket(140, 240, 4, 1500, kPacingInfo0),
+                createPacket(150, 250, 5, 1500, kPacingInfo0),
+                createPacket(160, 260, 6, 1500, kPacingInfo0)
+            )
+
+            sentPackets.forEach { packet -> test.onSentPacket(packet) }
+
+            // Note: Important to include the last packet, as only unreceived packets in
+            // between received packets can be inferred.
+            val receivedPackets = listOf(
+                sentPackets[0],
+                sentPackets[2],
+                sentPackets[6]
+            )
+
+            val feedbackBuilder = RtcpFbTccPacketBuilder()
+            feedbackBuilder.SetBase(
+                receivedPackets[0].sentPacket.sequenceNumber.toInt(),
+                receivedPackets[0].receiveTime
+            )
+
+            receivedPackets.forEach { packet ->
+                feedbackBuilder.AddReceivedPacket(
+                    packet.sentPacket.sequenceNumber.toInt(),
+                    packet.receiveTime
+                ) shouldBe true
+            }
+
+            val feedback = feedbackBuilder.build()
+
+            val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
+            comparePacketFeedbackVectors(sentPackets, res!!.packetFeedbacks)
+        }
+
+        "HandlesDroppedPackets" {
+            val test = OneTransportFeedbackAdapterTest()
+            val packets = mutableListOf<PacketResult>()
+            packets.add(createPacket(100, 200, 0, 1500, kPacingInfo0))
+            packets.add(createPacket(110, 210, 1, 1500, kPacingInfo1))
+            packets.add(createPacket(120, 220, 2, 1500, kPacingInfo2))
+            packets.add(createPacket(130, 230, 3, 1500, kPacingInfo3))
+            packets.add(createPacket(140, 240, 4, 1500, kPacingInfo4))
+
+            val kSendSideDropBefore = 1
+            val kReceiveSideDropAfter = 3
+
+            packets.forEach { packet ->
+                if (packet.sentPacket.sequenceNumber >= kSendSideDropBefore) {
+                    test.onSentPacket(packet)
+                }
+            }
+
+            val feedbackBuilder = RtcpFbTccPacketBuilder()
+            feedbackBuilder.SetBase(packets[0].sentPacket.sequenceNumber.toInt(), packets[0].receiveTime)
+
+            packets.forEach { packet ->
+                if (packet.sentPacket.sequenceNumber <= kReceiveSideDropAfter) {
+                    feedbackBuilder.AddReceivedPacket(
+                        packet.sentPacket.sequenceNumber.toInt(),
+                        packet.receiveTime
+                    ) shouldBe true
+                }
+            }
+
+            val feedback = feedbackBuilder.build()
+
+            val expectedPackets = packets.subList(kSendSideDropBefore, kReceiveSideDropAfter + 1)
+
+            // Packets that have timed out on the send-side have lost the
+            // information stored on the send-side. And they will not be reported to
+            // observers since we won't know that they come from the same networks.
+            val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
+            comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
+        }
+
+        "SendTimeWrapsBothWays" {
+            val test = OneTransportFeedbackAdapterTest()
+            val kHighArrivalTime = RtcpFbTccPacket.Companion.kDeltaScaleFactor * (1 shl 8) * ((1 shl 23) - 1)
+            val packets = mutableListOf<PacketResult>()
+            packets.add(createPacket(kHighArrivalTime.toMillis() + 64, 210, 0, 1500, PacedPacketInfo()))
+            packets.add(createPacket(kHighArrivalTime.toMillis() - 64, 210, 1, 1500, PacedPacketInfo()))
+            packets.add(createPacket(kHighArrivalTime.toMillis(), 220, 2, 1500, PacedPacketInfo()))
+
+            packets.forEach { packet ->
+                test.onSentPacket(packet)
+            }
+
+            packets.forEach { packet ->
+                val feedbackBuilder = RtcpFbTccPacketBuilder()
+                feedbackBuilder.SetBase(packet.sentPacket.sequenceNumber.toInt(), packet.receiveTime)
+
+                feedbackBuilder.AddReceivedPacket(
+                    packet.sentPacket.sequenceNumber.toInt(),
+                    packet.receiveTime
+                ) shouldBe true
+
+                var feedback = feedbackBuilder.build()
+                val rawBuffer = feedback.buffer
+                val offset = feedback.offset
+                val length = feedback.length
+
+                feedback = RtcpFbTccPacket(rawBuffer, offset, length)
+
+                val expectedPackets = mutableListOf<PacketResult>()
+                expectedPackets.add(packet)
+
+                val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
+                comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
+            }
         }
     }
 }

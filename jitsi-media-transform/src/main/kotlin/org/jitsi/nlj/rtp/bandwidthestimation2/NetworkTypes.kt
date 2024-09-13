@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
+import org.jitsi.nlj.util.isFinite
 import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.per
 import org.jitsi.utils.ms
@@ -169,7 +170,7 @@ class PacketResult {
 
     var receiveTime: Instant = NEVER
 
-    fun isReceived() = receiveTime != NEVER
+    fun isReceived() = receiveTime.isFinite()
 }
 
 /**
