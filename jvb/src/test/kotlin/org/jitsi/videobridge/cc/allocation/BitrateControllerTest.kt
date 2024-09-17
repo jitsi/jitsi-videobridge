@@ -1528,7 +1528,7 @@ class MockRtpLayerDesc(
     var bitrate: Bandwidth,
     sid: Int = -1
 ) : RtpLayerDesc(eid, tid, sid, height, frameRate) {
-    override fun copy(height: Int): RtpLayerDesc {
+    override fun copy(height: Int, tid: Int, inherit: Boolean): RtpLayerDesc {
         TODO("Not yet implemented")
     }
 

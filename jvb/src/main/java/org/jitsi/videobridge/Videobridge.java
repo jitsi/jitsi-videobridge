@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import kotlin.*;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.health.Result;
@@ -28,7 +27,6 @@ import org.jitsi.videobridge.load_management.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.shutdown.*;
 import org.jitsi.videobridge.stats.*;
-import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.health.*;
@@ -102,20 +100,6 @@ public class Videobridge
     @NotNull private final Version version;
 
     @NotNull private final ShutdownManager shutdownManager;
-
-    static
-    {
-        org.jitsi.rtp.util.BufferPool.Companion.setGetArray(ByteBufferPool::getBuffer);
-        org.jitsi.rtp.util.BufferPool.Companion.setReturnArray(buffer -> {
-            ByteBufferPool.returnBuffer(buffer);
-            return Unit.INSTANCE;
-        });
-        org.jitsi.nlj.util.BufferPool.Companion.setGetBuffer(ByteBufferPool::getBuffer);
-        org.jitsi.nlj.util.BufferPool.Companion.setReturnBuffer(buffer -> {
-            ByteBufferPool.returnBuffer(buffer);
-            return Unit.INSTANCE;
-        });
-    }
 
     /**
      * Initializes a new <tt>Videobridge</tt> instance.

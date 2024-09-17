@@ -124,6 +124,12 @@ case "$1" in
             sed -i 's/.*--apis.*//' $CONFIG
         fi
 
+        # dcsctp4j isn't built for ppc64el, so use usrsctp there if no explicit option has been set.
+        DEBARCH=$(dpkg --print-architecture)
+        if [ "$DEBARCH" = "ppc64el" ] && ! hocon -f $HOCON_CONFIG get "videobridge.sctp.use-usrsctp" > /dev/null 2>&1 ;then
+            hocon -f $HOCON_CONFIG set "videobridge.sctp.use-usrsctp" "true"
+        fi
+        
         # we don't want to start the daemon as root
         if ! getent group jitsi > /dev/null ; then
             groupadd jitsi

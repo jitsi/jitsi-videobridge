@@ -131,19 +131,12 @@ class IceTransport @JvmOverloads constructor(
         logger.addContext("local_ufrag", it.localUfrag)
     }
 
-    // TODO: Do we still need the id here now that we have logContext?
-    private val iceStream = iceAgent.createMediaStream("stream-$id").apply {
+    private val iceStream = iceAgent.createMediaStream("stream").apply {
         addPairChangeListener(iceStreamPairChangedListener)
     }
 
-    private val iceComponent = iceAgent.createComponent(
-        iceStream,
-        IceConfig.config.keepAliveStrategy,
-        IceConfig.config.useComponentSocket
-    )
-
+    private val iceComponent = iceAgent.createComponent(iceStream, IceConfig.config.keepAliveStrategy, true)
     private val packetStats = PacketStats()
-
     val icePassword: String
         get() = iceAgent.localPassword
 
@@ -228,9 +221,13 @@ class IceTransport @JvmOverloads constructor(
                 break
             }
             packetStats.numPacketsReceived.increment()
-            incomingDataHandler?.dataReceived(receiveBuf, packet.offset, packet.length, receivedTime) ?: run {
-                logger.cdebug { "Data handler is null, dropping data" }
-                packetStats.numIncomingPacketsDroppedNoHandler.increment()
+            try {
+                incomingDataHandler?.dataReceived(receiveBuf, packet.offset, packet.length, receivedTime) ?: run {
+                    logger.cdebug { "Data handler is null, dropping data" }
+                    packetStats.numIncomingPacketsDroppedNoHandler.increment()
+                }
+            } catch (e: Throwable) {
+                logger.error("Uncaught exception processing packet", e)
             }
         }
         logger.info("No longer running, stopped reading packets")
@@ -263,7 +260,6 @@ class IceTransport @JvmOverloads constructor(
     }
 
     fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
-        put("useComponentSocket", IceConfig.config.useComponentSocket)
         put("keepAliveStrategy", IceConfig.config.keepAliveStrategy.toString())
         put("nominationStrategy", IceConfig.config.nominationStrategy.toString())
         put("advertisePrivateCandidates", IceConfig.config.advertisePrivateCandidates)
@@ -348,9 +344,6 @@ class IceTransport @JvmOverloads constructor(
             transition.completed() -> {
                 if (iceConnected.compareAndSet(false, true)) {
                     eventHandler?.connected()
-                    if (iceComponent.selectedPair.remoteCandidate.transport.isTcpType()) {
-                        iceSucceededTcp.inc()
-                    }
                     if (iceComponent.selectedPair.remoteCandidate.type == CandidateType.RELAYED_CANDIDATE ||
                         iceComponent.selectedPair.localCandidate.type == CandidateType.RELAYED_CANDIDATE
                     ) {
@@ -393,9 +386,6 @@ class IceTransport @JvmOverloads constructor(
 
     companion object {
         fun appendHarvesters(iceAgent: Agent) {
-            Harvesters.INSTANCE.tcpHarvester?.let {
-                iceAgent.addCandidateHarvester(it)
-            }
             Harvesters.INSTANCE.singlePortHarvesters.forEach(iceAgent::addCandidateHarvester)
         }
 
@@ -414,15 +404,6 @@ class IceTransport @JvmOverloads constructor(
         val iceSucceeded = VideobridgeMetricsContainer.instance.registerCounter(
             "ice_succeeded",
             "Number of times an ICE Agent succeeded."
-        )
-
-        /**
-         * The total number of times an ICE Agent succeeded and the selected
-         * candidate was a TCP candidate.
-         */
-        val iceSucceededTcp = VideobridgeMetricsContainer.instance.registerCounter(
-            "ice_succeeded_tcp",
-            "Number of times an ICE Agent succeeded and the selected candidate was a TCP candidate."
         )
 
         /**
@@ -502,8 +483,6 @@ private fun TransportAddress.isPrivateAddress(): Boolean = address.isSiteLocalAd
     /* 0xfc00::/7 */
     ((address is Inet6Address) && ((addressBytes[0].toInt() and 0xfe) == 0xfc))
 
-private fun Transport.isTcpType(): Boolean = this == Transport.TCP || this == Transport.SSLTCP
-
 private fun generateCandidateId(candidate: LocalCandidate): String = buildString {
     append(java.lang.Long.toHexString(hashCode().toLong()))
     append(java.lang.Long.toHexString(candidate.parentComponent.parentStream.parentAgent.hashCode().toLong()))
@@ -526,16 +505,7 @@ private fun LocalCandidate.toCandidatePacketExtension(advertisePrivateAddresses:
     cpe.network = 0
     cpe.setPriority(priority)
 
-    // Advertise 'tcp' candidates for which SSL is enabled as 'ssltcp'
-    // (although internally their transport protocol remains "tcp")
-    cpe.protocol = if (transport == Transport.TCP && isSSL) {
-        Transport.SSLTCP.toString()
-    } else {
-        transport.toString()
-    }
-    if (transport.isTcpType()) {
-        cpe.tcpType = tcpType.toString()
-    }
+    cpe.protocol = transport.toString()
     cpe.type = org.jitsi.xmpp.extensions.jingle.CandidateType.valueOf(type.toString())
     cpe.ip = transportAddress.hostAddress
     cpe.port = transportAddress.port

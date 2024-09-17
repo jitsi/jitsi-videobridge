@@ -441,7 +441,8 @@ class Av1TemplateDependencyStructure(
      * Note this makes certain assumptions about the encoding structure.
      */
     fun canSwitchWithoutKeyframe(fromDt: Int, toDt: Int): Boolean = templateInfo.any {
-        it.hasInterPictureDependency() && it.dti[fromDt] != DTI.NOT_PRESENT && it.dti[toDt] == DTI.SWITCH
+        it.hasInterPictureDependency() && it.dti.size > fromDt && it.dti.size > toDt &&
+            it.dti[fromDt] != DTI.NOT_PRESENT && it.dti[toDt] == DTI.SWITCH
     }
 
     /** Given that we are sending packets for a given DT, return a decodeTargetBitmask corresponding to all DTs
