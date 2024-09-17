@@ -24,6 +24,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.beInstanceOf
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.util.byteBufferOf
+import org.jitsi.utils.instantOfEpochMicro
+import org.jitsi.utils.micros
 import java.time.Duration
 
 class RtcpFbTccPacketTest : ShouldSpec() {
@@ -177,13 +179,13 @@ class RtcpFbTccPacketTest : ShouldSpec() {
                 mediaSourceSsrc = 2397376430,
                 feedbackPacketSeqNum = 162
             )
-            rtcpFbTccPacketBuilder.SetBase(6227, 107784064)
-            rtcpFbTccPacketBuilder.AddReceivedPacket(6228, 107784064) shouldBe true
+            rtcpFbTccPacketBuilder.SetBase(6227, instantOfEpochMicro(107784064))
+            rtcpFbTccPacketBuilder.AddReceivedPacket(6228, instantOfEpochMicro(107784064)) shouldBe true
         }
         context("Creating and parsing an RtcpFbTccPacket") {
             context("with missing packets") {
                 val kBaseSeqNo = 1000
-                val kBaseTimestampUs = 10000L
+                val kBaseTimestamp = instantOfEpochMicro(10000L)
                 val rtcpFbTccPacketBuilder = RtcpFbTccPacketBuilder(
                     rtcpHeader = RtcpHeaderBuilder(
                         senderSsrc = 839852602
@@ -191,9 +193,9 @@ class RtcpFbTccPacketTest : ShouldSpec() {
                     mediaSourceSsrc = 2397376430,
                     feedbackPacketSeqNum = 163
                 )
-                rtcpFbTccPacketBuilder.SetBase(kBaseSeqNo, kBaseTimestampUs)
-                rtcpFbTccPacketBuilder.AddReceivedPacket(kBaseSeqNo + 0, kBaseTimestampUs)
-                rtcpFbTccPacketBuilder.AddReceivedPacket(kBaseSeqNo + 3, kBaseTimestampUs + 2000)
+                rtcpFbTccPacketBuilder.SetBase(kBaseSeqNo, kBaseTimestamp)
+                rtcpFbTccPacketBuilder.AddReceivedPacket(kBaseSeqNo + 0, kBaseTimestamp)
+                rtcpFbTccPacketBuilder.AddReceivedPacket(kBaseSeqNo + 3, kBaseTimestamp + 2000.micros)
 
                 val coded = rtcpFbTccPacketBuilder.build()
 

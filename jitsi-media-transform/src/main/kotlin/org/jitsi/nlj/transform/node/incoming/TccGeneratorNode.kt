@@ -25,7 +25,6 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.Rfc3711IndexTracker
 import org.jitsi.nlj.util.bytes
-import org.jitsi.nlj.util.toEpochMicro
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
@@ -182,20 +181,19 @@ class TccGeneratorNode(
                 mediaSourceSsrc = mediaSsrc,
                 feedbackPacketSeqNum = currTccSeqNum++
             )
-            currentTccPacket.SetBase(windowStartSeq, firstEntry.value.toEpochMicro())
+            currentTccPacket.SetBase(windowStartSeq, firstEntry.value)
 
             var nextSequenceNumber = windowStartSeq
             val feedbackBlockPackets = packetArrivalTimes.tailMap(windowStartSeq)
             feedbackBlockPackets.forEach { (seq, timestamp) ->
-                val timestampUs = timestamp.toEpochMicro()
-                if (!currentTccPacket.AddReceivedPacket(seq, timestampUs)) {
+                if (!currentTccPacket.AddReceivedPacket(seq, timestamp)) {
                     tccPackets.add(currentTccPacket.build())
                     currentTccPacket = RtcpFbTccPacketBuilder(
                         mediaSourceSsrc = mediaSsrc,
                         feedbackPacketSeqNum = currTccSeqNum++
                     ).apply {
-                        SetBase(seq, timestampUs)
-                        AddReceivedPacket(seq, timestampUs)
+                        SetBase(seq, timestamp)
+                        AddReceivedPacket(seq, timestamp)
                     }
                 }
                 nextSequenceNumber = seq + 1

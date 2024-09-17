@@ -30,7 +30,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companio
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kDeltaScaleFactor
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kMaxReportedPackets
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kMaxSizeBytes
-import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kTimeWrapPeriodUs
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kTimeWrapPeriod
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kTransportFeedbackHeaderSizeBytes
 import org.jitsi.rtp.rtp.RtpSequenceNumber
 import org.jitsi.rtp.rtp.toRtpSequenceNumber
@@ -39,8 +39,12 @@ import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.get3BytesAsInt
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getShortAsInt
+import org.jitsi.utils.micros
+import org.jitsi.utils.times
+import org.jitsi.utils.toEpochMicro
+import org.jitsi.utils.toMicros
 import java.time.Duration
-import java.time.temporal.ChronoUnit
+import java.time.Instant
 
 sealed class PacketReport(val seqNum: Int)
 
@@ -52,7 +56,7 @@ typealias DeltaSize = Int
 
 class ReceivedPacketReport(seqNum: Int, val deltaTicks: Short) : PacketReport(seqNum) {
     val deltaDuration: Duration
-        get() = Duration.of(deltaTicks * 250L, ChronoUnit.MICROS)
+        get() = deltaTicks.toInt() * kDeltaScaleFactor
 }
 
 /**
@@ -95,23 +99,25 @@ class RtcpFbTccPacketBuilder(
 
     // The size of the entire packet, in bytes
     private var size_bytes_ = kTransportFeedbackHeaderSizeBytes
-    private var last_timestamp_us_: Long = 0
+    private var last_timestamp_: Instant = Instant.EPOCH
     private val packets_ = mutableListOf<PacketReport>()
 
-    fun SetBase(base_sequence: Int, ref_timestamp_us: Long) {
+    fun SetBase(base_sequence: Int, ref_timestamp: Instant) {
         base_seq_no_ = base_sequence.toRtpSequenceNumber()
-        base_time_ticks_ = (ref_timestamp_us % kTimeWrapPeriodUs) / kBaseScaleFactor
-        last_timestamp_us_ = GetBaseTimeUs()
+        base_time_ticks_ = (ref_timestamp.toEpochMicro() % kTimeWrapPeriod.toMicros()) / kBaseScaleFactor.toMicros()
+        last_timestamp_ = BaseTime()
     }
 
-    fun AddReceivedPacket(seqNum: Int, timestamp_us: Long): Boolean {
+    fun AddReceivedPacket(seqNum: Int, timestamp: Instant): Boolean {
         val sequence_number = seqNum.toRtpSequenceNumber()
-        var delta_full = (timestamp_us - last_timestamp_us_) % kTimeWrapPeriodUs
-        if (delta_full > kTimeWrapPeriodUs / 2) {
-            delta_full -= kTimeWrapPeriodUs
+        var delta_full = Duration.between(last_timestamp_, timestamp).toMicros() % kTimeWrapPeriod.toMicros()
+        if (delta_full > kTimeWrapPeriod.toMicros() / 2) {
+            delta_full -= kTimeWrapPeriod.toMicros()
+            delta_full -= kDeltaScaleFactor.toMicros() / 2
+        } else {
+            delta_full += kDeltaScaleFactor.toMicros() / 2
         }
-        delta_full += if (delta_full < 0) -(kDeltaScaleFactor / 2) else kDeltaScaleFactor / 2
-        delta_full /= kDeltaScaleFactor
+        delta_full /= kDeltaScaleFactor.toMicros()
 
         val delta = delta_full.toShort()
         // If larger than 16bit signed, we can't represent it - need new fb packet.
@@ -137,13 +143,15 @@ class RtcpFbTccPacketBuilder(
         }
 
         packets_.add(ReceivedPacketReport(sequence_number.value, delta))
-        last_timestamp_us_ += delta * kDeltaScaleFactor
+        last_timestamp_ += delta.toInt() * kDeltaScaleFactor
         size_bytes_ += delta_size
 
         return true
     }
 
-    fun GetBaseTimeUs(): Long = base_time_ticks_ * kBaseScaleFactor
+    fun BaseTime(): Instant {
+        return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
+    }
 
     private fun AddDeltaSize(deltaSize: DeltaSize): Boolean {
         if (num_seq_no_ == kMaxReportedPackets) {
@@ -295,7 +303,7 @@ class RtcpFbTccPacket(
         val encoded_chunks_: MutableList<Chunk>,
         var last_chunk_: LastChunk,
         var num_seq_no_: Int,
-        var last_timestamp_us_: Long,
+        var last_timestamp_: Instant,
         val packets_: MutableList<PacketReport>
     )
 
@@ -305,7 +313,7 @@ class RtcpFbTccPacket(
         val encoded_chunks_ = mutableListOf<Chunk>()
         val last_chunk_ = LastChunk()
         val num_seq_no_: Int
-        var last_timestamp_us_: Long = 0
+        var last_timestamp_: Instant = Instant.EPOCH
         val packets_ = mutableListOf<PacketReport>()
 
         val base_time_ticks_ = getReferenceTimeTicks(buffer, offset)
@@ -343,13 +351,13 @@ class RtcpFbTccPacket(
                     1 -> {
                         val delta = buffer[index]
                         packets_.add(ReceivedPacketReport(seq_no.value, delta.toPositiveShort()))
-                        last_timestamp_us_ += delta * kDeltaScaleFactor
+                        last_timestamp_ += delta.toInt() * kDeltaScaleFactor
                         index += delta_size
                     }
                     2 -> {
                         val delta = buffer.getShortAsInt(index)
                         packets_.add(ReceivedPacketReport(seq_no.value, delta.toShort()))
-                        last_timestamp_us_ += delta * kDeltaScaleFactor
+                        last_timestamp_ += delta * kDeltaScaleFactor
                         index += delta_size
                     }
                     3 -> {
@@ -376,7 +384,7 @@ class RtcpFbTccPacket(
             encoded_chunks_,
             last_chunk_,
             num_seq_no_,
-            last_timestamp_us_,
+            last_timestamp_,
             packets_
         )
     }
@@ -401,10 +409,10 @@ class RtcpFbTccPacket(
         }
     private val packets_: MutableList<PacketReport>
         get() = data.packets_
-    private var last_timestamp_us_: Long
-        get() = data.last_timestamp_us_
+    private var last_timestamp_: Instant
+        get() = data.last_timestamp_
         set(value) {
-            data.last_timestamp_us_ = value
+            data.last_timestamp_ = value
         }
 
     // The reference time, in ticks.
@@ -416,7 +424,9 @@ class RtcpFbTccPacket(
 
     val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
-    fun GetBaseTimeUs(): Long = base_time_ticks_ * kBaseScaleFactor
+    fun BaseTime(): Instant {
+        return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
+    }
 
     override fun iterator(): Iterator<PacketReport> = packets_.iterator()
 
@@ -426,7 +436,7 @@ class RtcpFbTccPacket(
         const val FMT = 15
 
         // Convert to multiples of 0.25ms
-        const val kDeltaScaleFactor = 250
+        val kDeltaScaleFactor = 250.micros
 
         // Maximum number of packets_ (including missing) TransportFeedback can report.
         const val kMaxReportedPackets = 0xFFFF
@@ -442,11 +452,11 @@ class RtcpFbTccPacket(
         const val kTransportFeedbackHeaderSizeBytes = 4 + 8 + 8
 
         // Used to convert from microseconds to multiples of 64ms
-        const val kBaseScaleFactor = kDeltaScaleFactor * (1 shl 8)
+        val kBaseScaleFactor = kDeltaScaleFactor * (1 shl 8)
 
         // The reference time field is 24 bits and are represented as multiples of 64ms
         // When the reference time field would need to wrap around
-        const val kTimeWrapPeriodUs: Long = (1 shl 24).toLong() * kBaseScaleFactor
+        val kTimeWrapPeriod = (1 shl 24).toLong() * kBaseScaleFactor
 
         const val BASE_SEQ_NUM_OFFSET = RtcpFbPacket.HEADER_SIZE
         const val PACKET_STATUS_COUNT_OFFSET = RtcpFbPacket.HEADER_SIZE + 2

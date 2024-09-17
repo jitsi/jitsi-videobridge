@@ -23,6 +23,7 @@ import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
+import org.jitsi.utils.instantOfEpochMicro
 import org.jitsi.utils.time.FakeClock
 import java.util.logging.Level
 
@@ -58,11 +59,11 @@ class TransportCcEngineTest : FunSpec() {
             transportCcEngine.mediaPacketSent(4, 1300.bytes)
 
             val tccPacket = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 0)) {
-                SetBase(1, 100)
-                AddReceivedPacket(1, 100)
-                AddReceivedPacket(2, 110)
-                AddReceivedPacket(3, 120)
-                AddReceivedPacket(4, 130)
+                SetBase(1, instantOfEpochMicro(100))
+                AddReceivedPacket(1, instantOfEpochMicro(100))
+                AddReceivedPacket(2, instantOfEpochMicro(110))
+                AddReceivedPacket(3, instantOfEpochMicro(120))
+                AddReceivedPacket(4, instantOfEpochMicro(130))
                 build()
             }
 
@@ -81,15 +82,15 @@ class TransportCcEngineTest : FunSpec() {
             transportCcEngine.mediaPacketSent(4, 1300.bytes)
 
             val tccPacket = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 1)) {
-                SetBase(4, 130)
-                AddReceivedPacket(4, 130)
+                SetBase(4, instantOfEpochMicro(130))
+                AddReceivedPacket(4, instantOfEpochMicro(130))
                 build()
             }
             transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant())
 
             val tccPacket2 = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 2)) {
-                SetBase(4, 130)
-                AddReceivedPacket(4, 130)
+                SetBase(4, instantOfEpochMicro(130))
+                AddReceivedPacket(4, instantOfEpochMicro(130))
                 build()
             }
             transportCcEngine.rtcpPacketReceived(tccPacket2, clock.instant())
@@ -108,8 +109,8 @@ class TransportCcEngineTest : FunSpec() {
             transportCcEngine.mediaPacketSent(5, 1300.bytes)
 
             val tccPacket = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 1)) {
-                SetBase(4, 130)
-                AddReceivedPacket(5, 130)
+                SetBase(4, instantOfEpochMicro(130))
+                AddReceivedPacket(5, instantOfEpochMicro(130))
                 build()
             }
             transportCcEngine.rtcpPacketReceived(tccPacket, clock.instant())
@@ -118,8 +119,8 @@ class TransportCcEngineTest : FunSpec() {
             lossListener.numLost shouldBe 1
 
             val tccPacket2 = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 2)) {
-                SetBase(4, 130)
-                AddReceivedPacket(4, 130)
+                SetBase(4, instantOfEpochMicro(130))
+                AddReceivedPacket(4, instantOfEpochMicro(130))
                 build()
             }
 
