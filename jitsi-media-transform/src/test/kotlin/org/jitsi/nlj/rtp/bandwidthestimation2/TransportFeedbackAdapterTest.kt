@@ -20,6 +20,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
@@ -364,6 +365,30 @@ class TransportFeedbackAdapterTest : FreeSpec() {
             val expectedPackets = mutableListOf<PacketResult>()
             expectedPackets.add(packetFeedback.copy())
             comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
+        }
+
+        "IgnoreDuplicatePacketSentCalls" {
+            val test = OneTransportFeedbackAdapterTest()
+            val packet = createPacket(100, 200, 0, 1500, kPacingInfo0)
+
+            // Add a packet and then mark it as sent.
+            test.adapter.addPacket(
+                packet.sentPacket.sequenceNumber.toInt(),
+                packet.sentPacket.size,
+                packet.sentPacket.pacingInfo,
+                test.clock.instant()
+            )
+            val sentPacket = test.adapter.processSentPacket(
+                SentPacketInfo(packet.sentPacket.sequenceNumber.toInt(), packet.sentPacket.sendTime)
+            )
+            sentPacket shouldNotBe null
+
+            // Call ProcessSentPacket() again with the same sequence number. This packet
+            // has already been marked as sent and the call should be ignored.
+            val duplicatePacket = test.adapter.processSentPacket(
+                SentPacketInfo(packet.sentPacket.sequenceNumber.toInt(), packet.sentPacket.sendTime)
+            )
+            duplicatePacket shouldBe null
         }
     }
 }
