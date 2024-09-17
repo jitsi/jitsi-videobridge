@@ -165,12 +165,13 @@ class TransportLossReport(
 /**
  * The result of packet feedback
  */
-class PacketResult {
-    var sentPacket = SentPacket()
-
+class PacketResult(
+    var sentPacket: SentPacket = SentPacket(),
     var receiveTime: Instant = NEVER
-
+) {
     fun isReceived() = receiveTime.isFinite()
+
+    fun copy(): PacketResult = PacketResult(sentPacket.copy(), receiveTime)
 }
 
 /**

@@ -17,12 +17,15 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.roundDownTo
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.ms
 import org.jitsi.utils.time.FakeClock
 import org.jitsi.utils.times
 import java.time.Duration
@@ -52,14 +55,16 @@ private fun comparePacketFeedbackVectors(truth: List<PacketResult>, input: List<
     // equal. However, the difference must be the same for all x.
     val arrivalTimeDelta = Duration.between(input[0].receiveTime, truth[0].receiveTime)
     for (i in truth.indices) {
-        assert(truth[i].isReceived())
-        if (input[i].isReceived()) {
-            Duration.between(input[i].receiveTime, truth[i].receiveTime) shouldBe arrivalTimeDelta
+        withClue("feedback vector packet $i") {
+            assert(truth[i].isReceived())
+            if (input[i].isReceived()) {
+                Duration.between(input[i].receiveTime, truth[i].receiveTime) shouldBe arrivalTimeDelta
+            }
+            input[i].sentPacket.sendTime shouldBe truth[i].sentPacket.sendTime
+            input[i].sentPacket.sequenceNumber shouldBe truth[i].sentPacket.sequenceNumber
+            input[i].sentPacket.size shouldBe truth[i].sentPacket.size
+            input[i].sentPacket.pacingInfo shouldBe truth[i].sentPacket.pacingInfo
         }
-        input[i].sentPacket.sendTime shouldBe truth[i].sentPacket.sendTime
-        input[i].sentPacket.sequenceNumber shouldBe truth[i].sentPacket.sequenceNumber
-        input[i].sentPacket.size shouldBe truth[i].sentPacket.size
-        input[i].sentPacket.pacingInfo shouldBe truth[i].sentPacket.pacingInfo
     }
 }
 
@@ -245,6 +250,120 @@ class TransportFeedbackAdapterTest : FreeSpec() {
                 val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
                 comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
             }
+        }
+
+        "HandlesArrivalReordering" {
+            val test = OneTransportFeedbackAdapterTest()
+            val packets = mutableListOf<PacketResult>()
+            packets.add(createPacket(120, 200, 0, 1500, kPacingInfo0))
+            packets.add(createPacket(110, 210, 1, 1500, kPacingInfo1))
+            packets.add(createPacket(100, 220, 2, 1500, kPacingInfo2))
+
+            packets.forEach { packet ->
+                test.onSentPacket(packet)
+            }
+
+            val feedbackBuilder = RtcpFbTccPacketBuilder()
+            feedbackBuilder.SetBase(packets[0].sentPacket.sequenceNumber.toInt(), packets[0].receiveTime)
+
+            packets.forEach { packet ->
+                feedbackBuilder.AddReceivedPacket(
+                    packet.sentPacket.sequenceNumber.toInt(),
+                    packet.receiveTime
+                ) shouldBe true
+            }
+
+            val feedback = feedbackBuilder.build()
+
+            // Adapter keeps the packets ordered by sequence number (which is itself
+            // assigned by the order of transmission). Reordering by some other criteria,
+            // eg. arrival time, is up to the observers.
+            val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
+            comparePacketFeedbackVectors(packets, res!!.packetFeedbacks)
+        }
+
+        "TimestampDeltas" {
+            val test = OneTransportFeedbackAdapterTest()
+            val sentPackets = mutableListOf<PacketResult>()
+            // TODO(srte): Consider using us resolution in the constants.
+            val kSmallDelta = RtcpFbTccPacket.kDeltaScaleFactor.roundDownTo(1.ms)
+            val kLargePositiveDelta = (RtcpFbTccPacket.kDeltaScaleFactor * Short.MAX_VALUE.toInt()).roundDownTo(1.ms)
+            val kLargeNegativeDelta = (RtcpFbTccPacket.kDeltaScaleFactor * Short.MIN_VALUE.toInt()).roundDownTo(1.ms)
+
+            val packetFeedback = PacketResult()
+            packetFeedback.sentPacket.sequenceNumber = 1
+            packetFeedback.sentPacket.sendTime = Instant.ofEpochMilli(100)
+            packetFeedback.receiveTime = Instant.ofEpochMilli(200)
+            sentPackets.add(packetFeedback.copy())
+
+            // TODO(srte): This rounding maintains previous behavior, but should ot be
+            // required.
+            packetFeedback.sentPacket.sendTime += kSmallDelta
+            packetFeedback.receiveTime += kSmallDelta
+            ++packetFeedback.sentPacket.sequenceNumber
+            sentPackets.add(packetFeedback.copy())
+
+            packetFeedback.sentPacket.sendTime += kLargePositiveDelta
+            packetFeedback.receiveTime += kLargePositiveDelta
+            ++packetFeedback.sentPacket.sequenceNumber
+            sentPackets.add(packetFeedback.copy())
+
+            packetFeedback.sentPacket.sendTime += kLargeNegativeDelta
+            packetFeedback.receiveTime += kLargeNegativeDelta
+            ++packetFeedback.sentPacket.sequenceNumber
+            sentPackets.add(packetFeedback.copy())
+
+            // Too large, delta - will need two feedback messages.
+            packetFeedback.sentPacket.sendTime += kLargePositiveDelta + 1.ms
+            packetFeedback.receiveTime += kLargePositiveDelta + 1.ms
+            ++packetFeedback.sentPacket.sequenceNumber
+
+            sentPackets.forEach { packet ->
+                test.onSentPacket(packet)
+            }
+            test.onSentPacket(packetFeedback)
+
+            // Create expected feedback and send into adapter.
+            var feedbackBuilder = RtcpFbTccPacketBuilder()
+            feedbackBuilder.SetBase(sentPackets[0].sentPacket.sequenceNumber.toInt(), sentPackets[0].receiveTime)
+
+            sentPackets.forEach { packet ->
+                feedbackBuilder.AddReceivedPacket(
+                    packet.sentPacket.sequenceNumber.toInt(),
+                    packet.receiveTime
+                ) shouldBe true
+            }
+            feedbackBuilder.AddReceivedPacket(
+                packetFeedback.sentPacket.sequenceNumber.toInt(),
+                packetFeedback.receiveTime
+            ) shouldBe false
+
+            var feedback = feedbackBuilder.build()
+            var rawPacket = feedback.buffer
+            var offset = feedback.offset
+            var length = feedback.length
+            feedback = RtcpFbTccPacket(rawPacket, offset, length)
+
+            var res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
+            comparePacketFeedbackVectors(sentPackets, res!!.packetFeedbacks)
+
+            // Create a new feedback message and add the trailing item.
+            feedbackBuilder = RtcpFbTccPacketBuilder()
+            feedbackBuilder.SetBase(packetFeedback.sentPacket.sequenceNumber.toInt(), packetFeedback.receiveTime)
+            feedbackBuilder.AddReceivedPacket(
+                packetFeedback.sentPacket.sequenceNumber.toInt(),
+                packetFeedback.receiveTime
+            ) shouldBe true
+            feedback = feedbackBuilder.build()
+            rawPacket = feedback.buffer
+            offset = feedback.offset
+            length = feedback.length
+            feedback = RtcpFbTccPacket(rawPacket, offset, length)
+
+            res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
+            val expectedPackets = mutableListOf<PacketResult>()
+            expectedPackets.add(packetFeedback.copy())
+            comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
         }
     }
 }
