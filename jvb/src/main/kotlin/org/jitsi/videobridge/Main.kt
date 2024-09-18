@@ -18,6 +18,7 @@ package org.jitsi.videobridge
 
 import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
+import org.ice4j.ice.harvest.AbstractUdpListener
 import org.ice4j.ice.harvest.MappingCandidateHarvesters
 import org.ice4j.util.Buffer
 import org.jitsi.config.JitsiConfig
@@ -223,6 +224,7 @@ private fun getSystemPropertyDefaults(): Map<String, String> {
 }
 
 private fun startIce4j() {
+    AbstractUdpListener.USE_PUSH_API = true
     // Start the initialization of the mapping candidate harvesters.
     // Asynchronous, because the AWS and STUN harvester may take a long
     // time to initialize.
