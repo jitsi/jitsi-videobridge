@@ -22,6 +22,7 @@ import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrUpdater
+import org.jitsi.nlj.rtp.ClassicTransportCcEngine
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
@@ -104,7 +105,7 @@ class RtpSenderImpl(
     // its handler (likely in another thread) grab the packet and send it out
     private var outgoingPacketHandler: PacketHandler? = null
     override val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
-    private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger)
+    private val transportCcEngine: TransportCcEngine = ClassicTransportCcEngine(bandwidthEstimator, logger)
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
     private val srtcpEncryptWrapper = SrtcpEncryptNode()
