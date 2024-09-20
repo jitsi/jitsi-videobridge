@@ -17,7 +17,6 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.TransportCcEngine
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
@@ -41,6 +40,8 @@ abstract class RtpSender :
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
     abstract fun getStreamStats(): OutgoingStatisticsSnapshot
     abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
+    abstract fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener)
+    abstract fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener)
     abstract fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot
     abstract fun requestKeyframe(mediaSsrc: Long? = null)
     abstract fun addLossListener(lossListener: LossListener)
@@ -52,6 +53,4 @@ abstract class RtpSender :
      * An optional function to be executed for each RTP packet, as the first step of the send pipeline.
      */
     var preProcesor: ((PacketInfo) -> PacketInfo?)? = null
-
-    abstract val bandwidthEstimator: BandwidthEstimator
 }

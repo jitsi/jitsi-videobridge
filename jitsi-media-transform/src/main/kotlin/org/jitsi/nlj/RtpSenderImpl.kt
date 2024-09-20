@@ -104,7 +104,7 @@ class RtpSenderImpl(
     // a generic handler here and then the bridge can put it into its PacketQueue and have
     // its handler (likely in another thread) grab the packet and send it out
     private var outgoingPacketHandler: PacketHandler? = null
-    override val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
+    private val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
     private val transportCcEngine: TransportCcEngine = ClassicTransportCcEngine(bandwidthEstimator, logger)
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
@@ -291,6 +291,12 @@ class RtpSenderImpl(
     override fun getPacketStreamStats() = packetStreamStats.snapshot()
 
     override fun getTransportCcEngineStats() = transportCcEngine.getStatistics()
+
+    override fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener) =
+        transportCcEngine.addBandwidthListener(listener)
+
+    override fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener) =
+        transportCcEngine.removeBandwidthListener(listener)
 
     override fun handleEvent(event: Event) {
         when (event) {

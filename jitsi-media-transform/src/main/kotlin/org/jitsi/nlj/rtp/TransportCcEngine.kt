@@ -16,9 +16,9 @@
 package org.jitsi.nlj.rtp
 
 import org.jitsi.nlj.rtcp.RtcpListener
+import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.json.simple.JSONObject
 import java.time.Duration
 import java.time.Instant
 
@@ -54,7 +54,15 @@ abstract class TransportCcEngine : RtcpListener {
         lossListeners.remove(listener)
     }
 
+    abstract fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener)
+
+    abstract fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener)
+
     abstract class StatisticsSnapshot {
-        abstract fun toJson(): JSONObject
+        abstract fun toJson(): Map<*, *>
+    }
+
+    interface BandwidthListener {
+        fun bandwidthEstimationChanged(newValue: Bandwidth)
     }
 }

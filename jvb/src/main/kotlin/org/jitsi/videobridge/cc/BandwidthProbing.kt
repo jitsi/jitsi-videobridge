@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.cc
 
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.utils.concurrent.PeriodicRunnable
@@ -31,7 +31,7 @@ import kotlin.random.Random
 class BandwidthProbing(
     private val probingDataSender: ProbingDataSender,
     private val statusSnapshotSupplier: Supplier<BitrateControllerStatusSnapshot>
-) : PeriodicRunnable(config.paddingPeriodMs), BandwidthEstimator.Listener {
+) : PeriodicRunnable(config.paddingPeriodMs), TransportCcEngine.BandwidthListener {
 
     /**
      * The sequence number to use if probing with the JVB's SSRC.

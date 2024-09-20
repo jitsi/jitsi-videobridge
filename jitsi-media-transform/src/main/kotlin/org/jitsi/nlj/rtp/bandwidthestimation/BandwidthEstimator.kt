@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation
 
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
@@ -221,11 +222,7 @@ abstract class BandwidthEstimator(
     /** Reset the estimator to its initial state. */
     abstract fun reset(): Unit
 
-    interface Listener {
-        fun bandwidthEstimationChanged(newValue: Bandwidth)
-    }
-
-    private val listeners = LinkedList<Listener>()
+    private val listeners = LinkedList<TransportCcEngine.BandwidthListener>()
     private var curBandwidth = (-1).bps
 
     private var lastBweLogTime = NEVER
@@ -263,7 +260,7 @@ abstract class BandwidthEstimator(
      * @param listener
      */
     @Synchronized
-    fun addListener(listener: Listener) {
+    fun addListener(listener: TransportCcEngine.BandwidthListener) {
         listeners.add(listener)
     }
 
@@ -272,7 +269,7 @@ abstract class BandwidthEstimator(
      * @param listener
      */
     @Synchronized
-    fun removeListener(listener: Listener) {
+    fun removeListener(listener: TransportCcEngine.BandwidthListener) {
         listeners.remove(listener)
     }
 

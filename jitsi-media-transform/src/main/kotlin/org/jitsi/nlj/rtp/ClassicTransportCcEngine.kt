@@ -26,10 +26,10 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.UnreceivedPacketReport
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.joinToRangedString
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -226,9 +226,14 @@ class ClassicTransportCcEngine(
             numDuplicateReports.sum(),
             numPacketsReportedAfterLost.sum(),
             numPacketsUnreported.sum(),
-            numMissingPacketReports.sum()
+            numMissingPacketReports.sum(),
+            bandwidthEstimator.getStats()
         )
     }
+
+    override fun addBandwidthListener(listener: BandwidthListener) = bandwidthEstimator.addListener(listener)
+
+    override fun removeBandwidthListener(listener: BandwidthListener) = bandwidthEstimator.removeListener(listener)
 
     /**
      * [PacketDetailState] is the state of a [PacketDetail]
@@ -264,16 +269,19 @@ class ClassicTransportCcEngine(
         val numDuplicateReports: Long,
         val numPacketsReportedAfterLost: Long,
         val numPacketsUnreported: Long,
-        val numMissingPacketReports: Long
+        val numMissingPacketReports: Long,
+        val bandwidthEstimatorStats: BandwidthEstimator.StatisticsSnapshot
     ) : TransportCcEngine.StatisticsSnapshot() {
-        override fun toJson(): JSONObject {
-            return JSONObject().also {
+        override fun toJson(): Map<*, *> {
+            return OrderedJsonObject().also {
+                it.put("name", this.javaClass.simpleName)
                 it.put("numPacketsReported", numPacketsReported)
                 it.put("numPacketsReportedLost", numPacketsReportedLost)
                 it.put("numDuplicateReports", numDuplicateReports)
                 it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
                 it.put("numPacketsUnreported", numPacketsUnreported)
                 it.put("numMissingPacketReports", numMissingPacketReports)
+                it.put("bandwidth_estimator_stats", bandwidthEstimatorStats)
             }
         }
     }
