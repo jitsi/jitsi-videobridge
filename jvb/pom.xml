@@ -45,6 +45,10 @@
   </profiles>
 
   <dependencies>
+  <dependency>
+    <groupId>com.github.kokorin</groupId>
+    <artifactId>jebml</artifactId>
+</dependency>
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
       <artifactId>json-simple</artifactId>
