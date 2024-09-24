@@ -439,7 +439,7 @@ class Relay @JvmOverloads constructor(
                     scheduleRelayMessageTransportTimeout()
                 } else if (sctpConfig.enabled) {
                     if (sctpRole == Sctp.Role.CLIENT) {
-                        sctpTransport!!.socket.connect()
+                        sctpTransport!!.connect()
                     }
                 }
             }
@@ -498,7 +498,7 @@ class Relay @JvmOverloads constructor(
             it.start(SctpCallbacks(it))
             sctpHandler!!.setSctpTransport(it)
             if (dtlsTransport.isConnected && sctpDesc.role == Sctp.Role.CLIENT) {
-                it.socket.connect()
+                it.connect()
             }
         }
     }
@@ -1172,7 +1172,7 @@ class Relay @JvmOverloads constructor(
             sctpHandler?.stop()
             usrSctpHandler?.stop()
             sctpManager?.closeConnection()
-            sctpTransport?.socket?.close()
+            sctpTransport?.stop()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
@@ -1275,7 +1275,7 @@ class Relay @JvmOverloads constructor(
                 val dataChannelStack = DataChannelStack(
                     { data, sid, ppid ->
                         val message = DcSctpMessage(sid.toShort(), ppid, data.array())
-                        val status = sctpTransport?.socket?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
+                        val status = sctpTransport?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
                         return@DataChannelStack if (status == SendStatus.kSuccess) {
                             0
                         } else {
