@@ -1115,7 +1115,7 @@ class Endpoint @JvmOverloads constructor(
             sctpHandler?.stop()
             usrSctpHandler?.stop()
             sctpManager?.closeConnection()
-            sctpTransport?.socket?.close()
+            sctpTransport?.stop()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
@@ -1240,7 +1240,7 @@ class Endpoint @JvmOverloads constructor(
         }
 
         override fun OnAborted(error: ErrorKind, message: String) {
-            logger.warn("SCTP aborted with error $error: $message")
+            logger.info("SCTP aborted with error $error: $message")
         }
 
         override fun OnConnected() {
@@ -1249,7 +1249,7 @@ class Endpoint @JvmOverloads constructor(
                 val dataChannelStack = DataChannelStack(
                     { data, sid, ppid ->
                         val message = DcSctpMessage(sid.toShort(), ppid, data.array())
-                        val status = sctpTransport?.socket?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
+                        val status = sctpTransport?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
                         return@DataChannelStack if (status == SendStatus.kSuccess) {
                             0
                         } else {
