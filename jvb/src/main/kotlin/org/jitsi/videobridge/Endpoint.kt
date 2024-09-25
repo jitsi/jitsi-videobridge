@@ -1240,7 +1240,7 @@ class Endpoint @JvmOverloads constructor(
         }
 
         override fun OnAborted(error: ErrorKind, message: String) {
-            logger.warn("SCTP aborted with error $error: $message")
+            logger.info("SCTP aborted with error $error: $message")
         }
 
         override fun OnConnected() {
