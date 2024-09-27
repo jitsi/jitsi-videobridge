@@ -105,7 +105,9 @@ public class AdaptiveSourceProjection
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(AdaptiveSourceProjection.class.getName(),
             Map.of("targetSsrc", Long.toString(targetSsrc),
-                "srcEpId", Objects.toString(source.getOwner(), "")));
+                "srcEpId", Objects.toString(source.getOwner(), ""),
+                "srcName", source.getSourceName()
+                ));
         this.keyframeRequester = keyframeRequester;
     }
 
