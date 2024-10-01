@@ -384,7 +384,7 @@ class Relay @JvmOverloads constructor(
             }
         }
         iceTransport.eventHandler = object : IceTransport.EventHandler {
-            override fun connected() {
+            override fun writeable() {
                 logger.info("ICE connected")
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
@@ -394,6 +394,8 @@ class Relay @JvmOverloads constructor(
                 })
                 TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake)
             }
+
+            override fun connected() {}
 
             override fun failed() {}
 
