@@ -95,6 +95,13 @@ class IceTransport @JvmOverloads constructor(
     var eventHandler: EventHandler? = null
 
     /**
+     * Whether or not it is possible to write to this [IceTransport].
+     *
+     * This happens as soon as any candidate pair is validated, and happens (usually) before iceConnected.
+     */
+    private val iceWriteable = AtomicBoolean(false)
+
+    /**
      * Whether or not this [IceTransport] has connected.
      */
     private val iceConnected = AtomicBoolean(false)
@@ -105,6 +112,8 @@ class IceTransport @JvmOverloads constructor(
     private val iceFailed = AtomicBoolean(false)
 
     fun hasFailed(): Boolean = iceFailed.get()
+
+    fun isWriteable(): Boolean = iceWriteable.get()
 
     fun isConnected(): Boolean = iceConnected.get()
 
@@ -264,6 +273,7 @@ class IceTransport @JvmOverloads constructor(
         put("nominationStrategy", IceConfig.config.nominationStrategy.toString())
         put("advertisePrivateCandidates", IceConfig.config.advertisePrivateCandidates)
         put("closed", !running.get())
+        put("iceWriteable", iceWriteable.get())
         put("iceConnected", iceConnected.get())
         put("iceFailed", iceFailed.get())
         putAll(packetStats.toJson())
@@ -375,7 +385,11 @@ class IceTransport @JvmOverloads constructor(
     }
 
     private fun iceStreamPairChanged(ev: PropertyChangeEvent) {
-        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
+        if (IceMediaStream.PROPERTY_PAIR_VALIDATED == ev.propertyName) {
+            if (iceWriteable.compareAndSet(false, true)) {
+                eventHandler?.writeable()
+            }
+        } else if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED == ev.propertyName) {
             /* TODO: Currently ice4j only triggers this event for the selected
              * pair, but should we double-check the pair anyway?
              */
@@ -439,6 +453,11 @@ class IceTransport @JvmOverloads constructor(
     }
 
     interface EventHandler {
+        /**
+         * Notify the event handler that it is possible to write to the ICE stack
+         */
+        fun writeable()
+
         /**
          * Notify the event handler that ICE connected successfully
          */
