@@ -1,6 +1,5 @@
 package org.jitsi.videobridge.exporter
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.Media
 import org.jitsi.mediajson.MediaEvent
@@ -30,7 +29,6 @@ class MediaJsonEncoder(
 
     private val ssrcsStarted = mutableSetOf<SsrcState>()
     var seq = 0
-    val om = jacksonObjectMapper()
 
     fun encode(p: AudioRtpPacket, epId: String) = synchronized(ssrcsStarted) {
         if (ssrcsStarted.none { it.ssrc == p.ssrc } ) {
@@ -38,7 +36,7 @@ class MediaJsonEncoder(
             val state = SsrcState(p.ssrc, p.timestamp, offset)
             ssrcsStarted.add(state)
             val e = StartEvent(
-                (++seq).toString(),
+                ++seq,
                 Start(
                     "$epId-${p.ssrc}",
                     MediaFormat(
@@ -61,11 +59,11 @@ class MediaJsonEncoder(
         val elapsedRtpTime = this.timestamp - ssrcState.initialRtpTs
         val ts = elapsedRtpTime + ssrcState.offset
         val p = MediaEvent(
-            seq.toString(),
+            seq,
             media = Media(
                 "$epId-${this.ssrc}",
-                this.sequenceNumber.toString(),
-                ts.toString(),
+                this.sequenceNumber,
+                ts,
                 Base64.encode(this.buffer, this.payloadOffset, this.payloadOffset + this.payloadLength)
             )
         )
