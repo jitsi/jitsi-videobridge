@@ -76,6 +76,7 @@ class Colibri2ConferenceHandler(
         for (e in conferenceModifyIQ.endpoints) {
             responseBuilder.addEndpoint(handleColibri2Endpoint(e, ignoreUnknownEndpoints))
         }
+        conferenceModifyIQ.exports?.let { conference.setExports(it.getExports()) }
         for (r in conferenceModifyIQ.relays) {
             if (!RelayConfig.config.enabled) {
                 throw IqProcessingException(Condition.feature_not_implemented, "Octo is disabled in configuration.")

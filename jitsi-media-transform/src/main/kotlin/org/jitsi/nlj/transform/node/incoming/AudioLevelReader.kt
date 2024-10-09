@@ -74,16 +74,16 @@ class AudioLevelReader(
 
                     if (!silence) stats.nonSilence(AudioLevelHeaderExtension.getVad(ext))
                     if (silence && forwardedSilencePackets > forwardedSilencePacketsLimit) {
-                        packetInfo.shouldDiscard = true
+                        // packetInfo.shouldDiscard = true
                         stats.discardedSilence()
                     } else if (this@AudioLevelReader.forceMute) {
-                        packetInfo.shouldDiscard = true
+                        // packetInfo.shouldDiscard = true
                         stats.discardedForceMute()
                     } else {
                         forwardedSilencePackets = if (silence) forwardedSilencePackets + 1 else 0
                         audioLevelListener?.let { listener ->
                             if (listener.onLevelReceived(audioRtpPacket.ssrc, (127 - level).toPositiveLong())) {
-                                packetInfo.shouldDiscard = true
+                                // packetInfo.shouldDiscard = true
                                 stats.discardedRanking()
                             }
                         }
