@@ -143,7 +143,8 @@ class RtpSenderImpl(
         outgoingRtpRoot = pipeline {
             node(object : TransformerNode("Pre-processor") {
                 override fun transform(packetInfo: PacketInfo): PacketInfo? {
-                    return preProcesor?.invoke(packetInfo) ?: packetInfo
+                    preProcesor?.let { return it.invoke(packetInfo) }
+                    return packetInfo
                 }
                 override fun trace(f: () -> Unit) {}
             })
