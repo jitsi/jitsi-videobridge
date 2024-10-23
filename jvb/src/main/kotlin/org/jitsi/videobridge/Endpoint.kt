@@ -326,6 +326,7 @@ class Endpoint @JvmOverloads constructor(
                 if (doSsrcRewriting) {
                     // Just check both tables instead of looking up the type first.
                     if (!videoSsrcs.rewriteRtcp(packet) && !audioSsrcs.rewriteRtcp(packet)) {
+                        logger.info("Dropping SR with senderSsrc=${packet.senderSsrc}: $packet")
                         return null
                     }
                 }
