@@ -403,6 +403,7 @@ class PluggableTransformerNode(
         return packetInfo
     }
     override fun trace(f: () -> Unit) {}
+    override val aggregationKey = this.name
 }
 
 /**
