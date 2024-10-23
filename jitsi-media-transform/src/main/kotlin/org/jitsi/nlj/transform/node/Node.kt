@@ -393,6 +393,18 @@ abstract class TransformerNode(name: String) : StatsKeepingNode(name) {
     }
 }
 
+/** A [TransformerNode] which gets its transformation function dynamically. */
+class PluggableTransformerNode(
+    name: String,
+    val transform: () -> ((PacketInfo) -> PacketInfo?)?
+) : TransformerNode(name) {
+    override fun transform(packetInfo: PacketInfo): PacketInfo? {
+        transform()?.let { return it.invoke(packetInfo) }
+        return packetInfo
+    }
+    override fun trace(f: () -> Unit) {}
+}
+
 /**
  * Unlike a [TransformerNode], [ModifierNode] modifies a packet in-place and never
  * outright 'fails', meaning the original [PacketInfo] will *always* be forwarded.

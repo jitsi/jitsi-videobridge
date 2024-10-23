@@ -38,10 +38,10 @@ import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.PacketLossConfig
 import org.jitsi.nlj.transform.node.PacketLossNode
 import org.jitsi.nlj.transform.node.PacketStreamStatsNode
+import org.jitsi.nlj.transform.node.PluggableTransformerNode
 import org.jitsi.nlj.transform.node.SrtcpEncryptNode
 import org.jitsi.nlj.transform.node.SrtpEncryptNode
 import org.jitsi.nlj.transform.node.ToggleablePcapWriter
-import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtEncoder
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtStripper
@@ -141,13 +141,7 @@ class RtpSenderImpl(
         incomingPacketQueue.setErrorHandler(queueErrorCounter)
 
         outgoingRtpRoot = pipeline {
-            node(object : TransformerNode("Pre-processor") {
-                override fun transform(packetInfo: PacketInfo): PacketInfo? {
-                    preProcesor?.let { return it.invoke(packetInfo) }
-                    return packetInfo
-                }
-                override fun trace(f: () -> Unit) {}
-            })
+            node(PluggableTransformerNode("RTP pre-processor") { preProcesor })
             node(AudioRedHandler(streamInformationStore, logger))
             node(HeaderExtStripper(streamInformationStore))
             node(outgoingPacketCache)
@@ -174,6 +168,7 @@ class RtpSenderImpl(
 
         // TODO: are we setting outgoing rtcp sequence numbers correctly? just add a simple node here to rewrite them
         outgoingRtcpRoot = pipeline {
+            node(PluggableTransformerNode("RTCP pre-processor") { preProcesor })
             node(keyframeRequester)
             node(SentRtcpStats())
             // TODO(brian): not sure this is a great idea.  it works as a catch-call but can also be error-prone
