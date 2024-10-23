@@ -34,6 +34,7 @@ import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.AudioRedHandler
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.transform.node.PacketCacher
 import org.jitsi.nlj.transform.node.PacketLossConfig
 import org.jitsi.nlj.transform.node.PacketLossNode
@@ -185,6 +186,16 @@ class RtpSenderImpl(
             }
             node(rtcpSrUpdater)
             node(toggleablePcapWriter.newObserverNode(outbound = true))
+            node(object : ObserverNode("RTCP sent notifier") {
+                override fun observe(packetInfo: PacketInfo) {
+                    val packet = packetInfo.packet
+                    if (packet is RtcpPacket) {
+                        rtcpEventNotifier.notifyRtcpSent(packet)
+                    }
+                }
+
+                override fun trace(f: () -> Unit) {}
+            })
             node(srtcpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
@@ -212,10 +223,6 @@ class RtpSenderImpl(
      */
     override fun doProcessPacket(packetInfo: PacketInfo) {
         if (running) {
-            val packet = packetInfo.packet
-            if (packet is RtcpPacket) {
-                rtcpEventNotifier.notifyRtcpSent(packet)
-            }
             packetInfo.addEvent(PACKET_QUEUE_ENTRY_EVENT)
             incomingPacketQueue.add(packetInfo)
         } else {
