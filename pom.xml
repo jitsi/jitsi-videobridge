@@ -28,7 +28,7 @@
         <kotest.version>5.9.1</kotest.version>
         <junit.version>5.10.2</junit.version>
         <jitsi.utils.version>1.0-133-g6af1020</jitsi.utils.version>
-        <jicoco.version>1.1-143-g175c44b</jicoco.version>
+        <jicoco.version>1.1-144-ga2c5ec1</jicoco.version>
         <mockk.version>1.13.11</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
@@ -95,6 +95,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jicoco-mediajson</artifactId>
+                <version>${jicoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-utils</artifactId>
                 <version>${jitsi.utils.version}</version>
             </dependency>
@@ -111,7 +116,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-81-g3816e5a</version>
+                <version>1.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
