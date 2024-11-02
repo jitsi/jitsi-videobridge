@@ -28,7 +28,9 @@ import java.security.KeyPair
 data class CertificateInfo(
     val keyPair: KeyPair,
     val certificate: org.bouncycastle.tls.Certificate,
+    val rawKeyCertificate: org.bouncycastle.tls.Certificate,
     val localFingerprintHashFunction: String,
     val localFingerprint: String,
+    val localRawKeyFingerprint: String,
     val creationTimestampMs: Long
 )

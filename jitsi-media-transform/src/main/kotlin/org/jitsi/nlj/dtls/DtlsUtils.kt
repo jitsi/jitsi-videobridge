@@ -16,10 +16,12 @@
 package org.jitsi.nlj.dtls
 
 import org.bouncycastle.asn1.ASN1Encoding
+import org.bouncycastle.asn1.ASN1Object
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.Certificate
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -27,11 +29,14 @@ import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.operator.bc.BcDefaultDigestProvider
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.bouncycastle.tls.AlertDescription
+import org.bouncycastle.tls.CertificateEntry
+import org.bouncycastle.tls.CertificateType
 import org.bouncycastle.tls.TlsContext
 import org.bouncycastle.tls.TlsUtils
 import org.bouncycastle.tls.crypto.TlsSecret
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCertificate
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto
+import org.bouncycastle.tls.crypto.impl.bc.BcTlsRawKeyCertificate
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cerror
@@ -68,14 +73,24 @@ class DtlsUtils {
             val localFingerprintHashFunction = x509certificate.getHashFunction()
             val localFingerprint = x509certificate.getFingerprint(localFingerprintHashFunction)
 
+            val sPKI = x509certificate.subjectPublicKeyInfo
+            val rawKeyFingerprint = sPKI.getFingerprint(localFingerprintHashFunction)
+
             val certificate = org.bouncycastle.tls.Certificate(
                 arrayOf(BcTlsCertificate(BC_TLS_CRYPTO, x509certificate))
+            )
+            val rawKeyCertificate = org.bouncycastle.tls.Certificate(
+                CertificateType.RawPublicKey,
+                null,
+                arrayOf(CertificateEntry(BcTlsRawKeyCertificate(BC_TLS_CRYPTO, sPKI), null))
             )
             return CertificateInfo(
                 keyPair,
                 certificate,
+                rawKeyCertificate,
                 localFingerprintHashFunction,
                 localFingerprint,
+                rawKeyFingerprint,
                 System.currentTimeMillis()
             )
         }
@@ -158,14 +173,26 @@ class DtlsUtils {
          */
         fun verifyAndValidateCertificate(
             certificateInfo: org.bouncycastle.tls.Certificate,
-            remoteFingerprints: Map<String, String>
+            remoteFingerprints: Map<String, String>,
+            remoteRawKeyFingerprints: Map<String, String>
         ) {
             if (certificateInfo.certificateList.isEmpty()) {
                 throw DtlsException("No remote fingerprints.")
             }
+            val type = certificateInfo.certificateType
             for (currCertificate in certificateInfo.certificateList) {
-                val x509Cert = Certificate.getInstance(currCertificate.encoded)
-                verifyAndValidateCertificate(x509Cert, remoteFingerprints)
+                when (type) {
+                    CertificateType.X509 -> {
+                        val x509Cert = Certificate.getInstance(currCertificate.encoded)
+                        verifyAndValidateCertificate(x509Cert, remoteFingerprints)
+                    }
+                    CertificateType.RawPublicKey -> {
+                        val sPKI = SubjectPublicKeyInfo.getInstance(currCertificate.encoded)
+                        verifyAndValidateRawPublicKey(sPKI, remoteRawKeyFingerprints)
+                    }
+                    else ->
+                        throw DtlsException("Invalid certificate type")
+                }
             }
         }
 
@@ -229,6 +256,18 @@ class DtlsUtils {
             }
         }
 
+        private fun verifyAndValidateRawPublicKey(
+            sPKI: SubjectPublicKeyInfo,
+            remoteRawKeyFingerprints: Map<String, String>
+        ) {
+            if (!remoteRawKeyFingerprints.any { (hash, fingerprint) ->
+                    sPKI.getFingerprint(hash) == fingerprint
+                }
+            ) {
+                throw DtlsException("No remote raw key fingerprint matches SubjectPublicKeyInfo")
+            }
+        }
+
         /**
          * Determine and return the hash function (as a [String]) used by this certificate
          */
@@ -242,10 +281,10 @@ class DtlsUtils {
         }
 
         /**
-         * Computes the fingerprint of a [org.bouncycastle.asn1.x509.Certificate] using [hashFunction] and returns it
-         * as a [String]
+         * Computes the fingerprint of a [ASN1Object] (e.g. a [org.bouncycastle.asn1.x509.Certificate])
+         * using [hashFunction] and returns it as a [String]
          */
-        private fun Certificate.getFingerprint(hashFunction: String): String {
+        private fun ASN1Object.getFingerprint(hashFunction: String): String {
             val digAlgId = DefaultDigestAlgorithmIdentifierFinder().find(hashFunction.uppercase())
             val digest = BcDefaultDigestProvider.INSTANCE.get(digAlgId)
             val input: ByteArray = getEncoded(ASN1Encoding.DER)

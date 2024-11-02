@@ -33,7 +33,7 @@ import kotlin.concurrent.thread
 class DtlsTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
     private val debugEnabled = true
-    private val pcapEnabled = false
+    private val pcapEnabled = true
     private val logger = StdoutLogger(_level = Level.OFF)
 
     fun debug(s: String) {
@@ -50,8 +50,14 @@ class DtlsTest : ShouldSpec() {
         dtlsClient.remoteFingerprints = mapOf(
             dtlsServer.localFingerprintHashFunction to dtlsServer.localFingerprint
         )
+        dtlsClient.remoteRawKeyFingerprints = mapOf(
+            dtlsServer.localFingerprintHashFunction to dtlsServer.localRawKeyFingerprint
+        )
         dtlsServer.remoteFingerprints = mapOf(
             dtlsClient.localFingerprintHashFunction to dtlsClient.localFingerprint
+        )
+        dtlsServer.remoteRawKeyFingerprints = mapOf(
+            dtlsClient.localFingerprintHashFunction to dtlsClient.localRawKeyFingerprint
         )
 
         // The DTLS server's send is wired directly to the DTLS client's receive

@@ -17,8 +17,10 @@ package org.jitsi.nlj.dtls
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.bouncycastle.crypto.util.PrivateKeyFactory
+import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
+import org.bouncycastle.tls.CertificateType
 import org.bouncycastle.tls.DefaultTlsClient
 import org.bouncycastle.tls.ExporterLabel
 import org.bouncycastle.tls.ExtensionType
@@ -28,6 +30,7 @@ import org.bouncycastle.tls.SignatureAlgorithm
 import org.bouncycastle.tls.SignatureAndHashAlgorithm
 import org.bouncycastle.tls.TlsAuthentication
 import org.bouncycastle.tls.TlsCredentials
+import org.bouncycastle.tls.TlsFatalAlert
 import org.bouncycastle.tls.TlsSRTPUtils
 import org.bouncycastle.tls.TlsServerCertificate
 import org.bouncycastle.tls.TlsSession
@@ -81,12 +84,20 @@ class TlsClientImpl(
         return object : TlsAuthentication {
             override fun getClientCredentials(certificateRequest: CertificateRequest): TlsCredentials {
                 // NOTE: can't set clientCredentials when it is declared because 'context' won't be set yet
+                val cert = when (context.securityParametersHandshake.clientCertificateType) {
+                    CertificateType.RawPublicKey ->
+                        certificateInfo.rawKeyCertificate
+                    CertificateType.X509 ->
+                        certificateInfo.certificate
+                    else ->
+                        throw TlsFatalAlert(AlertDescription.internal_error)
+                }
                 if (clientCredentials == null) {
                     clientCredentials = BcDefaultTlsCredentialedSigner(
                         TlsCryptoParameters(context),
                         (context.crypto as BcTlsCrypto),
                         PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
-                        certificateInfo.certificate,
+                        cert,
                         if (TlsUtils.isSignatureAlgorithmsExtensionAllowed(context.serverVersion)) {
                             SignatureAndHashAlgorithm(
                                 HashAlgorithm.sha256,
@@ -121,6 +132,20 @@ class TlsClientImpl(
         clientExtensions.put(ExtensionType.renegotiation_info, byteArrayOf(0))
 
         return clientExtensions
+    }
+
+    override fun getAllowedClientCertificateTypes(): ShortArray? {
+        if (DtlsConfig.config.negotiateRawKeyFingerprints) {
+            return shortArrayOf(CertificateType.X509, CertificateType.RawPublicKey)
+        }
+        return null
+    }
+
+    override fun getAllowedServerCertificateTypes(): ShortArray? {
+        if (DtlsConfig.config.negotiateRawKeyFingerprints) {
+            return shortArrayOf(CertificateType.X509, CertificateType.RawPublicKey)
+        }
+        return null
     }
 
     override fun processServerExtensions(serverExtensions: Hashtable<*, *>?) {
