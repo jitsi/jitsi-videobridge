@@ -261,10 +261,19 @@ class DtlsUtils {
             remoteRawKeyFingerprints: Map<String, String>
         ) {
             if (!remoteRawKeyFingerprints.any { (hash, fingerprint) ->
-                    sPKI.getFingerprint(hash) == fingerprint
+                    try {
+                        sPKI.getFingerprint(hash) == fingerprint
+                    } catch (e: Exception) {
+                        // Swallow exception for unknown hash functions
+                        false
+                    }
                 }
             ) {
-                throw DtlsException("No remote raw key fingerprint matches SubjectPublicKeyInfo")
+                val expected = sPKI.getFingerprint("sha-256")
+                throw DtlsException(
+                    "No remote raw key fingerprint matches SubjectPublicKeyInfo.  " +
+                        "Expected: sha-256 $expected.  Seen: ${remoteRawKeyFingerprints.entries.joinToString()}"
+                )
             }
         }
 
@@ -286,6 +295,7 @@ class DtlsUtils {
          */
         private fun ASN1Object.getFingerprint(hashFunction: String): String {
             val digAlgId = DefaultDigestAlgorithmIdentifierFinder().find(hashFunction.uppercase())
+                ?: throw DtlsException("digest algorithm $hashFunction unknown")
             val digest = BcDefaultDigestProvider.INSTANCE.get(digAlgId)
             val input: ByteArray = getEncoded(ASN1Encoding.DER)
             val output = ByteArray(digest.digestSize)

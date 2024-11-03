@@ -175,6 +175,13 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         dtlsStack.remoteFingerprints = remoteFingerprints
     }
 
+    fun setRemoteRawKeyFingerprints(remoteRawKeyFingerprints: Map<String, String>) {
+        if (remoteRawKeyFingerprints.isEmpty()) {
+            return
+        }
+        dtlsStack.remoteRawKeyFingerprints = remoteRawKeyFingerprints
+    }
+
     /**
      * Describe the properties of this [DtlsTransport] into the given
      * [IceUdpTransportPacketExtension]

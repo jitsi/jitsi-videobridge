@@ -89,6 +89,7 @@ import org.jitsi.videobridge.util.looksLikeDtls
 import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
+import org.jitsi.xmpp.extensions.jingle.DtlsRawKeyFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import org.jitsi_modified.sctp4j.SctpDataCallback
@@ -803,6 +804,19 @@ class Endpoint @JvmOverloads constructor(
             val setup = fingerprintExtensions.first().setup
             dtlsTransport.setSetupAttribute(setup)
         }
+
+        val remoteRawKeyFingerprints = mutableMapOf<String, String>()
+        val rawKeyFingerprintExtensions =
+            transportInfo.getChildExtensionsOfType(DtlsRawKeyFingerprintPacketExtension::class.java)
+        rawKeyFingerprintExtensions.forEach { rawKeyFingerprintExtension ->
+            if (rawKeyFingerprintExtension.hash != null && rawKeyFingerprintExtension.fingerprint != null) {
+                remoteRawKeyFingerprints[rawKeyFingerprintExtension.hash] = rawKeyFingerprintExtension.fingerprint
+            } else {
+                logger.info("Ignoring empty DtlsRawKeyFingerprint extension: ${transportInfo.toStringOpt()}")
+            }
+        }
+        dtlsTransport.setRemoteRawKeyFingerprints(remoteRawKeyFingerprints)
+
         iceTransport.startConnectivityEstablishment(transportInfo)
     }
 
