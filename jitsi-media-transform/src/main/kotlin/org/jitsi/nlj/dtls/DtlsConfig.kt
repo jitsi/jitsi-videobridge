@@ -36,6 +36,10 @@ class DtlsConfig {
         }
     }
 
+    val negotiateRawKeyFingerprints: Boolean by config {
+        "jmt.dtls.negotiate-raw-key-fingerprints".from(JitsiConfig.newConfig)
+    }
+
     companion object {
         val config = DtlsConfig()
     }

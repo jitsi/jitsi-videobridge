@@ -68,10 +68,18 @@ class DtlsStack(
     val localFingerprint: String
         get() = certificateInfo.localFingerprint
 
+    val localRawKeyFingerprint: String
+        get() = certificateInfo.localRawKeyFingerprint
+
     /**
      * The remote fingerprints sent to us over the signaling path.
      */
     var remoteFingerprints: Map<String, String> = HashMap()
+
+    /**
+     * The remote raw key fingerprints.
+     */
+    var remoteRawKeyFingerprints: Map<String, String> = HashMap()
 
     /**
      * A handler which will be invoked when DTLS application data is received
@@ -174,7 +182,7 @@ class DtlsStack(
      */
     private fun verifyAndValidateRemoteCertificate(remoteCertificate: Certificate?) {
         remoteCertificate?.let {
-            DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints)
+            DtlsUtils.verifyAndValidateCertificate(it, remoteFingerprints, remoteRawKeyFingerprints)
             // The above throws an exception if the checks fail.
             logger.cdebug { "Fingerprints verified." }
         } ?: run {

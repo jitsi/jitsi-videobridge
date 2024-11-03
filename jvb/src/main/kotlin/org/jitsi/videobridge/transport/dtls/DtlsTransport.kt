@@ -18,6 +18,7 @@ package org.jitsi.videobridge.transport.dtls
 
 import org.ice4j.util.Buffer
 import org.jitsi.nlj.dtls.DtlsClient
+import org.jitsi.nlj.dtls.DtlsConfig
 import org.jitsi.nlj.dtls.DtlsServer
 import org.jitsi.nlj.dtls.DtlsStack
 import org.jitsi.nlj.srtp.TlsRole
@@ -28,6 +29,7 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
+import org.jitsi.xmpp.extensions.jingle.DtlsRawKeyFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -173,6 +175,13 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         dtlsStack.remoteFingerprints = remoteFingerprints
     }
 
+    fun setRemoteRawKeyFingerprints(remoteRawKeyFingerprints: Map<String, String>) {
+        if (remoteRawKeyFingerprints.isEmpty()) {
+            return
+        }
+        dtlsStack.remoteRawKeyFingerprints = remoteRawKeyFingerprints
+    }
+
     /**
      * Describe the properties of this [DtlsTransport] into the given
      * [IceUdpTransportPacketExtension]
@@ -191,6 +200,15 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         fingerprintPE.hash = dtlsStack.localFingerprintHashFunction
         if (cryptex) {
             fingerprintPE.cryptex = true
+        }
+        if (DtlsConfig.config.negotiateRawKeyFingerprints) {
+            val rawKeyFingerprintPE = iceUdpTransportPe.getFirstChildOfType(
+                DtlsRawKeyFingerprintPacketExtension::class.java
+            ) ?: run {
+                DtlsRawKeyFingerprintPacketExtension().also { iceUdpTransportPe.addChildExtension(it) }
+            }
+            rawKeyFingerprintPE.fingerprint = dtlsStack.localRawKeyFingerprint
+            rawKeyFingerprintPE.hash = dtlsStack.localFingerprintHashFunction
         }
     }
 

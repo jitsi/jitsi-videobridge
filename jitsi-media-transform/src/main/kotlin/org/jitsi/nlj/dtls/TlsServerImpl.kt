@@ -20,6 +20,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
+import org.bouncycastle.tls.CertificateType
 import org.bouncycastle.tls.ClientCertificateType
 import org.bouncycastle.tls.DefaultTlsServer
 import org.bouncycastle.tls.ExporterLabel
@@ -29,6 +30,7 @@ import org.bouncycastle.tls.SignatureAlgorithm
 import org.bouncycastle.tls.SignatureAndHashAlgorithm
 import org.bouncycastle.tls.TlsCredentialedDecryptor
 import org.bouncycastle.tls.TlsCredentialedSigner
+import org.bouncycastle.tls.TlsExtensionsUtils
 import org.bouncycastle.tls.TlsSRTPUtils
 import org.bouncycastle.tls.TlsSession
 import org.bouncycastle.tls.TlsUtils
@@ -64,6 +66,8 @@ class TlsServerImpl(
 
     private var session: TlsSession? = null
 
+    private var useRawKeys: Boolean = false
+
     /**
      * Only set after a handshake has completed
      */
@@ -96,6 +100,17 @@ class TlsServerImpl(
         val protectionProfiles = useSRTPData.protectionProfiles
         chosenSrtpProtectionProfile =
             DtlsUtils.chooseSrtpProtectionProfile(SrtpConfig.protectionProfiles, protectionProfiles.asIterable())
+
+        if (DtlsConfig.config.negotiateRawKeyFingerprints) {
+            val remoteServerCertTypes = TlsExtensionsUtils.getServerCertificateTypeExtensionClient(clientExtensions)
+            val remoteClientCertTypes = TlsExtensionsUtils.getClientCertificateTypeExtensionClient(clientExtensions)
+
+            if (remoteServerCertTypes?.contains(CertificateType.RawPublicKey) == true &&
+                remoteClientCertTypes?.contains(CertificateType.RawPublicKey) == true
+            ) {
+                useRawKeys = true
+            }
+        }
     }
 
     override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
@@ -109,13 +124,25 @@ class TlsServerImpl(
     }
 
     override fun getECDSASignerCredentials(): TlsCredentialedSigner {
+        val cert = if (useRawKeys) {
+            certificateInfo.rawKeyCertificate
+        } else {
+            certificateInfo.certificate
+        }
         return BcDefaultTlsCredentialedSigner(
             TlsCryptoParameters(context),
             (context.crypto as BcTlsCrypto),
             PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
-            certificateInfo.certificate,
+            cert,
             SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa)
         )
+    }
+
+    override fun getAllowedClientCertificateTypes(): ShortArray? {
+        if (useRawKeys) {
+            return shortArrayOf(CertificateType.RawPublicKey)
+        }
+        return null
     }
 
     override fun getCertificateRequest(): CertificateRequest {
