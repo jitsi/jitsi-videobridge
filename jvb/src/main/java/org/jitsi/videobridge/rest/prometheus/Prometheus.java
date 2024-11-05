@@ -16,11 +16,14 @@
 
 package org.jitsi.videobridge.rest.prometheus;
 
-import io.prometheus.client.exporter.common.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
+import kotlin.*;
 import org.jetbrains.annotations.NotNull;
 import org.jitsi.metrics.*;
+
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * A REST endpoint exposing JVB stats for Prometheus.
@@ -35,6 +38,13 @@ import org.jitsi.metrics.*;
 @Path("/metrics")
 public class Prometheus
 {
+    static private final Comparator<MediaType> comparator =  Comparator.comparing(Prometheus::getQValue).reversed();
+
+    private static double getQValue(MediaType m)
+    {
+        return m.getParameters().get("q") == null ? 1.0 : Double.parseDouble(m.getParameters().get("q"));
+    }
+
     @NotNull
     private final MetricsContainer metricsContainer;
 
@@ -44,23 +54,16 @@ public class Prometheus
     }
 
     @GET
-    @Produces(TextFormat.CONTENT_TYPE_004)
-    public String getPrometheusPlainText()
+    public Response x(@HeaderParam("Accept") String accept)
     {
-        return metricsContainer.getPrometheusMetrics(TextFormat.CONTENT_TYPE_004);
-    }
+        List<String> acceptMediaTypes
+            = Arrays.stream(accept.split(","))
+                .map(MediaType::valueOf)
+                .sorted(comparator)
+                .map(m -> m.getType() + "/" + m.getSubtype())
+                .collect(Collectors.toList());
+        Pair<String, String> m = metricsContainer.getMetrics(acceptMediaTypes);
 
-    @GET
-    @Produces(TextFormat.CONTENT_TYPE_OPENMETRICS_100)
-    public String getPrometheusOpenMetrics()
-    {
-        return metricsContainer.getPrometheusMetrics(TextFormat.CONTENT_TYPE_OPENMETRICS_100);
-    }
-
-    @GET
-    @Produces(MediaType.APPLICATION_JSON)
-    public String getJsonString()
-    {
-        return metricsContainer.getJsonString();
+        return Response.ok(m.getFirst(), m.getSecond()).build();
     }
 }
