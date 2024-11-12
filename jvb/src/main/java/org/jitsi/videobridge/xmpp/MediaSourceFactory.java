@@ -24,7 +24,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
 import org.jitsi.xmpp.util.*;
-import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.parts.*;
 import org.jxmpp.util.*;
 
@@ -43,16 +42,7 @@ public class MediaSourceFactory
      * The {@link Logger} used by the {@link MediaSourceDesc} class and its
      * instances for logging output.
      */
-    private static final Logger logger
-        = new LoggerImpl(MediaSourceFactory.class.getName());
-
-    /**
-     * The default number of temporal layers to use for VP8 simulcast.
-     *
-     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
-     * in the RTP stream.
-     */
-    private static final int VP8_SIMULCAST_TEMPORAL_LAYERS = 3;
+    private static final Logger logger = new LoggerImpl(MediaSourceFactory.class.getName());
 
     /**
      * The resolution of the base stream when activating simulcast for VP8.
