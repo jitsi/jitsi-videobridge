@@ -186,7 +186,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 
         logger.trace {
             "Allocating: sortedSources=${sortedSources.map { it.sourceName }}, " +
-                " effectiveConstraints=$newEffectiveConstraints"
+                " effectiveConstraints=${newEffectiveConstraints.map { "${it.key.sourceName}=${it.value}" }}"
         }
 
         // Compute the bandwidth allocation.

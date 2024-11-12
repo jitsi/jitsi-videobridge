@@ -98,7 +98,8 @@ data class SingleAllocation(
         get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1
 
-    override fun toString(): String = "[id=$endpointId target=${targetLayer?.height}/${targetLayer?.frameRate} " +
+    override fun toString(): String = "[epId=$endpointId sourceName=${mediaSource?.sourceName} " +
+        "target=${targetLayer?.height}/${targetLayer?.frameRate} " +
         "(${targetLayer?.indexString()}) " +
         "ideal=${idealLayer?.height}/${idealLayer?.frameRate} (${idealLayer?.indexString()})]"
 
