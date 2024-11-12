@@ -52,14 +52,10 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 ) {
     private val logger = createChildLogger(parentLogger)
 
-    /**
-     * The estimated available bandwidth in bits per second.
-     */
+    /** The estimated available bandwidth in bits per second. */
     private var bweBps: Long = -1
 
-    /**
-     * Whether this bandwidth estimator has been expired. Once expired we stop periodic re-allocation.
-     */
+    /** Whether this bandwidth estimator has been expired. Once expired we stop periodic re-allocation. */
     private var expired = false
 
     /**
@@ -95,24 +91,18 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
      */
     private var lastUpdateTime: Instant = clock.instant()
 
-    /**
-     * The result of the bitrate control algorithm, the last time it ran.
-     */
+    /** The result of the bitrate control algorithm, the last time it ran. */
     var allocation = BandwidthAllocation(emptySet())
         private set
 
-    /**
-     * The task scheduled to call [.update].
-     */
+    /** The task scheduled to call [.update]. */
     private var updateTask: ScheduledFuture<*>? = null
 
     init {
         rescheduleUpdate()
     }
 
-    /**
-     * Gets a JSON representation of the parts of this object's state that are deemed useful for debugging.
-     */
+    /** Gets a JSON representation of the parts of this object's state that are deemed useful for debugging. */
     @get:SuppressFBWarnings(
         value = ["IS2_INCONSISTENT_SYNC"],
         justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
@@ -128,9 +118,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             return debugState
         }
 
-    /**
-     * Get the available bandwidth, taking into account the `trustBwe` option.
-     */
+    /** Get the available bandwidth, taking into account the `trustBwe` option. */
     private val availableBandwidth: Long
         get() = if (trustBwe.get()) bweBps else Long.MAX_VALUE
 
