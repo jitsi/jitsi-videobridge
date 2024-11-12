@@ -39,12 +39,17 @@ class BitrateControllerConfig private constructor() {
         "videobridge.cc.bwe-change-threshold".from(JitsiConfig.newConfig)
     }
 
-    /**
-     * The max resolution to allocate for the thumbnails.
-     */
-    val thumbnailMaxHeightPx: Int by config {
-        "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT".from(JitsiConfig.legacyConfig)
+    val initialMaxHeightPx: Int by config {
+        // Support the old property name if the user has overridden it.
         "videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig)
+            .softDeprecated("use videobridge.cc.initial-max-height-px")
+        "videobridge.cc.initial-max-height-px".from(JitsiConfig.newConfig)
+    }
+    val defaultMaxHeightPx: Int by config {
+        // Support the old property name if the user has overridden it.
+        "videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig)
+            .softDeprecated("use videobridge.cc.default-max-height-px")
+        "videobridge.cc.default-max-height-px".from(JitsiConfig.newConfig)
     }
 
     /**

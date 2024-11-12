@@ -80,7 +80,7 @@ internal class AllocationSettingsWrapper(
 
     private var videoConstraints: Map<String, VideoConstraints> = emptyMap()
 
-    private var defaultConstraints: VideoConstraints = VideoConstraints(config.thumbnailMaxHeightPx)
+    private var defaultConstraints: VideoConstraints = VideoConstraints(config.initialMaxHeightPx)
 
     private var assumedBandwidthBps: Long = -1
 
