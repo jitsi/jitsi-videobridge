@@ -31,8 +31,6 @@ class BandwidthAllocation @JvmOverloads constructor(
     private val suspendedSources: List<String> = emptyList()
 ) {
     val hasSuspendedSources: Boolean = suspendedSources.isNotEmpty()
-    val forwardedEndpoints: Set<String> =
-        allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     val forwardedSources: Set<String> =
         allocations.filter { it.isForwarded() }.mapNotNull { it.mediaSource?.sourceName }.toSet()
