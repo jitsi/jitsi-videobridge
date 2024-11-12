@@ -93,14 +93,6 @@ class BitrateControllerConfig private constructor() {
     }
 
     /**
-     * The property for the max resolution to allocate for the onstage
-     * participant.
-     */
-    private val onstageIdealHeightPx: Int by config(
-        "videobridge.cc.onstage-ideal-height-px".from(JitsiConfig.newConfig)
-    )
-
-    /**
      * The maximum amount of time we'll run before recalculating which streams we'll
      * forward.
      */
