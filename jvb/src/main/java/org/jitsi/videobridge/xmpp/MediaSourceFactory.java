@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vpx.*;
@@ -536,12 +537,10 @@ public class MediaSourceFactory
     {
         final Collection<SourceGroupPacketExtension> finalSourceGroups
                 = sourceGroups == null ? new ArrayList<>() : sourceGroups;
-        if (sources == null)
-        {
-            sources = new ArrayList<>();
-        }
+        final Collection<SourcePacketExtension> finalSources
+                = sources == null ? new ArrayList<>() : sources;
 
-        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups);
+        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(finalSources, finalSourceGroups);
         List<MediaSourceDesc> mediaSources = new ArrayList<>();
 
         sourceSsrcsList.forEach(sourceSsrcs -> {
@@ -567,7 +566,8 @@ public class MediaSourceFactory
                         numTemporalLayersPerStream,
                         secondarySsrcs,
                         sourceSsrcs.owner,
-                        sourceSsrcs.name
+                        sourceSsrcs.name,
+                        getVideoType(finalSources)
             );
             mediaSources.add(mediaSource);
         });
@@ -624,7 +624,8 @@ public class MediaSourceFactory
                     numTemporalLayersPerStream,
                     secondarySsrcs,
                     owner,
-                    name
+                    name,
+                    getVideoType(sources)
             );
         }
         else
@@ -779,7 +780,8 @@ public class MediaSourceFactory
             int numTemporalLayersPerStream,
             Map<Long, SecondarySsrcs> allSecondarySsrcs,
             String owner,
-            String name
+            String name,
+            VideoType videoType
     )
     {
         RtpEncodingDesc[] encodings =
@@ -817,6 +819,18 @@ public class MediaSourceFactory
             throw new IllegalArgumentException("The 'owner' is missing in the source description");
         }
 
-        return new MediaSourceDesc(encodings, owner, name);
+        return new MediaSourceDesc(encodings, owner, name, videoType);
+    }
+
+    private static VideoType getVideoType(@NotNull Collection<SourcePacketExtension> sources)
+    {
+        for (SourcePacketExtension source : sources)
+        {
+            if (source.getVideoType() != null)
+            {
+                return VideoType.valueOf(source.getVideoType().toUpperCase());
+            }
+        }
+        return VideoType.CAMERA;
     }
 }
