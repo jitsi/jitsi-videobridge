@@ -86,7 +86,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
      * The allocations settings signalled by the receiver.
      */
     private var allocationSettings =
-        AllocationSettings(defaultConstraints = VideoConstraints(BitrateControllerConfig.config.thumbnailMaxHeightPx()))
+        AllocationSettings(defaultConstraints = VideoConstraints(BitrateControllerConfig.config.thumbnailMaxHeightPx))
 
     /**
      * The last time [BandwidthAllocator.update] was called.
@@ -336,7 +336,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             return
         }
         val timeSinceLastUpdate = Duration.between(lastUpdateTime, clock.instant())
-        val period = BitrateControllerConfig.config.maxTimeBetweenCalculations()
+        val period = BitrateControllerConfig.config.maxTimeBetweenCalculations
         val delayMs = if (timeSinceLastUpdate > period) {
             logger.debug("Running periodic re-allocation.")
             TaskPools.CPU_POOL.execute { this.update() }
@@ -384,7 +384,7 @@ private fun bweChangeIsLargerThanThreshold(previousBwe: Long, currentBwe: Long):
     // In any case, there are other triggers for re-allocation, so any suppression we do here will only last up to
     // a few seconds.
     val deltaBwe = abs(currentBwe - previousBwe)
-    return deltaBwe > previousBwe * BitrateControllerConfig.config.bweChangeThreshold()
+    return deltaBwe > previousBwe * BitrateControllerConfig.config.bweChangeThreshold
 
     // If, on the other hand, the bwe has decreased, we require at least a 15% drop in order to update the bitrate
     // allocation. This is an ugly hack to prevent too many resolution/UI changes in case the bridge produces too
