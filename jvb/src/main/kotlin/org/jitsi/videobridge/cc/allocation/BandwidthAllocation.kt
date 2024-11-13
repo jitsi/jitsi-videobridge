@@ -45,8 +45,8 @@ class BandwidthAllocation @JvmOverloads constructor(
         allocations.all { allocation ->
             other.allocations.any { otherAllocation ->
                 allocation.endpointId == otherAllocation.endpointId &&
-                    allocation.mediaSource?.primarySSRC ==
-                    otherAllocation.mediaSource?.primarySSRC &&
+                    allocation.mediaSource?.primarySSRC == otherAllocation.mediaSource?.primarySSRC &&
+                    allocation.mediaSource?.videoType == otherAllocation.mediaSource?.videoType &&
                     allocation.targetLayer?.index == otherAllocation.targetLayer?.index
             }
         }

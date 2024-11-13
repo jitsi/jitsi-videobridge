@@ -603,7 +603,9 @@ class Endpoint @JvmOverloads constructor(
 
         if (doSsrcRewriting) {
             val newActiveSources =
-                newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
+                newEffectiveConstraints.entries.filter {
+                    !it.value.isDisabled() && it.key.videoType.isEnabled()
+                }.map { it.key }.toList()
             val newActiveSourceNames = newActiveSources.map { it.sourceName }.toSet()
             /* safe unlocked access of activeSources. BitrateController will not overlap calls to this method. */
             if (activeSources != newActiveSourceNames) {
