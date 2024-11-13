@@ -106,6 +106,12 @@ abstract class AbstractEndpoint protected constructor(
         val mediaSourceDesc = findMediaSourceDesc(sourceName)
         if (mediaSourceDesc != null) {
             if (mediaSourceDesc.videoType !== videoType) {
+                if (mediaSourceDesc.videoType.isEnabled() && videoType.isEnabled()) {
+                    logger.warn(
+                        "Changing video type from ${mediaSourceDesc.videoType} to $videoType for $sourceName. " +
+                                "This will not trigger re-signaling the mapping."
+                    )
+                }
                 mediaSourceDesc.videoType = videoType
                 conference.speechActivity.endpointVideoAvailabilityChanged()
             }
