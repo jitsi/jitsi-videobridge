@@ -96,7 +96,7 @@ class BitrateControllerTest : ShouldSpec() {
             val delayMs = TimeUnit.MILLISECONDS.convert(captureDelay.captured, captureDelayTimeunit.captured)
 
             delayMs.shouldBeWithinPercentageOf(
-                BitrateControllerConfig.config.maxTimeBetweenCalculations().toMillis(),
+                BitrateControllerConfig.config.maxTimeBetweenCalculations.toMillis(),
                 10.0
             )
 

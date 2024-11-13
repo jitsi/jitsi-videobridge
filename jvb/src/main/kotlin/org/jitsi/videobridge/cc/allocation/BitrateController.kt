@@ -105,7 +105,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
      * TODO: Is this comment still accurate?
      */
     private val trustBwe: Boolean
-        get() = config.trustBwe() && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10.secs
+        get() = config.trustBwe && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10.secs
 
     // Proxy to the allocator
     fun endpointOrderingChanged() = bandwidthAllocator.update()
