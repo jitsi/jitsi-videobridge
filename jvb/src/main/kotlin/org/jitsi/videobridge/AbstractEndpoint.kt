@@ -109,7 +109,7 @@ abstract class AbstractEndpoint protected constructor(
                 if (mediaSourceDesc.videoType.isEnabled() && videoType.isEnabled()) {
                     logger.warn(
                         "Changing video type from ${mediaSourceDesc.videoType} to $videoType for $sourceName. " +
-                                "This will not trigger re-signaling the mapping."
+                            "This will not trigger re-signaling the mapping."
                     )
                 }
                 mediaSourceDesc.videoType = videoType
