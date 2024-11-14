@@ -78,11 +78,11 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         addHandler(eventHandler)
     }
 
-    /**
-     * The allocations settings signalled by the receiver.
-     */
+    /** The allocations settings signalled by the receiver. */
     private var allocationSettings =
-        AllocationSettings(defaultConstraints = VideoConstraints(BitrateControllerConfig.config.thumbnailMaxHeightPx))
+        AllocationSettings(
+            defaultConstraints = VideoConstraints(BitrateControllerConfig.config.initialMaxHeightPx)
+        )
 
     /**
      * The last time [BandwidthAllocator.update] was called.

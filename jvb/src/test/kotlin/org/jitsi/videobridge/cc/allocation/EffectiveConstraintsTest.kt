@@ -21,7 +21,6 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
-import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 
 fun testSource(endpointId: String, sourceName: String, videoType: VideoType = VideoType.CAMERA): MediaSourceDesc {
     return MediaSourceDesc(
@@ -44,7 +43,7 @@ class EffectiveConstraintsTest : ShouldSpec() {
         val s5 = testSource("e1", "s5", videoType = VideoType.DISABLED)
         val s6 = testSource("e1", "s6", videoType = VideoType.DISABLED)
 
-        val defaultConstraints = VideoConstraints(BitrateControllerConfig.config.thumbnailMaxHeightPx)
+        val defaultConstraints = VideoConstraints(180)
 
         val sources = listOf(s1, s2, s3, s4, s5, s6)
         val zeroEffectiveConstraints = mutableMapOf(
