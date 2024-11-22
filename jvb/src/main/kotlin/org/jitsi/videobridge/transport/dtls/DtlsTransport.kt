@@ -163,7 +163,7 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         }
     }
 
-    fun setRemoteFingerprints(remoteFingerprints: Map<String, String>) {
+    fun setRemoteFingerprints(remoteFingerprints: Map<String, List<String>>) {
         // Don't pass an empty list to the stack in order to avoid wiping
         // certificates that were contained in a previous request.
         if (remoteFingerprints.isEmpty()) {
