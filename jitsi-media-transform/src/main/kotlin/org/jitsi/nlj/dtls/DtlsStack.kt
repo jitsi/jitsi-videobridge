@@ -71,7 +71,7 @@ class DtlsStack(
     /**
      * The remote fingerprints sent to us over the signaling path.
      */
-    var remoteFingerprints: Map<String, String> = HashMap()
+    var remoteFingerprints: Map<String, List<String>> = mapOf()
 
     /**
      * A handler which will be invoked when DTLS application data is received

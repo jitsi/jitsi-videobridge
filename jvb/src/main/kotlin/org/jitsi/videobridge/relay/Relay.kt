@@ -612,11 +612,12 @@ class Relay @JvmOverloads constructor(
      * transport information.
      */
     fun setTransportInfo(transportInfo: IceUdpTransportPacketExtension) {
-        val remoteFingerprints = mutableMapOf<String, String>()
+        val remoteFingerprints = mutableMapOf<String, MutableList<String>>()
         val fingerprintExtensions = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension::class.java)
         fingerprintExtensions.forEach { fingerprintExtension ->
             if (fingerprintExtension.hash != null && fingerprintExtension.fingerprint != null) {
-                remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
+                remoteFingerprints.getOrPut(fingerprintExtension.hash.lowercase()) { mutableListOf() }
+                    .add(fingerprintExtension.fingerprint)
             } else {
                 logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toStringOpt()}")
             }

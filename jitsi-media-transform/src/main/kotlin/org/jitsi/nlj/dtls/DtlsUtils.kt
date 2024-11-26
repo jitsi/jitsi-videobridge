@@ -65,7 +65,7 @@ class DtlsUtils {
             val cn = generateCN("TODO-APP-NAME", "TODO-APP-VERSION")
             val keyPair = generateEcKeyPair()
             val x509certificate = generateCertificate(cn, keyPair)
-            val localFingerprintHashFunction = x509certificate.getHashFunction()
+            val localFingerprintHashFunction = config.localFingerprintHashFunction
             val localFingerprint = x509certificate.getFingerprint(localFingerprintHashFunction)
 
             val certificate = org.bouncycastle.tls.Certificate(
@@ -158,7 +158,7 @@ class DtlsUtils {
          */
         fun verifyAndValidateCertificate(
             certificateInfo: org.bouncycastle.tls.Certificate,
-            remoteFingerprints: Map<String, String>
+            remoteFingerprints: Map<String, List<String>>
         ) {
             if (certificateInfo.certificateList.isEmpty()) {
                 throw DtlsException("No remote fingerprints.")
@@ -179,66 +179,33 @@ class DtlsUtils {
          * and validate against the fingerprints presented by the remote endpoint
          * via the signaling path.
          */
-        private fun verifyAndValidateCertificate(certificate: Certificate, remoteFingerprints: Map<String, String>) {
-            // RFC 4572 "Connection-Oriented Media Transport over the Transport
-            // Layer Security (TLS) Protocol in the Session Description Protocol
-            // (SDP)" defines that "[a] certificate fingerprint MUST be computed
-            // using the same one-way hash function as is used in the certificate's
-            // signature algorithm."
-
-            val hashFunction = certificate.getHashFunction()
-
-            // As RFC 5763 "Framework for Establishing a Secure Real-time Transport
-            // Protocol (SRTP) Security Context Using Datagram Transport Layer
-            // Security (DTLS)" states, "the certificate presented during the DTLS
-            // handshake MUST match the fingerprint exchanged via the signaling path
-            // in the SDP."
-            val remoteFingerprint = remoteFingerprints[hashFunction] ?: throw DtlsException(
-                "No fingerprint declared over the signaling path with hash function: $hashFunction"
-            )
-
-            // TODO(boris) check if the below is still true, and re-introduce the hack if it is.
-            // Unfortunately, Firefox does not comply with RFC 5763 at the time
-            // of this writing. Its certificate uses SHA-1 and it sends a
-            // fingerprint computed with SHA-256. We could, of course, wait for
-            // Mozilla to make Firefox compliant. However, we would like to
-            // support Firefox in the meantime. That is why we will allow the
-            // fingerprint to "upgrade" the hash function of the certificate
-            // much like SHA-256 is an "upgrade" of SHA-1.
-            /*
-            if (remoteFingerprint == null)
-            {
-                val hashFunctionUpgrade = findHashFunctionUpgrade(hashFunction, remoteFingerprints)
-
-                if (hashFunctionUpgrade != null
-                        && !hashFunctionUpgrade.equalsIgnoreCase(hashFunction)) {
-                    fingerprint = fingerprints[hashFunctionUpgrade]
-                    if (fingerprint != null)
-                        hashFunction = hashFunctionUpgrade
-                }
-            }
+        private fun verifyAndValidateCertificate(
+            certificate: Certificate,
+            remoteFingerprints: Map<String, List<String>>
+        ) {
+            /** RFC 8122:
+             *    An endpoint MUST select the set of fingerprints that use its most
+             *    preferred hash function (out of those offered by the peer) and verify
+             *    that each certificate used matches one fingerprint out of that set.
              */
+            config.acceptedFingerprintHashFunctions.forEach { hashFunction ->
+                val fingerprints = remoteFingerprints[hashFunction] ?: return@forEach
 
-            val certificateFingerprint = certificate.getFingerprint(hashFunction)
+                val certificateFingerprint = certificate.getFingerprint(hashFunction)
 
-            if (remoteFingerprint != certificateFingerprint) {
-                throw DtlsException(
-                    "Fingerprint $remoteFingerprint does not match the $hashFunction-hashed " +
-                        "certificate $certificateFingerprint"
-                )
+                if (fingerprints.none { it == certificateFingerprint }) {
+                    throw DtlsException(
+                        "None of the fingerprints ${fingerprints.joinToString()} match the $hashFunction-hashed " +
+                            "certificate $certificateFingerprint"
+                    )
+                }
+                return@verifyAndValidateCertificate
             }
-        }
-
-        /**
-         * Determine and return the hash function (as a [String]) used by this certificate
-         */
-        private fun Certificate.getHashFunction(): String {
-            val digAlgId = DefaultDigestAlgorithmIdentifierFinder().find(signatureAlgorithm)
-
-            return BcDefaultDigestProvider.INSTANCE
-                .get(digAlgId)
-                .algorithmName
-                .lowercase()
+            /* If we got here none of our accepted fingerprint functions were listed. */
+            throw DtlsException(
+                "No fingerprint declared over the signaling path with any of the accepted hash functions: " +
+                    config.acceptedFingerprintHashFunctions.joinToString()
+            )
         }
 
         /**
