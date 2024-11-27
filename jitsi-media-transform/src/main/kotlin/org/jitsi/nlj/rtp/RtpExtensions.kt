@@ -103,7 +103,13 @@ enum class RtpExtensionType(val uri: String) {
      */
     AV1_DEPENDENCY_DESCRIPTOR(
         "https://aomediacodec.github.io/av1-rtp-spec/#dependency-descriptor-rtp-header-extension"
-    );
+    ),
+
+    /**
+     * Video Layers Allocation
+     * https://webrtc.googlesource.com/src/+/refs/heads/main/docs/native-code/rtp-hdrext/video-layers-allocation00
+     */
+    VLA("http://www.webrtc.org/experiments/rtp-hdrext/video-layers-allocation00");
 
     companion object {
         private val uriMap = RtpExtensionType.values().associateBy(RtpExtensionType::uri)
