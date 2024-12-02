@@ -28,8 +28,7 @@ import org.jitsi.utils.OrderedJsonObject
  *
  * @author George Politis
  */
-abstract class RtpLayerDesc
-constructor(
+abstract class RtpLayerDesc(
     /**
      * The index of this instance's encoding in the source encoding array.
      */
@@ -109,12 +108,6 @@ constructor(
      * @return the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.
      */
     abstract fun getBitrate(nowMs: Long): Bandwidth
-
-    /**
-     * Expose [getBitrate] as a [Double] in order to make it accessible from java (since [Bandwidth] is an inline
-     * class).
-     */
-    fun getBitrateBps(nowMs: Long): Double = getBitrate(nowMs).bps
 
     /**
      * Recursively checks this layer and its dependencies to see if the bitrate is zero.

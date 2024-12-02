@@ -269,7 +269,7 @@ internal class SingleSourceAllocation(
         if (constraints.maxHeight == 0 || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
-        val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrateBps(nowMs)) }
+        val layers = source.rtpLayers.map { LayerSnapshot(it, it.getBitrate(nowMs).bps) }
 
         return when (source.videoType) {
             VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
