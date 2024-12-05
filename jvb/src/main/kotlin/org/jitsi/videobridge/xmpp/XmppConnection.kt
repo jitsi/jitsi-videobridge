@@ -20,12 +20,14 @@ import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig.Companion.config
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIQ
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.health.HealthCheckIQ
+import org.jitsi.xmpp.mucclient.ConnectionStateListener
 import org.jitsi.xmpp.mucclient.IQListener
 import org.jitsi.xmpp.mucclient.MucClient
 import org.jitsi.xmpp.mucclient.MucClientConfiguration
@@ -64,6 +66,14 @@ class XmppConnection : IQListener {
                 registerIQ(GracefulShutdownIQ())
                 registerIQ(ConferenceModifyIQ.ELEMENT, ConferenceModifyIQ.NAMESPACE, false)
                 setIQListener(this@XmppConnection)
+                addConnectionStateListener(object : ConnectionStateListener {
+                    override fun connected(mucClient: MucClient) {}
+                    override fun closed(mucClient: MucClient) = VideobridgeMetrics.xmppDisconnects.inc()
+                    override fun closedOnError(mucClient: MucClient) = VideobridgeMetrics.xmppDisconnects.inc()
+                    override fun reconnecting(mucClient: MucClient) {}
+                    override fun reconnectionFailed(mucClient: MucClient) {}
+                    override fun pingFailed(mucClient: MucClient) {}
+                })
             }
 
             config.clientConfigs.forEach { cfg -> mucClientManager.addMucClient(cfg) }

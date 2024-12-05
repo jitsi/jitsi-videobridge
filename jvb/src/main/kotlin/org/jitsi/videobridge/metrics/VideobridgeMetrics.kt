@@ -247,6 +247,11 @@ object VideobridgeMetrics {
         "Total duration of video received, in milliseconds (each SSRC counts separately)."
     )
 
+    val xmppDisconnects = metricsContainer.registerCounter(
+        "xmpp_disconnects",
+        "The number of times one of the XMPP connections has disconnected."
+    )
+
     private val tossedPacketsEnergyBuckets =
         listOf(0, 7, 15, 23, 31, 39, 47, 55, 63, 71, 79, 87, 95, 103, 111, 119, 127).map { it.toDouble() }
             .toDoubleArray()
