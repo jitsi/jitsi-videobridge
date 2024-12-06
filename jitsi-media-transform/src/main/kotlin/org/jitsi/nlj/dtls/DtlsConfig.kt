@@ -54,6 +54,10 @@ class DtlsConfig private constructor() {
         }
     }
 
+    val useNoSignatureSigner: Boolean by config {
+        "jmt.dtls.use-no-signature-signer".from(JitsiConfig.newConfig)
+    }
+
     companion object {
         val config = DtlsConfig()
     }
