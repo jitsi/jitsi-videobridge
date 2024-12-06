@@ -660,7 +660,7 @@ class GoogCcNetworkController(
     }
 }
 
-/* Congestion window config, from rtc_base/experiments/rate_control_settings.{h,cc}
+/* Congestion window config, from WebRTC rtc_base/experiments/rate_control_settings.{h,cc}
  * stripped down to used fields only. */
 class CongestionWindowConfig(
     private val queueSizeMs: Int? = 350,
