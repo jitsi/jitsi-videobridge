@@ -52,14 +52,10 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 ) {
     private val logger = createChildLogger(parentLogger)
 
-    /**
-     * The estimated available bandwidth in bits per second.
-     */
+    /** The estimated available bandwidth in bits per second. */
     private var bweBps: Long = -1
 
-    /**
-     * Whether this bandwidth estimator has been expired. Once expired we stop periodic re-allocation.
-     */
+    /** Whether this bandwidth estimator has been expired. Once expired we stop periodic re-allocation. */
     private var expired = false
 
     /**
@@ -82,11 +78,11 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         addHandler(eventHandler)
     }
 
-    /**
-     * The allocations settings signalled by the receiver.
-     */
+    /** The allocations settings signalled by the receiver. */
     private var allocationSettings =
-        AllocationSettings(defaultConstraints = VideoConstraints(BitrateControllerConfig.config.thumbnailMaxHeightPx()))
+        AllocationSettings(
+            defaultConstraints = VideoConstraints(BitrateControllerConfig.config.initialMaxHeightPx)
+        )
 
     /**
      * The last time [BandwidthAllocator.update] was called.
@@ -95,24 +91,18 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
      */
     private var lastUpdateTime: Instant = clock.instant()
 
-    /**
-     * The result of the bitrate control algorithm, the last time it ran.
-     */
+    /** The result of the bitrate control algorithm, the last time it ran. */
     var allocation = BandwidthAllocation(emptySet())
         private set
 
-    /**
-     * The task scheduled to call [.update].
-     */
+    /** The task scheduled to call [.update]. */
     private var updateTask: ScheduledFuture<*>? = null
 
     init {
         rescheduleUpdate()
     }
 
-    /**
-     * Gets a JSON representation of the parts of this object's state that are deemed useful for debugging.
-     */
+    /** Gets a JSON representation of the parts of this object's state that are deemed useful for debugging. */
     @get:SuppressFBWarnings(
         value = ["IS2_INCONSISTENT_SYNC"],
         justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
@@ -128,9 +118,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             return debugState
         }
 
-    /**
-     * Get the available bandwidth, taking into account the `trustBwe` option.
-     */
+    /** Get the available bandwidth, taking into account the `trustBwe` option. */
     private val availableBandwidth: Long
         get() = if (trustBwe.get()) bweBps else Long.MAX_VALUE
 
@@ -186,7 +174,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 
         logger.trace {
             "Allocating: sortedSources=${sortedSources.map { it.sourceName }}, " +
-                " effectiveConstraints=$newEffectiveConstraints"
+                " effectiveConstraints=${newEffectiveConstraints.map { "${it.key.sourceName}=${it.value}" }}"
         }
 
         // Compute the bandwidth allocation.
@@ -336,7 +324,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             return
         }
         val timeSinceLastUpdate = Duration.between(lastUpdateTime, clock.instant())
-        val period = BitrateControllerConfig.config.maxTimeBetweenCalculations()
+        val period = BitrateControllerConfig.config.maxTimeBetweenCalculations
         val delayMs = if (timeSinceLastUpdate > period) {
             logger.debug("Running periodic re-allocation.")
             TaskPools.CPU_POOL.execute { this.update() }
@@ -384,7 +372,7 @@ private fun bweChangeIsLargerThanThreshold(previousBwe: Long, currentBwe: Long):
     // In any case, there are other triggers for re-allocation, so any suppression we do here will only last up to
     // a few seconds.
     val deltaBwe = abs(currentBwe - previousBwe)
-    return deltaBwe > previousBwe * BitrateControllerConfig.config.bweChangeThreshold()
+    return deltaBwe > previousBwe * BitrateControllerConfig.config.bweChangeThreshold
 
     // If, on the other hand, the bwe has decreased, we require at least a 15% drop in order to update the bitrate
     // allocation. This is an ugly hack to prevent too many resolution/UI changes in case the bridge produces too

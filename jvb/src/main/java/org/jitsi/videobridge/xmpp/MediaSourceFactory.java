@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.rtp.codec.vpx.*;
@@ -23,7 +24,6 @@ import org.jitsi.xmpp.extensions.colibri.*;
 import org.jitsi.xmpp.extensions.jingle.*;
 import org.jitsi.xmpp.extensions.jitsimeet.*;
 import org.jitsi.xmpp.util.*;
-import org.jivesoftware.smack.packet.*;
 import org.jxmpp.jid.parts.*;
 import org.jxmpp.util.*;
 
@@ -42,16 +42,7 @@ public class MediaSourceFactory
      * The {@link Logger} used by the {@link MediaSourceDesc} class and its
      * instances for logging output.
      */
-    private static final Logger logger
-        = new LoggerImpl(MediaSourceFactory.class.getName());
-
-    /**
-     * The default number of temporal layers to use for VP8 simulcast.
-     *
-     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
-     * in the RTP stream.
-     */
-    private static final int VP8_SIMULCAST_TEMPORAL_LAYERS = 3;
+    private static final Logger logger = new LoggerImpl(MediaSourceFactory.class.getName());
 
     /**
      * The resolution of the base stream when activating simulcast for VP8.
@@ -536,12 +527,10 @@ public class MediaSourceFactory
     {
         final Collection<SourceGroupPacketExtension> finalSourceGroups
                 = sourceGroups == null ? new ArrayList<>() : sourceGroups;
-        if (sources == null)
-        {
-            sources = new ArrayList<>();
-        }
+        final Collection<SourcePacketExtension> finalSources
+                = sources == null ? new ArrayList<>() : sources;
 
-        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(sources, finalSourceGroups);
+        List<SourceSsrcs> sourceSsrcsList = getSourceSsrcs(finalSources, finalSourceGroups);
         List<MediaSourceDesc> mediaSources = new ArrayList<>();
 
         sourceSsrcsList.forEach(sourceSsrcs -> {
@@ -567,7 +556,8 @@ public class MediaSourceFactory
                         numTemporalLayersPerStream,
                         secondarySsrcs,
                         sourceSsrcs.owner,
-                        sourceSsrcs.name
+                        sourceSsrcs.name,
+                        getVideoType(finalSources)
             );
             mediaSources.add(mediaSource);
         });
@@ -624,7 +614,8 @@ public class MediaSourceFactory
                     numTemporalLayersPerStream,
                     secondarySsrcs,
                     owner,
-                    name
+                    name,
+                    getVideoType(sources)
             );
         }
         else
@@ -779,7 +770,8 @@ public class MediaSourceFactory
             int numTemporalLayersPerStream,
             Map<Long, SecondarySsrcs> allSecondarySsrcs,
             String owner,
-            String name
+            String name,
+            VideoType videoType
     )
     {
         RtpEncodingDesc[] encodings =
@@ -817,6 +809,18 @@ public class MediaSourceFactory
             throw new IllegalArgumentException("The 'owner' is missing in the source description");
         }
 
-        return new MediaSourceDesc(encodings, owner, name);
+        return new MediaSourceDesc(encodings, owner, name, videoType);
+    }
+
+    private static VideoType getVideoType(@NotNull Collection<SourcePacketExtension> sources)
+    {
+        for (SourcePacketExtension source : sources)
+        {
+            if (source.getVideoType() != null)
+            {
+                return VideoType.valueOf(source.getVideoType().toUpperCase());
+            }
+        }
+        return VideoType.CAMERA;
     }
 }

@@ -123,7 +123,7 @@ internal class SingleSourceAllocation(
         // `maxOversendBitrate`.
         if (allowOversending && layers.oversendIndex >= 0 && targetIdx < layers.oversendIndex) {
             for (i in layers.oversendIndex downTo targetIdx + 1) {
-                if (layers[i].bitrate <= maxBps + config.maxOversendBitrateBps()) {
+                if (layers[i].bitrate <= maxBps + config.maxOversendBitrate.bps) {
                     targetIdx = i
                 }
             }
@@ -236,7 +236,7 @@ internal class SingleSourceAllocation(
             }
         }
 
-        val oversendIdx = if (onStage && config.allowOversendOnStage()) {
+        val oversendIdx = if (onStage && config.allowOversendOnStage) {
             val maxHeight = selectedLayers.maxOfOrNull { it.layer.height } ?: return Layers.noLayers
             // Of all layers with the highest resolution select the one with lowest bitrate. In case of VP9 the layers
             // are not necessarily ordered by bitrate.
@@ -339,7 +339,7 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
  */
 private fun getPreferred(constraints: VideoConstraints): VideoConstraints {
     return if (constraints.maxHeight > 180 || !constraints.heightIsLimited()) {
-        VideoConstraints(config.onstagePreferredHeightPx(), config.onstagePreferredFramerate())
+        VideoConstraints(config.onstagePreferredHeightPx, config.onstagePreferredFramerate)
     } else {
         VideoConstraints.UNLIMITED
     }

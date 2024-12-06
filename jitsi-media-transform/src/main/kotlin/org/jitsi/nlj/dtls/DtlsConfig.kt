@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.dtls
 
+import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.tls.CipherSuite
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
@@ -36,9 +37,36 @@ class DtlsConfig {
         }
     }
 
+    val localFingerprintHashFunction: String by config {
+        "jmt.dtls.local-fingerprint-hash-function".from(JitsiConfig.newConfig).transformedBy {
+            validateHashFunction(it)
+        }
+    }
+
+    val acceptedFingerprintHashFunctions: List<String> by config {
+        "jmt.dtls.accepted-fingerprint-hash-functions".from(JitsiConfig.newConfig).convertFrom<List<String>> { list ->
+            if (list.isEmpty()) {
+                throw ConfigException.UnableToRetrieve.ConditionNotMet(
+                    "accepted-fingerprint-hash-functions must not be empty"
+                )
+            }
+            list.map { validateHashFunction(it) }
+        }
+    }
+
     companion object {
         val config = DtlsConfig()
     }
+}
+
+private fun validateHashFunction(func: String): String {
+    val ucFunc = func.uppercase()
+    DefaultDigestAlgorithmIdentifierFinder().find(ucFunc)
+        ?: throw ConfigException.UnableToRetrieve.WrongType("Unknown hash function $func")
+    if (ucFunc == "MD5" || ucFunc == "MD2") {
+        throw ConfigException.UnableToRetrieve.WrongType("Forbidden hash function $func")
+    }
+    return func.lowercase()
 }
 
 private fun String.toBcCipherSuite(): Int = try {

@@ -30,7 +30,7 @@ class BitrateControllerConfig private constructor() {
      * In order to limit the resolution changes due to bandwidth changes we only react to bandwidth changes greater
      * than {@code bweChangeThreshold * last_bandwidth_estimation}.
      */
-    private val bweChangeThreshold: Double by config {
+    val bweChangeThreshold: Double by config {
         "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT".from(JitsiConfig.legacyConfig)
             .transformedBy { it / 100.0 }
         // This is an old version, include for backward compat.
@@ -38,84 +38,72 @@ class BitrateControllerConfig private constructor() {
             .transformedBy { it / 100.0 }
         "videobridge.cc.bwe-change-threshold".from(JitsiConfig.newConfig)
     }
-    fun bweChangeThreshold() = bweChangeThreshold
 
-    /**
-     * The max resolution to allocate for the thumbnails.
-     */
-    private val thumbnailMaxHeightPx: Int by config {
-        "org.jitsi.videobridge.THUMBNAIL_MAX_HEIGHT".from(JitsiConfig.legacyConfig)
+    val initialMaxHeightPx: Int by config {
+        // Support the old property name if the user has overridden it.
         "videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig)
+            .softDeprecated("use videobridge.cc.initial-max-height-px")
+        "videobridge.cc.initial-max-height-px".from(JitsiConfig.newConfig)
     }
-    fun thumbnailMaxHeightPx() = thumbnailMaxHeightPx
+    val defaultMaxHeightPx: Int by config {
+        // Support the old property name if the user has overridden it.
+        "videobridge.cc.thumbnail-max-height-px".from(JitsiConfig.newConfig)
+            .softDeprecated("use videobridge.cc.default-max-height-px")
+        "videobridge.cc.default-max-height-px".from(JitsiConfig.newConfig)
+    }
 
     /**
      * The default preferred resolution to allocate for the onstage participant,
      * before allocating bandwidth for the thumbnails.
      */
-    private val onstagePreferredHeightPx: Int by config {
+    val onstagePreferredHeightPx: Int by config {
         "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT".from(JitsiConfig.legacyConfig)
         "videobridge.cc.onstage-preferred-height-px".from(JitsiConfig.newConfig)
     }
-    fun onstagePreferredHeightPx() = onstagePreferredHeightPx
 
     /**
      * The preferred frame rate to allocate for the onstage participant.
      */
-    private val onstagePreferredFramerate: Double by config {
+    val onstagePreferredFramerate: Double by config {
         "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE".from(JitsiConfig.legacyConfig)
         "videobridge.cc.onstage-preferred-framerate".from(JitsiConfig.newConfig)
     }
-    fun onstagePreferredFramerate() = onstagePreferredFramerate
 
     /**
      * Whether or not we are allowed to oversend (exceed available bandwidth) for the video of the on-stage
      * participant.
      */
-    private val allowOversendOnStage: Boolean by config {
+    val allowOversendOnStage: Boolean by config {
         "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND".from(JitsiConfig.legacyConfig).transformedBy { !it }
         "videobridge.cc.enable-onstage-video-suspend".from(JitsiConfig.newConfig).transformedBy { !it }
         "videobridge.cc.allow-oversend-onstage".from(JitsiConfig.newConfig)
     }
-    fun allowOversendOnStage(): Boolean = allowOversendOnStage
 
     /**
      * The maximum bitrate by which the bridge may exceed the estimated available bandwidth when oversending.
      */
-    private val maxOversendBitrate: Bandwidth by config {
+    val maxOversendBitrate: Bandwidth by config {
         "videobridge.cc.max-oversend-bitrate".from(JitsiConfig.newConfig)
             .convertFrom<String> { Bandwidth.fromString(it) }
     }
-    fun maxOversendBitrateBps(): Long = maxOversendBitrate.bps
 
     /**
      * Whether or not we should trust the bandwidth
      * estimations. If this is se to false, then we assume a bandwidth
      * estimation of Long.MAX_VALUE.
      */
-    private val trustBwe: Boolean by config {
+    val trustBwe: Boolean by config {
         "org.jitsi.videobridge.TRUST_BWE".from(JitsiConfig.legacyConfig)
         "videobridge.cc.trust-bwe".from(JitsiConfig.newConfig)
     }
-    fun trustBwe(): Boolean = trustBwe
-
-    /**
-     * The property for the max resolution to allocate for the onstage
-     * participant.
-     */
-    private val onstageIdealHeightPx: Int by config(
-        "videobridge.cc.onstage-ideal-height-px".from(JitsiConfig.newConfig)
-    )
-    fun onstageIdealHeightPx() = onstageIdealHeightPx
 
     /**
      * The maximum amount of time we'll run before recalculating which streams we'll
      * forward.
      */
-    private val maxTimeBetweenCalculations: Duration by config(
+    val maxTimeBetweenCalculations: Duration by config(
         "videobridge.cc.max-time-between-calculations".from(JitsiConfig.newConfig)
     )
-    fun maxTimeBetweenCalculations() = maxTimeBetweenCalculations
 
     val assumedBandwidthLimit: Bandwidth? by optionalconfig {
         "videobridge.cc.assumed-bandwidth-limit".from(JitsiConfig.newConfig)

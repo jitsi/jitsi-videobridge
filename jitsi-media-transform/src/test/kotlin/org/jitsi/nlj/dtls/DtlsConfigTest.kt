@@ -17,6 +17,7 @@ package org.jitsi.nlj.dtls
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.bouncycastle.tls.CipherSuite
 import org.jitsi.config.withNewConfig
@@ -61,6 +62,59 @@ class DtlsConfigTest : ShouldSpec() {
             context("Wrong type") {
                 withNewConfig("jmt.dtls.cipher-suites = 42") {
                     shouldThrow<ConfigException> { DtlsConfig.config.cipherSuites }
+                }
+            }
+        }
+        context("Valid fingerprint hash functions") {
+            withNewConfig(
+                """
+                    jmt.dtls.local-fingerprint-hash-function = sha-512
+                    jmt.dtls.accepted-fingerprint-hash-functions = [ sha-512, sha-384, sha-256 ]
+                """.trimIndent()
+            ) {
+                DtlsConfig.config.localFingerprintHashFunction shouldBe "sha-512"
+                DtlsConfig.config.acceptedFingerprintHashFunctions shouldContainExactly
+                    setOf("sha-512", "sha-384", "sha-256")
+            }
+            context("With inconsistent capitalization") {
+                withNewConfig(
+                    """
+                        jmt.dtls.local-fingerprint-hash-function = SHA-512
+                        jmt.dtls.accepted-fingerprint-hash-functions = [ Sha-512, sHa-384, shA-256 ]
+                    """.trimIndent()
+                ) {
+                    DtlsConfig.config.localFingerprintHashFunction shouldBe "sha-512"
+                    DtlsConfig.config.acceptedFingerprintHashFunctions shouldContainExactly
+                        setOf("sha-512", "sha-384", "sha-256")
+                }
+            }
+        }
+        context("Invalid local fingerprint hash function") {
+            context("Invalid name") {
+                withNewConfig("jmt.dtls.local-fingerprint-hash-function = sha-257") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.localFingerprintHashFunction }
+                }
+            }
+            context("Forbidden function") {
+                withNewConfig("jmt.dtls.local-fingerprint-hash-function = md5") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.localFingerprintHashFunction }
+                }
+            }
+        }
+        context("Invalid accepted accepted fingerprint hash functions") {
+            context("Invalid entry") {
+                withNewConfig("jmt.dtls.accepted-fingerprint-hash-functions = [ sha-256, sha-257 ]") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.acceptedFingerprintHashFunctions }
+                }
+            }
+            context("Empty") {
+                withNewConfig("jmt.dtls.accepted-fingerprint-hash-functions = []") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.acceptedFingerprintHashFunctions }
+                }
+            }
+            context("Forbidden function") {
+                withNewConfig("jmt.dtls.accepted-fingerprint-hash-functions = [ sha-1, md5 ]") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.acceptedFingerprintHashFunctions }
                 }
             }
         }

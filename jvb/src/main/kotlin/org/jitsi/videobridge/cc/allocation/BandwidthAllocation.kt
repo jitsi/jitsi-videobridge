@@ -31,8 +31,6 @@ class BandwidthAllocation @JvmOverloads constructor(
     private val suspendedSources: List<String> = emptyList()
 ) {
     val hasSuspendedSources: Boolean = suspendedSources.isNotEmpty()
-    val forwardedEndpoints: Set<String> =
-        allocations.filter { it.isForwarded() }.map { it.endpointId }.toSet()
 
     val forwardedSources: Set<String> =
         allocations.filter { it.isForwarded() }.mapNotNull { it.mediaSource?.sourceName }.toSet()
@@ -45,8 +43,8 @@ class BandwidthAllocation @JvmOverloads constructor(
         allocations.all { allocation ->
             other.allocations.any { otherAllocation ->
                 allocation.endpointId == otherAllocation.endpointId &&
-                    allocation.mediaSource?.primarySSRC ==
-                    otherAllocation.mediaSource?.primarySSRC &&
+                    allocation.mediaSource?.primarySSRC == otherAllocation.mediaSource?.primarySSRC &&
+                    allocation.mediaSource?.videoType == otherAllocation.mediaSource?.videoType &&
                     allocation.targetLayer?.index == otherAllocation.targetLayer?.index
             }
         }
@@ -98,7 +96,8 @@ data class SingleAllocation(
         get() = targetLayer?.index ?: -1
     fun isForwarded(): Boolean = targetIndex > -1
 
-    override fun toString(): String = "[id=$endpointId target=${targetLayer?.height}/${targetLayer?.frameRate} " +
+    override fun toString(): String = "[epId=$endpointId sourceName=${mediaSource?.sourceName} " +
+        "target=${targetLayer?.height}/${targetLayer?.frameRate} " +
         "(${targetLayer?.indexString()}) " +
         "ideal=${idealLayer?.height}/${idealLayer?.frameRate} (${idealLayer?.indexString()})]"
 

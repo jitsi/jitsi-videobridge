@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge
 
+import org.ice4j.util.Buffer
 import org.jitsi.config.JitsiConfig
 import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.ErrorKind
@@ -45,13 +46,11 @@ import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.nlj.util.sumOf
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
-import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging2.Logger
@@ -166,7 +165,7 @@ class Endpoint @JvmOverloads constructor(
 
     /* TODO: do we ever want to support useUniquePort for an Endpoint? */
     private val iceTransport = IceTransport(id, iceControlling, false, supportsPrivateAddresses, logger)
-    private val dtlsTransport = DtlsTransport(logger).also { it.cryptex = CryptexConfig.endpoint }
+    private val dtlsTransport = DtlsTransport(logger, id).also { it.cryptex = CryptexConfig.endpoint }
 
     private var cryptex: Boolean = CryptexConfig.endpoint
 
@@ -407,30 +406,21 @@ class Endpoint @JvmOverloads constructor(
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
-            override fun dataReceived(data: ByteArray, offset: Int, length: Int, receivedTime: Instant) {
-                // DTLS data will be handled by the DtlsTransport, but SRTP data can go
-                // straight to the transceiver
-                if (looksLikeDtls(data, offset, length)) {
-                    // DTLS transport is responsible for making its own copy, because it will manage its own
-                    // buffers
-                    dtlsTransport.dtlsDataReceived(data, offset, length)
+            override fun dataReceived(buffer: Buffer) {
+                if (looksLikeDtls(buffer.buffer, buffer.offset, buffer.length)) {
+                    // DTLS transport is responsible for making its own copy, because it will manage its own buffers
+                    dtlsTransport.enqueueBuffer(buffer)
                 } else {
-                    val copy = ByteBufferPool.getBuffer(
-                        length +
-                            RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET +
-                            Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET
-                    )
-                    System.arraycopy(data, offset, copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)
                     val pktInfo =
-                        PacketInfo(UnparsedPacket(copy, RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET, length)).apply {
-                            this.receivedTime = receivedTime
+                        PacketInfo(UnparsedPacket(buffer.buffer, buffer.offset, buffer.length)).apply {
+                            this.receivedTime = buffer.receivedTime
                         }
                     transceiver.handleIncomingPacket(pktInfo)
                 }
             }
         }
         iceTransport.eventHandler = object : IceTransport.EventHandler {
-            override fun connected() {
+            override fun writeable() {
                 logger.info("ICE connected")
                 transceiver.setOutgoingPacketHandler(object : PacketHandler {
                     override fun processPacket(packetInfo: PacketInfo) {
@@ -438,8 +428,10 @@ class Endpoint @JvmOverloads constructor(
                         outgoingSrtpPacketQueue.add(packetInfo)
                     }
                 })
-                TaskPools.IO_POOL.execute(iceTransport::startReadingData)
                 TaskPools.IO_POOL.execute(dtlsTransport::startDtlsHandshake)
+            }
+
+            override fun connected() {
             }
 
             override fun failed() {
@@ -611,7 +603,9 @@ class Endpoint @JvmOverloads constructor(
 
         if (doSsrcRewriting) {
             val newActiveSources =
-                newEffectiveConstraints.entries.filter { !it.value.isDisabled() }.map { it.key }.toList()
+                newEffectiveConstraints.entries.filter {
+                    !it.value.isDisabled() && it.key.videoType.isEnabled()
+                }.map { it.key }.toList()
             val newActiveSourceNames = newActiveSources.map { it.sourceName }.toSet()
             /* safe unlocked access of activeSources. BitrateController will not overlap calls to this method. */
             if (activeSources != newActiveSourceNames) {
@@ -794,11 +788,12 @@ class Endpoint @JvmOverloads constructor(
      * transport information.
      */
     fun setTransportInfo(transportInfo: IceUdpTransportPacketExtension) {
-        val remoteFingerprints = mutableMapOf<String, String>()
+        val remoteFingerprints = mutableMapOf<String, MutableList<String>>()
         val fingerprintExtensions = transportInfo.getChildExtensionsOfType(DtlsFingerprintPacketExtension::class.java)
         fingerprintExtensions.forEach { fingerprintExtension ->
             if (fingerprintExtension.hash != null && fingerprintExtension.fingerprint != null) {
-                remoteFingerprints[fingerprintExtension.hash] = fingerprintExtension.fingerprint
+                remoteFingerprints.getOrPut(fingerprintExtension.hash.lowercase()) { mutableListOf() }
+                    .add(fingerprintExtension.fingerprint)
             } else {
                 logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toStringOpt()}")
             }
@@ -1115,7 +1110,7 @@ class Endpoint @JvmOverloads constructor(
             sctpHandler?.stop()
             usrSctpHandler?.stop()
             sctpManager?.closeConnection()
-            sctpTransport?.socket?.close()
+            sctpTransport?.stop()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)
         }
@@ -1240,7 +1235,7 @@ class Endpoint @JvmOverloads constructor(
         }
 
         override fun OnAborted(error: ErrorKind, message: String) {
-            logger.warn("SCTP aborted with error $error: $message")
+            logger.info("SCTP aborted with error $error: $message")
         }
 
         override fun OnConnected() {
@@ -1249,7 +1244,7 @@ class Endpoint @JvmOverloads constructor(
                 val dataChannelStack = DataChannelStack(
                     { data, sid, ppid ->
                         val message = DcSctpMessage(sid.toShort(), ppid, data.array())
-                        val status = sctpTransport?.socket?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
+                        val status = sctpTransport?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
                         return@DataChannelStack if (status == SendStatus.kSuccess) {
                             0
                         } else {

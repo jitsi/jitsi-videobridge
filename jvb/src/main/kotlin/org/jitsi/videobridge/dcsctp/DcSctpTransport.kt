@@ -15,11 +15,13 @@
  */
 package org.jitsi.videobridge.dcsctp
 
+import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.DcSctpOptions
 import org.jitsi.dcsctp4j.DcSctpSocketCallbacks
 import org.jitsi.dcsctp4j.DcSctpSocketFactory
 import org.jitsi.dcsctp4j.DcSctpSocketInterface
 import org.jitsi.dcsctp4j.SendOptions
+import org.jitsi.dcsctp4j.SendStatus
 import org.jitsi.dcsctp4j.Timeout
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.utils.OrderedJsonObject
@@ -40,19 +42,51 @@ class DcSctpTransport(
     parentLogger: Logger
 ) {
     val logger = createChildLogger(parentLogger)
-    lateinit var socket: DcSctpSocketInterface
+    private val lock = Any()
+    private var socket: DcSctpSocketInterface? = null
 
     fun start(callbacks: DcSctpSocketCallbacks, options: DcSctpOptions = DEFAULT_SOCKET_OPTIONS) {
-        socket = factory.create(name, callbacks, null, options)
+        synchronized(lock) {
+            socket = factory.create(name, callbacks, null, options)
+        }
     }
 
     fun handleIncomingSctp(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
-        socket.receivePacket(packet.getBuffer(), packet.getOffset(), packet.getLength())
+        synchronized(lock) {
+            socket?.receivePacket(packet.getBuffer(), packet.getOffset(), packet.getLength())
+        }
+    }
+
+    fun stop() {
+        synchronized(lock) {
+            socket?.close()
+            socket = null
+        }
+    }
+
+    fun connect() {
+        synchronized(lock) {
+            socket?.connect()
+        }
+    }
+
+    fun send(message: DcSctpMessage, options: SendOptions): SendStatus {
+        synchronized(lock) {
+            return socket?.send(message, options) ?: SendStatus.kErrorShuttingDown
+        }
+    }
+
+    fun handleTimeout(timeoutId: Long) {
+        synchronized(lock) {
+            socket?.handleTimeout(timeoutId)
+        }
     }
 
     fun getDebugState(): OrderedJsonObject {
-        val metrics = socket.metrics
+        val metrics = synchronized(lock) {
+            socket?.metrics
+        }
         return OrderedJsonObject().apply {
             if (metrics != null) {
                 put("tx_packets_count", metrics.txPacketsCount)
@@ -157,7 +191,7 @@ abstract class DcSctpBaseCallbacks(
                 scheduledFuture = TaskPools.SCHEDULED_POOL.schedule({
                     /* Execute it on the IO_POOL, because a timer may trigger sending new SCTP packets. */
                     future = TaskPools.IO_POOL.submit {
-                        transport?.socket?.handleTimeout(timeoutId)
+                        transport?.handleTimeout(timeoutId)
                     }
                 }, duration, TimeUnit.MILLISECONDS)
             } catch (e: Throwable) {
