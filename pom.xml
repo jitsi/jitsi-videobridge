@@ -75,22 +75,32 @@
         <dependencies>
             <dependency>
                 <groupId>${project.groupId}</groupId>
-                <artifactId>jicoco</artifactId>
-                <version>${jicoco.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>jicoco-test-kotlin</artifactId>
-                <version>${jicoco.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
                 <artifactId>jicoco-config</artifactId>
                 <version>${jicoco.version}</version>
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jicoco-health-checker</artifactId>
+                <version>${jicoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jicoco-jetty</artifactId>
+                <version>${jicoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jicoco-metrics</artifactId>
+                <version>${jicoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jicoco-mucclient</artifactId>
+                <version>${jicoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>jicoco-test-kotlin</artifactId>
                 <version>${jicoco.version}</version>
             </dependency>
             <dependency>
