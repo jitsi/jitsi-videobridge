@@ -87,6 +87,14 @@ class VlaReaderNode(
                                 )
                                 layer.targetBitrate = targetBitrateKbps.kbps
                                 spatialLayer.res?.let { res ->
+                                    if (layer.height > 0 && layer.height != res.height) {
+                                        logger.warn("Updating layer height from ${layer.height} to ${res.height}")
+                                    }
+                                    if (layer.frameRate > 0.0 && layer.frameRate != res.maxFramerate.toDouble()) {
+                                        logger.warn(
+                                            "Updating layer frame rate from ${layer.frameRate} to ${res.maxFramerate}"
+                                        )
+                                    }
                                     layer.height = res.height
                                     layer.frameRate = res.maxFramerate.toDouble()
                                 }
