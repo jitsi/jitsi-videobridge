@@ -16,6 +16,7 @@
 package org.jitsi.rtp.extensions
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.jitsi.rtp.rtp.RtpPacket.HeaderExtension
@@ -200,7 +201,7 @@ class VlaExtensionTest : ShouldSpec() {
                 )
             )
         }
-        context("VP9 SVC (witt resolutions)") {
+        context("VP9 SVC (with resolutions)") {
             parse(
                 0b0000_0111,
                 0b1010_1000.toByte(),
@@ -292,7 +293,69 @@ class VlaExtensionTest : ShouldSpec() {
             )
         }
         context("Invalid VLAs") {
-            parse(0x00) shouldBe emptyList()
+            context("Resolution incomplete") {
+                // Cuts short with not enough bytes to contain the resolution. We succeed with no resolution.
+                parse(
+                    0b0000_0001,
+                    0b1000_0000.toByte(), // #tls
+                    0b0101_0000,          // targetBitrate 1
+                    0b0111_1000,          // targetBitrate 2
+                    0b1100_1000.toByte(), // targetBitrate 3
+                    0b0000_0001,          // targetBitrate 3
+                    0b0000_0001,          // width
+                    0b0011_1111,          // width
+                    0b0000_0000,          // height
+                    0b1011_0011.toByte(), // height
+                    // 0b0010_0001           // maxFramerate
+                ) shouldBe listOf(
+                    Stream(
+                        0,
+                        listOf(
+                            SpatialLayer(
+                                0,
+                                listOf(80, 120, 200),
+                                null
+                            )
+                        )
+                    )
+                )
+            }
+            context("Invalid leb128") {
+                // Cuts short in the middle of one of the leb128 encoding of one of the target bitrates.
+                shouldThrow<IllegalStateException> {
+                    parse(
+                        0b0000_0001,
+                        0b1000_0000.toByte(), // #tls
+                        0b0101_0000,          // targetBitrate 1
+                        0b0111_1000,          // targetBitrate 2
+                        0b1100_1000.toByte(), // targetBitrate 3
+                        //0b0000_0001,          // targetBitrate 3
+                    )
+                }
+            }
+            context("Missing target bitrates") {
+                // Does not contain the expected number of target bitrates
+                shouldThrow<IllegalStateException> {
+                    parse(
+                        0b0000_0001,          // 1 spatial layer
+                        0b1000_0000.toByte(), // 3 temporal layers
+                        0b0101_0000,          // targetBitrate 1
+                        0b1100_1000.toByte(), // targetBitrate 2
+                        0b0000_0001,          // targetBitrate 2
+                        //0b0111_1000,          // targetBitrate 3
+                    )
+                }
+            }
+            context("Missing temporal layer counts") {
+                // Does not contain the expected temporal layer counts
+                shouldThrow<IllegalStateException> {
+                    parse(
+                        0b0001_0000,          // spatial layer bitmask in the next byte, 2 streams
+                        0b1111_1111.toByte(), // 4 spatial layers for each stream
+                        0b0000_0000.toByte(), // 1 temporal layer for each spatial layer of stream 1, more must follow
+                    )
+                }
+            }
         }
     }
 }
