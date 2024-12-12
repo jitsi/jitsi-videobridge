@@ -220,7 +220,7 @@ abstract class BandwidthEstimator(
     abstract fun getStats(now: Instant = Clock.systemUTC().instant()): StatisticsSnapshot
 
     /** Reset the estimator to its initial state. */
-    abstract fun reset(): Unit
+    abstract fun reset()
 
     private val listeners = LinkedList<TransportCcEngine.BandwidthListener>()
     private var curBandwidth = (-1).bps

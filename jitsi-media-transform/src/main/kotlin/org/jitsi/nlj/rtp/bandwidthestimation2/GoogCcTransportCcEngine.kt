@@ -16,6 +16,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.rtp.TransportCcEngine
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
@@ -40,7 +41,13 @@ class GoogCcTransportCcEngine(
 
     private val feedbackAdapter = TransportFeedbackAdapter(logger)
     private val networkController = GoogCcNetworkController(
-        NetworkControllerConfig(logger, diagnosticContext),
+        NetworkControllerConfig(
+            logger,
+            diagnosticContext,
+            constraints = TargetRateConstraints(
+                startingRate = BandwidthEstimatorConfig.initBw
+            )
+        ),
         GoogCcConfig(
             // TODO configure non-default fields here.
         )
