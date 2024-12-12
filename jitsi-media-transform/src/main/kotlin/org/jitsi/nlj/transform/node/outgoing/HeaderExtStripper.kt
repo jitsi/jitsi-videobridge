@@ -36,13 +36,13 @@ class HeaderExtStripper(
         retainedExtTypes.forEach { rtpExtensionType ->
             streamInformationStore.onRtpExtensionMapping(rtpExtensionType) {
                 it?.let {
-                    retainedExts = retainedExts.plus(it)
-                    retainedExtsWithAv1DD = retainedExtsWithAv1DD.plus(it)
+                    retainedExts += it
+                    retainedExtsWithAv1DD += it
                 }
             }
         }
         streamInformationStore.onRtpExtensionMapping(RtpExtensionType.AV1_DEPENDENCY_DESCRIPTOR) {
-            it?.let { retainedExtsWithAv1DD = retainedExtsWithAv1DD.plus(it) }
+            it?.let { retainedExtsWithAv1DD += it }
         }
     }
 
@@ -51,6 +51,7 @@ class HeaderExtStripper(
 
         val retained = if (rtpPacket is Av1DDPacket) retainedExtsWithAv1DD else retainedExts
 
+        // TODO: we should also retain any extensions that were not signaled.
         rtpPacket.removeHeaderExtensionsExcept(retained)
 
         return packetInfo
