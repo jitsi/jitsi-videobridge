@@ -285,6 +285,7 @@ class Relay @JvmOverloads constructor(
             },
             external = true
         )
+        addRtpExtensionToRetain(RtpExtensionType.VLA)
     }
 
     /**

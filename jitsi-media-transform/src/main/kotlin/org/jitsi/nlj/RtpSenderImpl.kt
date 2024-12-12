@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrUpdater
 import org.jitsi.nlj.rtp.LossListener
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
@@ -111,6 +112,7 @@ class RtpSenderImpl(
     private val srtcpEncryptWrapper = SrtcpEncryptNode()
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-tx")
     private val outgoingPacketCache = PacketCacher()
+    private val headerExtensionStripper = HeaderExtStripper(streamInformationStore)
     private val absSendTime = AbsSendTime(streamInformationStore)
     private val statsTracker = OutgoingStatisticsTracker()
     private val packetStreamStats = PacketStreamStatsNode()
@@ -144,7 +146,7 @@ class RtpSenderImpl(
         outgoingRtpRoot = pipeline {
             node(PluggableTransformerNode("RTP pre-processor") { preProcesor })
             node(AudioRedHandler(streamInformationStore, logger))
-            node(HeaderExtStripper(streamInformationStore))
+            node(headerExtensionStripper)
             node(outgoingPacketCache)
             node(absSendTime)
             node(statsTracker)
@@ -331,6 +333,10 @@ class RtpSenderImpl(
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
         incomingPacketQueue.close()
         toggleablePcapWriter.disable()
+    }
+
+    override fun addRtpExtensionToRetain(extensionType: RtpExtensionType) {
+        headerExtensionStripper.addRtpExtensionToRetain(extensionType)
     }
 
     companion object {
