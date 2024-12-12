@@ -19,9 +19,11 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
+import org.jitsi.nlj.findRtpSource
 import org.jitsi.nlj.rtp.RtpExtensionType.VLA
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
+import org.jitsi.nlj.util.kbps
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.VlaExtension
 import org.jitsi.utils.logging2.Logger
@@ -30,7 +32,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 
 /**
- * A node which reads the Video Layers Allocation (VLA) RTP header extension and updates the media sources (TODO).
+ * A node which reads the Video Layers Allocation (VLA) RTP header extension and updates the media sources.
  */
 class VlaReaderNode(
     streamInformationStore: ReadOnlyStreamInformationStore,
@@ -56,20 +58,41 @@ class VlaReaderNode(
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
         vlaExtId?.let {
             rtpPacket.getHeaderExtension(it)?.let { ext ->
-                try {
-                    val vla = VlaExtension.parse(ext)
-                    // TODO update media sources
-                    logger.info(
-                        "VLA extension found: $vla " +
-                            "raw=${ext.buffer.toHexString(ext.dataOffset, ext.dataOffset + ext.dataLengthBytes)}"
-                    )
+                val vla = try {
+                    VlaExtension.parse(ext)
                 } catch (e: Exception) {
                     logger.warn("Failed to parse VLA extension", e)
+                    return
+                }
+
+                val sourceDesc = mediaSourceDescs.findRtpSource(rtpPacket)
+
+                logger.debug("Found VLA=$vla for sourceDesc=$sourceDesc")
+
+                vla.forEachIndexed { streamIdx, stream ->
+                    val rtpEncoding = sourceDesc?.rtpEncodings?.get(streamIdx)
+                    stream.spatialLayers.forEach { spatialLayer ->
+                        spatialLayer.targetBitratesKbps.forEachIndexed { tlIdx, targetBitrateKbps ->
+                            rtpEncoding?.layers?.find {
+                                // With VP8 simulcast all layers have sid -1
+                                (it.sid == spatialLayer.id || it.sid == -1) && it.tid == tlIdx
+                            }?.let { layer ->
+                                logger.debug(
+                                    "Setting target bitrate for rtpEncoding=$rtpEncoding layer=$layer to " +
+                                        "${targetBitrateKbps.kbps} (res=${spatialLayer.res})"
+                                )
+                                layer.targetBitrate = targetBitrateKbps.kbps
+                                spatialLayer.res?.let { res ->
+                                    layer.height = res.height
+                                    layer.frameRate = res.maxFramerate.toDouble()
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

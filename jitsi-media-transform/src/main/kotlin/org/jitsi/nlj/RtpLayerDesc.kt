@@ -53,7 +53,7 @@ abstract class RtpLayerDesc(
      * represents. The actual frame rate may be less due to bad network or
      * system load.  [NO_FRAME_RATE] for unknown.
      */
-    val frameRate: Double,
+    var frameRate: Double,
 ) {
     abstract fun copy(height: Int = this.height, tid: Int = this.tid, inherit: Boolean = true): RtpLayerDesc
 
@@ -61,6 +61,8 @@ abstract class RtpLayerDesc(
      * The [BitrateTracker] instance used to calculate the receiving bitrate of this RTP layer.
      */
     protected var bitrateTracker = BitrateCalculator.createBitrateTracker()
+
+    var targetBitrate: Bandwidth? = null
 
     /**
      * @return the "id" of this layer within this encoding. This is a server-side id and should
@@ -86,6 +88,7 @@ abstract class RtpLayerDesc(
      */
     internal open fun inheritFrom(other: RtpLayerDesc) {
         inheritStatistics(other.bitrateTracker)
+        targetBitrate = other.targetBitrate
     }
 
     /**
@@ -124,6 +127,7 @@ abstract class RtpLayerDesc(
         addNumber("height", height)
         addNumber("index", index)
         addNumber("bitrate_bps", getBitrate(System.currentTimeMillis()).bps)
+        addNumber("target_bitrate", targetBitrate?.bps ?: 0)
     }
 
     fun debugState(): OrderedJsonObject = getNodeStats().toJson().apply { put("indexString", indexString()) }
