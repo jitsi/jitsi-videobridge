@@ -32,8 +32,8 @@ import java.util.*
  * Transport CC engine invoking GoogCc NetworkController.
  */
 class GoogCcTransportCcEngine(
-    parentLogger: Logger,
     diagnosticContext: DiagnosticContext,
+    parentLogger: Logger,
     val clock: Clock = Clock.systemUTC(),
 ) : TransportCcEngine() {
     private val logger = createChildLogger(parentLogger)

@@ -25,8 +25,10 @@ import org.jitsi.nlj.rtcp.RtcpSrUpdater
 import org.jitsi.nlj.rtp.ClassicTransportCcEngine
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.TransportCcEngine
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
+import org.jitsi.nlj.rtp.bandwidthestimation2.GoogCcTransportCcEngine
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeEventVisitor
@@ -105,8 +107,15 @@ class RtpSenderImpl(
     // a generic handler here and then the bridge can put it into its PacketQueue and have
     // its handler (likely in another thread) grab the packet and send it out
     private var outgoingPacketHandler: PacketHandler? = null
-    private val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
-    private val transportCcEngine: TransportCcEngine = ClassicTransportCcEngine(bandwidthEstimator, logger)
+
+    private val transportCcEngine: TransportCcEngine =
+        when (BandwidthEstimatorConfig.engine) {
+            BandwidthEstimatorEngine.GoogleCc ->
+                ClassicTransportCcEngine(GoogleCcEstimator(diagnosticContext, logger), logger)
+
+            BandwidthEstimatorEngine.GoogleCc2 ->
+                GoogCcTransportCcEngine(diagnosticContext, logger)
+        }
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
     private val srtcpEncryptWrapper = SrtcpEncryptNode()
@@ -326,7 +335,6 @@ class RtpSenderImpl(
         addString("localVideoSsrc", localVideoSsrc?.toString() ?: "null")
         addString("localAudioSsrc", localAudioSsrc?.toString() ?: "null")
         addJson("transportCcEngine", transportCcEngine.getStatistics().toJson())
-        addJson("Bandwidth Estimation", bandwidthEstimator.getStats().toJson())
     }
 
     override fun stop() {
