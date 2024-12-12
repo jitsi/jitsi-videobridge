@@ -23,14 +23,15 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.rtp.RtpPacket
 
 /**
- * Strip all hop-by-hop header extensions.  Currently this leaves ssrc-audio-level and video-orientation,
+ * Strip all hop-by-hop header extensions. By default, this leaves ssrc-audio-level and video-orientation,
  * plus the AV1 dependency descriptor if the packet is an Av1DDPacket.
  */
 class HeaderExtStripper(
-    streamInformationStore: ReadOnlyStreamInformationStore
+    streamInformationStore: ReadOnlyStreamInformationStore,
 ) : ModifierNode("Strip header extensions") {
     private var retainedExts: Set<Int> = emptySet()
     private var retainedExtsWithAv1DD: Set<Int> = emptySet()
+    private var retainedExtTypes = defaultRetainedExtTypes
 
     init {
         retainedExtTypes.forEach { rtpExtensionType ->
@@ -44,6 +45,10 @@ class HeaderExtStripper(
         streamInformationStore.onRtpExtensionMapping(RtpExtensionType.AV1_DEPENDENCY_DESCRIPTOR) {
             it?.let { retainedExtsWithAv1DD += it }
         }
+    }
+
+    fun addRtpExtensionToRetain(extensionType: RtpExtensionType) {
+            retainedExtTypes += extensionType
     }
 
     override fun modify(packetInfo: PacketInfo): PacketInfo {
@@ -60,7 +65,7 @@ class HeaderExtStripper(
     override fun trace(f: () -> Unit) = f.invoke()
 
     companion object {
-        private val retainedExtTypes: Set<RtpExtensionType> = setOf(
+        val defaultRetainedExtTypes: Set<RtpExtensionType> = setOf(
             RtpExtensionType.SSRC_AUDIO_LEVEL,
             RtpExtensionType.VIDEO_ORIENTATION
         )
