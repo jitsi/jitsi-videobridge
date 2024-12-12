@@ -26,6 +26,7 @@ import org.jitsi.rtp.rtp.header_extensions.VlaExtension.ResolutionAndFrameRate
 import org.jitsi.rtp.rtp.header_extensions.VlaExtension.SpatialLayer
 import org.jitsi.rtp.rtp.header_extensions.VlaExtension.Stream
 
+@Suppress("ktlint:standard:no-multi-spaces")
 class VlaExtensionTest : ShouldSpec() {
     init {
         context("Empty") {
@@ -306,7 +307,7 @@ class VlaExtensionTest : ShouldSpec() {
                     0b0011_1111,          // width
                     0b0000_0000,          // height
                     0b1011_0011.toByte(), // height
-                    // 0b0010_0001           // maxFramerate
+                    // 0b0010_0001        // maxFramerate
                 ) shouldBe listOf(
                     Stream(
                         0,
@@ -329,7 +330,7 @@ class VlaExtensionTest : ShouldSpec() {
                         0b0101_0000,          // targetBitrate 1
                         0b0111_1000,          // targetBitrate 2
                         0b1100_1000.toByte(), // targetBitrate 3
-                        //0b0000_0001,          // targetBitrate 3
+                        // 0b0000_0001,       // targetBitrate 3
                     )
                 }
             }
@@ -342,7 +343,7 @@ class VlaExtensionTest : ShouldSpec() {
                         0b0101_0000,          // targetBitrate 1
                         0b1100_1000.toByte(), // targetBitrate 2
                         0b0000_0001,          // targetBitrate 2
-                        //0b0111_1000,          // targetBitrate 3
+                        // 0b0111_1000,       // targetBitrate 3
                     )
                 }
             }

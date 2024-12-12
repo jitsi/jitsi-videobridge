@@ -48,7 +48,7 @@ class HeaderExtStripper(
     }
 
     fun addRtpExtensionToRetain(extensionType: RtpExtensionType) {
-            retainedExtTypes += extensionType
+        retainedExtTypes += extensionType
     }
 
     override fun modify(packetInfo: PacketInfo): PacketInfo {
