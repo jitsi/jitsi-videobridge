@@ -26,6 +26,22 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
     private var offset = byteOffset * 8
     private val byteBound = byteOffset + byteLength
 
+    init {
+        check(byteOffset >= 0) { "byteOffset must be >= 0" }
+        check(byteBound <= buf.size) { "byteOffset + byteLength must be <= buf.size" }
+    }
+
+    /** Clone with the current state (offset) and a new length in bytes. */
+    fun clone(newByteLength: Int): BitReader {
+        check(offset % 8 == 0) { "Cannot clone BitReader with unaligned offset" }
+        check(offset / 8 + newByteLength <= byteBound) {
+            "newByteLength $newByteLength exceeds buffer length $byteLength after offset $byteOffset"
+        }
+        return BitReader(buf, offset / 8, newByteLength)
+    }
+
+    fun remainingBits(): Int = byteBound * 8 - offset
+
     /** Read a single bit from the buffer, as a boolean, incrementing the offset. */
     fun bitAsBoolean(): Boolean {
         val byteIdx = offset / 8
@@ -96,6 +112,20 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
         }
         val extraBit = bit()
         return (v shl 1) - m + extraBit
+    }
+
+    /**
+     * Read a LEB128-encoded unsigned integer.
+     * https://aomediacodec.github.io/av1-spec/#leb128
+     */
+    fun leb128(): Long {
+        var value = 0L
+        (0..8).forEach { i ->
+            val hasNext = bitAsBoolean()
+            value = value or (bits(7).toLong() shl (i * 7))
+            if (!hasNext) return value
+        }
+        return value
     }
 
     /** Reset the reader to the beginning of the buffer */

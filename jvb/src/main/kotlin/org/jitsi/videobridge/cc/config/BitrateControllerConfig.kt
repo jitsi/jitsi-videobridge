@@ -110,6 +110,10 @@ class BitrateControllerConfig private constructor() {
             .convertFrom<String> { Bandwidth.fromString(it) }
     }
 
+    val useVlaTargetBitrate: Boolean by config {
+        "videobridge.cc.use-vla-target-bitrate".from(JitsiConfig.newConfig)
+    }
+
     companion object {
         @JvmField
         val config = BitrateControllerConfig()

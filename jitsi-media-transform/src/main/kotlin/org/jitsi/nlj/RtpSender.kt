@@ -16,6 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.rtp.LossListener
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -48,6 +49,7 @@ abstract class RtpSender :
     abstract fun setFeature(feature: Features, enabled: Boolean)
     abstract fun isFeatureEnabled(feature: Features): Boolean
     abstract fun tearDown()
+    abstract fun addRtpExtensionToRetain(extensionType: RtpExtensionType)
 
     /**
      * An optional function to be executed for each RTP packet, as the first step of the send pipeline.

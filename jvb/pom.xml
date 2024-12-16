@@ -132,16 +132,24 @@
       <artifactId>ice4j</artifactId>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jicoco</artifactId>
-    </dependency>
-    <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>jicoco-config</artifactId>
     </dependency>
     <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>jicoco-health-checker</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>jicoco-jetty</artifactId>
+    </dependency>
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-metrics</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jicoco-mucclient</artifactId>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

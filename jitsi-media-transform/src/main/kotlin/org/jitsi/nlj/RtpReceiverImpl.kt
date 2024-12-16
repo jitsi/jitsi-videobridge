@@ -56,6 +56,7 @@ import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.VideoMuteNode
 import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.VideoQualityLayerLookup
+import org.jitsi.nlj.transform.node.incoming.VlaReaderNode
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Bandwidth
@@ -248,6 +249,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(videoParser)
                                     node(VideoQualityLayerLookup(logger))
                                     node(videoBitrateCalculator)
+                                    node(VlaReaderNode(streamInformationStore, logger))
                                     node(packetHandlerWrapper)
                                 }
                             }

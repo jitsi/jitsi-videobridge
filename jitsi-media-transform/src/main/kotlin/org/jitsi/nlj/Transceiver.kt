@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
@@ -209,6 +210,10 @@ class Transceiver(
         val localSsrcSetEvent = SetLocalSsrcEvent(mediaType, ssrc)
         rtpSender.handleEvent(localSsrcSetEvent)
         rtpReceiver.handleEvent(localSsrcSetEvent)
+    }
+
+    fun addRtpExtensionToRetain(extensionType: RtpExtensionType) {
+        rtpSender.addRtpExtensionToRetain(extensionType)
     }
 
     fun receivesSsrc(ssrc: Long): Boolean = streamInformationStore.receiveSsrcs.contains(ssrc)
