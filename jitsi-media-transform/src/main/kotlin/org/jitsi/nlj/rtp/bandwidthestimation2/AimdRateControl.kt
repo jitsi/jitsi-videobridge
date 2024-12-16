@@ -49,20 +49,21 @@ import kotlin.math.pow
  * Based on WebRTC modules/remote_bitrate_estimator/aimd_rate_control.{h,cc} in
  * WebRTC tag branch-heads/6613 (Chromium 128).
  */
-internal class AimdRateControl(private val sendSide: Boolean = false) {
+class AimdRateControl(private val sendSide: Boolean = false) {
 
     private var minConfiguredBitrate: Bandwidth = kCongestionControllerMinBitrate
     private var maxConfiguredBitrate: Bandwidth = 30000.kbps
     private var currentBitrate: Bandwidth = maxConfiguredBitrate
     private var latestEstimatedThroughput: Bandwidth = currentBitrate
 
-    private val linkCapacity = LinkCapacityEstimator()
+    val linkCapacity = LinkCapacityEstimator()
 
     // Omitted:
     // val networkEstimate: NetworkStateEstimate? = null
     // As far as I can tell it is not ever set in current Chromium?
 
-    private var rateControlState: RateControlState = RateControlState.kRcHold
+    var rateControlState: RateControlState = RateControlState.kRcHold
+        private set
 
     private var timeLastBitrateChange: Instant = NEVER
 
@@ -273,7 +274,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
                     // throughput measurements. Relying on them may lead to unnecessary
                     // BWE drops.
                     if (linkCapacity.hasEstimate()) {
-                        decreasedBitrate = linkCapacity.estimate * beta
+                        decreasedBitrate = linkCapacity.estimate!! * beta
                     }
                 }
                 // Avoid increasing the rate when over-using.
@@ -344,7 +345,7 @@ internal class AimdRateControl(private val sendSide: Boolean = false) {
         }
     }
 
-    private enum class RateControlState {
+    enum class RateControlState {
         kRcHold,
         kRcIncrease,
         kRcDecrease

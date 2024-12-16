@@ -51,13 +51,15 @@ class TrendlineEstimator : DelayIncreaseDetectorInterface {
     private val kUp = 0.0087
     private val kDown = 0.039
     private val overusingTimeThreshold = kOverusingTimeThreshold
-    private var threshold = 12.5
+    var threshold = 12.5
+        private set
 
-    @SuppressFBWarnings("URF_UNREAD_FIELD")
-    private var prevModifiedTrend = Double.NaN
+    var prevModifiedTrend = Double.NaN
+        private set
 
     private var lastUpdateMs = -1L
-    private var prevTrend = 0.0
+    var prevTrend = 0.0
+        private set
     private var timeOverUsing = -1.0
     private var overuseCounter = 0
     private var hypothesis = BandwidthUsage.kBwNormal

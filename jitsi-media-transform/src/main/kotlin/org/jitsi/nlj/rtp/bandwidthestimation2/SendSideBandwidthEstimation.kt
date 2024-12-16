@@ -183,9 +183,10 @@ class SendSideBandwidthEstimation(
     private val lowLossThreshold: Float = kDefaultLowLossThreshold
     private val highLossThreshold: Float = kDefaultHighLossThreshold
     private val bitrateThreshold: Bandwidth = kDefaultBitrateThreshold
-    private var lossBasedBandwidthEstimatorV2 = LossBasedBweV2().apply {
+    var lossBasedBandwidthEstimatorV2 = LossBasedBweV2().apply {
         setMinMaxBitrate(minBitrateConfigured, maxBitrateConfigured)
     }
+        private set
     private var lossBasedState: LossBasedState = LossBasedState.kDelayBasedEstimate
 
     fun onRouteChange() {

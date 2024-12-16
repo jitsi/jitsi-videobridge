@@ -42,13 +42,13 @@ class DelayBasedBwe(
     private val logger = parentLogger.createChildLogger(javaClass.name)
 
     private var interArrivalDelta: InterArrivalDelta? = null
-    private val delayDetector: DelayIncreaseDetectorInterface = TrendlineEstimator()
+    val delayDetector: DelayIncreaseDetectorInterface = TrendlineEstimator()
 
     private var lastSeenPacket: Instant = NEVER
 
     /* private var umaRecorded: Boolean = false */
 
-    private val rateControl = AimdRateControl(sendSide = true)
+    val rateControl = AimdRateControl(sendSide = true)
     private var prevBitrate: Bandwidth = Bandwidth.ZERO
     private var prevState: BandwidthUsage = BandwidthUsage.kBwNormal
 

@@ -98,7 +98,8 @@ class GoogCcTransportCcEngine(
     }
 
     override fun getStatistics(): StatisticsSnapshot {
-        return StatisticsSnapshot()
+        val now = clock.instant()
+        return StatisticsSnapshot(networkController.getStatistics(now))
     }
 
     override fun addBandwidthListener(listener: BandwidthListener) {
@@ -116,10 +117,14 @@ class GoogCcTransportCcEngine(
         // TOOD: other fields of update
     }
 
-    class StatisticsSnapshot : TransportCcEngine.StatisticsSnapshot() {
-        // TODO
+    class StatisticsSnapshot(
+        val networkControllerState: GoogCcNetworkController.StatisticsSnapshot
+        /* TODO: state for TransportFeedbackAdapter? */
+    ) : TransportCcEngine.StatisticsSnapshot() {
         override fun toJson(): Map<*, *> {
-            return OrderedJsonObject()
+            return OrderedJsonObject().apply {
+                put("network_state", networkControllerState.toJson())
+            }
         }
     }
 }

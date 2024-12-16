@@ -50,8 +50,8 @@ class LinkCapacityEstimator {
 
     fun hasEstimate(): Boolean = estimateKbps != null
 
-    val estimate: Bandwidth
-        get() = estimateKbps!!.kbps
+    val estimate: Bandwidth?
+        get() = estimateKbps?.kbps
 
     private fun update(capacitySample: Bandwidth, alpha: Double) {
         // This double-cast is probably a bug in the Google CC code (it calls `capacity_sample.kbps()` rather than

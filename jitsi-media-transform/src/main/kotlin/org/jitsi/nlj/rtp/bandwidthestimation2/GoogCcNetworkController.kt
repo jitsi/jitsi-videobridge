@@ -27,6 +27,7 @@ import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.minDuration
 import org.jitsi.nlj.util.times
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
@@ -557,6 +558,100 @@ class GoogCcNetworkController(
         msg.dataWindow = pacingRate * msg.timeWindow
         msg.padWindow = paddingRate * msg.timeWindow
         return msg
+    }
+
+    /** Jitsi local addition.
+     * Fields based on WebRTC modules/congestion_controller/goog_cc/test/goog_cc_printer.{cc,h}
+     */
+    class StatisticsSnapshot(
+        val time: Instant,
+        val rtt: Duration,
+        val target: Bandwidth,
+        val stableTarget: Bandwidth,
+        val pacing: Bandwidth?,
+        val padding: Bandwidth?,
+        val window: DataSize,
+        val rateControlState: AimdRateControl.RateControlState,
+        val stableEstimate: Bandwidth?,
+        val trendline: Double,
+        val trendlineModifiedOffset: Double,
+        val trendlineOffsetThreshold: Double,
+        val acknowledgedRate: Bandwidth?,
+        /* Skipped, based on NetworkStateEstimate
+         * estCapacity
+         * estCapacityDev
+         * estCapacityMin
+         * estCrossDelay
+         * estSpikeDelay
+         * estPreBuffer
+         * estPostBuffer
+         * estPropagation
+         */
+        /* Fields where data from LossBasedBweV1 are printed, even though LossBasedBweV2 is the default.
+         TODO: print state out of LossBasedBweV2.
+        val lossRatio: Double,
+        val lossAverage: Double,
+        val lossAverageMax: Double,
+        val lossThresInc: Double,
+        val lossThresDec: Double,
+        val lossBasedRate: Bandwidth,
+        val lossAckRate: Bandwidth,
+         */
+        /* SendSideBandwidthEstimator populates itself from LossBasedBwe's estimate. */
+        val sendSideTarget: Bandwidth,
+        val lossBasedState: LossBasedState,
+        val dataWindow: DataSize?,
+        val pushbackTarget: Bandwidth
+    ) {
+        fun toJson(): OrderedJsonObject {
+            return OrderedJsonObject().apply {
+                put("time", time.toEpochMilli())
+                put("rtt", rtt)
+                put("target", target.bps)
+                put("stable_target", stableTarget.bps)
+                put("pacing", pacing?.bps ?: Double.NaN)
+                put("padding", padding?.bps ?: Double.NaN)
+                put("window", window.bytes)
+                put("rate_control_state", rateControlState.name)
+                put("stable_estimate", stableEstimate?.bps ?: Double.NaN)
+                put("trendline", trendline)
+                put("trendline_modified_offset", trendlineModifiedOffset)
+                put("trendline_modified_threshold", trendlineOffsetThreshold)
+                put("acknowleged_rate", acknowledgedRate?.bps ?: Double.NaN)
+                put("send_side_target", sendSideTarget.bps)
+                put("last_loss_based_state", lossBasedState.name)
+                put("data_window", dataWindow?.bytes ?: Double.NaN)
+                put("pushback_target", pushbackTarget.bps)
+            }
+        }
+    }
+
+    private fun trend() = delayBasedBwe.delayDetector as TrendlineEstimator
+
+    fun getStatistics(now: Instant): StatisticsSnapshot {
+        val stateUpdate = getNetworkState(now)
+        val target = stateUpdate.targetRate!!
+        val pacing = stateUpdate.pacerConfig
+        val congestionWindow = stateUpdate.congestionWindow ?: DataSize.INFINITY
+        return StatisticsSnapshot(
+            time = target.atTime,
+            rtt = target.networkEstimate.roundTripTime,
+            target = target.targetRate,
+            stableTarget = target.stableTargetRate,
+            pacing = pacing?.dataRate(),
+            padding = pacing?.padRate(),
+            window = congestionWindow,
+            rateControlState = delayBasedBwe.rateControl.rateControlState,
+            stableEstimate = delayBasedBwe.rateControl.linkCapacity.estimate,
+            trendline = trend().prevTrend,
+            trendlineModifiedOffset = trend().prevModifiedTrend,
+            trendlineOffsetThreshold = trend().threshold,
+            acknowledgedRate = acknowledgedBitrateEstimator.bitrate(),
+            sendSideTarget = bandwidthEstimation.targetRate(),
+            lossBasedState = lastLossBasedState,
+            dataWindow = currentDataWindow,
+            pushbackTarget = lastPushbackTargetRate,
+        )
     }
 
     private val packetFeedbackOnly = googCcConfig.feedbackOnly
