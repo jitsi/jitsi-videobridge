@@ -32,6 +32,8 @@ abstract class TransportCcEngine : RtcpListener {
 
     abstract override fun rtcpPacketReceived(rtcpPacket: RtcpPacket, receivedTime: Instant?)
 
+    abstract fun mediaPacketTagged(tccSeqNum: Int, length: DataSize)
+
     abstract fun mediaPacketSent(tccSeqNum: Int, length: DataSize)
 
     abstract fun getStatistics(): StatisticsSnapshot

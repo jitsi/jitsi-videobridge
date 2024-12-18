@@ -78,6 +78,16 @@ class GoogCcTransportCcEngine(
         // TODO: handle other RTCP packets that the network controller wants
     }
 
+    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize) {
+        val now = clock.instant()
+        feedbackAdapter.addPacket(
+            tccSeqNum,
+            DataSize.ZERO, // TODO: network overhead
+            pacingInfo = null,
+            creationTime = now
+        )
+    }
+
     override fun mediaPacketSent(tccSeqNum: Int, length: DataSize) {
         val now = clock.instant()
         val sentPacketInfo = SentPacketInfo(
@@ -99,7 +109,7 @@ class GoogCcTransportCcEngine(
 
     override fun getStatistics(): StatisticsSnapshot {
         val now = clock.instant()
-        return StatisticsSnapshot(networkController.getStatistics(now))
+        return StatisticsSnapshot(feedbackAdapter.getStatisitics(), networkController.getStatistics(now))
     }
 
     override fun addBandwidthListener(listener: BandwidthListener) {
@@ -118,12 +128,14 @@ class GoogCcTransportCcEngine(
     }
 
     class StatisticsSnapshot(
+        val transportAdapterState: TransportFeedbackAdapter.StatisticsSnapshot,
         val networkControllerState: GoogCcNetworkController.StatisticsSnapshot
-        /* TODO: state for TransportFeedbackAdapter? */
     ) : TransportCcEngine.StatisticsSnapshot() {
         override fun toJson(): Map<*, *> {
             return OrderedJsonObject().apply {
-                put("network_state", networkControllerState.toJson())
+                put("name", GoogCcTransportCcEngine::class.java.simpleName)
+                put("transport_adapter", transportAdapterState.toJson())
+                put("network_controller", networkControllerState.toJson())
             }
         }
     }

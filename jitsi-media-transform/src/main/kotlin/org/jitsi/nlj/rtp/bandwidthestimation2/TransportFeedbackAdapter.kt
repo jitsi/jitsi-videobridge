@@ -25,6 +25,7 @@ import org.jitsi.nlj.util.isInfinite
 import org.jitsi.nlj.util.max
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.secs
 import java.time.Duration
@@ -73,12 +74,12 @@ class TransportFeedbackAdapter(
 ) {
     val logger = parentLogger.createChildLogger(javaClass.name)
 
-    fun addPacket(tccSeqNum: Int, length: DataSize, pacingInfo: PacedPacketInfo?, creationTime: Instant) {
+    fun addPacket(tccSeqNum: Int, overheadBytes: DataSize, pacingInfo: PacedPacketInfo?, creationTime: Instant) {
         val packet = PacketFeedback(
             creationTime = creationTime,
             sent = SentPacket(
                 sequenceNumber = seqNumUnwrapper.update(tccSeqNum).toLong(),
-                size = length,
+                size = overheadBytes,
                 pacingInfo = pacingInfo ?: PacedPacketInfo()
             )
         )
@@ -186,6 +187,7 @@ class TransportFeedbackAdapter(
 
             val packetFeedback = history[seqNum]
             if (packetFeedback == null) {
+                logger.debug("No history entry found for seqNum $seqNum")
                 ++failedLookups
                 return@forEach
             }
@@ -229,4 +231,50 @@ class TransportFeedbackAdapter(
 
     private var currentOffset = Instant.MIN
     private var lastTimestamp = Instant.MIN
+
+    /** Jitsi local */
+    fun getStatisitics(): StatisticsSnapshot {
+        return StatisticsSnapshot(
+            inFlight.inFlightData,
+            pendingUntrackedSize,
+            lastSendTime,
+            lastUntrackedSendTime,
+            lastAckSeqNum,
+            history.size
+        )
+    }
+
+    class StatisticsSnapshot(
+        val inFlight: DataSize,
+        val pendingUntrackedSize: DataSize,
+        val lastSendTime: Instant,
+        val lastUntrackedSendTime: Instant,
+        val lastAckSeqNum: Long,
+        val historySize: Int
+    ) {
+        fun toJson(): OrderedJsonObject {
+            return OrderedJsonObject().apply {
+                put("in_flight_bytes", inFlight.bytes)
+                put("pending_untracked_size", pendingUntrackedSize.bytes)
+                put(
+                    "last_send_time",
+                    if (lastSendTime.isFinite()) {
+                        lastSendTime.toEpochMilli()
+                    } else {
+                        Double.NEGATIVE_INFINITY
+                    }
+                )
+                put(
+                    "last_untracked_send_time",
+                    if (lastUntrackedSendTime.isFinite()) {
+                        lastUntrackedSendTime.toEpochMilli()
+                    } else {
+                        Double.NEGATIVE_INFINITY
+                    }
+                )
+                put("last_ack_seq_num", lastAckSeqNum)
+                put("history_size", historySize)
+            }
+        }
+    }
 }

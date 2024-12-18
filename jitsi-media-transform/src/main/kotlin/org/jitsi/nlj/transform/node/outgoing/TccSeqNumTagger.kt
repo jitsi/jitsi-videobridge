@@ -53,6 +53,8 @@ class TccSeqNumTagger(
 
                     val curSeq = currTccSeqNum
                     val len = rtpPacket.length.bytes
+                    weakTcc.get()?.mediaPacketTagged(curSeq, len)
+
                     packetInfo.onSent { weakTcc.get()?.mediaPacketSent(curSeq, len) }
 
                     currTccSeqNum++

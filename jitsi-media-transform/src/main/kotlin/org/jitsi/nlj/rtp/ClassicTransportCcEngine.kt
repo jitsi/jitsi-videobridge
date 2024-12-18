@@ -204,6 +204,10 @@ class ClassicTransportCcEngine(
         }
     }
 
+    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize) {
+        /* Nothing needs to be done */
+    }
+
     override fun mediaPacketSent(tccSeqNum: Int, length: DataSize) {
         val now = clock.instant()
         val seq = tccSeqNum and 0xFFFF
@@ -274,7 +278,7 @@ class ClassicTransportCcEngine(
     ) : TransportCcEngine.StatisticsSnapshot() {
         override fun toJson(): Map<*, *> {
             return OrderedJsonObject().also {
-                it.put("name", this.javaClass.simpleName)
+                it.put("name", ClassicTransportCcEngine::class.java.simpleName)
                 it.put("numPacketsReported", numPacketsReported)
                 it.put("numPacketsReportedLost", numPacketsReportedLost)
                 it.put("numDuplicateReports", numDuplicateReports)
