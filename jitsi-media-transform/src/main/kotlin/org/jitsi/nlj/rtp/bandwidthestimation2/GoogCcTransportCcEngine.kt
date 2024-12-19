@@ -129,9 +129,20 @@ class GoogCcTransportCcEngine(
 
     private fun processUpdate(update: NetworkControlUpdate) {
         update.targetRate?.let { targetRate ->
+            logger.info("GoogleCcEstimator setting TargetRate to $targetRate")
             listeners.forEach { it.bandwidthEstimationChanged(targetRate.targetRate) }
         }
-        // TOOD: other fields of update
+        update.congestionWindow?.let { congestionWindow ->
+            logger.warn("TODO: GoogleCcEstimator wants to set CongestionWindow to $congestionWindow")
+        }
+        update.pacerConfig?.let { pacerConfig ->
+            logger.warn("TODO: GoogleCcEstimator wants to set PacerConfig to $pacerConfig")
+        }
+        update.probeClusterConfigs.let { configs ->
+            if (configs.isNotEmpty()) {
+                logger.warn("TODO: GoogleCcEstimator wants to set ${configs.size} ProbeClusterConfigs: $configs")
+            }
+        }
     }
 
     class StatisticsSnapshot(

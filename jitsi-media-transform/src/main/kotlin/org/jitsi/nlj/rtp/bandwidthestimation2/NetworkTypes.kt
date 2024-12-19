@@ -212,6 +212,12 @@ class NetworkEstimate {
     var bwePeriod = maxDuration
 
     var lossRateRatio = 0.0f
+
+    /* Jitsi local */
+    override fun toString(): String {
+        return "atTime $atTime: " +
+            "bandwidth $bandwidth, rtt $roundTripTime, bwePeriod $bwePeriod, lossRateRatio $lossRateRatio"
+    }
 }
 
 class PacerConfig {
@@ -226,6 +232,12 @@ class PacerConfig {
 
     fun dataRate() = dataWindow.per(timeWindow)
     fun padRate() = padWindow.per(timeWindow)
+
+    /* Jitsi Local */
+    override fun toString(): String {
+        return "Data rate ${dataRate()} ($dataWindow per $timeWindow), " +
+            "pad rate ${padRate()} ($padWindow per $timeWindow)"
+    }
 }
 
 class ProbeClusterConfig {
@@ -239,6 +251,12 @@ class ProbeClusterConfig {
     var minProbeDelta = 2.ms
     var targetProbeCount = 0
     var id = 0
+
+    /* Jitsi local */
+    override fun toString(): String {
+        return "atTime $atTime: ID=$id: DataRate $targetDataRate Duration $targetDuration " +
+            "ProbeDelta $minProbeDelta ProbeCount $targetProbeCount"
+    }
 }
 
 class TargetTransferRate {
@@ -249,6 +267,12 @@ class TargetTransferRate {
     var targetRate = Bandwidth.ZERO
     var stableTargetRate = Bandwidth.ZERO
     var cwndReduceRatio = 0.0
+
+    /* Jitsi local */
+    override fun toString(): String {
+        return "atTime $atTime: networkEstimate {$networkEstimate}, " +
+            "targetRate $targetRate, stableTargetRate $stableTargetRate, cwndReduceRatio $cwndReduceRatio"
+    }
 }
 
 // Contains updates of network controller comand state. Using nullables to
