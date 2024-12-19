@@ -164,7 +164,7 @@ class TransportFeedbackAdapter(
                 currentOffset += delta
             }
         }
-        lastTimestamp = feedbackReceiveTime
+        lastTimestamp = feedback.BaseTime()
 
         val packetResultVector = ArrayList<PacketResult>()
         packetResultVector.ensureCapacity(feedback.GetPacketStatusCount())

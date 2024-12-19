@@ -437,7 +437,7 @@ class RtcpFbTccPacket(
     }
 
     fun GetBaseDelta(prev_timestamp: Instant): Duration {
-        var delta = Duration.between(BaseTime(), prev_timestamp)
+        var delta = Duration.between(prev_timestamp, BaseTime())
         // Compensate for wrap around
         if ((delta - kTimeWrapPeriod).abs() < delta.abs()) {
             delta -= kTimeWrapPeriod
