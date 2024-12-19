@@ -240,7 +240,9 @@ class TransportFeedbackAdapter(
             lastSendTime,
             lastUntrackedSendTime,
             lastAckSeqNum,
-            history.size
+            history.size,
+            currentOffset,
+            lastTimestamp
         )
     }
 
@@ -250,31 +252,33 @@ class TransportFeedbackAdapter(
         val lastSendTime: Instant,
         val lastUntrackedSendTime: Instant,
         val lastAckSeqNum: Long,
-        val historySize: Int
+        val historySize: Int,
+        val currentOffset: Instant,
+        val lastTimestamp: Instant
     ) {
         fun toJson(): OrderedJsonObject {
             return OrderedJsonObject().apply {
                 put("in_flight_bytes", inFlight.bytes)
                 put("pending_untracked_size", pendingUntrackedSize.bytes)
-                put(
-                    "last_send_time",
-                    if (lastSendTime.isFinite()) {
-                        lastSendTime.toEpochMilli()
-                    } else {
-                        Double.NEGATIVE_INFINITY
-                    }
-                )
-                put(
-                    "last_untracked_send_time",
-                    if (lastUntrackedSendTime.isFinite()) {
-                        lastUntrackedSendTime.toEpochMilli()
-                    } else {
-                        Double.NEGATIVE_INFINITY
-                    }
-                )
+                put("last_send_time", lastSendTime.toEpochMilliOrInf())
+                put("last_untracked_send_time", lastUntrackedSendTime.toEpochMilliOrInf())
                 put("last_ack_seq_num", lastAckSeqNum)
                 put("history_size", historySize)
+                put("current_offset", currentOffset.toEpochMilliOrInf())
+                put("last_timestamp", lastTimestamp.toEpochMilliOrInf())
             }
+        }
+    }
+}
+
+private fun Instant.toEpochMilliOrInf(): Number {
+    return try {
+        this.toEpochMilli()
+    } catch (e: ArithmeticException) {
+        if (this < Instant.EPOCH) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            Double.POSITIVE_INFINITY
         }
     }
 }
