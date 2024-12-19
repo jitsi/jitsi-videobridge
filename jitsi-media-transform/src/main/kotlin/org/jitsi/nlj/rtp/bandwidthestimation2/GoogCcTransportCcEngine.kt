@@ -58,6 +58,7 @@ class GoogCcTransportCcEngine(
 
     private val listeners = LinkedList<BandwidthListener>()
 
+    @Synchronized
     override fun onRttUpdate(rtt: Duration) {
         val update =
             networkController.onRoundTripTimeUpdate(
@@ -66,6 +67,7 @@ class GoogCcTransportCcEngine(
         processUpdate(update)
     }
 
+    @Synchronized
     override fun rtcpPacketReceived(rtcpPacket: RtcpPacket, receivedTime: Instant?) {
         if (rtcpPacket is RtcpFbTccPacket) {
             val now = clock.instant()
@@ -78,6 +80,7 @@ class GoogCcTransportCcEngine(
         // TODO: handle other RTCP packets that the network controller wants
     }
 
+    @Synchronized
     override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize) {
         val now = clock.instant()
         feedbackAdapter.addPacket(
@@ -88,6 +91,7 @@ class GoogCcTransportCcEngine(
         )
     }
 
+    @Synchronized
     override fun mediaPacketSent(tccSeqNum: Int, length: DataSize) {
         val now = clock.instant()
         val sentPacketInfo = SentPacketInfo(
@@ -107,15 +111,18 @@ class GoogCcTransportCcEngine(
         }
     }
 
+    @Synchronized
     override fun getStatistics(): StatisticsSnapshot {
         val now = clock.instant()
         return StatisticsSnapshot(feedbackAdapter.getStatisitics(), networkController.getStatistics(now))
     }
 
+    @Synchronized
     override fun addBandwidthListener(listener: BandwidthListener) {
         listeners.add(listener)
     }
 
+    @Synchronized
     override fun removeBandwidthListener(listener: BandwidthListener) {
         listeners.remove(listener)
     }
