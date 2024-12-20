@@ -170,8 +170,10 @@ fun main() {
     listOf("TERM", "HUP", "INT").forEach { signalName ->
         try {
             Signal.handle(Signal(signalName)) { signal ->
-                shutdownService.beginShutdown()
                 exitStatus = signal.number + 128 // Matches java.lang.Terminator
+                logger.info("Caught signal $signal, shutting down.")
+
+                shutdownService.beginShutdown()
             }
         } catch (e: IllegalArgumentException) {
             /* Unknown signal on this platform, or not allowed to register this signal; that's fine. */
