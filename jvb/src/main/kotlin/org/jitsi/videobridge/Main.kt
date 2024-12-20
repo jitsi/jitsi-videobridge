@@ -48,6 +48,7 @@ import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.ColibriWebSocketService
 import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
+import sun.misc.Signal
 import java.time.Clock
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
@@ -163,6 +164,21 @@ fun main() {
         null
     }
 
+    var exitStatus = 0
+
+    /* Catch signals and cause them to trigger a clean shutdown. */
+    listOf("TERM", "HUP", "INT").forEach { signalName ->
+        try {
+            Signal.handle(Signal(signalName)) { signal ->
+                shutdownService.beginShutdown()
+                exitStatus = signal.number + 128 // Matches java.lang.Terminator
+            }
+        } catch (e: IllegalArgumentException) {
+            /* Unknown signal on this platform, or not allowed to register this signal; that's fine. */
+            logger.warn("Unable to register signal '$signalName'", e)
+        }
+    }
+
     // Block here until the bridge shuts down
     shutdownService.waitForShutdown()
 
@@ -186,7 +202,7 @@ fun main() {
     TaskPools.CPU_POOL.shutdownNow()
     TaskPools.IO_POOL.shutdownNow()
 
-    exitProcess(0)
+    exitProcess(exitStatus)
 }
 
 private fun setupMetaconfigLogger() {
