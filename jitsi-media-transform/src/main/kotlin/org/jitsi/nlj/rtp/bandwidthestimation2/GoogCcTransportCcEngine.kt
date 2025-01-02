@@ -17,6 +17,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
+import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimatorConfig
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
@@ -45,7 +46,9 @@ class GoogCcTransportCcEngine(
             logger,
             diagnosticContext,
             constraints = TargetRateConstraints(
-                startingRate = BandwidthEstimatorConfig.initBw
+                startingRate = BandwidthEstimatorConfig.initBw,
+                maxDataRate = GoogleCcEstimatorConfig.maxBw, // TODO: move these two to a generic config
+                minDataRate = GoogleCcEstimatorConfig.minBw
             )
         ),
         GoogCcConfig(
