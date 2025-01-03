@@ -56,9 +56,13 @@ abstract class TransportCcEngine : RtcpListener {
         lossListeners.remove(listener)
     }
 
-    abstract fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener)
+    abstract fun addBandwidthListener(listener: BandwidthListener)
 
-    abstract fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener)
+    abstract fun removeBandwidthListener(listener: BandwidthListener)
+
+    abstract fun start()
+
+    abstract fun stop()
 
     abstract class StatisticsSnapshot {
         abstract fun toJson(): Map<*, *>

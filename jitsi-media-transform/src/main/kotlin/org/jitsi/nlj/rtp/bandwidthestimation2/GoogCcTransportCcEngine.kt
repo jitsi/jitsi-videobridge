@@ -29,6 +29,9 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 /**
  * Transport CC engine invoking GoogCc NetworkController.
@@ -36,12 +39,13 @@ import java.util.*
 class GoogCcTransportCcEngine(
     diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
+    val scheduledExecutor: ScheduledExecutorService,
     val clock: Clock = Clock.systemUTC(),
 ) : TransportCcEngine() {
     private val logger = createChildLogger(parentLogger)
 
     private val feedbackAdapter = TransportFeedbackAdapter(logger)
-    private val networkController = GoogCcNetworkController(
+    private val networkController = factory.create(
         NetworkControllerConfig(
             logger,
             diagnosticContext,
@@ -50,14 +54,10 @@ class GoogCcTransportCcEngine(
                 maxDataRate = GoogleCcEstimatorConfig.maxBw, // TODO: move these two to a generic config
                 minDataRate = GoogleCcEstimatorConfig.minBw
             )
-        ),
-        GoogCcConfig(
-            // TODO configure non-default fields here.
         )
-    ).apply {
-        val update = onNetworkAvailability(NetworkAvailability(atTime = clock.instant(), networkAvailable = true))
-        processUpdate(update) // Does this make sense to do during init?
-    }
+    )
+
+    private var processTask: ScheduledFuture<*>? = null
 
     private val listeners = LinkedList<BandwidthListener>()
 
@@ -117,7 +117,10 @@ class GoogCcTransportCcEngine(
     @Synchronized
     override fun getStatistics(): StatisticsSnapshot {
         val now = clock.instant()
-        return StatisticsSnapshot(feedbackAdapter.getStatisitics(), networkController.getStatistics(now))
+        return StatisticsSnapshot(
+            feedbackAdapter.getStatisitics(),
+            (networkController as GoogCcNetworkController).getStatistics(now)
+        )
     }
 
     @Synchronized
@@ -128,6 +131,30 @@ class GoogCcTransportCcEngine(
     @Synchronized
     override fun removeBandwidthListener(listener: BandwidthListener) {
         listeners.remove(listener)
+    }
+
+    override fun start() {
+        val startTime = clock.instant()
+        var update =
+            networkController.onNetworkAvailability(NetworkAvailability(atTime = startTime, networkAvailable = true))
+        processUpdate(update) // Does this make sense to do during init?
+
+        update = networkController.onProcessInterval(ProcessInterval(atTime = startTime))
+        processUpdate(update)
+
+        val processInterval = factory.getProcessInterval().toMillis()
+
+        processTask = scheduledExecutor.scheduleAtFixedRate({
+            synchronized(this@GoogCcTransportCcEngine) {
+                val now = clock.instant()
+                update = networkController.onProcessInterval(ProcessInterval(atTime = now))
+                processUpdate(update)
+            }
+        }, processInterval, processInterval, TimeUnit.MILLISECONDS)
+    }
+
+    override fun stop() {
+        processTask?.cancel(false)
     }
 
     private fun processUpdate(update: NetworkControlUpdate) {
@@ -146,6 +173,10 @@ class GoogCcTransportCcEngine(
                 logger.warn("TODO: GoogleCcEstimator wants to set ${configs.size} ProbeClusterConfigs: $configs")
             }
         }
+    }
+
+    companion object {
+        private val factory = GoogCcNetworkControllerFactory()
     }
 
     class StatisticsSnapshot(

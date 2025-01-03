@@ -536,7 +536,7 @@ class GoogCcNetworkController(
             update.probeClusterConfigs.addAll(probes)
             update.pacerConfig = getPacingRates(atTime)
             logger.debug(
-                "bwe ${atTime.toEpochMilli()} pushback_target_bps=${lastPushbackTargetRate.bps} " +
+                "bwe $atTime: pushback_target_bps=${lastPushbackTargetRate.bps} " +
                     "estimate_bps=${lossBasedTargetRate.bps}"
             )
         }
@@ -671,7 +671,9 @@ class GoogCcNetworkController(
     private val bandwidthEstimation = SendSideBandwidthEstimation(logger, diagnosticContext)
     private val alrDetector = AlrDetector()
     private var probeBitrateEstimator = ProbeBitrateEstimator()
-    private var delayBasedBwe = DelayBasedBwe(logger, diagnosticContext)
+    private var delayBasedBwe = DelayBasedBwe(logger, diagnosticContext).also {
+        it.setMinBitrate(kCongestionControllerMinBitrate)
+    }
     private var acknowledgedBitrateEstimator = AcknowledgedBitrateEstimatorInterface.create()
 
     private var initialConfig: NetworkControllerConfig? = config

@@ -239,6 +239,10 @@ class ClassicTransportCcEngine(
 
     override fun removeBandwidthListener(listener: BandwidthListener) = bandwidthEstimator.removeListener(listener)
 
+    override fun start() { }
+
+    override fun stop() { }
+
     /**
      * [PacketDetailState] is the state of a [PacketDetail]
      */

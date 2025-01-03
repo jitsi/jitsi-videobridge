@@ -115,7 +115,7 @@ class RtpSenderImpl(
                 ClassicTransportCcEngine(GoogleCcEstimator(diagnosticContext, logger), logger)
 
             BandwidthEstimatorEngine.GoogleCc2 ->
-                GoogCcTransportCcEngine(diagnosticContext, logger)
+                GoogCcTransportCcEngine(diagnosticContext, logger, backgroundExecutor)
         }
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
