@@ -76,22 +76,26 @@ class VlaReaderNode(
                 vla.forEachIndexed { streamIdx, stream ->
                     val rtpEncoding = sourceDesc?.rtpEncodings?.get(streamIdx)
                     stream.spatialLayers.forEach { spatialLayer ->
+                        val maxTl = spatialLayer.targetBitratesKbps.size - 1
+
                         spatialLayer.targetBitratesKbps.forEachIndexed { tlIdx, targetBitrateKbps ->
                             rtpEncoding?.layers?.find {
                                 // With VP8 simulcast all layers have sid -1
                                 (it.sid == spatialLayer.id || it.sid == -1) && it.tid == tlIdx
                             }?.let { layer ->
-                                logger.debug(
+                                logger.debug {
                                     "Setting target bitrate for rtpEncoding=$rtpEncoding layer=$layer to " +
                                         "${targetBitrateKbps.kbps} (res=${spatialLayer.res})"
-                                )
+                                }
                                 layer.targetBitrate = targetBitrateKbps.kbps
                                 spatialLayer.res?.let { res ->
                                     if (layer.height > 0 && layer.height != res.height) {
                                         logger.warn("Updating layer height from ${layer.height} to ${res.height}")
                                     }
                                     layer.height = res.height
-                                    layer.frameRate = res.maxFramerate.toDouble()
+                                    /* Presume 2:1 frame rate ratios for temporal layers */
+                                    val framerateFraction = 1.0 / (1 shl (maxTl - tlIdx))
+                                    layer.frameRate = res.maxFramerate.toDouble() * framerateFraction
                                 }
                             }
                         }

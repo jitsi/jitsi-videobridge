@@ -79,8 +79,7 @@ class Av1DDRtpLayerDesc(
      * {@inheritDoc}
      */
     override fun toString(): String {
-        return "subjective_quality=" + index +
-            ",DT=" + dt
+        return "subjective_quality=$index,DT=$dt,height=$height,frameRate=$frameRate"
     }
 
     companion object {
