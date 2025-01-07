@@ -147,7 +147,7 @@ class MediaSourceDesc
     }
 
     @Synchronized
-    fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? = rtpEncodings.find { it.matches(ssrc) }
+    fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? = rtpEncodings.find { it.hasSsrc(ssrc) }
 
     @Synchronized
     fun getEncodingLayers(ssrc: Long): Array<RtpLayerDesc> {
@@ -194,7 +194,7 @@ class MediaSourceDesc
      * Checks whether any encoding of this source has this [ssrc]
      */
     @Synchronized
-    fun hasSsrc(ssrc: Long) = rtpEncodings.any { it.matches(ssrc) }
+    fun hasSsrc(ssrc: Long) = rtpEncodings.any { it.hasSsrc(ssrc) }
 }
 
 /**
