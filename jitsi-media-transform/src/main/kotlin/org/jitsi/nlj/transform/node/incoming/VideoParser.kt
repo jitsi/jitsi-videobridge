@@ -20,6 +20,7 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.findRtpSource
+import org.jitsi.nlj.findRtpSourceByPrimary
 import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.format.Vp9PayloadType
 import org.jitsi.nlj.rtp.ParsedVideoPacket
@@ -228,7 +229,7 @@ class VideoParser(
     }
 
     private fun resetSource(source: MediaSourceDesc) {
-        val signaledSource = signaledSources.findRtpSource(source.primarySSRC)
+        val signaledSource = signaledSources.findRtpSourceByPrimary(source.primarySSRC)
         if (signaledSource == null) {
             logger.warn("Unable to find signaled source corresponding to ${source.primarySSRC}")
             return
