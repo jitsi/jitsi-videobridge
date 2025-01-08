@@ -29,6 +29,7 @@ import org.jitsi.nlj.util.minDuration
 import org.jitsi.nlj.util.times
 import org.jitsi.nlj.util.toDouble
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
@@ -626,6 +627,28 @@ class GoogCcNetworkController(
                 put("data_window", dataWindow?.bytes ?: Double.NaN)
                 put("pushback_target", pushbackTarget.bps)
                 put("in_alr", inAlr)
+            }
+        }
+
+        fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
+            point.apply {
+                addField("rtt", rtt.toDouble())
+                addField("target", target.bps)
+                addField("stable_target", stableTarget.bps)
+                addField("pacing", pacing?.bps ?: Double.NaN)
+                addField("padding", padding?.bps ?: Double.NaN)
+                addField("window", window.bytes)
+                addField("rate_control_state", rateControlState.name)
+                addField("stable_estimate", stableEstimate?.bps ?: Double.NaN)
+                addField("trendline", trendline)
+                addField("trendline_modified_offset", trendlineModifiedOffset)
+                addField("trendline_modified_threshold", trendlineOffsetThreshold)
+                addField("acknowleged_rate", acknowledgedRate?.bps ?: Double.NaN)
+                addField("send_side_target", sendSideTarget.bps)
+                addField("last_loss_based_state", lossBasedState.name)
+                addField("data_window", dataWindow?.bytes ?: Double.NaN)
+                addField("pushback_target", pushbackTarget.bps)
+                addField("in_alr", inAlr)
             }
         }
     }

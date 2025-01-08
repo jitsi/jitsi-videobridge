@@ -23,6 +23,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import java.time.Clock
@@ -37,7 +38,7 @@ import java.util.concurrent.TimeUnit
  * Transport CC engine invoking GoogCc NetworkController.
  */
 class GoogCcTransportCcEngine(
-    diagnosticContext: DiagnosticContext,
+    val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
     val scheduledExecutor: ScheduledExecutorService,
     val clock: Clock = Clock.systemUTC(),
@@ -173,10 +174,24 @@ class GoogCcTransportCcEngine(
                 logger.warn("TODO: GoogleCcEstimator wants to set ${configs.size} ProbeClusterConfigs: $configs")
             }
         }
+
+        if (timeSeriesLogger.isTraceEnabled && update.isNotEmpty()) {
+            val now = update.atTime ?: clock.instant()
+            val stats = (networkController as GoogCcNetworkController).getStatistics(now)
+            val statsPoint = diagnosticContext.makeTimeSeriesPoint("goog_cc_stats", now)
+            stats.addToTimeSeriesPoint(statsPoint)
+            timeSeriesLogger.trace(statsPoint)
+
+            val updatePoint = diagnosticContext.makeTimeSeriesPoint("goog_cc_update", now)
+            update.addToTimeSeriesPoint(updatePoint)
+            timeSeriesLogger.trace(updatePoint)
+        }
     }
 
     companion object {
         private val factory = GoogCcNetworkControllerFactory()
+
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(GoogCcNetworkController::class.java)
     }
 
     class StatisticsSnapshot(

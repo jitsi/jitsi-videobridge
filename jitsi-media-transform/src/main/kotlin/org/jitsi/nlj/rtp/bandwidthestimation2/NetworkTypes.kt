@@ -24,6 +24,8 @@ import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.isFinite
 import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.per
+import org.jitsi.nlj.util.toDoubleMillis
+import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.ms
 import java.time.Duration
 import java.time.Instant
@@ -283,7 +285,42 @@ open class NetworkControlUpdate(
     open val pacerConfig: PacerConfig? = null,
     open val probeClusterConfigs: List<ProbeClusterConfig> = listOf(),
     open val targetRate: TargetTransferRate? = null
-)
+) {
+    /* Jitsi local */
+    fun isEmpty(): Boolean {
+        return congestionWindow == null && pacerConfig == null && probeClusterConfigs.isEmpty() && targetRate == null
+    }
+
+    fun isNotEmpty() = !isEmpty()
+
+    val atTime: Instant?
+        get() = targetRate?.atTime ?: probeClusterConfigs.firstOrNull()?.atTime ?: pacerConfig?.atTime
+
+    fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
+        targetRate?.let {
+            point.addField("target_rate_bps", it.targetRate.bps)
+            point.addField("stable_target_Rate_bps", it.stableTargetRate.bps)
+            point.addField("cwnd_reduce_ratio", it.cwndReduceRatio)
+            point.addField("rtt_ms", it.networkEstimate.roundTripTime.toDoubleMillis())
+            point.addField("bwe_period_ms", it.networkEstimate.bwePeriod.toDoubleMillis())
+            point.addField("loss_rate_ratio", it.networkEstimate.lossRateRatio)
+        }
+        congestionWindow?.let {
+            point.addField("congestion_window_bytes", it.bytes)
+        }
+        pacerConfig?.let {
+            point.addField("pacer_data_rate_bps", it.dataRate().bps)
+            point.addField("pacer_pad_rate_bps", it.padRate().bps)
+        }
+        probeClusterConfigs.forEachIndexed { i, it ->
+            point.addField("probe_cluster_" + i + "_id", it.id)
+            point.addField("probe_cluster_" + i + "_data_rate_bps", it.targetDataRate.bps)
+            point.addField("probe_cluster_" + i + "_duration_ms", it.targetDuration.toDoubleMillis())
+            point.addField("probe_cluster_" + i + "_delta_ms", it.minProbeDelta.toDoubleMillis())
+            point.addField("probe_cluster_" + i + "_count", it.targetProbeCount)
+        }
+    }
+}
 
 class MutableNetworkControlUpdate(
     override var congestionWindow: DataSize? = null,
