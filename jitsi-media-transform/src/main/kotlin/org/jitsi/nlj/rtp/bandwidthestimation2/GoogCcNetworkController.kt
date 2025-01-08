@@ -27,6 +27,7 @@ import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.minDuration
 import org.jitsi.nlj.util.times
+import org.jitsi.nlj.util.toDouble
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.ms
@@ -601,12 +602,14 @@ class GoogCcNetworkController(
         val sendSideTarget: Bandwidth,
         val lossBasedState: LossBasedState,
         val dataWindow: DataSize?,
-        val pushbackTarget: Bandwidth
+        val pushbackTarget: Bandwidth,
+        /* Additions to the fields from goog_cc_printer */
+        val inAlr: Boolean
     ) {
         fun toJson(): OrderedJsonObject {
             return OrderedJsonObject().apply {
                 put("time", time.toEpochMilli())
-                put("rtt", rtt)
+                put("rtt", rtt.toDouble())
                 put("target", target.bps)
                 put("stable_target", stableTarget.bps)
                 put("pacing", pacing?.bps ?: Double.NaN)
@@ -622,6 +625,7 @@ class GoogCcNetworkController(
                 put("last_loss_based_state", lossBasedState.name)
                 put("data_window", dataWindow?.bytes ?: Double.NaN)
                 put("pushback_target", pushbackTarget.bps)
+                put("in_alr", inAlr)
             }
         }
     }
@@ -651,6 +655,7 @@ class GoogCcNetworkController(
             lossBasedState = lastLossBasedState,
             dataWindow = currentDataWindow,
             pushbackTarget = lastPushbackTargetRate,
+            inAlr = previouslyInAlr
         )
     }
 
