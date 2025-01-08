@@ -233,7 +233,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.5.2</version>
                 <configuration>
                     <systemPropertyVariables>
                         <kotest.framework.classpath.scanning.autoscan.disable>true</kotest.framework.classpath.scanning.autoscan.disable>
@@ -268,7 +268,7 @@
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-checkstyle-plugin</artifactId>
-              <version>3.1.1</version>
+              <version>3.6.0</version>
               <configuration>
                   <configLocation>checkstyle.xml</configLocation>
               </configuration>

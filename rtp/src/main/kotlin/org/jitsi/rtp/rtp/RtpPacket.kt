@@ -410,15 +410,14 @@ open class RtpPacket(
         ).also { if (pendingHeaderExtensions != null) it.pendingHeaderExtensions = ArrayList(pendingHeaderExtensions) }
     }
 
-    override fun toString(): String = with(StringBuilder()) {
-        append("RtpPacket: ")
+    override fun toString(): String = buildString {
+        append("${this@RtpPacket::class.java.simpleName}: ")
         append("PT=$payloadType")
         append(", Ssrc=$ssrc")
         append(", SeqNum=$sequenceNumber")
         append(", M=$isMarked")
         append(", X=$hasEncodedExtensions")
         append(", Ts=$timestamp")
-        toString()
     }
 
     /**

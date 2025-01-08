@@ -115,6 +115,7 @@ class MediaSourceDesc
      * @return the last "stable" bitrate (bps) of the encoding with a non-zero rate
      * at or below the specified index.
      */
+    @Synchronized
     fun getBitrate(nowMs: Long, idx: Int): Bandwidth {
         for (entry in layersByIndex.headMap(idx, true).descendingMap()) {
             val bitrate = entry.value.getBitrate(nowMs)
@@ -146,7 +147,7 @@ class MediaSourceDesc
     }
 
     @Synchronized
-    fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? = rtpEncodings.find { it.matches(ssrc) }
+    fun findRtpEncodingDesc(ssrc: Long): RtpEncodingDesc? = rtpEncodings.find { it.hasSsrc(ssrc) }
 
     @Synchronized
     fun getEncodingLayers(ssrc: Long): Array<RtpLayerDesc> {
@@ -180,7 +181,7 @@ class MediaSourceDesc
     /**
      * Checks whether the given SSRC matches this source's [primarySSRC].
      * This is mostly useful only for determining quickly whether two source
-     * descriptions describe the same source; other functions should be used
+     * descriptions describe the same source; other functions (probably [hasSsrc]) should be used
      * to match received media packets.
      *
      * @param ssrc the SSRC to match.
@@ -188,6 +189,12 @@ class MediaSourceDesc
      * for this source.
      */
     fun matches(ssrc: Long) = rtpEncodings.getOrNull(0)?.primarySSRC == ssrc
+
+    /**
+     * Checks whether any encoding of this source has this [ssrc]
+     */
+    @Synchronized
+    fun hasSsrc(ssrc: Long) = rtpEncodings.any { it.hasSsrc(ssrc) }
 }
 
 /**
@@ -199,8 +206,12 @@ fun Array<MediaSourceDesc>.findRtpLayerDescs(packet: VideoRtpPacket): Collection
     return this.flatMap { it.findRtpLayerDescs(packet) }
 }
 
-fun Array<MediaSourceDesc>.findRtpSource(ssrc: Long): MediaSourceDesc? {
+fun Array<MediaSourceDesc>.findRtpSourceByPrimary(ssrc: Long): MediaSourceDesc? {
     return this.find { it.matches(ssrc) }
+}
+
+fun Array<MediaSourceDesc>.findRtpSource(ssrc: Long): MediaSourceDesc? {
+    return this.find { it.hasSsrc(ssrc) }
 }
 
 fun Array<MediaSourceDesc>.findRtpSource(packet: RtpPacket): MediaSourceDesc? = findRtpSource(packet.ssrc)

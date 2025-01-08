@@ -26,6 +26,7 @@ import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
@@ -52,6 +53,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     private val clock: Clock = Clock.systemUTC()
 ) {
     val eventEmitter = SyncEventEmitter<EventHandler>()
+
+    private val logger = createChildLogger(parentLogger)
 
     private val bitrateAllocatorEventHandler = BitrateAllocatorEventHandler()
 
@@ -133,6 +136,9 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun accept(packetInfo: PacketInfo): Boolean {
         if (packetInfo.layeringChanged) {
             // This needs to be done synchronously, so it's complete before the accept, below.
+            logger.debug {
+                "Layering information changed for packet from ${packetInfo.endpointId}, updating bandwidth allocation"
+            }
             bandwidthAllocator.update()
         }
         return packetHandler.accept(packetInfo)

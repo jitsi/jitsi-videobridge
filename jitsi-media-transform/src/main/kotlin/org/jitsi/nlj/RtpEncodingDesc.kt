@@ -154,12 +154,12 @@ constructor(
     }
 
     /**
-     * Gets a boolean indicating whether or not the SSRC specified in the
-     * arguments matches this encoding or not.
+     * Gets a boolean indicating whether the SSRC specified in the
+     * arguments is used by this encoding.
      *
      * @param ssrc the SSRC to match.
      */
-    fun matches(ssrc: Long): Boolean {
+    fun hasSsrc(ssrc: Long): Boolean {
         return if (primarySSRC == ssrc) {
             true
         } else {
