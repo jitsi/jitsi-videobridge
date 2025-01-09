@@ -17,13 +17,31 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.rtp.util.RtpUtils
-import org.jitsi.rtp.util.isNewerThan
-import org.jitsi.rtp.util.rolledOverTo
 
-class Rfc3711IndexTracker {
-    var roc: Long = 0
-        private set
-    private var highestSeqNumReceived = -1
+class Rfc3711IndexTracker : IndexTracker<Int>() {
+    override fun addRollover(seqNum: Int, roc: Long) = 0x1_0000 * roc + seqNum
+    override fun rollsOver(a: Int, b: Int): Boolean = isOlderThan(a, b) && b < a
+    override fun isOlderThan(a: Int, b: Int): Boolean = RtpUtils.isOlderSequenceNumberThan(a, b)
+    override fun toLong(t: Int): Long = t.toLong()
+}
+
+class RtpTimestampIndexTracker : IndexTracker<Long>() {
+    override fun addRollover(seqNum: Long, roc: Long) = 0x1_0000_0000 * roc + seqNum
+    override fun rollsOver(a: Long, b: Long): Boolean = isOlderThan(a, b) && b < a
+    override fun isOlderThan(a: Long, b: Long): Boolean = RtpUtils.isOlderTimestampThan(a, b)
+    override fun toLong(t: Long): Long = t
+}
+
+sealed class IndexTracker<T> {
+    private var roc: Long = 0L
+
+    private var highestSeqNumReceived: T? = null
+
+    internal abstract fun addRollover(seqNum: T, roc: Long): Long
+    internal abstract fun rollsOver(a: T, b: T): Boolean
+    internal abstract fun isOlderThan(a: T, b: T): Boolean
+    internal abstract fun toLong(t: T): Long
+    private fun isNewerThan(a: T, b: T): Boolean = !isOlderThan(a, b) && a != b
 
     /**
      * return the index (as defined by RFC3711 at https://tools.ietf.org/html/rfc3711#section-3.3.1)
@@ -31,28 +49,33 @@ class Rfc3711IndexTracker {
      * NOTE that this method must be called for all 'received' sequence numbers so that it may keep
      * its rollover counter accurate
      */
-    fun update(seqNum: Int): Long {
-        return getIndex(seqNum, true)
-    }
+    fun update(seqNum: T): Long = getIndex(seqNum, true)
+
+    /**
+     * Interprets an RTP sequence number in the context of the highest sequence number received. Returns the index
+     * which corresponds to the packet, but does not update the ROC.
+     */
+    fun interpret(seqNum: T): Long = getIndex(seqNum, false)
 
     /**
      * return the index (as defined by RFC3711 at https://tools.ietf.org/html/rfc3711#section-3.3.1)
      * for the given [seqNum]. If [updateRoc] is [true] and we've rolled over, updates our ROC.
      */
-    private fun getIndex(seqNum: Int, updateRoc: Boolean): Long {
-        if (highestSeqNumReceived == -1) {
+    private fun getIndex(seqNum: T, updateRoc: Boolean): Long {
+        val highestSeqNumReceived = this.highestSeqNumReceived
+        if (highestSeqNumReceived == null) {
             if (updateRoc) {
-                highestSeqNumReceived = seqNum
+                this.highestSeqNumReceived = seqNum
             }
-            return seqNum.toLong()
+            return toLong(seqNum)
         }
 
         val v = when {
-            seqNum rolledOverTo highestSeqNumReceived -> {
+            rollsOver(seqNum, highestSeqNumReceived) -> {
                 // Seq num was from the previous roc value
                 roc - 1
             }
-            highestSeqNumReceived rolledOverTo seqNum -> {
+            rollsOver(highestSeqNumReceived, seqNum) -> {
                 // We've rolled over, so update the roc in place if updateRoc
                 // is set, otherwise return the right value (our current roc
                 // + 1)
@@ -65,29 +88,19 @@ class Rfc3711IndexTracker {
             else -> roc
         }
 
-        if (updateRoc && (seqNum isNewerThan highestSeqNumReceived)) {
-            highestSeqNumReceived = seqNum
+        if (updateRoc && isNewerThan(seqNum, highestSeqNumReceived)) {
+            this.highestSeqNumReceived = seqNum
         }
 
-        return 0x1_0000 * v + seqNum
+        return addRollover(seqNum, v)
     }
 
-    /**
-     * Interprets an RTP sequence number in the context of the highest sequence number received. Returns the index
-     * which corresponds to the packet, but does not update the ROC.
-     */
-    fun interpret(seqNum: Int): Long {
-        return getIndex(seqNum, false)
-    }
-
-    /** Force this sequence number to be interpreted as the new highest, regardless
-     * of its rollover state.
-     */
-    fun resetAt(seq: Int) {
-        val delta = RtpUtils.getSequenceNumberDelta(seq, highestSeqNumReceived)
-        if (delta < 0) {
+    /** Force this sequence number to be interpreted as the new highest, regardless of its rollover state. */
+    fun resetAt(seq: T) {
+        val highestSeqNumReceived = this.highestSeqNumReceived
+        if (highestSeqNumReceived == null || isOlderThan(seq, highestSeqNumReceived)) {
             roc++
-            highestSeqNumReceived = seq
+            this.highestSeqNumReceived = seq
         }
         getIndex(seq, true)
     }
