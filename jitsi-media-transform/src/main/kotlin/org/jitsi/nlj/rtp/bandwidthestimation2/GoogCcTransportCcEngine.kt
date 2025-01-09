@@ -89,7 +89,7 @@ class GoogCcTransportCcEngine(
         val now = clock.instant()
         feedbackAdapter.addPacket(
             tccSeqNum,
-            DataSize.ZERO, // TODO: network overhead
+            length, // TODO: network overhead
             pacingInfo = null,
             creationTime = now
         )
