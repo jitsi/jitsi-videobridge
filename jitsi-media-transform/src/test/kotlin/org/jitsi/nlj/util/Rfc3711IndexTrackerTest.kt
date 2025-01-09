@@ -65,5 +65,14 @@ internal class Rfc3711IndexTrackerTest : ShouldSpec() {
                 }
             }
         }
+        context("resetting the index tracker") {
+            indexTracker.update(65000)
+            indexTracker.update(65001)
+            indexTracker.update(2)
+            indexTracker.resetAt(65002)
+            should("return the proper index") {
+                indexTracker.update(65002) shouldBe 2 * 0x1_0000 + 65002
+            }
+        }
     }
 }
