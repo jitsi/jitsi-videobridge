@@ -216,7 +216,7 @@
     <dependency>
       <groupId>io.sentry</groupId>
       <artifactId>sentry</artifactId>
-      <version>7.14.0</version>
+      <version>7.20.0</version>
       <scope>runtime</scope>
     </dependency>
     <!-- test -->
