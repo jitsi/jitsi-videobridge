@@ -200,11 +200,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         val nowMs = clock.instant().toEpochMilli()
         val allocation = bandwidthAllocator.allocation
         allocation.allocations.forEach { singleAllocation ->
-            val allocationTargetBitrate: Bandwidth? = if (config.useVlaTargetBitrate) {
-                singleAllocation.targetLayer?.targetBitrate ?: singleAllocation.targetLayer?.getBitrate(nowMs)
-            } else {
-                singleAllocation.targetLayer?.getBitrate(nowMs)
-            }
+            val allocationTargetBitrate: Bandwidth? = singleAllocation.targetLayer?.getBitrate(nowMs)
 
             allocationTargetBitrate?.let {
                 totalTargetBitrate += it
