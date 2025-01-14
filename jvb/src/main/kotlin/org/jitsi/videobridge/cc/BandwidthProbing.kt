@@ -18,10 +18,14 @@ package org.jitsi.videobridge.cc
 
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.nlj.util.BitrateTracker
+import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.utils.concurrent.PeriodicRunnable
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
+import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import org.jitsi.videobridge.cc.allocation.BitrateControllerStatusSnapshot
 import org.jitsi.videobridge.cc.config.BandwidthProbingConfig.Companion.config
 import org.json.simple.JSONObject
@@ -36,17 +40,27 @@ class BandwidthProbing(
     /**
      * The sequence number to use if probing with the JVB's SSRC.
      */
-    private var seqNum = Random.nextInt(0xFFFF)
+    private val seqNum = Random.nextInt(0xFFFF)
 
     /**
      * The RTP timestamp to use if probing with the JVB's SSRC.
      */
-    private var ts: Long = Random.nextInt().toPositiveLong()
+    private val ts: Long = Random.nextInt().toPositiveLong()
 
     /**
      * Whether or not probing is currently enabled
      */
     var enabled = false
+
+    private var lastTotalNeededBps = 0L
+    private var lastMaxPaddingBps = 0L
+    private var lastPaddingBps = 0L
+    private fun zeroStats() {
+        lastTotalNeededBps = 0
+        lastMaxPaddingBps = 0
+        lastPaddingBps = 0
+    }
+    private val probingBitrate = BitrateTracker(5.secs, 100.ms)
 
     /**
      * The number of bytes left over from one run of probing to the next.  This
@@ -67,6 +81,7 @@ class BandwidthProbing(
     override fun run() {
         super.run()
         if (!enabled) {
+            zeroStats()
             return
         }
 
@@ -80,17 +95,23 @@ class BandwidthProbing(
         if (totalNeededBps < 1) {
             // Don't need to send any probing.
             bytesLeftOver = 0
+            zeroStats()
             return
         }
 
         val latestBweCopy = latestBwe
         if (bitrateControllerStatus.currentIdealBps <= latestBweCopy) {
+            zeroStats()
             return
         }
 
         // How much padding can we afford?
         val maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps
         val paddingBps = totalNeededBps.coerceAtMost(maxPaddingBps)
+
+        lastTotalNeededBps = totalNeededBps
+        lastMaxPaddingBps = maxPaddingBps
+        lastPaddingBps = paddingBps
 
         var timeSeriesPoint: DiagnosticContext.TimeSeriesPoint? = null
         val newBytesNeeded = (config.paddingPeriodMs * paddingBps / 1000.0 / 8.0)
@@ -113,6 +134,7 @@ class BandwidthProbing(
 
         if (bytesNeeded >= 1) {
             val bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytesNeeded.toInt())
+            probingBitrate.update(bytesSent.bytes)
             bytesLeftOver = (bytesNeeded - bytesSent).coerceAtLeast(0.0).toInt()
             timeSeriesPoint?.addField("bytes_sent", bytesSent)?.addField("new_bytes_left_over", bytesLeftOver)
         } else {
@@ -129,6 +151,10 @@ class BandwidthProbing(
         put("ts", ts)
         put("enabled", enabled)
         put("latestBwe", latestBwe)
+        put("lastTotalNeededBps", lastTotalNeededBps)
+        put("lastMaxPaddingBps", lastMaxPaddingBps)
+        put("lastPaddingBps", lastPaddingBps)
+        put("probingBps", probingBitrate.getRateBps())
     }
 
     companion object {
