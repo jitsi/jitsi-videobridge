@@ -92,7 +92,7 @@ class BandwidthProbing(
 
         // How much padding do we need?
         val totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps
-        if (totalNeededBps < 1) {
+        if (totalNeededBps < 1 || !bitrateControllerStatus.hasNonIdealLayer) {
             // Don't need to send any probing.
             bytesLeftOver = 0
             zeroStats()

@@ -196,6 +196,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         var totalTargetBitrate = 0.bps
         var totalIdealBitrate = 0.bps
         val activeSsrcs = mutableSetOf<Long>()
+        var hasNonIdealLayer = false
 
         val nowMs = clock.instant().toEpochMilli()
         val allocation = bandwidthAllocator.allocation
@@ -216,6 +217,10 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             allocationIdealBitrate?.let {
                 totalIdealBitrate += it
             }
+
+            if (singleAllocation.idealLayer != null && singleAllocation.idealLayer != singleAllocation.targetLayer) {
+                hasNonIdealLayer = true
+            }
         }
 
         activeSsrcs.removeIf { it < 0 }
@@ -223,7 +228,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         return BitrateControllerStatusSnapshot(
             currentTargetBps = totalTargetBitrate.bps.toLong(),
             currentIdealBps = totalIdealBitrate.bps.toLong(),
-            activeSsrcs = activeSsrcs
+            activeSsrcs = activeSsrcs,
+            hasNonIdealLayer = hasNonIdealLayer
         )
     }
 
@@ -322,5 +328,6 @@ interface MediaSourceContainer {
 data class BitrateControllerStatusSnapshot(
     val currentTargetBps: Long = -1L,
     val currentIdealBps: Long = -1L,
-    val activeSsrcs: Collection<Long> = emptyList()
+    val activeSsrcs: Collection<Long> = emptyList(),
+    val hasNonIdealLayer: Boolean
 )
