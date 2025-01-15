@@ -174,7 +174,7 @@ class TransportFeedbackAdapter(
         var deltaSinceBase = Duration.ZERO
 
         feedback.forEach { report ->
-            val seqNum = seqNumUnwrapper.update(report.seqNum).toLong()
+            val seqNum = seqNumUnwrapper.interpret(report.seqNum).toLong()
 
             if (seqNum > lastAckSeqNum) {
                 // Starts at history_.begin() if last_ack_seq_num_ < 0, since any

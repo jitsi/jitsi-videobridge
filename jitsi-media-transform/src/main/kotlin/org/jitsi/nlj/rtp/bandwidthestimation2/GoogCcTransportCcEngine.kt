@@ -98,8 +98,11 @@ class GoogCcTransportCcEngine(
     @Synchronized
     override fun mediaPacketSent(tccSeqNum: Int, length: DataSize) {
         val now = clock.instant()
+        // We need to do sequence number unwrapping in the TransportFeedbackAdapter, so
+        // truncate it here so we can unwrap it again later.
+        val truncatedSeqNum = tccSeqNum and 0xFFFF
         val sentPacketInfo = SentPacketInfo(
-            packetId = tccSeqNum,
+            packetId = truncatedSeqNum,
             sendTime = now,
             info = PacketInfo(
                 // TODO I think these should always be true when tccSeqNum is defined?
