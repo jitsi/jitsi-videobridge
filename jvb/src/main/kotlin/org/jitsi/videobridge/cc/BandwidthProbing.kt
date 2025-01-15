@@ -20,7 +20,6 @@ import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bytes
-import org.jitsi.rtp.extensions.unsigned.toPositiveLong
 import org.jitsi.utils.concurrent.PeriodicRunnable
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -30,26 +29,13 @@ import org.jitsi.videobridge.cc.allocation.BitrateControllerStatusSnapshot
 import org.jitsi.videobridge.cc.config.BandwidthProbingConfig.Companion.config
 import org.json.simple.JSONObject
 import java.util.function.Supplier
-import kotlin.random.Random
 
 class BandwidthProbing(
     private val probingDataSender: ProbingDataSender,
     private val statusSnapshotSupplier: Supplier<BitrateControllerStatusSnapshot>
 ) : PeriodicRunnable(config.paddingPeriodMs), BandwidthEstimator.Listener {
 
-    /**
-     * The sequence number to use if probing with the JVB's SSRC.
-     */
-    private val seqNum = Random.nextInt(0xFFFF)
-
-    /**
-     * The RTP timestamp to use if probing with the JVB's SSRC.
-     */
-    private val ts: Long = Random.nextInt().toPositiveLong()
-
-    /**
-     * Whether or not probing is currently enabled
-     */
+    /** Whether or not probing is currently enabled */
     var enabled = false
 
     private var lastTotalNeededBps = 0L
@@ -147,8 +133,6 @@ class BandwidthProbing(
     }
 
     fun getDebugState(): JSONObject = JSONObject().apply {
-        put("seqNum", seqNum)
-        put("ts", ts)
         put("enabled", enabled)
         put("latestBwe", latestBwe)
         put("lastTotalNeededBps", lastTotalNeededBps)
