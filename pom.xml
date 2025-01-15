@@ -23,7 +23,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <jetty.version>11.0.21</jetty.version>
+        <jetty.version>11.0.24</jetty.version>
         <kotlin.version>2.0.0</kotlin.version>
         <kotest.version>5.9.1</kotest.version>
         <junit.version>5.10.2</junit.version>

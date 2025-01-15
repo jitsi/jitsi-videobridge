@@ -17,7 +17,7 @@
   <properties>
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
-    <slf4j.version>2.0.13</slf4j.version>
+    <slf4j.version>2.0.16</slf4j.version>
   </properties>
 
   <profiles>
@@ -216,7 +216,7 @@
     <dependency>
       <groupId>io.sentry</groupId>
       <artifactId>sentry</artifactId>
-      <version>7.14.0</version>
+      <version>7.20.0</version>
       <scope>runtime</scope>
     </dependency>
     <!-- test -->
