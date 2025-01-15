@@ -167,10 +167,14 @@ class GoogCcTransportCcEngine(
             listeners.forEach { it.bandwidthEstimationChanged(targetRate.targetRate) }
         }
         update.congestionWindow?.let { congestionWindow ->
-            logger.warn("TODO: GoogleCcEstimator wants to set CongestionWindow to $congestionWindow")
+            /* We don't use a congestion window */
+            /* TODO: does this do anything bad to the estimator? */
+            logger.info("GoogleCcEstimator wants to set CongestionWindow to $congestionWindow")
         }
         update.pacerConfig?.let { pacerConfig ->
-            logger.warn("TODO: GoogleCcEstimator wants to set PacerConfig to $pacerConfig")
+            /* We don't use a pacer */
+            /* TODO: does this do anything bad to the estimator? */
+            logger.info("GoogleCcEstimator wants to set PacerConfig to $pacerConfig")
         }
         update.probeClusterConfigs.let { configs ->
             if (configs.isNotEmpty()) {
