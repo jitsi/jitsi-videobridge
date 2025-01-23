@@ -90,7 +90,11 @@ class VlaReaderNode(
                                 layer.targetBitrate = targetBitrateKbps.kbps
                                 spatialLayer.res?.let { res ->
                                     if (layer.height > 0 && layer.height != res.height) {
-                                        logger.warn("Updating layer height from ${layer.height} to ${res.height}")
+                                        logger.info {
+                                            "Updating layer height for source ${sourceDesc.sourceName} " +
+                                                "encoding ${rtpEncoding.primarySSRC} layer ${layer.indexString()} " +
+                                                "from ${layer.height} to ${res.height}"
+                                        }
                                     }
                                     layer.height = res.height
                                     /* Presume 2:1 frame rate ratios for temporal layers */
