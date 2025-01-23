@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit
 class GoogCcTransportCcEngine(
     val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
-    val scheduledExecutor: ScheduledExecutorService,
+    private val scheduledExecutor: ScheduledExecutorService,
     val clock: Clock = Clock.systemUTC(),
 ) : TransportCcEngine() {
     private val logger = createChildLogger(parentLogger)
