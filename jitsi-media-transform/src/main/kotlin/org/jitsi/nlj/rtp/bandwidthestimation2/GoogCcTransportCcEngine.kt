@@ -51,6 +51,7 @@ class GoogCcTransportCcEngine(
             logger,
             diagnosticContext,
             constraints = TargetRateConstraints(
+                atTime = clock.instant(),
                 startingRate = BandwidthEstimatorConfig.initBw,
                 maxDataRate = GoogleCcEstimatorConfig.maxBw, // TODO: move these two to a generic config
                 minDataRate = GoogleCcEstimatorConfig.minBw
