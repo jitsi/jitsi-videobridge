@@ -242,18 +242,18 @@ class PacerConfig {
     }
 }
 
-class ProbeClusterConfig {
-    var atTime = Instant.MAX
-    var targetDataRate = Bandwidth.ZERO
+data class ProbeClusterConfig(
+    var atTime: Instant = Instant.MAX,
+    var targetDataRate: Bandwidth = Bandwidth.ZERO,
 
     // Duration of a probe.
-    var targetDuration = Duration.ZERO
+    var targetDuration: Duration = Duration.ZERO,
 
     // Delta time between sent bursts of packets during probe.
-    var minProbeDelta = 2.ms
-    var targetProbeCount = 0
-    var id = 0
-
+    var minProbeDelta: Duration = 2.ms,
+    var targetProbeCount: Int = 0,
+    var id: Int = 0
+) {
     /* Jitsi local */
     override fun toString(): String {
         return "atTime $atTime: ID=$id: DataRate $targetDataRate Duration $targetDuration " +

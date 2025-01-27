@@ -26,6 +26,7 @@ import org.jitsi.nlj.util.times
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration
@@ -139,7 +140,7 @@ class ProbeController(
     private val diagnosticContext: DiagnosticContext,
     private val config: ProbeControllerConfig = ProbeControllerConfig()
 ) {
-    private val logger = parentLogger.createChildLogger(javaClass.name)
+    private val logger = createChildLogger(parentLogger)
 
     private var networkAvailable = false
     private var repeatedInitialProbingEnabled = false
