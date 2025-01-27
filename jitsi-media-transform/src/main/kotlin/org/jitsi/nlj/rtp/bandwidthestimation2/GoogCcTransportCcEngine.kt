@@ -18,7 +18,9 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimatorConfig
+import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.utils.OrderedJsonObject
@@ -41,6 +43,7 @@ class GoogCcTransportCcEngine(
     val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
     private val scheduledExecutor: ScheduledExecutorService,
+    private val sendProbing: (DataSize, Any?) -> Int,
     val clock: Clock = Clock.systemUTC(),
 ) : TransportCcEngine() {
     private val logger = createChildLogger(parentLogger)
@@ -58,6 +61,8 @@ class GoogCcTransportCcEngine(
             )
         )
     )
+    private val bitrateProber = BitrateProber(logger)
+    private var probeTask: ScheduledFuture<*>? = null
 
     private var processTask: ScheduledFuture<*>? = null
 
@@ -86,14 +91,21 @@ class GoogCcTransportCcEngine(
     }
 
     @Synchronized
-    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize) {
+    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize, probingInfo: Any?) {
         val now = clock.instant()
+        val pacedPacketInfo = probingInfo as? PacedPacketInfo
         feedbackAdapter.addPacket(
             tccSeqNum,
             length, // TODO: network overhead
-            pacingInfo = null,
+            pacingInfo = pacedPacketInfo,
             creationTime = now
         )
+        synchronized(this@GoogCcTransportCcEngine) {
+            if (pacedPacketInfo == null) {
+                bitrateProber.onIncomingPacket(length)
+            }
+            maybeScheduleProbing(now)
+        }
     }
 
     @Synchronized
@@ -159,7 +171,12 @@ class GoogCcTransportCcEngine(
     }
 
     override fun stop() {
+        synchronized(this@GoogCcTransportCcEngine) {
+            // Stop bitrateProber from initiating any new probes
+            bitrateProber.setEnabled(false)
+        }
         processTask?.cancel(false)
+        probeTask?.cancel(false)
     }
 
     private fun processUpdate(update: NetworkControlUpdate) {
@@ -179,7 +196,13 @@ class GoogCcTransportCcEngine(
         }
         update.probeClusterConfigs.let { configs ->
             if (configs.isNotEmpty()) {
-                logger.warn("TODO: GoogleCcEstimator wants to set ${configs.size} ProbeClusterConfigs: $configs")
+                logger.info("GoogleCcEstimator creating ${configs.size} ProbeClusterConfigs: $configs")
+                synchronized(this@GoogCcTransportCcEngine) {
+                    configs.forEach { config ->
+                        bitrateProber.createProbeCluster(config)
+                    }
+                    maybeScheduleProbing(clock.instant())
+                }
             }
         }
 
@@ -193,6 +216,39 @@ class GoogCcTransportCcEngine(
             val updatePoint = diagnosticContext.makeTimeSeriesPoint("goog_cc_update", now)
             update.addToTimeSeriesPoint(updatePoint)
             timeSeriesLogger.trace(updatePoint)
+        }
+    }
+
+    /** Schedule bitrate probing if needed and not current scheduled.
+     *  Should be synchronized on this@GoogCcTransportCcEngine. */
+    private fun maybeScheduleProbing(now: Instant) {
+        if (bitrateProber.isProbing() && probeTask == null) {
+            val nextProbeTime = bitrateProber.nextProbeTime(now)
+            if (nextProbeTime == Instant.MAX) {
+                return
+            }
+            val delay = if (nextProbeTime == Instant.MIN) {
+                0
+            } else {
+                Duration.between(now, nextProbeTime).toMillis().coerceAtLeast(0)
+            }
+
+            scheduledExecutor.schedule({
+                val cluster: PacedPacketInfo
+                val probeSize: DataSize
+                synchronized(this@GoogCcTransportCcEngine) {
+                    probeTask = null
+                    val now = clock.instant()
+                    cluster = bitrateProber.currentCluster(now) ?: PacedPacketInfo()
+                    if (cluster.probeClusterId == kNotAProbe) {
+                        return@schedule
+                    }
+                    probeSize = bitrateProber.recommendedMinProbeSize()
+                    val probeSent = sendProbing(probeSize, cluster)
+                    bitrateProber.probeSent(now, probeSent.bytes)
+                    maybeScheduleProbing(now)
+                }
+            }, delay, TimeUnit.MILLISECONDS)
         }
     }
 

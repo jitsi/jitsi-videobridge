@@ -204,7 +204,7 @@ class ClassicTransportCcEngine(
         }
     }
 
-    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize) {
+    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize, probingInfo: Any?) {
         /* Nothing needs to be done */
     }
 

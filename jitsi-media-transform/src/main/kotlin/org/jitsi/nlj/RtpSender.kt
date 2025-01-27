@@ -36,7 +36,7 @@ abstract class RtpSender :
     NodeStatsProducer,
     EndpointConnectionStats.EndpointConnectionStatsListener {
 
-    abstract fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int
+    abstract fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int, probingInfo: Any?): Int
     abstract fun onOutgoingPacket(handler: PacketHandler)
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
     abstract fun getStreamStats(): OutgoingStatisticsSnapshot

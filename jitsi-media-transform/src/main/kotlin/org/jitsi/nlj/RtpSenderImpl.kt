@@ -115,7 +115,13 @@ class RtpSenderImpl(
                 ClassicTransportCcEngine(GoogleCcEstimator(diagnosticContext, logger), logger)
 
             BandwidthEstimatorEngine.GoogleCc2 ->
-                GoogCcTransportCcEngine(diagnosticContext, logger, backgroundExecutor)
+                GoogCcTransportCcEngine(diagnosticContext, logger, backgroundExecutor, { dataSize, probingData ->
+                    return@GoogCcTransportCcEngine probingDataSender.sendProbing(
+                        null,
+                        dataSize.bytes.toInt(),
+                        probingData
+                    )
+                })
         }
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
@@ -242,8 +248,8 @@ class RtpSenderImpl(
         }
     }
 
-    override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int =
-        probingDataSender.sendProbing(mediaSsrcs, numBytes)
+    override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int, probingInfo: Any?): Int =
+        probingDataSender.sendProbing(mediaSsrcs, numBytes, probingInfo)
 
     override fun onOutgoingPacket(handler: PacketHandler) {
         outgoingPacketHandler = handler

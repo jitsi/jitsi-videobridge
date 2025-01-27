@@ -141,6 +141,12 @@ open class PacketInfo @JvmOverloads constructor(
     var payloadVerification = if (enablePayloadVerification) packet.payloadVerification else null
 
     /**
+     * Information about whether this packet is used for probing by the transport-cc engine.
+     * The type is internal to that object.
+     */
+    var probingInfo: Any? = null
+
+    /**
      * Re-calculates the expected payload verification string. This should be called any time that the code
      * intentionally modifies the packet in a way that could change the verification string (for example, re-creates
      * it with a new type (parsing), or intentionally modifies the payload (SRTP)).
@@ -169,6 +175,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.endpointId = endpointId
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
+        clone.probingInfo = probingInfo
         @Suppress("UNCHECKED_CAST") // ArrayList.clone() really does return ArrayList, not Object.
         clone.onSentActions = onSentActions?.clone() as ArrayList<() -> Unit>?
         return clone
