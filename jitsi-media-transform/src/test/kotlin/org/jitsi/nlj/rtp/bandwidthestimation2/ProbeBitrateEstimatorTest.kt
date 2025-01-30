@@ -24,6 +24,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bytes
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import java.time.Instant
 
@@ -35,7 +37,7 @@ import java.time.Instant
  */
 class TestProbeBitrateEstimator {
     var measuredDataRate: Bandwidth? = null
-    val probeBitrateEstimator = ProbeBitrateEstimator()
+    val probeBitrateEstimator = ProbeBitrateEstimator(logger, diagnosticContext)
 
     // TODO(philipel): Use PacedPacketInfo when ProbeBitrateEstimator is rewritten
     //                 to use that information.
@@ -54,6 +56,11 @@ class TestProbeBitrateEstimator {
         feedback.sentPacket.pacingInfo = PacedPacketInfo(probeClusterId, minProbes, minBytes)
         feedback.receiveTime = kReferenceTime + arrivalTimeMs.ms
         measuredDataRate = probeBitrateEstimator.handleProbeAndEstimateBitrate(feedback)
+    }
+
+    companion object {
+        val logger = createLogger()
+        val diagnosticContext = DiagnosticContext()
     }
 }
 

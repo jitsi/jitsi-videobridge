@@ -172,7 +172,7 @@ class OneDelayBasedBweTest(parentLogger: Logger, diagnosticContext: DiagnosticCo
     val bitrateObserver = TestBitrateObserver()
     val acknowledgedBitrateEstimator: AcknowledgedBitrateEstimatorInterface =
         AcknowledgedBitrateEstimatorInterface.create()
-    val probeBitrateEstimator = ProbeBitrateEstimator()
+    val probeBitrateEstimator = ProbeBitrateEstimator(parentLogger, diagnosticContext)
     val bitrateEstimator = DelayBasedBwe(parentLogger, diagnosticContext)
     val streamGenerator = StreamGenerator(1e6.toLong(), clock.instant().toEpochMicro())
 

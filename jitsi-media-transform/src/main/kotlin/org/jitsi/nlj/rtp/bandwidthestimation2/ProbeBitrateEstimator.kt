@@ -23,7 +23,10 @@ import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.per
 import org.jitsi.nlj.util.times
-import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.secs
 import java.time.Duration
 import java.time.Instant
@@ -35,9 +38,12 @@ import java.util.*
  * Based on WebRTC modules/congestion_controller/goog_cc/probe_bitrate_estimator.{h,cc} in
  * WebRTC tag branch-heads/6613 (Chromium 128).
  */
-class ProbeBitrateEstimator {
+class ProbeBitrateEstimator(
+    parentLogger: Logger,
+    private val diagnosticContext: DiagnosticContext
+) {
     // TODO: pass parent logger in so we have log contexts
-    private val logger = createLogger()
+    private val logger = createChildLogger(parentLogger)
 
     private val clusters = TreeMap<Int, AggregatedCluster>()
 
@@ -130,7 +136,11 @@ class ProbeBitrateEstimator {
             check(sendRate > receiveRate)
             res = kTargetUtilizationFraction * receiveRate
         }
-        /* TODO: timeseries log */
+        timeSeriesLogger.trace(
+            diagnosticContext.makeTimeSeriesPoint("probe_result_success")
+                .addField("id", clusterId)
+                .addField("bitrate_bps", res.bps)
+        )
         estimatedDataRate = res
         return estimatedDataRate
     }
@@ -188,5 +198,7 @@ class ProbeBitrateEstimator {
         /* The maximum time interval between first and the last probe on a cluster
          * on the sender side as well as the receive side. */
         val kMaxProbeInterval = 1.secs
+
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(ProbeBitrateEstimator::class.java)
     }
 }

@@ -38,7 +38,6 @@ interface AcknowledgedBitrateEstimatorInterface {
         fun create(
             settings: RobustThroughputEstimatorSettings = RobustThroughputEstimatorSettings()
         ): AcknowledgedBitrateEstimatorInterface {
-            /* TODO: return RobustThroughputEstimator if requested? */
             if (settings.enabled) {
                 return RobustThroughputEstimator(settings)
             } else {

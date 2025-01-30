@@ -22,6 +22,7 @@ import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.toDoubleMillis
 import org.jitsi.nlj.util.toRoundedEpochMilli
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
@@ -42,7 +43,7 @@ class DelayBasedBwe(
     private val logger = parentLogger.createChildLogger(javaClass.name)
 
     private var interArrivalDelta: InterArrivalDelta? = null
-    val delayDetector: DelayIncreaseDetectorInterface = TrendlineEstimator()
+    val delayDetector: DelayIncreaseDetectorInterface = TrendlineEstimator(logger, diagnosticContext)
 
     private var lastSeenPacket: Instant = NEVER
 
@@ -184,7 +185,11 @@ class DelayBasedBwe(
             } else {
                 prevBitrate
             }
-            /** TODO: time series log: bitrate, atTime, detectorState */
+            timeSeriesLogger.trace(
+                diagnosticContext.makeTimeSeriesPoint("bwe_update_delay_based", atTime)
+                    .addField("bitrate_bps", bitrate.bps)
+                    .addField("detector_state", detectorState.name)
+            )
 
             prevBitrate = bitrate
             prevState = detectorState
@@ -233,6 +238,8 @@ class DelayBasedBwe(
     companion object {
         val kStreamTimeOut = 2.secs
         val kSendTimeGroupLength = 5.ms
+
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(DelayBasedBwe::class.java)
     }
 
     data class Result(

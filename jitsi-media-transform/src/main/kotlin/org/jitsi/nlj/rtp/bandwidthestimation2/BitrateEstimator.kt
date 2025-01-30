@@ -37,7 +37,7 @@ import kotlin.math.roundToInt
  * are considered to be more likely to have been caused by, e.g., delay spikes
  * unrelated to congestion.
  *
- * Based on WebRTC modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.{h,cc} in
+ * Based on WebRTC modules/congestion_controller/goog_cc/bitrate_estimator.{h,cc} in
  * WebRTC tag branch-heads/6613 (Chromium 128).
  */
 open class BitrateEstimator {
@@ -102,7 +102,6 @@ open class BitrateEstimator {
         bitrateEstimateKbps = max(bitrateEstimateKbps, estimateFloor.kbps.toFloat())
         bitrateEstimateVar = sampleVar * predBitrateEstimateVar /
             (sampleVar + predBitrateEstimateVar)
-        /* TODO: Timeseries logger: atTime, bitrateEstimateKbps * 1000 */
     }
 
     private fun updateWindow(nowMs: Long, bytes: Int, rateWindowMs: Int): Pair<Float, Boolean> {

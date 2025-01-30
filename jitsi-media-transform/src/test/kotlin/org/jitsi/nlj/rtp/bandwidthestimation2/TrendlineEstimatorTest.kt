@@ -19,6 +19,8 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging2.createLogger
 
 /**
  * Unit tests of TrendlineEstimator
@@ -37,7 +39,7 @@ class OneTrendlineEstimatorTest(
 
     var count = 1
 
-    val estimator = TrendlineEstimator()
+    val estimator = TrendlineEstimator(createLogger(), DiagnosticContext())
 
     fun runTestUntilStateChange() {
         check(count >= 1)

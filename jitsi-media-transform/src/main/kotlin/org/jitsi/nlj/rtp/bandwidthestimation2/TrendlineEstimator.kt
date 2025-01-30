@@ -18,6 +18,9 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
+import org.jitsi.utils.logging2.Logger
 import kotlin.collections.ArrayDeque
 import kotlin.math.abs
 import kotlin.math.min
@@ -28,7 +31,10 @@ import kotlin.math.min
  * Based on WebRTC modules/congestion_controller/goog_cc/trendline_estimator.{h,cc} in
  * WebRTC tag branch-heads/6613 (Chromium 128).
  */
-class TrendlineEstimator : DelayIncreaseDetectorInterface {
+class TrendlineEstimator(
+    parentLogger: Logger,
+    private val diagnosticContext: DiagnosticContext
+) : DelayIncreaseDetectorInterface {
     private val settings = TrendlineEstimatorSettings()
 
     // Parameters
@@ -116,7 +122,11 @@ class TrendlineEstimator : DelayIncreaseDetectorInterface {
                 }
             }
         }
-        // TODO: timeseries logger: arrivalTimeMs, accumulatedDelay, smoothedDelay, trend
+        timeSeriesLogger.trace(
+            diagnosticContext.makeTimeSeriesPoint("trendline_updated")
+                .addField("accumulated_delay_ms", accumulatedDelay)
+                .addField("smoothed_delay_ms", smoothedDelay)
+        )
 
         detect(trend, sendDeltaMs, arrivalTimeMs)
     }
@@ -153,6 +163,11 @@ class TrendlineEstimator : DelayIncreaseDetectorInterface {
         }
         val modifiedTrend = min(numOfDeltas, kMinNumDeltas) * trend * thresholdGain
         prevModifiedTrend = modifiedTrend
+        timeSeriesLogger.trace(
+            diagnosticContext.makeTimeSeriesPoint("trendline_detect", nowMs)
+                .addField("trend", modifiedTrend)
+                .addField("threshold", threshold)
+        )
         if (modifiedTrend > threshold) {
             if (timeOverUsing == -1.0) {
                 // Initialize the timer. Assume that we've been
@@ -216,6 +231,8 @@ class TrendlineEstimator : DelayIncreaseDetectorInterface {
         const val kOverusingTimeThreshold = 10.0
         const val kMinNumDeltas = 60
         const val kDeltaCounterMax = 1000
+
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(TrendlineEstimator::class.java)
     }
 }
 
