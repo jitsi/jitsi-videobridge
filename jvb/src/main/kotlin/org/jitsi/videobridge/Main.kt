@@ -78,7 +78,7 @@ fun main() {
     // properties were set.
     JitsiConfig.reloadNewConfig()
 
-    logger.info("Starting jitsi-videobridge version ${JvbVersionService.instance.currentVersion}")
+    logger.info("[Gracetech] Starting jitsi-videobridge version ${JvbVersionService.instance.currentVersion}")
 
     UlimitCheck.printUlimits()
     startIce4j()
