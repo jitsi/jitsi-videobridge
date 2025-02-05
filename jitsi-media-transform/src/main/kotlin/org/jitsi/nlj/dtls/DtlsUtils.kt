@@ -114,7 +114,11 @@ class DtlsUtils {
                 subject,
                 keyPair.public
             )
-            val signer = JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
+            val signer = if (config.useNoSignatureSigner) {
+                NoSignatureSigner()
+            } else {
+                JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
+            }
 
             return certBuilder.build(signer).toASN1Structure()
         }
