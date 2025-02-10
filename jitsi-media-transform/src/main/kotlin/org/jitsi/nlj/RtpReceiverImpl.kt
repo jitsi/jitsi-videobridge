@@ -125,7 +125,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val silenceDiscarder = DiscardableDiscarder("Silence discarder", false)
     private val paddingOnlyDiscarder = DiscardableDiscarder("Padding-only discarder", true)
     private val statsTracker = IncomingStatisticsTracker(streamInformationStore)
-    private val packetStreamStats = PacketStreamStatsNode()
+    private val packetStreamStats = PacketStreamStatsNode(diagnosticContext, "receive")
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statsTracker) {
         remoteBandwidthEstimator.createRemb()?.let {
             listOf(it)
