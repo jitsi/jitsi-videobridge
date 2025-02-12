@@ -110,7 +110,7 @@ fun main() {
         JvbVersionService.instance.currentVersion,
         Clock.systemUTC()
     )
-    val videobridgeExpireThread = VideobridgeExpireThread(videobridge)
+    val videobridgeExpireThread = VideobridgeExpireThread(videobridge).apply { start() }
     Metrics.metricsUpdater.addUpdateTask {
         VideobridgePeriodicMetrics.update(videobridge)
     }

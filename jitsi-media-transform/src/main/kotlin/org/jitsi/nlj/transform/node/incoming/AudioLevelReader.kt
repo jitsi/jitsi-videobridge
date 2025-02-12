@@ -73,7 +73,7 @@ class AudioLevelReader(
                     val silence = level == MUTED_LEVEL
 
                     if (!silence) stats.nonSilence(AudioLevelHeaderExtension.getVad(ext))
-                    if (silence && forwardedSilencePackets > forwardedSilencePacketsLimit) {
+                    if (silence && discardSilence && forwardedSilencePackets > forwardedSilencePacketsLimit) {
                         packetInfo.shouldDiscard = true
                         stats.discardedSilence()
                     } else if (this@AudioLevelReader.forceMute) {
@@ -110,6 +110,9 @@ class AudioLevelReader(
         const val MUTED_LEVEL = 127
         private val forwardedSilencePacketsLimit: Int by config {
             "jmt.audio.level.forwarded-silence-packets-limit".from(JitsiConfig.newConfig)
+        }
+        private val discardSilence: Boolean by config {
+            "jmt.audio.level.discard-silence".from(JitsiConfig.newConfig)
         }
     }
 }
