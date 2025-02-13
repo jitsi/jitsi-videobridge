@@ -255,7 +255,7 @@ class GoogCcTransportCcEngine(
     companion object {
         private val factory = GoogCcNetworkControllerFactory()
 
-        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(GoogCcNetworkController::class.java)
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(GoogCcTransportCcEngine::class.java)
     }
 
     class StatisticsSnapshot(
