@@ -83,6 +83,7 @@ class GoogCcTransportCcEngine(
             val now = clock.instant()
             val feedback = feedbackAdapter.processTransportFeedback(rtcpPacket, now)
             if (feedback != null) {
+                // TODO: feed lossListeners with loss events
                 val update = networkController.onTransportPacketsFeedback(feedback)
                 processUpdate(update)
             }
