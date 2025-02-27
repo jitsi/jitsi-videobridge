@@ -187,7 +187,9 @@ class TransportFeedbackAdapter(
 
             val packetFeedback = history[seqNum]
             if (packetFeedback == null) {
-                logger.debug("No history entry found for seqNum $seqNum")
+                logger.debug {
+                    "No history entry found for seqNum $seqNum with ${report.javaClass.simpleName}"
+                }
                 ++failedLookups
                 return@forEach
             }
@@ -195,7 +197,10 @@ class TransportFeedbackAdapter(
             if (packetFeedback.sent.sendTime.isInfinite()) {
                 // TODO(srte): Fix the tests that makes this happen and make this a
                 //  DCHECK.
-                logger.error("Received feedback before packet was indicated as sent")
+                logger.error(
+                    "Received feedback with ${report.javaClass.simpleName} " +
+                        "before packet with seqNum $seqNum was indicated as sent"
+                )
                 return@forEach
             }
 
