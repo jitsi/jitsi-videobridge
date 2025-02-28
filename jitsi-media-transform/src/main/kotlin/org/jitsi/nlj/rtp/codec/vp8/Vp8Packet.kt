@@ -166,7 +166,7 @@ class Vp8Packet private constructor(
             height = height,
             pictureId = pictureId,
             TL0PICIDX = TL0PICIDX
-        )
+        ).also { postClone(it) }
     }
 
     companion object {

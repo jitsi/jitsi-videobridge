@@ -211,7 +211,7 @@ class Vp9Packet private constructor(
             encodingId = encodingId,
             pictureId = pictureId,
             TL0PICIDX = TL0PICIDX
-        )
+        ).also { postClone(it) }
     }
 
     companion object {
