@@ -27,5 +27,5 @@ open class AudioRtpPacket(
         cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
         BYTES_TO_LEAVE_AT_START_OF_PACKET,
         length
-    )
+    ).also { postClone(it) }
 }

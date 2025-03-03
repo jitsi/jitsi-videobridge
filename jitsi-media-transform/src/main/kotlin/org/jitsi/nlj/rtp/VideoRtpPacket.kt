@@ -43,6 +43,6 @@ open class VideoRtpPacket @JvmOverloads constructor(
             BYTES_TO_LEAVE_AT_START_OF_PACKET,
             length,
             encodingId = encodingId
-        )
+        ).also { postClone(it) }
     }
 }
