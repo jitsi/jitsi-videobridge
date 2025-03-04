@@ -96,15 +96,17 @@ class Av1DDFrameProjection internal constructor(
         diagnosticContext: DiagnosticContext,
         ssrc: Long,
         sequenceNumberDelta: Int,
-        timestamp: Long
+        timestamp: Long,
+        frameNumber: Int?,
+        templateId: Int?
     ) : this(
         diagnosticContext = diagnosticContext,
         av1Frame = null,
         ssrc = ssrc,
         timestamp = timestamp,
         sequenceNumberDelta = sequenceNumberDelta,
-        frameNumber = 0,
-        templateIdDelta = 0,
+        frameNumber = frameNumber ?: 0,
+        templateIdDelta = templateId ?: -1,
         dti = null,
         mark = false,
         created = null
@@ -229,6 +231,9 @@ class Av1DDFrameProjection internal constructor(
      * Get the next template ID that would come after the template IDs in this projection's structure
      */
     fun getNextTemplateId(): Int? {
+        if (av1Frame == null && templateIdDelta != -1) {
+            return templateIdDelta
+        }
         return av1Frame?.structure?.let { rewriteTemplateId(it.templateIdOffset + it.templateCount) }
     }
 

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.rtcp.*;
 import org.json.simple.*;
@@ -78,6 +79,17 @@ public interface AdaptiveSourceProjectionContext
      * timestamp and other RTP-level details.
      */
     RtpState getRtpState();
+
+    /**
+     * @return Persistent state, if any, that should be associated with this
+     * particular projection context type, so that when it comes back it can
+     * resume data, if necessary.
+     */
+    @Nullable
+    default Object getPersistentState()
+    {
+        return null;
+    }
 
     /**
      * Gets a JSON representation of the parts of this object's state that
