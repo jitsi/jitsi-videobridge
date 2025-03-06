@@ -81,12 +81,16 @@ class RtpState {
     var lastSequenceNumber = 0
     var lastTimestamp = 0L
     var codecState: CodecState? = null
+    var av1PersistentState: CodecState? = null // TODO? Generalize if needed in the future
     var valid = false
 
     fun update(packet: RtpPacket) {
         lastSequenceNumber = packet.sequenceNumber
         lastTimestamp = packet.timestamp
         codecState = packet.getCodecState()
+        if (packet is Av1DDPacket) {
+            av1PersistentState = codecState
+        }
         valid = true
     }
 
@@ -136,7 +140,9 @@ class SendSsrc(val ssrc: Long) {
                             RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, recv.state.lastSequenceNumber)
                         timestampDelta =
                             RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
-                        codecDeltas = state.codecState?.getDeltas(recv.state.codecState)
+                        codecDeltas = state.codecState?.getDeltas(
+                            recv.state.codecState
+                        )
                     } else {
                         val prevSequenceNumber =
                             RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1)
@@ -150,6 +156,10 @@ class SendSsrc(val ssrc: Long) {
                     }
                 }
                 recv.hasDeltas = true
+            }
+
+            if (packet is Av1DDPacket && state.codecState !is Av1DDCodecState && state.av1PersistentState != null) {
+                codecDeltas = state.av1PersistentState?.getDeltas(packet)
             }
 
             recv.state.update(packet)
