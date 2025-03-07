@@ -323,7 +323,7 @@ public class AdaptiveSourceProjection
                 logger.warn("Got unexpected context persistent state from class " +
                         context.getClass().getSimpleName());
             }
-            persistentStates.put(context.getClass(), context);
+            persistentStates.put(context.getClass(), state);
         }
         else if (persistentStates.get(context.getClass()) != null)
         {
