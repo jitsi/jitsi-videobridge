@@ -635,7 +635,11 @@ private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
         if (packet !is Vp9Packet) {
             return null
         }
-        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+        val tl0IndexDelta = if (packet.hasTL0PICIDX) {
+            VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+        } else {
+            0
+        }
         return Vp9CodecDeltas(tl0IndexDelta)
     }
 
@@ -645,7 +649,9 @@ private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
 private class Vp9CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
     override fun rewritePacket(packet: RtpPacket) {
         require(packet is Vp9Packet)
-        packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
+        if (packet.hasTL0PICIDX) {
+            packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
+        }
     }
 
     override fun toString() = "[VP9 TL0Idx]$tl0IndexDelta"
