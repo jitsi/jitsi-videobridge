@@ -431,7 +431,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
                 notifyMappings(remappings)
             }
         } catch (e: Exception) {
-            logger.error("Error rewriting SSRC", e)
+            logger.error("Error rewriting SSRC, packet $packet", e)
             send = false
         }
 
@@ -613,7 +613,9 @@ private class Vp8CodecState(val lastTl0Index: Int) : CodecState {
 
 private class Vp8CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
     override fun rewritePacket(packet: RtpPacket) {
-        require(packet is Vp8Packet)
+        if (packet !is Vp8Packet) {
+            return
+        }
         packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
     }
 
@@ -648,7 +650,9 @@ private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
 
 private class Vp9CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
     override fun rewritePacket(packet: RtpPacket) {
-        require(packet is Vp9Packet)
+        if (packet !is Vp9Packet) {
+            return
+        }
         if (packet.hasTL0PICIDX) {
             packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
         }
@@ -691,11 +695,16 @@ private class Av1DDCodecState : CodecState {
         val templateIdDelta = getTemplateIdDelta(lastTemplateIdx, packetLastTemplateIdx - 1)
         return Av1DDCodecDeltas(frameNumDelta, templateIdDelta)
     }
+
+    override fun toString() = "[Av1DD FrameNum]$lastFrameNum [Av1DD TemplateIdx]$lastTemplateIdx"
 }
 
 private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int) : CodecDeltas {
     override fun rewritePacket(packet: RtpPacket) {
-        require(packet is Av1DDPacket)
+        if (packet !is Av1DDPacket) {
+            return
+        }
+
         val descriptor = packet.descriptor
         requireNotNull(descriptor)
 
