@@ -651,7 +651,7 @@ private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
             return null
         }
         val tl0IndexDelta = if (packet.hasTL0PICIDX) {
-            val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(
+            VpxUtils.getTl0PicIdxDelta(
                 lastTl0Index,
                 VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, -1)
             )
