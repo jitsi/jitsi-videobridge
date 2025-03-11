@@ -614,7 +614,10 @@ private class Vp8CodecState(val lastTl0Index: Int) : CodecState {
         if (packet !is Vp8Packet) {
             return null
         }
-        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(
+            lastTl0Index,
+            VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, -1)
+        )
         return Vp8CodecDeltas(tl0IndexDelta)
     }
 
@@ -648,7 +651,10 @@ private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
             return null
         }
         val tl0IndexDelta = if (packet.hasTL0PICIDX) {
-            VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+            val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(
+                lastTl0Index,
+                VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, -1)
+            )
         } else {
             0
         }
@@ -673,17 +679,17 @@ private class Vp9CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
 
 private class Av1DDCodecState : CodecState {
     val lastFrameNum: Int
-    val lastTemplateIdx: Int
+    val nextTemplateIdx: Int
     constructor(lastFrameNum: Int, lastTemplateIdx: Int) {
         this.lastFrameNum = lastFrameNum
-        this.lastTemplateIdx = lastTemplateIdx
+        this.nextTemplateIdx = lastTemplateIdx
     }
 
     constructor(packet: Av1DDPacket) {
         val descriptor = packet.descriptor
         requireNotNull(descriptor) { "AV1 Packet being routed must have non-null descriptor" }
         this.lastFrameNum = packet.frameNumber
-        this.lastTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
+        this.nextTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
     }
 
     override fun getDeltas(otherState: CodecState?): CodecDeltas? {
@@ -691,7 +697,7 @@ private class Av1DDCodecState : CodecState {
             return null
         }
         val frameNumDelta = RtpUtils.getSequenceNumberDelta(lastFrameNum, otherState.lastFrameNum)
-        val templateIdDelta = getTemplateIdDelta(lastTemplateIdx, otherState.lastTemplateIdx)
+        val templateIdDelta = getTemplateIdDelta(nextTemplateIdx, otherState.nextTemplateIdx)
         return Av1DDCodecDeltas(frameNumDelta, templateIdDelta)
     }
 
@@ -700,13 +706,15 @@ private class Av1DDCodecState : CodecState {
             return null
         }
         val descriptor = packet.descriptor ?: return null
-        val frameNumDelta = RtpUtils.getSequenceNumberDelta(lastFrameNum, packet.frameNumber - 1)
-        val packetLastTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
-        val templateIdDelta = getTemplateIdDelta(lastTemplateIdx, packetLastTemplateIdx - 1)
+        val frameNumDelta = RtpUtils.getSequenceNumberDelta(
+            lastFrameNum,
+            RtpUtils.applySequenceNumberDelta(packet.frameNumber, -1)
+        )
+        val templateIdDelta = getTemplateIdDelta(nextTemplateIdx, descriptor.structure.templateIdOffset)
         return Av1DDCodecDeltas(frameNumDelta, templateIdDelta)
     }
 
-    override fun toString() = "[Av1DD FrameNum]$lastFrameNum [Av1DD TemplateIdx]$lastTemplateIdx"
+    override fun toString() = "[Av1DD FrameNum]$lastFrameNum [Av1DD TemplateIdx]$nextTemplateIdx"
 }
 
 private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int) : CodecDeltas {
