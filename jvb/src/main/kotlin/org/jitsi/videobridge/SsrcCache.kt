@@ -81,12 +81,16 @@ class RtpState {
     var lastSequenceNumber = 0
     var lastTimestamp = 0L
     var codecState: CodecState? = null
+    var av1PersistentState: CodecState? = null // TODO? Generalize if needed in the future
     var valid = false
 
     fun update(packet: RtpPacket) {
         lastSequenceNumber = packet.sequenceNumber
         lastTimestamp = packet.timestamp
         codecState = packet.getCodecState()
+        if (packet is Av1DDPacket) {
+            av1PersistentState = codecState
+        }
         valid = true
     }
 
@@ -136,7 +140,9 @@ class SendSsrc(val ssrc: Long) {
                             RtpUtils.getSequenceNumberDelta(state.lastSequenceNumber, recv.state.lastSequenceNumber)
                         timestampDelta =
                             RtpUtils.getTimestampDiff(state.lastTimestamp, recv.state.lastTimestamp)
-                        codecDeltas = state.codecState?.getDeltas(recv.state.codecState)
+                        codecDeltas = state.codecState?.getDeltas(
+                            recv.state.codecState
+                        )
                     } else {
                         val prevSequenceNumber =
                             RtpUtils.applySequenceNumberDelta(packet.sequenceNumber, -1)
@@ -150,6 +156,10 @@ class SendSsrc(val ssrc: Long) {
                     }
                 }
                 recv.hasDeltas = true
+            }
+
+            if (packet is Av1DDPacket && state.codecState !is Av1DDCodecState && state.av1PersistentState != null) {
+                codecDeltas = state.av1PersistentState?.getDeltas(packet)
             }
 
             recv.state.update(packet)
@@ -431,7 +441,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
                 notifyMappings(remappings)
             }
         } catch (e: Exception) {
-            logger.error("Error rewriting SSRC", e)
+            logger.error("Error rewriting SSRC, packet $packet", e)
             send = false
         }
 
@@ -604,7 +614,10 @@ private class Vp8CodecState(val lastTl0Index: Int) : CodecState {
         if (packet !is Vp8Packet) {
             return null
         }
-        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(
+            lastTl0Index,
+            VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, -1)
+        )
         return Vp8CodecDeltas(tl0IndexDelta)
     }
 
@@ -613,7 +626,9 @@ private class Vp8CodecState(val lastTl0Index: Int) : CodecState {
 
 private class Vp8CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
     override fun rewritePacket(packet: RtpPacket) {
-        require(packet is Vp8Packet)
+        if (packet !is Vp8Packet) {
+            return
+        }
         packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
     }
 
@@ -635,7 +650,14 @@ private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
         if (packet !is Vp9Packet) {
             return null
         }
-        val tl0IndexDelta = VpxUtils.getTl0PicIdxDelta(lastTl0Index, (packet.TL0PICIDX - 1))
+        val tl0IndexDelta = if (packet.hasTL0PICIDX) {
+            VpxUtils.getTl0PicIdxDelta(
+                lastTl0Index,
+                VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, -1)
+            )
+        } else {
+            0
+        }
         return Vp9CodecDeltas(tl0IndexDelta)
     }
 
@@ -644,8 +666,12 @@ private class Vp9CodecState(val lastTl0Index: Int) : CodecState {
 
 private class Vp9CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
     override fun rewritePacket(packet: RtpPacket) {
-        require(packet is Vp9Packet)
-        packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
+        if (packet !is Vp9Packet) {
+            return
+        }
+        if (packet.hasTL0PICIDX) {
+            packet.TL0PICIDX = VpxUtils.applyTl0PicIdxDelta(packet.TL0PICIDX, tl0IndexDelta)
+        }
     }
 
     override fun toString() = "[VP9 TL0Idx]$tl0IndexDelta"
@@ -653,17 +679,17 @@ private class Vp9CodecDeltas(val tl0IndexDelta: Int) : CodecDeltas {
 
 private class Av1DDCodecState : CodecState {
     val lastFrameNum: Int
-    val lastTemplateIdx: Int
+    val nextTemplateIdx: Int
     constructor(lastFrameNum: Int, lastTemplateIdx: Int) {
         this.lastFrameNum = lastFrameNum
-        this.lastTemplateIdx = lastTemplateIdx
+        this.nextTemplateIdx = lastTemplateIdx
     }
 
     constructor(packet: Av1DDPacket) {
         val descriptor = packet.descriptor
         requireNotNull(descriptor) { "AV1 Packet being routed must have non-null descriptor" }
         this.lastFrameNum = packet.frameNumber
-        this.lastTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
+        this.nextTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
     }
 
     override fun getDeltas(otherState: CodecState?): CodecDeltas? {
@@ -671,7 +697,7 @@ private class Av1DDCodecState : CodecState {
             return null
         }
         val frameNumDelta = RtpUtils.getSequenceNumberDelta(lastFrameNum, otherState.lastFrameNum)
-        val templateIdDelta = getTemplateIdDelta(lastTemplateIdx, otherState.lastTemplateIdx)
+        val templateIdDelta = getTemplateIdDelta(nextTemplateIdx, otherState.nextTemplateIdx)
         return Av1DDCodecDeltas(frameNumDelta, templateIdDelta)
     }
 
@@ -680,16 +706,23 @@ private class Av1DDCodecState : CodecState {
             return null
         }
         val descriptor = packet.descriptor ?: return null
-        val frameNumDelta = RtpUtils.getSequenceNumberDelta(lastFrameNum, packet.frameNumber - 1)
-        val packetLastTemplateIdx = descriptor.structure.templateIdOffset + descriptor.structure.templateCount
-        val templateIdDelta = getTemplateIdDelta(lastTemplateIdx, packetLastTemplateIdx - 1)
+        val frameNumDelta = RtpUtils.getSequenceNumberDelta(
+            lastFrameNum,
+            RtpUtils.applySequenceNumberDelta(packet.frameNumber, -1)
+        )
+        val templateIdDelta = getTemplateIdDelta(nextTemplateIdx, descriptor.structure.templateIdOffset)
         return Av1DDCodecDeltas(frameNumDelta, templateIdDelta)
     }
+
+    override fun toString() = "[Av1DD FrameNum]$lastFrameNum [Av1DD TemplateIdx]$nextTemplateIdx"
 }
 
 private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int) : CodecDeltas {
     override fun rewritePacket(packet: RtpPacket) {
-        require(packet is Av1DDPacket)
+        if (packet !is Av1DDPacket) {
+            return
+        }
+
         val descriptor = packet.descriptor
         requireNotNull(descriptor)
 
