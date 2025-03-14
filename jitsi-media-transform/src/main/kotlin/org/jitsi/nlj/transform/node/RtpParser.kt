@@ -41,6 +41,7 @@ class RtpParser(
             logger.cdebug { "Unknown payload type: $payloadTypeNumber" }
             return null
         }
+        packetInfo.payloadType = payloadType
 
         val rtpPacket = when (payloadType.mediaType) {
             MediaType.AUDIO -> try {
