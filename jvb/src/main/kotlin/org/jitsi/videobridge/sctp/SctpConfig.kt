@@ -24,12 +24,6 @@ class SctpConfig private constructor() {
     val enabled: Boolean by config { "videobridge.sctp.enabled".from(JitsiConfig.newConfig) }
     fun enabled() = enabled
 
-    /**
-     * If [enabled], whether to use the usrsctp based implementation. Otherwise, the new dcsctp implementation will be
-     * used.
-     */
-    val useUsrSctp: Boolean by config { "videobridge.sctp.use-usrsctp".from(JitsiConfig.newConfig) }
-
     companion object {
         @JvmField
         val config = SctpConfig()
