@@ -425,13 +425,13 @@ class Relay @JvmOverloads constructor(
             ) {
                 logger.info("DTLS handshake complete")
                 setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
+                scheduleRelayMessageTransportTimeout()
                 if (sctpConfig.enabled && sctpConfig.useUsrSctp) {
                     when (val socket = sctpSocket) {
                         is SctpClientSocket -> connectUsrSctpConnection(socket)
                         is SctpServerSocket -> acceptUsrSctpConnection(socket)
                         else -> Unit
                     }
-                    scheduleRelayMessageTransportTimeout()
                 } else if (sctpConfig.enabled) {
                     if (sctpRole == Sctp.Role.CLIENT) {
                         sctpTransport!!.connect()
