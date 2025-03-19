@@ -23,6 +23,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import java.lang.Integer.max
 import java.time.Clock
@@ -44,8 +45,12 @@ internal class SingleSourceAllocation(
     private val onStage: Boolean,
     diagnosticContext: DiagnosticContext,
     clock: Clock,
-    val logger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
+    parentLogger: Logger = LoggerImpl(SingleSourceAllocation::class.qualifiedName)
 ) {
+    val logger = createChildLogger(parentLogger).apply {
+        addContext(mapOf("remote_endpoint_id" to endpointId))
+    }
+
     /**
      * The immutable list of layers to be considered when allocating bandwidth.
      */
@@ -69,7 +74,6 @@ internal class SingleSourceAllocation(
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint)
         }
-        logger.addContext(mapOf("remote_endpoint_id" to endpointId))
     }
 
     fun isOnStage() = onStage
