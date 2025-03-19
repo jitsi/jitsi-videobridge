@@ -88,7 +88,7 @@ case "$1" in
             HOSTNAME=localhost
             DOMAIN=\"auth.$JVB_HOSTNAME\"
             USERNAME=jvb
-            PASSWORD=$JVB_SECRET
+            PASSWORD=\"$JVB_SECRET\"
             MUC_JIDS=\"jvbbrewery@internal.auth.$JVB_HOSTNAME\"
             MUC_NICKNAME=$(uuidgen)
         }
