@@ -348,7 +348,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun tearDown() {
-        logger.info("Tearing down")
+        logger.debug("Tearing down")
         NodeTeardownVisitor().visit(inputTreeRoot)
         incomingPacketQueue.close()
         toggleablePcapWriter.disable()

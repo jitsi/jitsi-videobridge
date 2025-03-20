@@ -366,7 +366,7 @@ class Transceiver(
     }
 
     fun teardown() {
-        logger.info("Tearing down")
+        logger.debug("Tearing down")
         rtpReceiver.tearDown()
         rtpSender.tearDown()
     }

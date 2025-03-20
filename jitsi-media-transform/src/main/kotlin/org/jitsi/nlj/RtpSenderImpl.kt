@@ -329,7 +329,7 @@ class RtpSenderImpl(
     }
 
     override fun tearDown() {
-        logger.info("Tearing down")
+        logger.debug("Tearing down")
         NodeTeardownVisitor().reverseVisit(outputPipelineTerminationNode)
         incomingPacketQueue.close()
         toggleablePcapWriter.disable()

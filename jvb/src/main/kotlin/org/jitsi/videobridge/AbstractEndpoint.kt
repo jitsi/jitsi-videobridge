@@ -179,7 +179,7 @@ abstract class AbstractEndpoint protected constructor(
      * Expires this [AbstractEndpoint].
      */
     open fun expire() {
-        logger.info("Expiring.")
+        logger.debug("Expiring.")
         isExpired = true
         conference.endpointExpired(this)
     }

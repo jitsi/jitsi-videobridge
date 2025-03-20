@@ -59,7 +59,7 @@ public class DataChannelStack
         DataChannelMessage message = DataChannelProtocolMessageParser.parse(data.array(), ppid);
         if (message instanceof OpenChannelMessage)
         {
-            logger.info("Received data channel open message");
+            logger.debug("Received data channel open message");
             OpenChannelMessage openChannelMessage = (OpenChannelMessage)message;
             // Remote side wants to open a channel
             DataChannel dataChannel = new RemotelyOpenedDataChannel(
