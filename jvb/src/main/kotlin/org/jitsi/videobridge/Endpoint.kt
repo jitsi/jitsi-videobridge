@@ -371,9 +371,9 @@ class Endpoint @JvmOverloads constructor(
             object : PeriodicRunnable(ConnectionStatsConfig.interval.toMillis()) {
                 override fun run() {
                     synchronized(this@Endpoint) {
-                        latestBandwidth?.let { bandwidth ->
-                            sendMessage(ConnectionStats(bandwidth.bps))
-                        }
+                        latestBandwidth
+                    }?.let { bandwidth ->
+                        sendMessage(ConnectionStats(bandwidth.bps))
                     }
                 }
             }.also {
