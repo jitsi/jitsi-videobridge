@@ -207,13 +207,13 @@ class IceTransport @JvmOverloads constructor(
             // local peer, do not really start the connectivity establishment
             // until we have at least one remote candidate per ICE Component.
             if (iceComponent.remoteCandidateCount > 0) {
-                logger.info("Starting the agent with remote candidates.")
+                logger.debug("Starting the agent with remote candidates.")
                 iceAgent.startConnectivityEstablishment()
             }
         } else if (iceStream.remoteUfragAndPasswordKnown()) {
             // We don't have any remote candidates, but we already know the
             // remote ufrag and password, so we can start ICE.
-            logger.info("Starting the Agent without remote candidates.")
+            logger.debug("Starting the Agent without remote candidates.")
             iceAgent.startConnectivityEstablishment()
         } else {
             logger.cdebug { "Not starting ICE, no ufrag and pwd yet. ${transportPacketExtension.toStringOpt()}" }
@@ -366,7 +366,7 @@ class IceTransport @JvmOverloads constructor(
         val newState = ev.newValue as IceProcessingState
         val transition = IceProcessingStateTransition(oldState, newState)
 
-        logger.info("ICE state changed old=$oldState new=$newState")
+        logger.debug("ICE state changed old=$oldState new=$newState")
 
         when {
             transition.completed() -> {
