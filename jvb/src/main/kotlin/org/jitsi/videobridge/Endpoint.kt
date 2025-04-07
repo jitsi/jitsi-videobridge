@@ -370,11 +370,8 @@ class Endpoint @JvmOverloads constructor(
         if (ConnectionStatsConfig.enabled) {
             object : PeriodicRunnable(ConnectionStatsConfig.interval.toMillis()) {
                 override fun run() {
-                    synchronized(this@Endpoint) {
-                        latestBandwidth
-                    }?.let { bandwidth ->
-                        sendMessage(ConnectionStats(bandwidth.bps))
-                    }
+                    super.run()
+                    latestBandwidth?.let { sendMessage(ConnectionStats(it.bps)) }
                 }
             }.also {
                 recurringRunnableExecutor.registerRecurringRunnable(it)
@@ -1213,9 +1210,7 @@ class Endpoint @JvmOverloads constructor(
          */
         override fun bandwidthEstimationChanged(newValue: Bandwidth) {
             logger.cdebug { "Estimated bandwidth is now $newValue" }
-            synchronized(this@Endpoint) {
-                latestBandwidth = newValue
-            }
+            latestBandwidth = newValue
             bitrateController.bandwidthChanged(newValue.bps.toLong())
             bandwidthProbing.bandwidthEstimationChanged(newValue)
         }
