@@ -52,6 +52,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.concurrent.PeriodicRunnable
 import org.jitsi.utils.concurrent.RecurringRunnableExecutor
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -68,6 +69,7 @@ import org.jitsi.videobridge.dcsctp.DcSctpBaseCallbacks
 import org.jitsi.videobridge.dcsctp.DcSctpHandler
 import org.jitsi.videobridge.dcsctp.DcSctpTransport
 import org.jitsi.videobridge.message.BridgeChannelMessage
+import org.jitsi.videobridge.message.ConnectionStats
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
@@ -355,6 +357,28 @@ class Endpoint @JvmOverloads constructor(
      * Next allocated send SSRC, when allocating serially (off by default).
      */
     private var nextSendSsrc = 777000001L
+
+    /**
+     * Latest bandwidth received from bandwidth estimator.
+     */
+    private var latestBandwidth: Bandwidth? = null
+
+    /**
+     * Recurring event to send connection stats messages.
+     */
+    private val connectionStatsSender =
+        if (ConnectionStatsConfig.enabled) {
+            object : PeriodicRunnable(ConnectionStatsConfig.interval.toMillis()) {
+                override fun run() {
+                    super.run()
+                    latestBandwidth?.let { sendMessage(ConnectionStats(it.bps)) }
+                }
+            }.also {
+                recurringRunnableExecutor.registerRecurringRunnable(it)
+            }
+        } else {
+            null
+        }
 
     init {
         conference.encodingsManager.subscribe(this)
@@ -1014,6 +1038,9 @@ class Endpoint @JvmOverloads constructor(
 
         bandwidthProbing.enabled = false
         recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing)
+        connectionStatsSender?.let {
+            recurringRunnableExecutor.deRegisterRecurringRunnable(it)
+        }
         conference.encodingsManager.unsubscribe(this)
 
         dtlsTransport.stop()
@@ -1183,6 +1210,7 @@ class Endpoint @JvmOverloads constructor(
          */
         override fun bandwidthEstimationChanged(newValue: Bandwidth) {
             logger.cdebug { "Estimated bandwidth is now $newValue" }
+            latestBandwidth = newValue
             bitrateController.bandwidthChanged(newValue.bps.toLong())
             bandwidthProbing.bandwidthEstimationChanged(newValue)
         }

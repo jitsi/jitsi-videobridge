@@ -58,6 +58,7 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = SourceVideoTypeMessage::class, name = SourceVideoTypeMessage.TYPE),
+    JsonSubTypes.Type(value = ConnectionStats::class, name = ConnectionStats.TYPE),
     JsonSubTypes.Type(value = VideoTypeMessage::class, name = VideoTypeMessage.TYPE)
 )
 sealed class BridgeChannelMessage {
@@ -121,6 +122,7 @@ open class MessageHandler {
             is RemoveReceiverMessage -> removeReceiver(message)
             is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
             is SourceVideoTypeMessage -> sourceVideoType(message)
+            is ConnectionStats -> connectionStats(message)
             is VideoTypeMessage -> videoType(message)
         }
     }
@@ -146,6 +148,7 @@ open class MessageHandler {
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun sourceVideoType(message: SourceVideoTypeMessage) = unhandledMessageReturnNull(message)
+    open fun connectionStats(message: ConnectionStats) = unhandledMessageReturnNull(message)
     open fun videoType(message: VideoTypeMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
@@ -472,6 +475,18 @@ class SourceVideoTypeMessage(
 
     companion object {
         const val TYPE = "SourceVideoTypeMessage"
+    }
+}
+
+/**
+ * A message from the bridge to an endpoint giving information about the connection to the bridge
+ * (that the client can't determine on its own)
+ */
+class ConnectionStats(
+    val estimatedDownlinkBandwidth: Double,
+) : BridgeChannelMessage() {
+    companion object {
+        const val TYPE = "ConnectionStats"
     }
 }
 
