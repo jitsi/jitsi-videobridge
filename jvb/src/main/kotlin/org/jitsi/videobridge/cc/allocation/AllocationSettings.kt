@@ -138,7 +138,10 @@ internal class AllocationSettingsWrapper(
                 logger.warn("Setting assumed bandwidth ${limited.bps} (receiver asked for $it).")
                 this.assumedBandwidthBps = limited
                 changed = true
-            } ?: logger.info("Ignoring assumed-bandwidth-bps, not allowed in config.")
+            } ?: run { if (it.bps >= 0.bps) {
+                    logger.info("Ignoring assumed-bandwidth-bps, not allowed in config.")
+                }
+            }
         }
 
         if (changed) {
