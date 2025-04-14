@@ -18,7 +18,7 @@ We envision using the HTTP/JSON version of the colibri2 protocol you can see som
 		<td>GET</td>
 		<td>/colibri/v2/conferences/{meetingId}/dominant-speaker-identification</td>
 		<td>
-			200 OK with a JSON array/list of JSON objects
+			200 OK with a JSON array/list of JSON objects<br />
 			For example: 
 <pre>
 {
@@ -39,7 +39,10 @@ We envision using the HTTP/JSON version of the colibri2 protocol you can see som
 		<td>
 			200 OK with a JSON object which represents the created conference if the request was with <code>Content-Type: application/json</code> and was a JSON object which 
             consist field like <code> meeting-id</code>, <code>endpoints</code>, media types, media payloads<br />
-            See the test example [Colibri2JSONSerializerTest](https://github.com/jitsi/jitsi-xmpp-extensions/blob/master/src/test/kotlin/org/jitsi/xmpp/extensions/colibri2/json/Colibri2JSONSerializerTest.kt)
+            See the test example 
+            <a href="https://github.com/jitsi/jitsi-xmpp-extensions/blob/master/src/test/kotlin/org/jitsi/xmpp/extensions/colibri2/json/Colibri2JSONSerializerTest.kt">
+    Colibri2JSONSerializerTest
+</a> <br />
 			For example, a request could look like:
 			<pre>
 {
@@ -94,24 +97,6 @@ We envision using the HTTP/JSON version of the colibri2 protocol you can see som
                 { "type": "nack", "subtype": "pli" },
                 { "type": "transport-cc" }
               ]
-            },
-            {
-              "name": "rtx", "id": "96", "clockrate": "90000",
-              "parameters": {"apt": "100"},
-              "rtcp-fbs":[
-                { "type": "ccm", "subtype": "fir" },
-                { "type": "nack" },
-                { "type": "nack", "subtype": "pli" }
-              ]
-            },
-            {
-              "name": "rtx", "id": "97", "clockrate": "90000",
-              "parameters": {"apt": "101"},
-              "rtcp-fbs":[
-                { "type": "ccm", "subtype": "fir" },
-                { "type": "nack" },
-                { "type": "nack", "subtype": "pli" }
-              ]
             }
           ],
           "rtp-hdrexts":[
@@ -148,7 +133,7 @@ The respective response could look like:
                             "port": "10000",
                             "ip": "172.18.0.4",
                             "foundation": "1",
-                            "id": "7be8deb97f7a774a0183e029c",
+                            "id": "5bbb5d5e101f870f0ffffffffdf286239",
                             "priority": "2130706431",
                             "type": "host",
                             "network": "0"
@@ -161,7 +146,7 @@ The respective response could look like:
                             "port": "10000",
                             "ip": "192.168.1.1",
                             "foundation": "2",
-                            "id": "72c906147f7a774a02cd40399",
+                            "id": "56f8f898101f870f0fffffffff3be6336",
                             "rel-addr": "172.18.0.4",
                             "priority": "1694498815",
                             "type": "srflx",
@@ -175,7 +160,7 @@ The respective response could look like:
                             "port": "10000",
                             "ip": "152.58.154.133",
                             "foundation": "2",
-                            "id": "2216951d7f7a774a04669d1d",
+                            "id": "c6ac5101f870f0ffffffffcb50fcba",
                             "rel-addr": "172.18.0.4",
                             "priority": "1694498815",
                             "type": "srflx",
@@ -183,11 +168,11 @@ The respective response could look like:
                         }
                     ],
                     "xmlns": "urn:xmpp:jingle:transports:ice-udp:1",
-                    "ufrag": "2b4it1ioqsv12m",
+                    "ufrag": "26ant1ioqu7qnr",
                     "rtcp-mux": true,
-                    "pwd": "4hvp3jj7v4rrt6681oncqvmn2p",
+                    "pwd": "9q8uj7tg6j4rc4i6ulc1pmsq9",
                     "web-sockets": [
-                        "wss://localhost:8443/colibri-ws/172.18.0.4/c7dbddb6f857a8ab/79f0273d?pwd=4hvp3jj7v4rrt6681oncqvmn2p"
+                        "wss://localhost:8443/colibri-ws/172.18.0.4/7e441eda3701676e/79f0273d?pwd=9q8uj7tg6j4rc4i6ulc1pmsq9"
                     ],
                     "fingerprints": [
                         {
@@ -204,7 +189,7 @@ The respective response could look like:
         {
             "sources": [
                 {
-                    "ssrc": 3490535668,
+                    "ssrc": 3191927963,
                     "name": "jvb-a0"
                 }
             ],
@@ -214,7 +199,7 @@ The respective response could look like:
         {
             "sources": [
                 {
-                    "ssrc": 1348796334,
+                    "ssrc": 1863439907,
                     "name": "jvb-v0"
                 }
             ],
@@ -229,10 +214,10 @@ The respective response could look like:
 		<td>PATCH</td>
 		<td>/colibri/v2/conferences/{mettingId}</td>
 		<td>
-			200 OK which represents the expire conference. <br />
+			200 OK which represents updated success. <br />
 			For example: 
 <pre>
-The Request body look like: 
+The Request body to expire conference: 
 {
   "expire":true
 }
