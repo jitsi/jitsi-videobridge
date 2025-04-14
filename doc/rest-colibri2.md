@@ -18,7 +18,7 @@ We envision using the HTTP/JSON version of the colibri2 protocol you can see som
 		<td>GET</td>
 		<td>/colibri/v2/conferences/{meetingId}/dominant-speaker-identification</td>
 		<td>
-			200 OK with a JSON array/list of JSON objects<br />
+			200 OK with JSON objects which represents <code>endpointsBySpeechActivity</code>,<code>dominantEndpoint</code>, <code>endpointsInLastNOrder</code>,<code> dominantSpeakerIdentification</code> <br />
 			For example: 
 <pre>
 {
@@ -214,7 +214,7 @@ The respective response could look like:
 		<td>PATCH</td>
 		<td>/colibri/v2/conferences/{mettingId}</td>
 		<td>
-			200 OK which represents updated success. <br />
+			200 OK which represents success. <br />
 			For example: 
 <pre>
 The Request body to expire conference: 
