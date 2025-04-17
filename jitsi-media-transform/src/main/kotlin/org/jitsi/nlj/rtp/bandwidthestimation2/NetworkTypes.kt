@@ -299,7 +299,7 @@ open class NetworkControlUpdate(
     fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
         targetRate?.let {
             point.addField("target_rate_bps", it.targetRate.bps)
-            point.addField("stable_target_Rate_bps", it.stableTargetRate.bps)
+            point.addField("stable_target_rate_bps", it.stableTargetRate.bps)
             point.addField("cwnd_reduce_ratio", it.cwndReduceRatio)
             point.addField("rtt_ms", it.networkEstimate.roundTripTime.toDoubleMillis())
             point.addField("bwe_period_ms", it.networkEstimate.bwePeriod.toDoubleMillis())
