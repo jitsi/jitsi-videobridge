@@ -595,9 +595,11 @@ class GoogCcNetworkController(
          * estPostBuffer
          * estPropagation
          */
+
+        val lossRatio: Float,
+
         /* Fields where data from LossBasedBweV1 are printed, even though LossBasedBweV2 is the default.
          TODO: print state out of LossBasedBweV2.
-        val lossRatio: Double,
         val lossAverage: Double,
         val lossAverageMax: Double,
         val lossThresInc: Double,
@@ -628,6 +630,7 @@ class GoogCcNetworkController(
                 put("trendline_modified_offset", trendlineModifiedOffset)
                 put("trendline_modified_threshold", trendlineOffsetThreshold)
                 put("acknowledged_rate", acknowledgedRate?.bps ?: Double.NaN)
+                put("loss_ratio", lossRatio)
                 put("send_side_target", sendSideTarget.bps)
                 put("last_loss_based_state", lossBasedState.name)
                 put("data_window", dataWindow?.bytes ?: Double.NaN)
@@ -650,6 +653,7 @@ class GoogCcNetworkController(
                 addField("trendline_modified_offset", trendlineModifiedOffset)
                 addField("trendline_modified_threshold", trendlineOffsetThreshold)
                 addField("acknowledged_rate", acknowledgedRate?.bps ?: Double.NaN)
+                addField("loss_ratio", lossRatio)
                 addField("send_side_target", sendSideTarget.bps)
                 addField("last_loss_based_state", lossBasedState.name)
                 addField("data_window", dataWindow?.bytes ?: Double.NaN)
@@ -680,6 +684,7 @@ class GoogCcNetworkController(
             trendlineModifiedOffset = trend().prevModifiedTrend,
             trendlineOffsetThreshold = trend().threshold,
             acknowledgedRate = acknowledgedBitrateEstimator.bitrate(),
+            lossRatio = target.networkEstimate.lossRateRatio,
             sendSideTarget = bandwidthEstimation.targetRate(),
             lossBasedState = lastLossBasedState,
             dataWindow = currentDataWindow,
