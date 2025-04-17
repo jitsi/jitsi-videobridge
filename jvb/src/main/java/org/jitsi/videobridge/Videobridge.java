@@ -484,8 +484,9 @@ public class Videobridge
      * included.
      */
     @SuppressWarnings("unchecked")
-    public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
+    public OrderedJsonObject getDebugState(String conferenceId, String endpointId, DebugStateMode mode)
     {
+        boolean full = mode == DebugStateMode.FULL;
         OrderedJsonObject debugState = new OrderedJsonObject();
         debugState.put("shutdownState", shutdownManager.getState().toString());
         debugState.put("drain", drainMode);

@@ -319,7 +319,10 @@ public class Debug
     @Produces(MediaType.APPLICATION_JSON)
     public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject debugState = videobridge.getDebugState(null, null, full);
+        OrderedJsonObject debugState = videobridge.getDebugState(
+                null,
+                null,
+                full ? DebugStateMode.FULL : DebugStateMode.SHORT);
 
         // Append the health status.
         Result result = healthCheckService.getResult();
@@ -340,7 +343,10 @@ public class Debug
             @PathParam("confId") String confId,
             @DefaultValue("true") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridge.getDebugState(confId, null, full);
+        OrderedJsonObject confJson = videobridge.getDebugState(
+                confId,
+                null,
+                full ? DebugStateMode.FULL : DebugStateMode.SHORT);
         return confJson.toJSONString();
     }
 
@@ -352,7 +358,10 @@ public class Debug
             @PathParam("epId") String epId,
             @DefaultValue("true") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridge.getDebugState(confId, epId, full);
+        OrderedJsonObject confJson = videobridge.getDebugState(
+                confId,
+                epId,
+                full ? DebugStateMode.FULL : DebugStateMode.SHORT);
         return confJson.toJSONString();
     }
 
