@@ -462,6 +462,12 @@ class GoogCcNetworkController(
             networkEstimate.bwePeriod = delayBasedBwe.getExpectedBwePeriod()
 
             this.atTime = atTime
+            if (rateControlSettings.useCongestionWindowDropFrameOnly()) {
+                targetRate = lastLossBasedTargetRate
+            } else {
+                targetRate = lastPushbackTargetRate
+            }
+
             targetRate = lastPushbackTargetRate
             stableTargetRate = bandwidthEstimation.getEstimatedLinkCapacity()
         }
