@@ -1244,7 +1244,8 @@ public class Conference
     @SuppressWarnings("unchecked")
     public JSONObject getDebugState(@NotNull DebugStateMode mode, @Nullable String endpointId)
     {
-        if (mode == DebugStateMode.RTCSTATS && !isRtcStatsEnabled) {
+        if (mode == DebugStateMode.RTCSTATS && !isRtcStatsEnabled)
+        {
             return new JSONObject();
         }
 

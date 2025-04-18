@@ -29,7 +29,6 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
-import org.jitsi.nlj.util.appendAll
 import org.jitsi.utils.OrderedJsonObject
 import org.json.simple.JSONObject
 import java.time.Duration
@@ -203,7 +202,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
     override fun debugState(mode: DebugStateMode): Pair<String, OrderedJsonObject> {
         val o = super.debugState(mode).second
         if (mode == DebugStateMode.FULL) {
-            o.appendAll(getNodeStats().toJson())
+            stats.appendTo(o)
         }
         return Pair(name, o)
     }
@@ -363,6 +362,13 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
                 addMbps("processing_throughput_mbps", "num_input_bytes", "total_time_spent_ms")
                 addNumber("max_packet_process_time_ms", maxProcessingDurationMs)
             }
+        }
+        fun appendTo(json: OrderedJsonObject) {
+            json["num_input_packets"] = numInputPackets
+            json["num_output_packets"] = numOutputPackets
+            json["num_discarded_packets"] = numDiscardedPackets
+            json["total_time_spent_ns"] = totalProcessingDurationNs
+            json["max_packet_process_time_ms"] = maxProcessingDurationMs
         }
     }
 }
