@@ -24,6 +24,7 @@ import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
+import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Not an 'RtpSender' in the sense that it sends only RTP (and not
@@ -56,4 +57,5 @@ abstract class RtpSender :
     var preProcesor: ((PacketInfo) -> PacketInfo?)? = null
 
     abstract val bandwidthEstimator: BandwidthEstimator
+    abstract fun debugState(mode: DebugStateMode): OrderedJsonObject
 }

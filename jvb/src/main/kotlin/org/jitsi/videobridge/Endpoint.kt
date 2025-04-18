@@ -23,6 +23,7 @@ import org.jitsi.dcsctp4j.ErrorKind
 import org.jitsi.dcsctp4j.SendPacketStatus
 import org.jitsi.dcsctp4j.SendStatus
 import org.jitsi.metaconfig.config
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
@@ -991,25 +992,24 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    override val debugState: JSONObject
-        get() = super.debugState.apply {
-            put("bitrateController", bitrateController.debugState)
-            put("bandwidthProbing", bandwidthProbing.getDebugState())
-            put("iceTransport", iceTransport.getDebugState())
-            put("dtlsTransport", dtlsTransport.getDebugState())
-            put("transceiver", transceiver.getNodeStats().toJson())
-            put("acceptAudio", acceptAudio)
-            put("acceptVideo", acceptVideo)
-            put("visitor", visitor)
-            put("messageTransport", messageTransport.debugState)
-            if (doSsrcRewriting) {
-                put("audioSsrcs", audioSsrcs.getDebugState())
-                put("videoSsrcs", videoSsrcs.getDebugState())
-            }
-            sctpTransport?.let {
-                put("sctp", it.getDebugState())
-            }
+    override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
+        put("bitrateController", bitrateController.debugState(mode))
+        put("bandwidthProbing", bandwidthProbing.getDebugState())
+        put("iceTransport", iceTransport.getDebugState())
+        put("dtlsTransport", dtlsTransport.getDebugState())
+        put("transceiver", transceiver.debugState(mode))
+        put("acceptAudio", acceptAudio)
+        put("acceptVideo", acceptVideo)
+        put("visitor", visitor)
+        put("messageTransport", messageTransport.debugState)
+        if (doSsrcRewriting) {
+            put("audioSsrcs", audioSsrcs.getDebugState())
+            put("videoSsrcs", videoSsrcs.getDebugState())
         }
+        sctpTransport?.let {
+            put("sctp", it.getDebugState())
+        }
+    }
 
     override fun expire() {
         if (super.isExpired) {
@@ -1022,7 +1022,7 @@ class Endpoint @JvmOverloads constructor(
             updateStatsOnExpire()
             transceiver.stop()
             logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
-            logger.cdebug { bitrateController.debugState.toJSONString() }
+            logger.cdebug { bitrateController.debugState(DebugStateMode.FULL).toJSONString() }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
 

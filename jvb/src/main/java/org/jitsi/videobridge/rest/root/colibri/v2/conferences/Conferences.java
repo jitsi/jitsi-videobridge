@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.rest.root.colibri.v2.conferences;
 
+import org.jitsi.nlj.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
@@ -76,7 +77,7 @@ public class Conferences
 
         ConferenceSpeechActivity conferenceSpeechActivity = conference.getSpeechActivity();
 
-        return conferenceSpeechActivity.getDebugState().toJSONString();
+        return conferenceSpeechActivity.getDebugState(DebugStateMode.FULL).toJSONString();
     }
 
     @POST

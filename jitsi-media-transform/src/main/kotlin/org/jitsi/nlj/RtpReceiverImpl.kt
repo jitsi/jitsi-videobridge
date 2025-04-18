@@ -29,6 +29,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.RtpReceiverStats
+import org.jitsi.nlj.transform.NodeDebugStateVisitor
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
@@ -68,6 +69,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -206,7 +208,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             node(packetStreamStats)
             demux("SRTP/SRTCP") {
                 packetPath {
-                    name = "SRTP path"
+                    name = "SRTP"
                     predicate = PacketPredicate(Packet::looksLikeRtp)
                     path = pipeline {
                         node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
@@ -230,7 +232,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(PaddingTermination(logger))
                         demux("Media Type") {
                             packetPath {
-                                name = "Audio path"
+                                name = "Audio"
                                 predicate = PacketPredicate { it is AudioRtpPacket }
                                 path = pipeline {
                                     node(silenceDiscarder)
@@ -239,7 +241,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 }
                             }
                             packetPath {
-                                name = "Video path"
+                                name = "Video"
                                 predicate = PacketPredicate { it is VideoRtpPacket }
                                 path = pipeline {
                                     node(RtxHandler(streamInformationStore, logger))
@@ -257,7 +259,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     }
                 }
                 packetPath {
-                    name = "SRTCP path"
+                    name = "SRTCP"
                     predicate = PacketPredicate(Packet::looksLikeRtcp)
                     path = pipeline {
                         node(srtcpDecryptWrapper)
@@ -288,6 +290,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
         addBlock(super.getNodeStats())
         addBoolean("running", running)
         NodeStatsVisitor(this).visit(inputTreeRoot)
+    }
+    override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+        NodeDebugStateVisitor(this, mode).visit(inputTreeRoot)
     }
 
     override fun enqueuePacket(p: PacketInfo) {

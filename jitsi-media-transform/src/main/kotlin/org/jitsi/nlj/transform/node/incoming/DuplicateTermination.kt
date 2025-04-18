@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
@@ -50,6 +51,13 @@ class DuplicateTermination() : TransformerNode("Duplicate termination") {
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
         addNumber("num_duplicate_packets_dropped", numDuplicatePacketsDropped)
     }
+
+    override fun debugState(mode: DebugStateMode) = Pair(
+        name,
+        super.debugState(mode).second.apply {
+            this["num_duplicate_packets_dropped"] = numDuplicatePacketsDropped
+        }
+    )
 
     override fun trace(f: () -> Unit) = f.invoke()
 }

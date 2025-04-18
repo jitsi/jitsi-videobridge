@@ -79,6 +79,10 @@ class RestConfig private constructor() {
         "videobridge.rest.drain.enabled".from(JitsiConfig.newConfig)
     }
 
+    private val rtcstatsEnabled: Boolean by config {
+        "videobridge.rest.rtcstats.enabled".from(JitsiConfig.newConfig)
+    }
+
     private val versionEnabled: Boolean by config {
         "videobridge.rest.version.enabled".from(JitsiConfig.newConfig)
     }
@@ -97,11 +101,12 @@ class RestConfig private constructor() {
     fun isEnabled(api: RestApis) = when (api) {
         RestApis.COLIBRI -> colibriEnabled
         RestApis.DEBUG -> debugEnabled
-        RestApis.HEALTH -> healthEnabled
-        RestApis.SHUTDOWN -> shutdownEnabled
         RestApis.DRAIN -> drainEnabled
-        RestApis.VERSION -> versionEnabled
+        RestApis.HEALTH -> healthEnabled
         RestApis.PROMETHEUS -> prometheusEnabled
+        RestApis.RTCSTATS -> rtcstatsEnabled
+        RestApis.SHUTDOWN -> shutdownEnabled
+        RestApis.VERSION -> versionEnabled
     }
 
     companion object {

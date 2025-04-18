@@ -15,8 +15,11 @@
  */
 package org.jitsi.nlj.transform.node
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.PacketStreamStats
+import org.jitsi.nlj.util.appendAll
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 
@@ -29,8 +32,7 @@ class PacketStreamStatsNode(
     private val diagnosticContext: DiagnosticContext,
     private val direction: String,
     private val packetStreamStats: PacketStreamStats = PacketStreamStats()
-) :
-    ObserverNode("PacketStreamStats") {
+) : ObserverNode("PacketStreamStats") {
 
     override fun observe(packetInfo: PacketInfo) {
         packetStreamStats.update(packetInfo.packet.length)
@@ -49,6 +51,11 @@ class PacketStreamStatsNode(
     }
 
     fun getBitrate() = snapshot().bitrate
+
+    override fun debugState(mode: DebugStateMode): Pair<String, OrderedJsonObject> = Pair(
+        name,
+        super.debugState(mode).second.appendAll(packetStreamStats.snapshot().toJson())
+    )
 
     /**
      * Creates a new [Node] instance which shares the same [packetStreamStats]. Useful when we want to add nodes to

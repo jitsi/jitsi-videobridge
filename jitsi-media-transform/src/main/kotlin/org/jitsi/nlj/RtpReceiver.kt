@@ -21,6 +21,7 @@ import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.Bandwidth
+import org.jitsi.utils.OrderedJsonObject
 
 abstract class RtpReceiver :
     StatsKeepingPacketHandler(),
@@ -39,6 +40,8 @@ abstract class RtpReceiver :
      * Enqueue an incoming packet to be processed
      */
     abstract fun enqueuePacket(p: PacketInfo)
+
+    abstract fun debugState(mode: DebugStateMode): OrderedJsonObject
 
     /**
      * Set the SRTP transformers to be used for RTP/RTCP encryption and decryption
