@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
@@ -28,6 +29,8 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
+import org.jitsi.nlj.util.appendAll
+import org.jitsi.utils.OrderedJsonObject
 import org.json.simple.JSONObject
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
@@ -52,6 +55,8 @@ sealed class Node(
     // Create these once here so we don't allocate a new string every time
     protected val nodeEntryString = "Entered node $name"
     protected val nodeExitString = "Exited node $name"
+
+    open fun debugState(mode: DebugStateMode): Pair<String, OrderedJsonObject> = Pair(name, OrderedJsonObject())
 
     open fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
@@ -194,6 +199,14 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
      * Avoid stopping more than once.
      */
     private var stopped = false
+
+    override fun debugState(mode: DebugStateMode): Pair<String, OrderedJsonObject> {
+        val o = super.debugState(mode).second
+        if (mode == DebugStateMode.FULL) {
+            o.appendAll(getNodeStats().toJson())
+        }
+        return Pair(name, o)
+    }
 
     /**
      * The function that all subclasses should implement to do the actual
@@ -543,6 +556,15 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
         }
         return superStats
     }
+
+    override fun debugState(mode: DebugStateMode) = Pair(
+        name,
+        super.debugState(mode).second.apply {
+            transformPaths.forEach { path ->
+                this["packets_accepted_${path.name}"] = path.packetsAccepted
+            }
+        }
+    )
 }
 
 /**

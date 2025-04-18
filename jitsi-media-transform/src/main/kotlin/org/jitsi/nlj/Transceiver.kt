@@ -34,6 +34,7 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -336,6 +337,14 @@ class Transceiver(
             addBlock(rtpReceiver.getNodeStats())
             addBlock(rtpSender.getNodeStats())
         }
+    }
+
+    fun debugState(mode: DebugStateMode): OrderedJsonObject = OrderedJsonObject().apply {
+        put("stream_information_store", streamInformationStore.getNodeStats().toJson())
+        put("media_sources", mediaSources.getNodeStats().toJson())
+        put("endpoint_connection_stats", endpointConnectionStats.getSnapshot().toJson())
+        put("receiver", rtpReceiver.debugState(mode))
+        put("sender", rtpSender.debugState(mode))
     }
 
     /**

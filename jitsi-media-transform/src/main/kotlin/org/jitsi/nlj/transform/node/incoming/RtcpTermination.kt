@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -133,6 +134,16 @@ class RtcpTermination(
             addNumber("num_failed_to_forward", numFailedToForward)
         }
     }
+
+    override fun debugState(mode: DebugStateMode) = Pair(
+        name,
+        super.debugState(mode).second.apply {
+            this["num_failed_to_forward"] = numFailedToForward
+            packetReceiveCounts.forEach { (type, count) ->
+                this["num_${type}_rx"] = count
+            }
+        }
+    )
 
     override fun trace(f: () -> Unit) = f.invoke()
 }

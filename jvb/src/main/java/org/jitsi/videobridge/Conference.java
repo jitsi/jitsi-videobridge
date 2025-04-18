@@ -40,7 +40,6 @@ import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.jxmpp.jid.*;
 
-import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -72,6 +71,11 @@ public class Conference
      * A boolean that indicates whether or not to include RTCStats for this call.
      */
     private final boolean isRtcStatsEnabled;
+
+    public boolean isRtcStatsEnabled()
+    {
+        return isRtcStatsEnabled;
+    }
 
     /**
      * A read-only cache of the endpoints in this conference. Note that it
@@ -1233,43 +1237,27 @@ public class Conference
     /**
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
-     */
-    public JSONObject getDebugState()
-    {
-        return getDebugState(true);
-    }
-
-    /**
-     * Gets a JSON representation of the parts of this object's state that
-     * are deemed useful for debugging.
      *
-     * @param full if specified the result will include more details and will
-     * include the debug state of the endpoint(s). Otherwise just the IDs and
-     * names of the conference and endpoints are included.
-     */
-    public JSONObject getDebugState(boolean full)
-    {
-        return getDebugState(full, null);
-    }
-
-    /**
-     * Gets a JSON representation of the parts of this object's state that
-     * are deemed useful for debugging.
-     *
-     * @param full if specified the result will include more details and will
-     * include the debug state of the endpoint(s). Otherwise just the IDs and
-     * names of the conference and endpoints are included.
-     * @param endpointId the ID of the endpoint to include. If set to
-     * {@code null}, all endpoints will be included.
+     * @param mode determines how much detail to include in the debug state.
+     * @param endpointId the ID of the endpoint to include. If set to {@code null}, all endpoints will be included.
      */
     @SuppressWarnings("unchecked")
-    public JSONObject getDebugState(boolean full, String endpointId)
+    public JSONObject getDebugState(@NotNull DebugStateMode mode, @Nullable String endpointId)
     {
+        if (mode == DebugStateMode.RTCSTATS && !isRtcStatsEnabled) {
+            return new JSONObject();
+        }
+
+        boolean full = mode == DebugStateMode.FULL || mode == DebugStateMode.RTCSTATS;
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
-        debugState.put("rtcstatsEnabled", isRtcStatsEnabled);
 
-        if (conferenceName != null)
+        if (mode != DebugStateMode.RTCSTATS)
+        {
+            debugState.put("rtcstatsEnabled", isRtcStatsEnabled);
+        }
+
+        if (conferenceName != null && mode != DebugStateMode.RTCSTATS)
         {
             debugState.put("name", conferenceName.toString());
         }
@@ -1282,8 +1270,10 @@ public class Conference
         {
             debugState.put("expired", expired.get());
             debugState.put("creationTime", creationTime);
-            debugState.put("speechActivity", speechActivity.getDebugState());
-            //debugState.put("encodingsManager", encodingsManager.getDebugState());
+        }
+        if (mode == DebugStateMode.FULL || mode == DebugStateMode.RTCSTATS)
+        {
+            debugState.put("speechActivity", speechActivity.getDebugState(mode));
         }
 
         JSONObject endpoints = new JSONObject();
@@ -1292,7 +1282,14 @@ public class Conference
         {
             if (endpointId == null || endpointId.equals(e.getId()))
             {
-                endpoints.put(e.getId(), full ? e.getDebugState() : e.getStatsId());
+                if (mode == DebugStateMode.SHORT)
+                {
+                    endpoints.put(e.getId(), e.getStatsId());
+                }
+                else
+                {
+                    endpoints.put(e.getId(), e.debugState(mode));
+                }
             }
         }
 
@@ -1300,7 +1297,14 @@ public class Conference
         debugState.put("relays", relays);
         for (Relay r : relaysById.values())
         {
-            relays.put(r.getId(), full ? r.getDebugState() : r.getId());
+            if (mode == DebugStateMode.SHORT)
+            {
+                relays.put(r.getId(), r.getId());
+            }
+            else
+            {
+                relays.put(r.getId(), r.debugState(mode));
+            }
         }
 
         return debugState;

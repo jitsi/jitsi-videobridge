@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.MediaSources
@@ -204,11 +205,12 @@ class RelayedEndpoint(
         }
     }
 
-    override val debugState: JSONObject
-        get() = super.debugState.apply {
+    override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
+        if (mode == DebugStateMode.FULL) {
             val block = getNodeStats()
             put(block.name, block.toJson())
         }
+    }
 
     private fun updateStatsOnExpire() {
         val relayStats = relay.statistics

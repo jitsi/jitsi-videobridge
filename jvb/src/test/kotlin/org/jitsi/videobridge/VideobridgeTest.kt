@@ -23,6 +23,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.config.withNewConfig
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService

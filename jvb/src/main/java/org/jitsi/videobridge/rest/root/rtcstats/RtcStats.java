@@ -18,6 +18,7 @@ package org.jitsi.videobridge.rest.root.rtcstats;
 import jakarta.inject.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import org.jitsi.nlj.*;
 import org.jitsi.utils.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;

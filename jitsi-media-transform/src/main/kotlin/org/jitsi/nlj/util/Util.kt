@@ -16,6 +16,7 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.rtp.Packet
+import org.jitsi.utils.OrderedJsonObject
 import java.time.Duration
 import java.util.Collections
 import java.util.function.Predicate
@@ -68,6 +69,12 @@ inline fun getStackTrace(): String = with(StringBuffer()) {
         appendLine(ste.toString())
     }
     toString()
+}
+
+fun OrderedJsonObject.appendAll(other: OrderedJsonObject) = this.also {
+    other.forEach { (key, value) ->
+        this[key] = value
+    }
 }
 
 typealias PacketPredicate = Predicate<Packet>

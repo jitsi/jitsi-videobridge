@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge
+package org.jitsi.nlj
 
 enum class DebugStateMode {
-    SHORT,
+    /** Include full details, mostly for manually debugging */
     FULL,
-    RTCSTATS
+
+    /** Include all information needed for rtcstats or similar metrics collection */
+    RTCSTATS,
+
+    /** Include only the most important information, e.g. listing conferences and endpoints. */
+    SHORT
 }

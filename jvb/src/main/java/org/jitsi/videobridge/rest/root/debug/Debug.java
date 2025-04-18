@@ -17,6 +17,7 @@
 package org.jitsi.videobridge.rest.root.debug;
 
 import org.jitsi.health.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.debug.*;
 import org.jitsi.utils.*;

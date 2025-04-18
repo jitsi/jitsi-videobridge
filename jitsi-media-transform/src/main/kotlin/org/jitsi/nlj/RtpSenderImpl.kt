@@ -29,6 +29,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeDebugStateVisitor
 import org.jitsi.nlj.transform.NodeEventVisitor
 import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
@@ -58,6 +59,7 @@ import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -322,6 +324,10 @@ class RtpSenderImpl(
         addString("localAudioSsrc", localAudioSsrc?.toString() ?: "null")
         addJson("transportCcEngine", transportCcEngine.getStatistics().toJson())
         addJson("Bandwidth Estimation", bandwidthEstimator.getStats().toJson())
+    }
+
+    override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+        NodeDebugStateVisitor(this, mode).reverseVisit(outputPipelineTerminationNode)
     }
 
     override fun stop() {

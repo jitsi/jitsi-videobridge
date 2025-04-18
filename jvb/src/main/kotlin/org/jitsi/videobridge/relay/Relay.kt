@@ -20,6 +20,7 @@ import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.ErrorKind
 import org.jitsi.dcsctp4j.SendPacketStatus
 import org.jitsi.dcsctp4j.SendStatus
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
@@ -313,18 +314,22 @@ class Relay @JvmOverloads constructor(
         TransportConfig.queueSize
     )
 
-    val debugState: JSONObject
-        get() = JSONObject().apply {
-            put("iceTransport", iceTransport.getDebugState())
-            put("dtlsTransport", dtlsTransport.getDebugState())
-            put("transceiver", transceiver.getNodeStats().toJson())
-            put("meshId", meshId)
-            put("messageTransport", messageTransport.debugState)
+    fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
+        put("iceTransport", iceTransport.getDebugState())
+        put("dtlsTransport", dtlsTransport.getDebugState())
+        put("transceiver", transceiver.debugState(mode))
+        put("meshId", meshId)
+        put("messageTransport", messageTransport.debugState)
+        sctpTransport?.let {
+            put("sctp", it.getDebugState())
+        }
+
+        if (mode == DebugStateMode.FULL) {
             val remoteEndpoints = JSONObject()
             val endpointsBySsrcMap = JSONObject()
             synchronized(endpointsLock) {
                 for (r in relayedEndpoints.values) {
-                    remoteEndpoints[r.id] = r.debugState
+                    remoteEndpoints[r.id] = r.debugState(mode)
                 }
                 for ((s, e) in endpointsBySsrc) {
                     endpointsBySsrcMap[s] = e.id
@@ -337,10 +342,8 @@ class Relay @JvmOverloads constructor(
                 endpointSenders[s.id] = s.getDebugState()
             }
             put("senders", endpointSenders)
-            sctpTransport?.let {
-                put("sctp", it.getDebugState())
-            }
         }
+    }
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
