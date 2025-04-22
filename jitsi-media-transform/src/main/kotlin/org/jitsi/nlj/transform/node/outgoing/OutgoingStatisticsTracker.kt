@@ -16,11 +16,13 @@
 package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.PacketType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
+import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.OrderedJsonObject
@@ -40,6 +42,9 @@ class OutgoingStatisticsTracker(
     private var numVideoPackets = 0
 
     private val videoBitrate = BitrateCalculator.createBitrateTracker()
+
+    private val videoPacketTypeBitrates = mutableMapOf<PacketType, BitrateTracker>()
+
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
 
@@ -47,7 +52,11 @@ class OutgoingStatisticsTracker(
             is AudioRtpPacket -> numAudioPackets++
             is VideoRtpPacket -> {
                 numVideoPackets++
-                videoBitrate.update(rtpPacket.length.bytes)
+                if (timeseriesLogger.isTraceEnabled) {
+                    videoBitrate.update(rtpPacket.length.bytes)
+                    videoPacketTypeBitrates.getOrPut(packetInfo.packetType) { BitrateCalculator.createBitrateTracker() }
+                        .update(rtpPacket.length.bytes)
+                }
             }
         }
 
@@ -81,10 +90,13 @@ class OutgoingStatisticsTracker(
             }.toMap()
         ).also {
             if (timeseriesLogger.isTraceEnabled) {
-                timeseriesLogger.trace(
-                    diagnosticContext.makeTimeSeriesPoint("sent_video_stream_stats")
-                        .addField("bitrate_bps", videoBitrate.rate.bps)
-                )
+                val point = diagnosticContext.makeTimeSeriesPoint("sent_video_stream_stats")
+                    .addField("bitrate_bps", videoBitrate.rate.bps)
+                videoPacketTypeBitrates.forEach { (type, tracker) ->
+                    point.addField("video_${type}_bitrate", tracker.rate.bps)
+                }
+
+                timeseriesLogger.trace(point)
             }
         }
     }

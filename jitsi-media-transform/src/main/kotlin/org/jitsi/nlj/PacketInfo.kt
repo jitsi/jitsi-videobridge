@@ -19,6 +19,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging2.createLogger
 import java.time.Clock
 import java.time.Duration
@@ -90,6 +91,16 @@ class EventTimeline(
     }
 }
 
+enum class PacketType {
+    Routed,
+    RTX,
+    Padding,
+    Synthesized,
+    RTCP,
+    Misc
+    /* TODO: handle SCTP and datachannel if we need them */
+}
+
 /**
  * [PacketInfo] is a wrapper around a [Packet] instance to be passed through
  * a pipeline.  Since the [Packet] can change as it moves through the pipeline
@@ -141,6 +152,11 @@ open class PacketInfo @JvmOverloads constructor(
     var payloadVerification = if (enablePayloadVerification) packet.payloadVerification else null
 
     /**
+     * The type of the packet, used for tracking the sources of media being routed.
+     */
+    var packetType: PacketType = if (packet is RtcpPacket) PacketType.RTCP else PacketType.Misc
+
+    /**
      * Re-calculates the expected payload verification string. This should be called any time that the code
      * intentionally modifies the packet in a way that could change the verification string (for example, re-creates
      * it with a new type (parsing), or intentionally modifies the payload (SRTP)).
@@ -169,6 +185,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.endpointId = endpointId
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
+        clone.packetType = packetType
         @Suppress("UNCHECKED_CAST") // ArrayList.clone() really does return ArrayList, not Object.
         clone.onSentActions = onSentActions?.clone() as ArrayList<() -> Unit>?
         return clone

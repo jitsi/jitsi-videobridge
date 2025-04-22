@@ -25,6 +25,7 @@ import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.PacketType
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.VideoType
@@ -361,6 +362,7 @@ class Relay @JvmOverloads constructor(
                         ).apply {
                             this.receivedTime = buffer.receivedTime
                         }
+                    pktInfo.packetType = PacketType.Routed
                     handleMediaPacket(pktInfo)
                 }
             }
