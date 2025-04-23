@@ -54,6 +54,14 @@ class PacketStreamStatsNode(
         packetStreamStats.snapshot().toJson()
     )
 
+    override fun getNodeStats() = super.getNodeStats().apply {
+        val snapshot = packetStreamStats.snapshot()
+        addNumber("bitrate_bps", snapshot.bitrate.bps)
+        addNumber("packet_rate", snapshot.packetRate)
+        addNumber("bytes_sent", snapshot.bytes)
+        addNumber("packets_sent", snapshot.packets)
+    }
+
     /**
      * Creates a new [Node] instance which shares the same [packetStreamStats]. Useful when we want to add nodes to
      * different branches of a [Node] tree.
