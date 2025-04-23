@@ -487,7 +487,6 @@ public class Videobridge
     @SuppressWarnings("unchecked")
     public OrderedJsonObject getDebugState(String conferenceId, String endpointId, DebugStateMode mode)
     {
-        logger.info("XXX getDebugState mode = "+ mode);
         OrderedJsonObject debugState = new OrderedJsonObject();
 
         if (mode == DebugStateMode.FULL || mode == DebugStateMode.SHORT)
