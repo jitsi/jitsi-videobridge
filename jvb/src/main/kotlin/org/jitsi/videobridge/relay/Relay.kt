@@ -315,11 +315,11 @@ class Relay @JvmOverloads constructor(
     )
 
     fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
-        put("iceTransport", iceTransport.getDebugState())
-        put("dtlsTransport", dtlsTransport.getDebugState())
+        put("ice_transport", iceTransport.getDebugState())
+        put("dtls_transport", dtlsTransport.getDebugState())
         put("transceiver", transceiver.debugState(mode))
-        put("meshId", meshId)
-        put("messageTransport", messageTransport.debugState)
+        put("mesh_id", meshId)
+        put("message_transport", messageTransport.debugState)
         sctpTransport?.let {
             put("sctp", it.getDebugState())
         }
@@ -335,8 +335,8 @@ class Relay @JvmOverloads constructor(
                     endpointsBySsrcMap[s] = e.id
                 }
             }
-            put("remoteEndpoints", remoteEndpoints)
-            put("endpointsBySsrc", endpointsBySsrcMap)
+            put("remote_endpoints", remoteEndpoints)
+            put("endpoints_by_ssrc", endpointsBySsrcMap)
             val endpointSenders = JSONObject()
             for (s in senders.values) {
                 endpointSenders[s.id] = s.getDebugState()

@@ -993,18 +993,18 @@ class Endpoint @JvmOverloads constructor(
     }
 
     override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
-        put("bitrateController", bitrateController.debugState(mode))
-        put("bandwidthProbing", bandwidthProbing.getDebugState())
-        put("iceTransport", iceTransport.getDebugState())
-        put("dtlsTransport", dtlsTransport.getDebugState())
+        put("bitrate_controller", bitrateController.debugState(mode))
+        put("bandwidth_probing", bandwidthProbing.getDebugState())
+        put("ice_transport", iceTransport.getDebugState())
+        put("dtls_transport", dtlsTransport.getDebugState())
         put("transceiver", transceiver.debugState(mode))
-        put("acceptAudio", acceptAudio)
-        put("acceptVideo", acceptVideo)
+        put("accept_audio", acceptAudio)
+        put("accept_video", acceptVideo)
         put("visitor", visitor)
-        put("messageTransport", messageTransport.debugState)
+        put("message_transport", messageTransport.debugState)
         if (doSsrcRewriting) {
-            put("audioSsrcs", audioSsrcs.getDebugState())
-            put("videoSsrcs", videoSsrcs.getDebugState())
+            put("audio_ssrcs", audioSsrcs.getDebugState())
+            put("video_ssrcs", videoSsrcs.getDebugState())
         }
         sctpTransport?.let {
             put("sctp", it.getDebugState())

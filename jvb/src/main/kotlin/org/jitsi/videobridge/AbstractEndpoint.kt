@@ -222,10 +222,10 @@ abstract class AbstractEndpoint protected constructor(
         this@AbstractEndpoint.receiverVideoConstraints.forEach { (sourceName, receiverConstraints) ->
             receiverVideoConstraints[sourceName] = receiverConstraints.getDebugState()
         }
-        this["receiverVideoConstraints"] = receiverVideoConstraints
-        this["maxReceiverVideoConstraints"] = HashMap(maxReceiverVideoConstraints)
+        this["receiver_video_constraints"] = receiverVideoConstraints
+        this["max_receiver_video_constraints"] = HashMap(maxReceiverVideoConstraints)
         this["expired"] = isExpired
-        this["statsId"] = statsId
+        this["stats_id"] = statsId
     }
 
     /**

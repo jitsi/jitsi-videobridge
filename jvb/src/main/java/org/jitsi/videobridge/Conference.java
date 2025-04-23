@@ -1253,10 +1253,8 @@ public class Conference
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
 
-        if (mode != DebugStateMode.RTCSTATS)
-        {
-            debugState.put("rtcstatsEnabled", isRtcStatsEnabled);
-        }
+        // Keep this camelCase for compatibility with jvb-rtcstats-push
+        debugState.put("rtcstatsEnabled", isRtcStatsEnabled);
 
         if (conferenceName != null && mode != DebugStateMode.RTCSTATS)
         {
@@ -1270,11 +1268,11 @@ public class Conference
         if (full)
         {
             debugState.put("expired", expired.get());
-            debugState.put("creationTime", creationTime);
+            debugState.put("creation_time", creationTime);
         }
         if (mode == DebugStateMode.FULL || mode == DebugStateMode.RTCSTATS)
         {
-            debugState.put("speechActivity", speechActivity.getDebugState(mode));
+            debugState.put("speech_activity", speechActivity.getDebugState(mode));
         }
 
         JSONObject endpoints = new JSONObject();

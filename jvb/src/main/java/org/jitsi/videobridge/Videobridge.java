@@ -491,11 +491,11 @@ public class Videobridge
 
         if (mode == DebugStateMode.FULL || mode == DebugStateMode.SHORT)
         {
-            debugState.put("shutdownState", shutdownManager.getState().toString());
+            debugState.put("shutdown_state", shutdownManager.getState().toString());
             debugState.put("drain", drainMode);
             debugState.put("time", System.currentTimeMillis());
 
-            debugState.put("load-management", jvbLoadManager.getStats());
+            debugState.put("load_management", jvbLoadManager.getStats());
 
             Double jitter = PacketTransitStats.getBridgeJitter();
             if (jitter != null)

@@ -153,7 +153,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         put("packet_handler", packetHandler.debugState(mode))
         put("oversending", oversendingTimeTracker.state)
         put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
-        put("supportsRtx", supportsRtx)
+        put("supports_rtx", supportsRtx)
         put("trust_bwe", trustBwe)
     }
 
