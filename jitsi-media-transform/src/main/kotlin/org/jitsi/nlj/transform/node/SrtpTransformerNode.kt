@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node
 
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.srtp.AbstractSrtpTransformer
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -140,7 +139,7 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+    override fun debugState() = super.debugState().apply {
         this["num_srtp_processed"] = numSrtpProcessed
         this["num_srtp_fail"] = numSrtpFail
         this["num_srtp_auth_fail"] = numSrtpAuthFail

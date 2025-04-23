@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.RtxPacket
@@ -102,7 +101,7 @@ class RtxHandler(
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+    override fun debugState() = super.debugState().apply {
         this["num_rtx_packets_received"] = numRtxPacketsReceived
         this["num_padding_packets_received"] = numPaddingPacketsReceived
     }

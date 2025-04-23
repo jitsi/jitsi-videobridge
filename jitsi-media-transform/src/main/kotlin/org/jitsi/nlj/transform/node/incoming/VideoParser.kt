@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -244,7 +243,7 @@ class VideoParser(
     override fun trace(f: () -> Unit) = f.invoke()
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply { stats.addToNodeStatsBlock(this) }
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply { stats.addToJson(this) }
+    override fun debugState() = super.debugState().apply { stats.addToJson(this) }
 
     fun getStats() = stats.snapshot()
 

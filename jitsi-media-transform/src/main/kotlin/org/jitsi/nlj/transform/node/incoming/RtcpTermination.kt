@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -135,7 +134,7 @@ class RtcpTermination(
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+    override fun debugState() = super.debugState().apply {
         this["num_failed_to_forward"] = numFailedToForward
         packetReceiveCounts.forEach { (type, count) ->
             this["num_${type}_rx"] = count

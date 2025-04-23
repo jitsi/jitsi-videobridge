@@ -18,7 +18,6 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.AudioLevelListener
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RtpExtensionType.SSRC_AUDIO_LEVEL
@@ -104,7 +103,7 @@ class AudioLevelReader(
             addBoolean("force_mute", forceMute)
         }
 
-        override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        override fun debugState() = super.debugState().apply {
             this["num_audio_levels"] = stats.numAudioLevels
             this["num_silence_packets_discarded"] = stats.numDiscardedSilence
             this["num_force_mute_discarded"] = stats.numDiscardedForceMute

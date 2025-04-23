@@ -61,7 +61,10 @@ class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor() {
 
 class NodeDebugStateVisitor(val o: OrderedJsonObject, val mode: DebugStateMode) : NodeVisitor() {
     override fun doWork(node: Node) {
-        val debugState = node.debugState(mode)
+        val debugState = when (mode) {
+            DebugStateMode.FULL -> node.getNodeStats().toJson()
+            else -> node.debugState()
+        }
         if (debugState.isNotEmpty()) {
             o[node.name] = debugState
         }

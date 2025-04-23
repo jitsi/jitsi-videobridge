@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node
 
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.util.appendAll
@@ -51,7 +50,7 @@ class PacketStreamStatsNode(
 
     fun getBitrate() = snapshot().bitrate
 
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).appendAll(
+    override fun debugState() = super.debugState().appendAll(
         packetStreamStats.snapshot().toJson()
     )
 

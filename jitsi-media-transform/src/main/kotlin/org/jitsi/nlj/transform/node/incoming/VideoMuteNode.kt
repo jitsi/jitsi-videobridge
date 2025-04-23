@@ -1,6 +1,5 @@
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -24,7 +23,7 @@ class VideoMuteNode : ObserverNode("VideoMuteNode") {
         addBoolean("force_mute", forceMute)
     }
 
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+    override fun debugState() = super.debugState().apply {
         this["num_video_packets_discarded"] = numMutedPackets
         this["force_mute"] = forceMute
     }

@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node
 
-import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
@@ -55,7 +54,8 @@ sealed class Node(
     protected val nodeEntryString = "Entered node $name"
     protected val nodeExitString = "Exited node $name"
 
-    open fun debugState(mode: DebugStateMode): OrderedJsonObject = OrderedJsonObject()
+    // This is a subset of the nodes state/stats, for the full state use getNodeStats()
+    open fun debugState(): OrderedJsonObject = OrderedJsonObject()
 
     open fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
@@ -198,12 +198,6 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
      * Avoid stopping more than once.
      */
     private var stopped = false
-
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
-        if (mode == DebugStateMode.FULL) {
-            stats.appendTo(this)
-        }
-    }
 
     /**
      * The function that all subclasses should implement to do the actual
@@ -561,7 +555,7 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
         return superStats
     }
 
-    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+    override fun debugState() = super.debugState().apply {
         transformPaths.forEach { path ->
             this["packets_accepted_${path.name}"] = path.packetsAccepted
         }
