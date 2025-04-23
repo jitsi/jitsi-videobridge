@@ -151,6 +151,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
         put("bitrate_allocator", bandwidthAllocator.debugState)
         put("packet_handler", packetHandler.debugState(mode))
+        put("forwarded_sources", forwardedSources.toString())
         put("oversending", oversendingTimeTracker.state)
         put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
         put("supports_rtx", supportsRtx)

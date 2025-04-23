@@ -227,7 +227,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(remoteBandwidthEstimator)
                         // This reads audio levels from packets that use cryptex. TODO: should it go in the Audio path?
                         node(audioLevelReader.postDecryptNode)
-                        node(toggleablePcapWriter.newObserverNode(outbound = false))
+                        node(toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_rtp"))
                         node(statsTracker)
                         node(PaddingTermination(logger))
                         demux("Media Type") {
@@ -263,7 +263,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     predicate = PacketPredicate(Packet::looksLikeRtcp)
                     path = pipeline {
                         node(srtcpDecryptWrapper)
-                        node(toggleablePcapWriter.newObserverNode(outbound = false))
+                        node(toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_rtcp"))
                         node(CompoundRtcpParser(logger))
                         node(rtcpTermination)
                         node(packetHandlerWrapper)

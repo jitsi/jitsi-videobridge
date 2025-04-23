@@ -154,7 +154,7 @@ class RtpSenderImpl(
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
             node(HeaderExtEncoder(streamInformationStore, logger))
-            node(toggleablePcapWriter.newObserverNode(outbound = true))
+            node(toggleablePcapWriter.newObserverNode(outbound = true, suffix = "tx_rtp"))
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
@@ -189,7 +189,7 @@ class RtpSenderImpl(
                 packetInfo
             }
             node(rtcpSrUpdater)
-            node(toggleablePcapWriter.newObserverNode(outbound = true))
+            node(toggleablePcapWriter.newObserverNode(outbound = true, suffix = "tx_rtcp"))
             node(object : ObserverNode("RTCP sent notifier") {
                 override fun observe(packetInfo: PacketInfo) {
                     val packet = packetInfo.packet
