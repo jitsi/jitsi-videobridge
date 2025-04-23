@@ -1244,12 +1244,12 @@ public class Conference
     @SuppressWarnings("unchecked")
     public JSONObject getDebugState(@NotNull DebugStateMode mode, @Nullable String endpointId)
     {
-        if (mode == DebugStateMode.RTCSTATS && !isRtcStatsEnabled)
+        if (mode == DebugStateMode.STATS && !isRtcStatsEnabled)
         {
             return new JSONObject();
         }
 
-        boolean full = mode == DebugStateMode.FULL || mode == DebugStateMode.RTCSTATS;
+        boolean full = mode == DebugStateMode.FULL || mode == DebugStateMode.STATS;
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
 
@@ -1270,7 +1270,7 @@ public class Conference
             debugState.put("expired", expired.get());
             debugState.put("creation_time", creationTime);
         }
-        if (mode == DebugStateMode.FULL || mode == DebugStateMode.RTCSTATS)
+        if (mode == DebugStateMode.FULL || mode == DebugStateMode.STATS)
         {
             debugState.put("speech_activity", speechActivity.getDebugState(mode));
         }

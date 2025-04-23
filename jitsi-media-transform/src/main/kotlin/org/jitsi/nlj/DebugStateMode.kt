@@ -19,8 +19,8 @@ enum class DebugStateMode {
     /** Include full details, mostly for manually debugging */
     FULL,
 
-    /** Include all information needed for rtcstats or similar metrics collection */
-    RTCSTATS,
+    /** Include all information needed for stats/metric collection (e.g. rtcstats) */
+    STATS,
 
     /** Include only the most important information, e.g. listing conferences and endpoints. */
     SHORT

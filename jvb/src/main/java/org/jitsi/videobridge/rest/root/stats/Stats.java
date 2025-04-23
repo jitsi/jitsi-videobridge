@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.rest.root.rtcstats;
+package org.jitsi.videobridge.rest.root.stats;
 
 import jakarta.inject.*;
 import jakarta.ws.rs.*;
@@ -24,9 +24,9 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 
-@Path("/rtcstats")
+@Path("/stats")
 @EnabledByConfig(RestApis.RTCSTATS)
-public class RtcStats
+public class Stats
 {
     @Inject
     private Videobridge videobridge;
@@ -38,7 +38,7 @@ public class RtcStats
         OrderedJsonObject debugState = videobridge.getDebugState(
                 null,
                 null,
-                DebugStateMode.RTCSTATS);
+                DebugStateMode.STATS);
 
         return debugState.toJSONString();
     }

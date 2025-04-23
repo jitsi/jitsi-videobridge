@@ -509,7 +509,7 @@ public class Videobridge
         if (StringUtils.isBlank(conferenceId))
         {
             getConferences().stream()
-                    .filter(c -> mode != DebugStateMode.RTCSTATS || c.isRtcStatsEnabled())
+                    .filter(c -> mode != DebugStateMode.STATS || c.isRtcStatsEnabled())
                     .forEach(conference ->
                 conferences.put(
                         conference.getID(),

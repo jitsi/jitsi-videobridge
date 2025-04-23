@@ -388,7 +388,7 @@ public class AdaptiveSourceProjection
                     "context",
                     contextCopy == null ? null : contextCopy.getDebugState());
         }
-        else if (mode == DebugStateMode.RTCSTATS)
+        else if (mode == DebugStateMode.STATS)
         {
             debugState.put(
                     "context",
