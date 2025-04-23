@@ -56,13 +56,10 @@ class PaddingTermination(parentLogger: Logger) : TransformerNode("Padding termin
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = Pair(
-        name,
-        super.debugState(mode).second.apply {
-            this["num_padded_packets_seen"] = numPaddedPacketsSeen
-            this["num_padding_only_packets_seen"] = numPaddingOnlyPacketsSeen
-        }
-    )
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        this["num_padded_packets_seen"] = numPaddedPacketsSeen
+        this["num_padding_only_packets_seen"] = numPaddingOnlyPacketsSeen
+    }
 
     override fun trace(f: () -> Unit) = f.invoke()
 }

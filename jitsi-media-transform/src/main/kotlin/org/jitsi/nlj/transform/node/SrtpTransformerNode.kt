@@ -140,17 +140,14 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = Pair(
-        name,
-        super.debugState(mode).second.apply {
-            this["num_srtp_processed"] = numSrtpProcessed
-            this["num_srtp_fail"] = numSrtpFail
-            this["num_srtp_auth_fail"] = numSrtpAuthFail
-            this["num_srtp_replay_fail"] = numSrtpReplayFail
-            this["num_srtp_replay_old"] = numSrtpReplayOld
-            this["num_srtp_invalid_packet"] = numSrtpInvalidPacket
-        }
-    )
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        this["num_srtp_processed"] = numSrtpProcessed
+        this["num_srtp_fail"] = numSrtpFail
+        this["num_srtp_auth_fail"] = numSrtpAuthFail
+        this["num_srtp_replay_fail"] = numSrtpReplayFail
+        this["num_srtp_replay_old"] = numSrtpReplayOld
+        this["num_srtp_invalid_packet"] = numSrtpInvalidPacket
+    }
 
     override fun stop() {
         super.stop()

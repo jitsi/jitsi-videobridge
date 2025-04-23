@@ -52,12 +52,9 @@ class DuplicateTermination() : TransformerNode("Duplicate termination") {
         addNumber("num_duplicate_packets_dropped", numDuplicatePacketsDropped)
     }
 
-    override fun debugState(mode: DebugStateMode) = Pair(
-        name,
-        super.debugState(mode).second.apply {
-            this["num_duplicate_packets_dropped"] = numDuplicatePacketsDropped
-        }
-    )
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        this["num_duplicate_packets_dropped"] = numDuplicatePacketsDropped
+    }
 
     override fun trace(f: () -> Unit) = f.invoke()
 }

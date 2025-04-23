@@ -102,13 +102,10 @@ class RtxHandler(
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = Pair(
-        name,
-        super.debugState(mode).second.apply {
-            this["num_rtx_packets_received"] = numRtxPacketsReceived
-            this["num_padding_packets_received"] = numPaddingPacketsReceived
-        }
-    )
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        this["num_rtx_packets_received"] = numRtxPacketsReceived
+        this["num_padding_packets_received"] = numPaddingPacketsReceived
+    }
 
     override fun trace(f: () -> Unit) = f.invoke()
 }

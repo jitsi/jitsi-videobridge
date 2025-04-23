@@ -135,15 +135,12 @@ class RtcpTermination(
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = Pair(
-        name,
-        super.debugState(mode).second.apply {
-            this["num_failed_to_forward"] = numFailedToForward
-            packetReceiveCounts.forEach { (type, count) ->
-                this["num_${type}_rx"] = count
-            }
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        this["num_failed_to_forward"] = numFailedToForward
+        packetReceiveCounts.forEach { (type, count) ->
+            this["num_${type}_rx"] = count
         }
-    )
+    }
 
     override fun trace(f: () -> Unit) = f.invoke()
 }

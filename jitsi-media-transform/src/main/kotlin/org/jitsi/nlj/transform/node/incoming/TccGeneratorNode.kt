@@ -251,16 +251,13 @@ class TccGeneratorNode(
         }
     }
 
-    override fun debugState(mode: DebugStateMode) = Pair(
-        name,
-        super.debugState(mode).second.apply {
-            this["num_tcc_packets_sent"] = numTccSent
-            this["tcc_feedback_bitrate_bps"] = tccFeedbackBitrate.rate.bps
-            if (mode == DebugStateMode.FULL) {
-                this["tcc_extension_id"] = tccExtensionId.toString()
-                this["num_multiple_tcc_packets"] = numMultipleTccPackets
-                this["enabled"] = enabled
-            }
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        this["num_tcc_packets_sent"] = numTccSent
+        this["tcc_feedback_bitrate_bps"] = tccFeedbackBitrate.rate.bps
+        if (mode == DebugStateMode.FULL) {
+            this["tcc_extension_id"] = tccExtensionId.toString()
+            this["num_multiple_tcc_packets"] = numMultipleTccPackets
+            this["enabled"] = enabled
         }
-    )
+    }
 }

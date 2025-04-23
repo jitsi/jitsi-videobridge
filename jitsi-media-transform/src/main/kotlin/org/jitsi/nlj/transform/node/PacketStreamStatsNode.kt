@@ -19,7 +19,6 @@ import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.util.appendAll
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 
@@ -52,9 +51,8 @@ class PacketStreamStatsNode(
 
     fun getBitrate() = snapshot().bitrate
 
-    override fun debugState(mode: DebugStateMode): Pair<String, OrderedJsonObject> = Pair(
-        name,
-        super.debugState(mode).second.appendAll(packetStreamStats.snapshot().toJson())
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).appendAll(
+        packetStreamStats.snapshot().toJson()
     )
 
     /**

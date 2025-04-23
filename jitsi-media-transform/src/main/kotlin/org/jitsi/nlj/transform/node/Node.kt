@@ -55,7 +55,7 @@ sealed class Node(
     protected val nodeEntryString = "Entered node $name"
     protected val nodeExitString = "Exited node $name"
 
-    open fun debugState(mode: DebugStateMode): Pair<String, OrderedJsonObject> = Pair(name, OrderedJsonObject())
+    open fun debugState(mode: DebugStateMode): OrderedJsonObject = OrderedJsonObject()
 
     open fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
@@ -199,12 +199,10 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
      */
     private var stopped = false
 
-    override fun debugState(mode: DebugStateMode): Pair<String, OrderedJsonObject> {
-        val o = super.debugState(mode).second
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
         if (mode == DebugStateMode.FULL) {
-            stats.appendTo(o)
+            stats.appendTo(this)
         }
-        return Pair(name, o)
     }
 
     /**
@@ -563,14 +561,11 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
         return superStats
     }
 
-    override fun debugState(mode: DebugStateMode) = Pair(
-        name,
-        super.debugState(mode).second.apply {
-            transformPaths.forEach { path ->
-                this["packets_accepted_${path.name}"] = path.packetsAccepted
-            }
+    override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+        transformPaths.forEach { path ->
+            this["packets_accepted_${path.name}"] = path.packetsAccepted
         }
-    )
+    }
 }
 
 /**

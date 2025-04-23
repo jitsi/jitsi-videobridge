@@ -104,15 +104,12 @@ class AudioLevelReader(
             addBoolean("force_mute", forceMute)
         }
 
-        override fun debugState(mode: DebugStateMode) = Pair(
-            name,
-            super.debugState(mode).second.apply {
-                this["num_audio_levels"] = stats.numAudioLevels
-                this["num_silence_packets_discarded"] = stats.numDiscardedSilence
-                this["num_force_mute_discarded"] = stats.numDiscardedForceMute
-                this["num_ranking_discarded"] = stats.numDiscardedRanking
-            }
-        )
+        override fun debugState(mode: DebugStateMode) = super.debugState(mode).apply {
+            this["num_audio_levels"] = stats.numAudioLevels
+            this["num_silence_packets_discarded"] = stats.numDiscardedSilence
+            this["num_force_mute_discarded"] = stats.numDiscardedForceMute
+            this["num_ranking_discarded"] = stats.numDiscardedRanking
+        }
 
         override fun trace(f: () -> Unit) = f.invoke()
     }
