@@ -57,6 +57,7 @@ import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.appendAll
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.OrderedJsonObject
@@ -327,6 +328,17 @@ class RtpSenderImpl(
     }
 
     override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+        if (mode == DebugStateMode.FULL) {
+            appendAll(super.getNodeStats().toJson())
+            this["packet_queue"] = incomingPacketQueue.debugState
+            this["running"] = running
+        }
+        appendAll(nackHandler.getNodeStats().toJson())
+        appendAll(probingDataSender.getNodeStats().toJson())
+        this["local_video_ssrc"] = localVideoSsrc?.toString() ?: "null"
+        this["local_audio_ssrc"] = localAudioSsrc?.toString() ?: "null"
+        this["transport_cc_engine"] = transportCcEngine.getStatistics().toJson()
+        this["bandwidth_estimation"] = bandwidthEstimator.getStats().toJson()
         NodeDebugStateVisitor(this, mode).reverseVisit(outputPipelineTerminationNode)
     }
 
