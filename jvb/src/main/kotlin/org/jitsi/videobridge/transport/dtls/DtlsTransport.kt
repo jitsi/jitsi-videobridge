@@ -216,7 +216,7 @@ class DtlsTransport(parentLogger: Logger, id: String) {
 
     fun getDebugState(): OrderedJsonObject = stats.toJson().apply {
         put("running", running.get())
-        put("role", dtlsStack.role.toString())
+        put("role", dtlsStack.role?.javaClass?.simpleName ?: "null")
         put("is_connected", isConnected)
     }
 

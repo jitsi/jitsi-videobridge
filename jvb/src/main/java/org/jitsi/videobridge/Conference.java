@@ -1256,7 +1256,7 @@ public class Conference
         // Keep this camelCase for compatibility with jvb-rtcstats-push
         debugState.put("rtcstatsEnabled", isRtcStatsEnabled);
 
-        if (conferenceName != null && mode != DebugStateMode.RTCSTATS)
+        if (conferenceName != null)
         {
             debugState.put("name", conferenceName.toString());
         }

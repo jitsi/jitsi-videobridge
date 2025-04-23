@@ -37,8 +37,8 @@ class AudioLevelReader(
     /**
      *  Process packets without cryptex pre-SRTP to allow the "skip decryption" optimization if they are to be dropped.
      */
-    val preDecryptNode = AudioLevelReaderNode("AudioLevelReader_pre_srtp)") { !it.originalHadCryptex }
-    val postDecryptNode = AudioLevelReaderNode("AudioLevelReader_post_srtp)") { it.originalHadCryptex }
+    val preDecryptNode = AudioLevelReaderNode("AudioLevelReader_pre_srtp") { !it.originalHadCryptex }
+    val postDecryptNode = AudioLevelReaderNode("AudioLevelReader_post_srtp") { it.originalHadCryptex }
 
     private var audioLevelExtId: Int? = null
     var audioLevelListener: AudioLevelListener? = null
