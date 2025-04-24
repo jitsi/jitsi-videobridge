@@ -197,18 +197,11 @@ class RelayedEndpoint(
 
     fun getIncomingStats() = rtpReceiver.getStats().packetStreamStats
 
-    fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Remote Endpoint $id").apply {
-            addBlock(streamInformationStore.getNodeStats())
-            addBlock(_mediaSources.getNodeStats())
-            addBlock(rtpReceiver.getNodeStats())
-        }
-    }
-
     override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
         if (mode == DebugStateMode.FULL) {
-            val block = getNodeStats()
-            put(block.name, block.toJson())
+            this["stream_information_store"] = streamInformationStore.debugState(mode)
+            this["receiver"] = rtpReceiver.debugState(mode)
+            this["media_sources"] = _mediaSources.debugState()
         }
     }
 
@@ -234,7 +227,7 @@ class RelayedEndpoint(
         try {
             updateStatsOnExpire()
             rtpReceiver.stop()
-            logger.cdebug { getNodeStats().prettyPrint(0) }
+            logger.cdebug { debugState(DebugStateMode.FULL).toJSONString() }
             rtpReceiver.tearDown()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)

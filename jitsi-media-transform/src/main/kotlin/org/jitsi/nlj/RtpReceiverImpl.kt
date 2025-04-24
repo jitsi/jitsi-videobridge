@@ -27,11 +27,9 @@ import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.transform.NodeDebugStateVisitor
 import org.jitsi.nlj.transform.NodeEventVisitor
-import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.transform.node.Node
@@ -286,11 +284,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun doProcessPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
 
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP receiver $id").apply {
-        addBlock(super.getNodeStats())
-        addBoolean("running", running)
-        NodeStatsVisitor(this).visit(inputTreeRoot)
-    }
     override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
         NodeDebugStateVisitor(this, mode).visit(inputTreeRoot)
     }

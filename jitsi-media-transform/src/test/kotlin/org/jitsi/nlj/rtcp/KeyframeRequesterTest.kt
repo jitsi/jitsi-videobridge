@@ -22,6 +22,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
@@ -29,13 +30,13 @@ import org.jitsi.nlj.resources.node.onOutput
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.util.ExtmapAllowMixedChangedHandler
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpExtensionHandler
 import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
@@ -69,7 +70,7 @@ class KeyframeRequesterTest : ShouldSpec() {
 
         override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? = null
 
-        override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("dummy")
+        override fun debugState(mode: DebugStateMode) = OrderedJsonObject()
     }
     private val logger = StdoutLogger()
     private val clock: FakeClock = FakeClock()

@@ -1021,7 +1021,7 @@ class Endpoint @JvmOverloads constructor(
             bitrateController.expire()
             updateStatsOnExpire()
             transceiver.stop()
-            logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
+            logger.cdebug { transceiver.debugState(DebugStateMode.FULL).toJSONString() }
             logger.cdebug { bitrateController.debugState(DebugStateMode.FULL).toJSONString() }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }

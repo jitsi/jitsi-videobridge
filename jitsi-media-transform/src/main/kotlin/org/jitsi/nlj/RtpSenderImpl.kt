@@ -28,10 +28,8 @@ import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeDebugStateVisitor
 import org.jitsi.nlj.transform.NodeEventVisitor
-import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.AudioRedHandler
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -311,20 +309,6 @@ class RtpSenderImpl(
         }
         NodeEventVisitor(event).reverseVisit(outputPipelineTerminationNode)
         probingDataSender.handleEvent(event)
-    }
-
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
-        addBlock(super.getNodeStats())
-        addBlock(nackHandler.getNodeStats())
-        addBlock(probingDataSender.getNodeStats())
-        addJson("packetQueue", incomingPacketQueue.debugState)
-        NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)
-
-        addString("running", running.toString())
-        addString("localVideoSsrc", localVideoSsrc?.toString() ?: "null")
-        addString("localAudioSsrc", localAudioSsrc?.toString() ?: "null")
-        addJson("transportCcEngine", transportCcEngine.getStatistics().toJson())
-        addJson("Bandwidth Estimation", bandwidthEstimator.getStats().toJson())
     }
 
     override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {

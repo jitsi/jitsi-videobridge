@@ -22,7 +22,6 @@ import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
-import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
 import org.jitsi.utils.OrderedJsonObject
 
@@ -35,7 +34,6 @@ abstract class RtpSender :
     StatsKeepingPacketHandler(),
     EventHandler,
     Stoppable,
-    NodeStatsProducer,
     EndpointConnectionStats.EndpointConnectionStatsListener {
 
     abstract fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int
