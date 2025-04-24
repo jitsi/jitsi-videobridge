@@ -54,8 +54,7 @@ sealed class Node(
     protected val nodeEntryString = "Entered node $name"
     protected val nodeExitString = "Exited node $name"
 
-    // This is a subset of the nodes state/stats, for the full state use getNodeStats()
-    open fun debugState(): OrderedJsonObject = OrderedJsonObject()
+    open fun statsJson(): OrderedJsonObject = OrderedJsonObject()
 
     open fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
@@ -555,7 +554,7 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
         return superStats
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         transformPaths.forEach { path ->
             this["packets_accepted_${path.name}"] = path.packetsAccepted
         }

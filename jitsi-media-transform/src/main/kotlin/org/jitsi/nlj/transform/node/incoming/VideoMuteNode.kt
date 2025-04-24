@@ -23,7 +23,7 @@ class VideoMuteNode : ObserverNode("VideoMuteNode") {
         addBoolean("force_mute", forceMute)
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         this["num_video_packets_discarded"] = numMutedPackets
         this["force_mute"] = forceMute
     }

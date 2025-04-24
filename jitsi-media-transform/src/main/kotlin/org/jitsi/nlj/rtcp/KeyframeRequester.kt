@@ -204,7 +204,7 @@ class KeyframeRequester @JvmOverloads constructor(
         }
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         this["num_api_requests"] = numApiRequests
         this["num_api_requests_dropped"] = numApiRequestsDropped
         this["num_firs_dropped"] = numFirsDropped

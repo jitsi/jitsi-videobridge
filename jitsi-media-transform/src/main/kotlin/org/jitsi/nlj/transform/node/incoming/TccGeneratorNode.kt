@@ -250,7 +250,7 @@ class TccGeneratorNode(
         }
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         this["num_tcc_packets_sent"] = numTccSent
         this["tcc_feedback_bitrate_bps"] = tccFeedbackBitrate.rate.bps
         this["tcc_extension_id"] = tccExtensionId.toString()

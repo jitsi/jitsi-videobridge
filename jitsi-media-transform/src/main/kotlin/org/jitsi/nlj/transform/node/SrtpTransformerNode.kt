@@ -139,7 +139,7 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
         }
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         this["num_srtp_processed"] = numSrtpProcessed
         this["num_srtp_fail"] = numSrtpFail
         this["num_srtp_auth_fail"] = numSrtpAuthFail

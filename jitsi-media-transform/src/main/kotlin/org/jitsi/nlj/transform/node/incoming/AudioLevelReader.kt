@@ -103,7 +103,7 @@ class AudioLevelReader(
             addBoolean("force_mute", forceMute)
         }
 
-        override fun debugState() = super.debugState().apply {
+        override fun statsJson() = super.statsJson().apply {
             this["num_audio_levels"] = stats.numAudioLevels
             this["num_silence_packets_discarded"] = stats.numDiscardedSilence
             this["num_force_mute_discarded"] = stats.numDiscardedForceMute

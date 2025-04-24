@@ -38,7 +38,7 @@ class SentRtcpStats : ObserverNode("Sent RTCP stats") {
         }
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         sentRtcpCounts.forEach { (rtcpType, count) ->
             this["num_${rtcpType}_tx"] = count
         }

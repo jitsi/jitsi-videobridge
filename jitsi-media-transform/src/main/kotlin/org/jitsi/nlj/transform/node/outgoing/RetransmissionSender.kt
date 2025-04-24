@@ -120,7 +120,7 @@ class RetransmissionSender(
         }
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         this["num_retransmissions_requested"] = numRetransmissionsRequested
         this["num_retransmissions_rtx_sent"] = numRetransmittedRtxPackets
         this["num_retransmissions_plain_sent"] = numRetransmittedPlainPackets

@@ -243,7 +243,7 @@ class VideoParser(
     override fun trace(f: () -> Unit) = f.invoke()
 
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply { stats.addToNodeStatsBlock(this) }
-    override fun debugState() = super.debugState().apply { stats.addToJson(this) }
+    override fun statsJson() = super.statsJson().apply { stats.addToJson(this) }
 
     fun getStats() = stats.snapshot()
 

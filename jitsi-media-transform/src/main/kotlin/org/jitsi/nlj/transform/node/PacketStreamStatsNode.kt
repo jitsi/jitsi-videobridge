@@ -50,7 +50,7 @@ class PacketStreamStatsNode(
 
     fun getBitrate() = snapshot().bitrate
 
-    override fun debugState() = super.debugState().appendAll(
+    override fun statsJson() = super.statsJson().appendAll(
         packetStreamStats.snapshot().toJson()
     )
 

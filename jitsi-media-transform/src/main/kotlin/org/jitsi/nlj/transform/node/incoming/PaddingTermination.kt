@@ -55,7 +55,7 @@ class PaddingTermination(parentLogger: Logger) : TransformerNode("Padding termin
         }
     }
 
-    override fun debugState() = super.debugState().apply {
+    override fun statsJson() = super.statsJson().apply {
         this["num_padded_packets_seen"] = numPaddedPacketsSeen
         this["num_padding_only_packets_seen"] = numPaddingOnlyPacketsSeen
     }
