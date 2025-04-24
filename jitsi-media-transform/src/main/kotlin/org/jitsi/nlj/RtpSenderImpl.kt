@@ -318,7 +318,7 @@ class RtpSenderImpl(
             this["running"] = running
         }
         appendAll(nackHandler.getNodeStats().toJson())
-        appendAll(probingDataSender.getNodeStats().toJson())
+        this["probing_data_sender"] = probingDataSender.debugState(mode)
         this["local_video_ssrc"] = localVideoSsrc?.toString() ?: "null"
         this["local_audio_ssrc"] = localAudioSsrc?.toString() ?: "null"
         this["transport_cc_engine"] = transportCcEngine.getStatistics().toJson()
