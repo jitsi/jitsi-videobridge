@@ -51,8 +51,10 @@ class VideobridgeTest : ShouldSpec() {
     }
 
     init {
-        context("Debug state should be JSON") {
-            videobridge.getDebugState(null, null, DebugStateMode.FULL).shouldBeValidJson()
+        DebugStateMode.entries.forEach { mode ->
+            context("Debug state should be JSON (mode=$mode)") {
+                videobridge.getDebugState(null, null, mode).shouldBeValidJson()
+            }
         }
         context("Shutdown") {
             context("when a conference is active") {
