@@ -30,7 +30,6 @@ import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.srtp.SrtpTransformers
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.StreamInformationStore

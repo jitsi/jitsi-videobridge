@@ -339,7 +339,7 @@ class Relay @JvmOverloads constructor(
             put("endpoints_by_ssrc", endpointsBySsrcMap)
             val endpointSenders = JSONObject()
             for (s in senders.values) {
-                endpointSenders[s.id] = s.getDebugState()
+                endpointSenders[s.id] = s.getDebugState(mode)
             }
             put("senders", endpointSenders)
         }
