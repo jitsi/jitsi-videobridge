@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.*;
 import org.jitsi.health.Result;
+import org.jitsi.nlj.*;
 import org.jitsi.shutdown.*;
 import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
@@ -484,29 +485,35 @@ public class Videobridge
      * included.
      */
     @SuppressWarnings("unchecked")
-    public OrderedJsonObject getDebugState(String conferenceId, String endpointId, boolean full)
+    public OrderedJsonObject getDebugState(String conferenceId, String endpointId, DebugStateMode mode)
     {
         OrderedJsonObject debugState = new OrderedJsonObject();
-        debugState.put("shutdownState", shutdownManager.getState().toString());
-        debugState.put("drain", drainMode);
-        debugState.put("time", System.currentTimeMillis());
 
-        debugState.put("load-management", jvbLoadManager.getStats());
-
-        Double jitter = PacketTransitStats.getBridgeJitter();
-        if (jitter != null)
+        if (mode == DebugStateMode.FULL || mode == DebugStateMode.SHORT)
         {
-            debugState.put("overall_bridge_jitter", jitter);
+            debugState.put("shutdown_state", shutdownManager.getState().toString());
+            debugState.put("drain", drainMode);
+            debugState.put("time", System.currentTimeMillis());
+
+            debugState.put("load_management", jvbLoadManager.getStats());
+
+            Double jitter = PacketTransitStats.getBridgeJitter();
+            if (jitter != null)
+            {
+                debugState.put("overall_bridge_jitter", jitter);
+            }
         }
 
         JSONObject conferences = new JSONObject();
         debugState.put("conferences", conferences);
         if (StringUtils.isBlank(conferenceId))
         {
-            getConferences().forEach(conference ->
+            getConferences().stream()
+                    .filter(c -> mode != DebugStateMode.STATS || c.isRtcStatsEnabled())
+                    .forEach(conference ->
                 conferences.put(
                         conference.getID(),
-                        conference.getDebugState(full, null)));
+                        conference.getDebugState(mode, null)));
         }
         else
         {
@@ -519,7 +526,7 @@ public class Videobridge
 
             conferences.put(
                     conferenceId,
-                    conference == null ? "null" : conference.getDebugState(full, endpointId));
+                    conference == null ? "null" : conference.getDebugState(mode, endpointId));
         }
 
         return debugState;

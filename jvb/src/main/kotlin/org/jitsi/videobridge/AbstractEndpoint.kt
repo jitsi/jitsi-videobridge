@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
@@ -216,19 +217,16 @@ abstract class AbstractEndpoint protected constructor(
     abstract fun requestKeyframe()
 
     /** A JSON representation of the parts of this object's state that are deemed useful for debugging. */
-    open val debugState: JSONObject
-        get() {
-            val debugState = JSONObject()
-            val receiverVideoConstraints = JSONObject()
-            this.receiverVideoConstraints.forEach { (sourceName, receiverConstraints) ->
-                receiverVideoConstraints[sourceName] = receiverConstraints.getDebugState()
-            }
-            debugState["receiverVideoConstraints"] = receiverVideoConstraints
-            debugState["maxReceiverVideoConstraints"] = HashMap(maxReceiverVideoConstraints)
-            debugState["expired"] = isExpired
-            debugState["statsId"] = statsId
-            return debugState
+    open fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
+        val receiverVideoConstraints = JSONObject()
+        this@AbstractEndpoint.receiverVideoConstraints.forEach { (sourceName, receiverConstraints) ->
+            receiverVideoConstraints[sourceName] = receiverConstraints.getDebugState()
         }
+        this["receiver_video_constraints"] = receiverVideoConstraints
+        this["max_receiver_video_constraints"] = HashMap(maxReceiverVideoConstraints)
+        this["expired"] = isExpired
+        this["stats_id"] = statsId
+    }
 
     /**
      * Computes and sets the [.maxReceiverVideoConstraints] from the specified video constraints of the media

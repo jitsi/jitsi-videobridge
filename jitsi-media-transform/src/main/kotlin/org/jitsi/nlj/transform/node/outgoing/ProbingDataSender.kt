@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
@@ -24,13 +25,12 @@ import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.rtp.PaddingVideoPacket
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketCache
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -53,7 +53,7 @@ class ProbingDataSender(
     private val diagnosticContext: DiagnosticContext,
     streamInformationStore: ReadOnlyStreamInformationStore,
     parentLogger: Logger
-) : EventHandler, NodeStatsProducer {
+) : EventHandler {
 
     private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(this.javaClass)
     private val logger = createChildLogger(parentLogger)
@@ -183,15 +183,15 @@ class ProbingDataSender(
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Probing data sender").apply {
-            addNumber("num_bytes_of_probing_data_sent_as_rtx", numProbingBytesSentRtx)
-            addNumber("num_bytes_of_probing_data_sent_as_dummy", numProbingBytesSentDummyData)
-            addBoolean("rtx_supported", rtxSupported)
-            addString("local_video_ssrc", localVideoSsrc.toString())
-            addString("curr_dummy_timestamp", currDummyTimestamp.toString())
-            addString("curr_dummy_seq_num", currDummySeqNum.toString())
-            addString("video_payload_types", videoPayloadTypes.toString())
+    fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+        this["num_bytes_of_probing_data_sent_as_rtx"] = numProbingBytesSentRtx
+        this["num_bytes_of_probing_data_sent_as_dummy"] = numProbingBytesSentDummyData
+        this["rtx_supported"] = rtxSupported
+        if (mode == DebugStateMode.FULL) {
+            this["local_video_ssrc"] = localVideoSsrc.toString()
+            this["curr_dummy_timestamp"] = currDummyTimestamp.toString()
+            this["curr_dummy_seq_num"] = currDummySeqNum.toString()
+            this["video_payload_types"] = videoPayloadTypes.toString()
         }
     }
 

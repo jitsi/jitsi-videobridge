@@ -36,8 +36,8 @@ class AudioLevelReader(
     /**
      *  Process packets without cryptex pre-SRTP to allow the "skip decryption" optimization if they are to be dropped.
      */
-    val preDecryptNode = AudioLevelReaderNode("Audio level reader (pre-srtp)") { !it.originalHadCryptex }
-    val postDecryptNode = AudioLevelReaderNode("Audio level reader (post-srtp)") { it.originalHadCryptex }
+    val preDecryptNode = AudioLevelReaderNode("AudioLevelReader_pre_srtp") { !it.originalHadCryptex }
+    val postDecryptNode = AudioLevelReaderNode("AudioLevelReader_post_srtp") { it.originalHadCryptex }
 
     private var audioLevelExtId: Int? = null
     var audioLevelListener: AudioLevelListener? = null
@@ -101,6 +101,13 @@ class AudioLevelReader(
             addNumber("num_non_silence", stats.numNonSilence)
             addNumber("num_non_silence_with_vad", stats.numNonSilenceWithVad)
             addBoolean("force_mute", forceMute)
+        }
+
+        override fun statsJson() = super.statsJson().apply {
+            this["num_audio_levels"] = stats.numAudioLevels
+            this["num_silence_packets_discarded"] = stats.numDiscardedSilence
+            this["num_force_mute_discarded"] = stats.numDiscardedForceMute
+            this["num_ranking_discarded"] = stats.numDiscardedRanking
         }
 
         override fun trace(f: () -> Unit) = f.invoke()

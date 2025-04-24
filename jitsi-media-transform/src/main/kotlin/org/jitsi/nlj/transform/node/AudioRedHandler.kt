@@ -87,6 +87,16 @@ class AudioRedHandler(
         addNumber("invalid_red_packets_dropped", stats.invalidRedPacketsDropped)
     }
 
+    override fun statsJson() = super.statsJson().apply {
+        this["red_packets_decapsulated"] = stats.redPacketsDecapsulated
+        this["red_packets_forwarded"] = stats.redPacketsForwarded
+        this["audio_packets_encapsulated"] = stats.audioPacketsEncapsulated
+        this["audio_packets_forwarded"] = stats.audioPacketsForwarded
+        this["lost_packets_recovered"] = stats.lostPacketsRecovered
+        this["redundancy_packets_added"] = stats.redundancyPacketsAdded
+        this["invalid_red_packets_dropped"] = stats.invalidRedPacketsDropped
+    }
+
     override fun stop() = super.stop().also {
         ssrcRedHandlers.values.forEach { it.stop() }
         ssrcRedHandlers.clear()

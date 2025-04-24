@@ -18,6 +18,7 @@ package org.jitsi.videobridge
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
+import org.jitsi.nlj.DebugStateMode
 import org.json.simple.JSONObject
 import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
@@ -37,7 +38,9 @@ class ConferenceTest : ConfigTest() {
                 // TODO cover the case when they're true
                 createLocalEndpoint("abcdabcd", true, false, false, false)
                 endpointCount shouldBe 1
-                debugState.shouldBeValidJson()
+                DebugStateMode.entries.forEach { mode ->
+                    getDebugState(mode, null).shouldBeValidJson()
+                }
             }
         }
         context("Creating relays should work") {
@@ -45,7 +48,9 @@ class ConferenceTest : ConfigTest() {
                 hasRelays() shouldBe false
                 createRelay("relay-id", "mesh-id", true, true)
                 hasRelays() shouldBe true
-                debugState.shouldBeValidJson()
+                DebugStateMode.entries.forEach { mode ->
+                    getDebugState(mode, null).shouldBeValidJson()
+                }
             }
         }
     }

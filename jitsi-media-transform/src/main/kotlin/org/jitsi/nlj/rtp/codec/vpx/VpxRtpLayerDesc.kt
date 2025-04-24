@@ -183,9 +183,9 @@ constructor(
     /**
      * Extracts a [NodeStatsBlock] from an [RtpLayerDesc].
      */
-    override fun getNodeStats() = super.getNodeStats().apply {
-        addNumber("tid", tid)
-        addNumber("sid", sid)
+    override fun debugState() = super.debugState().apply {
+        this["tid"] = tid
+        this["sid"] = sid
     }
 
     override fun indexString(): String = indexString(index)

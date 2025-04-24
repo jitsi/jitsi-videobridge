@@ -28,9 +28,8 @@ import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
-import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeDebugStateVisitor
 import org.jitsi.nlj.transform.NodeEventVisitor
-import org.jitsi.nlj.transform.NodeStatsVisitor
 import org.jitsi.nlj.transform.NodeTeardownVisitor
 import org.jitsi.nlj.transform.node.AudioRedHandler
 import org.jitsi.nlj.transform.node.ConsumerNode
@@ -56,8 +55,10 @@ import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
+import org.jitsi.nlj.util.appendAll
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -152,7 +153,7 @@ class RtpSenderImpl(
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
             node(HeaderExtEncoder(streamInformationStore, logger))
-            node(toggleablePcapWriter.newObserverNode(outbound = true))
+            node(toggleablePcapWriter.newObserverNode(outbound = true, suffix = "tx_rtp"))
             node(srtpEncryptWrapper)
             node(packetStreamStats.createNewNode())
             node(PacketLossNode(packetLossConfig), condition = { packetLossConfig.enabled })
@@ -187,7 +188,7 @@ class RtpSenderImpl(
                 packetInfo
             }
             node(rtcpSrUpdater)
-            node(toggleablePcapWriter.newObserverNode(outbound = true))
+            node(toggleablePcapWriter.newObserverNode(outbound = true, suffix = "tx_rtcp"))
             node(object : ObserverNode("RTCP sent notifier") {
                 override fun observe(packetInfo: PacketInfo) {
                     val packet = packetInfo.packet
@@ -310,18 +311,19 @@ class RtpSenderImpl(
         probingDataSender.handleEvent(event)
     }
 
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("RTP sender $id").apply {
-        addBlock(super.getNodeStats())
-        addBlock(nackHandler.getNodeStats())
-        addBlock(probingDataSender.getNodeStats())
-        addJson("packetQueue", incomingPacketQueue.debugState)
-        NodeStatsVisitor(this).reverseVisit(outputPipelineTerminationNode)
-
-        addString("running", running.toString())
-        addString("localVideoSsrc", localVideoSsrc?.toString() ?: "null")
-        addString("localAudioSsrc", localAudioSsrc?.toString() ?: "null")
-        addJson("transportCcEngine", transportCcEngine.getStatistics().toJson())
-        addJson("Bandwidth Estimation", bandwidthEstimator.getStats().toJson())
+    override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+        if (mode == DebugStateMode.FULL) {
+            appendAll(super.getNodeStats().toJson())
+            this["packet_queue"] = incomingPacketQueue.debugState
+            this["running"] = running
+        }
+        appendAll(nackHandler.getNodeStats().toJson())
+        this["probing_data_sender"] = probingDataSender.debugState(mode)
+        this["local_video_ssrc"] = localVideoSsrc?.toString() ?: "null"
+        this["local_audio_ssrc"] = localAudioSsrc?.toString() ?: "null"
+        this["transport_cc_engine"] = transportCcEngine.getStatistics().toJson()
+        this["bandwidth_estimation"] = bandwidthEstimator.getStats().toJson()
+        NodeDebugStateVisitor(this, mode).reverseVisit(outputPipelineTerminationNode)
     }
 
     override fun stop() {

@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
@@ -26,7 +27,6 @@ import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.srtp.SrtpTransformers
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
@@ -120,21 +120,11 @@ class RelayEndpointSender(
 
     fun getOutgoingStats() = rtpSender.getPacketStreamStats()
 
-    fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Remote Endpoint $id").apply {
-            addBlock(streamInformationStore.getNodeStats())
-            addBlock(rtpSender.getNodeStats())
-        }
-    }
-
-    fun getDebugState(): JSONObject {
-        val debugState = JSONObject()
-        debugState["expired"] = expired
-
-        val block = getNodeStats()
-        debugState[block.name] = block.toJson()
-
-        return debugState
+    fun getDebugState(mode: DebugStateMode) = JSONObject().apply {
+        this["expired"] = expired
+        this["id"] = id
+        this["sender"] = rtpSender.debugState(mode)
+        this["stream_information_store"] = streamInformationStore.debugState(mode)
     }
 
     fun expire() {
@@ -146,7 +136,7 @@ class RelayEndpointSender(
         try {
             updateStatsOnExpire()
             rtpSender.stop()
-            logger.cdebug { getNodeStats().prettyPrint(0) }
+            logger.cdebug { getDebugState(DebugStateMode.FULL).toJSONString() }
             rtpSender.tearDown()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)

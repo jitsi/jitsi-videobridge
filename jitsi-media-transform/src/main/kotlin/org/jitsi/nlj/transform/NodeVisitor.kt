@@ -16,10 +16,12 @@
 
 package org.jitsi.nlj.transform
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.DemuxerNode
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.utils.OrderedJsonObject
 
 abstract class NodeVisitor {
     open fun visit(node: Node) {
@@ -54,6 +56,18 @@ class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor() {
     override fun doWork(node: Node) {
         val block = node.getNodeStats()
         nodeStatsBlock.addBlock(block)
+    }
+}
+
+class NodeDebugStateVisitor(val o: OrderedJsonObject, val mode: DebugStateMode) : NodeVisitor() {
+    override fun doWork(node: Node) {
+        val debugState = when (mode) {
+            DebugStateMode.FULL -> node.getNodeStats().toJson()
+            else -> node.statsJson()
+        }
+        if (debugState.isNotEmpty()) {
+            o[node.name] = debugState
+        }
     }
 }
 

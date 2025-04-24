@@ -23,6 +23,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.config.withNewConfig
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.shutdown.ShutdownServiceImpl
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
@@ -50,8 +51,10 @@ class VideobridgeTest : ShouldSpec() {
     }
 
     init {
-        context("Debug state should be JSON") {
-            videobridge.getDebugState(null, null, true).shouldBeValidJson()
+        DebugStateMode.entries.forEach { mode ->
+            context("Debug state should be JSON (mode=$mode)") {
+                videobridge.getDebugState(null, null, mode).shouldBeValidJson()
+            }
         }
         context("Shutdown") {
             context("when a conference is active") {

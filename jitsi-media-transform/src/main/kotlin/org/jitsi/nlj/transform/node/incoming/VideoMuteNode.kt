@@ -5,7 +5,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 
-class VideoMuteNode : ObserverNode("Video mute node") {
+class VideoMuteNode : ObserverNode("VideoMuteNode") {
 
     private var numMutedPackets = 0
     var forceMute: Boolean = false
@@ -21,6 +21,11 @@ class VideoMuteNode : ObserverNode("Video mute node") {
     override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
         addNumber("num_video_packets_discarded", numMutedPackets)
         addBoolean("force_mute", forceMute)
+    }
+
+    override fun statsJson() = super.statsJson().apply {
+        this["num_video_packets_discarded"] = numMutedPackets
+        this["force_mute"] = forceMute
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

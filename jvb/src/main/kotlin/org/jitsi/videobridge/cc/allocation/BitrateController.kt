@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
@@ -147,16 +148,15 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun transformRtcp(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
 
-    val debugState: JSONObject
-        get() = JSONObject().apply {
-            put("bitrate_allocator", bandwidthAllocator.debugState)
-            put("packet_handler", packetHandler.debugState)
-            put("forwardedSources", forwardedSources.toString())
-            put("oversending", oversendingTimeTracker.state)
-            put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
-            put("supportsRtx", supportsRtx)
-            put("trust_bwe", trustBwe)
-        }
+    fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
+        put("bitrate_allocator", bandwidthAllocator.debugState)
+        put("packet_handler", packetHandler.debugState(mode))
+        put("forwarded_sources", forwardedSources.toString())
+        put("oversending", oversendingTimeTracker.state)
+        put("total_oversending_time_secs", oversendingTimeTracker.totalTimeOn().seconds)
+        put("supports_rtx", supportsRtx)
+        put("trust_bwe", trustBwe)
+    }
 
     fun addPayloadType(payloadType: PayloadType) {
         if (payloadType.encoding == PayloadTypeEncoding.RTX) {

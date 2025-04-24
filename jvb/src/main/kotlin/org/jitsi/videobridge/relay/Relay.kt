@@ -20,6 +20,7 @@ import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.ErrorKind
 import org.jitsi.dcsctp4j.SendPacketStatus
 import org.jitsi.dcsctp4j.SendStatus
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
@@ -178,8 +179,8 @@ class Relay @JvmOverloads constructor(
     private var dataChannelStack: DataChannelStack? = null
 
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-sctp")
-    private val sctpRecvPcap = toggleablePcapWriter.newObserverNode(outbound = false)
-    private val sctpSendPcap = toggleablePcapWriter.newObserverNode(outbound = true)
+    private val sctpRecvPcap = toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_sctp")
+    private val sctpSendPcap = toggleablePcapWriter.newObserverNode(outbound = true, suffix = "tx_sctp")
 
     private val sctpPipeline = pipeline {
         node(sctpRecvPcap)
@@ -313,34 +314,36 @@ class Relay @JvmOverloads constructor(
         TransportConfig.queueSize
     )
 
-    val debugState: JSONObject
-        get() = JSONObject().apply {
-            put("iceTransport", iceTransport.getDebugState())
-            put("dtlsTransport", dtlsTransport.getDebugState())
-            put("transceiver", transceiver.getNodeStats().toJson())
-            put("meshId", meshId)
-            put("messageTransport", messageTransport.debugState)
+    fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
+        put("ice_transport", iceTransport.getDebugState())
+        put("dtls_transport", dtlsTransport.getDebugState())
+        put("transceiver", transceiver.debugState(mode))
+        put("mesh_id", meshId)
+        put("message_transport", messageTransport.debugState)
+        sctpTransport?.let {
+            put("sctp", it.getDebugState())
+        }
+
+        if (mode == DebugStateMode.FULL) {
             val remoteEndpoints = JSONObject()
             val endpointsBySsrcMap = JSONObject()
             synchronized(endpointsLock) {
                 for (r in relayedEndpoints.values) {
-                    remoteEndpoints[r.id] = r.debugState
+                    remoteEndpoints[r.id] = r.debugState(mode)
                 }
                 for ((s, e) in endpointsBySsrc) {
                     endpointsBySsrcMap[s] = e.id
                 }
             }
-            put("remoteEndpoints", remoteEndpoints)
-            put("endpointsBySsrc", endpointsBySsrcMap)
+            put("remote_endpoints", remoteEndpoints)
+            put("endpoints_by_ssrc", endpointsBySsrcMap)
             val endpointSenders = JSONObject()
             for (s in senders.values) {
-                endpointSenders[s.id] = s.getDebugState()
+                endpointSenders[s.id] = s.getDebugState(mode)
             }
             put("senders", endpointSenders)
-            sctpTransport?.let {
-                put("sctp", it.getDebugState())
-            }
         }
+    }
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -1019,7 +1022,7 @@ class Relay @JvmOverloads constructor(
             updateStatsOnExpire()
             transceiver.stop()
             srtpTransformers?.close()
-            logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
+            logger.cdebug { transceiver.debugState(DebugStateMode.FULL).toJSONString() }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
 

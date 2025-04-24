@@ -376,15 +376,24 @@ public class AdaptiveSourceProjection
      * are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
-    public JSONObject getDebugState()
+    public JSONObject getDebugState(@NotNull DebugStateMode mode)
     {
         JSONObject debugState = new JSONObject();
 
         debugState.put("targetSsrc", targetSsrc);
         AdaptiveSourceProjectionContext contextCopy = context;
-        debugState.put(
-                "context",
-                contextCopy == null ? null : contextCopy.getDebugState());
+        if (mode == DebugStateMode.FULL)
+        {
+            debugState.put(
+                    "context",
+                    contextCopy == null ? null : contextCopy.getDebugState());
+        }
+        else if (mode == DebugStateMode.STATS)
+        {
+            debugState.put(
+                    "context",
+                    contextCopy == null ? "null" : contextCopy.getClass().getSimpleName());
+        }
         debugState.put("targetIndex", targetIndex);
 
         return debugState;

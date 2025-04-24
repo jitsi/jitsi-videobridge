@@ -101,5 +101,10 @@ class RtxHandler(
         }
     }
 
+    override fun statsJson() = super.statsJson().apply {
+        this["num_rtx_packets_received"] = numRtxPacketsReceived
+        this["num_padding_packets_received"] = numPaddingPacketsReceived
+    }
+
     override fun trace(f: () -> Unit) = f.invoke()
 }

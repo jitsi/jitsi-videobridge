@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2020 - present 8x8, Inc.
+ * Copyright @ 2025 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.rest
+package org.jitsi.nlj
 
-enum class RestApis {
-    COLIBRI,
-    DEBUG,
-    DRAIN,
-    HEALTH,
-    PROMETHEUS,
-    RTCSTATS,
-    SHUTDOWN,
-    VERSION
+enum class DebugStateMode {
+    /** Include full details, mostly for manually debugging */
+    FULL,
+
+    /** Include all information needed for stats/metric collection (e.g. rtcstats) */
+    STATS,
+
+    /** Include only the most important information, e.g. listing conferences and endpoints. */
+    SHORT
 }

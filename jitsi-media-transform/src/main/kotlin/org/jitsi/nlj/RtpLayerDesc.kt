@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
@@ -119,18 +118,14 @@ abstract class RtpLayerDesc(
      */
     abstract fun hasZeroBitrate(nowMs: Long): Boolean
 
-    /**
-     * Extracts a [NodeStatsBlock] from an [RtpLayerDesc].
-     */
-    open fun getNodeStats() = NodeStatsBlock(indexString()).apply {
-        addNumber("frameRate", frameRate)
-        addNumber("height", height)
-        addNumber("index", index)
-        addNumber("bitrate_bps", getBitrate(System.currentTimeMillis()).bps)
-        addNumber("target_bitrate", targetBitrate?.bps ?: 0)
+    open fun debugState(): OrderedJsonObject = OrderedJsonObject().apply {
+        this["frameRate"] = frameRate
+        this["height"] = height
+        this["index"] = index
+        this["bitrate_bps"] = getBitrate(System.currentTimeMillis()).bps
+        this["target_bitrate"] = targetBitrate?.bps ?: 0
+        this["indexString"] = indexString()
     }
-
-    fun debugState(): OrderedJsonObject = getNodeStats().toJson().apply { put("indexString", indexString()) }
 
     abstract fun indexString(): String
 

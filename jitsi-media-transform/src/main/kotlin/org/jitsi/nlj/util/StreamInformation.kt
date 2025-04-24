@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.supportsPli
 import org.jitsi.nlj.format.supportsRemb
@@ -23,9 +24,8 @@ import org.jitsi.nlj.format.supportsTcc
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -46,7 +46,7 @@ typealias ExtmapAllowMixedChangedHandler = (Boolean) -> Unit
  * etc.) available and allows interested parties to add handlers for when certain
  * information is available.
  */
-interface ReadOnlyStreamInformationStore : NodeStatsProducer {
+interface ReadOnlyStreamInformationStore {
     val rtpExtensions: List<RtpExtension>
     fun onRtpExtensionMapping(rtpExtensionType: RtpExtensionType, handler: RtpExtensionHandler)
 
@@ -58,6 +58,7 @@ interface ReadOnlyStreamInformationStore : NodeStatsProducer {
 
     fun getLocalPrimarySsrc(secondarySsrc: Long): Long?
     fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long?
+    fun debugState(mode: DebugStateMode): OrderedJsonObject
 
     /**
      * All signaled receive SSRCs
@@ -110,8 +111,8 @@ class StreamInformationStoreImpl : StreamInformationStore {
     private val _rtpPayloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
     override val rtpPayloadTypes: Map<Byte, PayloadType> = Collections.unmodifiableMap(_rtpPayloadTypes)
 
-    private val localSsrcAssociations = SsrcAssociationStore("Local SSRC Associations")
-    private val remoteSsrcAssociations = SsrcAssociationStore("Remote SSRC Associations")
+    private val localSsrcAssociations = SsrcAssociationStore()
+    private val remoteSsrcAssociations = SsrcAssociationStore()
 
     private val receiveSsrcStore = ReceiveSsrcStore(localSsrcAssociations)
     override val receiveSsrcs: Set<Long>
@@ -221,21 +222,19 @@ class StreamInformationStoreImpl : StreamInformationStore {
 
     override fun removeReceiveSsrc(ssrc: Long) = receiveSsrcStore.removeReceiveSsrc(ssrc)
 
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Stream Information Store").apply {
-        addBlock(
-            NodeStatsBlock("RTP Extensions").apply {
-                rtpExtensions.forEach { addString(it.id.toString(), it.type.toString()) }
-            }
-        )
-        addBlock(
-            NodeStatsBlock("RTP Payload Types").apply {
-                rtpPayloadTypes.forEach { addString(it.key.toString(), it.value.toString()) }
-            }
-        )
-        addBlock(localSsrcAssociations.getNodeStats())
-        addBlock(remoteSsrcAssociations.getNodeStats())
-        addBlock(receiveSsrcStore.getNodeStats())
-        addBoolean("supports_pli", supportsPli)
-        addBoolean("supports_fir", supportsFir)
+    override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+        this["supports_pli"] = supportsPli
+        this["supports_fir"] = supportsFir
+        this["rtp_extensions"] = OrderedJsonObject().apply {
+            rtpExtensions.forEach { put(it.id.toString(), it.type.toString()) }
+        }
+        this["rtp_payload_types"] = OrderedJsonObject().apply {
+            rtpPayloadTypes.forEach { put(it.key.toString(), it.value.toString()) }
+        }
+        if (mode == DebugStateMode.FULL) {
+            this["local_ssrc_associations"] = localSsrcAssociations.toString()
+            this["remote_ssrc_associations"] = remoteSsrcAssociations.toString()
+            this["receive_ssrc_store"] = receiveSsrcStore.debugState()
+        }
     }
 }
