@@ -115,7 +115,7 @@ class RtpSenderImpl(
     private val outgoingPacketCache = PacketCacher()
     private val headerExtensionStripper = HeaderExtStripper(streamInformationStore)
     private val absSendTime = AbsSendTime(streamInformationStore)
-    private val statsTracker = OutgoingStatisticsTracker()
+    private val statsTracker = OutgoingStatisticsTracker(diagnosticContext)
     private val packetStreamStats = PacketStreamStatsNode(diagnosticContext, "send")
     private val rtcpSrUpdater = RtcpSrUpdater(statsTracker)
     private val keyframeRequester = KeyframeRequester(streamInformationStore, logger)

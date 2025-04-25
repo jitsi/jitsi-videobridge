@@ -20,11 +20,17 @@ import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
+import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
+import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import java.util.concurrent.ConcurrentHashMap
 
-class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
+class OutgoingStatisticsTracker(
+    private val diagnosticContext: DiagnosticContext,
+) : ObserverNode("Outgoing statistics tracker") {
     /**
      * Per-SSRC statistics
      */
@@ -33,12 +39,16 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
     private var numAudioPackets = 0
     private var numVideoPackets = 0
 
+    private val videoBitrate = BitrateCalculator.createBitrateTracker()
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
 
         when (rtpPacket) {
             is AudioRtpPacket -> numAudioPackets++
-            is VideoRtpPacket -> numVideoPackets++
+            is VideoRtpPacket -> {
+                numVideoPackets++
+                videoBitrate.update(rtpPacket.length.bytes)
+            }
         }
 
         val stats = ssrcStats.computeIfAbsent(rtpPacket.ssrc) {
@@ -69,11 +79,22 @@ class OutgoingStatisticsTracker : ObserverNode("Outgoing statistics tracker") {
             ssrcStats.map { (ssrc, stats) ->
                 Pair(ssrc, stats.getSnapshot())
             }.toMap()
-        )
+        ).also {
+            if (timeseriesLogger.isTraceEnabled) {
+                timeseriesLogger.trace(
+                    diagnosticContext.makeTimeSeriesPoint("sent_video_stream_stats")
+                        .addField("bitrate_bps", videoBitrate.rate.bps)
+                )
+            }
+        }
     }
 
     fun getSsrcSnapshot(ssrc: Long): OutgoingSsrcStats.Snapshot? {
         return ssrcStats[ssrc]?.getSnapshot()
+    }
+
+    companion object {
+        private val timeseriesLogger = TimeSeriesLogger.getTimeSeriesLogger(OutgoingStatisticsTracker::class.java)
     }
 }
 
