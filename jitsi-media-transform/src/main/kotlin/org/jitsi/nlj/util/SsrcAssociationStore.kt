@@ -17,15 +17,11 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.nlj.rtp.SsrcAssociationType
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.NodeStatsProducer
 import java.util.concurrent.CopyOnWriteArrayList
 
 typealias SsrcAssociationHandler = (SsrcAssociation) -> Unit
 
-class SsrcAssociationStore(
-    private val name: String = "SSRC Associations"
-) : NodeStatsProducer {
+class SsrcAssociationStore {
     private val ssrcAssociations: MutableList<SsrcAssociation> = CopyOnWriteArrayList()
 
     /**
@@ -83,7 +79,5 @@ class SsrcAssociationStore(
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock(name).apply {
-        addString("SSRC associations", ssrcAssociations.toString())
-    }
+    override fun toString(): String = ssrcAssociations.toString()
 }

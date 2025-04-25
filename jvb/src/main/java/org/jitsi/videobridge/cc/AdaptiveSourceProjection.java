@@ -89,6 +89,12 @@ public class AdaptiveSourceProjection
     private int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
 
     /**
+     * The map for persistent states.
+     * Currently, we only expect it for AV1.
+     */
+    private final HashMap<Class<? extends AdaptiveSourceProjectionContext>, Object> persistentStates = new HashMap<>();
+
+    /**
      * Ctor.
      *
      * @param source the {@link MediaSourceDesc} that owns the packets
@@ -260,7 +266,9 @@ public class AdaptiveSourceProjection
                     (context == null ? "creating new" : "changing to") +
                     " AV1 DD context for source packet ssrc " + rtpPacket.getSsrc());
                 context = new Av1DDAdaptiveSourceProjectionContext(
-                    diagnosticContext, rtpState, logger);
+                        diagnosticContext, rtpState,
+                        persistentStates.get(Av1DDAdaptiveSourceProjectionContext.class),
+                        logger);
             }
 
             return context;
@@ -296,7 +304,30 @@ public class AdaptiveSourceProjection
         }
         else
         {
+            savePersistentState();
             return context.getRtpState();
+        }
+    }
+
+    private void savePersistentState()
+    {
+        if (context == null)
+        {
+            return;
+        }
+        Object state = context.getPersistentState();
+        if (state != null)
+        {
+            if (context.getClass() != Av1DDAdaptiveSourceProjectionContext.class)
+            {
+                logger.warn("Got unexpected context persistent state from class " +
+                        context.getClass().getSimpleName());
+            }
+            persistentStates.put(context.getClass(), state);
+        }
+        else if (persistentStates.get(context.getClass()) != null)
+        {
+            persistentStates.remove(context.getClass());
         }
     }
 
@@ -345,15 +376,24 @@ public class AdaptiveSourceProjection
      * are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
-    public JSONObject getDebugState()
+    public JSONObject getDebugState(@NotNull DebugStateMode mode)
     {
         JSONObject debugState = new JSONObject();
 
         debugState.put("targetSsrc", targetSsrc);
         AdaptiveSourceProjectionContext contextCopy = context;
-        debugState.put(
-                "context",
-                contextCopy == null ? null : contextCopy.getDebugState());
+        if (mode == DebugStateMode.FULL)
+        {
+            debugState.put(
+                    "context",
+                    contextCopy == null ? null : contextCopy.getDebugState());
+        }
+        else if (mode == DebugStateMode.STATS)
+        {
+            debugState.put(
+                    "context",
+                    contextCopy == null ? "null" : contextCopy.getClass().getSimpleName());
+        }
         debugState.put("targetIndex", targetIndex);
 
         return debugState;

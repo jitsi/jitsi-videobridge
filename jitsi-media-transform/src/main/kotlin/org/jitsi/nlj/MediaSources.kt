@@ -16,8 +16,7 @@
 
 package org.jitsi.nlj
 
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Maintains an array of [MediaSourceDesc]. The set method preserves the existing sources that match one of the new
@@ -26,7 +25,7 @@ import org.jitsi.nlj.transform.NodeStatsProducer
  *
  * @author Boris Grozev
  */
-class MediaSources : NodeStatsProducer {
+class MediaSources {
     private var sources: Array<MediaSourceDesc> = arrayOf()
 
     fun setMediaSources(newSources: Array<MediaSourceDesc>): Boolean {
@@ -60,14 +59,15 @@ class MediaSources : NodeStatsProducer {
 
     fun getMediaSources(): Array<MediaSourceDesc> = sources
 
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("MediaStreamSources").apply {
+    fun debugState() = OrderedJsonObject().apply {
         sources.forEach { source ->
-            val sourceBlock = NodeStatsBlock(source.sourceName)
-            sourceBlock.addString("owner", source.owner)
-            sourceBlock.addString("video_type", source.videoType.toString())
-            source.rtpEncodings.forEach { sourceBlock.addBlock(it.getNodeStats()) }
-
-            addBlock(sourceBlock)
+            this[source.sourceName] = OrderedJsonObject().apply {
+                this["owner"] = source.owner
+                this["video_type"] = source.videoType.toString()
+                source.rtpEncodings.forEach {
+                    this["rtp_encoding_${it.primarySSRC}"] = it.debugState()
+                }
+            }
         }
     }
 }

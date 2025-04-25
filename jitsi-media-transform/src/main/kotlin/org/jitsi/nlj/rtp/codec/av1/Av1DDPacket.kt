@@ -129,7 +129,7 @@ class Av1DDPacket : ParsedVideoPacket {
             descriptor = descriptor,
             statelessDescriptor = statelessDescriptor,
             frameInfo = frameInfo
-        )
+        ).also { postClone(it) }
     }
 
     fun getScalabilityStructure(eid: Int = 0, baseFrameRate: Double = 30.0): RtpEncodingDesc? {

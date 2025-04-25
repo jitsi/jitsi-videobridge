@@ -74,7 +74,7 @@ fun getEffectiveConstraints(
     var sourcesWithNonZeroConstraints = 0
 
     return sources.associateWith { source ->
-        if (sourcesWithNonZeroConstraints >= effectiveLastN) {
+        if (!source.videoType.isEnabled() || sourcesWithNonZeroConstraints >= effectiveLastN) {
             VideoConstraints.NOTHING
         } else {
             allocationSettings.getConstraints(source.sourceName).also {

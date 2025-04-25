@@ -134,11 +134,11 @@ class BandwidthProbing(
 
     fun getDebugState(): JSONObject = JSONObject().apply {
         put("enabled", enabled)
-        put("latestBwe", latestBwe)
-        put("lastTotalNeededBps", lastTotalNeededBps)
-        put("lastMaxPaddingBps", lastMaxPaddingBps)
-        put("lastPaddingBps", lastPaddingBps)
-        put("probingBps", probingBitrate.getRateBps())
+        put("latest_bwe", latestBwe)
+        put("last_total_needed_bps", lastTotalNeededBps)
+        put("last_max_padding_bps", lastMaxPaddingBps)
+        put("last_padding_bps", lastPaddingBps)
+        put("probing_bps", probingBitrate.getRateBps())
     }
 
     companion object {

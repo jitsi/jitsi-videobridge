@@ -134,5 +134,12 @@ class RtcpTermination(
         }
     }
 
+    override fun statsJson() = super.statsJson().apply {
+        this["num_failed_to_forward"] = numFailedToForward
+        packetReceiveCounts.forEach { (type, count) ->
+            this["num_${type}_rx"] = count
+        }
+    }
+
     override fun trace(f: () -> Unit) = f.invoke()
 }

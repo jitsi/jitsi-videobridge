@@ -74,6 +74,7 @@ enum class PayloadTypeEncoding {
     OTHER,
     VP8,
     VP9,
+    AV1,
     H264,
     RED,
     RTX,
@@ -128,6 +129,12 @@ class Vp9PayloadType(
     parameters: PayloadTypeParams = ConcurrentHashMap(),
     rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
 ) : VideoPayloadType(pt, PayloadTypeEncoding.VP9, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet)
+
+class Av1PayloadType(
+    pt: Byte,
+    parameters: PayloadTypeParams = ConcurrentHashMap(),
+    rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
+) : VideoPayloadType(pt, PayloadTypeEncoding.AV1, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet)
 
 class H264PayloadType(
     pt: Byte,

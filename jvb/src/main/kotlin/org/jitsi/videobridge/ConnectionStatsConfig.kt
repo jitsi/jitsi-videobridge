@@ -13,19 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.rtp
+package org.jitsi.videobridge
 
-import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
+import java.time.Duration
 
-open class AudioRtpPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtpPacket(buffer, offset, length) {
-
-    override fun clone(): AudioRtpPacket = AudioRtpPacket(
-        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-        BYTES_TO_LEAVE_AT_START_OF_PACKET,
-        length
-    ).also { postClone(it) }
+class ConnectionStatsConfig private constructor() {
+    companion object {
+        val enabled: Boolean by config(
+            "videobridge.connection-stats.enabled".from(JitsiConfig.newConfig)
+        )
+        val interval: Duration by config(
+            "videobridge.connection-stats.interval".from(JitsiConfig.newConfig)
+        )
+    }
 }

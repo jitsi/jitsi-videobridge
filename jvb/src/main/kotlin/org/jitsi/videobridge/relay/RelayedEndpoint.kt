@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.MediaSources
@@ -29,7 +30,6 @@ import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.srtp.SrtpTransformers
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ConsumerNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.StreamInformationStore
@@ -196,19 +196,13 @@ class RelayedEndpoint(
 
     fun getIncomingStats() = rtpReceiver.getStats().packetStreamStats
 
-    fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Remote Endpoint $id").apply {
-            addBlock(streamInformationStore.getNodeStats())
-            addBlock(_mediaSources.getNodeStats())
-            addBlock(rtpReceiver.getNodeStats())
+    override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
+        if (mode == DebugStateMode.FULL) {
+            this["stream_information_store"] = streamInformationStore.debugState(mode)
+            this["receiver"] = rtpReceiver.debugState(mode)
+            this["media_sources"] = _mediaSources.debugState()
         }
     }
-
-    override val debugState: JSONObject
-        get() = super.debugState.apply {
-            val block = getNodeStats()
-            put(block.name, block.toJson())
-        }
 
     private fun updateStatsOnExpire() {
         val relayStats = relay.statistics
@@ -232,7 +226,7 @@ class RelayedEndpoint(
         try {
             updateStatsOnExpire()
             rtpReceiver.stop()
-            logger.cdebug { getNodeStats().prettyPrint(0) }
+            logger.cdebug { debugState(DebugStateMode.FULL).toJSONString() }
             rtpReceiver.tearDown()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)

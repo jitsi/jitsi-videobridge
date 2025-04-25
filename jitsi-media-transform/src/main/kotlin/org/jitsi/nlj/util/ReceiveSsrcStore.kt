@@ -15,15 +15,14 @@
  */
 package org.jitsi.nlj.util
 
-import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 
 class ReceiveSsrcStore(
     private val ssrcAssociationStore: SsrcAssociationStore
-) : NodeStatsProducer {
+) {
     // NOTE: to enable efficient lookup for various use cases, we store
     // different 'views' of the receive SSRCs in multiple data structures
     // (below).  Updates to these data structures do not happen atomically,
@@ -84,9 +83,9 @@ class ReceiveSsrcStore(
         primaryMediaSsrcs.remove(ssrcAssociation.secondarySsrc)
     }
 
-    override fun getNodeStats(): NodeStatsBlock = NodeStatsBlock("Receive SSRC store").apply {
-        addString("Receive SSRCs", receiveSsrcsByMediaType.toString())
-        addString("Primary media SSRCs", primaryMediaSsrcs.toString())
-        addString("Primary video SSRCs", primaryVideoSsrcs.toString())
+    fun debugState() = OrderedJsonObject().apply {
+        this["receive_ssrcs"] = receiveSsrcsByMediaType.toMap()
+        this["primary_media_ssrcs"] = primaryMediaSsrcs.toSet()
+        this["primary_video_ssrcs"] = primaryVideoSsrcs.toSet()
     }
 }

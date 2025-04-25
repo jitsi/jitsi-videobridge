@@ -24,16 +24,15 @@ import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
-import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.TransceiverStats
-import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -75,7 +74,7 @@ class Transceiver(
      */
     private val eventHandler: TransceiverEventHandler,
     private val clock: Clock = Clock.systemUTC()
-) : Stoppable, NodeStatsProducer {
+) : Stoppable {
     private val logger = createChildLogger(parentLogger)
     val packetIOActivity = PacketIOActivity()
     private val endpointConnectionStats = EndpointConnectionStats(logger)
@@ -326,17 +325,12 @@ class Transceiver(
         rtpReceiver.forceMuteVideo(shouldMute)
     }
 
-    /**
-     * Get stats about this transceiver's pipeline nodes
-     */
-    override fun getNodeStats(): NodeStatsBlock {
-        return NodeStatsBlock("Transceiver $id").apply {
-            addBlock(streamInformationStore.getNodeStats())
-            addBlock(mediaSources.getNodeStats())
-            addJson("endpointConnectionStats", endpointConnectionStats.getSnapshot().toJson())
-            addBlock(rtpReceiver.getNodeStats())
-            addBlock(rtpSender.getNodeStats())
-        }
+    fun debugState(mode: DebugStateMode): OrderedJsonObject = OrderedJsonObject().apply {
+        put("stream_information_store", streamInformationStore.debugState(mode))
+        put("media_sources", mediaSources.debugState())
+        put("endpoint_connection_stats", endpointConnectionStats.getSnapshot().toJson())
+        put("receiver", rtpReceiver.debugState(mode))
+        put("sender", rtpSender.debugState(mode))
     }
 
     /**
@@ -366,7 +360,7 @@ class Transceiver(
     }
 
     fun teardown() {
-        logger.info("Tearing down")
+        logger.debug("Tearing down")
         rtpReceiver.tearDown()
         rtpSender.tearDown()
     }

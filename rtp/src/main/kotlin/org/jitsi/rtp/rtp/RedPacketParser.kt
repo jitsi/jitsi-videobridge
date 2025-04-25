@@ -215,7 +215,7 @@ internal class RtpRedPacket(buffer: ByteArray, offset: Int, length: Int) : RtpPa
         cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
         BYTES_TO_LEAVE_AT_START_OF_PACKET,
         length
-    )
+    ).also { postClone(it) }
 
     companion object {
         val parser = RedPacketParser { b, o, l -> RtpPacket(b, o, l) }

@@ -20,6 +20,7 @@ import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.ErrorKind
 import org.jitsi.dcsctp4j.SendPacketStatus
 import org.jitsi.dcsctp4j.SendStatus
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketHandler
@@ -64,13 +65,10 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.event.EventEmitter
-import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
-import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.CryptexConfig
 import org.jitsi.videobridge.EncodingsManager
@@ -90,8 +88,6 @@ import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.sctp.DataChannelHandler
-import org.jitsi.videobridge.sctp.SctpHandler
-import org.jitsi.videobridge.sctp.SctpManager
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -104,10 +100,6 @@ import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
-import org.jitsi_modified.sctp4j.SctpClientSocket
-import org.jitsi_modified.sctp4j.SctpDataCallback
-import org.jitsi_modified.sctp4j.SctpServerSocket
-import org.jitsi_modified.sctp4j.SctpSocket
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
@@ -148,8 +140,6 @@ class Relay @JvmOverloads constructor(
     clock: Clock = Clock.systemUTC()
 ) : EncodingsManager.EncodingsUpdateListener, PotentialPacketHandler {
 
-    private val eventEmitter: EventEmitter<AbstractEndpoint.EventHandler> = SyncEventEmitter()
-
     /**
      * The [Logger] used by the [Relay] class to print debug information.
      */
@@ -177,12 +167,7 @@ class Relay @JvmOverloads constructor(
      */
     private var expired = false
 
-    /**
-     * The two SCTP implementations (using usrsctp and dcsctp) are implemented side by side here. The intention is
-     * for the new dcsctp one to replace the old one, which will eventually be removed.
-     */
-    private val sctpHandler = if (sctpConfig.enabled && !sctpConfig.useUsrSctp) DcSctpHandler() else null
-    private val usrSctpHandler = if (sctpConfig.enabled && sctpConfig.useUsrSctp) SctpHandler() else null
+    private val sctpHandler = if (sctpConfig.enabled) DcSctpHandler() else null
 
     /** The [DcSctpTransport] instance we'll use to manage the SCTP connection */
     private var sctpTransport: DcSctpTransport? = null
@@ -190,22 +175,16 @@ class Relay @JvmOverloads constructor(
     /** The role we'll play in the SCTP handshake, if negotiated */
     private var sctpRole: Sctp.Role? = null
 
-    // usrsctp
-    private var sctpManager: SctpManager? = null
-    private var sctpSocket: SctpSocket? = null
     private val dataChannelHandler = DataChannelHandler()
     private var dataChannelStack: DataChannelStack? = null
 
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-sctp")
-    private val sctpRecvPcap = toggleablePcapWriter.newObserverNode(outbound = false)
-    private val sctpSendPcap = toggleablePcapWriter.newObserverNode(outbound = true)
+    private val sctpRecvPcap = toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_sctp")
+    private val sctpSendPcap = toggleablePcapWriter.newObserverNode(outbound = true, suffix = "tx_sctp")
 
     private val sctpPipeline = pipeline {
         node(sctpRecvPcap)
         sctpHandler?.let {
-            node(it)
-        }
-        usrSctpHandler?.let {
             node(it)
         }
     }
@@ -335,34 +314,36 @@ class Relay @JvmOverloads constructor(
         TransportConfig.queueSize
     )
 
-    val debugState: JSONObject
-        get() = JSONObject().apply {
-            put("iceTransport", iceTransport.getDebugState())
-            put("dtlsTransport", dtlsTransport.getDebugState())
-            put("transceiver", transceiver.getNodeStats().toJson())
-            put("meshId", meshId)
-            put("messageTransport", messageTransport.debugState)
+    fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
+        put("ice_transport", iceTransport.getDebugState())
+        put("dtls_transport", dtlsTransport.getDebugState())
+        put("transceiver", transceiver.debugState(mode))
+        put("mesh_id", meshId)
+        put("message_transport", messageTransport.debugState)
+        sctpTransport?.let {
+            put("sctp", it.getDebugState())
+        }
+
+        if (mode == DebugStateMode.FULL) {
             val remoteEndpoints = JSONObject()
             val endpointsBySsrcMap = JSONObject()
             synchronized(endpointsLock) {
                 for (r in relayedEndpoints.values) {
-                    remoteEndpoints[r.id] = r.debugState
+                    remoteEndpoints[r.id] = r.debugState(mode)
                 }
                 for ((s, e) in endpointsBySsrc) {
                     endpointsBySsrcMap[s] = e.id
                 }
             }
-            put("remoteEndpoints", remoteEndpoints)
-            put("endpointsBySsrc", endpointsBySsrcMap)
+            put("remote_endpoints", remoteEndpoints)
+            put("endpoints_by_ssrc", endpointsBySsrcMap)
             val endpointSenders = JSONObject()
             for (s in senders.values) {
-                endpointSenders[s.id] = s.getDebugState()
+                endpointSenders[s.id] = s.getDebugState(mode)
             }
             put("senders", endpointSenders)
-            sctpTransport?.let {
-                put("sctp", it.getDebugState())
-            }
         }
+    }
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -425,14 +406,8 @@ class Relay @JvmOverloads constructor(
             ) {
                 logger.info("DTLS handshake complete")
                 setSrtpInformation(chosenSrtpProtectionProfile, tlsRole, keyingMaterial)
-                if (sctpConfig.enabled && sctpConfig.useUsrSctp) {
-                    when (val socket = sctpSocket) {
-                        is SctpClientSocket -> connectUsrSctpConnection(socket)
-                        is SctpServerSocket -> acceptUsrSctpConnection(socket)
-                        else -> Unit
-                    }
-                    scheduleRelayMessageTransportTimeout()
-                } else if (sctpConfig.enabled) {
+                scheduleRelayMessageTransportTimeout()
+                if (sctpConfig.enabled) {
                     if (sctpRole == Sctp.Role.CLIENT) {
                         sctpTransport!!.connect()
                     }
@@ -475,11 +450,7 @@ class Relay @JvmOverloads constructor(
      */
     fun createSctpConnection(sctpDesc: Sctp) {
         if (sctpConfig.enabled) {
-            if (sctpConfig.useUsrSctp) {
-                createUsrSctpConnection(sctpDesc)
-            } else {
-                createDcSctpConnection(sctpDesc)
-            }
+            createDcSctpConnection(sctpDesc)
         } else {
             logger.error("Not creating SCTP connection, SCTP is disabled in configuration.")
         }
@@ -495,114 +466,6 @@ class Relay @JvmOverloads constructor(
             if (dtlsTransport.isConnected && sctpDesc.role == Sctp.Role.CLIENT) {
                 it.connect()
             }
-        }
-    }
-
-    private fun createUsrSctpConnection(sctpDesc: Sctp) {
-        val openDataChannelLocally = sctpDesc.role == Sctp.Role.CLIENT
-
-        logger.cdebug { "Creating SCTP manager" }
-        // Create the SctpManager and provide it a method for sending SCTP data
-        val sctpManager = SctpManager(
-            { data, offset, length ->
-                sctpSendPcap.observe(data, offset, length)
-                dtlsTransport.sendDtlsData(data, offset, length)
-                0
-            },
-            logger
-        )
-        this.sctpManager = sctpManager
-        usrSctpHandler!!.setSctpManager(sctpManager)
-        val socket = if (sctpDesc.role == Sctp.Role.CLIENT) {
-            sctpManager.createClientSocket(logger)
-        } else {
-            sctpManager.createServerSocket(logger)
-        }
-        socket.eventHandler = object : SctpSocket.SctpSocketEventHandler {
-            override fun onReady() {
-                logger.info("SCTP connection is ready, creating the Data channel stack")
-                val dataChannelStack = DataChannelStack(
-                    { data, sid, ppid -> socket.send(data, true, sid, ppid) },
-                    logger
-                )
-                this@Relay.dataChannelStack = dataChannelStack
-                // This handles if the remote side will be opening the data channel
-                dataChannelStack.onDataChannelStackEvents { dataChannel ->
-                    logger.info("Remote side opened a data channel.")
-                    messageTransport.setDataChannel(dataChannel)
-                }
-                dataChannelHandler.setDataChannelStack(dataChannelStack)
-                if (openDataChannelLocally) {
-                    // This logic is for opening the data channel locally
-                    logger.info("Will open the data channel.")
-                    val dataChannel = dataChannelStack.createDataChannel(
-                        DataChannelProtocolConstants.RELIABLE,
-                        0,
-                        0,
-                        0,
-                        "default"
-                    )
-                    messageTransport.setDataChannel(dataChannel)
-                    dataChannel.open()
-                } else {
-                    logger.info("Will wait for the remote side to open the data channel.")
-                }
-            }
-
-            override fun onDisconnected() {
-                logger.info("SCTP connection is disconnected")
-            }
-        }
-        socket.dataCallback = SctpDataCallback { data, sid, ssn, tsn, ppid, context, flags ->
-            // We assume all data coming over SCTP will be datachannel data
-            val dataChannelPacket = DataChannelPacket(data, 0, data.size, sid, ppid.toInt())
-            // Post the rest of the task here because the current context is
-            // holding a lock inside the SctpSocket which can cause a deadlock
-            // if two endpoints are trying to send datachannel messages to one
-            // another (with stats broadcasting it can happen often)
-            incomingDataChannelMessagesQueue.add(PacketInfo(dataChannelPacket))
-        }
-        if (socket is SctpServerSocket) {
-            socket.listen()
-        }
-        sctpSocket = socket
-    }
-
-    fun connectUsrSctpConnection(sctpClientSocket: SctpClientSocket) {
-        TaskPools.IO_POOL.execute {
-            // We don't want to block the thread calling
-            // onDtlsHandshakeComplete so run the socket acceptance in an IO
-            // pool thread
-            logger.info("Attempting to establish SCTP socket connection")
-
-            if (!sctpClientSocket.connect(SctpManager.DEFAULT_SCTP_PORT)) {
-                logger.error("Failed to establish SCTP connection to remote side")
-            }
-        }
-    }
-
-    fun acceptUsrSctpConnection(sctpServerSocket: SctpServerSocket) {
-        TaskPools.IO_POOL.execute {
-            // We don't want to block the thread calling
-            // onDtlsHandshakeComplete so run the socket acceptance in an IO
-            // pool thread
-            // FIXME: This runs forever once the socket is closed (
-            // accept never returns true).
-            logger.info("Attempting to establish SCTP socket connection")
-            var attempts = 0
-            while (!sctpServerSocket.accept()) {
-                attempts++
-                try {
-                    Thread.sleep(100)
-                } catch (e: InterruptedException) {
-                    break
-                }
-                if (attempts > 100) {
-                    logger.error("Timed out waiting for SCTP connection from remote side")
-                    break
-                }
-            }
-            logger.cdebug { "SCTP socket ${sctpServerSocket.hashCode()} accepted connection" }
         }
     }
 
@@ -643,7 +506,7 @@ class Relay @JvmOverloads constructor(
         iceTransport.describe(iceUdpTransportPacketExtension)
         dtlsTransport.describe(iceUdpTransportPacketExtension)
 
-        if (sctpTransport == null && sctpSocket == null) {
+        if (sctpTransport == null) {
             /* TODO: this should be dependent on videobridge.websockets.enabled, if we support that being
              *  disabled for relay.
              */
@@ -1159,15 +1022,13 @@ class Relay @JvmOverloads constructor(
             updateStatsOnExpire()
             transceiver.stop()
             srtpTransformers?.close()
-            logger.cdebug { transceiver.getNodeStats().prettyPrint(0) }
+            logger.cdebug { transceiver.debugState(DebugStateMode.FULL).toJSONString() }
             logger.cdebug { iceTransport.getDebugState().toJSONString() }
             logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
 
             transceiver.teardown()
             messageTransport.close()
             sctpHandler?.stop()
-            usrSctpHandler?.stop()
-            sctpManager?.closeConnection()
             sctpTransport?.stop()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)

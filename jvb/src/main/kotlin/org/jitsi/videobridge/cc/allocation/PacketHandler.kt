@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.PacketInfo.Companion.enablePayloadVerification
@@ -170,15 +171,14 @@ internal class PacketHandler(
 
     fun timeSinceFirstMedia(): Duration = firstMedia?.let { Duration.between(it, clock.instant()) } ?: Duration.ZERO
 
-    val debugState: JSONObject
-        get() = JSONObject().apply {
-            this["numDroppedPacketsUnknownSsrc"] = numDroppedPacketsUnknownSsrc.toInt()
-            this["adaptiveSourceProjectionMap"] = adaptiveSourceProjectionMap.debugState()
-        }
+    fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
+        this["num_dropped_packets_unknown_ssrc"] = numDroppedPacketsUnknownSsrc.toInt()
+        this["adaptive_source_projection_map"] = adaptiveSourceProjectionMap.debugState(mode)
+    }
 
-    private fun Map<Long, AdaptiveSourceProjection>.debugState() = JSONObject().also {
+    private fun Map<Long, AdaptiveSourceProjection>.debugState(mode: DebugStateMode) = JSONObject().also {
         forEach { (ssrc, adaptiveSourceProjection) ->
-            it[ssrc] = adaptiveSourceProjection.debugState
+            it[ssrc] = adaptiveSourceProjection.getDebugState(mode)
         }
     }
 

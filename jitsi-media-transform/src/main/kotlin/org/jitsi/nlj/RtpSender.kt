@@ -21,8 +21,8 @@ import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
-import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
+import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Not an 'RtpSender' in the sense that it sends only RTP (and not
@@ -33,7 +33,6 @@ abstract class RtpSender :
     StatsKeepingPacketHandler(),
     EventHandler,
     Stoppable,
-    NodeStatsProducer,
     EndpointConnectionStats.EndpointConnectionStatsListener {
 
     abstract fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int, probingInfo: Any?): Int
@@ -55,4 +54,6 @@ abstract class RtpSender :
      * An optional function to be executed for each RTP packet, as the first step of the send pipeline.
      */
     var preProcesor: ((PacketInfo) -> PacketInfo?)? = null
+
+    abstract fun debugState(mode: DebugStateMode): OrderedJsonObject
 }

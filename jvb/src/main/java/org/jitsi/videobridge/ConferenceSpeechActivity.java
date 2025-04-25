@@ -395,12 +395,17 @@ public class ConferenceSpeechActivity
      * are deemed useful for debugging.
      */
     @SuppressWarnings("unchecked")
-    public JSONObject getDebugState()
+    public JSONObject getDebugState(@NotNull DebugStateMode mode)
     {
         JSONObject debugState = new JSONObject();
 
         AbstractEndpoint dominantEndpoint = getDominantEndpoint();
         debugState.put("dominantEndpoint", dominantEndpoint == null ? "null" : dominantEndpoint.getId());
+        if (mode != DebugStateMode.FULL)
+        {
+            return debugState;
+        }
+
         DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
         debugState.put("dominantSpeakerIdentification", dsi == null ? null : dsi.doGetJSON());
         synchronized (syncRoot)

@@ -204,6 +204,17 @@ class KeyframeRequester @JvmOverloads constructor(
         }
     }
 
+    override fun statsJson() = super.statsJson().apply {
+        this["num_api_requests"] = numApiRequests
+        this["num_api_requests_dropped"] = numApiRequestsDropped
+        this["num_firs_dropped"] = numFirsDropped
+        this["num_firs_generated"] = numFirsGenerated
+        this["num_firs_forwarded"] = numFirsForwarded
+        this["num_plis_dropped"] = numPlisDropped
+        this["num_plis_generated"] = numPlisGenerated
+        this["num_plis_forwarded"] = numPlisForwarded
+    }
+
     fun onRttUpdate(newRtt: Double) {
         // avg(rtt) + stddev(rtt) would be more accurate than rtt + 10.
         waitInterval = Duration.ofMillis(min(DEFAULT_WAIT_INTERVAL.toMillis(), newRtt.toLong() + 10))

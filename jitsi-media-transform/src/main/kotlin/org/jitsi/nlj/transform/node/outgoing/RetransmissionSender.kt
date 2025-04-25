@@ -120,5 +120,11 @@ class RetransmissionSender(
         }
     }
 
+    override fun statsJson() = super.statsJson().apply {
+        this["num_retransmissions_requested"] = numRetransmissionsRequested
+        this["num_retransmissions_rtx_sent"] = numRetransmittedRtxPackets
+        this["num_retransmissions_plain_sent"] = numRetransmittedPlainPackets
+    }
+
     override fun trace(f: () -> Unit) = f.invoke()
 }

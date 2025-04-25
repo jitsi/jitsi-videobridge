@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - Present, 8x8 Inc
+ * Copyright @ 2025 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.rtp
+package org.jitsi.nlj
 
-import org.jitsi.rtp.rtp.RtpPacket
+enum class DebugStateMode {
+    /** Include full details, mostly for manually debugging */
+    FULL,
 
-open class AudioRtpPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtpPacket(buffer, offset, length) {
+    /** Include all information needed for stats/metric collection (e.g. rtcstats) */
+    STATS,
 
-    override fun clone(): AudioRtpPacket = AudioRtpPacket(
-        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-        BYTES_TO_LEAVE_AT_START_OF_PACKET,
-        length
-    ).also { postClone(it) }
+    /** Include only the most important information, e.g. listing conferences and endpoints. */
+    SHORT
 }

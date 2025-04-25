@@ -51,5 +51,9 @@ class DuplicateTermination() : TransformerNode("Duplicate termination") {
         addNumber("num_duplicate_packets_dropped", numDuplicatePacketsDropped)
     }
 
+    override fun statsJson() = super.statsJson().apply {
+        this["num_duplicate_packets_dropped"] = numDuplicatePacketsDropped
+    }
+
     override fun trace(f: () -> Unit) = f.invoke()
 }
