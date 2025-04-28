@@ -264,7 +264,7 @@ class Av1DependencyDescriptorHeaderExtension(
             customChains?.let { put("customChains", it) }
             activeDecodeTargetsBitmask?.let {
                 if (newTemplateDependencyStructure == null ||
-                    activeDecodeTargetsBitmask != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
+                    it != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
                 ) {
                     put("activeDecodeTargets", Integer.toBinaryString(it))
                 }
