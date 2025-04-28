@@ -262,6 +262,13 @@ class Av1DependencyDescriptorHeaderExtension(
             customDtis?.let { put("customDTIs", it) }
             customFdiffs?.let { put("customFdiffs", it) }
             customChains?.let { put("customChains", it) }
+            activeDecodeTargetsBitmask?.let {
+                if (newTemplateDependencyStructure == null ||
+                    it != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
+                ) {
+                    put("activeDecodeTargets", Integer.toBinaryString(it))
+                }
+            }
         }.toJSONString()
     }
 

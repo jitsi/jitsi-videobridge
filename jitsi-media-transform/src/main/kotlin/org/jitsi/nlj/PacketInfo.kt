@@ -91,6 +91,22 @@ class EventTimeline(
 }
 
 /**
+ * The origin of a packet in the system; used to track outgoing packets in [OutgoingStatisticsTracker]
+ * to measure the bitrates of each type of data.
+ *
+ * Currently only used for RTP, so RTCP, SCTP, and Datachannel will all be either Routed or Misc.
+ */
+enum class PacketOrigin {
+    Routed,
+    Retransmission,
+    Probing,
+    Padding,
+    Synthesized,
+    Misc
+    /* TODO: Add RTCP, SCTP, and datachannel if needed */
+}
+
+/**
  * [PacketInfo] is a wrapper around a [Packet] instance to be passed through
  * a pipeline.  Since the [Packet] can change as it moves through the pipeline
  * (as it is parsed into different types), the wrapping [PacketInfo] stays consistent
@@ -147,6 +163,11 @@ open class PacketInfo @JvmOverloads constructor(
     var probingInfo: Any? = null
 
     /**
+     * The origin of the packet, used for tracking the sources of media being routed.
+     */
+    var packetOrigin: PacketOrigin = PacketOrigin.Misc
+
+    /**
      * Re-calculates the expected payload verification string. This should be called any time that the code
      * intentionally modifies the packet in a way that could change the verification string (for example, re-creates
      * it with a new type (parsing), or intentionally modifies the payload (SRTP)).
@@ -176,6 +197,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
         clone.probingInfo = probingInfo
+        clone.packetOrigin = packetOrigin
         @Suppress("UNCHECKED_CAST") // ArrayList.clone() really does return ArrayList, not Object.
         clone.onSentActions = onSentActions?.clone() as ArrayList<() -> Unit>?
         return clone

@@ -28,7 +28,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.secs
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
@@ -104,13 +103,15 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         eventEmitter.addHandler(eventHandler)
     }
 
+    private var bweSet = false
+
     /**
-     * Ignore the bandwidth estimations in the first 10 seconds because the REMBs don't ramp up fast enough. This needs
-     * to go but it's related to our GCC implementation that needs to be brought up to speed.
-     * TODO: Is this comment still accurate?
+     * Ignore the bandwidth estimations for some initial time because the REMBs don't ramp up fast enough.
+     * This shouldn't be needed for other bandwidth estimation algorithms.
      */
     private val trustBwe: Boolean
-        get() = config.trustBwe && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10.secs
+        get() = config.trustBwe && supportsRtx && bweSet &&
+            packetHandler.timeSinceFirstMedia() >= config.initialIgnoreBwePeriod
 
     // Proxy to the allocator
     fun endpointOrderingChanged() = bandwidthAllocator.update()
@@ -129,6 +130,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun getTotalOversendingTime(): Duration = oversendingTimeTracker.totalTimeOn()
     fun isOversending() = oversendingTimeTracker.state
     fun bandwidthChanged(newBandwidthBps: Long) {
+        bweSet = true
         timeSeriesLogger?.logBweChange(newBandwidthBps)
         bandwidthAllocator.bandwidthChanged(newBandwidthBps)
     }
@@ -242,14 +244,14 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
         var totalTargetBps = 0.0
         var totalIdealBps = 0.0
-        var totalTargetMeasuredBps = 0.0
-        var totalIdealMeasuredBps = 0.0
+        var totalTargetVlaBps = 0.0
+        var totalIdealVlaBps = 0.0
 
         allocation.allocations.forEach {
             it.targetLayer?.getBitrate(nowMs)?.let { bitrate -> totalTargetBps += bitrate.bps }
             it.idealLayer?.getBitrate(nowMs)?.let { bitrate -> totalIdealBps += bitrate.bps }
-            it.targetLayer?.targetBitrate?.let { bitrate -> totalTargetMeasuredBps += bitrate.bps }
-            it.idealLayer?.targetBitrate?.let { bitrate -> totalIdealMeasuredBps += bitrate.bps }
+            it.targetLayer?.targetBitrate?.let { bitrate -> totalTargetVlaBps += bitrate.bps }
+            it.idealLayer?.targetBitrate?.let { bitrate -> totalIdealVlaBps += bitrate.bps }
             trace(
                 diagnosticContext
                     .makeTimeSeriesPoint("allocation_for_source", nowMs)
@@ -257,19 +259,19 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
                     .addField("target_idx", it.targetLayer?.index ?: -1)
                     .addField("ideal_idx", it.idealLayer?.index ?: -1)
                     .addField("target_bps_measured", it.targetLayer?.getBitrate(nowMs)?.bps ?: -1)
-                    .addField("target_bps", it.targetLayer?.targetBitrate?.bps ?: -1)
+                    .addField("target_bps_vla", it.targetLayer?.targetBitrate?.bps ?: -1)
                     .addField("ideal_bps_measured", it.idealLayer?.getBitrate(nowMs)?.bps ?: -1)
-                    .addField("ideal_bps", it.idealLayer?.targetBitrate?.bps ?: -1)
+                    .addField("ideal_bps_vla", it.idealLayer?.targetBitrate?.bps ?: -1)
             )
         }
 
         trace(
             diagnosticContext
                 .makeTimeSeriesPoint("allocation", nowMs)
-                .addField("total_target_bps", totalTargetBps)
-                .addField("total_ideal_bps", totalIdealBps)
-                .addField("total_target_measured_bps", totalTargetMeasuredBps)
-                .addField("total_ideal_measured_bps", totalIdealMeasuredBps)
+                .addField("total_target_measured_bps", totalTargetBps)
+                .addField("total_ideal_measured_bps", totalIdealBps)
+                .addField("total_target_vla_bps", totalTargetVlaBps)
+                .addField("total_ideal_vla_bps", totalIdealVlaBps)
         )
     }
 

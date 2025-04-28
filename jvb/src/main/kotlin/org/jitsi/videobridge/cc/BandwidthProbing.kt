@@ -54,7 +54,7 @@ class BandwidthProbing(
      * bandwidth, and also handles the use when the number of bytes we want to
      * send is less than the size of an RTP header.
      */
-    private var bytesLeftOver = 0
+    private var bytesLeftOver: Double = 0.0
 
     private var latestBwe: Long = -1
 
@@ -80,7 +80,7 @@ class BandwidthProbing(
         val totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps
         if (totalNeededBps < 1 || !bitrateControllerStatus.hasNonIdealLayer) {
             // Don't need to send any probing.
-            bytesLeftOver = 0
+            bytesLeftOver = 0.0
             zeroStats()
             return
         }
@@ -121,10 +121,10 @@ class BandwidthProbing(
         if (bytesNeeded >= 1) {
             val bytesSent = probingDataSender.sendProbing(bitrateControllerStatus.activeSsrcs, bytesNeeded.toInt())
             probingBitrate.update(bytesSent.bytes)
-            bytesLeftOver = (bytesNeeded - bytesSent).coerceAtLeast(0.0).toInt()
+            bytesLeftOver = (bytesNeeded - bytesSent).coerceAtLeast(0.0)
             timeSeriesPoint?.addField("bytes_sent", bytesSent)?.addField("new_bytes_left_over", bytesLeftOver)
         } else {
-            bytesLeftOver = bytesNeeded.coerceAtLeast(0.0).toInt()
+            bytesLeftOver = bytesNeeded.coerceAtLeast(0.0)
         }
 
         if (timeSeriesLogger.isTraceEnabled) {

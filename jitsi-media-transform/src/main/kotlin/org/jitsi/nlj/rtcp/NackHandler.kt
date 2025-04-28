@@ -18,6 +18,7 @@ package org.jitsi.nlj.rtcp
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
@@ -87,7 +88,11 @@ class NackHandler(
                 numCacheMisses++
             }
         }
-        nackedPackets.forEach { onNackedPacketsReady.processPacket(PacketInfo(it)) }
+        nackedPackets.forEach {
+            val packetInfo = PacketInfo(it)
+            packetInfo.packetOrigin = PacketOrigin.Retransmission
+            onNackedPacketsReady.processPacket(packetInfo)
+        }
     }
 
     override fun onRttUpdate(newRttMs: Double) {
