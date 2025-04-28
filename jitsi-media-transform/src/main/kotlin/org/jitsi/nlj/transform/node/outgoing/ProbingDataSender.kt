@@ -21,7 +21,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.PacketType
+import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.format.VideoPayloadType
@@ -138,7 +138,7 @@ class ProbingDataSender(
         packetCache.getMany(mediaSsrc, numBytes).forEach {
             bytesSent += it.length
             val packetInfo = PacketInfo(it)
-            packetInfo.packetType = PacketType.Padding
+            packetInfo.packetOrigin = PacketOrigin.Padding
             rtxDataSender.processPacket(packetInfo)
         }
         return bytesSent
@@ -166,7 +166,7 @@ class ProbingDataSender(
             paddingPacket.timestamp = currDummyTimestamp
             paddingPacket.sequenceNumber = currDummySeqNum
             val packetInfo = PacketInfo(paddingPacket)
-            packetInfo.packetType = PacketType.Padding
+            packetInfo.packetOrigin = PacketOrigin.Padding
             garbageDataSender.processPacket(packetInfo)
 
             currDummySeqNum++

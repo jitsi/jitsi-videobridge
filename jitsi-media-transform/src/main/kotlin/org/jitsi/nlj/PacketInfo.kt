@@ -19,7 +19,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.logging2.createLogger
 import java.time.Clock
 import java.time.Duration
@@ -91,14 +90,19 @@ class EventTimeline(
     }
 }
 
-enum class PacketType {
+/**
+ * The origin of a packet in the system; used to track outgoing packets in [OutgoingStatisticsTracker]
+ * to measure the bitrates of each type of data.
+ *
+ * Currently only used for RTP, so RTCP, SCTP, and Datachannel will all be either Routed or Misc.
+ */
+enum class PacketOrigin {
     Routed,
-    RTX,
+    Retransmission,
     Padding,
     Synthesized,
-    RTCP,
     Misc
-    /* TODO: handle SCTP and datachannel if we need them */
+    /* TODO: Add RTCP, SCTP, and datachannel if needed */
 }
 
 /**
@@ -152,9 +156,9 @@ open class PacketInfo @JvmOverloads constructor(
     var payloadVerification = if (enablePayloadVerification) packet.payloadVerification else null
 
     /**
-     * The type of the packet, used for tracking the sources of media being routed.
+     * The origin of the packet, used for tracking the sources of media being routed.
      */
-    var packetType: PacketType = if (packet is RtcpPacket) PacketType.RTCP else PacketType.Misc
+    var packetOrigin: PacketOrigin = PacketOrigin.Misc
 
     /**
      * Re-calculates the expected payload verification string. This should be called any time that the code
@@ -185,7 +189,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.endpointId = endpointId
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
-        clone.packetType = packetType
+        clone.packetOrigin = packetOrigin
         @Suppress("UNCHECKED_CAST") // ArrayList.clone() really does return ArrayList, not Object.
         clone.onSentActions = onSentActions?.clone() as ArrayList<() -> Unit>?
         return clone

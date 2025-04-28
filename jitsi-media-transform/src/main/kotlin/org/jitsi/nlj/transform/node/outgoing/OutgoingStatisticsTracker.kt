@@ -16,7 +16,7 @@
 package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.PacketType
+import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
@@ -43,7 +43,7 @@ class OutgoingStatisticsTracker(
 
     private val videoBitrate = BitrateCalculator.createBitrateTracker()
 
-    private val videoPacketTypeBitrates = mutableMapOf<PacketType, BitrateTracker>()
+    private val videoBitratesByOrigin = mutableMapOf<PacketOrigin, BitrateTracker>()
 
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
@@ -52,10 +52,14 @@ class OutgoingStatisticsTracker(
             is AudioRtpPacket -> numAudioPackets++
             is VideoRtpPacket -> {
                 numVideoPackets++
+
+                /* These bitrate measurements are only used in the timeseries log below, so only calculate them
+                 * if the timeseries is enabled. */
                 if (timeseriesLogger.isTraceEnabled) {
                     videoBitrate.update(rtpPacket.length.bytes)
-                    videoPacketTypeBitrates.getOrPut(packetInfo.packetType) { BitrateCalculator.createBitrateTracker() }
-                        .update(rtpPacket.length.bytes)
+                    videoBitratesByOrigin.getOrPut(packetInfo.packetOrigin) {
+                        BitrateCalculator.createBitrateTracker()
+                    }.update(rtpPacket.length.bytes)
                 }
             }
         }
@@ -92,8 +96,8 @@ class OutgoingStatisticsTracker(
             if (timeseriesLogger.isTraceEnabled) {
                 val point = diagnosticContext.makeTimeSeriesPoint("sent_video_stream_stats")
                     .addField("bitrate_bps", videoBitrate.rate.bps)
-                videoPacketTypeBitrates.forEach { (type, tracker) ->
-                    point.addField("video_${type}_bitrate", tracker.rate.bps)
+                videoBitratesByOrigin.forEach { (origin, tracker) ->
+                    point.addField("video_${origin}_bitrate", tracker.rate.bps)
                 }
 
                 timeseriesLogger.trace(point)
