@@ -1403,7 +1403,7 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         DiagnosticContext(),
         logger,
         clock
-    )
+    ).apply { bandwidthChanged(bwe.bps.toLong()) } // TODO: handle the -1 bps case better
 
     fun setEndpointOrdering(vararg endpoints: TestEndpoint) {
         logger.info("Set endpoints ${endpoints.map{ it.id }.joinToString(",")}")

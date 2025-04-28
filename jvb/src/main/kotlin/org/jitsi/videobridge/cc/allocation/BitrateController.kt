@@ -28,7 +28,6 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.secs
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
@@ -104,13 +103,15 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
         eventEmitter.addHandler(eventHandler)
     }
 
+    private var bweSet = false
+
     /**
-     * Ignore the bandwidth estimations in the first 10 seconds because the REMBs don't ramp up fast enough. This needs
-     * to go but it's related to our GCC implementation that needs to be brought up to speed.
-     * TODO: Is this comment still accurate?
+     * Ignore the bandwidth estimations for some initial time because the REMBs don't ramp up fast enough.
+     * This shouldn't be needed for other bandwidth estimation algorithms.
      */
     private val trustBwe: Boolean
-        get() = config.trustBwe && supportsRtx && packetHandler.timeSinceFirstMedia() >= 10.secs
+        get() = config.trustBwe && supportsRtx && bweSet &&
+            packetHandler.timeSinceFirstMedia() >= config.initialIgnoreBwePeriod
 
     // Proxy to the allocator
     fun endpointOrderingChanged() = bandwidthAllocator.update()
@@ -129,6 +130,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun getTotalOversendingTime(): Duration = oversendingTimeTracker.totalTimeOn()
     fun isOversending() = oversendingTimeTracker.state
     fun bandwidthChanged(newBandwidthBps: Long) {
+        bweSet = true
         timeSeriesLogger?.logBweChange(newBandwidthBps)
         bandwidthAllocator.bandwidthChanged(newBandwidthBps)
     }

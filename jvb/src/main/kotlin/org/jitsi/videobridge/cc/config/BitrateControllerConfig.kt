@@ -114,6 +114,14 @@ class BitrateControllerConfig private constructor() {
         "videobridge.cc.use-vla-target-bitrate".from(JitsiConfig.newConfig)
     }
 
+    /**
+     * How long after first media to ignore bandwidth estimation.  Needed for BWE
+     * algorithms that ramp up slowly; should be set to zero if this isn't a problem.
+     */
+    val initialIgnoreBwePeriod: Duration by config(
+        "videobridge.cc.initial-ignore-bwe-period".from(JitsiConfig.newConfig)
+    )
+
     companion object {
         @JvmField
         val config = BitrateControllerConfig()

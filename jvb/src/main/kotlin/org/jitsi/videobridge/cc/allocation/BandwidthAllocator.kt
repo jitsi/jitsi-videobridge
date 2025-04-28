@@ -377,6 +377,9 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
  * @return true if the bandwidth has changed above the configured threshold, * false otherwise.
  */
 private fun bweChangeIsLargerThanThreshold(previousBwe: Long, currentBwe: Long): Boolean {
+    if (previousBwe == currentBwe) { // Even if we're "changing" -1 to -1
+        return false
+    }
     if (previousBwe == -1L || currentBwe == -1L) {
         return true
     }
