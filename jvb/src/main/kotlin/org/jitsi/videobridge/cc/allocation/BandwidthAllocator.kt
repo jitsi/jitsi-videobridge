@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.bps
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
+import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
@@ -182,6 +183,18 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         val allocationChanged = !allocation.isTheSameAs(newAllocation)
         val effectiveConstraintsChanged = effectiveConstraints != oldEffectiveConstraints
 
+        if (timeSeriesLogger.isTraceEnabled) {
+            timeSeriesLogger.trace(
+                diagnosticContext.makeTimeSeriesPoint("allocator_update", lastUpdateTime)
+                    .addField("target_bps", newAllocation.targetBps)
+                    .addField("ideal_bps", newAllocation.idealBps)
+                    .addField("bwe_bps", bweBps)
+                    .addField("oversending", newAllocation.oversending)
+                    .addField("allocation_changed", allocationChanged)
+                    .addField("effective_constraints_changed", effectiveConstraintsChanged)
+            )
+        }
+
         if (allocationChanged) {
             eventEmitter.fireEvent { allocationChanged(newAllocation) }
         }
@@ -340,6 +353,10 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             delayMs + 5,
             TimeUnit.MILLISECONDS
         )
+    }
+
+    companion object {
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator::class.java)
     }
 
     interface EventHandler {

@@ -19,6 +19,7 @@ package org.jitsi.nlj.transform.node
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.format.AudioRedPayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.RedAudioRtpPacket
@@ -247,7 +248,9 @@ class AudioRedHandler(
                                 if ((it.sequenceNumber == prev && prevMissing) ||
                                     (it.sequenceNumber == prev2 && prev2Missing)
                                 ) {
-                                    add(PacketInfo(it))
+                                    val packetInfo = PacketInfo(it)
+                                    packetInfo.packetOrigin = PacketOrigin.Synthesized
+                                    add(packetInfo)
                                     stats.lostPacketRecovered()
                                 }
                                 sentAudioCache.insert(it)

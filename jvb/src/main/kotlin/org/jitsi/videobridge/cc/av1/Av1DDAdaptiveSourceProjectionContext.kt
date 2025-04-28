@@ -165,6 +165,8 @@ class Av1DDAdaptiveSourceProjectionContext(
                 .addField("targetIndex", Av1DDRtpLayerDesc.indexString(targetIndex))
                 .addField("new_frame", result.isNewFrame)
                 .addField("accept", accept)
+                .addField("payload_length", packet.payloadLength)
+                .addField("packet_length", packet.length)
             av1QualityFilter.addDiagnosticContext(pt)
             timeSeriesLogger.trace(pt)
         }
