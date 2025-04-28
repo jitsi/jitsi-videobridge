@@ -107,9 +107,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
     /**
      * Ignore the bandwidth estimations for some initial time because the REMBs don't ramp up fast enough.
-     * This is needed for our GCC implementation but should be ski
-     * to go but it's related to our GCC implementation that needs to be brought up to speed.
-     * TODO: Is this comment still accurate?
+     * This shouldn't be needed for other bandwidth estimation algorithms.
      */
     private val trustBwe: Boolean
         get() = config.trustBwe && supportsRtx && bweSet &&
