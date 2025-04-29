@@ -188,7 +188,8 @@ class TransportFeedbackAdapter(
             val packetFeedback = history[seqNum]
             if (packetFeedback == null) {
                 logger.debug {
-                    "No history entry found for seqNum $seqNum with ${report.javaClass.simpleName}"
+                    "No history entry found for seqNum $seqNum with ${report.javaClass.simpleName} " +
+                        "(orig seq=${report.seqNum}, unwrapper=${seqNumUnwrapper.debugState()})"
                 }
                 ++failedLookups
                 return@forEach
