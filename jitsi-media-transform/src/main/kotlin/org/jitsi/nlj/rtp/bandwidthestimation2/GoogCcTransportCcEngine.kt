@@ -95,8 +95,11 @@ class GoogCcTransportCcEngine(
     override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize, probingInfo: Any?) {
         val now = clock.instant()
         val pacedPacketInfo = probingInfo as? PacedPacketInfo
+        // We need to do sequence number unwrapping in the TransportFeedbackAdapter, so
+        // truncate it here so we can unwrap it again later.
+        val truncatedSeqNum = tccSeqNum and 0xFFFF
         feedbackAdapter.addPacket(
-            tccSeqNum,
+            truncatedSeqNum,
             length, // TODO: network overhead
             pacingInfo = pacedPacketInfo,
             creationTime = now
