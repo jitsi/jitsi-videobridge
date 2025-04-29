@@ -7,6 +7,8 @@ import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * A history of recent frames on a Av1 stream.
@@ -109,7 +111,7 @@ class Av1DDFrameMap(
     }
 
     @Synchronized
-    fun getIndex(frameIndex: Int) = frameHistory.getIndex(frameIndex)
+    fun getIndex(frameIndex: Long) = frameHistory.getIndex(frameIndex)
 
     @Synchronized
     fun nextFrame(frame: Av1DDFrame): Av1DDFrame? {
@@ -151,7 +153,7 @@ internal class FrameHistory(size: Int) :
         synchronize = false
     ) {
     var numCached = 0
-    var firstIndex = -1
+    var firstIndex = -1L
     var indexTracker = Rfc3711IndexTracker()
 
     /**
@@ -165,7 +167,7 @@ internal class FrameHistory(size: Int) :
     /**
      * Gets a frame with a given frame number index from the cache.
      */
-    fun getIndex(index: Int): Av1DDFrame? {
+    fun getIndex(index: Long): Av1DDFrame? {
         if (index <= lastIndex - size) {
             /* We don't want to remember old frames even if they're still
                tracked; their neighboring frames may have been evicted,
@@ -184,7 +186,7 @@ internal class FrameHistory(size: Int) :
         val ret = super.insertItem(frame, frame.index)
         if (ret) {
             numCached++
-            if (firstIndex == -1 || frame.index < firstIndex) {
+            if (firstIndex == -1L || frame.index < firstIndex) {
                 firstIndex = frame.index
             }
         }
@@ -206,29 +208,29 @@ internal class FrameHistory(size: Int) :
 
     fun findBefore(frame: Av1DDFrame, pred: (Av1DDFrame) -> Boolean): Av1DDFrame? {
         val lastIndex = lastIndex
-        if (lastIndex == -1) {
+        if (lastIndex == -1L) {
             return null
         }
         val index = frame.index
-        val searchStartIndex = Integer.min(index - 1, lastIndex)
-        val searchEndIndex = Integer.max(lastIndex - size, firstIndex - 1)
+        val searchStartIndex = min(index - 1, lastIndex)
+        val searchEndIndex = max(lastIndex - size, firstIndex - 1)
         return doFind(pred, searchStartIndex, searchEndIndex, -1)
     }
 
     fun findAfter(frame: Av1DDFrame, pred: (Av1DDFrame) -> Boolean): Av1DDFrame? {
         val lastIndex = lastIndex
-        if (lastIndex == -1) {
+        if (lastIndex == -1L) {
             return null
         }
         val index = frame.index
         if (index >= lastIndex) {
             return null
         }
-        val searchStartIndex = Integer.max(index + 1, Integer.max(lastIndex - size + 1, firstIndex))
+        val searchStartIndex = max(index + 1, max(lastIndex - size + 1, firstIndex))
         return doFind(pred, searchStartIndex, lastIndex + 1, 1)
     }
 
-    private fun doFind(pred: (Av1DDFrame) -> Boolean, startIndex: Int, endIndex: Int, increment: Int): Av1DDFrame? {
+    private fun doFind(pred: (Av1DDFrame) -> Boolean, startIndex: Long, endIndex: Long, increment: Int): Av1DDFrame? {
         var index = startIndex
         while (index != endIndex) {
             val frame = getIndex(index)

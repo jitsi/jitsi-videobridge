@@ -756,7 +756,7 @@ private open class DDBasedGenerator(
             frameInfo = structure.templateInfo[templateId],
             // Will be less than 0xffff
             frameNumber = frameCount,
-            index = frameCount,
+            index = frameCount.toLong(),
             templateId = templateId,
             structure = structure,
             activeDecodeTargets = null,
@@ -867,7 +867,7 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
             frameInfo = structure.templateInfo[templateId],
             // Will be less than 0xffff
             frameNumber = pictureCount,
-            index = pictureCount,
+            index = pictureCount.toLong(),
             templateId = templateId,
             structure = structure,
             activeDecodeTargets = null,

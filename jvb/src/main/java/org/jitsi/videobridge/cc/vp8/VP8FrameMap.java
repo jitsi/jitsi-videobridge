@@ -27,6 +27,8 @@ import java.util.function.*;
 
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
+import static java.lang.Long.max;
+import static java.lang.Long.min;
 
 /**
  * A history of recent frames on a VP8 stream.
@@ -276,7 +278,7 @@ public class VP8FrameMap
         }
 
         int numCached = 0;
-        int firstIndex = -1;
+        long firstIndex = -1;
 
         PictureIdIndexTracker indexTracker = new PictureIdIndexTracker();
 
@@ -285,14 +287,14 @@ public class VP8FrameMap
          */
         public VP8Frame get(int pictureId)
         {
-            int index = indexTracker.interpret(pictureId);
+            long index = indexTracker.interpret(pictureId);
             return getIndex(index);
         }
 
         /**
          * Gets a frame with a given VP8 picture ID index from the cache.
          */
-        private VP8Frame getIndex(int index)
+        private VP8Frame getIndex(long index)
         {
             if (index <= getLastIndex() - getSize())
             {
@@ -317,7 +319,7 @@ public class VP8FrameMap
 
         public boolean insert(int pictureId, VP8Frame frame)
         {
-            int index = indexTracker.update(pictureId);
+            long index = indexTracker.update(pictureId);
             boolean ret = super.insertItem(frame, index);
             if (ret)
             {
@@ -342,16 +344,16 @@ public class VP8FrameMap
         @Nullable
         public VP8Frame findBefore(VP8Frame frame, Predicate<VP8Frame> pred)
         {
-            int lastIndex = getLastIndex();
+            long lastIndex = getLastIndex();
             if (lastIndex == -1)
             {
                 return null;
             }
 
-            int index = indexTracker.interpret(frame.getPictureId());
+            long index = indexTracker.interpret(frame.getPictureId());
 
-            int searchStartIndex = min(index - 1, lastIndex);
-            int searchEndIndex = max(lastIndex - getSize(), firstIndex - 1);
+            long searchStartIndex = min(index - 1, lastIndex);
+            long searchEndIndex = max(lastIndex - getSize(), firstIndex - 1);
 
             return doFind(pred, searchStartIndex, searchEndIndex, -1);
         }
@@ -359,28 +361,28 @@ public class VP8FrameMap
         @Nullable
         public VP8Frame findAfter(VP8Frame frame, Predicate<VP8Frame> pred)
         {
-            int lastIndex = getLastIndex();
+            long lastIndex = getLastIndex();
             if (lastIndex == -1)
             {
                 return null;
             }
 
-            int index = indexTracker.interpret(frame.getPictureId());
+            long index = indexTracker.interpret(frame.getPictureId());
 
             if (index >= lastIndex)
             {
                 return null;
             }
 
-            int searchStartIndex = max(index + 1, max(lastIndex - getSize() + 1, firstIndex));
+            long searchStartIndex = max(index + 1, max(lastIndex - getSize() + 1, firstIndex));
 
             return doFind(pred, searchStartIndex, lastIndex + 1, 1);
         }
 
         @Nullable
-        private VP8Frame doFind(Predicate<VP8Frame> pred, int startIndex, int endIndex, int increment)
+        private VP8Frame doFind(Predicate<VP8Frame> pred, long startIndex, long endIndex, int increment)
         {
-            for (int index = startIndex; index != endIndex; index += increment)
+            for (long index = startIndex; index != endIndex; index += increment)
             {
                 VP8Frame frame = getIndex(index);
                 if (frame != null && pred.test(frame))

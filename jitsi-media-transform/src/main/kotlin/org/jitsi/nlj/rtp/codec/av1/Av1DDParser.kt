@@ -147,9 +147,9 @@ class TemplateHistory(minHistory: Int) {
     private val indexTracker = Rfc3711IndexTracker()
     private val history = TreeCache<Av1DdInfo>(minHistory)
     private var latestDecodeTargets = -1
-    private var latestDecodeTargetIndex = -1
+    private var latestDecodeTargetIndex = -1L
 
-    fun get(seqNo: Int): Map.Entry<Int, Av1DdInfo>? {
+    fun get(seqNo: Int): Map.Entry<Long, Av1DdInfo>? {
         val index = indexTracker.update(seqNo)
         return history.getEntryBefore(index)
     }

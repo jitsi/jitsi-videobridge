@@ -29,7 +29,7 @@ import kotlin.collections.ArrayList
  *
  * @author Jonathan Lennox
  */
-class Vp9Picture(packet: Vp9Packet, index: Int) {
+class Vp9Picture(packet: Vp9Packet, index: Long) {
     val frames = ArrayList<Vp9Frame?>()
 
     init {
@@ -82,7 +82,7 @@ class Vp9Picture(packet: Vp9Packet, index: Int) {
     val pictureId: Int
         get() = firstFrame().pictureId
 
-    val index: Int
+    val index: Long
         get() = firstFrame().index
 
     val tl0PICIDX: Int

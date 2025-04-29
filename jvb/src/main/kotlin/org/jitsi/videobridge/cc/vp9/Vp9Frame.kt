@@ -113,7 +113,7 @@ class Vp9Frame internal constructor(
     /**
      * The PictureID index (PictureID plus cycles) of this frame.
      */
-    val index: Int,
+    val index: Long,
 
     /**
      * The VP9 TL0PICIDX of the incoming VP9 frame that this instance refers to
@@ -186,10 +186,10 @@ class Vp9Frame internal constructor(
 
     // Validate that the index matches the pictureId
     init {
-        assert((index and 0x7fff) == pictureId)
+        assert((index and 0x7fff).toInt() == pictureId)
     }
 
-    constructor(packet: Vp9Packet, index: Int) : this(
+    constructor(packet: Vp9Packet, index: Long) : this(
         ssrc = packet.ssrc,
         timestamp = packet.timestamp,
         earliestKnownSequenceNumber = packet.sequenceNumber,

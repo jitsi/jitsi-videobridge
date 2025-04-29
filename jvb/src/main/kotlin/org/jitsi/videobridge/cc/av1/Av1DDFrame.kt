@@ -81,7 +81,7 @@ class Av1DDFrame internal constructor(
     /**
      * The FrameID index (FrameID plus cycles) of this frame.
      */
-    val index: Int,
+    val index: Long,
 
     /**
      * The template ID of this frame
@@ -169,10 +169,10 @@ class Av1DDFrame internal constructor(
 
     // Validate that the index matches the pictureId
     init {
-        assert((index and 0xffff) == frameNumber)
+        assert((index and 0xffff).toInt() == frameNumber)
     }
 
-    constructor(packet: Av1DDPacket, index: Int) : this(
+    constructor(packet: Av1DDPacket, index: Long) : this(
         ssrc = packet.ssrc,
         timestamp = packet.timestamp,
         earliestKnownSequenceNumber = packet.sequenceNumber,

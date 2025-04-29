@@ -58,10 +58,10 @@ class TccGeneratorNode(
     private val lock = Any()
 
     // Tcc seq num -> arrival time in ms
-    private val packetArrivalTimes = TreeMap<Int, Instant>()
+    private val packetArrivalTimes = TreeMap<Long, Instant>()
 
     // The first sequence number of the current tcc feedback packet
-    private var windowStartSeq: Int = -1
+    private var windowStartSeq: Long = -1
     private val tccFeedbackBitrate = BitrateTracker(1.secs, 10.ms)
     private var numTccSent: Int = 0
     private var numMultipleTccPackets = 0
@@ -118,7 +118,7 @@ class TccGeneratorNode(
     /**
      * @param tccSeqNum the extended sequence number.
      */
-    private fun addPacket(tccSeqNum: Int, timestamp: Instant?, isMarked: Boolean, ssrc: Long) {
+    private fun addPacket(tccSeqNum: Long, timestamp: Instant?, isMarked: Boolean, ssrc: Long) {
         synchronized(lock) {
             if (packetArrivalTimes.ceilingKey(windowStartSeq) == null) {
                 // Packets in map are all older than the start of the next tcc feedback packet,
@@ -128,7 +128,7 @@ class TccGeneratorNode(
             }
 
             timestamp?.run {
-                if (packetArrivalTimes.isEmpty() && windowStartSeq == -1) {
+                if (packetArrivalTimes.isEmpty() && windowStartSeq == -1L) {
                     lossListeners.forEach {
                         it.packetReceived(false)
                     }
@@ -143,7 +143,7 @@ class TccGeneratorNode(
                         /* TODO: should we squelch for large tcc jumps? */
                         lossListeners.forEach {
                             if (numLost > 0) {
-                                it.packetLost(numLost)
+                                it.packetLost(numLost.toInt())
                             }
                             it.packetReceived(false)
                         }
@@ -157,7 +157,7 @@ class TccGeneratorNode(
                     }
                 }
 
-                if (windowStartSeq == -1 || tccSeqNum < windowStartSeq) {
+                if (windowStartSeq == -1L || tccSeqNum < windowStartSeq) {
                     windowStartSeq = tccSeqNum
                 }
 
@@ -181,19 +181,19 @@ class TccGeneratorNode(
                 mediaSourceSsrc = mediaSsrc,
                 feedbackPacketSeqNum = currTccSeqNum++
             )
-            currentTccPacket.SetBase(windowStartSeq, firstEntry.value)
+            currentTccPacket.SetBase(windowStartSeq.toInt(), firstEntry.value)
 
             var nextSequenceNumber = windowStartSeq
             val feedbackBlockPackets = packetArrivalTimes.tailMap(windowStartSeq)
             feedbackBlockPackets.forEach { (seq, timestamp) ->
-                if (!currentTccPacket.AddReceivedPacket(seq, timestamp)) {
+                if (!currentTccPacket.AddReceivedPacket(seq.toInt(), timestamp)) {
                     tccPackets.add(currentTccPacket.build())
                     currentTccPacket = RtcpFbTccPacketBuilder(
                         mediaSourceSsrc = mediaSsrc,
                         feedbackPacketSeqNum = currTccSeqNum++
                     ).apply {
-                        SetBase(seq, timestamp)
-                        AddReceivedPacket(seq, timestamp)
+                        SetBase(seq.toInt(), timestamp)
+                        AddReceivedPacket(seq.toInt(), timestamp)
                     }
                 }
                 nextSequenceNumber = seq + 1

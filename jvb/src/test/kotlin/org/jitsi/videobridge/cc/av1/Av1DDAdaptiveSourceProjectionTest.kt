@@ -352,8 +352,8 @@ class Av1DDAdaptiveSourceProjectionTest {
     private class ProjectedPacket constructor(
         val packet: Av1DDPacket,
         val origSeq: Int,
-        val extOrigSeq: Int,
-        val extFrameNum: Int,
+        val extOrigSeq: Long,
+        val extFrameNum: Long,
     )
 
     /** Run an out-of-order test on a single stream, randomized order except for the first
@@ -384,10 +384,10 @@ class Av1DDAdaptiveSourceProjectionTest {
             logger
         )
         var latestSeq = buffer[0].packetAs<Av1DDPacket>().sequenceNumber
-        val projectedPackets = TreeMap<Int, ProjectedPacket>()
+        val projectedPackets = TreeMap<Long, ProjectedPacket>()
         val origSeqIdxTracker = Rfc3711IndexTracker()
         val newSeqIdxTracker = Rfc3711IndexTracker()
-        val frameNumsDropped = HashSet<Int>()
+        val frameNumsDropped = HashSet<Long>()
         val frameNumsIndexTracker = Rfc3711IndexTracker()
         for (i in 0..99999) {
             val packetInfo = buffer[0]
@@ -436,7 +436,7 @@ class Av1DDAdaptiveSourceProjectionTest {
                 buffer.shuffle(random)
             }
         }
-        val frameNumsSeen = HashSet<Int>()
+        val frameNumsSeen = HashSet<Long>()
 
         /* Add packets that weren't added yet, or that were dropped for being too old, to frameNumsSeen. */
         frameNumsSeen.addAll(frameNumsDropped)

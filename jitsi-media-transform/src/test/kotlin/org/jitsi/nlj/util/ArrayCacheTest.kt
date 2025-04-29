@@ -22,7 +22,7 @@ import io.kotest.matchers.shouldBe
 
 internal class ArrayCacheTest : ShouldSpec() {
 
-    data class Dummy(val index: Int)
+    data class Dummy(val index: Long)
 
     private val arrayCache = object : ArrayCache<Dummy>(10, { Dummy(it.index) }) {
         var discarded = 0
@@ -86,7 +86,7 @@ internal class ArrayCacheTest : ShouldSpec() {
             numInserts++
             numHits++
 
-            for (i in 150..200) {
+            for (i in 150L..200L) {
                 arrayCache.insertItem(Dummy(i), i) shouldBe true
                 numInserts++
             }
