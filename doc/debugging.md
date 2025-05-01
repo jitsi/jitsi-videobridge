@@ -20,17 +20,12 @@ Returns the currently running version.
 GET /about/version
 ```
 
-### List conferences
-Returns a list of running conferences.
+### Get Dominant speaker
+Returns a dominant speaker identification
 ```
-GET /colibri/conferences
+GET /colibri/v2/conferences/{meetingId}/dominant-speaker-identification
 ```
 
-### Describe a conference
-Returns the COLIBRI description of a conference.
-```
-GET /colibri/conferences/<CONFERENCE_ID>
-```
 
 ### Overall statistics
 Returns overall bridge statistics. These include number of current and total conferences and endpoints, number of packets/bytes received/sent, current packet rate and bit rate. They are generally suitable for storing as timeseries in order to monitor a service.
