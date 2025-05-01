@@ -20,8 +20,13 @@ import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
 import org.jitsi.nlj.util.DataSize
+import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.RtcpReportBlock
+import org.jitsi.rtp.rtcp.RtcpRrPacket
+import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
@@ -37,7 +42,10 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Transport CC engine invoking GoogCc NetworkController.
+ * Transport CC engine invoking GoogCc NetworkController.  Contains some code based loosely on
+ * WebRTC call/rtp_transport_controller_send.{h,cc} in
+ * WebRTC tag branch-heads/6613 (Chromium 128)
+ *
  */
 class GoogCcTransportCcEngine(
     val diagnosticContext: DiagnosticContext,
@@ -79,16 +87,80 @@ class GoogCcTransportCcEngine(
 
     @Synchronized
     override fun rtcpPacketReceived(rtcpPacket: RtcpPacket, receivedTime: Instant?) {
-        if (rtcpPacket is RtcpFbTccPacket) {
-            val now = clock.instant()
-            val feedback = feedbackAdapter.processTransportFeedback(rtcpPacket, now)
-            if (feedback != null) {
-                // TODO: feed lossListeners with loss events
-                val update = networkController.onTransportPacketsFeedback(feedback)
+        when (rtcpPacket) {
+            is RtcpFbTccPacket -> {
+                val time = receivedTime ?: clock.instant()
+                val feedback = feedbackAdapter.processTransportFeedback(rtcpPacket, time)
+                if (feedback != null) {
+                    // TODO: feed lossListeners with loss events
+                    val update = networkController.onTransportPacketsFeedback(feedback)
+                    processUpdate(update)
+                }
+            }
+            is RtcpFbRembPacket -> {
+                val time = receivedTime ?: clock.instant()
+                val msg = RemoteBitrateReport(receiveTime = time, bandwidth = rtcpPacket.bitrate.bps)
+                val update = networkController.onRemoteBitrateReport(msg)
                 processUpdate(update)
             }
+            is RtcpSrPacket -> {
+                val time = receivedTime ?: clock.instant()
+                onReport(time, rtcpPacket.reportBlocks)
+            }
+            is RtcpRrPacket -> {
+                val time = receivedTime ?: clock.instant()
+                onReport(time, rtcpPacket.reportBlocks)
+            }
         }
-        // TODO: handle other RTCP packets that the network controller wants
+    }
+
+    private class LossReport {
+        var extendedHighestSequenceNumber: Long = 0
+        var cumulativeLost = 0
+    }
+
+    private val lastReportBlocks = HashMap<Long, LossReport>()
+    private var lastReportBlockTime = clock.instant()
+
+    private fun onReport(receiveTime: Instant, reportBlocks: List<RtcpReportBlock>) {
+        if (reportBlocks.isEmpty()) {
+            return
+        }
+
+        var totalPacketsLostDelta = 0
+        var totalPacketsDelta = 0L
+
+        reportBlocks.forEach { reportBlock ->
+            val newLossReport = LossReport()
+            val lastLossReport = lastReportBlocks.putIfAbsent(reportBlock.ssrc, newLossReport)
+            if (lastLossReport != null) {
+                totalPacketsDelta += reportBlock.extendedHighestSeqNum - lastLossReport.extendedHighestSequenceNumber
+                totalPacketsLostDelta += reportBlock.cumulativePacketsLost - lastLossReport.cumulativeLost
+            }
+            val lossReport = lastLossReport ?: newLossReport
+            lossReport.extendedHighestSequenceNumber = reportBlock.extendedHighestSeqNum
+            lossReport.cumulativeLost = reportBlock.cumulativePacketsLost
+        }
+        // Can only compute delta if there has been previous blocks to compare to. If
+        // not, total_packets_delta will be unchanged and there's nothing more to do.
+        if (totalPacketsDelta == 0L) {
+            return
+        }
+        val packetsReceivedDelta = totalPacketsDelta - totalPacketsLostDelta
+        // To detect lost packets, at least one packet has to be received.
+        if (packetsReceivedDelta < 1) {
+            return
+        }
+        val msg = TransportLossReport(
+            packetsLostDelta = totalPacketsDelta,
+            packetsReceivedDelta = packetsReceivedDelta,
+            receiveTime = receiveTime,
+            startTime = lastReportBlockTime,
+            endTime = receiveTime
+        )
+        val update = networkController.onTransportLossReport(msg)
+        processUpdate(update)
+        lastReportBlockTime = receiveTime
     }
 
     @Synchronized
