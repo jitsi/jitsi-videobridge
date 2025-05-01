@@ -214,6 +214,7 @@ The respective response could look like:
 		<td>PATCH</td>
 		<td>/colibri/v2/conferences/{mettingId}</td>
 		<td>
+     Expire conference <br />
 			200 OK which represents success. <br />
 			For example: 
 <pre>
@@ -224,5 +225,91 @@ The Request body to expire conference:
 </pre>
 		</td>
 	</tr>
+	<tr>
+		<td>PATCH</td>
+		<td>/colibri/v2/conferences/{mettingId}</td>
+		<td>
+			200 OK which represents success. <br />
+			Here, I am doing it for 
+            <a href="https://github.com/jitsi/jitsi-xmpp-extensions/blob/master/src/test/kotlin/org/jitsi/xmpp/extensions/colibri2/json/Colibri2JSONSerializerTest.kt#L326">
+    Conference-modified with transport for an endpoint and feedback sources
+</a> <br />
+In the same way you can do it for
+<a href="https://github.com/jitsi/jitsi-xmpp-extensions/blob/master/src/test/kotlin/org/jitsi/xmpp/extensions/colibri2/json/Colibri2JSONSerializerTest.kt#L388C17-L388C59">
+    Update endpoint with transport and sources
+</a> <br />
+For example, a request could look like:
+			<pre>
+{
+  "endpoints": [
+    {
+      "id":"79f0273e",
+      "transport": {
+        "transport": {
+          "candidates": [
+            {
+              "generation": "0",
+              "rel-port": "9",
+              "component": "1",
+              "protocol": "udp",
+              "port": "10000",
+              "ip": "129.80.210.199",
+              "foundation": "2",
+              "id": "653aa1ba295b62480ffffffffdc52c0d9",
+              "rel-addr": "0.0.0.0",
+              "priority": "1694498815",
+              "type": "srflx",
+              "network": "0"
+            }
+          ],
+          "xmlns": "urn:xmpp:jingle:transports:ice-udp:1",
+          "ufrag": "2ivqh1fvtf0l3h",
+          "rtcp-mux": true,
+          "pwd": "1a5ejbent91k6io6a3fauikg22",
+          "web-sockets": [
+            "wss://beta-us-ashburn-1-global-2808-jvb-83-102-26.jitsi.net:443/colibri-ws/default-id/3d937bbdf97a23e0/79f0273e?pwd=1a5ejbent91k6io6a3fauikg22"
+          ],
+          "fingerprints": [
+            {
+              "fingerprint": "2E:CC:85:71:32:5B:B5:60:64:C8:F6:7B:6D:45:D4:34:2B:51:A0:06:B5:EA:2F:84:BC:7B:64:1F:A3:0A:69:23",
+              "setup": "actpass",
+              "hash": "sha-256",
+              "cryptex": true
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "type": "audio",
+      "id": "jvb-a0",
+      "sources": [
+        { "ssrc":411312308, "name": "jvb-a0", "parameters": { "msid": "mixedmslabel mixedlabelaudio0" } }
+      ]
+    },
+    {
+      "type": "video",
+      "id": "jvb-v0",
+      "sources": [
+        { "ssrc":3929652146, "name": "jvb-v0", "parameters": { "msid": "mixedmslabel mixedlabelvideo0" } }
+      ]
+    }
+  ]
+}</pre>
+
+The respective response could look like:
+
+<pre>
+{
+    "endpoints": [
+        {
+            "id": "79f0273e"
+        }
+    ]
+}</pre>
+</td>
+</tr>
 	
 </table>
