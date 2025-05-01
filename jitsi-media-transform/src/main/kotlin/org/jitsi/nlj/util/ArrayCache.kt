@@ -200,7 +200,7 @@ open class ArrayCache<T>(
         if (head == -1 || index > cache[head].index) {
             return
         }
-        val diff = cache[head].index - index
+        val diff = index - cache[head].index
         val position = position(diff)
         if (cache[position].index == index) {
             cache[position].timeAdded = timeAdded
