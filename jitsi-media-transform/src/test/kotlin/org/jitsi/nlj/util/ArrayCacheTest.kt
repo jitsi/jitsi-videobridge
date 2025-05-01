@@ -19,15 +19,24 @@ package org.jitsi.nlj.util
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
+import org.jitsi.utils.ms
+import org.jitsi.utils.time.FakeClock
 
 internal class ArrayCacheTest : ShouldSpec() {
 
-    data class Dummy(val index: Int)
+    data class Dummy(val index: Long)
 
-    private val arrayCache = object : ArrayCache<Dummy>(10, { Dummy(it.index) }) {
+    private val fakeClock = FakeClock()
+
+    private val arrayCache = object : ArrayCache<Dummy>(10, { Dummy(it.index) }, clock = fakeClock) {
         var discarded = 0
         override fun discardItem(item: Dummy) {
             discarded++
+        }
+
+        /** Expose protected [updateTimeAdded] to tests */
+        fun publicUpdateTimeAdded(index: Long, timeAdded: Long) {
+            updateTimeAdded(index, timeAdded)
         }
     }
 
@@ -86,7 +95,7 @@ internal class ArrayCacheTest : ShouldSpec() {
             numInserts++
             numHits++
 
-            for (i in 150..200) {
+            for (i in 150L..200L) {
                 arrayCache.insertItem(Dummy(i), i) shouldBe true
                 numInserts++
             }
@@ -124,6 +133,27 @@ internal class ArrayCacheTest : ShouldSpec() {
             arrayCache.flush()
             arrayCache.discarded shouldBe arrayCache.size
             arrayCache.getContainer(200) shouldBe null
+        }
+        context("time added should be correct") {
+            val time1 = fakeClock.millis()
+            arrayCache.insertItem(data1, data1.index) shouldBe true
+
+            fakeClock.elapse(100.ms)
+            val time2 = fakeClock.millis()
+            arrayCache.getContainer(data1.index)!!.timeAdded shouldBe time1
+            arrayCache.insertItem(dataOlder, dataOlder.index)
+
+            fakeClock.elapse(100.ms)
+            arrayCache.getContainer(dataOlder.index)!!.timeAdded shouldBe time2
+            arrayCache.getContainer(data1.index)!!.timeAdded shouldBe time1
+
+            fakeClock.elapse(100.ms)
+            val time3 = fakeClock.millis()
+            arrayCache.publicUpdateTimeAdded(dataOlder.index, time3)
+
+            fakeClock.elapse(100.ms)
+            arrayCache.getContainer(dataOlder.index)!!.timeAdded shouldBe time3
+            arrayCache.getContainer(data1.index)!!.timeAdded shouldBe time1
         }
     }
 }

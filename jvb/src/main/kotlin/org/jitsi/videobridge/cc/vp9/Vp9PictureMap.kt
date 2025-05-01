@@ -22,6 +22,8 @@ import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * A history of recent pictures on a VP9 stream.
@@ -164,7 +166,7 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
     synchronize = false
 ) {
     var numCached = 0
-    var firstIndex = -1
+    var firstIndex = -1L
     val indexTracker = PictureIdIndexTracker()
 
     /**
@@ -178,7 +180,7 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
     /**
      * Gets a picture with a given VP9 picture ID index from the cache.
      */
-    private fun getIndex(index: Int): Vp9Picture? {
+    private fun getIndex(index: Long): Vp9Picture? {
         if (index <= lastIndex - size) {
             /* We don't want to remember old pictures even if they're still
                tracked; their neighboring pictures may have been evicted,
@@ -201,7 +203,7 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
         val inserted = super.insertItem(picture, index)
         if (inserted) {
             numCached++
-            if (firstIndex == -1 || index < firstIndex) {
+            if (firstIndex == -1L || index < firstIndex) {
                 firstIndex = index
             }
             return picture
@@ -218,12 +220,12 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
 
     fun findBefore(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         val lastIndex = lastIndex
-        if (lastIndex == -1) {
+        if (lastIndex == -1L) {
             return null
         }
         val index = indexTracker.interpret(frame.pictureId)
-        val searchStartIndex = Integer.min(index, lastIndex)
-        val searchEndIndex = Integer.max(lastIndex - size, firstIndex - 1)
+        val searchStartIndex = min(index, lastIndex)
+        val searchEndIndex = max(lastIndex - size, firstIndex - 1)
         return doFind(
             pred = pred,
             startIndex = searchStartIndex,
@@ -235,14 +237,14 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
 
     fun findAfter(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
         val lastIndex = lastIndex
-        if (lastIndex == -1) {
+        if (lastIndex == -1L) {
             return null
         }
         val index = indexTracker.interpret(frame.pictureId)
         if (index > lastIndex) {
             return null
         }
-        val searchStartIndex = Integer.max(index, Integer.max(lastIndex - size + 1, firstIndex))
+        val searchStartIndex = max(index, max(lastIndex - size + 1, firstIndex))
         return doFind(
             pred = pred,
             startIndex = searchStartIndex,
@@ -254,8 +256,8 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
 
     private fun doFind(
         pred: (Vp9Frame) -> Boolean,
-        startIndex: Int,
-        endIndex: Int,
+        startIndex: Long,
+        endIndex: Long,
         startLayer: Int,
         increment: Int
     ): Vp9Frame? {

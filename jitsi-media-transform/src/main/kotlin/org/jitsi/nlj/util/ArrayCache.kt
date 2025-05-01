@@ -20,6 +20,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import java.lang.Integer.max
+import java.lang.Long.max
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -60,7 +61,7 @@ open class ArrayCache<T>(
     val hitRate
         get() = _numHits.get() * 1.0 / max(1, _numHits.get() + _numMisses.get())
 
-    protected val lastIndex: Int
+    protected val lastIndex: Long
         get() = if (head == -1) -1 else cache[head].index
 
     val empty: Boolean
@@ -69,7 +70,7 @@ open class ArrayCache<T>(
     /**
      * Inserts an item with a specific index in the cache. Stores a copy.
      */
-    fun insertItem(item: T, index: Int, timeAdded: Long): Boolean = if (synchronize) {
+    fun insertItem(item: T, index: Long, timeAdded: Long): Boolean = if (synchronize) {
         synchronized(syncRoot) {
             doInsert(item, index, timeAdded)
         }
@@ -81,9 +82,11 @@ open class ArrayCache<T>(
      * Inserts an item with a specific index in the cache, computing time
      * from [clock]. Stores a copy.
      */
-    fun insertItem(item: T, index: Int): Boolean = insertItem(item, index, clock.millis())
+    fun insertItem(item: T, index: Long): Boolean = insertItem(item, index, clock.millis())
 
-    private fun doInsert(item: T, index: Int, timeAdded: Long): Boolean {
+    private fun position(diff: Long): Int = ((head + diff) floorMod size.toLong()).toInt()
+
+    private fun doInsert(item: T, index: Long, timeAdded: Long): Boolean {
         val diff = if (head == -1) -1 else index - cache[head].index
         val position = when {
             head == -1 -> {
@@ -95,9 +98,9 @@ open class ArrayCache<T>(
                 numOldInserts++
                 return false
             }
-            diff < 0 -> (head + diff) floorMod size
+            diff < 0 -> position(diff)
             else -> {
-                head = (head + diff) floorMod size
+                head = position(diff)
                 head
             }
         }
@@ -121,7 +124,7 @@ open class ArrayCache<T>(
      * copy.
      */
     @JvmOverloads
-    fun getContainer(index: Int, shouldCloneItem: Boolean = true): Container? {
+    fun getContainer(index: Long, shouldCloneItem: Boolean = true): Container? {
         val result = when {
             synchronize -> synchronized(syncRoot) {
                 doGet(index, shouldCloneItem)
@@ -133,7 +136,7 @@ open class ArrayCache<T>(
         return result
     }
 
-    private fun doGet(index: Int, shouldCloneItem: Boolean): Container? {
+    private fun doGet(index: Long, shouldCloneItem: Boolean): Container? {
         if (index < 0) {
             return null
         }
@@ -148,7 +151,7 @@ open class ArrayCache<T>(
             return null
         }
 
-        val position = (head + diff) floorMod size
+        val position = position(diff)
         if (cache[position].index == index) {
             return cache[position].clone(shouldCloneItem)
         }
@@ -158,7 +161,7 @@ open class ArrayCache<T>(
     /**
      * Checks whether the cache contains an item with a given index.
      */
-    fun containsIndex(index: Int): Boolean {
+    fun containsIndex(index: Long): Boolean {
         return if (synchronize) {
             synchronized(syncRoot) {
                 doContains(index)
@@ -168,7 +171,7 @@ open class ArrayCache<T>(
         }
     }
 
-    private fun doContains(index: Int): Boolean {
+    private fun doContains(index: Long): Boolean {
         if (head == -1) {
             return false
         }
@@ -178,14 +181,14 @@ open class ArrayCache<T>(
             return false
         }
 
-        val position = (head + diff) floorMod size
+        val position = position(diff)
         return (cache[position].index == index)
     }
 
     /**
      * Updates the [timeAdded] value of an item with a particular index, if it is in the cache.
      */
-    protected fun updateTimeAdded(index: Int, timeAdded: Long) = if (synchronize) {
+    protected fun updateTimeAdded(index: Long, timeAdded: Long) = if (synchronize) {
         synchronized(syncRoot) {
             doUpdateTimeAdded(index, timeAdded)
         }
@@ -193,12 +196,12 @@ open class ArrayCache<T>(
         doUpdateTimeAdded(index, timeAdded)
     }
 
-    private fun doUpdateTimeAdded(index: Int, timeAdded: Long) {
+    private fun doUpdateTimeAdded(index: Long, timeAdded: Long) {
         if (head == -1 || index > cache[head].index) {
             return
         }
-        val diff = cache[head].index - index
-        val position = (head - diff) floorMod size
+        val diff = index - cache[head].index
+        val position = position(diff)
         if (cache[position].index == index) {
             cache[position].timeAdded = timeAdded
         }
@@ -221,7 +224,7 @@ open class ArrayCache<T>(
     private fun doForEachDescending(predicate: (T) -> Boolean) {
         if (head == -1) return
 
-        val indexRange = cache[head].index downTo max(cache[head].index - size, 1)
+        val indexRange = cache[head].index downTo max(cache[head].index - size, 1L)
         for (i in 0 until size) {
             val position = (head - i) floorMod size
             if (cache[position].index in indexRange) {
@@ -268,7 +271,7 @@ open class ArrayCache<T>(
 
     inner class Container(
         var item: T? = null,
-        var index: Int = -1,
+        var index: Long = -1,
         var timeAdded: Long = -1
     ) {
         fun clone(shouldCloneItem: Boolean): Container {

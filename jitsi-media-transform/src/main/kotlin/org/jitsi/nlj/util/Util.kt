@@ -49,6 +49,10 @@ infix fun Int.floorMod(other: Int): Int {
     return Math.floorMod(this, other)
 }
 
+infix fun Long.floorMod(other: Long): Long {
+    return Math.floorMod(this, other)
+}
+
 /** Set the value at position [index] in a [MutableList] to [element].  If the list has fewer
  * than [index] entries, extend the intermediate entries between its current size and
  * [index] with [fillerElement].

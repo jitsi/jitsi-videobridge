@@ -165,7 +165,7 @@ class Vp9AdaptiveSourceProjectionTest {
     private class ProjectedPacket constructor(
         val packet: Vp9Packet,
         val origSeq: Int,
-        val extOrigSeq: Int,
+        val extOrigSeq: Long,
         val nearOldest: Boolean
     )
 
@@ -196,7 +196,7 @@ class Vp9AdaptiveSourceProjectionTest {
             logger
         )
         var latestSeq = buffer[0]!!.packetAs<Vp9Packet>().sequenceNumber
-        val projectedPackets = TreeMap<Int, ProjectedPacket?>()
+        val projectedPackets = TreeMap<Long, ProjectedPacket?>()
         val origSeqIdxTracker = Rfc3711IndexTracker()
         val newSeqIdxTracker = Rfc3711IndexTracker()
         for (i in 0..99999) {
@@ -259,7 +259,7 @@ class Vp9AdaptiveSourceProjectionTest {
                 buffer.shuffle(random)
             }
         }
-        val iter: Iterator<Int> = projectedPackets.keys.iterator()
+        val iter: Iterator<Long> = projectedPackets.keys.iterator()
         var prevPacket = projectedPackets[iter.next()]
         while (iter.hasNext()) {
             val packet = projectedPackets[iter.next()]

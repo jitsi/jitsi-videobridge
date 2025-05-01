@@ -49,9 +49,10 @@ class TccSeqNumTagger(
                     val ext = rtpPacket.getHeaderExtension(tccExtId)
                         ?: rtpPacket.addHeaderExtension(tccExtId, TccHeaderExtension.DATA_SIZE_BYTES)
 
-                    TccHeaderExtension.setSequenceNumber(ext, currTccSeqNum)
-
                     val curSeq = currTccSeqNum
+
+                    TccHeaderExtension.setSequenceNumber(ext, curSeq)
+
                     val len = rtpPacket.length.bytes
                     packetInfo.onSent { weakTcc.get()?.mediaPacketSent(curSeq, len) }
 
