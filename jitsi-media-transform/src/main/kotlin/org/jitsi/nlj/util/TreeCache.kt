@@ -27,24 +27,24 @@ import java.util.*
 open class TreeCache<T>(
     private val minSize: Int
 ) {
-    private val map = TreeMap<Int, T>()
+    private val map = TreeMap<Long, T>()
 
-    private var highestIndex = -1
+    private var highestIndex = -1L
 
-    fun insert(index: Int, value: T) {
+    fun insert(index: Long, value: T) {
         map[index] = value
 
         updateState(index)
     }
 
-    fun getEntryBefore(index: Int): Map.Entry<Int, T>? {
+    fun getEntryBefore(index: Long): Map.Entry<Long, T>? {
         updateState(index)
         return map.floorEntry(index)
     }
 
-    fun get(index: Int): T? = map[index]
+    fun get(index: Long): T? = map[index]
 
-    private fun updateState(index: Int) {
+    private fun updateState(index: Long) {
         if (highestIndex < index) {
             highestIndex = index
         }

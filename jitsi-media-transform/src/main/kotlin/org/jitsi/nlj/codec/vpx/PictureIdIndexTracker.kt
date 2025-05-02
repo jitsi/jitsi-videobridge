@@ -19,14 +19,14 @@ package org.jitsi.nlj.codec.vpx
  * of 0x8000).
  */
 class PictureIdIndexTracker {
-    private var roc = 0
+    private var roc = 0L
     private var highestSeqNumReceived = -1
-    private fun getIndex(seqNum: Int, updateRoc: Boolean): Int {
+    private fun getIndex(seqNum: Int, updateRoc: Boolean): Long {
         if (highestSeqNumReceived == -1) {
             if (updateRoc) {
                 highestSeqNumReceived = seqNum
             }
-            return seqNum
+            return seqNum.toLong()
         }
         val delta = VpxUtils.getExtendedPictureIdDelta(seqNum, highestSeqNumReceived)
         val v =

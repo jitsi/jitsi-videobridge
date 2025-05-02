@@ -21,7 +21,7 @@ import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.rtp.util.rolledOverTo
 
 class Rfc3711IndexTracker {
-    var roc: Int = 0
+    var roc: Long = 0
         private set
     private var highestSeqNumReceived = -1
 
@@ -31,7 +31,7 @@ class Rfc3711IndexTracker {
      * NOTE that this method must be called for all 'received' sequence numbers so that it may keep
      * its rollover counter accurate
      */
-    fun update(seqNum: Int): Int {
+    fun update(seqNum: Int): Long {
         return getIndex(seqNum, true)
     }
 
@@ -39,7 +39,7 @@ class Rfc3711IndexTracker {
      * return the index (as defined by RFC3711 at https://tools.ietf.org/html/rfc3711#section-3.3.1)
      * for the given [seqNum]. If [updateRoc] is [true] and we've rolled over, updates our ROC.
      */
-    private fun getIndex(seqNum: Int, updateRoc: Boolean): Int {
+    private fun getIndex(seqNum: Int, updateRoc: Boolean): Long {
         require(seqNum in 0..0xFFFF) {
             "seqNum must be between 0 and 0xFFFF"
         }
@@ -47,7 +47,7 @@ class Rfc3711IndexTracker {
             if (updateRoc) {
                 highestSeqNumReceived = seqNum
             }
-            return seqNum
+            return seqNum.toLong()
         }
 
         val v = when {
@@ -79,7 +79,7 @@ class Rfc3711IndexTracker {
      * Interprets an RTP sequence number in the context of the highest sequence number received. Returns the index
      * which corresponds to the packet, but does not update the ROC.
      */
-    fun interpret(seqNum: Int): Int {
+    fun interpret(seqNum: Int): Long {
         return getIndex(seqNum, false)
     }
 

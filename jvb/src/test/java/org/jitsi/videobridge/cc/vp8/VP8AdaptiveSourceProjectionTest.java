@@ -131,10 +131,10 @@ public class VP8AdaptiveSourceProjectionTest
     {
         final Vp8Packet packet;
         final int origSeq;
-        final int extOrigSeq;
+        final long extOrigSeq;
         final boolean nearOldest;
 
-        ProjectedPacket(Vp8Packet p, int s, int e, boolean o)
+        ProjectedPacket(Vp8Packet p, int s, long e, boolean o)
         {
             packet = p;
             origSeq = s;
@@ -175,7 +175,7 @@ public class VP8AdaptiveSourceProjectionTest
 
         int latestSeq = buffer.get(0).<Vp8Packet>packetAs().getSequenceNumber();
 
-        TreeMap<Integer, ProjectedPacket> projectedPackets = new TreeMap<>();
+        TreeMap<Long, ProjectedPacket> projectedPackets = new TreeMap<>();
         Rfc3711IndexTracker origSeqIdxTracker = new Rfc3711IndexTracker();
         Rfc3711IndexTracker newSeqIdxTracker = new Rfc3711IndexTracker();
 
@@ -225,8 +225,8 @@ public class VP8AdaptiveSourceProjectionTest
                 assertEquals(RtpUtils.applyTimestampDelta(origTs, expectedTsOffset), packet.getTimestamp());
                 assertEquals(origTl0PicIdx, packet.getTL0PICIDX());
                 int newSeq = packet.getSequenceNumber();
-                int extNewSeq = newSeqIdxTracker.update(newSeq);
-                int extOrigSeq = origSeqIdxTracker.update(origSeq);
+                long extNewSeq = newSeqIdxTracker.update(newSeq);
+                long extOrigSeq = origSeqIdxTracker.update(origSeq);
                 assertFalse(projectedPackets.containsKey(extNewSeq));
                 projectedPackets.put(extNewSeq, new ProjectedPacket(packet, origSeq, extOrigSeq, nearOldest));
             }
@@ -239,7 +239,7 @@ public class VP8AdaptiveSourceProjectionTest
             Collections.shuffle(buffer, random);
         }
 
-        Iterator<Integer> iter = projectedPackets.keySet().iterator();
+        Iterator<Long> iter = projectedPackets.keySet().iterator();
 
         ProjectedPacket prevPacket = projectedPackets.get(iter.next());
 
@@ -265,8 +265,8 @@ public class VP8AdaptiveSourceProjectionTest
         ProjectedPacket firstPacket = projectedPackets.firstEntry().getValue();
         ProjectedPacket lastPacket = projectedPackets.lastEntry().getValue();
 
-        int origDelta = lastPacket.extOrigSeq - firstPacket.extOrigSeq;
-        int projDelta = projectedPackets.lastKey() - projectedPackets.firstKey();
+        long origDelta = lastPacket.extOrigSeq - firstPacket.extOrigSeq;
+        long projDelta = projectedPackets.lastKey() - projectedPackets.firstKey();
         assertTrue(projDelta <= origDelta);
     }
 

@@ -324,7 +324,7 @@ class ClassicTransportCcEngine(
         }
 
         val lastSequence: Int
-            get() = if (lastIndex == -1) -1 else lastIndex and 0xFFFF
+            get() = if (lastIndex == -1L) -1 else (lastIndex and 0xFFFF).toInt()
     }
 
     companion object {

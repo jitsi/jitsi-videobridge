@@ -75,7 +75,7 @@ class Vp9AdaptiveSourceProjectionContext(
      * We can't send frames with picIdIdx less than this, because we don't have
      * space in the projected sequence number/picId/tl0PicIdx counts.
      */
-    private var lastPicIdIndexResumption = -1
+    private var lastPicIdIndexResumption = -1L
 
     @Synchronized
     override fun accept(packetInfo: PacketInfo, targetIndex: Int): Boolean {

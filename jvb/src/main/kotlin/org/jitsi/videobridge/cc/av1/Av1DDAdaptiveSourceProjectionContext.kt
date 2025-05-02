@@ -75,7 +75,7 @@ class Av1DDAdaptiveSourceProjectionContext(
      * We can't send frames with frame number less than this, because we don't have
      * space in the projected sequence number/frame number counts.
      */
-    private var lastFrameNumberIndexResumption = -1
+    private var lastFrameNumberIndexResumption = -1L
 
     override fun accept(packetInfo: PacketInfo, targetIndex: Int): Boolean {
         val packet = packetInfo.packet
