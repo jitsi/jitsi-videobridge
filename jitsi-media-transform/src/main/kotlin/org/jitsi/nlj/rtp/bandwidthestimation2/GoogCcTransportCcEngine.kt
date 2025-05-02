@@ -257,22 +257,22 @@ class GoogCcTransportCcEngine(
 
     private fun processUpdate(update: NetworkControlUpdate) {
         update.targetRate?.let { targetRate ->
-            logger.info("GoogleCcEstimator setting TargetRate to $targetRate")
+            logger.debug("GoogleCcEstimator setting TargetRate to $targetRate")
             listeners.forEach { it.bandwidthEstimationChanged(targetRate.targetRate) }
         }
         update.congestionWindow?.let { congestionWindow ->
             /* We don't use a congestion window */
             /* TODO: does this do anything bad to the estimator? */
-            logger.info("GoogleCcEstimator wants to set CongestionWindow to $congestionWindow")
+            logger.trace("GoogleCcEstimator wants to set CongestionWindow to $congestionWindow")
         }
         update.pacerConfig?.let { pacerConfig ->
             /* We don't use a pacer */
             /* TODO: does this do anything bad to the estimator? */
-            logger.info("GoogleCcEstimator wants to set PacerConfig to $pacerConfig")
+            logger.trace("GoogleCcEstimator wants to set PacerConfig to $pacerConfig")
         }
         update.probeClusterConfigs.let { configs ->
             if (configs.isNotEmpty()) {
-                logger.info("GoogleCcEstimator creating ${configs.size} ProbeClusterConfigs: $configs")
+                logger.debug("GoogleCcEstimator creating ${configs.size} ProbeClusterConfigs: $configs")
                 synchronized(this@GoogCcTransportCcEngine) {
                     configs.forEach { config ->
                         bitrateProber.createProbeCluster(config)

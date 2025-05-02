@@ -218,7 +218,7 @@ class TransportFeedbackAdapter(
         }
 
         if (failedLookups > 0) {
-            logger.warn(
+            logger.info(
                 "Failed to lookup send time for $failedLookups packet${if (failedLookups > 1) "s" else ""}. " +
                     "Packets reordered or send time history too small?"
             )
