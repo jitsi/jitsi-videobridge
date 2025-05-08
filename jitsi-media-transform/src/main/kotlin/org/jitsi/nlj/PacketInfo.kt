@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.rtp.Packet
 import org.jitsi.utils.logging2.createLogger
 import java.time.Clock
@@ -149,6 +150,8 @@ open class PacketInfo @JvmOverloads constructor(
      */
     var layeringChanged = false
 
+    var payloadType: PayloadType? = null
+
     /**
      * The payload verification string for the packet, or 'null' if payload verification is disabled. Calculating the
      * it is expensive, thus we only do it when the flag is enabled.
@@ -187,6 +190,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.originalHadCryptex = originalHadCryptex
         clone.shouldDiscard = shouldDiscard
         clone.endpointId = endpointId
+        clone.payloadType = payloadType
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
         clone.packetOrigin = packetOrigin
