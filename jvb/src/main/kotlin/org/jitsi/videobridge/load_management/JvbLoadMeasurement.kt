@@ -24,9 +24,6 @@ interface JvbLoadMeasurement {
     fun getLoad(): Double
 
     operator fun div(other: JvbLoadMeasurement): Double
-    operator fun plus(other: JvbLoadMeasurement): Double {
-        return getLoad() + other.getLoad()
-    }
 
     companion object {
         const val CONFIG_BASE = "videobridge.load-management.load-measurements"

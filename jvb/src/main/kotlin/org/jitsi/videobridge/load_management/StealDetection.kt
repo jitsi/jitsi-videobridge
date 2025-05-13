@@ -16,19 +16,16 @@
 package org.jitsi.videobridge.load_management
 
 import org.jitsi.metrics.DoubleGaugeMetric
+import java.io.File
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer.Companion.instance as metricsContainer
 
-object StealDetection {
-    private val linux = System.getProperty("os.name").lowercase().contains("linux")
+class StealDetection internal constructor(private val file: File) {
 
     private var previous = TotalAndSteal(0, 0)
 
     fun update(): CpuMeasurement {
-        if (!linux) {
-            return CpuMeasurement(0.0)
-        }
         val current = try {
-            readFromProc() ?: return CpuMeasurement(0.0)
+            readFromFile() ?: return CpuMeasurement(0.0)
         } catch (e: Exception) {
             return CpuMeasurement(0.0)
         }
@@ -40,7 +37,7 @@ object StealDetection {
 
         val totalDelta = current.total - previous.total
         val stealDelta = current.steal - previous.steal
-        val currentSteal = if (totalDelta > 0) {
+        val currentSteal = if (totalDelta > 0 && stealDelta > 0) {
             stealDelta.toDouble() / totalDelta
         } else {
             0.0
@@ -52,9 +49,8 @@ object StealDetection {
         return CpuMeasurement(currentSteal)
     }
 
-    private fun readFromProc(): TotalAndSteal? {
-        val statFile = java.io.File("/proc/stat")
-        val cpuLine = statFile.readLines()
+    private fun readFromFile(): TotalAndSteal? {
+        val cpuLine = file.readLines()
             .firstOrNull { it.startsWith("cpu ") }
             ?.split("\\s+".toRegex())
             ?.drop(1)
@@ -65,11 +61,17 @@ object StealDetection {
         return TotalAndSteal(total = cpuLine.sum(), steal = cpuLine[7])
     }
 
-    private val stealMetric: DoubleGaugeMetric by lazy {
-        metricsContainer.registerDoubleGauge(
-            "cpu_steal",
-            "CPU steal fraction (from 0 to 1)"
-        )
+    companion object {
+        private val stealMetric: DoubleGaugeMetric by lazy {
+            metricsContainer.registerDoubleGauge(
+                "cpu_steal",
+                "CPU steal fraction (from 0 to 1)"
+            )
+        }
+
+        private val linux = System.getProperty("os.name").lowercase().contains("linux")
+
+        val instance = if (linux) StealDetection(File("/proc/stat")) else null
     }
 }
 

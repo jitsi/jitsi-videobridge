@@ -189,9 +189,10 @@ class CpuUsageLoadManager(
 ) : JvbLoadManager<CpuMeasurement>(loadThreshold, recoveryThreshold, loadReducer) {
     init {
         val sampler = CpuLoadSampler { loadMeasurement ->
-            val stealMeasurement = if (detectCpuSteal) StealDetection.update() else CpuMeasurement(0.0)
+            val stealMeasurement = (if (detectCpuSteal) StealDetection.instance?.update() else null)
+                ?: CpuMeasurement(0.0)
 
-            loadUpdate(CpuMeasurement(loadMeasurement + stealMeasurement))
+            loadUpdate(CpuMeasurement(loadMeasurement.getLoad() + stealMeasurement.getLoad()))
             VideobridgeMetrics.stressLevel.set(getCurrentStressLevel())
         }
 
