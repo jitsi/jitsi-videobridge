@@ -183,7 +183,7 @@ class Av1DDPacketTest : ShouldSpec() {
                 arrayOf(
                     // Make sure the correct "height" value is picked from portrait mode (720x1280)
                     // TODO: I think the frame rate calculation gets this DD wrong, but I'm not quite sure
-                    //  what the structure encoder is using
+                    //  what structure the encoder is using
                     Av1DDRtpLayerDesc(0, 0, 0, 0, 720, 10.0),
                     Av1DDRtpLayerDesc(0, 1, 1, 0, 720, 20.0),
                     Av1DDRtpLayerDesc(0, 2, 2, 0, 720, 30.0),
