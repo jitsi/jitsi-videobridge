@@ -717,6 +717,53 @@ class Vp9PacketTest : ShouldSpec() {
             tL0PICIDX = null,
             descriptorSize = 5,
             scalabilityStructure = null
+        ),
+
+        /* Mobile chrome, portrait-mode */
+        SampleVp9Packet(
+            "Temporally-scalable portrait mode",
+            "90e553b379aa95ae6012c1c8" +
+                "1000001d" +
+                "030324e813" +
+                "05021b57" +
+                "0b5cc007e1c0081485214eaaaaa8000600004000100002aa80a8000600004000100002a000a800060000400016d549241b" +
+                "5524906d54923157e001974ca864330e222396eca8655304224390eca8775300b3013f0167027f02cf04ff0380" +
+                "0c0a01800f141c00b3013f0b" +
+                "00" +
+                // I=1,P=0,L=1,F=1,B=1,E=1,V=1,Z=0
+                "be" +
+                // M=1, PID=0x61d6=20950
+                "d1d6" +
+                // TID=0,U=1,SID=0,D=0
+                "10" +
+                // Begin SS: N_S=0,Y=1,G=0
+                "10" +
+                // WIDTH=180
+                "00b4" +
+                // HEIGHT=320
+                "0140" +
+                // VP9 media. Truncated.
+                "83498342000b3013f8167827",
+            isStartOfFrame = true,
+            isEndOfFrame = true,
+            isEndOfPicture = true,
+            isKeyframe = true,
+            isInterPicturePredicted = false,
+            pictureId = 20950,
+            hasExtendedPictureId = true,
+            isUpperLevelReference = true,
+            tid = 0,
+            sid = 0,
+            isSwitchingUpPoint = true,
+            usesInterLayerDependency = false,
+            tL0PICIDX = null,
+            descriptorSize = 9,
+            scalabilityStructure = RtpEncodingDesc(
+                0x6012c1c8,
+                arrayOf(
+                    VpxRtpLayerDesc(0, 0, 0, 180, -1.0)
+                )
+            )
         )
     )
 
