@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
 internal class Rfc3711IndexTrackerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    private val indexTracker = Rfc3711IndexTracker()
+    private val indexTracker = RtpSequenceIndexTracker()
 
     init {
         context("feeding in the first sequence number") {

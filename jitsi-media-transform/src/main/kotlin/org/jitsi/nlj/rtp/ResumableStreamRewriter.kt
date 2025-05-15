@@ -16,7 +16,7 @@
 package org.jitsi.nlj.rtp
 
 import org.jitsi.nlj.util.ArrayCache
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.isNewerThan
 
@@ -123,7 +123,7 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
         var gapsLeft = 0
             private set
 
-        private val rfc3711IndexTracker = Rfc3711IndexTracker()
+        private val rtpSequenceIndexTracker = RtpSequenceIndexTracker()
 
         private fun fillBetween(start: Long, end: Long, firstNewIndex: Long) {
             if (end <= lastIndex - size + 1) {
@@ -144,7 +144,7 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
         }
 
         fun rewriteSequenceNumber(accept: Boolean, sequenceNumber: Int): Int {
-            val index = rfc3711IndexTracker.update(sequenceNumber)
+            val index = rtpSequenceIndexTracker.update(sequenceNumber)
 
             val newIndex: Long
 

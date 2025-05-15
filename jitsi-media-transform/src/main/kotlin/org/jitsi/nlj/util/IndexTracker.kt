@@ -18,7 +18,7 @@ package org.jitsi.nlj.util
 
 import org.jitsi.rtp.util.RtpUtils
 
-class Rfc3711IndexTracker : IndexTracker<Int>() {
+class RtpSequenceIndexTracker : IndexTracker<Int>() {
     override fun addRollover(seqNum: Int, roc: Long) = 0x1_0000 * roc + seqNum
     override fun rollsOver(a: Int, b: Int): Boolean = isOlderThan(a, b) && b < a
     override fun isOlderThan(a: Int, b: Int): Boolean = RtpUtils.isOlderSequenceNumberThan(a, b)

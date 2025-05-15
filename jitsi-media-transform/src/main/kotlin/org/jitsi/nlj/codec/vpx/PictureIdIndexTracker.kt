@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.codec.vpx
 
-/** Like [org.jitsi.nlj.util.Rfc3711IndexTracker], but for VP8/VP9 picture IDs (so with a rollover
+/** Like [org.jitsi.nlj.util.RtpSequenceIndexTracker], but for VP8/VP9 picture IDs (so with a rollover
  * of 0x8000).
  */
 class PictureIdIndexTracker {
