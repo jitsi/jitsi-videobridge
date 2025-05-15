@@ -159,6 +159,37 @@ class Av1DDPacketTest : ShouldSpec() {
                     Av1DDRtpLayerDesc(0, 2, 0, 2, 180, 30.0),
                 )
             )
+        ),
+        SampleAv1DDPacket(
+            "temporally-scalable portrait-mode keyframe",
+            // RTP header
+            "906487db2fb5ae06481d4dca" +
+                // Two-byte header extension header
+                "1000000f" +
+                // Other header extensions
+                "030387b1a4" +
+                "0502827e" +
+                // AV1 DD
+                "0b178023c58002044eaaaf2860414d34538a094040b3c13fc0" +
+                // VLA
+                "0c17a1009601f403dc0b00b3013f060167027f0602cf04ff06" +
+                // padding
+                "00" +
+                // Media payload, truncated
+                "109096029d012ad0020005396b00",
+            null,
+            RtpEncodingDesc(
+                0x481d4dcaL,
+                arrayOf(
+                    // Make sure the correct "height" value is picked from portrait mode (720x1280)
+                    // TODO: I think the frame rate calculation gets this DD wrong, but I'm not quite sure
+                    //  what structure the encoder is using
+                    Av1DDRtpLayerDesc(0, 0, 0, 0, 720, 10.0),
+                    Av1DDRtpLayerDesc(0, 1, 1, 0, 720, 20.0),
+                    Av1DDRtpLayerDesc(0, 2, 2, 0, 720, 30.0),
+                )
+            )
+
         )
     )
 

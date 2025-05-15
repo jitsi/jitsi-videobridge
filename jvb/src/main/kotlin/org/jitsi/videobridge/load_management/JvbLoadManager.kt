@@ -155,8 +155,7 @@ open class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                 CPU_USAGE_MEASUREMENT -> CpuUsageLoadManager(
                     CpuMeasurement.loadThreshold,
                     CpuMeasurement.recoverThreshold,
-                    reducer,
-                    videobridge
+                    reducer
                 )
                 else -> throw IllegalArgumentException(
                     "Invalid configuration for load measurement type: $loadMeasurement"
@@ -186,15 +185,24 @@ class PacketRateLoadManager(
 class CpuUsageLoadManager(
     loadThreshold: CpuMeasurement,
     recoveryThreshold: CpuMeasurement,
-    loadReducer: JvbLoadReducer?,
-    videobridge: Videobridge
+    loadReducer: JvbLoadReducer?
 ) : JvbLoadManager<CpuMeasurement>(loadThreshold, recoveryThreshold, loadReducer) {
     init {
         val sampler = CpuLoadSampler { loadMeasurement ->
-            loadUpdate(loadMeasurement)
+            val stealMeasurement = (if (detectCpuSteal) StealDetection.instance?.update() else null)
+                ?: CpuMeasurement(0.0)
+
+            loadUpdate(CpuMeasurement(loadMeasurement.getLoad() + stealMeasurement.getLoad()))
             VideobridgeMetrics.stressLevel.set(getCurrentStressLevel())
         }
 
         startSampler(sampler)
+    }
+
+    companion object {
+        val detectCpuSteal: Boolean by config {
+            "${JvbLoadMeasurement.CONFIG_BASE}.cpu-usage.detect-cpu-steal"
+                .from(JitsiConfig.newConfig)
+        }
     }
 }

@@ -24,6 +24,7 @@ import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.logging2.cwarn
 import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
+import kotlin.math.min
 
 /**
  * If this [Vp9Packet] instance is being created via a clone,
@@ -273,12 +274,17 @@ class Vp9Packet private constructor(
 
             val heights = if (hasResolution) {
                 Array(numSpatial) {
-                    off += 2 // We only record height, not width
+                    val width = ((buffer[off].toInt() and 0xff) shl 8) or
+                        (buffer[off + 1].toInt() and 0xff)
+                    off += 2
 
                     val height = ((buffer[off].toInt() and 0xff) shl 8) or
                         (buffer[off + 1].toInt() and 0xff)
                     off += 2
-                    height
+
+                    // Treat the lesser of width or height as the height in order to handle
+                    // portrait-mode video correctly
+                    min(width, height)
                 }
             } else {
                 Array(numSpatial) { RtpLayerDesc.NO_HEIGHT }

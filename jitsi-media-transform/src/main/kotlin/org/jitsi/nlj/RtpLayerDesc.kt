@@ -41,10 +41,13 @@ abstract class RtpLayerDesc(
      */
     val sid: Int,
     /**
-     * The max height of the bitstream that this instance represents. The actual
+     * The max "height" of the bitstream that this instance represents. The actual
      * height may be less due to bad network or system load.  [NO_HEIGHT] for unknown.
      *
-     * XXX we should be able to sniff the actual height from the RTP packets.
+     * In order to handle portrait-mode video correctly, this should actually be the smaller of
+     * the bitstream's height or width.
+     *
+     * Where possible we sniff the actual height from the RTP packets.
      */
     var height: Int,
     /**

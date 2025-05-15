@@ -12,3 +12,7 @@ higher than the specified need not be transmitted for a specific video source:
   "maxHeight": 180
 }
 ```
+
+Note that in order to handle portrait-mode video correctly,
+despite the name `maxHeight`, this parameter is actually used to specify the smaller
+of the dimensions of the video (which for portrait mode will be its width).
