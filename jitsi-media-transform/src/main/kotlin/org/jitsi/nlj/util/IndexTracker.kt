@@ -37,6 +37,7 @@ open class IntIndexTracker(val bits: Int) : IndexTracker<Int>() {
     override fun rollsOver(a: Int, b: Int): Boolean = isOlderThan(a, b) && b < a
     override fun isOlderThan(a: Int, b: Int): Boolean = delta(a, b) < 0
     override fun toLong(t: Int): Long = t.toLong()
+    override fun isValid(t: Int): Boolean = t >= 0 && t < (1 shl bits)
 
     private fun delta(a: Int, b: Int): Int {
         val diff = a - b
@@ -56,6 +57,7 @@ open class LongIndexTracker(val bits: Int) : IndexTracker<Long>() {
     override fun rollsOver(a: Long, b: Long): Boolean = isOlderThan(a, b) && b < a
     override fun isOlderThan(a: Long, b: Long): Boolean = delta(a, b) < 0
     override fun toLong(t: Long): Long = t
+    override fun isValid(t: Long): Boolean = t >= 0L && t < (1L shl bits)
 
     private fun delta(a: Long, b: Long): Long {
         val diff = a - b
@@ -76,7 +78,13 @@ sealed class IndexTracker<T> {
     internal abstract fun rollsOver(a: T, b: T): Boolean
     internal abstract fun isOlderThan(a: T, b: T): Boolean
     internal abstract fun toLong(t: T): Long
+    internal abstract fun isValid(t: T): Boolean
     private fun isNewerThan(a: T, b: T): Boolean = !isOlderThan(a, b) && a != b
+    private fun validate(t: T): T = if (!isValid(t)) {
+        throw IllegalArgumentException("Invalid sequence number: $t")
+    } else {
+        t
+    }
 
     /**
      * return the index (as defined by RFC3711 at https://tools.ietf.org/html/rfc3711#section-3.3.1)
@@ -84,13 +92,13 @@ sealed class IndexTracker<T> {
      * NOTE that this method must be called for all 'received' sequence numbers so that it may keep
      * its rollover counter accurate
      */
-    fun update(seqNum: T): Long = getIndex(seqNum, true)
+    fun update(seqNum: T): Long = getIndex(validate(seqNum), true)
 
     /**
      * Interprets an RTP sequence number in the context of the highest sequence number received. Returns the index
      * which corresponds to the packet, but does not update the ROC.
      */
-    fun interpret(seqNum: T): Long = getIndex(seqNum, false)
+    fun interpret(seqNum: T): Long = getIndex(validate(seqNum), false)
 
     /**
      * return the index (as defined by RFC3711 at https://tools.ietf.org/html/rfc3711#section-3.3.1)
@@ -132,6 +140,7 @@ sealed class IndexTracker<T> {
 
     /** Force this sequence number to be interpreted as the new highest, regardless of its rollover state. */
     fun resetAt(seq: T) {
+        validate(seq)
         val highestSeqNumReceived = this.highestSeqNumReceived
         if (highestSeqNumReceived == null || isOlderThan(seq, highestSeqNumReceived)) {
             roc++

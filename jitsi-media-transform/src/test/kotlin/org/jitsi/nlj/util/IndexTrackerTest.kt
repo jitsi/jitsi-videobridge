@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.util
 
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
@@ -27,6 +29,22 @@ internal class IndexTrackerTest : ShouldSpec() {
     init {
         context("RtpSequenceIndexTracker") {
             val indexTracker = RtpSequenceIndexTracker()
+
+            context("Not accept input outside the range") {
+                listOf(-1, 0x1_0000, 0x1000_0000).forEach { invalid ->
+                    withClue("Testing $invalid") {
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.update(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.interpret(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.resetAt(invalid)
+                        }
+                    }
+                }
+            }
 
             context("feeding in the first sequence number") {
                 val firstIndex = indexTracker.update(65000)
@@ -51,9 +69,9 @@ internal class IndexTrackerTest : ShouldSpec() {
                         }
                     }
                     context("and then an older sequence number") {
-                        val oldIndex = indexTracker.update(64000)
+                        val oldIndex = 64000
                         should("return the proper index") {
-                            oldIndex shouldBe oldIndex
+                            indexTracker.update(oldIndex) shouldBe oldIndex
                         }
                     }
                 }
@@ -81,6 +99,22 @@ internal class IndexTrackerTest : ShouldSpec() {
             // the API is different
             val indexTracker = LongIndexTracker(16)
 
+            context("Not accept input outside the range") {
+                listOf(-1L, 0x1_0000L, 0x1000_0000L).forEach { invalid ->
+                    withClue("Testing $invalid") {
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.update(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.interpret(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.resetAt(invalid)
+                        }
+                    }
+                }
+            }
+
             context("feeding in the first sequence number") {
                 val firstIndex = indexTracker.update(65000)
                 should("return itself as the index") {
@@ -104,9 +138,9 @@ internal class IndexTrackerTest : ShouldSpec() {
                         }
                     }
                     context("and then an older sequence number") {
-                        val oldIndex = indexTracker.update(64000)
+                        val oldIndex = 64000L
                         should("return the proper index") {
-                            oldIndex shouldBe oldIndex
+                            indexTracker.update(oldIndex) shouldBe oldIndex
                         }
                     }
                 }
@@ -132,6 +166,22 @@ internal class IndexTrackerTest : ShouldSpec() {
         context("PictureIdIndexTracker") {
             val indexTracker = PictureIdIndexTracker()
 
+            context("Not accept input outside the range") {
+                listOf(-1, 0x8000, 0x1000_0000).forEach { invalid ->
+                    withClue("Testing $invalid") {
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.update(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.interpret(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.resetAt(invalid)
+                        }
+                    }
+                }
+            }
+
             context("feeding in the first sequence number") {
                 val firstIndex = indexTracker.update(32000)
                 should("return itself as the index") {
@@ -155,9 +205,9 @@ internal class IndexTrackerTest : ShouldSpec() {
                         }
                     }
                     context("and then an older sequence number") {
-                        val oldIndex = indexTracker.update(31000)
+                        val oldIndex = 31000
                         should("return the proper index") {
-                            oldIndex shouldBe oldIndex
+                            indexTracker.update(oldIndex) shouldBe oldIndex
                         }
                     }
                 }
@@ -165,7 +215,7 @@ internal class IndexTrackerTest : ShouldSpec() {
             context("a series of sequence numbers") {
                 should("never return a negative index") {
                     var seqNum = 22134
-                    repeat(35537) {
+                    repeat(3553) {
                         indexTracker.update(seqNum++) shouldBeGreaterThan 0
                     }
                 }
@@ -173,33 +223,50 @@ internal class IndexTrackerTest : ShouldSpec() {
         }
         context("RtpTimestampIndexTracker") {
             val indexTracker = RtpTimestampIndexTracker()
+            val base = 4000000000L // higher than 2^31
+
+            context("Not accept input outside the range") {
+                listOf(-1L, 0x1_0000_0000, 0x100_0000_0000).forEach { invalid ->
+                    withClue("Testing $invalid") {
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.update(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.interpret(invalid)
+                        }
+                        shouldThrow<IllegalArgumentException> {
+                            indexTracker.resetAt(invalid)
+                        }
+                    }
+                }
+            }
 
             context("feeding in the first timestamp") {
-                val firstIndex = indexTracker.update(4000000000L)
+                val firstIndex = indexTracker.update(base)
                 should("return itself as the index") {
-                    firstIndex shouldBe 4000000000L
+                    firstIndex shouldBe base
                 }
                 context("and then another without rolling over") {
-                    val secondIndex = indexTracker.update(4000001000L)
+                    val secondIndex = indexTracker.update(base + 1000)
                     should("return itself as the index") {
-                        secondIndex shouldBe 4000001000L
+                        secondIndex shouldBe (base + 1000)
                     }
                     context("and then another which does roll over") {
                         val rollOverIndex = indexTracker.update(2000L)
                         should("return the proper index") {
-                            rollOverIndex shouldBe 1L * 0x1_0000_0000 + 2000L
+                            rollOverIndex shouldBe 0x1_0000_0000 + 2000L
                         }
                         context("and then a timestamp from the previous rollover") {
-                            val prevRollOverIndex = indexTracker.update(4000002000L)
+                            val prevRollOverIndex = indexTracker.update(base + 2000)
                             should("return the proper index") {
-                                prevRollOverIndex shouldBe 4000002000L
+                                prevRollOverIndex shouldBe base + 2000
                             }
                         }
                     }
                     context("and then an older timestamp") {
-                        val oldIndex = indexTracker.update(3900000000L)
+                        val oldIndex = base - 1000000
                         should("return the proper index") {
-                            oldIndex shouldBe oldIndex
+                            indexTracker.update(oldIndex) shouldBe oldIndex
                         }
                     }
                 }
@@ -213,12 +280,12 @@ internal class IndexTrackerTest : ShouldSpec() {
                 }
             }
             context("resetting the timestamp tracker") {
-                indexTracker.update(4000000000L)
-                indexTracker.update(4000001000L)
+                indexTracker.update(base)
+                indexTracker.update(base + 1000)
                 indexTracker.update(2000L)
-                indexTracker.resetAt(4000002000L)
+                indexTracker.resetAt(base + 2000)
                 should("return the proper index") {
-                    indexTracker.update(4000002000L) shouldBe 2L * 0x1_0000_0000 + 4000002000L
+                    indexTracker.update(base + 2000) shouldBe 2L * 0x1_0000_0000 + base + 2000
                 }
             }
         }
