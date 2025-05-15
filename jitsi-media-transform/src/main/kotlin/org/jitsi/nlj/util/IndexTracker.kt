@@ -20,8 +20,13 @@ package org.jitsi.nlj.util
  * Index tracker inspired by the RFC3711 RTP sequence number index tracker.
  */
 
+/** A tracker suitable for the VP8/VP9 15-bit PictureID field. */
 class PictureIdIndexTracker : IntIndexTracker(15)
+
+/** A tracker suitable for RTP 16-bit sequence numbers. */
 class RtpSequenceIndexTracker : IntIndexTracker(16)
+
+/** A tracker suitable for RTP 32-bit timestamps. */
 class RtpTimestampIndexTracker : LongIndexTracker(32)
 
 open class IntIndexTracker(val bits: Int) : IndexTracker<Int>() {
