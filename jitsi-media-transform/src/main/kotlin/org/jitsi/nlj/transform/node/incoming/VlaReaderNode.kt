@@ -30,6 +30,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
+import kotlin.math.min
 
 /**
  * A node which reads the Video Layers Allocation (VLA) RTP header extension and updates the media sources.
@@ -89,14 +90,17 @@ class VlaReaderNode(
                                 }
                                 layer.targetBitrate = targetBitrateKbps.kbps
                                 spatialLayer.res?.let { res ->
-                                    if (layer.height > 0 && layer.height != res.height) {
+                                    // Treat the lesser of width and height as the height
+                                    // in order to handle portrait-mode video correctly
+                                    val minDimension = min(res.height, res.width)
+                                    if (layer.height > 0 && layer.height != minDimension) {
                                         logger.info {
                                             "Updating layer height for source ${sourceDesc.sourceName} " +
                                                 "encoding ${rtpEncoding.primarySSRC} layer ${layer.indexString()} " +
-                                                "from ${layer.height} to ${res.height}"
+                                                "from ${layer.height} to $minDimension"
                                         }
                                     }
-                                    layer.height = res.height
+                                    layer.height = minDimension
                                     /* Presume 2:1 frame rate ratios for temporal layers */
                                     val framerateFraction = 1.0 / (1 shl (maxTl - tlIdx))
                                     layer.frameRate = res.maxFramerate.toDouble() * framerateFraction

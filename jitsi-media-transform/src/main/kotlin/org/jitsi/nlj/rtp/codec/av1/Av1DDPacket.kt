@@ -27,6 +27,7 @@ import org.jitsi.rtp.rtp.header_extensions.Av1DependencyException
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 import org.jitsi.utils.logging2.Logger
+import kotlin.math.min
 
 /** A video packet carrying an AV1 Dependency Descriptor.  Note that this may or may not be an actual AV1 packet;
  * other video codecs can also carry the AV1 DD.
@@ -197,7 +198,8 @@ fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
         if (!activeDecodeTargetsBitmask.containsDecodeTarget(i)) {
             return@forEachIndexed
         }
-        val height = structure.maxRenderResolutions.getOrNull(dt.spatialId)?.height ?: -1
+        // Treat the lesser of width and height as the height in order to handle portrait-mode video correctly
+        val height = structure.maxRenderResolutions.getOrNull(dt.spatialId)?.let { min(it.width, it.height) } ?: -1
 
         // Calculate the fraction of this spatial layer's framerate this DT comprises.
         val frameRate = baseFrameRate * layerCounts[dt.spatialId][dt.temporalId] / maxFrameGroup
