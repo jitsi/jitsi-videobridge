@@ -29,6 +29,7 @@ import org.jitsi.utils.logging2.LoggerImpl;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.queue.*;
 import org.jitsi.videobridge.colibri2.*;
+import org.jitsi.videobridge.export.*;
 import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
@@ -183,6 +184,9 @@ public class Conference
      */
     @Nullable
     private final String meetingId;
+
+    @NotNull
+    private final Exporter exporter = new Exporter();
 
     /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
@@ -603,6 +607,7 @@ public class Conference
         logger.debug(() -> "Expiring endpoints.");
         getEndpoints().forEach(AbstractEndpoint::expire);
         getRelays().forEach(Relay::expire);
+        exporter.stop();
         speechActivity.expire();
 
         updateStatisticsOnExpire();
@@ -1122,6 +1127,14 @@ public class Conference
                 prevHandler = relay;
             }
         }
+        if (exporter.wants(packetInfo))
+        {
+            if (prevHandler != null)
+            {
+                prevHandler.send(packetInfo.clone());
+            }
+            prevHandler = exporter;
+        }
 
         if (prevHandler != null)
         {
@@ -1132,6 +1145,11 @@ public class Conference
             // No one wanted the packet, so the buffer is now free!
             ByteBufferPool.returnBuffer(packetInfo.getPacket().getBuffer());
         }
+    }
+
+    public void setConnects(List<Connect> exports)
+    {
+        exporter.setConnects(exports);
     }
 
     public boolean hasRelays()
