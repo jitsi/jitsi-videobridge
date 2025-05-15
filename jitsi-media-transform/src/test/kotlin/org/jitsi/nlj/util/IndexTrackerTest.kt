@@ -171,5 +171,56 @@ internal class IndexTrackerTest : ShouldSpec() {
                 }
             }
         }
+        context("RtpTimestampIndexTracker") {
+            val indexTracker = RtpTimestampIndexTracker()
+
+            context("feeding in the first timestamp") {
+                val firstIndex = indexTracker.update(4000000000L)
+                should("return itself as the index") {
+                    firstIndex shouldBe 4000000000L
+                }
+                context("and then another without rolling over") {
+                    val secondIndex = indexTracker.update(4000001000L)
+                    should("return itself as the index") {
+                        secondIndex shouldBe 4000001000L
+                    }
+                    context("and then another which does roll over") {
+                        val rollOverIndex = indexTracker.update(2000L)
+                        should("return the proper index") {
+                            rollOverIndex shouldBe 1L * 0x1_0000_0000 + 2000L
+                        }
+                        context("and then a timestamp from the previous rollover") {
+                            val prevRollOverIndex = indexTracker.update(4000002000L)
+                            should("return the proper index") {
+                                prevRollOverIndex shouldBe 4000002000L
+                            }
+                        }
+                    }
+                    context("and then an older timestamp") {
+                        val oldIndex = indexTracker.update(3900000000L)
+                        should("return the proper index") {
+                            oldIndex shouldBe oldIndex
+                        }
+                    }
+                }
+            }
+            context("a series of timestamps") {
+                should("never return a negative index") {
+                    var timestamp = 3000000000L
+                    repeat(35537) {
+                        indexTracker.update(timestamp++) shouldBeGreaterThan 0
+                    }
+                }
+            }
+            context("resetting the timestamp tracker") {
+                indexTracker.update(4000000000L)
+                indexTracker.update(4000001000L)
+                indexTracker.update(2000L)
+                indexTracker.resetAt(4000002000L)
+                should("return the proper index") {
+                    indexTracker.update(4000002000L) shouldBe 2L * 0x1_0000_0000 + 4000002000L
+                }
+            }
+        }
     }
 }
