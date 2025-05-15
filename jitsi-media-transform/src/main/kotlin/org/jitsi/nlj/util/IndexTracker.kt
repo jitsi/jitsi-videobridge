@@ -16,27 +16,50 @@
 
 package org.jitsi.nlj.util
 
-import org.jitsi.nlj.codec.vpx.VpxUtils
-import org.jitsi.rtp.util.RtpUtils
+/**
+ * Index tracker inspired by the RFC3711 RTP sequence number index tracker.
+ */
 
-class PictureIdIndexTracker : IndexTracker<Int>() {
-    override fun addRollover(seqNum: Int, roc: Long) = 0x8000 * roc + seqNum
+class PictureIdIndexTracker : IntIndexTracker(15)
+class RtpSequenceIndexTracker : IntIndexTracker(16)
+class RtpTimestampIndexTracker : LongIndexTracker(32)
+
+open class IntIndexTracker(val bits: Int) : IndexTracker<Int>() {
+    init {
+        require(bits in 1..31) { "bits must be between 1 and 31" }
+    }
+    override fun addRollover(seqNum: Int, roc: Long) = (1 shl bits) * roc + seqNum
     override fun rollsOver(a: Int, b: Int): Boolean = isOlderThan(a, b) && b < a
-    override fun isOlderThan(a: Int, b: Int): Boolean = VpxUtils.getExtendedPictureIdDelta(a, b) < 0
+    override fun isOlderThan(a: Int, b: Int): Boolean = delta(a, b) < 0
     override fun toLong(t: Int): Long = t.toLong()
-}
-class RtpSequenceIndexTracker : IndexTracker<Int>() {
-    override fun addRollover(seqNum: Int, roc: Long) = 0x1_0000 * roc + seqNum
-    override fun rollsOver(a: Int, b: Int): Boolean = isOlderThan(a, b) && b < a
-    override fun isOlderThan(a: Int, b: Int): Boolean = RtpUtils.isOlderSequenceNumberThan(a, b)
-    override fun toLong(t: Int): Long = t.toLong()
+
+    private fun delta(a: Int, b: Int): Int {
+        val diff = a - b
+        return when {
+            diff < -(1 shl (bits - 1)) -> diff + (1 shl bits)
+            diff > (1 shl (bits - 1)) -> diff - (1 shl bits)
+            else -> diff
+        }
+    }
 }
 
-class RtpTimestampIndexTracker : IndexTracker<Long>() {
-    override fun addRollover(seqNum: Long, roc: Long) = 0x1_0000_0000 * roc + seqNum
+open class LongIndexTracker(val bits: Int) : IndexTracker<Long>() {
+    init {
+        require(bits in 1..63) { "bits must be between 1 and 63" }
+    }
+    override fun addRollover(seqNum: Long, roc: Long) = (1L shl bits) * roc + seqNum
     override fun rollsOver(a: Long, b: Long): Boolean = isOlderThan(a, b) && b < a
-    override fun isOlderThan(a: Long, b: Long): Boolean = RtpUtils.isOlderTimestampThan(a, b)
+    override fun isOlderThan(a: Long, b: Long): Boolean = delta(a, b) < 0
     override fun toLong(t: Long): Long = t
+
+    private fun delta(a: Long, b: Long): Long {
+        val diff = a - b
+        return when {
+            diff < -(1L shl (bits - 1)) -> diff + (1L shl bits)
+            diff > (1L shl (bits - 1)) -> diff - (1L shl bits)
+            else -> diff
+        }
+    }
 }
 
 sealed class IndexTracker<T> {
