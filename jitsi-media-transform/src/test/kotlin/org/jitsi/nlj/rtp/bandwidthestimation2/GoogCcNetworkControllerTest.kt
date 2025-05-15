@@ -20,82 +20,29 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.CallClient
-import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.CallClientConfig
-import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.EmulatedNetworkNode
-import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.NetworkSimulationConfig
-import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.Scenario
-import org.jitsi.nlj.rtp.bandwidthestimation2.simulation.VideoStreamConfig
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.kbps
-import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.times
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
-import java.time.Duration
 import java.time.Instant
-import java.util.*
 
 /** Tests of GoogCcNetworkController,
  * based on WebRTC modules/congestion_controller/goog_cc/goog_cc_network_control_unittest.cc in
  * WebRTC tag branch-heads/6422 (Chromium 125).
+ *
+ * Only tests that don't require the full network simulation environment are included.
  */
-
-// Count dips from a constant high bandwidth level within a short window.
-private fun countBandwidthDips(bandwidthHistory: Queue<Bandwidth>, threshold: Bandwidth): Int {
-    if (bandwidthHistory.isEmpty()) {
-        return 0
-    }
-    val first = bandwidthHistory.poll()
-
-    var dips = 0
-    var stateHigh = true
-    while (!bandwidthHistory.isEmpty()) {
-        if (bandwidthHistory.first() + threshold < first && stateHigh) {
-            ++dips
-            stateHigh = false
-        } else if (bandwidthHistory.first() == first) {
-            stateHigh = true
-        } else if (bandwidthHistory.first() > first) {
-            // If this is toggling we will catch it later when front becomes first.
-            stateHigh = false
-        }
-        bandwidthHistory.remove()
-    }
-    return dips
-}
-
-private fun createFeedbackOnlyFactory(): GoogCcNetworkControllerFactory {
-    return GoogCcNetworkControllerFactory(GoogCcFactoryConfig(feedbackOnly = true))
-}
 
 private const val kInitialBitrateKbps = 60
 private val kInitialBitrate = kInitialBitrateKbps.kbps
 private const val kDefaultPacingRate = 2.5
-
-private fun createVideoSendingClient(
-    s: Scenario,
-    config: CallClientConfig,
-    sendLink: List<EmulatedNetworkNode>,
-    returnLink: List<EmulatedNetworkNode>
-): CallClient {
-    val client = s.createClient("send", config)
-    val route = s.createRoutes(
-        client,
-        sendLink,
-        s.createClient("return", config),
-        returnLink
-    )
-    s.createVideoStream(route.forward(), VideoStreamConfig())
-    return client
-}
 
 private fun createRouteChange(
     time: Instant,
@@ -166,116 +113,7 @@ fun packetTransmissionAndFeedbackBlock(
     return targetBitrate
 }
 
-// Create transport packets feedback with a built-up delay.
-fun createTransportPacketsFeedback(
-    perPacketNetworkDelay: Duration,
-    oneWayDelay: Duration,
-    sendTime: Instant
-): TransportPacketsFeedback {
-    var delayBuildup = oneWayDelay
-    val kFeedbackSize = 3
-    val kPayloadSize = 1000L
-    val feedback = TransportPacketsFeedback()
-    for (i in 0 until kFeedbackSize) {
-        val packet = createPacketResult(
-            /*arrival_time=*/
-            sendTime + delayBuildup,
-            sendTime,
-            kPayloadSize,
-            PacedPacketInfo()
-        )
-        delayBuildup += perPacketNetworkDelay
-        feedback.feedbackTime = packet.receiveTime + oneWayDelay
-        feedback.packetFeedbacks.add(packet)
-    }
-    return feedback
-}
-
 // Scenarios:
-
-fun updatesTargetRateBasedOnLinkCapacity(testName: String = "") {
-    val factory = createFeedbackOnlyFactory()
-    val s = Scenario("googcc_unit/target_capacity" + testName, false)
-    val config = CallClientConfig()
-    config.transport.ccFactory = factory
-    config.transport.rates.minRate = 10.kbps
-    config.transport.rates.maxRate = 1500.kbps
-    config.transport.rates.startRate = 300.kbps
-    val sendNet = s.createMutableSimulationNode { c: NetworkSimulationConfig ->
-        c.bandwidth = 500.kbps
-        c.delay = 100.ms
-        c.lossRate = 0.0
-    }
-    val retNet = s.createMutableSimulationNode { c: NetworkSimulationConfig ->
-        c.delay = 100.ms
-    }
-    val truth = s.createPrinter(
-        "send.truth.txt",
-        maxDuration,
-        listOf(sendNet.configPrinter())
-    )
-
-    val client = createVideoSendingClient(
-        s,
-        config,
-        listOf(sendNet.node()),
-        listOf(retNet.node())
-    )
-
-    truth.printRow()
-    s.runFor(25.secs)
-    truth.printRow()
-    client.targetRate().kbps shouldBe 450.0 plusOrMinus 100.0
-
-    sendNet.updateConfig { c: NetworkSimulationConfig ->
-        c.bandwidth = 800.kbps
-        c.delay = 100.ms
-    }
-
-    truth.printRow()
-    s.runFor(20.secs)
-    truth.printRow()
-    client.targetRate().kbps shouldBe 750.0 plusOrMinus 150.0
-
-    sendNet.updateConfig { c: NetworkSimulationConfig ->
-        c.bandwidth = 100.kbps
-        c.delay = 200.ms
-    }
-    retNet.updateConfig { c: NetworkSimulationConfig -> c.delay = 200.ms }
-
-    truth.printRow()
-    s.runFor(50.secs)
-    truth.printRow()
-    client.targetRate().kbps shouldBe 90.0 plusOrMinus 25.0
-}
-
-fun runRembDipScenario(testName: String): Bandwidth {
-    val s = Scenario(testName)
-    val netConf = NetworkSimulationConfig()
-    netConf.bandwidth = 2000.kbps
-    netConf.delay = 50.ms
-    val client = s.createClient("send") { c ->
-        c.transport.rates.startRate = 1000.kbps
-    }
-    val sendNet = listOf(s.createSimulationNode(netConf))
-    val retNet = listOf(s.createSimulationNode(netConf))
-    val route = s.createRoutes(client, sendNet, s.createClient("return", CallClientConfig()), retNet)
-    s.createVideoStream(route.forward(), VideoStreamConfig())
-
-    s.runFor(10.secs)
-    client.sendBandwidth().kbps shouldBeGreaterThan 1500.0
-
-    val rembLimit = 250.kbps
-    client.setRemoteBitrate(rembLimit)
-    s.runFor(1.secs)
-    client.sendBandwidth() shouldBe rembLimit
-
-    val rembLimitLifted = 10000.kbps
-    client.setRemoteBitrate(rembLimitLifted)
-    s.runFor(10.secs)
-
-    return client.sendBandwidth()
-}
 
 class NetworkControllerTextFixture(
     googccConfig: GoogCcFactoryConfig = GoogCcFactoryConfig()
@@ -450,45 +288,6 @@ class GoogCcNetworkControllerTest : FreeSpec() {
             val targetBitrateAfterDelay =
                 packetTransmissionAndFeedbackBlock(controller, kRunTimeMs, 50, currentTime)
             targetBitrateAfterDelay!! shouldBeLessThan targetBitrateBeforeDelay!!
-        }
-
-        /* Skipping PaceAtMaxOfLowerLinkCapacityAndBwe - depends on link estimators */
-        /* Skipping LimitPacingFactorToUpperLinkCapacity - depends on link estimators. */
-
-        "CongestionWindowPushbackOnNetworkDelay".config(enabled = false) { // Implementation not yet complete
-            val factory = GoogCcNetworkControllerFactory(
-                GoogCcFactoryConfig(
-                    feedbackOnly = true,
-                    rateControlSettings = CongestionWindowConfig(
-                        queueSizeMs = 800,
-                        minBitrateBps = 30000
-                    )
-                )
-            )
-            val s = Scenario("googcc_unit/cwnd_on_delay", false)
-            val sendNet =
-                s.createMutableSimulationNode { c ->
-                    c.bandwidth = 1000.kbps
-                    c.delay = 100.ms
-                }
-            val retNet = s.createSimulationNode { c -> c.delay = 100.ms }
-            val config = CallClientConfig()
-            config.transport.ccFactory = factory
-            // Start high so bandwidth drop has max effect.
-            config.transport.rates.startRate = 300.kbps
-            config.transport.rates.maxRate = 2000.kbps
-            config.transport.rates.minRate = 10.kbps
-
-            val client = createVideoSendingClient(s, config, listOf(sendNet.node()), listOf(retNet))
-            s.runFor(10.secs)
-            sendNet.pauseTransmissionUntil(s.now() + 10.secs)
-            s.runFor(3.secs)
-
-            // After 3 seconds without feedback from any sent packets, we expect that the
-            // target rate is reduced to the minimum pushback threshold
-            // kDefaultMinPushbackTargetBitrateBps, which is defined as 30 kbps in
-            // congestion_window_pushback_controller.
-            client.targetRate().kbps shouldBeLessThan 40.0
         }
     }
 }
