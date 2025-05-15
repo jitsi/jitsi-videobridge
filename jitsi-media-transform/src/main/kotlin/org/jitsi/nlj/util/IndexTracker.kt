@@ -16,8 +16,15 @@
 
 package org.jitsi.nlj.util
 
+import org.jitsi.nlj.codec.vpx.VpxUtils
 import org.jitsi.rtp.util.RtpUtils
 
+class PictureIdIndexTracker : IndexTracker<Int>() {
+    override fun addRollover(seqNum: Int, roc: Long) = 0x8000 * roc + seqNum
+    override fun rollsOver(a: Int, b: Int): Boolean = isOlderThan(a, b) && b < a
+    override fun isOlderThan(a: Int, b: Int): Boolean = VpxUtils.getExtendedPictureIdDelta(a, b) < 0
+    override fun toLong(t: Int): Long = t.toLong()
+}
 class RtpSequenceIndexTracker : IndexTracker<Int>() {
     override fun addRollover(seqNum: Int, roc: Long) = 0x1_0000 * roc + seqNum
     override fun rollsOver(a: Int, b: Int): Boolean = isOlderThan(a, b) && b < a
