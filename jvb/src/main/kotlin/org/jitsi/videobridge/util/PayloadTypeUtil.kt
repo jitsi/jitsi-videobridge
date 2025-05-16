@@ -43,7 +43,6 @@ import org.jitsi.utils.MediaType.VIDEO
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.xmpp.extensions.jingle.PayloadTypePacketExtension
-import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -76,7 +75,7 @@ class PayloadTypeUtil {
                 if (parameter.name != null) {
                     parameters[parameter.name] = parameter.value
                 } else {
-                    logger.warn("Ignoring a format parameter with no name: " + parameter.toStringOpt())
+                    logger.warn("Ignoring a format parameter with no name: " + parameter.toXML())
                 }
             }
 
