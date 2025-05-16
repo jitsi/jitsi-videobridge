@@ -25,8 +25,6 @@ import org.jitsi.utils.logging2.*;
 import java.time.*;
 import java.util.function.*;
 
-import static java.lang.Integer.max;
-import static java.lang.Integer.min;
 import static java.lang.Long.max;
 import static java.lang.Long.min;
 

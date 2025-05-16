@@ -20,7 +20,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
@@ -385,10 +385,10 @@ class Av1DDAdaptiveSourceProjectionTest {
         )
         var latestSeq = buffer[0].packetAs<Av1DDPacket>().sequenceNumber
         val projectedPackets = TreeMap<Long, ProjectedPacket>()
-        val origSeqIdxTracker = Rfc3711IndexTracker()
-        val newSeqIdxTracker = Rfc3711IndexTracker()
+        val origSeqIdxTracker = RtpSequenceIndexTracker()
+        val newSeqIdxTracker = RtpSequenceIndexTracker()
         val frameNumsDropped = HashSet<Long>()
-        val frameNumsIndexTracker = Rfc3711IndexTracker()
+        val frameNumsIndexTracker = RtpSequenceIndexTracker()
         for (i in 0..99999) {
             val packetInfo = buffer[0]
             val packet = packetInfo.packetAs<Av1DDPacket>()

@@ -2,7 +2,7 @@ package org.jitsi.videobridge.cc.av1
 
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
 import org.jitsi.nlj.util.ArrayCache
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.utils.logging2.Logger
@@ -154,7 +154,7 @@ internal class FrameHistory(size: Int) :
     ) {
     var numCached = 0
     var firstIndex = -1L
-    var indexTracker = Rfc3711IndexTracker()
+    var indexTracker = RtpSequenceIndexTracker()
 
     /**
      * Gets a frame with a given frame number from the cache.

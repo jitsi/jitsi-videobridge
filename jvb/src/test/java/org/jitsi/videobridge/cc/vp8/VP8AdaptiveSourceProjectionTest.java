@@ -176,8 +176,8 @@ public class VP8AdaptiveSourceProjectionTest
         int latestSeq = buffer.get(0).<Vp8Packet>packetAs().getSequenceNumber();
 
         TreeMap<Long, ProjectedPacket> projectedPackets = new TreeMap<>();
-        Rfc3711IndexTracker origSeqIdxTracker = new Rfc3711IndexTracker();
-        Rfc3711IndexTracker newSeqIdxTracker = new Rfc3711IndexTracker();
+        RtpSequenceIndexTracker origSeqIdxTracker = new RtpSequenceIndexTracker();
+        RtpSequenceIndexTracker newSeqIdxTracker = new RtpSequenceIndexTracker();
 
         for (int i = 0; i < 100000; i++)
         {
