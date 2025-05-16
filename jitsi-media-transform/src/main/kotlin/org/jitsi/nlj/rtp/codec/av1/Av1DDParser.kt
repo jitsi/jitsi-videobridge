@@ -19,7 +19,7 @@ package org.jitsi.nlj.rtp.codec.av1
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.TreeCache
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
@@ -144,7 +144,7 @@ class Av1DDParser(
 }
 
 class TemplateHistory(minHistory: Int) {
-    private val indexTracker = Rfc3711IndexTracker()
+    private val indexTracker = RtpSequenceIndexTracker()
     private val history = TreeCache<Av1DdInfo>(minHistory)
     private var latestDecodeTargets = -1
     private var latestDecodeTargetIndex = -1L

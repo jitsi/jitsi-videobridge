@@ -92,7 +92,6 @@ import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
-import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import org.json.simple.JSONObject
 import java.security.SecureRandom
 import java.time.Clock
@@ -721,7 +720,7 @@ class Endpoint @JvmOverloads constructor(
                 remoteFingerprints.getOrPut(fingerprintExtension.hash.lowercase()) { mutableListOf() }
                     .add(fingerprintExtension.fingerprint)
             } else {
-                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toStringOpt()}")
+                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
             }
             if (CryptexConfig.endpoint) {
                 cryptex = cryptex && fingerprintExtension.cryptex
@@ -750,7 +749,7 @@ class Endpoint @JvmOverloads constructor(
             }
         }
 
-        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toStringOpt()}" }
+        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
 
         return iceUdpTransportPacketExtension
     }

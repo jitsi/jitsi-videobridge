@@ -127,7 +127,7 @@ class RtpPacketCache(
     var lastAccessMillis: Long = 0
         private set
 
-    private val rfc3711IndexTracker = Rfc3711IndexTracker()
+    private val rtpSequenceIndexTracker = RtpSequenceIndexTracker()
 
     override fun discardItem(item: RtpPacket) {
         BufferPool.returnBuffer(item.buffer)
@@ -160,7 +160,7 @@ class RtpPacketCache(
     fun doGet(sequenceNumber: Int, shouldCloneItem: Boolean): Container? {
         // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
         // (NACKs)
-        val index = rfc3711IndexTracker.interpret(sequenceNumber)
+        val index = rtpSequenceIndexTracker.interpret(sequenceNumber)
         // The RFC3711 tracker may produce negative numbers (example, if it is initialized with 0,
         // then 65535 is interpreted). These are invalid indexes.
         return if (index < 0) null else super.getContainer(index, shouldCloneItem)
@@ -176,17 +176,17 @@ class RtpPacketCache(
     fun contains(sequenceNumber: Int): Boolean {
         // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
         // (NACKs)
-        val index = rfc3711IndexTracker.interpret(sequenceNumber)
+        val index = rtpSequenceIndexTracker.interpret(sequenceNumber)
         return super.containsIndex(index)
     }
 
     fun insert(rtpPacket: RtpPacket): Boolean {
-        val index = rfc3711IndexTracker.update(rtpPacket.sequenceNumber)
+        val index = rtpSequenceIndexTracker.update(rtpPacket.sequenceNumber)
         return super.insertItem(rtpPacket, index)
     }
 
     fun updateTimestamp(seqNum: Int, timeAdded: Long) {
-        val index = rfc3711IndexTracker.interpret(seqNum)
+        val index = rtpSequenceIndexTracker.interpret(seqNum)
         super.updateTimeAdded(index, timeAdded)
     }
 

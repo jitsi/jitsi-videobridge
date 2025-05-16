@@ -19,7 +19,7 @@ import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.NEVER
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.formatMilli
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
@@ -306,7 +306,7 @@ class ClassicTransportCcEngine(
             }
         }
 
-        private val rfc3711IndexTracker = Rfc3711IndexTracker()
+        private val rtpSequenceIndexTracker = RtpSequenceIndexTracker()
 
         /**
          * Gets a packet with a given RTP sequence number from the cache.
@@ -314,12 +314,12 @@ class ClassicTransportCcEngine(
         fun get(sequenceNumber: Int): PacketDetail? {
             // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
             // (TCCs)
-            val index = rfc3711IndexTracker.interpret(sequenceNumber)
+            val index = rtpSequenceIndexTracker.interpret(sequenceNumber)
             return super.getContainer(index, shouldCloneItem = true)?.item
         }
 
         fun insert(seq: Int, packetDetail: PacketDetail): Boolean {
-            val index = rfc3711IndexTracker.update(seq)
+            val index = rtpSequenceIndexTracker.update(seq)
             return super.insertItem(packetDetail, index, packetDetail.packetSendTime.toEpochMilli())
         }
 

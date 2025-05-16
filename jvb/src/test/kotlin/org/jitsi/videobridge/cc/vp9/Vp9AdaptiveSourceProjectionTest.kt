@@ -25,7 +25,7 @@ import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyTl0PicIdxDelta
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.getExtendedPictureIdDelta
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
@@ -197,8 +197,8 @@ class Vp9AdaptiveSourceProjectionTest {
         )
         var latestSeq = buffer[0]!!.packetAs<Vp9Packet>().sequenceNumber
         val projectedPackets = TreeMap<Long, ProjectedPacket?>()
-        val origSeqIdxTracker = Rfc3711IndexTracker()
-        val newSeqIdxTracker = Rfc3711IndexTracker()
+        val origSeqIdxTracker = RtpSequenceIndexTracker()
+        val newSeqIdxTracker = RtpSequenceIndexTracker()
         for (i in 0..99999) {
             val packetInfo = buffer[0]
             val packet = packetInfo!!.packetAs<Vp9Packet>()

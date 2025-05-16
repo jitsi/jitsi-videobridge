@@ -21,7 +21,6 @@ import org.jitsi.videobridge.colibri2.createConferenceNotFoundError
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.IqProviderUtils
-import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import org.jivesoftware.smack.util.PacketParserUtils
 
 class Colibri2UtilTest : ShouldSpec({
@@ -30,7 +29,7 @@ class Colibri2UtilTest : ShouldSpec({
     context("createConferenceAlreadyExistsError") {
         val error = createConferenceAlreadyExistsError(iq, "i")
 
-        val parsedIq = parseIQ(error.toStringOpt())
+        val parsedIq = parseIQ(error.toXML().toString())
         val colibri2ErrorExtension =
             parsedIq.error.getExtension<Colibri2Error>(Colibri2Error.ELEMENT, Colibri2Error.NAMESPACE)
         colibri2ErrorExtension shouldNotBe null
@@ -40,7 +39,7 @@ class Colibri2UtilTest : ShouldSpec({
     context("createConferenceNotFoundError") {
         val error = createConferenceNotFoundError(iq, "i")
 
-        val parsedIq = parseIQ(error.toStringOpt())
+        val parsedIq = parseIQ(error.toXML().toString())
         val colibri2ErrorExtension =
             parsedIq.error.getExtension<Colibri2Error>(Colibri2Error.ELEMENT, Colibri2Error.NAMESPACE)
         colibri2ErrorExtension shouldNotBe null

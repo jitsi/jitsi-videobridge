@@ -23,7 +23,7 @@ import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
@@ -69,7 +69,7 @@ class TccGeneratorNode(
             _, _, newValue ->
         logger.debug("Setting enabled=$newValue")
     }
-    private val rfc3711IndexTracker = Rfc3711IndexTracker()
+    private val rtpSequenceIndexTracker = RtpSequenceIndexTracker()
 
     private val lossListeners = mutableListOf<LossListener>()
 
@@ -88,7 +88,7 @@ class TccGeneratorNode(
         tccExtensionId?.let { tccExtId ->
             val rtpPacket = packetInfo.packetAs<RtpPacket>()
             rtpPacket.getHeaderExtension(tccExtId)?.let { ext ->
-                val tccSeqNum = rfc3711IndexTracker.update(TccHeaderExtension.getSequenceNumber(ext))
+                val tccSeqNum = rtpSequenceIndexTracker.update(TccHeaderExtension.getSequenceNumber(ext))
                 addPacket(tccSeqNum, packetInfo.receivedTime, rtpPacket.isMarked, rtpPacket.ssrc)
             }
         }

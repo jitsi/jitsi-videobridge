@@ -100,7 +100,6 @@ import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
-import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Instant
@@ -485,7 +484,7 @@ class Relay @JvmOverloads constructor(
                 remoteFingerprints.getOrPut(fingerprintExtension.hash.lowercase()) { mutableListOf() }
                     .add(fingerprintExtension.fingerprint)
             } else {
-                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toStringOpt()}")
+                logger.info("Ignoring empty DtlsFingerprint extension: ${transportInfo.toXML()}")
             }
 
             if (CryptexConfig.relay) {
@@ -537,7 +536,7 @@ class Relay @JvmOverloads constructor(
             }
         }
 
-        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toStringOpt()}" }
+        logger.cdebug { "Transport description:\n${iceUdpTransportPacketExtension.toXML()}" }
 
         return iceUdpTransportPacketExtension
     }

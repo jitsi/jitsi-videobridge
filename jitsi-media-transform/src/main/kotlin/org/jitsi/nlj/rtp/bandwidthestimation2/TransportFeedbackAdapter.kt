@@ -18,7 +18,7 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.Rfc3711IndexTracker
+import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.isFinite
 import org.jitsi.nlj.util.isInfinite
@@ -230,7 +230,7 @@ class TransportFeedbackAdapter(
     private var pendingUntrackedSize = DataSize.ZERO
     private var lastSendTime = Instant.MIN
     private var lastUntrackedSendTime = Instant.MIN
-    private val seqNumUnwrapper = Rfc3711IndexTracker()
+    private val seqNumUnwrapper = RtpSequenceIndexTracker()
     private val history = TreeMap<Long, PacketFeedback>()
 
     private var lastAckSeqNum = -1L

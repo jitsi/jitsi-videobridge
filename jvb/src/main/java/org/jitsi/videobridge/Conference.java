@@ -179,7 +179,7 @@ public class Conference
 
     /**
      * A unique meeting ID optionally set by the signaling server ({@code null} if not explicitly set). It is exposed
-     * via ({@link #getDebugState()} for outside use.
+     * via ({@link #getDebugState(DebugStateMode, String)} ()} for outside use.
      */
     @Nullable
     private final String meetingId;
@@ -229,7 +229,7 @@ public class Conference
                     try
                     {
                         logger.info( () -> {
-                            String reqStr = XmlStringBuilderUtil.toStringOpt(request.getRequest());
+                            String reqStr = request.getRequest().toXML().toString();
                             if (VideobridgeConfig.getRedactRemoteAddresses())
                             {
                                 reqStr = RedactColibriIp.Companion.redact(reqStr);
@@ -247,7 +247,7 @@ public class Conference
                         request.getTotalDelayStats().addDelay(totalDelay);
                         if (processingDelay > 100)
                         {
-                            String reqStr = XmlStringBuilderUtil.toStringOpt(request.getRequest());
+                            String reqStr = request.getRequest().toXML().toString();
                             if (VideobridgeConfig.getRedactRemoteAddresses())
                             {
                                 reqStr = RedactColibriIp.Companion.redact(reqStr);
@@ -255,7 +255,7 @@ public class Conference
                             logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
                                     + totalDelay + " ms): " + reqStr);
                         }
-                        logger.info("SENT colibri2 response: " + XmlStringBuilderUtil.toStringOpt(response));
+                        logger.info("SENT colibri2 response: " + response.toXML());
                         request.getCallback().invoke(response);
                         if (expire) videobridge.expireConference(this);
                     }
