@@ -45,7 +45,6 @@ import org.jitsi.xmpp.extensions.jingle.CandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceCandidatePacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceRtcpmuxPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
-import org.jitsi.xmpp.util.XmlStringBuilderUtil.Companion.toStringOpt
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.io.IOException
@@ -216,7 +215,7 @@ class IceTransport @JvmOverloads constructor(
             logger.debug("Starting the Agent without remote candidates.")
             iceAgent.startConnectivityEstablishment()
         } else {
-            logger.cdebug { "Not starting ICE, no ufrag and pwd yet. ${transportPacketExtension.toStringOpt()}" }
+            logger.cdebug { "Not starting ICE, no ufrag and pwd yet. ${transportPacketExtension.toXML()}" }
         }
     }
 
