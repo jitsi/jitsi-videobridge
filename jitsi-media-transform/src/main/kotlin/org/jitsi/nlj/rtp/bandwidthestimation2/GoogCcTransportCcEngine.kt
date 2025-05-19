@@ -127,7 +127,7 @@ class GoogCcTransportCcEngine(
             return
         }
 
-        var totalPacketsLostDelta = 0
+        var totalPacketsLostDelta = 0L
         var totalPacketsDelta = 0L
 
         reportBlocks.forEach { reportBlock ->
@@ -152,7 +152,7 @@ class GoogCcTransportCcEngine(
             return
         }
         val msg = TransportLossReport(
-            packetsLostDelta = totalPacketsDelta,
+            packetsLostDelta = totalPacketsLostDelta,
             packetsReceivedDelta = packetsReceivedDelta,
             receiveTime = receiveTime,
             startTime = lastReportBlockTime,
