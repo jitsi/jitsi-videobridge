@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.cc
 
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bytes
@@ -33,7 +33,7 @@ import java.util.function.Supplier
 class BandwidthProbing(
     private val probingDataSender: ProbingDataSender,
     private val statusSnapshotSupplier: Supplier<BitrateControllerStatusSnapshot>
-) : PeriodicRunnable(config.paddingPeriodMs), BandwidthEstimator.Listener {
+) : PeriodicRunnable(config.paddingPeriodMs), TransportCcEngine.BandwidthListener {
 
     /** Whether or not probing is currently enabled */
     var enabled = false

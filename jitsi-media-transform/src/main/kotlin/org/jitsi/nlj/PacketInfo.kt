@@ -99,6 +99,7 @@ class EventTimeline(
 enum class PacketOrigin {
     Routed,
     Retransmission,
+    Probing,
     Padding,
     Synthesized,
     Misc
@@ -156,6 +157,12 @@ open class PacketInfo @JvmOverloads constructor(
     var payloadVerification = if (enablePayloadVerification) packet.payloadVerification else null
 
     /**
+     * Information about whether this packet is used for probing by the transport-cc engine.
+     * The type is internal to that object.
+     */
+    var probingInfo: Any? = null
+
+    /**
      * The origin of the packet, used for tracking the sources of media being routed.
      */
     var packetOrigin: PacketOrigin = PacketOrigin.Misc
@@ -189,6 +196,7 @@ open class PacketInfo @JvmOverloads constructor(
         clone.endpointId = endpointId
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
+        clone.probingInfo = probingInfo
         clone.packetOrigin = packetOrigin
         @Suppress("UNCHECKED_CAST") // ArrayList.clone() really does return ArrayList, not Object.
         clone.onSentActions = onSentActions?.clone() as ArrayList<() -> Unit>?

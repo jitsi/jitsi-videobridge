@@ -19,6 +19,7 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.utils.TimeUtils
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 
@@ -29,10 +30,39 @@ fun Instant.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.epochS
 
 fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.seconds, this.nano)
 
-fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
-    var sum: Duration = Duration.ZERO
-    for (element in this) {
-        sum += selector(element)
+/**
+ * Like [Instant.toEpochMilli], but rounded to nearest rather than rounded to zero.
+ *
+ * This is needed to be bit-exact with Google CC unit tests, since libwebrtc clocks round this way
+ */
+fun Instant.toRoundedEpochMilli(): Long {
+    var ret = toEpochMilli()
+    val remainder = nano.floorMod(1_000_000)
+    if (remainder > 499_999) {
+        ret++
     }
-    return sum
+    return ret
+}
+
+fun Instant.isInfinite(): Boolean = (this == Instant.MAX || this == Instant.MIN)
+
+fun Instant.isFinite(): Boolean = !this.isInfinite()
+
+/**
+ * Like [Clock.millis], but rounded to nearest rather than rounded to zero.
+ */
+fun Clock.roundedMillis() = this.instant().toRoundedEpochMilli()
+
+/**
+ * Returns the maximum of two [Instant]s
+ */
+fun max(a: Instant, b: Instant): Instant {
+    return if (a >= b) a else b
+}
+
+/**
+ * Returns the minimum of two [Instant]s
+ */
+fun min(a: Instant, b: Instant): Instant {
+    return if (a <= b) a else b
 }

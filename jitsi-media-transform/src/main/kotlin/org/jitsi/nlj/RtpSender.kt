@@ -18,7 +18,6 @@ package org.jitsi.nlj
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
@@ -36,11 +35,13 @@ abstract class RtpSender :
     Stoppable,
     EndpointConnectionStats.EndpointConnectionStatsListener {
 
-    abstract fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int
+    abstract fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int, probingInfo: Any?): Int
     abstract fun onOutgoingPacket(handler: PacketHandler)
     abstract fun setSrtpTransformers(srtpTransformers: SrtpTransformers)
     abstract fun getStreamStats(): OutgoingStatisticsSnapshot
     abstract fun getPacketStreamStats(): PacketStreamStats.Snapshot
+    abstract fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener)
+    abstract fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener)
     abstract fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot
     abstract fun requestKeyframe(mediaSsrc: Long? = null)
     abstract fun addLossListener(lossListener: LossListener)
@@ -54,6 +55,5 @@ abstract class RtpSender :
      */
     var preProcesor: ((PacketInfo) -> PacketInfo?)? = null
 
-    abstract val bandwidthEstimator: BandwidthEstimator
     abstract fun debugState(mode: DebugStateMode): OrderedJsonObject
 }

@@ -67,6 +67,8 @@ class ProbingDataSender(
     private var numProbingBytesSentRtx: Long = 0
     private var numProbingBytesSentDummyData: Long = 0
 
+    private var lastMediaSsrcs: Collection<Long> = emptyList()
+
     init {
         streamInformationStore.onRtpPayloadTypesChanged { currentRtpPayloadTypes ->
             if (currentRtpPayloadTypes.isEmpty()) {
@@ -86,15 +88,22 @@ class ProbingDataSender(
         }
     }
 
-    fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int {
+    fun sendProbing(mediaSsrcsIn: Collection<Long>?, numBytes: Int, probingInfo: Any?): Int {
         var totalBytesSent = 0
+
+        val mediaSsrcs = if (mediaSsrcsIn != null) {
+            lastMediaSsrcs = mediaSsrcsIn
+            mediaSsrcsIn
+        } else {
+            lastMediaSsrcs
+        }
 
         if (rtxSupported) {
             for (mediaSsrc in mediaSsrcs) {
                 if (totalBytesSent >= numBytes) {
                     break
                 }
-                val rtxBytesSent = sendRedundantDataOverRtx(mediaSsrc, numBytes - totalBytesSent)
+                val rtxBytesSent = sendRedundantDataOverRtx(mediaSsrc, numBytes - totalBytesSent, probingInfo)
                 numProbingBytesSentRtx += rtxBytesSent
                 totalBytesSent += rtxBytesSent
                 if (timeSeriesLogger.isTraceEnabled()) {
@@ -108,7 +117,7 @@ class ProbingDataSender(
             }
         }
         if (totalBytesSent < numBytes) {
-            val dummyBytesSent = sendDummyData(numBytes - totalBytesSent)
+            val dummyBytesSent = sendDummyData(numBytes - totalBytesSent, probingInfo)
             numProbingBytesSentDummyData += dummyBytesSent
             totalBytesSent += dummyBytesSent
             if (timeSeriesLogger.isTraceEnabled()) {
@@ -128,7 +137,7 @@ class ProbingDataSender(
      * by re-transmitting previously sent packets from the outgoing packet cache.
      * Returns the number of bytes transmitted
      */
-    private fun sendRedundantDataOverRtx(mediaSsrc: Long, numBytes: Int): Int {
+    private fun sendRedundantDataOverRtx(mediaSsrc: Long, numBytes: Int, probingInfo: Any?): Int {
         var bytesSent = 0
         // TODO(brian): we're in a thread context mess here.  we'll be sending these out from the bandwidthprobing
         // context (or whoever calls this) which i don't think we want.  Need look at getting all the pipeline
@@ -138,7 +147,8 @@ class ProbingDataSender(
         packetCache.getMany(mediaSsrc, numBytes).forEach {
             bytesSent += it.length
             val packetInfo = PacketInfo(it)
-            packetInfo.packetOrigin = PacketOrigin.Padding
+            packetInfo.probingInfo = probingInfo
+            packetInfo.packetOrigin = if (probingInfo != null) PacketOrigin.Probing else PacketOrigin.Padding
             rtxDataSender.processPacket(packetInfo)
         }
         return bytesSent
@@ -147,7 +157,7 @@ class ProbingDataSender(
     private var currDummyTimestamp = random.nextLong() and 0xFFFFFFFF
     private var currDummySeqNum = random.nextInt(0xFFFF)
 
-    private fun sendDummyData(numBytes: Int): Int {
+    private fun sendDummyData(numBytes: Int, probingInfo: Any?): Int {
         var bytesSent = 0
         val pt = videoPayloadTypes.firstOrNull() ?: return bytesSent
         val senderSsrc = localVideoSsrc ?: return bytesSent
@@ -166,7 +176,8 @@ class ProbingDataSender(
             paddingPacket.timestamp = currDummyTimestamp
             paddingPacket.sequenceNumber = currDummySeqNum
             val packetInfo = PacketInfo(paddingPacket)
-            packetInfo.packetOrigin = PacketOrigin.Padding
+            packetInfo.probingInfo = probingInfo
+            packetInfo.packetOrigin = if (probingInfo != null) PacketOrigin.Probing else PacketOrigin.Padding
             garbageDataSender.processPacket(packetInfo)
 
             currDummySeqNum++

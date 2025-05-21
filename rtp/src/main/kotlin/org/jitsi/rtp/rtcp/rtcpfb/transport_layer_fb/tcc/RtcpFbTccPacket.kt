@@ -108,8 +108,12 @@ class RtcpFbTccPacketBuilder(
         last_timestamp_ = BaseTime()
     }
 
-    fun AddReceivedPacket(seqNum: Int, timestamp: Instant): Boolean {
+    fun AddReceivedPacket(seqNum: Int, timestampIn: Instant): Boolean {
         val sequence_number = seqNum.toRtpSequenceNumber()
+        var timestamp = timestampIn
+        if (last_timestamp_ > timestamp) {
+            timestamp += Duration.between(timestamp, last_timestamp_).roundUpTo(kTimeWrapPeriod)
+        }
         var delta_full = Duration.between(last_timestamp_, timestamp).toMicros() % kTimeWrapPeriod.toMicros()
         if (delta_full > kTimeWrapPeriod.toMicros() / 2) {
             delta_full -= kTimeWrapPeriod.toMicros()
@@ -424,8 +428,23 @@ class RtcpFbTccPacket(
 
     val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
+    fun GetPacketStatusCount(): Int {
+        return num_seq_no_
+    }
+
     fun BaseTime(): Instant {
         return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
+    }
+
+    fun GetBaseDelta(prev_timestamp: Instant): Duration {
+        var delta = Duration.between(prev_timestamp, BaseTime())
+        // Compensate for wrap around
+        if ((delta - kTimeWrapPeriod).abs() < delta.abs()) {
+            delta -= kTimeWrapPeriod
+        } else if ((delta + kTimeWrapPeriod).abs() < delta.abs()) {
+            delta += kTimeWrapPeriod
+        }
+        return delta
     }
 
     override fun iterator(): Iterator<PacketReport> = packets_.iterator()
@@ -484,4 +503,15 @@ class RtcpFbTccPacket(
         fun setFeedbackPacketCount(buf: ByteArray, baseOffset: Int, value: Int) =
             buf.set(baseOffset + FB_PACKET_COUNT_OFFSET, value.toByte())
     }
+}
+
+/* TODO: move these to jitsi-utils */
+fun Duration.roundUpTo(resolution: Duration): Duration {
+    assert(resolution > Duration.ZERO)
+    return Duration.ofNanos((toNanos() + resolution.toNanos() - 1) / resolution.toNanos()) * resolution.toNanos()
+}
+
+fun Duration.roundDownTo(resolution: Duration): Duration {
+    assert(resolution > Duration.ZERO)
+    return Duration.ofNanos(toNanos() / resolution.toNanos()) * resolution.toNanos()
 }
