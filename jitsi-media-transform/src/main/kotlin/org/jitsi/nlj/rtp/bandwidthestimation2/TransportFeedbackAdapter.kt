@@ -48,7 +48,10 @@ data class PacketFeedback(
     // receiver's clock. For unreceived packet, Timestamp::PlusInfinity() is
     // used.
     var receiveTime: Instant = Instant.MAX
-)
+) {
+    // Jitsi extension: whether the packet was previously reported lost
+    var reportedLost: Boolean = false
+}
 
 class InFlightBytesTracker {
     fun addInFlightPacketBytes(packet: PacketFeedback) {
@@ -206,14 +209,19 @@ class TransportFeedbackAdapter(
                 return@forEach
             }
 
+            val previouslyReportedLost = packetFeedback.reportedLost
+
             if (report is ReceivedPacketReport) {
                 deltaSinceBase += report.deltaDuration
                 packetFeedback.receiveTime = currentOffset + deltaSinceBase
                 history.remove(seqNum)
+            } else {
+                packetFeedback.reportedLost = true
             }
             val result = PacketResult()
             result.sentPacket = packetFeedback.sent
             result.receiveTime = packetFeedback.receiveTime
+            result.previouslyReportedLost = previouslyReportedLost
             packetResultVector.add(result)
         }
 

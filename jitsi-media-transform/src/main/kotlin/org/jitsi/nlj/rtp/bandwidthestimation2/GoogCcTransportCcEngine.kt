@@ -92,9 +92,20 @@ class GoogCcTransportCcEngine(
                 val time = receivedTime ?: clock.instant()
                 val feedback = feedbackAdapter.processTransportFeedback(rtcpPacket, time)
                 if (feedback != null) {
-                    // TODO: feed lossListeners with loss events
                     val update = networkController.onTransportPacketsFeedback(feedback)
                     processUpdate(update)
+
+                    synchronized(this) {
+                        feedback.packetFeedbacks.forEach { fb ->
+                            lossListeners.forEach { l ->
+                                if (fb.isReceived()) {
+                                    l.packetReceived(fb.previouslyReportedLost)
+                                } else if (!fb.previouslyReportedLost) {
+                                    l.packetLost(1)
+                                }
+                            }
+                        }
+                    }
                 }
             }
             is RtcpFbRembPacket -> {

@@ -169,7 +169,9 @@ class TransportLossReport(
  */
 class PacketResult(
     var sentPacket: SentPacket = SentPacket(),
-    var receiveTime: Instant = NEVER
+    var receiveTime: Instant = NEVER,
+    // Jitsi extension: Whether a packet was previously reported lost
+    var previouslyReportedLost: Boolean = false
 ) {
     fun isReceived() = receiveTime.isFinite()
 
