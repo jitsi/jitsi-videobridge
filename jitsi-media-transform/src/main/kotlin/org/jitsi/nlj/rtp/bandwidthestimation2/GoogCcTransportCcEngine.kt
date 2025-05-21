@@ -17,7 +17,6 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
-import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
@@ -64,8 +63,8 @@ class GoogCcTransportCcEngine(
             constraints = TargetRateConstraints(
                 atTime = clock.instant(),
                 startingRate = BandwidthEstimatorConfig.initBw,
-                maxDataRate = GoogleCcEstimatorConfig.maxBw, // TODO: move these two to a generic config
-                minDataRate = GoogleCcEstimatorConfig.minBw
+                maxDataRate = BandwidthEstimatorConfig.maxBw,
+                minDataRate = BandwidthEstimatorConfig.minBw
             )
         )
     )

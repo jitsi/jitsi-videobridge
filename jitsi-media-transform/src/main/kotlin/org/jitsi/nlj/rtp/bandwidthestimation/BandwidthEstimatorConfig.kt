@@ -10,8 +10,23 @@ class BandwidthEstimatorConfig {
             "jmt.bwe.estimator.engine".from(JitsiConfig.newConfig)
                 .convertFrom<String> { BandwidthEstimatorEngine.valueOf(it) }
         }
+
         val initBw: Bandwidth by config {
             "jmt.bwe.estimator.initial-bw".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it) }
+        }
+
+        val minBw: Bandwidth by config {
+            "jmt.bwe.google-cc.min-bw".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it) }.softDeprecated("use jmt.bwe.estimator.min-bw")
+            "jmt.bwe.estimator.min-bw".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it) }
+        }
+
+        val maxBw: Bandwidth by config {
+            "jmt.bwe.google-cc.max-bw".from(JitsiConfig.newConfig)
+                .convertFrom<String> { Bandwidth.fromString(it) }.softDeprecated("use jmt.bwe.estimator.max-bw")
+            "jmt.bwe.estimator.max-bw".from(JitsiConfig.newConfig)
                 .convertFrom<String> { Bandwidth.fromString(it) }
         }
     }
