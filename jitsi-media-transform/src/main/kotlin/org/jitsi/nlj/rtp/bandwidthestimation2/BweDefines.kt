@@ -54,7 +54,7 @@ data class RateControlInput(
 }
 
 /**
- * This is from WebRTC api/transport/bandwidth_usage.h, same WebRTC revision.
+ * This is from WebRTC api/transport/bandwidth_usage.h in the same WebRTC revision.
  */
 enum class BandwidthUsage {
     kBwNormal,
