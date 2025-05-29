@@ -114,8 +114,8 @@ class DtlsUtils {
                 subject,
                 keyPair.public
             )
-            val signer = if (config.useNoSignatureSigner) {
-                NoSignatureSigner()
+            val signer = if (config.useAlgUnsigned) {
+                AlgUnsignedSigner()
             } else {
                 JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
             }

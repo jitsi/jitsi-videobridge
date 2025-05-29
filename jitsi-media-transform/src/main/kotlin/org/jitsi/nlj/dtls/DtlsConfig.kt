@@ -54,8 +54,8 @@ class DtlsConfig {
         }
     }
 
-    val useNoSignatureSigner: Boolean by config {
-        "jmt.dtls.use-no-signature-signer".from(JitsiConfig.newConfig)
+    val useAlgUnsigned: Boolean by config {
+        "jmt.dtls.use-alg-unsigned".from(JitsiConfig.newConfig)
     }
 
     companion object {
