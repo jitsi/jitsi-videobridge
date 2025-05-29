@@ -249,8 +249,8 @@ class RtpSenderImpl(
         }
     }
 
-    override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int, probingInfo: Any?): Int =
-        probingDataSender.sendProbing(mediaSsrcs, numBytes, probingInfo)
+    override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int =
+        probingDataSender.sendProbing(mediaSsrcs, numBytes, null)
 
     override fun onOutgoingPacket(handler: PacketHandler) {
         outgoingPacketHandler = handler
