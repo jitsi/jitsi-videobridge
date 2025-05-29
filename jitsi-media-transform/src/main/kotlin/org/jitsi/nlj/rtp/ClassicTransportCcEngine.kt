@@ -289,7 +289,7 @@ class ClassicTransportCcEngine(
                 it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
                 it.put("numPacketsUnreported", numPacketsUnreported)
                 it.put("numMissingPacketReports", numMissingPacketReports)
-                it.put("bandwidth_estimator_stats", bandwidthEstimatorStats)
+                it.put("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
             }
         }
     }
