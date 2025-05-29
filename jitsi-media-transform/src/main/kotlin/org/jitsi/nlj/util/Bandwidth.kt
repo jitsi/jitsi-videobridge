@@ -99,20 +99,20 @@ value class Bandwidth(val bps: Long) : Comparable<Bandwidth> {
     }
 }
 
-operator fun Double.times(other: Bandwidth): Bandwidth = Bandwidth(round(this * other.bps.toDouble()))
+operator fun Double.times(other: Bandwidth): Bandwidth = Bandwidth(round(this * other.bps))
 operator fun Int.times(other: Bandwidth): Bandwidth = Bandwidth(this * other.bps)
 
 val Int.bps: Bandwidth
-    get() = Bandwidth(this.toDouble())
+    get() = Bandwidth(this.toLong())
 val Int.bytesPerSec: Bandwidth
-    get() = Bandwidth(this.toDouble() * 8)
+    get() = Bandwidth(this * 8L)
 val Int.kbps: Bandwidth
-    get() = Bandwidth(this.toDouble() * 1000)
+    get() = Bandwidth(this * 1000L)
 val Int.mbps: Bandwidth
-    get() = Bandwidth(this.toDouble() * 1000 * 1000)
+    get() = Bandwidth(this * 1000L * 1000L)
 
 val Float.bps: Bandwidth
-    get() = Bandwidth(this.toDouble())
+    get() = Bandwidth(this.toLong())
 val Float.bytesPerSec: Bandwidth // Bytes per second
     get() = Bandwidth(this.toDouble() * 8)
 val Float.kbps: Bandwidth
@@ -130,13 +130,13 @@ val Double.mbps: Bandwidth
     get() = Bandwidth(this * 1000 * 1000)
 
 val Long.bps: Bandwidth
-    get() = Bandwidth(this.toDouble())
+    get() = Bandwidth(this)
 val Long.bytesPerSec: Bandwidth // Bytes per second
-    get() = Bandwidth(this.toDouble() * 8)
+    get() = Bandwidth(this * 8)
 val Long.kbps: Bandwidth
-    get() = Bandwidth(this.toDouble() * 1000)
+    get() = Bandwidth(this * 1000)
 val Long.mbps: Bandwidth
-    get() = Bandwidth(this.toDouble() * 1000 * 1000)
+    get() = Bandwidth(this * 1000 * 1000)
 
 /**
  * Create a [Bandwidth] from a [DataSize] over a given time
