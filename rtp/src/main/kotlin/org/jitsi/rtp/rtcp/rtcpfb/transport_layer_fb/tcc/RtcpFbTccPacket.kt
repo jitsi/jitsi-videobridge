@@ -40,6 +40,7 @@ import org.jitsi.rtp.util.get3BytesAsInt
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getShortAsInt
 import org.jitsi.utils.micros
+import org.jitsi.utils.roundUpTo
 import org.jitsi.utils.times
 import org.jitsi.utils.toEpochMicro
 import org.jitsi.utils.toMicros
@@ -503,15 +504,4 @@ class RtcpFbTccPacket(
         fun setFeedbackPacketCount(buf: ByteArray, baseOffset: Int, value: Int) =
             buf.set(baseOffset + FB_PACKET_COUNT_OFFSET, value.toByte())
     }
-}
-
-/* TODO: move these to jitsi-utils */
-fun Duration.roundUpTo(resolution: Duration): Duration {
-    assert(resolution > Duration.ZERO)
-    return Duration.ofNanos((toNanos() + resolution.toNanos() - 1) / resolution.toNanos()) * resolution.toNanos()
-}
-
-fun Duration.roundDownTo(resolution: Duration): Duration {
-    assert(resolution > Duration.ZERO)
-    return Duration.ofNanos(toNanos() / resolution.toNanos()) * resolution.toNanos()
 }

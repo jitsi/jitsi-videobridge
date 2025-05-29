@@ -24,9 +24,9 @@ import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
-import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.roundDownTo
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
+import org.jitsi.utils.roundDownTo
 import org.jitsi.utils.time.FakeClock
 import org.jitsi.utils.times
 import java.time.Duration
