@@ -40,7 +40,7 @@ private val kSendTimeHistoryWindow = 60.secs
  * modified to use Jitsi types for objects outside the congestion controller,
  * and not using Network Routes.
  */
-data class PacketFeedback(
+private data class PacketFeedback(
     // Time corresponding to when this object was created.
     val creationTime: Instant = Instant.MIN,
     val sent: SentPacket,
@@ -53,7 +53,7 @@ data class PacketFeedback(
     var reportedLost: Boolean = false
 }
 
-class InFlightBytesTracker {
+private class InFlightBytesTracker {
     fun addInFlightPacketBytes(packet: PacketFeedback) {
         require(packet.sent.sendTime.isFinite())
         inFlightData += packet.sent.size
