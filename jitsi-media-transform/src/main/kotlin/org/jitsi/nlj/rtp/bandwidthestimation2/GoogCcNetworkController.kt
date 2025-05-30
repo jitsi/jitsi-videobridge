@@ -21,18 +21,20 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
-import org.jitsi.nlj.util.isFinite
 import org.jitsi.nlj.util.max
-import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.min
-import org.jitsi.nlj.util.minDuration
 import org.jitsi.nlj.util.times
-import org.jitsi.nlj.util.toDouble
+import org.jitsi.utils.MAX_DURATION
+import org.jitsi.utils.MIN_DURATION
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
+import org.jitsi.utils.max
+import org.jitsi.utils.min
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.utils.toDouble
 import org.jitsi.utils.toRoundedMillis
 import java.time.Duration
 import java.time.Instant
@@ -305,8 +307,8 @@ class GoogCcNetworkController(
         if (congestionWindowPushbackController != null) {
             congestionWindowPushbackController.updateOutstandingData(report.dataInFlight.bytes.roundToLong())
         }
-        var maxFeedbackRtt = minDuration
-        var minPropagationRtt = maxDuration
+        var maxFeedbackRtt = MIN_DURATION
+        var minPropagationRtt = MAX_DURATION
         var maxRecvTime = Instant.MIN
 
         val feedbacks = report.receivedWithSendInfo()
@@ -339,7 +341,7 @@ class GoogCcNetworkController(
                 }
             }
 
-            var feedbackMinRtt = maxDuration
+            var feedbackMinRtt = MAX_DURATION
             for (packetFeedback in feedbacks) {
                 val pendingTime = Duration.between(packetFeedback.receiveTime, maxRecvTime)
                 val rtt = Duration.between(packetFeedback.sentPacket.sendTime, report.feedbackTime) - pendingTime
@@ -738,7 +740,7 @@ class GoogCcNetworkController(
     private var lastLossBasedState: LossBasedState = LossBasedState.kDelayBasedEstimate
 
     private var lastEstimatedFractionLoss: UByte? = 0u
-    private var lastEstimatedRoundTripTime = maxDuration
+    private var lastEstimatedRoundTripTime = MAX_DURATION
 
     private var pacingFactor = config.streamBasedConfig.pacingFactor ?: kDefaultPaceMultiplier
     private var minTotalAllocatedBitrate = config.streamBasedConfig.minTotalAllocatedBitrate ?: Bandwidth.ZERO

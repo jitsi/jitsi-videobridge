@@ -27,18 +27,18 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.div
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.times
+import org.jitsi.utils.NEVER
+import org.jitsi.utils.div
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.times
 import java.time.Duration
 import java.time.Instant
-import kotlin.time.times
 
 /**
  * Unit tests for Loss-Based BWE,

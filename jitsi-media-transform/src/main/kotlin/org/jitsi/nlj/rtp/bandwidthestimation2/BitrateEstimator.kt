@@ -22,8 +22,8 @@ import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.per
-import org.jitsi.nlj.util.toRoundedEpochMilli
 import org.jitsi.utils.ms
+import org.jitsi.utils.toRoundedEpochMilli
 import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.max

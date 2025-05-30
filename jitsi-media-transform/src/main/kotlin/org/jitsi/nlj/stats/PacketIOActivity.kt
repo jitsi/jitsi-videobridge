@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.latest
 import org.jitsi.nlj.util.threadSafeVetoable
+import org.jitsi.utils.NEVER
 import java.time.Instant
 
 @Suppress("unused")

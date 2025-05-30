@@ -26,15 +26,15 @@ import io.kotest.matchers.longs.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.jitsi.nlj.util.bytes
-import org.jitsi.nlj.util.roundedMillis
-import org.jitsi.nlj.util.toRoundedEpochMilli
 import org.jitsi.utils.instantOfEpochMicro
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.ms
+import org.jitsi.utils.roundedMillis
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
 import org.jitsi.utils.toEpochMicro
+import org.jitsi.utils.toRoundedEpochMilli
 import java.lang.Long.max
 import java.time.Duration
 import java.time.Instant

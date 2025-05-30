@@ -18,12 +18,13 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bytes
-import org.jitsi.nlj.util.isFinite
-import org.jitsi.nlj.util.isInfinite
-import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.per
+import org.jitsi.utils.isFinite
+import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.max
+import org.jitsi.utils.min
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration

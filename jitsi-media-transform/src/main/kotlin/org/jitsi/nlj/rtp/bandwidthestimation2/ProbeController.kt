@@ -19,14 +19,14 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.kbps
-import org.jitsi.nlj.util.max
-import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.times
+import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.max
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration
@@ -91,7 +91,7 @@ class ProbeControllerConfig(
     val alrProbingInterval: Duration = 5.secs,
     val alrProbeScale: Double = 2.0,
     // Configures how often we send probes if NetworkStateEstimate is available.
-    val networkStateEstimateProbingInterval: Duration = maxDuration,
+    val networkStateEstimateProbingInterval: Duration = MAX_DURATION,
     // Periodically probe as long as the ratio between current estimate and
     // NetworkStateEstimate is lower then this.
     val probeIfEstimateLowerThanNetworkStateEstimateRatio: Double = 0.0,

@@ -21,12 +21,13 @@ import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.div
-import org.jitsi.nlj.util.isFinite
-import org.jitsi.nlj.util.isInfinite
 import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.times
+import org.jitsi.utils.isFinite
+import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.min
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration

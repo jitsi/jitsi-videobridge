@@ -19,14 +19,14 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
-import org.jitsi.nlj.util.isFinite
-import org.jitsi.nlj.util.maxDuration
 import org.jitsi.nlj.util.per
-import org.jitsi.nlj.util.toDoubleMillis
+import org.jitsi.utils.MAX_DURATION
+import org.jitsi.utils.NEVER
+import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.ms
+import org.jitsi.utils.toDoubleMillis
 import java.time.Duration
 import java.time.Instant
 
@@ -152,7 +152,7 @@ class RemoteBitrateReport(
 
 class RoundTripTimeUpdate(
     val receiveTime: Instant = Instant.MAX,
-    val roundTripTime: Duration = maxDuration,
+    val roundTripTime: Duration = MAX_DURATION,
     val smoothed: Boolean = false
 )
 
@@ -212,8 +212,8 @@ class NetworkEstimate {
 
     // Deprecated, use TargetTransferRate::target_rate instead.
     var bandwidth = Bandwidth.INFINITY
-    var roundTripTime = maxDuration
-    var bwePeriod = maxDuration
+    var roundTripTime = MAX_DURATION
+    var bwePeriod = MAX_DURATION
 
     var lossRateRatio = 0.0f
 
@@ -229,7 +229,7 @@ class PacerConfig {
 
     // Pacer should send at most data_window data over time_window duration.
     var dataWindow = DataSize.INFINITY
-    var timeWindow = maxDuration
+    var timeWindow = MAX_DURATION
 
     // Pacer should send at least pad_window data over time_window duration.
     var padWindow = DataSize.ZERO

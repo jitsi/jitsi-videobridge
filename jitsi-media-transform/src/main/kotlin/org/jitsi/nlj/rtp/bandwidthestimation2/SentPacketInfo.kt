@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import org.jitsi.nlj.util.NEVER
+import org.jitsi.utils.NEVER
 import java.time.Instant
 
 /** Sent packet info,

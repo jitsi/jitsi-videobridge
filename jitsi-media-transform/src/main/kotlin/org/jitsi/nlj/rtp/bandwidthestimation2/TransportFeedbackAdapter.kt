@@ -20,13 +20,13 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.bytes
-import org.jitsi.nlj.util.isFinite
-import org.jitsi.nlj.util.isInfinite
-import org.jitsi.nlj.util.max
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.isFinite
+import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.max
 import org.jitsi.utils.secs
 import java.time.Duration
 import java.time.Instant

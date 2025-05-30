@@ -20,20 +20,22 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
-import org.jitsi.nlj.util.coerceIn
 import org.jitsi.nlj.util.div
-import org.jitsi.nlj.util.durationOfDoubleSeconds
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.max
 import org.jitsi.nlj.util.per
 import org.jitsi.nlj.util.times
-import org.jitsi.nlj.util.toDouble
+import org.jitsi.utils.NEVER
+import org.jitsi.utils.coerceIn
+import org.jitsi.utils.div
+import org.jitsi.utils.durationOfDoubleSeconds
+import org.jitsi.utils.max
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.times
+import org.jitsi.utils.toDouble
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.ceil

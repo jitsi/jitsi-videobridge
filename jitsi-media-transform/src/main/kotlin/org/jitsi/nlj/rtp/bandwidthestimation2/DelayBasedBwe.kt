@@ -17,15 +17,15 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
-import org.jitsi.nlj.util.toDoubleMillis
-import org.jitsi.nlj.util.toRoundedEpochMilli
+import org.jitsi.utils.NEVER
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
+import org.jitsi.utils.toDoubleMillis
+import org.jitsi.utils.toRoundedEpochMilli
 import java.time.Duration
 import java.time.Instant
 

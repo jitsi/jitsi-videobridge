@@ -17,9 +17,9 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import org.jitsi.nlj.util.NEVER
-import org.jitsi.nlj.util.max
+import org.jitsi.utils.NEVER
 import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.max
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import java.time.Duration
