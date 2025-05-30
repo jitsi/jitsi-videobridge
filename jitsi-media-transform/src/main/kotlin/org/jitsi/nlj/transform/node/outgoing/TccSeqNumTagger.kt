@@ -38,7 +38,6 @@ class TccSeqNumTagger(
         streamInformationStore.onRtpExtensionMapping(TRANSPORT_CC) {
             tccExtensionId = it
         }
-        transportCcEngine.start()
     }
 
     private val weakTcc = WeakReference(transportCcEngine)

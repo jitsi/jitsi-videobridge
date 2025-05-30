@@ -123,7 +123,7 @@ class RtpSenderImpl(
                         probingData
                     )
                 })
-        }
+        }.also { it.start() }
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
     private val srtcpEncryptWrapper = SrtcpEncryptNode()
