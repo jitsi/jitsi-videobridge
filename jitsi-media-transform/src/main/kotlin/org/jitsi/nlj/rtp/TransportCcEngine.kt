@@ -32,6 +32,8 @@ abstract class TransportCcEngine : RtcpListener {
 
     abstract override fun rtcpPacketReceived(rtcpPacket: RtcpPacket, receivedTime: Instant?)
 
+    /** This is called when a tccSeqNum is first assigned to a packet, i.e. the soonest the packet can meaningfully
+     * be described to the engine. */
     abstract fun mediaPacketTagged(tccSeqNum: Int, length: DataSize, probingInfo: Any?)
 
     abstract fun mediaPacketSent(tccSeqNum: Int, length: DataSize)
