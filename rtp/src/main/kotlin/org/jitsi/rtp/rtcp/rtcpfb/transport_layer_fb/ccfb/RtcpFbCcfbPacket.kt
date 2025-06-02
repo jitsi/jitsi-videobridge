@@ -17,9 +17,20 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb
 
+import org.jitsi.rtp.extensions.bytearray.putInt
+import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kTransportFeedbackHeaderSizeBytes
+import org.jitsi.rtp.util.BufferPool
+import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.utils.MAX_DURATION
+import org.jitsi.utils.MIN_DURATION
+import org.jitsi.utils.div
 import org.jitsi.utils.secs
+import org.jitsi.utils.toDouble
 import java.time.Duration
 import kotlin.math.min
 
@@ -75,8 +86,82 @@ class RtcpFbCcfbPacketBuilder(
     val packets: List<PacketInfo> = listOf(),
     val report_timestamp_compact_ntp: Long
 ) {
+    private fun blockLength(): Int {
+        var totalSize = kTransportFeedbackHeaderSizeBytes + kTimestampLength
+
+        packets.groupBy { it.ssrc }.forEach { (ssrc, packets) ->
+            val blockSize = packets.size * 2
+            totalSize += kHeaderPerMediaSsrcLength + blockSize + RtpUtils.getNumPaddingBytes(blockSize)
+        }
+
+        return totalSize
+    }
+
+    fun writeTo(buf: ByteArray, offset: Int) {
+        val blockLength = blockLength()
+        val paddingBytes = RtpUtils.getNumPaddingBytes(blockLength)
+        val packetSize = blockLength + paddingBytes
+        require(buf.size - offset >= packetSize) {
+            "Buffer of size ${buf.size} with offset $offset too small for CCFB packet of size $packetSize"
+        }
+        rtcpHeader.apply {
+            packetType = TransportLayerRtcpFbPacket.PT
+            reportCount = RtcpFbTccPacket.FMT
+            length = RtpUtils.calculateRtcpLengthFieldValue(blockLength)
+        }.writeTo(buf, offset)
+
+        RtcpFbPacket.setMediaSourceSsrc(buf, offset, mediaSourceSsrc)
+        var position = offset + RtcpFbPacket.HEADER_SIZE
+
+        packets.groupBy { it.ssrc }.forEach { (ssrc, packets) ->
+            check(
+                packets.size ==
+                    RtpUtils.getSequenceNumberDelta(packets.first().sequenceNumber, packets.last().sequenceNumber) + 1
+            ) {
+                "Expected continuous rtp sequence numbers"
+            }
+            check(packets.size <= 16384) {
+                "Unexpected number of reports: ${packets.size}"
+            }
+
+            buf.putInt(position, ssrc.toInt())
+            position += 4
+
+            buf.putShort(position, packets.first().sequenceNumber.toShort())
+            position += 2
+            buf.putShort(position, packets.size.toShort())
+            position += 2
+
+            packets.forEach { packet ->
+                val packetInfo = if (packet is ReceivedPacketInfo) {
+                    0x8000 or to2BitEcn(packet.ecn) or to13BitAto(packet.arrivalTimeOffset)
+                } else {
+                    0
+                }
+                buf.putShort(position, packetInfo.toShort())
+                position += 2
+            }
+            repeat(paddingBytes) {
+                buf[position++] = 0x00
+            }
+        }
+
+        buf.putInt(position, report_timestamp_compact_ntp.toInt())
+        position += 4
+        assert(position - offset == packetSize)
+    }
+
     fun build(): RtcpFbCcfbPacket {
-        TODO()
+        val blockLength = blockLength()
+        val packetSize = blockLength + RtpUtils.getNumPaddingBytes(blockLength)
+        val buf = BufferPool.getArray(packetSize)
+        writeTo(buf, 0)
+        return RtcpFbCcfbPacket(buf, 0, packetSize)
+    }
+
+    companion object {
+        private const val kHeaderPerMediaSsrcLength = 8
+        private const val kTimestampLength = 4
     }
 }
 
@@ -92,26 +177,30 @@ class RtcpFbCcfbPacketBuilder(
 // measurement. If the measurement is unavailable or if the arrival time of the
 // RTP packet is after the time represented by the RTS field, then an ATO value
 // of 0x1FFF MUST be reported for the packet.
-private fun to13BitAto(arrival_time_offset: Duration): Short {
+private fun to13BitAto(arrival_time_offset: Duration): Int {
     if (arrival_time_offset.isNegative) {
         return 0x1FFF
     }
-    return min((1024 * arrival_time_offset.toDouble()).toInt(), 0x1FFE).toShort()
+    return min((1024 * arrival_time_offset.toDouble()).toInt(), 0x1FFE)
 }
 
 private fun atoToTimeDelta(receiveInfo: Short): Duration {
     val ato = receiveInfo.toInt() and 0x1FFF
     if (ato == 0x1FFE) {
-        return maxDuration
+        return MAX_DURATION
     }
     if (ato == 0x1FFF) {
-        return minDuration
+        return MIN_DURATION
     }
     return ato.secs / 1024
 }
 
-private fun to2BitEcn(receiveInfo: Short): EcnMarking {
+private fun toEcnMarking(receiveInfo: Short): EcnMarking {
     return EcnMarking.fromBits(((receiveInfo.toInt() shr 13) and 0b11).toByte())
+}
+
+private fun to2BitEcn(ecnMarking: EcnMarking): Int {
+    return ecnMarking.bits.toInt() shl 13
 }
 
 /*
@@ -153,14 +242,3 @@ class RtcpFbCcfbPacket(
         const val kFeedbackMessageType = 11
     }
 }
-
-/* TODO: use versions of these from jitsi-utils once they're moved there from updated-bwe branch */
-fun Duration.toDouble(): Double {
-    return this.seconds.toDouble() + this.nano.toDouble() * 1e-9
-}
-
-val minDuration = Duration.ofSeconds(Long.MIN_VALUE, 0)
-
-val maxDuration = Duration.ofSeconds(Long.MAX_VALUE, 999_999_999)
-
-operator fun Duration.div(other: Long): Duration = this.dividedBy(other)
