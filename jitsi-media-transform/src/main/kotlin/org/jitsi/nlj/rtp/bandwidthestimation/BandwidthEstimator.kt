@@ -18,10 +18,10 @@ package org.jitsi.nlj.rtp.bandwidthestimation
 
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.bps
-import org.jitsi.nlj.util.formatMilli
+import org.jitsi.utils.NEVER
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.formatMilli
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import java.time.Clock

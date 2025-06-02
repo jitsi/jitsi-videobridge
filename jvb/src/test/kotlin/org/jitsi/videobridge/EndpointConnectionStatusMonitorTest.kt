@@ -27,7 +27,7 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import org.jitsi.nlj.util.NEVER
+import org.jitsi.utils.NEVER
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.mins

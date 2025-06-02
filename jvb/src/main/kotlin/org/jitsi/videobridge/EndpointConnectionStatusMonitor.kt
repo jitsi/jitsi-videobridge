@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge
 
-import org.jitsi.nlj.util.NEVER
+import org.jitsi.utils.NEVER
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
