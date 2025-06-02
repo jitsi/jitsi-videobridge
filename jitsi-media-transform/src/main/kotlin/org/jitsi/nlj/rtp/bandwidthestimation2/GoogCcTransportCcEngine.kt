@@ -257,9 +257,11 @@ class GoogCcTransportCcEngine(
         synchronized(this@GoogCcTransportCcEngine) {
             // Stop bitrateProber from initiating any new probes
             bitrateProber.setEnabled(false)
+            Pair(probeTask, processTask)
+        }.let { (probeTask, processTask) ->
+            probeTask?.cancel(false)
+            processTask?.cancel(false)
         }
-        probeTask?.cancel(false)
-        processTask?.cancel(false)
     }
 
     private fun processUpdate(update: NetworkControlUpdate) {
