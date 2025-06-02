@@ -49,7 +49,6 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
-import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
@@ -70,6 +69,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
+import org.jitsi.utils.sumOf
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.CryptexConfig
 import org.jitsi.videobridge.EncodingsManager
