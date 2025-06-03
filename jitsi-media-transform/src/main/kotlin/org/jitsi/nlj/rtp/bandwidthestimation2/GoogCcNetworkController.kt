@@ -152,10 +152,10 @@ class GoogCcNetworkController(
         }
         bandwidthEstimation.updateReceiverEstimate(msg.receiveTime, msg.bandwidth)
 
-        timeSeriesLogger.trace(
+        timeSeriesLogger.trace {
             diagnosticContext.makeTimeSeriesPoint("REMB_BW", msg.receiveTime)
                 .addField("REMB_kbps", msg.bandwidth.kbps)
-        )
+        }
         return NetworkControlUpdate()
     }
 

@@ -185,11 +185,11 @@ class DelayBasedBwe(
             } else {
                 prevBitrate
             }
-            timeSeriesLogger.trace(
+            timeSeriesLogger.trace {
                 diagnosticContext.makeTimeSeriesPoint("bwe_update_delay_based", atTime)
                     .addField("bitrate_bps", bitrate.bps)
                     .addField("detector_state", detectorState.name)
-            )
+            }
 
             prevBitrate = bitrate
             prevState = detectorState

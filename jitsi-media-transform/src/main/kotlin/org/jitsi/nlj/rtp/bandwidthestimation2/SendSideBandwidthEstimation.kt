@@ -557,12 +557,12 @@ class SendSideBandwidthEstimation(
             lastFractionLoss != lastLoggedFractionLoss ||
             Duration.between(lastRtcEventLog, atTime) > kRtcEventLogPeriod
         ) {
-            timeSeriesLogger.trace(
+            timeSeriesLogger.trace {
                 diagnosticContext.makeTimeSeriesPoint("RtcEventBweUpdateLossBased", atTime)
                     .addField("currentTarget", currentTarget.bps)
                     .addField("lastFractionLoss", lastFractionLoss)
                     .addField("expectedPacketsSinceLastLossUpdate", expectedPacketsSinceLastLossUpdate)
-            )
+            }
             lastLoggedFractionLoss = lastFractionLoss
             lastLoggedTarget = currentTarget
             lastRtcEventLog = atTime

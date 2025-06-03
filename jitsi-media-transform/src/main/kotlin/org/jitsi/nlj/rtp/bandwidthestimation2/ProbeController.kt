@@ -589,13 +589,13 @@ class ProbeController(
 
         private fun maybeLogProbeClusterCreated(diagnosticContext: DiagnosticContext, probe: ProbeClusterConfig) {
             val minDataSize = probe.targetDataRate * probe.targetDuration
-            timeSeriesLogger.trace(
+            timeSeriesLogger.trace {
                 diagnosticContext.makeTimeSeriesPoint("ProbeClusterCreated")
                     .addField("probe_id", probe.id)
                     .addField("probe_target_data_rate_bps", probe.targetDataRate.bps)
                     .addField("probe_target_probe_count", probe.targetProbeCount)
                     .addField("probe_min_data_size", minDataSize.bytes)
-            )
+            }
         }
     }
 }

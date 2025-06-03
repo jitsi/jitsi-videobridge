@@ -136,11 +136,11 @@ class ProbeBitrateEstimator(
             check(sendRate > receiveRate)
             res = kTargetUtilizationFraction * receiveRate
         }
-        timeSeriesLogger.trace(
+        timeSeriesLogger.trace {
             diagnosticContext.makeTimeSeriesPoint("probe_result_success")
                 .addField("id", clusterId)
                 .addField("bitrate_bps", res.bps)
-        )
+        }
         estimatedDataRate = res
         return estimatedDataRate
     }

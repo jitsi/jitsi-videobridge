@@ -122,11 +122,11 @@ class TrendlineEstimator(
                 }
             }
         }
-        timeSeriesLogger.trace(
+        timeSeriesLogger.trace {
             diagnosticContext.makeTimeSeriesPoint("trendline_updated")
                 .addField("accumulated_delay_ms", accumulatedDelay)
                 .addField("smoothed_delay_ms", smoothedDelay)
-        )
+        }
 
         detect(trend, sendDeltaMs, arrivalTimeMs)
     }
@@ -163,11 +163,11 @@ class TrendlineEstimator(
         }
         val modifiedTrend = min(numOfDeltas, kMinNumDeltas) * trend * thresholdGain
         prevModifiedTrend = modifiedTrend
-        timeSeriesLogger.trace(
+        timeSeriesLogger.trace {
             diagnosticContext.makeTimeSeriesPoint("trendline_detect", nowMs)
                 .addField("trend", modifiedTrend)
                 .addField("threshold", threshold)
-        )
+        }
         if (modifiedTrend > threshold) {
             if (timeOverUsing == -1.0) {
                 // Initialize the timer. Assume that we've been
