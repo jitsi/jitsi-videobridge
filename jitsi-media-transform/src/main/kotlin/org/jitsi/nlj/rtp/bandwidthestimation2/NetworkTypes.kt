@@ -100,21 +100,11 @@ class NetworkRouteChange(
 data class PacedPacketInfo(
     val probeClusterId: Int = kNotAProbe,
     val probeClusterMinProbes: Int = -1,
-    val probeClusterMinBytes: Int = -1
+    val probeClusterMinBytes: Int = -1,
+    var sendBitrate: Bandwidth = 0.bps
 ) {
     // TODO(srte): Move probing info to a separate, optional struct.
-    var sendBitrate = 0.bps
     var probeClusterBytesSent = 0
-
-    override operator fun equals(other: Any?): Boolean {
-        if (other !is PacedPacketInfo) {
-            return false
-        }
-        return sendBitrate == other.sendBitrate &&
-            probeClusterId == other.probeClusterId &&
-            probeClusterMinProbes == other.probeClusterMinProbes &&
-            probeClusterMinBytes == other.probeClusterMinBytes
-    }
 
     companion object {
         const val kNotAProbe = -1
@@ -175,7 +165,7 @@ class PacketResult(
 ) {
     fun isReceived() = receiveTime.isFinite()
 
-    fun copy(): PacketResult = PacketResult(sentPacket.copy(), receiveTime)
+    fun copy(): PacketResult = PacketResult(sentPacket.copy(), receiveTime, previouslyReportedLost)
 }
 
 /**
