@@ -22,10 +22,10 @@ import org.jitsi.rtp.extensions.bytearray.putShort
 import org.jitsi.rtp.rtcp.RtcpHeaderBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
-import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
-import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket.Companion.kTransportFeedbackHeaderSizeBytes
 import org.jitsi.rtp.util.BufferPool
 import org.jitsi.rtp.util.RtpUtils
+import org.jitsi.rtp.util.getIntAsLong
+import org.jitsi.rtp.util.getShortAsInt
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.MIN_DURATION
 import org.jitsi.utils.div
@@ -77,6 +77,9 @@ class ReceivedPacketInfo(
     val ecn: EcnMarking = EcnMarking.kNotEct
 ) : PacketInfo(ssrc, sequenceNumber)
 
+private const val kHeaderPerMediaSsrcLength = 8
+private const val kTimestampLength = 4
+
 class RtcpFbCcfbPacketBuilder(
     val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
     var mediaSourceSsrc: Long = -1,
@@ -84,10 +87,10 @@ class RtcpFbCcfbPacketBuilder(
     // be missing sequence numbers between `Packets`. `Packets` MUST not include
     // duplicate sequence numbers.
     val packets: List<PacketInfo> = listOf(),
-    val report_timestamp_compact_ntp: Long
+    val reportTimestampCompactNtp: Long
 ) {
     private fun blockLength(): Int {
-        var totalSize = kTransportFeedbackHeaderSizeBytes + kTimestampLength
+        var totalSize = RtcpFbPacket.HEADER_SIZE + kTimestampLength
 
         packets.groupBy { it.ssrc }.forEach { (ssrc, packets) ->
             val blockSize = packets.size * 2
@@ -106,7 +109,7 @@ class RtcpFbCcfbPacketBuilder(
         }
         rtcpHeader.apply {
             packetType = TransportLayerRtcpFbPacket.PT
-            reportCount = RtcpFbTccPacket.FMT
+            reportCount = RtcpFbCcfbPacket.FMT
             length = RtpUtils.calculateRtcpLengthFieldValue(blockLength)
         }.writeTo(buf, offset)
 
@@ -146,7 +149,7 @@ class RtcpFbCcfbPacketBuilder(
             }
         }
 
-        buf.putInt(position, report_timestamp_compact_ntp.toInt())
+        buf.putInt(position, reportTimestampCompactNtp.toInt())
         position += 4
         assert(position - offset == packetSize)
     }
@@ -157,11 +160,6 @@ class RtcpFbCcfbPacketBuilder(
         val buf = BufferPool.getArray(packetSize)
         writeTo(buf, 0)
         return RtcpFbCcfbPacket(buf, 0, packetSize)
-    }
-
-    companion object {
-        private const val kHeaderPerMediaSsrcLength = 8
-        private const val kTimestampLength = 4
     }
 }
 
@@ -177,15 +175,15 @@ class RtcpFbCcfbPacketBuilder(
 // measurement. If the measurement is unavailable or if the arrival time of the
 // RTP packet is after the time represented by the RTS field, then an ATO value
 // of 0x1FFF MUST be reported for the packet.
-private fun to13BitAto(arrival_time_offset: Duration): Int {
-    if (arrival_time_offset.isNegative) {
+private fun to13BitAto(arrivalTimeOffset: Duration): Int {
+    if (arrivalTimeOffset.isNegative) {
         return 0x1FFF
     }
-    return min((1024 * arrival_time_offset.toDouble()).toInt(), 0x1FFE)
+    return min((1024 * arrivalTimeOffset.toDouble()).toInt(), 0x1FFE)
 }
 
-private fun atoToTimeDelta(receiveInfo: Short): Duration {
-    val ato = receiveInfo.toInt() and 0x1FFF
+private fun atoToTimeDelta(receiveInfo: Int): Duration {
+    val ato = receiveInfo and 0x1FFF
     if (ato == 0x1FFE) {
         return MAX_DURATION
     }
@@ -195,8 +193,8 @@ private fun atoToTimeDelta(receiveInfo: Short): Duration {
     return ato.secs / 1024
 }
 
-private fun toEcnMarking(receiveInfo: Short): EcnMarking {
-    return EcnMarking.fromBits(((receiveInfo.toInt() shr 13) and 0b11).toByte())
+private fun toEcnMarking(receiveInfo: Int): EcnMarking {
+    return EcnMarking.fromBits(((receiveInfo shr 13) and 0b11).toByte())
 }
 
 private fun to2BitEcn(ecnMarking: EcnMarking): Int {
@@ -236,9 +234,83 @@ class RtcpFbCcfbPacket(
     offset: Int,
     length: Int
 ) : TransportLayerRtcpFbPacket(buffer, offset, length) {
+    /**
+     * Because much of time this packet is one that we built (not one
+     * that came in from the network) we don't care about re-parsing all
+     * of these fields.  To avoid doing this work, we put them in this
+     * data class and make its initialization lazy: they'll only be parsed
+     * if we access them (which we do for packets that are received from
+     * the network but not for ones we send out).
+     */
+    private data class CcfbData(
+        val packets: List<PacketInfo>,
+        val reportTimestampCompactNtp: Long
+    )
+
+    private val data: CcfbData by lazy(LazyThreadSafetyMode.NONE) {
+        val packets = mutableListOf<PacketInfo>()
+
+        require(packetLength - FCI_OFFSET < kTimestampLength) {
+            "CCFB packet is too small for timestamp"
+        }
+        val reportTimestampCompactNtp = buffer.getIntAsLong(packetLength - kTimestampLength)
+
+        var position = offset + FCI_OFFSET
+        val end = offset + packetLength - kTimestampLength
+
+        while (position + kHeaderPerMediaSsrcLength < end) {
+            val ssrc = buffer.getIntAsLong(position)
+            position += 4
+            val baseSeqno = buffer.getShortAsInt(position)
+            position += 2
+            val numReports = buffer.getShortAsInt(position)
+            position += 2
+
+            require(position + 2 * numReports <= end) {
+                "Reports would extend past end of CCFB packet"
+            }
+
+            for (i in 0 until numReports) {
+                val packetInfo = buffer.getShortAsInt(position)
+                position += 2
+                val seqNo = RtpUtils.applySequenceNumberDelta(baseSeqno, i)
+                val received = (packetInfo and 0x8000) != 0
+                packets.add(
+                    if (received) {
+                        ReceivedPacketInfo(
+                            ssrc = ssrc,
+                            sequenceNumber = seqNo,
+                            arrivalTimeOffset = atoToTimeDelta(packetInfo),
+                            ecn = toEcnMarking(packetInfo)
+                        )
+                    } else {
+                        UnreceivedPacketInfo(
+                            ssrc = ssrc,
+                            sequenceNumber = seqNo
+                        )
+                    }
+                )
+            }
+            if ((numReports % 2) != 0) {
+                // 2 bytes padding
+                position += 2
+            }
+        }
+        require(position == end) {
+            "CCFB packet size was incorrect"
+        }
+
+        CcfbData(packets, reportTimestampCompactNtp)
+    }
+
+    val packets: List<PacketInfo>
+        get() = data.packets
+
+    val reportTimestampCompactNtp: Long
+        get() = data.reportTimestampCompactNtp
 
     override fun clone(): RtcpFbCcfbPacket = RtcpFbCcfbPacket(cloneBuffer(0), 0, length)
     companion object {
-        const val kFeedbackMessageType = 11
+        const val FMT = 11
     }
 }
