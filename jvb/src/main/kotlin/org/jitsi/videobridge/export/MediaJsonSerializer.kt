@@ -25,6 +25,7 @@ import org.jitsi.mediajson.StartEvent
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.RtpTimestampIndexTracker
+import org.jitsi.utils.logging2.createLogger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -49,12 +50,14 @@ class MediaJsonSerializer(
     /** Global sequence number for all events */
     var seq = 0
 
+    val logger = createLogger()
     fun encode(p: AudioRtpPacket, epId: String) = synchronized(ssrcsStarted) {
         val state = ssrcsStarted.computeIfAbsent(p.ssrc) { ssrc ->
             SsrcState(
                 p.timestamp,
                 (Duration.between(ref, Clock.systemUTC().instant()).toNanos() * 48.0e-6).toLong()
             ).also {
+                logger.info("Starting SSRC $ssrc for endpoint $epId ")
                 handleEvent(createStart(epId, ssrc))
             }
         }

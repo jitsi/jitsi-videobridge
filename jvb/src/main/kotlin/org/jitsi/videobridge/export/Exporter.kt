@@ -15,106 +15,91 @@
  */
 package org.jitsi.videobridge.export
 
+import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.format.OpusPayloadType
-import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.PacketInfoQueue
-import org.jitsi.utils.logging2.createLogger
-import org.jitsi.videobridge.PotentialPacketHandler
-import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
-import org.jitsi.xmpp.extensions.colibri2.Connect
+import java.net.URI
 
-class Exporter : PotentialPacketHandler {
-    val logger = createLogger()
-    var started = false
-    val queue = PacketInfoQueue(
-        "${javaClass.simpleName}-packet-queue",
-        TaskPools.IO_POOL,
-        this::doHandlePacket,
-        1024
-    )
+internal class Exporter(private val url: URI, val logger: Logger) {
+    val queue: PacketInfoQueue by lazy {
+        PacketInfoQueue(
+            "${javaClass.simpleName}-packet-queue",
+            TaskPools.IO_POOL,
+            this::doHandlePacket,
+            1024
+        )
+    }
+    private val recorderWebSocket = object : WebSocketAdapter() {
+        override fun onWebSocketClose(statusCode: Int, reason: String?) =
+            super.onWebSocketClose(statusCode, reason).also {
+                logger.info("Websocket closed with status $statusCode, reason: $reason")
+            }
 
-    private var wsNotConnectedErrors = 0
-    private fun logWsNotConnectedError(): Boolean = (wsNotConnectedErrors++ % 1000) == 0
+        override fun onWebSocketConnect(session: Session?) = super.onWebSocketConnect(session).also {
+            logger.info("Websocket connected: $isConnected")
+        }
+
+        override fun onWebSocketError(cause: Throwable?) = super.onWebSocketError(cause).also {
+            logger.error("Websocket error", cause)
+            webSocketFailures.inc()
+        }
+    }
+
     private val serializer = MediaJsonSerializer {
         if (recorderWebSocket.isConnected) {
             recorderWebSocket.remote?.sendString(it.toJson())
-                ?: logger.info("Websocket is connected, but remote is null")
-        } else if (logWsNotConnectedError()) {
-            logger.info("Can not send packet, websocket is not connected (count=$wsNotConnectedErrors).")
+                ?: logger.warn("Websocket is connected, but remote is null")
+        } else {
+            logger.warn("Not connected, cannot send event: $it")
         }
     }
-    private var recorderWebSocket = WebSocketAdapter()
 
-    fun setConnects(connects: List<Connect>) {
-        when {
-            started && connects.isNotEmpty() -> throw FeatureNotImplementedException("Changing connects once enabled.")
-            connects.isEmpty() -> stop()
-            connects.size > 1 -> throw FeatureNotImplementedException("Multiple connects")
-            connects[0].video -> throw FeatureNotImplementedException("Video")
-            else -> start(connects[0])
-        }
-    }
+    fun isConnected() = recorderWebSocket.isConnected
 
     /** Run inside the queue thread, handle a packet. */
     private fun doHandlePacket(packet: PacketInfo): Boolean {
-        if (started) {
+        if (recorderWebSocket.isConnected) {
             serializer.encode(packet.packetAs(), packet.endpointId!!)
         }
         ByteBufferPool.returnBuffer(packet.packet.buffer)
         return true
     }
 
-    /** Whether we want to accept a packet. */
-    override fun wants(packet: PacketInfo): Boolean {
-        if (!started || packet.packet !is AudioRtpPacket) return false
-        if (packet.payloadType !is OpusPayloadType) {
-            logger.warn("Ignore audio with unsupported payload type: ${packet.payloadType}")
-            return false
-        }
-        return true
-    }
-
-    /** Accept a packet, add it to the queue. */
-    override fun send(packet: PacketInfo) {
-        if (started) {
+    fun send(packet: PacketInfo) {
+        if (recorderWebSocket.isConnected) {
             queue.add(packet)
         } else {
             ByteBufferPool.returnBuffer(packet.packet.buffer)
         }
     }
 
+    fun start() {
+        webSocketClient.connect(recorderWebSocket, url, ClientUpgradeRequest())
+    }
+
     fun stop() {
-        started = false
-        logger.info("Stopping.")
         recorderWebSocket.session?.close(org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN, "closing")
+        recorderWebSocket.session?.disconnect()
         queue.close()
     }
 
-    fun start(connect: Connect) {
-        if (connect.video) throw FeatureNotImplementedException("Video")
-        if (connect.protocol != Connect.Protocols.MEDIAJSON) {
-            throw FeatureNotImplementedException("Protocol ${connect.protocol}")
-        }
-        if (connect.type != Connect.Types.RECORDER) {
-            throw FeatureNotImplementedException("Type ${connect.type}")
-        }
-
-        logger.info("Starting with url=${connect.url}")
-        webSocketClient.connect(recorderWebSocket, connect.url, ClientUpgradeRequest())
-        started = true
-    }
-
     companion object {
-        val webSocketClient = WebSocketClient().apply {
+        private val webSocketClient = WebSocketClient().apply {
             idleTimeout = WebsocketServiceConfig.config.idleTimeout
             start()
         }
+
+        private val webSocketFailures = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_websocket_failures",
+            "Number of websocket connection failures from Exporter"
+        )
     }
 }

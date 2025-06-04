@@ -186,7 +186,7 @@ public class Conference
     private final String meetingId;
 
     @NotNull
-    private final Exporter exporter = new Exporter();
+    private final ExporterWrapper exporter;
 
     /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
@@ -224,6 +224,7 @@ public class Conference
         }
 
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
+        exporter = new ExporterWrapper(logger);
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
