@@ -50,7 +50,7 @@ class TransportCcEngineTest : FunSpec() {
         }
     }
 
-    private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger, clock).also {
+    private val transportCcEngine = ClassicTransportCcEngine(bandwidthEstimator, logger, clock).also {
         it.addLossListener(lossListener)
     }
 

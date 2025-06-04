@@ -24,8 +24,8 @@ import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.LossListener
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.transform.NodeDebugStateVisitor
@@ -134,7 +134,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, logger)
     private val retransmissionRequester = RetransmissionRequesterNode(rtcpSender, backgroundExecutor, logger)
     private val rembHandler = RembHandler(streamInformationStore, logger).apply {
-        addListener(object : BandwidthEstimator.Listener {
+        addListener(object : TransportCcEngine.BandwidthListener {
             override fun bandwidthEstimationChanged(newValue: Bandwidth) {
                 eventHandler.bandwidthEstimationChanged(newValue)
             }

@@ -40,6 +40,7 @@ import org.jitsi.rtp.util.get3BytesAsInt
 import org.jitsi.rtp.util.getByteAsInt
 import org.jitsi.rtp.util.getShortAsInt
 import org.jitsi.utils.micros
+import org.jitsi.utils.roundUpTo
 import org.jitsi.utils.times
 import org.jitsi.utils.toEpochMicro
 import org.jitsi.utils.toMicros
@@ -108,8 +109,12 @@ class RtcpFbTccPacketBuilder(
         last_timestamp_ = BaseTime()
     }
 
-    fun AddReceivedPacket(seqNum: Int, timestamp: Instant): Boolean {
+    fun AddReceivedPacket(seqNum: Int, timestampIn: Instant): Boolean {
         val sequence_number = seqNum.toRtpSequenceNumber()
+        var timestamp = timestampIn
+        if (last_timestamp_ > timestamp) {
+            timestamp += Duration.between(timestamp, last_timestamp_).roundUpTo(kTimeWrapPeriod)
+        }
         var delta_full = Duration.between(last_timestamp_, timestamp).toMicros() % kTimeWrapPeriod.toMicros()
         if (delta_full > kTimeWrapPeriod.toMicros() / 2) {
             delta_full -= kTimeWrapPeriod.toMicros()
@@ -424,8 +429,23 @@ class RtcpFbTccPacket(
 
     val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
+    fun GetPacketStatusCount(): Int {
+        return num_seq_no_
+    }
+
     fun BaseTime(): Instant {
         return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
+    }
+
+    fun GetBaseDelta(prev_timestamp: Instant): Duration {
+        var delta = Duration.between(prev_timestamp, BaseTime())
+        // Compensate for wrap around
+        if ((delta - kTimeWrapPeriod).abs() < delta.abs()) {
+            delta -= kTimeWrapPeriod
+        } else if ((delta + kTimeWrapPeriod).abs() < delta.abs()) {
+            delta += kTimeWrapPeriod
+        }
+        return delta
     }
 
     override fun iterator(): Iterator<PacketReport> = packets_.iterator()

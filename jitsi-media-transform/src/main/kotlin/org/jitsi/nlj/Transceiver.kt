@@ -19,7 +19,7 @@ import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -139,8 +139,8 @@ class Transceiver(
         )
 
     init {
-        rtpSender.bandwidthEstimator.addListener(
-            object : BandwidthEstimator.Listener {
+        rtpSender.addBandwidthListener(
+            object : TransportCcEngine.BandwidthListener {
                 override fun bandwidthEstimationChanged(newValue: Bandwidth) {
                     eventHandler.bandwidthEstimationChanged(newValue)
                 }
@@ -341,7 +341,6 @@ class Transceiver(
             rtpReceiver.getStats(),
             rtpSender.getStreamStats(),
             rtpSender.getPacketStreamStats(),
-            rtpSender.bandwidthEstimator.getStats(clock.instant()),
             rtpSender.getTransportCcEngineStats()
         )
     }
