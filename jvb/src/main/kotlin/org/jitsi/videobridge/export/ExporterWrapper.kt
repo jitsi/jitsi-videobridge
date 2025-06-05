@@ -70,9 +70,6 @@ class ExporterWrapper(parentLogger: Logger) : PotentialPacketHandler {
         if (connect.protocol != Connect.Protocols.MEDIAJSON) {
             throw FeatureNotImplementedException("Protocol ${connect.protocol}")
         }
-        if (connect.type != Connect.Types.RECORDER) {
-            throw FeatureNotImplementedException("Type ${connect.type}")
-        }
 
         logger.info("Starting with url=${connect.url}")
         if (exporter != null) {
