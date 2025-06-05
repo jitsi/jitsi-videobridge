@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 
 public interface PotentialPacketHandler
@@ -26,11 +27,11 @@ public interface PotentialPacketHandler
      * @param packet the RTP/RTCP packet
      * @return true if this handler wants the given packet, false otherwise
      */
-    boolean wants(PacketInfo packet);
+    boolean wants(@NotNull PacketInfo packet);
 
     /**
      * Send the given RTP/RTCP 'packet' (which came from 'source')
      * @param packet the RTP/RTCP packet
      */
-    void send(PacketInfo packet);
+    void send(@NotNull PacketInfo packet);
 }
