@@ -59,7 +59,8 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = SourceVideoTypeMessage::class, name = SourceVideoTypeMessage.TYPE),
     JsonSubTypes.Type(value = ConnectionStats::class, name = ConnectionStats.TYPE),
-    JsonSubTypes.Type(value = VideoTypeMessage::class, name = VideoTypeMessage.TYPE)
+    JsonSubTypes.Type(value = VideoTypeMessage::class, name = VideoTypeMessage.TYPE),
+    JsonSubTypes.Type(value = ReceiverAudioSubscriptionMessage::class, name = ReceiverAudioSubscriptionMessage.TYPE)
 )
 sealed class BridgeChannelMessage {
     private val jsonCacheDelegate = ResettableLazy { createJson() }
@@ -124,6 +125,7 @@ open class MessageHandler {
             is SourceVideoTypeMessage -> sourceVideoType(message)
             is ConnectionStats -> connectionStats(message)
             is VideoTypeMessage -> videoType(message)
+            is ReceiverAudioSubscriptionMessage -> receiverAudioSubscription(message)
         }
     }
 
@@ -150,6 +152,7 @@ open class MessageHandler {
     open fun sourceVideoType(message: SourceVideoTypeMessage) = unhandledMessageReturnNull(message)
     open fun connectionStats(message: ConnectionStats) = unhandledMessageReturnNull(message)
     open fun videoType(message: VideoTypeMessage) = unhandledMessageReturnNull(message)
+    open fun receiverAudioSubscription(message: ReceiverAudioSubscriptionMessage) = unhandledMessageReturnNull(message)
 
     fun getReceivedCounts() = receivedCounts.mapValues { it.value.get() }
 }
@@ -475,6 +478,14 @@ class SourceVideoTypeMessage(
 
     companion object {
         const val TYPE = "SourceVideoTypeMessage"
+    }
+}
+
+class ReceiverAudioSubscriptionMessage(
+    val sourceNames: List<String>
+) : BridgeChannelMessage() {
+    companion object {
+        const val TYPE = "ReceiverAudioSubscriptionMessage"
     }
 }
 
