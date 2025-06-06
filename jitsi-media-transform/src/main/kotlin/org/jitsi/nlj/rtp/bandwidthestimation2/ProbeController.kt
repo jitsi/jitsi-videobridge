@@ -542,7 +542,6 @@ class ProbeController(
             maxProbeBitrate = min(maxProbeBitrate, maxTotalAllocatedBitrate * 2)
         }
 
-        var estimateCappedBitrate = Bandwidth.INFINITY
         when (bandwidthLimitedCause) {
             BandwidthLimitedCause.kRttBasedBackOffHighRtt,
             BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased,
@@ -551,7 +550,7 @@ class ProbeController(
                 return mutableListOf()
             }
             BandwidthLimitedCause.kLossLimitedBweIncreasing ->
-                estimateCappedBitrate =
+                maxProbeBitrate =
                     min(maxProbeBitrate, estimatedBitrate * config.lossLimitedProbeScale)
             BandwidthLimitedCause.kDelayBasedLimited ->
                 Unit
@@ -564,8 +563,8 @@ class ProbeController(
         val pendingProbes = mutableListOf<ProbeClusterConfig>()
         for (b in bitratesToProbe) {
             assert(b != Bandwidth.ZERO)
-            var bitrate = min(b, estimateCappedBitrate)
-            if (bitrate > maxProbeBitrate) {
+            var bitrate = b
+            if (bitrate >= maxProbeBitrate) {
                 bitrate = maxProbeBitrate
                 probeFurther = false
             }
@@ -577,7 +576,7 @@ class ProbeController(
             updateState(State.kWaitingForProbingResult)
             // Dont expect probe results to be larger than a fraction of the actual
             // probe rate.
-            minBitrateToProbeFurther = min(estimateCappedBitrate, bitratesToProbe.last() * config.furtherProbeThreshold)
+            minBitrateToProbeFurther = pendingProbes.last().targetDataRate * config.furtherProbeThreshold
         } else {
             updateState(State.kProbingComplete)
         }

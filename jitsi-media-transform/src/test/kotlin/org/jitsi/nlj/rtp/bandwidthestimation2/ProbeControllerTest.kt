@@ -863,41 +863,6 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
         }
 
-        "ProbeFurtherInAlrIfLossBasedIncreasing" {
-            val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig()
-            )
-            val probeController = fixture.createController()
-            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
-            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
-            probeController.enablePeriodicAlrProbing(true)
-            probes = probeController.setEstimatedBitrate(
-                kStartBitrate,
-                BandwidthLimitedCause.kLossLimitedBweIncreasing,
-                fixture.currentTime()
-            )
-
-            // Wait long enough to time out exponential probing.
-            fixture.advanceTime(kExponentialProbingTimeout)
-            probes = probeController.process(fixture.currentTime())
-            probes.isEmpty() shouldBe true
-
-            // Probe when in alr.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
-            fixture.advanceTime(kAlrProbeInterval + 1.ms)
-            probes = probeController.process(fixture.currentTime())
-            probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
-
-            probes = probeController.setEstimatedBitrate(
-                1.5 * kStartBitrate,
-                BandwidthLimitedCause.kLossLimitedBweIncreasing,
-                fixture.currentTime()
-            )
-            probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe 1.5 * 1.5 * kStartBitrate
-        }
-
         "NotProbeWhenInAlrIfLossBasedDecreases" {
             val fixture = ProbeControllerFixture(
                 config = ProbeControllerConfig()
@@ -954,7 +919,8 @@ class ProbeControllerTest : FreeSpec() {
          * "ProbeIfEstimateLowerThanNetworkStateEstimate",
          * "DontProbeFurtherWhenLossLimited",
          * "ProbeFurtherWhenDelayBasedLimited",
-         * "ProbeFurtherIfNetworkStateEstimateIncreaseAfterProbeSent",
+         * "ProbeAfterTimeoutIfNetworkStateEstimateIncreaseAfterProbeSent",
+         * "SkipProbeFurtherIfAlreadyProbedToMaxRate"
          */
 
         "MaxAllocatedBitrateNotReset" {
