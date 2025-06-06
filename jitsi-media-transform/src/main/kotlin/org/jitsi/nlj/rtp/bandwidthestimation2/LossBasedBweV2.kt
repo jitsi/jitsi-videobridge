@@ -719,6 +719,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         return numLostPackets / numPackets
     }
 
+    // Calculates the average loss ratio over the last `observation_window_size`
+    // observations but skips the observation with min and max loss ratio in order
+    // to filter out loss spikes.
     private fun getAverageReportedByteLossRatio(): Double {
         if (numObservations <= 0) {
             return 0.0
@@ -726,17 +729,43 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         var totalBytes = DataSize.ZERO
         var lostBytes = DataSize.ZERO
+        var minLossRate = 1.0
+        var maxLossRate = 0.0
+        var minLostBytes = DataSize.ZERO
+        var maxLostBytes = DataSize.ZERO
+        var minBytesReceived = DataSize.ZERO
+        var maxBytesReceived = DataSize.ZERO
+
         for (observation in observations) {
             if (!observation.isInitialized()) {
                 continue
             }
 
             val instantTemporalWeight =
-                instantUpperBoundTemporalWeights[(numObservations - 1)] - observation.id
+                instantUpperBoundTemporalWeights[(numObservations - 1) - observation.id]
             totalBytes += observation.size * instantTemporalWeight
             lostBytes += observation.lostSize * instantTemporalWeight
+
+            val lossRate = if (observation.size != DataSize.ZERO) {
+                observation.lostSize / observation.size
+            } else {
+                0.0
+            }
+            if (numObservations > 3) {
+                if (lossRate > maxLossRate) {
+                    maxLossRate = lossRate
+                    maxLostBytes = instantTemporalWeight * observation.lostSize
+                    maxBytesReceived = instantTemporalWeight * observation.size
+                }
+                if (lossRate < minLossRate) {
+                    minLossRate = lossRate
+                    minLostBytes = instantTemporalWeight * observation.lostSize
+                    minBytesReceived = instantTemporalWeight * observation.size
+                }
+            }
         }
-        return lostBytes / totalBytes
+        return (lostBytes - minLostBytes - maxLostBytes) /
+            (totalBytes - maxBytesReceived - minBytesReceived)
     }
 
     private fun getCandidateBandwidthUpperBound(): Bandwidth {

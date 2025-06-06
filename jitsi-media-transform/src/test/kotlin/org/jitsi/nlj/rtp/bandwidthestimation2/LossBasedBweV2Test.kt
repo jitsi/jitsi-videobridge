@@ -1584,6 +1584,51 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan 150.kbps
         }
 
+        "UseByteLossRateIgnoreLossSpike" {
+            val config = LossBasedBweV2.Config(
+                useByteLossRate = true,
+                observationWindowSize = 5
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val kDelayBasedEstimate = 500.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(kDelayBasedEstimate)
+
+            // Fill the observation window
+            for (i in 0 until 5) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWithReceivedPackets(
+                        firstPacketTimestamp = Instant.EPOCH + i * kObservationDurationLowerBound
+                    ),
+                    delayBasedEstimate = kDelayBasedEstimate,
+                    inAlr = false
+                )
+            }
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith100pLossRate(Instant.EPOCH + 5 * kObservationDurationLowerBound),
+                delayBasedEstimate = kDelayBasedEstimate,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWithReceivedPackets(
+                    firstPacketTimestamp = Instant.EPOCH + 6 * kObservationDurationLowerBound
+                ),
+                delayBasedEstimate = kDelayBasedEstimate,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBe kDelayBasedEstimate
+
+            // But if more loss happen in a new observation, BWE back down.
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith100pLossRate(
+                    firstPacketTimestamp = Instant.EPOCH + 7 * kObservationDurationLowerBound
+                ),
+                delayBasedEstimate = kDelayBasedEstimate,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan kDelayBasedEstimate
+        }
+
         "PaceAtLossBasedEstimate" {
             val config = shortObservationConfig(
                 LossBasedBweV2.Config(
