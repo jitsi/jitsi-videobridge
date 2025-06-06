@@ -66,16 +66,28 @@ enum class EcnMarking(val bits: Byte) {
 sealed class PacketInfo(
     val ssrc: Long = 0,
     val sequenceNumber: Int = 0
-)
+) {
+    override fun toString(): String {
+        return "ssrc=$ssrc, sequenceNumber=$sequenceNumber"
+    }
+}
 
-class UnreceivedPacketInfo(ssrc: Long = 0, sequenceNumber: Int = 0) : PacketInfo(ssrc, sequenceNumber)
+class UnreceivedPacketInfo(ssrc: Long = 0, sequenceNumber: Int = 0) : PacketInfo(ssrc, sequenceNumber) {
+    override fun toString(): String {
+        return "Unreceived: " + super.toString()
+    }
+}
 
 class ReceivedPacketInfo(
     ssrc: Long = 0,
     sequenceNumber: Int = 0,
-    val arrivalTimeOffset: Duration,
+    val arrivalTimeOffset: Duration = MIN_DURATION,
     val ecn: EcnMarking = EcnMarking.kNotEct
-) : PacketInfo(ssrc, sequenceNumber)
+) : PacketInfo(ssrc, sequenceNumber) {
+    override fun toString(): String {
+        return "Received: " + super.toString() + ", arrivalTimeOffset=$arrivalTimeOffset, ecn=$ecn"
+    }
+}
 
 private const val kHeaderPerMediaSsrcLength = 8
 private const val kTimestampLength = 4
@@ -117,12 +129,6 @@ class RtcpFbCcfbPacketBuilder(
         var position = offset + RtcpFbPacket.HEADER_SIZE
 
         packets.groupBy { it.ssrc }.forEach { (ssrc, packets) ->
-            check(
-                packets.size ==
-                    RtpUtils.getSequenceNumberDelta(packets.first().sequenceNumber, packets.last().sequenceNumber) + 1
-            ) {
-                "Expected continuous rtp sequence numbers"
-            }
             check(packets.size <= 16384) {
                 "Unexpected number of reports: ${packets.size}"
             }
@@ -130,12 +136,20 @@ class RtcpFbCcfbPacketBuilder(
             buf.putInt(position, ssrc.toInt())
             position += 4
 
-            buf.putShort(position, packets.first().sequenceNumber.toShort())
+            val beginSeq = packets.first().sequenceNumber
+            val numReports = packets.size
+
+            buf.putShort(position, beginSeq.toShort())
             position += 2
-            buf.putShort(position, packets.size.toShort())
+            buf.putShort(position, numReports.toShort())
             position += 2
 
-            packets.forEach { packet ->
+            packets.forEachIndexed { i, packet ->
+                val expectedSeq = RtpUtils.applySequenceNumberDelta(beginSeq, i)
+                check(packet.sequenceNumber == expectedSeq) {
+                    "Sequence number for report $i of $ssrc is wrong " +
+                        "(expected $expectedSeq == $beginSeq + $i, got ${packet.sequenceNumber})"
+                }
                 val packetInfo = if (packet is ReceivedPacketInfo) {
                     0x8000 or to2BitEcn(packet.ecn) or to13BitAto(packet.arrivalTimeOffset)
                 } else {
@@ -144,7 +158,7 @@ class RtcpFbCcfbPacketBuilder(
                 buf.putShort(position, packetInfo.toShort())
                 position += 2
             }
-            repeat(paddingBytes) {
+            repeat(RtpUtils.getNumPaddingBytes(2 * numReports)) {
                 buf[position++] = 0x00
             }
         }
@@ -250,7 +264,7 @@ class RtcpFbCcfbPacket(
     private val data: CcfbData by lazy(LazyThreadSafetyMode.NONE) {
         val packets = mutableListOf<PacketInfo>()
 
-        require(packetLength - FCI_OFFSET < kTimestampLength) {
+        require(packetLength - FCI_OFFSET >= kTimestampLength) {
             "CCFB packet is too small for timestamp"
         }
         val reportTimestampCompactNtp = buffer.getIntAsLong(packetLength - kTimestampLength)
