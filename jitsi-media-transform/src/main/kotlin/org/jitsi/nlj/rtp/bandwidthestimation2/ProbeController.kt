@@ -115,8 +115,11 @@ class ProbeControllerConfig(
     val minProbeDelta: Duration = 2.ms,
     val lossLimitedProbeScale: Double = 1.5,
     // Don't send a probe if min(estimate, network state estimate) is larger than
-    // this fraction of the set max bitrate.
+    // this fraction of the set max or max allocated bitrate.
     val skipIfEstimateLargerThanFractionOfMax: Double = 0.0,
+    // Scale factor of the max allocated bitrate. Used when deciding if a probe
+    // can be skiped due to that the estimate is already high enough.
+    val skipProbeMaxAllocatedScale: Double = 1.0,
 )
 
 /* Reason that bandwidth estimate is limited. Bandwidth estimate can be limited
@@ -523,7 +526,7 @@ class ProbeController(
             val maxProbeRate = if (maxTotalAllocatedBitrate == Bandwidth.ZERO) {
                 maxBitrate
             } else {
-                min(maxTotalAllocatedBitrate, maxBitrate)
+                min(config.skipProbeMaxAllocatedScale * maxTotalAllocatedBitrate, maxBitrate)
             }
             if (min(networkEstimate, estimatedBitrate) > config.skipIfEstimateLargerThanFractionOfMax * maxProbeRate) {
                 updateState(State.kProbingComplete)
