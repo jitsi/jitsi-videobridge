@@ -32,6 +32,8 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.ms
+import org.jitsi.utils.secs
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -336,6 +338,11 @@ class GoogCcTransportCcEngine(
         private val factory = GoogCcNetworkControllerFactory()
 
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(GoogCcTransportCcEngine::class.java)
+
+        /* Default config settings to use when this version of the Google transport CC estimator engine is used. */
+        val DEFAULT_RATE_TRACKER_WINDOW_SIZE = 1.secs
+        val DEFAULT_RATE_TRACKER_BUCKET_SIZE = 20.ms
+        val DEFAULT_INITIAL_IGNORE_BWE_PERIOD = Duration.ZERO
     }
 
     class StatisticsSnapshot(

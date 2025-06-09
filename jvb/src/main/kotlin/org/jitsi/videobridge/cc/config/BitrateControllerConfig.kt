@@ -20,6 +20,10 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.metaconfig.optionalconfig
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorEngine
+import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
+import org.jitsi.nlj.rtp.bandwidthestimation2.GoogCcTransportCcEngine
 import org.jitsi.nlj.util.Bandwidth
 import java.time.Duration
 
@@ -114,13 +118,24 @@ class BitrateControllerConfig private constructor() {
         "videobridge.cc.use-vla-target-bitrate".from(JitsiConfig.newConfig)
     }
 
+    private val _initialIgnoreBwePeriod: Duration? by optionalconfig(
+        "videobridge.cc.initial-ignore-bwe-period".from(JitsiConfig.newConfig)
+    )
+
+    /** The default initial ignore BWE period if not set in jvb.conf, based on the BWE algorithm in use.*/
+    private fun defaultInitialIgnoreBwePeriod(): Duration {
+        return when (BandwidthEstimatorConfig.engine) {
+            BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.DEFAULT_INITIAL_IGNORE_BWE_PERIOD
+            BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.DEFAULT_INITIAL_IGNORE_BWE_PERIOD
+        }
+    }
+
     /**
      * How long after first media to ignore bandwidth estimation.  Needed for BWE
      * algorithms that ramp up slowly; should be set to zero if this isn't a problem.
      */
-    val initialIgnoreBwePeriod: Duration by config(
-        "videobridge.cc.initial-ignore-bwe-period".from(JitsiConfig.newConfig)
-    )
+    val initialIgnoreBwePeriod: Duration
+        get() = _initialIgnoreBwePeriod ?: defaultInitialIgnoreBwePeriod()
 
     companion object {
         @JvmField
