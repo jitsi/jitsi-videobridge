@@ -137,7 +137,6 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
 
     companion object {
         /* Default config settings to use when the classic Google CC estimator engine is used. */
-        /* Default config settings to use when this version of the Google transport CC estimator engine is used. */
         val defaultRateTrackerWindowSize: Duration by config {
             "jmt.bwe.estimator.GoogleCc.default-window-size".from(JitsiConfig.newConfig)
         }
