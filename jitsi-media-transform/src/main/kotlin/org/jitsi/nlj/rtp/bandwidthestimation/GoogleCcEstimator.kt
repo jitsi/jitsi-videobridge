@@ -15,14 +15,14 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.jitsi.utils.ms
-import org.jitsi.utils.secs
 import org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateEstimatorAbsSendTime
 import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.SendSideBandwidthEstimation
 import java.time.Duration
@@ -137,8 +137,15 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
 
     companion object {
         /* Default config settings to use when the classic Google CC estimator engine is used. */
-        val DEFAULT_RATE_TRACKER_WINDOW_SIZE = 5.secs
-        val DEFAULT_RATE_TRACKER_BUCKET_SIZE = 100.ms
-        val DEFAULT_INITIAL_IGNORE_BWE_PERIOD = 10.secs
+        /* Default config settings to use when this version of the Google transport CC estimator engine is used. */
+        val defaultRateTrackerWindowSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-window-size".from(JitsiConfig.newConfig)
+        }
+        val defaultRateTrackerBucketSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-bucket-size".from(JitsiConfig.newConfig)
+        }
+        val defaultInitialIgnoreBwePeriod: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-initial-ignore-bwe-period".from(JitsiConfig.newConfig)
+        }
     }
 }

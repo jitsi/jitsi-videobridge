@@ -149,8 +149,8 @@ open class BitrateCalculator(
         /** The default bitrate calculator window size if not set in jvb.conf, based on the BWE algorithm in use.*/
         private fun defaultWindowSize(): Duration {
             return when (BandwidthEstimatorConfig.engine) {
-                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.DEFAULT_RATE_TRACKER_WINDOW_SIZE
-                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.DEFAULT_RATE_TRACKER_WINDOW_SIZE
+                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerBucketSize
+                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerWindowSize
             }
         }
 
@@ -167,8 +167,8 @@ open class BitrateCalculator(
         /** The default bitrate calculator bucket size if not set in jvb.conf, based on the BWE algorithm in use.*/
         private fun defaultBucketSize(): Duration {
             return when (BandwidthEstimatorConfig.engine) {
-                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.DEFAULT_RATE_TRACKER_BUCKET_SIZE
-                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.DEFAULT_RATE_TRACKER_BUCKET_SIZE
+                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerBucketSize
+                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerBucketSize
             }
         }
 
