@@ -157,6 +157,13 @@ public class EndpointMessageTransport
         return null;
     }
 
+    @Override public BridgeChannelMessage receiverAudioSubscription(ReceiverAudioSubscriptionMessage receiverAudioSubscriptionMessage)
+    {
+        getLogger().info("Received audio subscription: " + receiverAudioSubscriptionMessage);
+        // TODO: store the subscription somewhere
+        return null;
+    }
+
     @Override
     public void unhandledMessage(@NotNull BridgeChannelMessage message)
     {
