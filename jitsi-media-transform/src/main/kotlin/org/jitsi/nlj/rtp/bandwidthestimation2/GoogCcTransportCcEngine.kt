@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
@@ -336,6 +338,17 @@ class GoogCcTransportCcEngine(
         private val factory = GoogCcNetworkControllerFactory()
 
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(GoogCcTransportCcEngine::class.java)
+
+        /* Default config settings to use when this version of the Google transport CC estimator engine is used. */
+        val defaultRateTrackerWindowSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc2.default-window-size".from(JitsiConfig.newConfig)
+        }
+        val defaultRateTrackerBucketSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc2.default-bucket-size".from(JitsiConfig.newConfig)
+        }
+        val defaultInitialIgnoreBwePeriod: Duration by config {
+            "jmt.bwe.estimator.GoogleCc2.default-initial-ignore-bwe-period".from(JitsiConfig.newConfig)
+        }
     }
 
     class StatisticsSnapshot(

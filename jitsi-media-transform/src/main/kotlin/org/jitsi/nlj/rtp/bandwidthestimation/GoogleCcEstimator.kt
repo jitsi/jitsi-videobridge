@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
@@ -131,5 +133,18 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
         sendSideBandwidthEstimation.reset(initBw.bps)
 
         sendSideBandwidthEstimation.setMinMaxBitrate(minBw.bps.toInt(), maxBw.bps.toInt())
+    }
+
+    companion object {
+        /* Default config settings to use when the classic Google CC estimator engine is used. */
+        val defaultRateTrackerWindowSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-window-size".from(JitsiConfig.newConfig)
+        }
+        val defaultRateTrackerBucketSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-bucket-size".from(JitsiConfig.newConfig)
+        }
+        val defaultInitialIgnoreBwePeriod: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-initial-ignore-bwe-period".from(JitsiConfig.newConfig)
+        }
     }
 }
