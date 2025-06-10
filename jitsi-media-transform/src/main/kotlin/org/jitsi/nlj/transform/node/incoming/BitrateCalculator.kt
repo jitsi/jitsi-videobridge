@@ -149,7 +149,7 @@ open class BitrateCalculator(
         /** The default bitrate calculator window size if not set in jvb.conf, based on the BWE algorithm in use.*/
         private fun defaultWindowSize(): Duration {
             return when (BandwidthEstimatorConfig.engine) {
-                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerBucketSize
+                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerWindowSize
                 BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerWindowSize
             }
         }
