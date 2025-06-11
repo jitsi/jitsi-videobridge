@@ -109,7 +109,7 @@ class ProbeControllerConfig(
     val probeOnMaxAllocatedBitrateChange: Boolean = true,
     val firstAllocationProbeScale: Double? = 1.0,
     val secondAllocationProbeScale: Double? = 2.0,
-    val allocationProbeLimitByCurrentScale: Double? = null,
+    val allocationProbeLimitByCurrentScale: Double = 2.0,
 
     // The minimum number probing packets used.
     val minProbePacketsSent: Int = 5,
@@ -240,11 +240,9 @@ class ProbeController(
                 return mutableListOf()
             }
             var firstProbeRate = maxTotalAllocatedBitrate * config.firstAllocationProbeScale
-            val currentBweLimit = if (config.allocationProbeLimitByCurrentScale == null) {
-                Bandwidth.INFINITY
-            } else {
-                estimatedBitrate * config.allocationProbeLimitByCurrentScale
-            }
+            val currentBweLimit =
+                config.allocationProbeLimitByCurrentScale *
+                    estimatedBitrate
             var limitedByCurrentBwe = currentBweLimit < firstProbeRate
             if (limitedByCurrentBwe) {
                 firstProbeRate = currentBweLimit

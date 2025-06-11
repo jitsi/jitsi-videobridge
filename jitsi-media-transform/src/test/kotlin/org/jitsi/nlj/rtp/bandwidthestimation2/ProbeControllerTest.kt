@@ -208,11 +208,7 @@ class ProbeControllerTest : FreeSpec() {
         }
 
         "ProbesOnMaxAllocatedBitrateLimitedByCurrentBwe" {
-            val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    allocationProbeLimitByCurrentScale = 1.5
-                )
-            )
+            val fixture = ProbeControllerFixture()
             kMaxBitrate shouldBeGreaterThan 1.5 * kStartBitrate
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
@@ -232,7 +228,7 @@ class ProbeControllerTest : FreeSpec() {
             probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
             probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
+            probes[0].targetDataRate shouldBe 2.0 * kStartBitrate
 
             // Continue probing if probe succeeds.
             probes = probeController.setEstimatedBitrate(
@@ -241,7 +237,7 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBeGreaterThan 1.5 * kStartBitrate
+            probes[0].targetDataRate shouldBeGreaterThan 2.0 * kStartBitrate
         }
 
         "CanDisableProbingOnMaxTotalAllocatedBitrateIncrease" {
@@ -750,6 +746,7 @@ class ProbeControllerTest : FreeSpec() {
                     furtherExponentialProbeScale = 3.0,
                     furtherProbeThreshold = 0.8,
                     firstAllocationProbeScale = 2.0,
+                    allocationProbeLimitByCurrentScale = 1000.0,
                     secondAllocationProbeScale = null,
                     minProbePacketsSent = 2
                 )
