@@ -129,16 +129,21 @@ private fun createPacketResultsWith50pPacketLossRate(firstPacketTimestamp: Insta
     return enoughFeedback
 }
 
-private fun createPacketResultsWith100pLossRate(firstPacketTimestamp: Instant): List<PacketResult> {
-    val enoughFeedback = List(2) { PacketResult() }
-    enoughFeedback[0].sentPacket.sequenceNumber = transportSequenceNumber++
-    enoughFeedback[1].sentPacket.sequenceNumber = transportSequenceNumber++
-    enoughFeedback[0].sentPacket.size = kPacketSize.bytes
-    enoughFeedback[1].sentPacket.size = kPacketSize.bytes
-    enoughFeedback[0].sentPacket.sendTime = firstPacketTimestamp
-    enoughFeedback[1].sentPacket.sendTime = firstPacketTimestamp + kObservationDurationLowerBound
-    enoughFeedback[0].receiveTime = NEVER
-    enoughFeedback[1].receiveTime = NEVER
+private fun createPacketResultsWith100pLossRate(
+    firstPacketTimestamp: Instant,
+    numPackets: Int = 2
+): List<PacketResult> {
+    val enoughFeedback = List(numPackets) { PacketResult() }
+    for (i in 0 until numPackets - 1) {
+        enoughFeedback[i].sentPacket.sequenceNumber = transportSequenceNumber++
+        enoughFeedback[i].sentPacket.size = kPacketSize.bytes
+        enoughFeedback[i].sentPacket.sendTime = firstPacketTimestamp + (i * 10).ms
+        enoughFeedback[i].receiveTime = NEVER
+    }
+    enoughFeedback[numPackets - 1].sentPacket.sequenceNumber = transportSequenceNumber++
+    enoughFeedback[numPackets - 1].sentPacket.size = kPacketSize.bytes
+    enoughFeedback[numPackets - 1].sentPacket.sendTime = firstPacketTimestamp + kObservationDurationLowerBound
+    enoughFeedback[numPackets - 1].receiveTime = NEVER
     return enoughFeedback
 }
 
@@ -1621,6 +1626,40 @@ class LossBasedBweV2Test : FreeSpec() {
             lossBasedBandwidthEstimator.updateBandwidthEstimate(
                 createPacketResultsWith100pLossRate(
                     firstPacketTimestamp = Instant.EPOCH + 7 * kObservationDurationLowerBound
+                ),
+                delayBasedEstimate = kDelayBasedEstimate,
+                inAlr = false
+            )
+            lossBasedBandwidthEstimator.getLossBasedResult().state shouldBe LossBasedState.kDecreasing
+            lossBasedBandwidthEstimator.getLossBasedResult().bandwidthEstimate shouldBeLessThan kDelayBasedEstimate
+        }
+
+        "UseByteLossRateDoesNotIgnoreLossSpikeOnSendBurst" {
+            val config = LossBasedBweV2.Config(
+                useByteLossRate = true,
+                observationWindowSize = 5
+            )
+            val lossBasedBandwidthEstimator = LossBasedBweV2(config)
+            val kDelayBasedEstimate = 500.kbps
+            lossBasedBandwidthEstimator.setBandwidthEstimate(kDelayBasedEstimate)
+
+            // Fill the observation window
+            for (i in 0 until 5) {
+                lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                    createPacketResultsWithReceivedPackets(
+                        firstPacketTimestamp = Instant.EPOCH + i * kObservationDurationLowerBound
+                    ),
+                    delayBasedEstimate = kDelayBasedEstimate,
+                    inAlr = false
+                )
+            }
+
+            // If the loss happens when increasing sending rate, then
+            // the BWE should back down
+            lossBasedBandwidthEstimator.updateBandwidthEstimate(
+                createPacketResultsWith100pLossRate(
+                    firstPacketTimestamp = Instant.EPOCH + 5 * kObservationDurationLowerBound,
+                    numPackets = 5
                 ),
                 delayBasedEstimate = kDelayBasedEstimate,
                 inAlr = false
