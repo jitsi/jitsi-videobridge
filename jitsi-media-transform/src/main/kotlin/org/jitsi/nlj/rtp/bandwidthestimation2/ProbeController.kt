@@ -100,6 +100,10 @@ class ProbeControllerConfig(
     // Overrides min_probe_duration if network_state_estimate_probing_interval
     // is set and a network state estimate is known.
     val networkStateProbeDuration: Duration = 15.ms,
+    // Overrides min_probe_delta if network_state_estimate_probing_interval
+    // is set and a network state estimate is known and equal or higher than the
+    // probe target.
+    val networkStateMinProbeDelta: Duration = 20.ms,
 
     // Configures the probes emitted by changed to the allocated bitrate.
     val probeOnMaxAllocatedBitrateChange: Boolean = true,
