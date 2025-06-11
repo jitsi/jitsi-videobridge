@@ -113,6 +113,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var lossBasedResult = Result()
     private var lastHoldInfo = HoldInfo(duration = kInitHoldDuration)
     private var lastPaddingInfo = PaddingInfo()
+    private var averageReportedLossRatio = 0.0
 
     init {
         if (!config.enabled) {
@@ -248,7 +249,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         // Do not increase the estimate if the average loss is greater than current
         // inherent loss.
-        if (getAverageReportedLossRatio() > bestCandidate.inherentLoss &&
+        if (averageReportedLossRatio > bestCandidate.inherentLoss &&
             config.notIncreaseIfInherentLossLessThanAverageLoss &&
             currentBestEstimate.lossLimitedBandwidth < bestCandidate.lossLimitedBandwidth
         ) {
@@ -321,7 +322,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         ) {
             logger.info {
                 "Resetting loss based BWE to $boundedBandwidthEstimate due to loss.  Avg loss rate: " +
-                    getAverageReportedLossRatio()
+                    averageReportedLossRatio
             }
             currentBestEstimate.lossLimitedBandwidth = boundedBandwidthEstimate
             currentBestEstimate.inherentLoss = 0.0
@@ -686,15 +687,15 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     )
 
     /** Returns `0.0` if not enough loss statistics have been received. */
-    private fun getAverageReportedLossRatio(): Double {
-        return if (config.useByteLossRate) {
-            getAverageReportedByteLossRatio()
+    private fun updateAverageReportedLossRatio() {
+        averageReportedLossRatio = if (config.useByteLossRate) {
+            calculateAverageReportedByteLossRatio()
         } else {
-            getAverageReportedPacketLossRatio()
+            calculateAverageReportedPacketLossRatio()
         }
     }
 
-    private fun getAverageReportedPacketLossRatio(): Double {
+    private fun calculateAverageReportedPacketLossRatio(): Double {
         if (numObservations <= 0) {
             return 0.0
         }
@@ -722,7 +723,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     // Calculates the average loss ratio over the last `observation_window_size`
     // observations but skips the observation with min and max loss ratio in order
     // to filter out loss spikes.
-    private fun getAverageReportedByteLossRatio(): Double {
+    private fun calculateAverageReportedByteLossRatio(): Double {
         if (numObservations <= 0) {
             return 0.0
         }
@@ -933,7 +934,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun getHighBandwidthBias(bandwidth: Bandwidth): Double {
         if (isValid(bandwidth)) {
-            val averageReportedLossRatio = getAverageReportedLossRatio()
             return adjustBiasFactor(averageReportedLossRatio, config.higherBandwidthBiasFactor) *
                 bandwidth.kbps +
                 adjustBiasFactor(averageReportedLossRatio, config.higherLogBandwidthBiasFactor) *
@@ -1007,7 +1007,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun calculateInstantUpperBound() {
         var instantLimit = maxBitrate
-        val averageReportedLossRatio = getAverageReportedLossRatio()
         if (averageReportedLossRatio > config.instantUpperBoundLossOffset) {
             instantLimit = config.instantUpperBoundBandwidthBalance /
                 (
@@ -1109,6 +1108,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         partialObservation = PartialObservation()
 
+        updateAverageReportedLossRatio()
         calculateInstantUpperBound()
         return true
     }
