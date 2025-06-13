@@ -21,7 +21,6 @@ import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation2.PacedPacketInfo.Companion.kNotAProbe
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -108,10 +107,16 @@ class GoogCcTransportCcEngine(
                 }
             }
             is RtcpFbRembPacket -> {
+                /* Ignore REMB packets - if we're supposed to be receiving them they'll be handled by [RembHandler],
+                 * and if we're not we're getting mysterious spurious REMB messages which we want to ignore.
+                 */
+
+                /*
                 val time = receivedTime ?: clock.instant()
                 val msg = RemoteBitrateReport(receiveTime = time, bandwidth = rtcpPacket.bitrate.bps)
                 val update = networkController.onRemoteBitrateReport(msg)
                 processUpdate(update)
+                 */
             }
             is RtcpSrPacket -> {
                 val time = receivedTime ?: clock.instant()

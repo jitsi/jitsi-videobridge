@@ -52,7 +52,7 @@ class RembHandler(
         if (streamInformationStore.supportsTcc) {
             if (!sawSpuriousRemb) {
                 logger.warn {
-                    "Ignoring unexpected REMB, when using TCC (for ${rembPacket.bitrate.bps} bps). Will " +
+                    "Ignoring unexpected REMB, when using TCC (for ${rembPacket.bitrate.bps}). Will " +
                         "suppress future logs for this endpoint."
                 }
                 endpointsWithSpuriousRemb.incrementAndGet()
