@@ -35,6 +35,7 @@ import java.time.Instant
 val kMinBitrate = 100.bps
 val kStartBitrate = 300.bps
 val kMaxBitrate = 10000.bps
+val kMbpsMultiplier = 1000.kbps
 
 val kExponentialProbingTimeout = 5.secs
 
@@ -669,7 +670,6 @@ class ProbeControllerTest : FreeSpec() {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
-            val kMbpsMultiplier = 1000.kbps
             var probes = probeController.setBitrates(
                 kMinBitrate,
                 10 * kMbpsMultiplier,
@@ -697,12 +697,11 @@ class ProbeControllerTest : FreeSpec() {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
-            val kMbpsMultiplier = 1000.kbps
-            val kMaxBitrate = 100 * kMbpsMultiplier
+
             var probes = probeController.setBitrates(
                 kMinBitrate,
                 10 * kMbpsMultiplier,
-                kMaxBitrate,
+                100 * kMbpsMultiplier,
                 fixture.currentTime()
             )
 
@@ -711,7 +710,7 @@ class ProbeControllerTest : FreeSpec() {
             val alrStartTime = fixture.currentTime()
             probeController.setAlrStartTimeMs(alrStartTime.toEpochMilli())
 
-            val estimatedBitrate = kMaxBitrate / 10
+            val estimatedBitrate = 10 * kMbpsMultiplier
             probes = probeController.setEstimatedBitrate(
                 estimatedBitrate,
                 BandwidthLimitedCause.kDelayBasedLimited,
