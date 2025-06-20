@@ -482,10 +482,11 @@ class SourceVideoTypeMessage(
 }
 
 class ReceiverAudioSubscriptionMessage(
-    val sourceNames: List<String>
+    val include: List<String>,
+    val exclude: List<String>,
 ) : BridgeChannelMessage() {
     companion object {
-        const val TYPE = "ReceiverAudioSubscriptionMessage"
+        const val TYPE = "ReceiverAudioSubscription"
     }
 }
 

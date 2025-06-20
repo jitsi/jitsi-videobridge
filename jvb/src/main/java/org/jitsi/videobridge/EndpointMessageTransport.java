@@ -160,7 +160,7 @@ public class EndpointMessageTransport
     @Override public BridgeChannelMessage receiverAudioSubscription(ReceiverAudioSubscriptionMessage receiverAudioSubscriptionMessage)
     {
         getLogger().info("Received audio subscription: " + receiverAudioSubscriptionMessage);
-        // TODO: store the subscription somewhere
+        List<String> sources = receiverAudioSubscriptionMessage.getInclude();
         return null;
     }
 
