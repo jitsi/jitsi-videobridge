@@ -460,8 +460,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
      */
     data class Config(
         var enabled: Boolean = true,
-        val bandwidthRampupUpperBoundFactor: Double = 1000000.0,
-        val bandwidthRampupUpperBoundFactorInHold: Double = 1000000.0,
+        val bandwidthRampupUpperBoundFactor: Double = 1.5,
+        val bandwidthRampupUpperBoundFactorInHold: Double = 1.2,
         val bandwidthRampupHoldThreshold: Double = 1.3,
         val rampupAccelerationMaxFactor: Double = 0.0,
         val rampupAccelerationMaxoutTime: Duration = 60.secs,
@@ -469,9 +469,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val higherBandwidthBiasFactor: Double = 0.0002,
         val higherLogBandwidthBiasFactor: Double = 0.02,
         val inherentLossLowerBound: Double = 1.0e-3,
-        val lossThresholdOfHighBandwidthPreference: Double = 0.15,
+        val lossThresholdOfHighBandwidthPreference: Double = 0.2,
         val bandwidthPreferenceSmoothingFactor: Double = 0.002,
-        val inherentLossUpperBoundBandwidthBalance: Bandwidth = 75.kbps,
+        val inherentLossUpperBoundBandwidthBalance: Bandwidth = 100.kbps,
         val inherentLossUpperBoundOffset: Double = 0.05,
         val initialInherentLossEstimate: Double = 0.01,
         val newtonIterations: Int = 1,
@@ -480,10 +480,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val appendDelayBasedEstimateCandidate: Boolean = true,
         val appendUpperBoundCandidateInAlr: Boolean = false,
         val observationDurationLowerBound: Duration = 250.ms,
-        val observationWindowSize: Int = 20,
+        val observationWindowSize: Int = 15,
         val sendingRateSmoothingFactor: Double = 0.0,
         val instantUpperBoundTemporalWeightFactor: Double = 0.9,
-        val instantUpperBoundBandwidthBalance: Bandwidth = 75.kbps,
+        val instantUpperBoundBandwidthBalance: Bandwidth = 100.kbps,
         val instantUpperBoundLossOffset: Double = 0.05,
         val temporalWeightFactor: Double = 0.9,
         val bandwidthBackoffLowerBoundFactor: Double = 1.0,
@@ -491,13 +491,13 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val delayedIncreaseWindow: Duration = 300.ms,
         val notIncreaseIfInherentLossLessThanAverageLoss: Boolean = true,
         val notUseAckedRateInAlr: Boolean = true,
-        val useInStartPhase: Boolean = false,
+        val useInStartPhase: Boolean = true,
         val minNumObservations: Int = 3,
-        val lowerBoundByAckedRateFactor: Double = 0.0,
-        val holdDurationFactor: Double = 0.0,
-        val useByteLossRate: Boolean = false,
-        val paddingDuration: Duration = Duration.ZERO,
-        val boundBestCandidate: Boolean = false,
+        val lowerBoundByAckedRateFactor: Double = 1.0,
+        val holdDurationFactor: Double = 2.0,
+        val useByteLossRate: Boolean = true,
+        val paddingDuration: Duration = 2.secs,
+        val boundBestCandidate: Boolean = true,
         val medianSendingRateFactor: Double = 2.0
     ) {
         fun isValid(): Boolean {
@@ -793,6 +793,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             // the loss rate might not be due to a spike.
             return lostBytes / totalBytes
         }
+
+        if (totalBytes == maxBytesReceived + minBytesReceived) {
+            // It could happen if the observation window was 2.
+            return lostBytes / totalBytes
+        }
+
         return (lostBytes - minLostBytes - maxLostBytes) /
             (totalBytes - maxBytesReceived - minBytesReceived)
     }
