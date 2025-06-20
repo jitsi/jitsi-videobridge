@@ -414,11 +414,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
-    fun paceAtLossBasedEstimate(): Boolean {
-        return config.paceAtLossBasedEstimate &&
-            lossBasedResult.state != LossBasedState.kDelayBasedEstimate
-    }
-
     fun getMedianSendingRate(): Bandwidth {
         val sendingRates = mutableListOf<Bandwidth>()
         for (observation in observations) {
@@ -503,7 +498,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val useByteLossRate: Boolean = false,
         val paddingDuration: Duration = Duration.ZERO,
         val boundBestCandidate: Boolean = false,
-        val paceAtLossBasedEstimate: Boolean = false,
         val medianSendingRateFactor: Double = 2.0
     ) {
         fun isValid(): Boolean {
