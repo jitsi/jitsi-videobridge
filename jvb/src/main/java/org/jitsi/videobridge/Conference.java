@@ -189,6 +189,12 @@ public class Conference
     private final ExporterWrapper exporter;
 
     /**
+     * Maps receiver endpoint IDs to the set of source names they want to receive
+     */
+    private final ConcurrentHashMap<String, Set<String>> audioSourceSubscriptions = new ConcurrentHashMap<>();
+
+
+    /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
      */
     private final static Pattern uuidTrimmer = Pattern.compile("(\\p{XDigit}{8})[\\p{XDigit}-]*");
@@ -1033,6 +1039,54 @@ public class Conference
             logger.warn("SSRC " + ssrc + " moved from ep " + oldEndpoint.getId() + " to ep " + endpoint.getId());
         }
     }
+
+    /**
+     * Updates the audio sources that should be forwarded to a given endpoint based on its subscription
+     *
+     * @param receiverId the ID of the receiving endpoint
+     * @param subscription the subscription message containing include/exclude lists
+     */
+    public void updateAudioSourceSubscription(String receiverId, ReceiverAudioSubscriptionMessage subscription) {
+        boolean hasWildcardInclude = subscription.getInclude().contains("*");
+        boolean hasWildcardExclude = subscription.getExclude().contains("*");
+
+        if (hasWildcardInclude && hasWildcardExclude) {
+            throw new IllegalArgumentException(
+                    "Invalid audio subscription for endpoint " + receiverId +
+                            ": cannot have wildcard '*' in both include and exclude lists"
+            );
+        }
+
+        Set<String> sourcesToReceive = new HashSet<>();
+
+        List<AbstractEndpoint> endpoints = getEndpoints().stream()
+                .filter(e -> !e.getId().equals(receiverId))
+                .collect(Collectors.toList());
+
+        // For each endpoint, determine if its audio should be forwarded
+        for (AbstractEndpoint sourceEndpoint : endpoints) {
+            String sourceId = sourceEndpoint.getId();
+            boolean shouldForward = true;
+
+            // Exclude list takes precedence
+            if (hasWildcardExclude || subscription.getExclude().contains(sourceId)) {
+                shouldForward = false;
+            }
+            else if (!subscription.getInclude().isEmpty() &&
+                    !hasWildcardInclude &&
+                    !subscription.getInclude().contains(sourceId)) {
+                shouldForward = false;
+            }
+
+            if (shouldForward) {
+                sourcesToReceive.add(sourceId);
+            }
+        }
+
+        audioSourceSubscriptions.put(receiverId, sourcesToReceive);
+    }
+
+
 
     /**
      * Gets the conference name.

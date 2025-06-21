@@ -73,6 +73,7 @@ import org.jitsi.videobridge.dcsctp.DcSctpTransport
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ConnectionStats
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
+import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.metrics.QueueMetrics
@@ -365,6 +366,11 @@ class Endpoint @JvmOverloads constructor(
     private var latestBandwidth: Bandwidth? = null
 
     /**
+     * Last updated ReceiverAudioSubscription
+     */
+    private var audioSubscription: ReceiverAudioSubscriptionMessage? = null;
+
+    /**
      * Recurring event to send connection stats messages.
      */
     private val connectionStatsSender =
@@ -533,6 +539,10 @@ class Endpoint @JvmOverloads constructor(
             EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
             EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
         }
+    }
+
+    fun setAudioSubscription(subscription: ReceiverAudioSubscriptionMessage?) {
+        audioSubscription = subscription
     }
 
     override val isSendingAudio: Boolean
