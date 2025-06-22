@@ -365,6 +365,11 @@ class Endpoint @JvmOverloads constructor(
     private var latestBandwidth: Bandwidth? = null
 
     /**
+     * Last updated ReceiverAudioSubscription
+     */
+    private var audioSubscription: ReceiverAudioSubscriptionMessage? = null;
+
+    /**
      * Recurring event to send connection stats messages.
      */
     private val connectionStatsSender =
@@ -533,6 +538,10 @@ class Endpoint @JvmOverloads constructor(
             EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
             EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
         }
+    }
+
+    fun setAudioSubscription(subscription: ReceiverAudioSubscriptionMessage?) {
+        audioSubscription = subscription
     }
 
     override val isSendingAudio: Boolean
