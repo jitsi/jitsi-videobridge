@@ -159,8 +159,21 @@ public class EndpointMessageTransport
 
     @Override public BridgeChannelMessage receiverAudioSubscription(ReceiverAudioSubscriptionMessage receiverAudioSubscriptionMessage)
     {
-        getLogger().info("Received audio subscription: " + receiverAudioSubscriptionMessage);
-        List<String> sources = receiverAudioSubscriptionMessage.getInclude();
+        if (getLogger().isDebugEnabled())
+        {
+            getLogger().debug("Received audio subscription: " + receiverAudioSubscriptionMessage);
+        }
+
+        endpoint.setAudioSubscription(receiverAudioSubscriptionMessage);
+
+        Conference conference = endpoint.getConference();
+        if (conference.isExpired()) {
+            getLogger().warn("Unable to handle audio subscription message - conference is expired");
+            return null;
+        }
+
+        conference.updateAudioSourceSubscription(endpoint.getId(), receiverAudioSubscriptionMessage);
+
         return null;
     }
 
