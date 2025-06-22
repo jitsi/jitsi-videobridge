@@ -11,7 +11,7 @@ Package: jitsi-videobridge2
 Replaces: jitsi-videobridge
 Conflicts: jitsi-videobridge (<= 1400-1)
 Architecture: all
-Pre-Depends: openjdk-17-jre-headless | openjdk-11-jre-headless, libssl3 | libssl1.1
+Pre-Depends: openjdk-17-jre-headless | openjdk-11-jre-headless | java-runtime-headless (>= 17), libssl3 | libssl1.1
 Depends: ${misc:Depends}, procps, uuid-runtime, ruby-hocon
 Recommends: libpcap0.8
 Description: WebRTC compatible Selective Forwarding Unit (SFU)
