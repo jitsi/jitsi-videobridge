@@ -320,10 +320,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         if (config.boundBestCandidate &&
             boundedBandwidthEstimate < bestCandidate.lossLimitedBandwidth
         ) {
-            logger.info {
-                "Resetting loss based BWE to $boundedBandwidthEstimate due to loss.  Avg loss rate: " +
-                    averageReportedLossRatio
-            }
+            // If network is lossy, cap the best estimate by the instant upper bound,
+            // e.g. 450kbps if loss rate is 50%.
+            // Otherwise, cap the estimate by the delay-based estimate or max_bitrate.
             currentBestEstimate.lossLimitedBandwidth = boundedBandwidthEstimate
             currentBestEstimate.inherentLoss = 0.0
         } else {
