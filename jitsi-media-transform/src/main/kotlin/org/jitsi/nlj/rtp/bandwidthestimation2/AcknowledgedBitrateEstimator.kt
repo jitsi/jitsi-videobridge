@@ -22,7 +22,7 @@ import java.time.Instant
  * Basic implementation to estimate acknowledged bitrate.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 class AcknowledgedBitrateEstimator(
     val bitrateEstimator: BitrateEstimator

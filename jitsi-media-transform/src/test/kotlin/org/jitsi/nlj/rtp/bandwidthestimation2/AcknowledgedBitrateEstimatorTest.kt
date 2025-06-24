@@ -31,7 +31,7 @@ import java.time.Instant
  * Unit tests of AcknowledgedBitrateEstimator.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator_unittest.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 
 class AcknowledgedBitrateEstimatorTestStates {

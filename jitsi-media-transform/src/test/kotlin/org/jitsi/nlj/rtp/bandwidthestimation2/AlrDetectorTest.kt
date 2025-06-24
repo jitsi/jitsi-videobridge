@@ -21,7 +21,7 @@ package org.jitsi.nlj.rtp.bandwidthestimation2
  * Unit tests for AlrDetector.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/alr_detector_unittest.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125), skipping tests of field trials.
+ * WebRTC tag branch-heads/7204 (Chromium 138), skipping tests of field trials.
  */
 
 import io.kotest.core.spec.style.FreeSpec

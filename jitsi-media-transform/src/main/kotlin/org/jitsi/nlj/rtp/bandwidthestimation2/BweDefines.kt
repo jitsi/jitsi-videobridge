@@ -25,7 +25,7 @@ import org.jitsi.utils.secs
 
 /** Common defines for bandwidth estimation,
  * based on WebRTC modules/remote_bitrate_estimator/{include/bwe_defines.h,bwe_defines.cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 
 val kCongestionControllerMinBitrate = 5000.bps

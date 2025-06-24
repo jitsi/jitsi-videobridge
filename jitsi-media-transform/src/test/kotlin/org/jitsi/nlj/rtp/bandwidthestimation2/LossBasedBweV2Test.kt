@@ -43,7 +43,7 @@ import java.time.Instant
 /**
  * Unit tests for Loss-Based BWE,
  * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2_test.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 
 val kObservationDurationLowerBound = 250.ms

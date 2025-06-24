@@ -20,7 +20,7 @@ import java.time.Instant
 
 /** Sent packet info,
  * based loosely on WebRTC rtc_base/network/sent_packet.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128)
+ * WebRTC tag branch-heads/7204 (Chromium 138)
  * stripped down to only the fields needed.
  */
 

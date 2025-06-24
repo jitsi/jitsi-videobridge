@@ -34,7 +34,7 @@ import java.time.Instant
 
 /** Unit tests for BitrateProber,
  * based on WebRTC modules/pacing/bitrate_prober_unittest.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 class BitrateProberTest : FreeSpec() {
     private val logger = createLogger()

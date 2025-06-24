@@ -35,7 +35,7 @@ import java.time.Instant
 
 /** Bitrate prober,
  * based on WebRTC modules/pacing/bitrate_prober.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 
 private val kProbeClusterTimeout = 5.secs

@@ -70,7 +70,7 @@ class FeedbackGenerator {
  * Unit tests of AcknowledgedBitrateEstimator.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/robust_throughput_estimator_unittest.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125)
+ * WebRTC tag branch-heads/7204 (Chromium 138)
  */
 @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
 class RobustThroughputEstimatorTest : FreeSpec() {

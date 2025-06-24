@@ -45,7 +45,7 @@ import kotlin.math.pow
 
 /** Loss-based bandwidth estimation,
  * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  *
  * Field trial settings are settable through the API, but not currently as config options.
  */
