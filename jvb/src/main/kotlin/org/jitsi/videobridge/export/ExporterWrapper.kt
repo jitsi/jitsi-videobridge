@@ -59,8 +59,10 @@ class ExporterWrapper(parentLogger: Logger) : PotentialPacketHandler {
     }
 
     fun stop() {
+        if (started) {
+            logger.info("Stopping.")
+        }
         started = false
-        logger.info("Stopping.")
         exporter?.stop()
         exporter = null
     }
