@@ -83,6 +83,10 @@ class DataSize(
     }
 }
 
+operator fun Int.times(other: DataSize): DataSize = other * this
+
+operator fun Double.times(other: DataSize): DataSize = other * this
+
 val Int.bits: DataSize
     get() = DataSize(this.toLong())
 val Int.bytes: DataSize

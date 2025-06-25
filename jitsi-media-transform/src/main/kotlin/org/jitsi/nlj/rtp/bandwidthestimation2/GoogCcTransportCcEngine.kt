@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Transport CC engine invoking GoogCc NetworkController.  Contains some code based loosely on
  * WebRTC call/rtp_transport_controller_send.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128)
+ * WebRTC tag branch-heads/7204 (Chromium 138)
  *
  */
 class GoogCcTransportCcEngine(

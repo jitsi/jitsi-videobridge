@@ -34,7 +34,7 @@ import java.time.Instant
 
 /** Probe controller,
  * based on WebRTC modules/congestion_controller/goog_cc/probe_controller.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */
@@ -100,12 +100,16 @@ class ProbeControllerConfig(
     // Overrides min_probe_duration if network_state_estimate_probing_interval
     // is set and a network state estimate is known.
     val networkStateProbeDuration: Duration = 15.ms,
+    // Overrides min_probe_delta if network_state_estimate_probing_interval
+    // is set and a network state estimate is known and equal or higher than the
+    // probe target.
+    val networkStateMinProbeDelta: Duration = 20.ms,
 
     // Configures the probes emitted by changed to the allocated bitrate.
     val probeOnMaxAllocatedBitrateChange: Boolean = true,
     val firstAllocationProbeScale: Double? = 1.0,
     val secondAllocationProbeScale: Double? = 2.0,
-    val allocationProbeLimitByCurrentScale: Double? = null,
+    val allocationProbeLimitByCurrentScale: Double = 2.0,
 
     // The minimum number probing packets used.
     val minProbePacketsSent: Int = 5,
@@ -115,8 +119,11 @@ class ProbeControllerConfig(
     val minProbeDelta: Duration = 2.ms,
     val lossLimitedProbeScale: Double = 1.5,
     // Don't send a probe if min(estimate, network state estimate) is larger than
-    // this fraction of the set max bitrate.
+    // this fraction of the set max or max allocated bitrate.
     val skipIfEstimateLargerThanFractionOfMax: Double = 0.0,
+    // Scale factor of the max allocated bitrate. Used when deciding if a probe
+    // can be skiped due to that the estimate is already high enough.
+    val skipProbeMaxAllocatedScale: Double = 1.0,
 )
 
 /* Reason that bandwidth estimate is limited. Bandwidth estimate can be limited
@@ -233,11 +240,9 @@ class ProbeController(
                 return mutableListOf()
             }
             var firstProbeRate = maxTotalAllocatedBitrate * config.firstAllocationProbeScale
-            val currentBweLimit = if (config.allocationProbeLimitByCurrentScale == null) {
-                Bandwidth.INFINITY
-            } else {
-                estimatedBitrate * config.allocationProbeLimitByCurrentScale
-            }
+            val currentBweLimit =
+                config.allocationProbeLimitByCurrentScale *
+                    estimatedBitrate
             var limitedByCurrentBwe = currentBweLimit < firstProbeRate
             if (limitedByCurrentBwe) {
                 firstProbeRate = currentBweLimit
@@ -523,7 +528,7 @@ class ProbeController(
             val maxProbeRate = if (maxTotalAllocatedBitrate == Bandwidth.ZERO) {
                 maxBitrate
             } else {
-                min(maxTotalAllocatedBitrate, maxBitrate)
+                min(config.skipProbeMaxAllocatedScale * maxTotalAllocatedBitrate, maxBitrate)
             }
             if (min(networkEstimate, estimatedBitrate) > config.skipIfEstimateLargerThanFractionOfMax * maxProbeRate) {
                 updateState(State.kProbingComplete)
@@ -542,7 +547,6 @@ class ProbeController(
             maxProbeBitrate = min(maxProbeBitrate, maxTotalAllocatedBitrate * 2)
         }
 
-        var estimateCappedBitrate = Bandwidth.INFINITY
         when (bandwidthLimitedCause) {
             BandwidthLimitedCause.kRttBasedBackOffHighRtt,
             BandwidthLimitedCause.kDelayBasedLimitedDelayIncreased,
@@ -551,7 +555,7 @@ class ProbeController(
                 return mutableListOf()
             }
             BandwidthLimitedCause.kLossLimitedBweIncreasing ->
-                estimateCappedBitrate =
+                maxProbeBitrate =
                     min(maxProbeBitrate, estimatedBitrate * config.lossLimitedProbeScale)
             BandwidthLimitedCause.kDelayBasedLimited ->
                 Unit
@@ -564,8 +568,8 @@ class ProbeController(
         val pendingProbes = mutableListOf<ProbeClusterConfig>()
         for (b in bitratesToProbe) {
             assert(b != Bandwidth.ZERO)
-            var bitrate = min(b, estimateCappedBitrate)
-            if (bitrate > maxProbeBitrate) {
+            var bitrate = b
+            if (bitrate >= maxProbeBitrate) {
                 bitrate = maxProbeBitrate
                 probeFurther = false
             }
@@ -577,7 +581,7 @@ class ProbeController(
             updateState(State.kWaitingForProbingResult)
             // Dont expect probe results to be larger than a fraction of the actual
             // probe rate.
-            minBitrateToProbeFurther = min(estimateCappedBitrate, bitratesToProbe.last() * config.furtherProbeThreshold)
+            minBitrateToProbeFurther = pendingProbes.last().targetDataRate * config.furtherProbeThreshold
         } else {
             updateState(State.kProbingComplete)
         }

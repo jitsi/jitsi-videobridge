@@ -31,7 +31,7 @@ fun timeToBytes(bitrateKbps: Int, timeMs: Long): Long {
 
 /** Unit tests for IntervalBudget,
  * based on WebRTC modules/pacing/interval_budget_unittest.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 
 class IntervalBudgetTest : FreeSpec() {

@@ -42,7 +42,7 @@ import kotlin.math.roundToLong
 
 /** Top-level Google CC Network Controller,
  * based on WebRTC modules/congestion_controller/goog_cc/goog_cc_network_control.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  *
  * Field trial settings have been generally removed, set to their default settings,
  * except where needed by unit tests.

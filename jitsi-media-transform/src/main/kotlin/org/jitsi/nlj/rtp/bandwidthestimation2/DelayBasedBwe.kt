@@ -31,7 +31,7 @@ import java.time.Instant
 
 /** Delay-based bandwidth estimation,
  * based on WebRTC modules/congestion_controller/goog_cc/delay_based_bwe.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  *
  * Field trial settings have been generally removed, set to their default settings, and APIs that aren't
  * used by Chrome have also been removed.

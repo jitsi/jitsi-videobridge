@@ -35,6 +35,7 @@ import java.time.Instant
 val kMinBitrate = 100.bps
 val kStartBitrate = 300.bps
 val kMaxBitrate = 10000.bps
+val kMbpsMultiplier = 1000.kbps
 
 val kExponentialProbingTimeout = 5.secs
 
@@ -44,7 +45,7 @@ private val kBitrateDropTimeout = 5.secs
 
 /** Unit tests for ProbeController,
  * based on WebRTC modules/congestion_controller/goog_cc/probe_controller_unittest.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  *
  * Field trial settings have been generally removed, set to their default settings.
  */
@@ -208,11 +209,7 @@ class ProbeControllerTest : FreeSpec() {
         }
 
         "ProbesOnMaxAllocatedBitrateLimitedByCurrentBwe" {
-            val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig(
-                    allocationProbeLimitByCurrentScale = 1.5
-                )
-            )
+            val fixture = ProbeControllerFixture()
             kMaxBitrate shouldBeGreaterThan 1.5 * kStartBitrate
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
@@ -232,7 +229,7 @@ class ProbeControllerTest : FreeSpec() {
             probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
             probes = probeController.onMaxTotalAllocatedBitrate(kMaxBitrate, fixture.currentTime())
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
+            probes[0].targetDataRate shouldBe 2.0 * kStartBitrate
 
             // Continue probing if probe succeeds.
             probes = probeController.setEstimatedBitrate(
@@ -241,7 +238,7 @@ class ProbeControllerTest : FreeSpec() {
                 fixture.currentTime()
             )
             probes.size shouldBe 1
-            probes[0].targetDataRate shouldBeGreaterThan 1.5 * kStartBitrate
+            probes[0].targetDataRate shouldBeGreaterThan 2.0 * kStartBitrate
         }
 
         "CanDisableProbingOnMaxTotalAllocatedBitrateIncrease" {
@@ -673,7 +670,6 @@ class ProbeControllerTest : FreeSpec() {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
-            val kMbpsMultiplier = 1000.kbps
             var probes = probeController.setBitrates(
                 kMinBitrate,
                 10 * kMbpsMultiplier,
@@ -701,12 +697,11 @@ class ProbeControllerTest : FreeSpec() {
             val fixture = ProbeControllerFixture()
             val probeController = fixture.createController()
             probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
-            val kMbpsMultiplier = 1000.kbps
-            val kMaxBitrate = 100 * kMbpsMultiplier
+
             var probes = probeController.setBitrates(
                 kMinBitrate,
                 10 * kMbpsMultiplier,
-                kMaxBitrate,
+                100 * kMbpsMultiplier,
                 fixture.currentTime()
             )
 
@@ -715,7 +710,7 @@ class ProbeControllerTest : FreeSpec() {
             val alrStartTime = fixture.currentTime()
             probeController.setAlrStartTimeMs(alrStartTime.toEpochMilli())
 
-            val estimatedBitrate = kMaxBitrate / 10
+            val estimatedBitrate = 10 * kMbpsMultiplier
             probes = probeController.setEstimatedBitrate(
                 estimatedBitrate,
                 BandwidthLimitedCause.kDelayBasedLimited,
@@ -750,6 +745,7 @@ class ProbeControllerTest : FreeSpec() {
                     furtherExponentialProbeScale = 3.0,
                     furtherProbeThreshold = 0.8,
                     firstAllocationProbeScale = 2.0,
+                    allocationProbeLimitByCurrentScale = 1000.0,
                     secondAllocationProbeScale = null,
                     minProbePacketsSent = 2
                 )
@@ -863,41 +859,6 @@ class ProbeControllerTest : FreeSpec() {
             probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
         }
 
-        "ProbeFurtherInAlrIfLossBasedIncreasing" {
-            val fixture = ProbeControllerFixture(
-                config = ProbeControllerConfig()
-            )
-            val probeController = fixture.createController()
-            probeController.onNetworkAvailability(NetworkAvailability(networkAvailable = true)).isEmpty() shouldBe true
-            var probes = probeController.setBitrates(kMinBitrate, kStartBitrate, kMaxBitrate, fixture.currentTime())
-            probeController.enablePeriodicAlrProbing(true)
-            probes = probeController.setEstimatedBitrate(
-                kStartBitrate,
-                BandwidthLimitedCause.kLossLimitedBweIncreasing,
-                fixture.currentTime()
-            )
-
-            // Wait long enough to time out exponential probing.
-            fixture.advanceTime(kExponentialProbingTimeout)
-            probes = probeController.process(fixture.currentTime())
-            probes.isEmpty() shouldBe true
-
-            // Probe when in alr.
-            probeController.setAlrStartTimeMs(fixture.currentTime().toEpochMilli())
-            fixture.advanceTime(kAlrProbeInterval + 1.ms)
-            probes = probeController.process(fixture.currentTime())
-            probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe 1.5 * kStartBitrate
-
-            probes = probeController.setEstimatedBitrate(
-                1.5 * kStartBitrate,
-                BandwidthLimitedCause.kLossLimitedBweIncreasing,
-                fixture.currentTime()
-            )
-            probes.size shouldBe 1
-            probes[0].targetDataRate shouldBe 1.5 * 1.5 * kStartBitrate
-        }
-
         "NotProbeWhenInAlrIfLossBasedDecreases" {
             val fixture = ProbeControllerFixture(
                 config = ProbeControllerConfig()
@@ -954,7 +915,8 @@ class ProbeControllerTest : FreeSpec() {
          * "ProbeIfEstimateLowerThanNetworkStateEstimate",
          * "DontProbeFurtherWhenLossLimited",
          * "ProbeFurtherWhenDelayBasedLimited",
-         * "ProbeFurtherIfNetworkStateEstimateIncreaseAfterProbeSent",
+         * "ProbeAfterTimeoutIfNetworkStateEstimateIncreaseAfterProbeSent",
+         * "SkipProbeFurtherIfAlreadyProbedToMaxRate"
          */
 
         "MaxAllocatedBitrateNotReset" {

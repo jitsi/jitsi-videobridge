@@ -45,7 +45,7 @@ import kotlin.math.pow
 
 /** Loss-based bandwidth estimation,
  * based on WebRTC modules/congestion_controller/goog_cc/loss_based_bwe_v2.{h,cc} in
- * WebRTC tag branch-heads/6613 (Chromium 128).
+ * WebRTC tag branch-heads/7204 (Chromium 138).
  *
  * Field trial settings are settable through the API, but not currently as config options.
  */
@@ -113,6 +113,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     private var lossBasedResult = Result()
     private var lastHoldInfo = HoldInfo(duration = kInitHoldDuration)
     private var lastPaddingInfo = PaddingInfo()
+    private var averageReportedLossRatio = 0.0
 
     init {
         if (!config.enabled) {
@@ -248,7 +249,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         // Do not increase the estimate if the average loss is greater than current
         // inherent loss.
-        if (getAverageReportedLossRatio() > bestCandidate.inherentLoss &&
+        if (averageReportedLossRatio > bestCandidate.inherentLoss &&
             config.notIncreaseIfInherentLossLessThanAverageLoss &&
             currentBestEstimate.lossLimitedBandwidth < bestCandidate.lossLimitedBandwidth
         ) {
@@ -319,10 +320,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         if (config.boundBestCandidate &&
             boundedBandwidthEstimate < bestCandidate.lossLimitedBandwidth
         ) {
-            logger.info {
-                "Resetting loss based BWE to $boundedBandwidthEstimate due to loss.  Avg loss rate: " +
-                    getAverageReportedLossRatio()
-            }
+            // If network is lossy, cap the best estimate by the instant upper bound,
+            // e.g. 450kbps if loss rate is 50%.
+            // Otherwise, cap the estimate by the delay-based estimate or max_bitrate.
             currentBestEstimate.lossLimitedBandwidth = boundedBandwidthEstimate
             currentBestEstimate.inherentLoss = 0.0
         } else {
@@ -413,9 +413,27 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
-    fun paceAtLossBasedEstimate(): Boolean {
-        return config.paceAtLossBasedEstimate &&
-            lossBasedResult.state != LossBasedState.kDelayBasedEstimate
+    fun getMedianSendingRate(): Bandwidth {
+        val sendingRates = mutableListOf<Bandwidth>()
+        for (observation in observations) {
+            if (!observation.isInitialized() ||
+                !isValid(observation.sendingRate) ||
+                observation.sendingRate == Bandwidth.ZERO
+            ) {
+                continue
+            }
+            sendingRates.add(observation.sendingRate)
+        }
+        if (sendingRates.isEmpty()) {
+            return Bandwidth.ZERO
+        }
+        sendingRates.sort()
+        if (sendingRates.size % 2 == 0) {
+            return (
+                sendingRates[sendingRates.size / 2 - 1] + sendingRates[sendingRates.size / 2]
+                ) / 2
+        }
+        return sendingRates[sendingRates.size / 2]
     }
 
     // For unit testing only
@@ -441,8 +459,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
      */
     data class Config(
         var enabled: Boolean = true,
-        val bandwidthRampupUpperBoundFactor: Double = 1000000.0,
-        val bandwidthRampupUpperBoundFactorInHold: Double = 1000000.0,
+        val bandwidthRampupUpperBoundFactor: Double = 1.5,
+        val bandwidthRampupUpperBoundFactorInHold: Double = 1.2,
         val bandwidthRampupHoldThreshold: Double = 1.3,
         val rampupAccelerationMaxFactor: Double = 0.0,
         val rampupAccelerationMaxoutTime: Duration = 60.secs,
@@ -450,9 +468,9 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val higherBandwidthBiasFactor: Double = 0.0002,
         val higherLogBandwidthBiasFactor: Double = 0.02,
         val inherentLossLowerBound: Double = 1.0e-3,
-        val lossThresholdOfHighBandwidthPreference: Double = 0.15,
+        val lossThresholdOfHighBandwidthPreference: Double = 0.2,
         val bandwidthPreferenceSmoothingFactor: Double = 0.002,
-        val inherentLossUpperBoundBandwidthBalance: Bandwidth = 75.kbps,
+        val inherentLossUpperBoundBandwidthBalance: Bandwidth = 100.kbps,
         val inherentLossUpperBoundOffset: Double = 0.05,
         val initialInherentLossEstimate: Double = 0.01,
         val newtonIterations: Int = 1,
@@ -461,10 +479,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val appendDelayBasedEstimateCandidate: Boolean = true,
         val appendUpperBoundCandidateInAlr: Boolean = false,
         val observationDurationLowerBound: Duration = 250.ms,
-        val observationWindowSize: Int = 20,
+        val observationWindowSize: Int = 15,
         val sendingRateSmoothingFactor: Double = 0.0,
         val instantUpperBoundTemporalWeightFactor: Double = 0.9,
-        val instantUpperBoundBandwidthBalance: Bandwidth = 75.kbps,
+        val instantUpperBoundBandwidthBalance: Bandwidth = 100.kbps,
         val instantUpperBoundLossOffset: Double = 0.05,
         val temporalWeightFactor: Double = 0.9,
         val bandwidthBackoffLowerBoundFactor: Double = 1.0,
@@ -472,14 +490,14 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         val delayedIncreaseWindow: Duration = 300.ms,
         val notIncreaseIfInherentLossLessThanAverageLoss: Boolean = true,
         val notUseAckedRateInAlr: Boolean = true,
-        val useInStartPhase: Boolean = false,
+        val useInStartPhase: Boolean = true,
         val minNumObservations: Int = 3,
-        val lowerBoundByAckedRateFactor: Double = 0.0,
-        val holdDurationFactor: Double = 0.0,
-        val useByteLossRate: Boolean = false,
-        val paddingDuration: Duration = Duration.ZERO,
-        val boundBestCandidate: Boolean = false,
-        val paceAtLossBasedEstimate: Boolean = false
+        val lowerBoundByAckedRateFactor: Double = 1.0,
+        val holdDurationFactor: Double = 2.0,
+        val useByteLossRate: Boolean = true,
+        val paddingDuration: Duration = 2.secs,
+        val boundBestCandidate: Boolean = true,
+        val medianSendingRateFactor: Double = 2.0
     ) {
         fun isValid(): Boolean {
             if (!enabled) {
@@ -686,15 +704,15 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     )
 
     /** Returns `0.0` if not enough loss statistics have been received. */
-    private fun getAverageReportedLossRatio(): Double {
-        return if (config.useByteLossRate) {
-            getAverageReportedByteLossRatio()
+    private fun updateAverageReportedLossRatio() {
+        averageReportedLossRatio = if (config.useByteLossRate) {
+            calculateAverageReportedByteLossRatio()
         } else {
-            getAverageReportedPacketLossRatio()
+            calculateAverageReportedPacketLossRatio()
         }
     }
 
-    private fun getAverageReportedPacketLossRatio(): Double {
+    private fun calculateAverageReportedPacketLossRatio(): Double {
         if (numObservations <= 0) {
             return 0.0
         }
@@ -719,24 +737,69 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         return numLostPackets / numPackets
     }
 
-    private fun getAverageReportedByteLossRatio(): Double {
+    // Calculates the average loss ratio over the last `observation_window_size`
+    // observations but skips the observation with min and max loss ratio in order
+    // to filter out loss spikes.
+    private fun calculateAverageReportedByteLossRatio(): Double {
         if (numObservations <= 0) {
             return 0.0
         }
 
         var totalBytes = DataSize.ZERO
         var lostBytes = DataSize.ZERO
+        var minLossRate = 1.0
+        var maxLossRate = 0.0
+        var minLostBytes = DataSize.ZERO
+        var maxLostBytes = DataSize.ZERO
+        var minBytesReceived = DataSize.ZERO
+        var maxBytesReceived = DataSize.ZERO
+
+        var sendRateOfMaxLossObservation = Bandwidth.ZERO
         for (observation in observations) {
             if (!observation.isInitialized()) {
                 continue
             }
 
             val instantTemporalWeight =
-                instantUpperBoundTemporalWeights[(numObservations - 1)] - observation.id
+                instantUpperBoundTemporalWeights[(numObservations - 1) - observation.id]
             totalBytes += observation.size * instantTemporalWeight
             lostBytes += observation.lostSize * instantTemporalWeight
+
+            val lossRate = if (observation.size != DataSize.ZERO) {
+                observation.lostSize / observation.size
+            } else {
+                0.0
+            }
+            if (numObservations > 3) {
+                if (lossRate > maxLossRate) {
+                    maxLossRate = lossRate
+                    maxLostBytes = instantTemporalWeight * observation.lostSize
+                    maxBytesReceived = instantTemporalWeight * observation.size
+                    sendRateOfMaxLossObservation = observation.sendingRate
+                }
+                if (lossRate < minLossRate) {
+                    minLossRate = lossRate
+                    minLostBytes = instantTemporalWeight * observation.lostSize
+                    minBytesReceived = instantTemporalWeight * observation.size
+                }
+            }
         }
-        return lostBytes / totalBytes
+        if (getMedianSendingRate() * config.medianSendingRateFactor <=
+            sendRateOfMaxLossObservation
+        ) {
+            // If the median sending rate is less than half of the sending rate of the
+            // observation with max loss rate, i.e. we suddenly send a lot of data, then
+            // the loss rate might not be due to a spike.
+            return lostBytes / totalBytes
+        }
+
+        if (totalBytes == maxBytesReceived + minBytesReceived) {
+            // It could happen if the observation window was 2.
+            return lostBytes / totalBytes
+        }
+
+        return (lostBytes - minLostBytes - maxLostBytes) /
+            (totalBytes - maxBytesReceived - minBytesReceived)
     }
 
     private fun getCandidateBandwidthUpperBound(): Bandwidth {
@@ -904,7 +967,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun getHighBandwidthBias(bandwidth: Bandwidth): Double {
         if (isValid(bandwidth)) {
-            val averageReportedLossRatio = getAverageReportedLossRatio()
             return adjustBiasFactor(averageReportedLossRatio, config.higherBandwidthBiasFactor) *
                 bandwidth.kbps +
                 adjustBiasFactor(averageReportedLossRatio, config.higherLogBandwidthBiasFactor) *
@@ -978,7 +1040,6 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
     private fun calculateInstantUpperBound() {
         var instantLimit = maxBitrate
-        val averageReportedLossRatio = getAverageReportedLossRatio()
         if (averageReportedLossRatio > config.instantUpperBoundLossOffset) {
             instantLimit = config.instantUpperBoundBandwidthBalance /
                 (
@@ -1055,6 +1116,8 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         val observationDuration = Duration.between(lastSendTimeMostRecentObservation, lastSendTime)
         // Too small to be meaningful.
+        // To consider: what if it is too long?, i.e. we did not receive any packets
+        // for a long time, then all the packets we received are too old.
         if (observationDuration <= Duration.ZERO ||
             observationDuration < config.observationDurationLowerBound
         ) {
@@ -1080,6 +1143,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
 
         partialObservation = PartialObservation()
 
+        updateAverageReportedLossRatio()
         calculateInstantUpperBound()
         return true
     }

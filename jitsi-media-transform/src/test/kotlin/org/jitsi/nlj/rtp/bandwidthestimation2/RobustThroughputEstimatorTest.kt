@@ -70,7 +70,7 @@ class FeedbackGenerator {
  * Unit tests of AcknowledgedBitrateEstimator.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/robust_throughput_estimator_unittest.cc in
- * WebRTC tag branch-heads/6422 (Chromium 125)
+ * WebRTC tag branch-heads/7204 (Chromium 138)
  */
 @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
 class RobustThroughputEstimatorTest : FreeSpec() {
@@ -422,12 +422,14 @@ class RobustThroughputEstimatorTest : FreeSpec() {
             // Since the window is 500 ms, the delayed packet was sent ~500
             // ms before the second oldest packet. However, the send rate
             // should not drop.
-            delayedPackets.first().receiveTime = feedbackGenerator.currentReceiveClock()
-            throughputEstimator.incomingPacketFeedbackVector(delayedPackets)
-            val throughput = throughputEstimator.bitrate()
-            throughput shouldNotBe null
-            throughput!!.bytesPerSec shouldBe sendRate.bytesPerSec plusOrMinus
-                0.05 * sendRate.bytesPerSec // Allow 5% error
+            run {
+                delayedPackets.first().receiveTime = feedbackGenerator.currentReceiveClock()
+                throughputEstimator.incomingPacketFeedbackVector(delayedPackets)
+                val throughput = throughputEstimator.bitrate()
+                throughput shouldNotBe null
+                throughput!!.bytesPerSec shouldBe sendRate.bytesPerSec plusOrMinus
+                    0.05 * sendRate.bytesPerSec // Allow 5% error
+            }
 
             // Thoughput should stay stable.
             repeat(10) {
