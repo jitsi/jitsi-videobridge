@@ -73,6 +73,7 @@ import org.jitsi.videobridge.dcsctp.DcSctpTransport
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ConnectionStats
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
+import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.metrics.QueueMetrics
