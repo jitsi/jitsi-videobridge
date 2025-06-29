@@ -166,14 +166,6 @@ public class EndpointMessageTransport
 
         endpoint.setAudioSubscription(receiverAudioSubscriptionMessage);
 
-        Conference conference = endpoint.getConference();
-        if (conference.isExpired()) {
-            getLogger().warn("Unable to handle audio subscription message - conference is expired");
-            return null;
-        }
-
-        conference.updateAudioSourceSubscription(endpoint.getId(), receiverAudioSubscriptionMessage);
-
         return null;
     }
 

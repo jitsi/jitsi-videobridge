@@ -367,7 +367,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Last updated ReceiverAudioSubscription
      */
-    private var audioSubscription: ReceiverAudioSubscriptionMessage? = null;
+    private var audioSubscription: AudioSubscriptionEntry = AudioSubscriptionEntry();
 
     /**
      * Recurring event to send connection stats messages.
@@ -540,8 +540,65 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    private class AudioSubscriptionEntry {
+        private var excludeWildcard = false
+        private var includeWildcard = true
+        private var wantedSsrcs = mutableListOf<Long>()
+
+        fun updateSubscription(
+            subscription: ReceiverAudioSubscriptionMessage,
+            conference: Conference,
+            localEndpointId: String
+        ) {
+            if (subscription.exclude.contains("*")) {
+                excludeWildcard = true
+                includeWildcard = false
+                wantedSsrcs = mutableListOf()
+                return
+            }
+            val ssrcs = conference.getAllRemoteAudioSsrcs(localEndpointId)
+            if (subscription.include.contains("*")) {
+                excludeWildcard = false
+                // Toggle the include wildcard only if the exclude is not wildcard.
+                includeWildcard = true
+                wantedSsrcs = ssrcs
+                return
+            }
+            excludeWildcard = false
+            includeWildcard = false
+            wantedSsrcs = ssrcs.filter { ssrc ->
+                subscription.include.contains(ssrc.toString()) &&
+                    !subscription.exclude.contains(ssrc.toString())
+            }.toMutableList()
+        }
+
+        fun isSsrcWanted(ssrc: Long): Boolean {
+            if (excludeWildcard) {
+                return false
+            }
+            if (includeWildcard) {
+                return true
+            }
+            return wantedSsrcs.contains(ssrc)
+        }
+
+        fun onConferenceSourceAdded(ssrc: Long) {
+            if (includeWildcard) {
+                wantedSsrcs.add(ssrc)
+            }
+        }
+
+        fun onConferenceSourceRemoved(ssrc: Long) {
+            wantedSsrcs.remove(ssrc)
+        }
+    }
+
     fun setAudioSubscription(subscription: ReceiverAudioSubscriptionMessage?) {
-        audioSubscription = subscription
+        if (subscription == null) {
+            audioSubscription = AudioSubscriptionEntry()
+            return
+        }
+        audioSubscription.updateSubscription(subscription, conference, id)
     }
 
     override val isSendingAudio: Boolean
@@ -918,7 +975,7 @@ class Endpoint @JvmOverloads constructor(
 
         return when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> acceptVideo && bitrateController.accept(packetInfo)
-            is AudioRtpPacket -> acceptAudio
+            is AudioRtpPacket -> acceptAudio && audioSubscription.isSsrcWanted(packet.ssrc)
             is RtcpSrPacket -> {
                 // TODO: For SRs we're only interested in the ntp/rtp timestamp
                 //  association, so we could only accept srs from the main ssrc
