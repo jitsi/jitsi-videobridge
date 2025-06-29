@@ -1119,6 +1119,7 @@ public class Conference
             {
                 continue;
             }
+
             if (endpoint.wants(packetInfo))
             {
                 if (prevHandler != null)
