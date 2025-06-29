@@ -944,7 +944,10 @@ public class Conference
         }
 
         relaysById.forEach((i, relay) -> relay.endpointExpired(id));
-        endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));
+        endpoint.getSsrcs().forEach(ssrc -> {
+            endpointsBySsrc.remove(ssrc, endpoint);
+            getLocalEndpoints().forEach(e -> e.conferenceAudioSourceRemoved(ssrc));
+        });
         endpointsChanged(removedEndpoint.getVisitor());
     }
 

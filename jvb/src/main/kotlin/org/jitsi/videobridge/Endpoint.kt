@@ -602,6 +602,14 @@ class Endpoint @JvmOverloads constructor(
         audioSubscription.updateSubscription(subscription, conference, id)
     }
 
+    fun conferenceAudioSourceAdded(ssrc: Long) {
+        audioSubscription.onConferenceSourceAdded(ssrc)
+    }
+
+    fun conferenceAudioSourceRemoved(ssrc: Long) {
+        audioSubscription.onConferenceSourceRemoved(ssrc)
+    }
+
     override val isSendingAudio: Boolean
         get() =
             // The endpoint is sending audio if we (the transceiver) are receiving audio.
