@@ -1031,16 +1031,14 @@ public class Conference
         }
     }
 
-    public List<Long> getAllRemoteAudioSsrcs(String localEndpointId) {
+    public List<Long> getAllRemoteAudioSsrcs(String callerId) {
         List<Long> ssrcs = new ArrayList<>();
-        for (AbstractEndpoint endpoint : getEndpoints()) {
-            if (endpoint.getId().equals(localEndpointId)) {
-                continue; // Skip local endpoint
+        for (Endpoint endpoint : getLocalEndpoints()) {
+            if (endpoint.getId().equals(callerId)) {
+                continue; // Skip the requesting endpoint
             }
-            if (endpoint instanceof Endpoint) {
-                for (AudioSourceDesc audioSource : ((Endpoint) endpoint).getAudioSources()) {
-                    ssrcs.add(audioSource.getSsrc());
-                }
+            for (AudioSourceDesc audioSource : endpoint.getAudioSources()) {
+                ssrcs.add(audioSource.getSsrc());
             }
         }
         return ssrcs;
