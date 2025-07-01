@@ -950,7 +950,10 @@ public class Conference
         }
 
         relaysById.forEach((i, relay) -> relay.endpointExpired(id));
-        endpoint.getSsrcs().forEach(ssrc -> endpointsBySsrc.remove(ssrc, endpoint));
+        endpoint.getSsrcs().forEach(ssrc -> {
+            endpointsBySsrc.remove(ssrc, endpoint);
+            getLocalEndpoints().forEach(e -> e.conferenceAudioSourceRemoved(ssrc));
+        });
         endpointsChanged(removedEndpoint.getVisitor());
     }
 
@@ -1032,6 +1035,19 @@ public class Conference
         {
             logger.warn("SSRC " + ssrc + " moved from ep " + oldEndpoint.getId() + " to ep " + endpoint.getId());
         }
+    }
+
+    public List<Long> getAllRemoteAudioSsrcs(String callerId) {
+        List<Long> ssrcs = new ArrayList<>();
+        for (Endpoint endpoint : getLocalEndpoints()) {
+            if (endpoint.getId().equals(callerId)) {
+                continue; // Skip the requesting endpoint
+            }
+            for (AudioSourceDesc audioSource : endpoint.getAudioSources()) {
+                ssrcs.add(audioSource.getSsrc());
+            }
+        }
+        return ssrcs;
     }
 
     /**
