@@ -261,6 +261,10 @@ constructor(size: Int) : ArrayCache<Vp9Picture>(
         startLayer: Int,
         increment: Int
     ): Vp9Frame? {
+        require((increment > 0 && startIndex <= endIndex) || (increment < 0 && startIndex >= endIndex)) {
+            "Values of startIndex=$startIndex, endIndex=$endIndex, and increment=$increment " +
+                "could lead to infinite loop"
+        }
         var index = startIndex
         var layer = startLayer
         var firstPicture = true
