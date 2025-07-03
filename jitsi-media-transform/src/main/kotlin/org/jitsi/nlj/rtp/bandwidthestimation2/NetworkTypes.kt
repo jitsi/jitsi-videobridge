@@ -21,6 +21,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.per
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.isFinite
@@ -160,12 +161,21 @@ class TransportLossReport(
 class PacketResult(
     var sentPacket: SentPacket = SentPacket(),
     var receiveTime: Instant = NEVER,
+    var ecn: EcnMarking = EcnMarking.kNotEct,
+    // `rtp_packet_info` is only set if the feedback is related to a RTP packet.
+    var rtpPacketInfo: RtpPacketInfo? = null,
     // Jitsi extension: Whether a packet was previously reported lost
     var previouslyReportedLost: Boolean = false
 ) {
+    data class RtpPacketInfo(
+        val ssrc: Long = 0,
+        val rtpSequenceNumber: Int = 0,
+        val isRetransmission: Boolean = false
+    )
+
     fun isReceived() = receiveTime.isFinite()
 
-    fun copy(): PacketResult = PacketResult(sentPacket.copy(), receiveTime, previouslyReportedLost)
+    fun copy(): PacketResult = PacketResult(sentPacket.copy(), receiveTime, ecn, rtpPacketInfo, previouslyReportedLost)
 }
 
 /**
@@ -175,6 +185,7 @@ class TransportPacketsFeedback {
     var feedbackTime: Instant = NEVER
     var dataInFlight: DataSize = DataSize.ZERO
     var packetFeedbacks: MutableList<PacketResult> = ArrayList()
+    var transportSupportsEcn: Boolean = false
 
     /** Arrival times for messages without send times information */
     val sendlessArrivalTimes = ArrayList<Instant>()

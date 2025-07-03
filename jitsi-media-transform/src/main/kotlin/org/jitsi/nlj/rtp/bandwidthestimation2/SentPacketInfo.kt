@@ -31,7 +31,7 @@ class PacketInfo(
 )
 
 class SentPacketInfo(
-    var packetId: Int = -1,
+    var packetId: Long = -1,
     var sendTime: Instant = NEVER,
     val info: PacketInfo = PacketInfo(),
 )

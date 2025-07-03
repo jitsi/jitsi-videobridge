@@ -27,6 +27,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.RtcpFbNackPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.TransportLayerRtcpFbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 
 /**
@@ -76,6 +77,7 @@ abstract class RtcpFbPacket(
                     when (fmt) {
                         RtcpFbNackPacket.FMT -> RtcpFbNackPacket(buf, offset, length)
                         RtcpFbTccPacket.FMT -> RtcpFbTccPacket(buf, offset, length)
+                        RtcpFbCcfbPacket.FMT -> RtcpFbCcfbPacket(buf, offset, length)
                         else -> UnsupportedRtcpFbPacket(buf, offset, length)
                     }
                 }

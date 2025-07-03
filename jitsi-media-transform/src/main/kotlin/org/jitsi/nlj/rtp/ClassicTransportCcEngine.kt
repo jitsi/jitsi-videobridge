@@ -15,10 +15,12 @@
  */
 package org.jitsi.nlj.rtp
 
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.ArrayCache
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
+import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.PacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
@@ -204,14 +206,14 @@ class ClassicTransportCcEngine(
         }
     }
 
-    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize, probingInfo: Any?) {
+    override fun mediaPacketTagged(packetInfo: PacketInfo, tccSeqNum: Long) {
         /* Nothing needs to be done */
     }
 
-    override fun mediaPacketSent(tccSeqNum: Int, length: DataSize) {
+    override fun mediaPacketSent(packetInfo: PacketInfo, tccSeqNum: Long) {
         val now = clock.instant()
-        val seq = tccSeqNum and 0xFFFF
-        if (!sentPacketDetails.insert(seq, PacketDetail(length, now))) {
+        val seq = (tccSeqNum and 0xFFFF).toInt()
+        if (!sentPacketDetails.insert(seq, PacketDetail(packetInfo.packet.length.bytes, now))) {
             /* Very old seq? Something odd is happening with whatever is
              * generating tccSeqNum values.
              */

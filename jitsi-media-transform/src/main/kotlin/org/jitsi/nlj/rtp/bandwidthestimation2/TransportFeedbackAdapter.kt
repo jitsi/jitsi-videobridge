@@ -17,12 +17,19 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.bytes
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.ReceivedPacketInfo
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.OrderedJsonObject
+import org.jitsi.utils.TimeUtils
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
 import org.jitsi.utils.logging2.Logger
@@ -44,10 +51,9 @@ private data class PacketFeedback(
     // Time corresponding to when this object was created.
     val creationTime: Instant = Instant.MIN,
     val sent: SentPacket,
-    // Time corresponding to when the packet was received. Timestamped with the
-    // receiver's clock. For unreceived packet, Timestamp::PlusInfinity() is
-    // used.
-    var receiveTime: Instant = Instant.MAX
+    val ssrc: Long = 0,
+    val rtpSequenceNumber: Int = 0,
+    val isRetransmission: Boolean = false
 ) {
     // Jitsi extension: whether the packet was previously reported lost
     var reportedLost: Boolean = false
@@ -72,19 +78,33 @@ private class InFlightBytesTracker {
     var inFlightData: DataSize = DataSize.ZERO
 }
 
+/** TransportFeedbackAdapter converts RTCP feedback packets to RTCP agnostic per
+ * packet send/receive information.
+ * It supports [RtcpFbCcfbPacket] according to RFC 8888 and
+ * [RtcpFbTccPacket] according to
+ * https://datatracker.ietf.org/doc/html/draft-holmer-rmcat-transport-wide-cc-extensions-01
+ */
 class TransportFeedbackAdapter(
     parentLogger: Logger
 ) {
     val logger = parentLogger.createChildLogger(javaClass.name)
 
-    fun addPacket(tccSeqNum: Int, overheadBytes: DataSize, pacingInfo: PacedPacketInfo?, creationTime: Instant) {
-        val packet = PacketFeedback(
+    fun addPacket(packet: PacketInfo, tccSeqNum: Long, overheadBytes: DataSize, creationTime: Instant) {
+        val rtpPacket = packet.packetAs<RtpPacket>()
+        // Update seqNumUnwrapper's notion of the ROC, and verify that it's in sync
+        val truncatedSeqNum = (tccSeqNum and 0xFFFF).toInt()
+        val unwrappedSeqNum = seqNumUnwrapper.update(truncatedSeqNum)
+        check(unwrappedSeqNum == tccSeqNum)
+        val feedback = PacketFeedback(
             creationTime = creationTime,
             sent = SentPacket(
-                sequenceNumber = seqNumUnwrapper.update(tccSeqNum).toLong(),
-                size = overheadBytes,
-                pacingInfo = pacingInfo ?: PacedPacketInfo()
-            )
+                sequenceNumber = tccSeqNum,
+                size = packet.packet.length.bytes + overheadBytes,
+                pacingInfo = packet.probingInfo as? PacedPacketInfo ?: PacedPacketInfo()
+            ),
+            ssrc = rtpPacket.ssrc,
+            rtpSequenceNumber = rtpPacket.sequenceNumber,
+            isRetransmission = packet.packetOrigin == PacketOrigin.Retransmission
         )
         while (history.isNotEmpty() &&
             Duration.between(history.firstEntry().value.creationTime, creationTime) > kSendTimeHistoryWindow
@@ -93,17 +113,25 @@ class TransportFeedbackAdapter(
             if (history.firstEntry().value.sent.sequenceNumber > lastAckSeqNum) {
                 inFlight.removeInFlightPacketBytes(history.firstEntry().value)
             }
+            val packet = history.firstEntry().value
+            rtpToTransportSequenceNumber.remove(
+                SsrcAndRtpSequenceNumber(packet.ssrc, packet.rtpSequenceNumber)
+            )
             history.remove(history.firstEntry().key)
         }
-        history[packet.sent.sequenceNumber] = packet
+        // Note that it can happen that the same SSRC and sequence number is sent
+        // again. e.g, audio retransmission.
+        rtpToTransportSequenceNumber[SsrcAndRtpSequenceNumber(feedback.ssrc, feedback.rtpSequenceNumber)] =
+            feedback.sent.sequenceNumber
+        history[feedback.sent.sequenceNumber] = feedback
     }
 
     fun processSentPacket(sentPacket: SentPacketInfo): SentPacket? {
         val sendTime = sentPacket.sendTime
         // TODO(srte): Only use one way to indicate that packet feedback is used.
-        if (sentPacket.info.includedInFeedback || sentPacket.packetId != -1) {
-            val unwrappedSeqNum = seqNumUnwrapper.update(sentPacket.packetId)
-            val it = history[unwrappedSeqNum.toLong()]
+        if (sentPacket.info.includedInFeedback || sentPacket.packetId != -1L) {
+            val seqNum = sentPacket.packetId
+            val it = history[seqNum]
             if (it != null) {
                 val packetRetransmit = it.sent.sendTime.isFinite()
                 it.sent.sendTime = sendTime
@@ -137,28 +165,18 @@ class TransportFeedbackAdapter(
     }
 
     fun processTransportFeedback(feedback: RtcpFbTccPacket, feedbackReceiveTime: Instant): TransportPacketsFeedback? {
-        val msg = TransportPacketsFeedback()
-        msg.feedbackTime = feedbackReceiveTime
-        msg.packetFeedbacks = processTransportFeedbackInner(feedback, feedbackReceiveTime)
-        if (msg.packetFeedbacks.isEmpty()) {
+        if (feedback.GetPacketStatusCount() == 0) {
+            logger.info { "Empty transport feedback packet received" }
             return null
         }
-        msg.dataInFlight = inFlight.getOutstandingData()
 
-        return msg
-    }
-
-    private fun processTransportFeedbackInner(
-        feedback: RtcpFbTccPacket,
-        feedbackReceiveTime: Instant
-    ): MutableList<PacketResult> {
         // Add timestamp deltas to a local time base selected on first packet arrival.
         // This won't be the true time base, but makes it easier to manually inspect
         // time stamps.
-        if (lastTimestamp.isInfinite()) {
+        if (lastTransportFeedbackBaseTime.isInfinite()) {
             currentOffset = feedbackReceiveTime
         } else {
-            val delta = feedback.GetBaseDelta(lastTimestamp)
+            val delta = feedback.GetBaseDelta(lastTransportFeedbackBaseTime)
             // Protect against assigning current_offset_ negative value.
             if (delta < Duration.between(currentOffset, Instant.EPOCH)) {
                 logger.warn("Unexpected feedback timestamp received: $feedbackReceiveTime")
@@ -167,7 +185,7 @@ class TransportFeedbackAdapter(
                 currentOffset += delta
             }
         }
-        lastTimestamp = feedback.BaseTime()
+        lastTransportFeedbackBaseTime = feedback.BaseTime()
 
         val packetResultVector = ArrayList<PacketResult>()
         packetResultVector.ensureCapacity(feedback.GetPacketStatusCount())
@@ -177,50 +195,31 @@ class TransportFeedbackAdapter(
         var deltaSinceBase = Duration.ZERO
 
         feedback.forEach { report ->
-            val seqNum = seqNumUnwrapper.interpret(report.seqNum).toLong()
+            val seqNum = seqNumUnwrapper.interpret(report.seqNum)
 
-            if (seqNum > lastAckSeqNum) {
-                // Starts at history_.begin() if last_ack_seq_num_ < 0, since any
-                // valid sequence number is >= 0.
-                for (it in history.subMap(lastAckSeqNum, false, seqNum, true)) {
-                    inFlight.removeInFlightPacketBytes(it.value)
-                }
-                lastAckSeqNum = seqNum
-            }
-
-            val packetFeedback = history[seqNum]
+            val packetFeedback = retrievePacketFeedback(seqNum, received = report is ReceivedPacketReport)
             if (packetFeedback == null) {
-                logger.debug {
-                    "No history entry found for seqNum $seqNum with ${report.javaClass.simpleName} " +
-                        "(orig seq=${report.seqNum}, unwrapper=${seqNumUnwrapper.debugState()}, " +
-                        "firstEntry=${history.firstEntry()?.value?.sent?.sequenceNumber})"
-                }
                 ++failedLookups
-                return@forEach
-            }
-
-            if (packetFeedback.sent.sendTime.isInfinite()) {
-                // TODO(srte): Fix the tests that makes this happen and make this a
-                //  DCHECK.
-                logger.error(
-                    "Received feedback with ${report.javaClass.simpleName} " +
-                        "before packet with seqNum $seqNum was indicated as sent"
-                )
                 return@forEach
             }
 
             val previouslyReportedLost = packetFeedback.reportedLost
 
+            val result = PacketResult()
+            result.sentPacket = packetFeedback.sent
+
             if (report is ReceivedPacketReport) {
                 deltaSinceBase += report.deltaDuration
-                packetFeedback.receiveTime = currentOffset + deltaSinceBase
+                result.receiveTime = currentOffset + deltaSinceBase
                 history.remove(seqNum)
             } else {
                 packetFeedback.reportedLost = true
             }
-            val result = PacketResult()
-            result.sentPacket = packetFeedback.sent
-            result.receiveTime = packetFeedback.receiveTime
+            result.rtpPacketInfo = PacketResult.RtpPacketInfo(
+                packetFeedback.ssrc,
+                packetFeedback.rtpSequenceNumber,
+                packetFeedback.isRetransmission
+            )
             result.previouslyReportedLost = previouslyReportedLost
             packetResultVector.add(result)
         }
@@ -232,20 +231,172 @@ class TransportFeedbackAdapter(
             )
         }
 
-        return packetResultVector
+        return toTransportFeedback(packetResultVector, feedbackReceiveTime, supportsEcn = false)
+    }
+
+    fun processCongestionControlFeedback(
+        feedback: RtcpFbCcfbPacket,
+        feedbackReceiveTime: Instant
+    ): TransportPacketsFeedback? {
+        if (feedback.packets.isEmpty()) {
+            logger.info { "Empty congestion control feedback packet received" }
+            return null
+        }
+        if (currentOffset.isInfinite()) {
+            currentOffset = feedbackReceiveTime
+        }
+        val feedbackDelta = lastFeedbackCompactNtpTime?.let {
+            Duration.ofMillis(
+                TimeUtils.ntpShortToMs(feedback.reportTimestampCompactNtp) -
+                    TimeUtils.ntpShortToMs(it)
+            )
+        } ?: Duration.ZERO
+        lastFeedbackCompactNtpTime = feedback.reportTimestampCompactNtp
+        if (feedbackDelta < Duration.ZERO) {
+            logger.warn("Unexpected feedback ntp time delta $feedbackDelta")
+            currentOffset = feedbackReceiveTime
+        } else {
+            currentOffset += feedbackDelta
+        }
+
+        var failedLookups = 0
+        var supportsEcn = true
+        val packetResultVector = mutableListOf<PacketResult>()
+        feedback.packets.forEach { packetInfo ->
+            val packetFeedback = retrievePacketFeedback(
+                SsrcAndRtpSequenceNumber(ssrc = packetInfo.ssrc, packetInfo.sequenceNumber),
+                received = packetInfo is ReceivedPacketInfo
+            )
+            if (packetFeedback == null) {
+                ++failedLookups
+                return@forEach
+            }
+            val result = PacketResult()
+            result.sentPacket = packetFeedback.sent
+            if (packetInfo is ReceivedPacketInfo) {
+                result.receiveTime = currentOffset - packetInfo.arrivalTimeOffset
+                result.ecn = packetInfo.ecn
+                supportsEcn = supportsEcn && packetInfo.ecn != EcnMarking.kNotEct
+            }
+            result.rtpPacketInfo = PacketResult.RtpPacketInfo(
+                ssrc = packetFeedback.ssrc,
+                rtpSequenceNumber = packetFeedback.rtpSequenceNumber,
+                isRetransmission = packetFeedback.isRetransmission,
+            )
+            packetResultVector.add(result)
+        }
+
+        if (failedLookups > 0) {
+            logger.warn {
+                "Failed to lookup send time for $failedLookups packets. " +
+                    "Packets reordered or send time history too small?"
+            }
+        }
+
+        // Feedback is expected to be sorted in send order.
+        packetResultVector.sortWith { lhs, rhs ->
+            compareValuesBy(lhs, rhs) { it.sentPacket.sequenceNumber }
+        }
+
+        return toTransportFeedback(packetResultVector, feedbackReceiveTime, supportsEcn)
+    }
+
+    fun getOutstandingData() = inFlight.getOutstandingData()
+
+    private data class SsrcAndRtpSequenceNumber(
+        val ssrc: Long,
+        val rtpSequenceNumber: Int
+    ) : Comparable<SsrcAndRtpSequenceNumber> {
+        override fun compareTo(other: SsrcAndRtpSequenceNumber): Int {
+            return compareValuesBy(this, other, { it.ssrc }, { it.rtpSequenceNumber })
+        }
+    }
+
+    private fun toTransportFeedback(
+        packetResults: MutableList<PacketResult>,
+        feedbackReceiveTime: Instant,
+        supportsEcn: Boolean
+    ): TransportPacketsFeedback? {
+        val msg = TransportPacketsFeedback()
+        msg.feedbackTime = feedbackReceiveTime
+        if (packetResults.isEmpty()) {
+            return null
+        }
+        msg.packetFeedbacks = packetResults
+        msg.dataInFlight = inFlight.getOutstandingData()
+        msg.transportSupportsEcn = supportsEcn
+
+        return msg
+    }
+
+    private fun retrievePacketFeedback(transportSeqNum: Long, received: Boolean): PacketFeedback? {
+        if (transportSeqNum > lastAckSeqNum) {
+            // Starts at history_.begin() if last_ack_seq_num_ < 0, since any
+            // valid sequence number is >= 0.
+            for (it in history.subMap(lastAckSeqNum, false, transportSeqNum, true)) {
+                inFlight.removeInFlightPacketBytes(it.value)
+            }
+            lastAckSeqNum = transportSeqNum
+        }
+
+        val packetFeedback = history[transportSeqNum]
+
+        if (packetFeedback == null) {
+            logger.debug {
+                "No history entry found for seqNum $transportSeqNum"
+            }
+            return null
+        }
+
+        if (packetFeedback.sent.sendTime.isInfinite()) {
+            // TODO(srte): Fix the tests that makes this happen and make this a
+            //  DCHECK.
+            logger.error(
+                "Received feedback before packet with seqNum $transportSeqNum was indicated as sent"
+            )
+            return null
+        }
+
+        if (received) {
+            // Note: Lost packets are not removed from history because they might
+            // be reported as received by a later feedback.
+            rtpToTransportSequenceNumber.remove(
+                SsrcAndRtpSequenceNumber(packetFeedback.ssrc, packetFeedback.rtpSequenceNumber)
+            )
+            history.remove(transportSeqNum)
+        }
+
+        return packetFeedback
+    }
+
+    private fun retrievePacketFeedback(key: SsrcAndRtpSequenceNumber, received: Boolean): PacketFeedback? {
+        val transportSeqNum = rtpToTransportSequenceNumber[key]
+        if (transportSeqNum == null) {
+            return null
+        }
+        return retrievePacketFeedback(transportSeqNum, received)
     }
 
     private var pendingUntrackedSize = DataSize.ZERO
     private var lastSendTime = Instant.MIN
     private var lastUntrackedSendTime = Instant.MIN
     private val seqNumUnwrapper = RtpSequenceIndexTracker()
-    private val history = TreeMap<Long, PacketFeedback>()
 
     private var lastAckSeqNum = -1L
     private val inFlight = InFlightBytesTracker()
 
     private var currentOffset = Instant.MIN
-    private var lastTimestamp = Instant.MIN
+
+    // `last_transport_feedback_base_time` is only used for transport feedback to
+    // track base time.
+    private var lastTransportFeedbackBaseTime = Instant.MIN
+
+    // Used by RFC 8888 congestion control feedback to track base time.
+    private var lastFeedbackCompactNtpTime: Long? = null
+
+    // Map SSRC and RTP sequence number to transport sequence number.
+    private val rtpToTransportSequenceNumber = TreeMap<SsrcAndRtpSequenceNumber, Long>()
+    private val history = TreeMap<Long, PacketFeedback>()
 
     /** Jitsi local */
     fun getStatisitics(): StatisticsSnapshot {
@@ -257,7 +408,7 @@ class TransportFeedbackAdapter(
             lastAckSeqNum,
             history.size,
             currentOffset,
-            lastTimestamp
+            lastTransportFeedbackBaseTime,
         )
     }
 
@@ -269,7 +420,7 @@ class TransportFeedbackAdapter(
         val lastAckSeqNum: Long,
         val historySize: Int,
         val currentOffset: Instant,
-        val lastTimestamp: Instant
+        val lastTransportFeedbackBaseTime: Instant
     ) {
         fun toJson(): OrderedJsonObject {
             return OrderedJsonObject().apply {
@@ -280,7 +431,7 @@ class TransportFeedbackAdapter(
                 put("last_ack_seq_num", lastAckSeqNum)
                 put("history_size", historySize)
                 put("current_offset", currentOffset.toEpochMilliOrInf())
-                put("last_timestamp", lastTimestamp.toEpochMilliOrInf())
+                put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf())
             }
         }
     }

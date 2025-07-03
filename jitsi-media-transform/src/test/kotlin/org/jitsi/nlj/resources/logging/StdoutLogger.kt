@@ -46,6 +46,10 @@ class StdoutLogger(
         context.addContext(addedContext)
     }
 
+    override fun removeContext(key: String) {
+        context.removeContext(key)
+    }
+
     private fun isLoggable(level: Level): Boolean = level.intValue() >= _level.intValue()
 
     private fun log(level: Level, msg: Any) {

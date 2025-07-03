@@ -27,7 +27,7 @@
         <kotlin.version>2.0.0</kotlin.version>
         <kotest.version>5.9.1</kotest.version>
         <junit.version>5.10.2</junit.version>
-        <jitsi.utils.version>1.0-138-gd5b1ca6</jitsi.utils.version>
+        <jitsi.utils.version>1.0-143-g65e2bd7</jitsi.utils.version>
         <jicoco.version>1.1-159-gf9c2712</jicoco.version>
         <mockk.version>1.13.11</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
