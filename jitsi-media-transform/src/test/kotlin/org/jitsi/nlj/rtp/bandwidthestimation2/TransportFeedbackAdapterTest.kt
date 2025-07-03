@@ -18,17 +18,31 @@
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
 import io.kotest.assertions.withClue
+import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.EcnMarking
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.ReceivedPacketInfo
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacketBuilder
+import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.UnreceivedPacketInfo
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
+import org.jitsi.rtp.rtp.RtpPacket
+import org.jitsi.utils.NEVER
+import org.jitsi.utils.TimeUtils
+import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
-import org.jitsi.utils.roundDownTo
+import org.jitsi.utils.roundTo
 import org.jitsi.utils.time.FakeClock
 import org.jitsi.utils.times
+import org.jitsi.utils.toDoubleMillis
 import java.time.Duration
 import java.time.Instant
 
@@ -38,14 +52,55 @@ import java.time.Instant
  * modified to use Jitsi types for objects outside the congestion controller,
  * and not using Network Routes.
  */
-private const val kSsrc = 8492L
 private val kPacingInfo0 = PacedPacketInfo(0, 5, 2000)
-private val kPacingInfo1 = PacedPacketInfo(1, 8, 4000)
-private val kPacingInfo2 = PacedPacketInfo(2, 14, 7000)
-private val kPacingInfo3 = PacedPacketInfo(3, 20, 10000)
-private val kPacingInfo4 = PacedPacketInfo(4, 22, 10000)
 
-private fun comparePacketFeedbackVectors(truth: List<PacketResult>, input: List<PacketResult>) {
+data class PacketTemplate(
+    val ssrc: Long = 1,
+    val transportSequenceNumber: Long = 0,
+    val rtpSequenceNumber: Int = 2,
+    // TODO do we need mediaType?
+    val packetSize: DataSize = 100.bytes,
+
+    val ecn: EcnMarking = EcnMarking.kNotEct,
+    val sendTimestamp: Instant = Instant.EPOCH,
+    val pacingInfo: PacedPacketInfo = PacedPacketInfo(),
+    var receiveTimestamp: Instant = NEVER,
+
+    val isAudio: Boolean = false
+)
+
+fun createPacketTemplates(
+    numberOfSsrcs: Int,
+    packetsPerSsrc: Int,
+    firstTransportSequenceNumber: Long = 99
+): List<PacketTemplate> {
+    var transportSequenceNumber: Long = firstTransportSequenceNumber
+    var sendTime = Instant.EPOCH + 200.ms
+    var receiveTime = Instant.EPOCH + 100.ms
+    val packets = mutableListOf<PacketTemplate>()
+
+    for (s in 0 until numberOfSsrcs) {
+        val ssrc = (s + 3).toLong()
+        for (r in ssrc * 10 until ssrc * 10 + packetsPerSsrc) {
+            val rtpSequenceNumber = r.toInt()
+            packets.add(
+                PacketTemplate(
+                    ssrc = ssrc,
+                    transportSequenceNumber = transportSequenceNumber++,
+                    rtpSequenceNumber = rtpSequenceNumber,
+                    sendTimestamp = sendTime,
+                    pacingInfo = kPacingInfo0,
+                    receiveTimestamp = receiveTime,
+                )
+            )
+            sendTime += 10.ms
+            receiveTime += 13.ms
+        }
+    }
+    return packets
+}
+
+private fun comparePacketFeedbackVectors(truth: List<PacketTemplate>, input: List<PacketResult>) {
     input.size shouldBe truth.size
     // truth contains the input data for the test, and input is what will be
     // sent to the bandwidth estimator. truth.arrival_tims_ms is used to
@@ -54,55 +109,110 @@ private fun comparePacketFeedbackVectors(truth: List<PacketResult>, input: List<
     // base adjustment performed by the TransportFeedbackAdapter at the first
     // packet, the truth[x].arrival_time and input[x].arrival_time may not be
     // equal. However, the difference must be the same for all x.
-    val arrivalTimeDelta = Duration.between(input[0].receiveTime, truth[0].receiveTime)
+    val arrivalTimeDelta = Duration.between(input[0].receiveTime, truth[0].receiveTimestamp).toDoubleMillis()
     for (i in truth.indices) {
         withClue("feedback vector packet $i") {
-            assert(truth[i].isReceived())
+            input[i].isReceived() shouldBe truth[i].receiveTimestamp.isFinite()
             if (input[i].isReceived()) {
-                Duration.between(input[i].receiveTime, truth[i].receiveTime) shouldBe arrivalTimeDelta
+                // Jitsi change from WebRTC: since we encode the feedback packets to their wire format, we
+                // need to account for the rounding of arrival times in CCFB packets.
+                Duration.between(input[i].receiveTime, truth[i].receiveTimestamp).toDoubleMillis() shouldBe
+                    (arrivalTimeDelta plusOrMinus 1000.0 / 1024.0)
             }
-            input[i].sentPacket.sendTime shouldBe truth[i].sentPacket.sendTime
-            input[i].sentPacket.sequenceNumber shouldBe truth[i].sentPacket.sequenceNumber
-            input[i].sentPacket.size shouldBe truth[i].sentPacket.size
-            input[i].sentPacket.pacingInfo shouldBe truth[i].sentPacket.pacingInfo
+            input[i].sentPacket.sendTime shouldBe truth[i].sendTimestamp
+            input[i].sentPacket.sequenceNumber shouldBe truth[i].transportSequenceNumber
+            input[i].sentPacket.size shouldBe truth[i].packetSize
+            input[i].sentPacket.pacingInfo shouldBe truth[i].pacingInfo
+            input[i].sentPacket.audio shouldBe truth[i].isAudio
+            input[i].rtpPacketInfo?.rtpSequenceNumber shouldBe truth[i].rtpSequenceNumber
+            input[i].rtpPacketInfo?.ssrc shouldBe truth[i].ssrc
+            // TODO do we need to compare isRetransmission?
         }
     }
 }
 
-private fun createPacket(
-    receiveTimeMs: Long,
-    sendTimeMs: Long,
-    sequenceNumber: Int,
-    payloadSize: Long,
-    pacingInfo: PacedPacketInfo
-): PacketResult {
-    val res = PacketResult().apply {
-        receiveTime = Instant.ofEpochMilli(receiveTimeMs)
-        sentPacket.sendTime = Instant.ofEpochMilli(sendTimeMs)
-        sentPacket.sequenceNumber = sequenceNumber.toLong()
-        sentPacket.size = payloadSize.bytes
-        sentPacket.pacingInfo = pacingInfo
+private fun createPacketToSend(packet: PacketTemplate): org.jitsi.nlj.PacketInfo {
+    val length = packet.packetSize.bytes.toInt()
+    val buf = BufferPool.getBuffer(length)
+    buf.fill(0, 0, length)
+
+    val sendPacket = RtpPacket(buffer = buf, offset = 0, length = length).apply {
+        version = 2
+        ssrc = packet.ssrc
+        sequenceNumber = packet.rtpSequenceNumber
     }
-    return res
+    val packetInfo = org.jitsi.nlj.PacketInfo(sendPacket).apply {
+        probingInfo = packet.pacingInfo
+    }
+
+    return packetInfo
 }
 
-class OneTransportFeedbackAdapterTest {
+private fun buildRtcpTransportFeedbackPacket(packets: List<PacketTemplate>): RtcpFbTccPacket {
+    val feedbackBuilder = RtcpFbTccPacketBuilder()
+    feedbackBuilder.SetBase(
+        (packets[0].transportSequenceNumber and 0xFFFF).toInt(),
+        packets[0].receiveTimestamp
+    )
+    packets.forEach { packet ->
+        if (packet.receiveTimestamp.isFinite()) {
+            feedbackBuilder.AddReceivedPacket(
+                (packet.transportSequenceNumber and 0xFFFF).toInt(),
+                packet.receiveTimestamp
+            )
+        }
+    }
+    return feedbackBuilder.build()
+}
+
+private fun buildRtcpCongestionControlFeedbackPacket(packets: List<PacketTemplate>): RtcpFbCcfbPacket {
+    // Assume the feedback was sent when the last packet was received.
+    // JITSI modification: interpret "last" by time rather than by sequence number
+    val feedbackSentTime =
+        packets.filter { it.receiveTimestamp.isFinite() }.maxOfOrNull { it.receiveTimestamp } ?: NEVER
+
+    val compactNtp = TimeUtils.toNtpShortFormat(TimeUtils.toNtpTime(feedbackSentTime.toEpochMilli()))
+
+    val packetInfos = mutableListOf<org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.PacketInfo>()
+    packets.forEach { packet ->
+        val packetInfo = if (packet.receiveTimestamp.isFinite()) {
+            ReceivedPacketInfo(
+                ssrc = packet.ssrc,
+                sequenceNumber = packet.rtpSequenceNumber,
+                arrivalTimeOffset = Duration.between(packet.receiveTimestamp, feedbackSentTime),
+                ecn = packet.ecn
+            )
+        } else {
+            UnreceivedPacketInfo(ssrc = packet.ssrc, sequenceNumber = packet.rtpSequenceNumber)
+        }
+        packetInfos.add(packetInfo)
+    }
+    val feedbackBuilder = RtcpFbCcfbPacketBuilder(reportTimestampCompactNtp = compactNtp, packets = packetInfos)
+
+    return feedbackBuilder.build()
+}
+
+enum class FeedbackType {
+    Ccfb,
+    Tcc
+}
+
+private fun timeNow() = Instant.EPOCH + 1234.ms
+
+class OneTransportFeedbackAdapterTest(val feedbackType: FeedbackType) {
     private val logger = createLogger()
 
-    fun onSentPacket(packetFeedback: PacketResult) {
-        adapter.addPacket(
-            packetFeedback.sentPacket.sequenceNumber.toInt(),
-            packetFeedback.sentPacket.size,
-            packetFeedback.sentPacket.pacingInfo,
-            clock.instant()
-        )
-        adapter.processSentPacket(
-            SentPacketInfo(
-                packetFeedback.sentPacket.sequenceNumber.toInt(),
-                packetFeedback.sentPacket.sendTime,
-                PacketInfo()
-            )
-        )
+    fun createAndProcessFeedback(packets: List<PacketTemplate>): TransportPacketsFeedback? {
+        when (feedbackType) {
+            FeedbackType.Tcc -> {
+                val rtcpFeedback = buildRtcpTransportFeedbackPacket(packets)
+                return adapter.processTransportFeedback(rtcpFeedback, timeNow())
+            }
+            FeedbackType.Ccfb -> {
+                val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+                return adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
+            }
+        }
     }
 
     val clock = FakeClock()
@@ -110,285 +220,472 @@ class OneTransportFeedbackAdapterTest {
 }
 
 class TransportFeedbackAdapterTest : FreeSpec() {
+    override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
+
+    init {
+        BufferPool.getBuffer = { size -> ByteArray(size + 10) }
+    }
+
     init {
         "AdaptsFeedbackAndPopulatesSendTimes" {
-            val test = OneTransportFeedbackAdapterTest()
-            val packets = mutableListOf<PacketResult>()
-            packets.add(createPacket(100, 200, 0, 1500, kPacingInfo0))
-            packets.add(createPacket(110, 210, 1, 1500, kPacingInfo0))
-            packets.add(createPacket(120, 220, 2, 1500, kPacingInfo0))
-            packets.add(createPacket(130, 230, 3, 1500, kPacingInfo1))
-            packets.add(createPacket(140, 240, 4, 1500, kPacingInfo1))
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val packets = createPacketTemplates(numberOfSsrcs = 2, packetsPerSsrc = 3)
 
-            packets.forEach { packet -> test.onSentPacket(packet) }
-
-            val feedback = RtcpFbTccPacketBuilder()
-            feedback.SetBase(packets[0].sentPacket.sequenceNumber.toInt(), packets[0].receiveTime)
-
-            packets.forEach { packet ->
-                feedback.AddReceivedPacket(packet.sentPacket.sequenceNumber.toInt(), packet.receiveTime) shouldBe true
+                    packets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(
+                                packet.transportSequenceNumber,
+                                packet.sendTimestamp
+                            )
+                        )
+                    }
+                    val adaptedFeedback = test.createAndProcessFeedback(packets)
+                    comparePacketFeedbackVectors(packets, adaptedFeedback!!.packetFeedbacks)
+                }
             }
-
-            val feedbackPacket = feedback.build()
-
-            val result = test.adapter.processTransportFeedback(feedbackPacket, test.clock.instant())
-            comparePacketFeedbackVectors(packets, result!!.packetFeedbacks)
         }
 
         "FeedbackVectorReportsUnreceived" {
-            val test = OneTransportFeedbackAdapterTest()
-            val sentPackets = listOf(
-                createPacket(100, 220, 0, 1500, kPacingInfo0),
-                createPacket(110, 210, 1, 1500, kPacingInfo0),
-                createPacket(120, 220, 2, 1500, kPacingInfo0),
-                createPacket(130, 230, 3, 1500, kPacingInfo0),
-                createPacket(140, 240, 4, 1500, kPacingInfo0),
-                createPacket(150, 250, 5, 1500, kPacingInfo0),
-                createPacket(160, 260, 6, 1500, kPacingInfo0)
-            )
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val sentPackets = createPacketTemplates(numberOfSsrcs = 2, packetsPerSsrc = 3)
 
-            sentPackets.forEach { packet -> test.onSentPacket(packet) }
+                    sentPackets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(
+                                packet.transportSequenceNumber,
+                                packet.sendTimestamp
+                            )
+                        )
+                    }
 
-            // Note: Important to include the last packet, as only unreceived packets in
-            // between received packets can be inferred.
-            val receivedPackets = listOf(
-                sentPackets[0],
-                sentPackets[2],
-                sentPackets[6]
-            )
-
-            val feedbackBuilder = RtcpFbTccPacketBuilder()
-            feedbackBuilder.SetBase(
-                receivedPackets[0].sentPacket.sequenceNumber.toInt(),
-                receivedPackets[0].receiveTime
-            )
-
-            receivedPackets.forEach { packet ->
-                feedbackBuilder.AddReceivedPacket(
-                    packet.sentPacket.sequenceNumber.toInt(),
-                    packet.receiveTime
-                ) shouldBe true
+                    // Note: Important to include the last packet per SSRC, as only unreceived
+                    // packets in between received packets can be inferred.
+                    sentPackets[1].receiveTimestamp = NEVER
+                    sentPackets[4].receiveTimestamp = NEVER
+                    val adaptedFeedback = test.createAndProcessFeedback(sentPackets)
+                    comparePacketFeedbackVectors(sentPackets, adaptedFeedback!!.packetFeedbacks)
+                }
             }
-
-            val feedback = feedbackBuilder.build()
-
-            val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
-            comparePacketFeedbackVectors(sentPackets, res!!.packetFeedbacks)
         }
 
         "HandlesDroppedPackets" {
-            val test = OneTransportFeedbackAdapterTest()
-            val packets = mutableListOf<PacketResult>()
-            packets.add(createPacket(100, 200, 0, 1500, kPacingInfo0))
-            packets.add(createPacket(110, 210, 1, 1500, kPacingInfo1))
-            packets.add(createPacket(120, 220, 2, 1500, kPacingInfo2))
-            packets.add(createPacket(130, 230, 3, 1500, kPacingInfo3))
-            packets.add(createPacket(140, 240, 4, 1500, kPacingInfo4))
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val packets =
+                        createPacketTemplates(numberOfSsrcs = 2, packetsPerSsrc = 3, firstTransportSequenceNumber = 0)
 
-            val kSendSideDropBefore = 1
-            val kReceiveSideDropAfter = 3
+                    val kSendSideDropBefore = 1
+                    val kReceiveSideDropAfter = 3
 
-            packets.forEach { packet ->
-                if (packet.sentPacket.sequenceNumber >= kSendSideDropBefore) {
-                    test.onSentPacket(packet)
+                    val sentPackets = mutableListOf<PacketTemplate>()
+
+                    packets.forEach { packet ->
+                        if (packet.transportSequenceNumber >= kSendSideDropBefore) {
+                            sentPackets.add(packet)
+                        }
+                    }
+
+                    sentPackets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(
+                                packet.transportSequenceNumber,
+                                packet.sendTimestamp
+                            )
+                        )
+                    }
+
+                    val receivedPackets = mutableListOf<PacketTemplate>()
+                    packets.forEach { packet ->
+                        if (packet.transportSequenceNumber <= kReceiveSideDropAfter) {
+                            receivedPackets.add(packet)
+                        }
+                    }
+
+                    val adaptedFeedback = test.createAndProcessFeedback(receivedPackets)
+
+                    val expectedPackets = packets.subList(kSendSideDropBefore, kReceiveSideDropAfter + 1)
+
+                    comparePacketFeedbackVectors(expectedPackets, adaptedFeedback!!.packetFeedbacks)
                 }
             }
-
-            val feedbackBuilder = RtcpFbTccPacketBuilder()
-            feedbackBuilder.SetBase(packets[0].sentPacket.sequenceNumber.toInt(), packets[0].receiveTime)
-
-            packets.forEach { packet ->
-                if (packet.sentPacket.sequenceNumber <= kReceiveSideDropAfter) {
-                    feedbackBuilder.AddReceivedPacket(
-                        packet.sentPacket.sequenceNumber.toInt(),
-                        packet.receiveTime
-                    ) shouldBe true
-                }
-            }
-
-            val feedback = feedbackBuilder.build()
-
-            val expectedPackets = packets.subList(kSendSideDropBefore, kReceiveSideDropAfter + 1)
-
-            // Packets that have timed out on the send-side have lost the
-            // information stored on the send-side. And they will not be reported to
-            // observers since we won't know that they come from the same networks.
-            val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
-            comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
         }
 
-        "SendTimeWrapsBothWays" {
-            val test = OneTransportFeedbackAdapterTest()
-            val kHighArrivalTime = RtcpFbTccPacket.Companion.kDeltaScaleFactor * (1 shl 8) * ((1 shl 23) - 1)
-            val packets = mutableListOf<PacketResult>()
-            packets.add(createPacket(kHighArrivalTime.toMillis() + 64, 210, 0, 1500, PacedPacketInfo()))
-            packets.add(createPacket(kHighArrivalTime.toMillis() - 64, 210, 1, 1500, PacedPacketInfo()))
-            packets.add(createPacket(kHighArrivalTime.toMillis(), 220, 2, 1500, PacedPacketInfo()))
+        // Skipped: "FeedbackReportsIfPacketIsAudio"
 
-            packets.forEach { packet ->
-                test.onSentPacket(packet)
-            }
+        "ReceiveTimeWrapsBothWays" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val kHighArrivalTime = RtcpFbTccPacket.Companion.kDeltaScaleFactor * (1 shl 8) * ((1 shl 23) - 1)
+                    val packets = listOf(
+                        PacketTemplate(
+                            transportSequenceNumber = 0,
+                            rtpSequenceNumber = 102,
+                            receiveTimestamp = Instant.EPOCH + kHighArrivalTime + 64.ms
+                        ),
+                        PacketTemplate(
+                            transportSequenceNumber = 1,
+                            rtpSequenceNumber = 103,
+                            receiveTimestamp = Instant.EPOCH + kHighArrivalTime - 64.ms
+                        ),
+                        PacketTemplate(
+                            transportSequenceNumber = 2,
+                            rtpSequenceNumber = 104,
+                            receiveTimestamp = Instant.EPOCH + kHighArrivalTime
+                        )
+                    )
 
-            packets.forEach { packet ->
-                val feedbackBuilder = RtcpFbTccPacketBuilder()
-                feedbackBuilder.SetBase(packet.sentPacket.sequenceNumber.toInt(), packet.receiveTime)
+                    packets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(
+                                packet.transportSequenceNumber,
+                                packet.sendTimestamp
+                            )
+                        )
+                    }
 
-                feedbackBuilder.AddReceivedPacket(
-                    packet.sentPacket.sequenceNumber.toInt(),
-                    packet.receiveTime
-                ) shouldBe true
+                    packets.forEach { packet ->
+                        val receivedPackets = listOf(packet)
+                        val result: TransportPacketsFeedback?
+                        when (test.feedbackType) {
+                            FeedbackType.Ccfb -> {
+                                val feedback = buildRtcpCongestionControlFeedbackPacket(receivedPackets)
+                                val rawBuffer = feedback.buffer
+                                val offset = feedback.offset
+                                val length = feedback.length
 
-                var feedback = feedbackBuilder.build()
-                val rawBuffer = feedback.buffer
-                val offset = feedback.offset
-                val length = feedback.length
+                                val parsedFeedback = RtcpFbCcfbPacket(rawBuffer, offset, length)
+                                result = test.adapter.processCongestionControlFeedback(parsedFeedback, timeNow())
+                            }
 
-                feedback = RtcpFbTccPacket(rawBuffer, offset, length)
+                            FeedbackType.Tcc -> {
+                                val feedback = buildRtcpTransportFeedbackPacket(receivedPackets)
+                                val rawBuffer = feedback.buffer
+                                val offset = feedback.offset
+                                val length = feedback.length
 
-                val expectedPackets = mutableListOf<PacketResult>()
-                expectedPackets.add(packet)
-
-                val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
-                comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
+                                val parsedFeedback = RtcpFbTccPacket(rawBuffer, offset, length)
+                                result = test.adapter.processTransportFeedback(parsedFeedback, timeNow())
+                            }
+                        }
+                        result shouldNotBe null
+                        comparePacketFeedbackVectors(receivedPackets, result!!.packetFeedbacks)
+                    }
+                }
             }
         }
 
         "HandlesArrivalReordering" {
-            val test = OneTransportFeedbackAdapterTest()
-            val packets = mutableListOf<PacketResult>()
-            packets.add(createPacket(120, 200, 0, 1500, kPacingInfo0))
-            packets.add(createPacket(110, 210, 1, 1500, kPacingInfo1))
-            packets.add(createPacket(100, 220, 2, 1500, kPacingInfo2))
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val packets = listOf(
+                        PacketTemplate(
+                            transportSequenceNumber = 0,
+                            rtpSequenceNumber = 101,
+                            sendTimestamp = Instant.EPOCH + 200.ms,
+                            receiveTimestamp = Instant.EPOCH + 120.ms
+                        ),
+                        PacketTemplate(
+                            transportSequenceNumber = 1,
+                            rtpSequenceNumber = 102,
+                            sendTimestamp = Instant.EPOCH + 210.ms,
+                            receiveTimestamp = Instant.EPOCH + 110.ms
+                        ),
+                        PacketTemplate(
+                            transportSequenceNumber = 2,
+                            rtpSequenceNumber = 103,
+                            sendTimestamp = Instant.EPOCH + 220.ms,
+                            receiveTimestamp = Instant.EPOCH + 100.ms
+                        ),
+                    )
 
-            packets.forEach { packet ->
-                test.onSentPacket(packet)
+                    packets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(
+                                packet.transportSequenceNumber,
+                                packet.sendTimestamp
+                            )
+                        )
+                    }
+
+                    // Adapter keeps the packets ordered by sequence number (which is itself
+                    // assigned by the order of transmission). Reordering by some other criteria,
+                    // eg. arrival time, is up to the observers.
+                    val adaptedFeedback = test.createAndProcessFeedback(packets)
+                    comparePacketFeedbackVectors(packets, adaptedFeedback!!.packetFeedbacks)
+                }
             }
-
-            val feedbackBuilder = RtcpFbTccPacketBuilder()
-            feedbackBuilder.SetBase(packets[0].sentPacket.sequenceNumber.toInt(), packets[0].receiveTime)
-
-            packets.forEach { packet ->
-                feedbackBuilder.AddReceivedPacket(
-                    packet.sentPacket.sequenceNumber.toInt(),
-                    packet.receiveTime
-                ) shouldBe true
-            }
-
-            val feedback = feedbackBuilder.build()
-
-            // Adapter keeps the packets ordered by sequence number (which is itself
-            // assigned by the order of transmission). Reordering by some other criteria,
-            // eg. arrival time, is up to the observers.
-            val res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
-            comparePacketFeedbackVectors(packets, res!!.packetFeedbacks)
-        }
-
-        "TimestampDeltas" {
-            val test = OneTransportFeedbackAdapterTest()
-            val sentPackets = mutableListOf<PacketResult>()
-            // TODO(srte): Consider using us resolution in the constants.
-            val kSmallDelta = RtcpFbTccPacket.kDeltaScaleFactor.roundDownTo(1.ms)
-            val kLargePositiveDelta = (RtcpFbTccPacket.kDeltaScaleFactor * Short.MAX_VALUE.toInt()).roundDownTo(1.ms)
-            val kLargeNegativeDelta = (RtcpFbTccPacket.kDeltaScaleFactor * Short.MIN_VALUE.toInt()).roundDownTo(1.ms)
-
-            val packetFeedback = PacketResult()
-            packetFeedback.sentPacket.sequenceNumber = 1
-            packetFeedback.sentPacket.sendTime = Instant.ofEpochMilli(100)
-            packetFeedback.receiveTime = Instant.ofEpochMilli(200)
-            sentPackets.add(packetFeedback.copy())
-
-            // TODO(srte): This rounding maintains previous behavior, but should ot be
-            // required.
-            packetFeedback.sentPacket.sendTime += kSmallDelta
-            packetFeedback.receiveTime += kSmallDelta
-            ++packetFeedback.sentPacket.sequenceNumber
-            sentPackets.add(packetFeedback.copy())
-
-            packetFeedback.sentPacket.sendTime += kLargePositiveDelta
-            packetFeedback.receiveTime += kLargePositiveDelta
-            ++packetFeedback.sentPacket.sequenceNumber
-            sentPackets.add(packetFeedback.copy())
-
-            packetFeedback.sentPacket.sendTime += kLargeNegativeDelta
-            packetFeedback.receiveTime += kLargeNegativeDelta
-            ++packetFeedback.sentPacket.sequenceNumber
-            sentPackets.add(packetFeedback.copy())
-
-            // Too large, delta - will need two feedback messages.
-            packetFeedback.sentPacket.sendTime += kLargePositiveDelta + 1.ms
-            packetFeedback.receiveTime += kLargePositiveDelta + 1.ms
-            ++packetFeedback.sentPacket.sequenceNumber
-
-            sentPackets.forEach { packet ->
-                test.onSentPacket(packet)
-            }
-            test.onSentPacket(packetFeedback)
-
-            // Create expected feedback and send into adapter.
-            var feedbackBuilder = RtcpFbTccPacketBuilder()
-            feedbackBuilder.SetBase(sentPackets[0].sentPacket.sequenceNumber.toInt(), sentPackets[0].receiveTime)
-
-            sentPackets.forEach { packet ->
-                feedbackBuilder.AddReceivedPacket(
-                    packet.sentPacket.sequenceNumber.toInt(),
-                    packet.receiveTime
-                ) shouldBe true
-            }
-            feedbackBuilder.AddReceivedPacket(
-                packetFeedback.sentPacket.sequenceNumber.toInt(),
-                packetFeedback.receiveTime
-            ) shouldBe false
-
-            var feedback = feedbackBuilder.build()
-            var rawPacket = feedback.buffer
-            var offset = feedback.offset
-            var length = feedback.length
-            feedback = RtcpFbTccPacket(rawPacket, offset, length)
-
-            var res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
-            comparePacketFeedbackVectors(sentPackets, res!!.packetFeedbacks)
-
-            // Create a new feedback message and add the trailing item.
-            feedbackBuilder = RtcpFbTccPacketBuilder()
-            feedbackBuilder.SetBase(packetFeedback.sentPacket.sequenceNumber.toInt(), packetFeedback.receiveTime)
-            feedbackBuilder.AddReceivedPacket(
-                packetFeedback.sentPacket.sequenceNumber.toInt(),
-                packetFeedback.receiveTime
-            ) shouldBe true
-            feedback = feedbackBuilder.build()
-            rawPacket = feedback.buffer
-            offset = feedback.offset
-            length = feedback.length
-            feedback = RtcpFbTccPacket(rawPacket, offset, length)
-
-            res = test.adapter.processTransportFeedback(feedback, test.clock.instant())
-            val expectedPackets = mutableListOf<PacketResult>()
-            expectedPackets.add(packetFeedback.copy())
-            comparePacketFeedbackVectors(expectedPackets, res!!.packetFeedbacks)
         }
 
         "IgnoreDuplicatePacketSentCalls" {
-            val test = OneTransportFeedbackAdapterTest()
-            val packet = createPacket(100, 200, 0, 1500, kPacingInfo0)
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val packet = PacketTemplate()
+                    // Add a packet and then mark it as sent.
+                    test.adapter.addPacket(
+                        createPacketToSend(packet),
+                        packet.transportSequenceNumber,
+                        0.bytes,
+                        timeNow()
+                    )
+                    val sentPacket = test.adapter.processSentPacket(
+                        SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp, PacketInfo())
+                    )
+                    sentPacket shouldNotBe null
 
-            // Add a packet and then mark it as sent.
-            test.adapter.addPacket(
-                packet.sentPacket.sequenceNumber.toInt(),
-                packet.sentPacket.size,
-                packet.sentPacket.pacingInfo,
-                test.clock.instant()
-            )
-            val sentPacket = test.adapter.processSentPacket(
-                SentPacketInfo(packet.sentPacket.sequenceNumber.toInt(), packet.sentPacket.sendTime)
-            )
-            sentPacket shouldNotBe null
+                    // Call ProcessSentPacket() again with the same sequence number. This packet
+                    // has already been marked as sent and the call should be ignored.
+                    val duplicatePacket = test.adapter.processSentPacket(
+                        SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp, PacketInfo())
+                    )
+                    duplicatePacket shouldBe null
+                }
+            }
+        }
 
-            // Call ProcessSentPacket() again with the same sequence number. This packet
-            // has already been marked as sent and the call should be ignored.
-            val duplicatePacket = test.adapter.processSentPacket(
-                SentPacketInfo(packet.sentPacket.sequenceNumber.toInt(), packet.sentPacket.sendTime)
+        "SendReceiveTimeDiffTimeContinuouseBetweenFeedback" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+                    val packets = listOf(
+                        PacketTemplate(
+                            transportSequenceNumber = 1,
+                            rtpSequenceNumber = 101,
+                            sendTimestamp = Instant.EPOCH + 100.ms,
+                            pacingInfo = kPacingInfo0,
+                            receiveTimestamp = Instant.EPOCH + 200.ms
+                        ),
+                        PacketTemplate(
+                            transportSequenceNumber = 2,
+                            rtpSequenceNumber = 102,
+                            sendTimestamp = Instant.EPOCH + 110.ms,
+                            pacingInfo = kPacingInfo0,
+                            receiveTimestamp = Instant.EPOCH + 210.ms
+                        )
+                    )
+
+                    packets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(
+                                packet.transportSequenceNumber,
+                                packet.sendTimestamp
+                            )
+                        )
+                    }
+
+                    val adaptedFeedback1 = test.createAndProcessFeedback(listOf(packets[0]))
+                    val adaptedFeedback2 = test.createAndProcessFeedback(listOf(packets[1]))
+
+                    adaptedFeedback1!!.packetFeedbacks.size shouldBe adaptedFeedback2!!.packetFeedbacks.size
+                    adaptedFeedback1.packetFeedbacks.size shouldBe 1
+                    Duration.between(
+                        adaptedFeedback1.packetFeedbacks[0].sentPacket.sendTime,
+                        adaptedFeedback1.packetFeedbacks[0].receiveTime
+                    ).roundTo(1.ms) shouldBe
+                        Duration.between(
+                            adaptedFeedback2.packetFeedbacks[0].sentPacket.sendTime,
+                            adaptedFeedback2.packetFeedbacks[0].receiveTime
+                        ).roundTo(1.ms)
+                }
+            }
+        }
+
+        "ProcessSentPacketIncreaseOutstandingData" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+
+                    val packet1 = PacketTemplate(transportSequenceNumber = 1, packetSize = 200.bytes)
+                    val packet2 = PacketTemplate(transportSequenceNumber = 2, packetSize = 300.bytes)
+                    test.adapter.addPacket(
+                        createPacketToSend(packet1),
+                        packet1.transportSequenceNumber,
+                        0.bytes,
+                        timeNow()
+                    )
+                    val sentPacket1 = test.adapter.processSentPacket(
+                        SentPacketInfo(packet1.transportSequenceNumber, packet1.sendTimestamp)
+                    )
+
+                    sentPacket1 shouldNotBe null
+                    sentPacket1!!.sequenceNumber shouldBe packet1.transportSequenceNumber
+                    // Only one packet in flight
+                    sentPacket1.dataInFlight shouldBe packet1.packetSize
+                    test.adapter.getOutstandingData() shouldBe packet1.packetSize
+
+                    test.adapter.addPacket(
+                        createPacketToSend(packet2),
+                        packet2.transportSequenceNumber,
+                        0.bytes,
+                        timeNow()
+                    )
+                    val sentPacket2 = test.adapter.processSentPacket(
+                        SentPacketInfo(packet2.transportSequenceNumber, packet2.sendTimestamp)
+                    )
+
+                    sentPacket2 shouldNotBe null
+                    // Two packets in flight.
+                    sentPacket2!!.dataInFlight shouldBe packet1.packetSize + packet2.packetSize
+
+                    test.adapter.getOutstandingData() shouldBe packet1.packetSize + packet2.packetSize
+                }
+            }
+        }
+
+        "TransportPacketFeedbackHasDataInFlight" {
+            FeedbackType.entries.forEach {
+                withClue(it) {
+                    val test = OneTransportFeedbackAdapterTest(it)
+
+                    val packets = listOf(
+                        PacketTemplate(
+                            transportSequenceNumber = 1,
+                            rtpSequenceNumber = 101,
+                            packetSize = 200.bytes,
+                            sendTimestamp = Instant.EPOCH + 100.ms,
+                            pacingInfo = kPacingInfo0,
+                            receiveTimestamp = Instant.EPOCH + 200.ms,
+                        ),
+                        PacketTemplate(
+                            transportSequenceNumber = 2,
+                            rtpSequenceNumber = 102,
+                            packetSize = 300.bytes,
+                            sendTimestamp = Instant.EPOCH + 110.ms,
+                            pacingInfo = kPacingInfo0,
+                            receiveTimestamp = Instant.EPOCH + 210.ms,
+                        )
+                    )
+
+                    packets.forEach { packet ->
+                        test.adapter.addPacket(
+                            createPacketToSend(packet),
+                            packet.transportSequenceNumber,
+                            0.bytes,
+                            timeNow()
+                        )
+                        test.adapter.processSentPacket(
+                            SentPacketInfo(
+                                packet.transportSequenceNumber,
+                                packet.sendTimestamp
+                            )
+                        )
+                    }
+
+                    val adaptedFeedback1 = test.createAndProcessFeedback(listOf(packets[0]))
+                    val adaptedFeedback2 = test.createAndProcessFeedback(listOf(packets[1]))
+                    adaptedFeedback1!!.dataInFlight shouldBe packets[1].packetSize
+                    adaptedFeedback2!!.dataInFlight shouldBe DataSize.ZERO
+                }
+            }
+        }
+
+        "CongestionControlFeedbackResultHasEcn" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    ecn = EcnMarking.kCe,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = Instant.EPOCH + 200.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    ecn = EcnMarking.kEct1,
+                    sendTimestamp = Instant.EPOCH + 110.ms,
+                    receiveTimestamp = Instant.EPOCH + 210.ms
+                ),
             )
-            duplicatePacket shouldBe null
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+            val adaptedFeedback = test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
+
+            adaptedFeedback!!.packetFeedbacks.size shouldBe 2
+            adaptedFeedback.packetFeedbacks[0].ecn shouldBe EcnMarking.kCe
+            adaptedFeedback.packetFeedbacks[1].ecn shouldBe EcnMarking.kEct1
+            adaptedFeedback.transportSupportsEcn shouldBe true
+        }
+
+        "ReportTransportDoesNotSupportEcnIfFeedbackContainNotEctPacket" {
+            val test = OneTransportFeedbackAdapterTest(feedbackType = FeedbackType.Ccfb)
+
+            val packets = listOf(
+                PacketTemplate(
+                    transportSequenceNumber = 1,
+                    rtpSequenceNumber = 101,
+                    ecn = EcnMarking.kCe,
+                    sendTimestamp = Instant.EPOCH + 100.ms,
+                    receiveTimestamp = Instant.EPOCH + 200.ms
+                ),
+                PacketTemplate(
+                    transportSequenceNumber = 2,
+                    rtpSequenceNumber = 102,
+                    ecn = EcnMarking.kNotEct,
+                    sendTimestamp = Instant.EPOCH + 110.ms,
+                    receiveTimestamp = Instant.EPOCH + 210.ms
+                ),
+            )
+
+            packets.forEach { packet ->
+                test.adapter.addPacket(createPacketToSend(packet), packet.transportSequenceNumber, 0.bytes, timeNow())
+                test.adapter.processSentPacket(SentPacketInfo(packet.transportSequenceNumber, packet.sendTimestamp))
+            }
+
+            val rtcpFeedback = buildRtcpCongestionControlFeedbackPacket(packets)
+            val adaptedFeedback = test.adapter.processCongestionControlFeedback(rtcpFeedback, timeNow())
+
+            adaptedFeedback!!.transportSupportsEcn shouldBe false
+            adaptedFeedback.packetFeedbacks.size shouldBe 2
         }
     }
 }

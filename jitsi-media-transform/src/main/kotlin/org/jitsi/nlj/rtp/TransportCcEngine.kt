@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj.rtp
 
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.nlj.util.DataSize
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Duration
 import java.time.Instant
@@ -34,9 +34,9 @@ abstract class TransportCcEngine : RtcpListener {
 
     /** This is called when a tccSeqNum is first assigned to a packet, i.e. the soonest the packet can meaningfully
      * be described to the engine. */
-    abstract fun mediaPacketTagged(tccSeqNum: Int, length: DataSize, probingInfo: Any?)
+    abstract fun mediaPacketTagged(packetInfo: PacketInfo, tccSeqNum: Long)
 
-    abstract fun mediaPacketSent(tccSeqNum: Int, length: DataSize)
+    abstract fun mediaPacketSent(packetInfo: PacketInfo, tccSeqNum: Long)
 
     abstract fun getStatistics(): StatisticsSnapshot
 

@@ -179,16 +179,14 @@ class GoogCcTransportCcEngine(
     }
 
     @Synchronized
-    override fun mediaPacketTagged(tccSeqNum: Int, length: DataSize, probingInfo: Any?) {
+    override fun mediaPacketTagged(packetInfo: org.jitsi.nlj.PacketInfo, tccSeqNum: Long) {
         val now = clock.instant()
-        val pacedPacketInfo = probingInfo as? PacedPacketInfo
-        // We need to do sequence number unwrapping in the TransportFeedbackAdapter, so
-        // truncate it here so we can unwrap it again later.
-        val truncatedSeqNum = tccSeqNum and 0xFFFF
+        val length = packetInfo.packet.length.bytes
+        val pacedPacketInfo = packetInfo.probingInfo as? PacedPacketInfo
         feedbackAdapter.addPacket(
-            truncatedSeqNum,
-            length, // TODO: network overhead
-            pacingInfo = pacedPacketInfo,
+            packetInfo,
+            tccSeqNum,
+            DataSize.ZERO, // TODO: network overhead
             creationTime = now
         )
         if (pacedPacketInfo == null) {
@@ -198,19 +196,17 @@ class GoogCcTransportCcEngine(
     }
 
     @Synchronized
-    override fun mediaPacketSent(tccSeqNum: Int, length: DataSize) {
+    override fun mediaPacketSent(packetInfo: org.jitsi.nlj.PacketInfo, tccSeqNum: Long) {
         val now = clock.instant()
-        // We need to do sequence number unwrapping in the TransportFeedbackAdapter, so
-        // truncate it here so we can unwrap it again later.
-        val truncatedSeqNum = tccSeqNum and 0xFFFF
+        val length = packetInfo.packet.length.toLong()
         val sentPacketInfo = SentPacketInfo(
-            packetId = truncatedSeqNum,
+            packetId = tccSeqNum,
             sendTime = now,
             info = PacketInfo(
                 // TODO I think these should always be true when tccSeqNum is defined?
                 includedInAllocation = true,
                 includedInFeedback = true,
-                packetSizeBytes = length.bytes.toLong()
+                packetSizeBytes = length
             )
         )
         val sentPacket = feedbackAdapter.processSentPacket(sentPacketInfo)
