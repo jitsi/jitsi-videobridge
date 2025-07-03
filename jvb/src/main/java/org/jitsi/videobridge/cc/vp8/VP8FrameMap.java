@@ -380,6 +380,11 @@ public class VP8FrameMap
         @Nullable
         private VP8Frame doFind(Predicate<VP8Frame> pred, long startIndex, long endIndex, int increment)
         {
+            if (!((increment > 0 && startIndex <= endIndex) || (increment < 0 && startIndex >= endIndex))) {
+                throw new IllegalArgumentException("Values of startIndex=" + startIndex + ", endIndex=" + endIndex +
+                        " , and increment=" + increment + " could lead to infinite loop");
+            }
+
             for (long index = startIndex; index != endIndex; index += increment)
             {
                 VP8Frame frame = getIndex(index);
