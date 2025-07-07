@@ -549,12 +549,12 @@ class Endpoint @JvmOverloads constructor(
         audioSubscription.updateSubscription(subscription, id)
     }
 
-    fun conferenceAudioSourceAdded(ssrc: Long) {
-        audioSubscription.onConferenceSourceAdded(ssrc)
+    fun conferenceAudioSourceAdded(ssrcs: Set<Long>) {
+        audioSubscription.onConferenceSourceAdded(ssrcs)
     }
 
-    fun conferenceAudioSourceRemoved(ssrc: Long) {
-        audioSubscription.onConferenceSourceRemoved(ssrc)
+    fun conferenceAudioSourceRemoved(ssrcs: Set<Long>) {
+        audioSubscription.onConferenceSourceRemoved(ssrcs)
     }
 
     override val isSendingAudio: Boolean
@@ -1242,13 +1242,13 @@ class Endpoint @JvmOverloads constructor(
     private inner class AudioSubscriptionEntry {
         private var excludeWildcard = false
         private var includeWildcard = true
-        private var wantedSsrcs = mutableListOf<Long>()
+        private var wantedSsrcs: Set<Long> = emptySet()
 
         fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, localEndpointId: String) {
             if (subscription.exclude.contains("*")) {
                 excludeWildcard = true
                 includeWildcard = false
-                wantedSsrcs = mutableListOf()
+                wantedSsrcs = emptySet()
                 return
             }
             val ssrcs = this@Endpoint.conference.getAudioSsrcs(localEndpointId)
@@ -1256,14 +1256,14 @@ class Endpoint @JvmOverloads constructor(
                 excludeWildcard = false
                 // Toggle the include wildcard only if the exclude is not wildcard.
                 includeWildcard = true
-                wantedSsrcs = ssrcs
+                wantedSsrcs = ssrcs.toSet()
                 return
             }
             excludeWildcard = false
             includeWildcard = false
             wantedSsrcs = ssrcs.filter { ssrc ->
                 subscription.include.contains(ssrc.toString()) && !subscription.exclude.contains(ssrc.toString())
-            }.toMutableList()
+            }.toSet()
         }
 
         fun isSsrcWanted(ssrc: Long): Boolean {
@@ -1276,14 +1276,14 @@ class Endpoint @JvmOverloads constructor(
             return wantedSsrcs.contains(ssrc)
         }
 
-        fun onConferenceSourceAdded(ssrc: Long) {
+        fun onConferenceSourceAdded(ssrcs: Set<Long>) {
             if (includeWildcard) {
-                wantedSsrcs.add(ssrc)
+                wantedSsrcs = wantedSsrcs.union(ssrcs)
             }
         }
 
-        fun onConferenceSourceRemoved(ssrc: Long) {
-            wantedSsrcs.remove(ssrc)
+        fun onConferenceSourceRemoved(ssrcs: Set<Long>) {
+            wantedSsrcs = wantedSsrcs.subtract(ssrcs)
         }
     }
 }
