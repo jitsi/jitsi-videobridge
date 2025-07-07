@@ -1031,10 +1031,17 @@ public class Conference
         }
     }
 
-    public List<Long> getAllRemoteAudioSsrcs(String callerId) {
+    /**
+     * Gets local audio SSRCs in the conference
+     * @param except the ID of the endpoint to exclude from the list.
+     * @return the list of audio SSRCs in the conference
+     */
+    public List<Long> getAudioSsrcs(String except)
+    {
         List<Long> ssrcs = new ArrayList<>();
         for (Endpoint endpoint : getLocalEndpoints()) {
-            if (endpoint.getId().equals(callerId)) {
+            if (endpoint.getId().equals(except))
+            {
                 continue; // Skip the requesting endpoint
             }
             for (AudioSourceDesc audioSource : endpoint.getAudioSources()) {
