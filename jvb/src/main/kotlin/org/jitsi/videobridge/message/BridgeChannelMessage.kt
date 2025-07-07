@@ -482,10 +482,16 @@ class SourceVideoTypeMessage(
 }
 
 /*
-* A message sent from a client to the bridge to indicate which audio sources it wants to receive.
+ * A message sent from a client to the bridge to indicate which audio sources it wants to receive.
  */
 class ReceiverAudioSubscriptionMessage(
+    /*
+     * The list of audio sourceNames to include. If * is specified, all audio sources are included.
+     */
     val include: List<String>,
+    /*
+     * The list of audio sourceNames to exclude. If * is specified, all audio sources are excluded.
+     */
     val exclude: List<String>,
 ) : BridgeChannelMessage() {
     companion object {
