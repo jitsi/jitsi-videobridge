@@ -1263,19 +1263,19 @@ class Endpoint @JvmOverloads constructor(
                 wantedSsrcs = emptySet()
                 return
             }
-            val ssrcs = this@Endpoint.conference.getAudioSsrcs(localEndpointId)
+            val descs = this@Endpoint.conference.getAudioSourceDescs().filter({ desc -> desc.owner != localEndpointId })
             if (subscription.include.contains("*")) {
                 excludeWildcard = false
                 // Toggle the include wildcard only if the exclude is not wildcard.
                 includeWildcard = true
-                wantedSsrcs = ssrcs.toSet()
+                wantedSsrcs = descs.map(AudioSourceDesc::ssrc).toSet()
                 return
             }
             excludeWildcard = false
             includeWildcard = false
-            wantedSsrcs = ssrcs.filter { ssrc ->
-                subscription.include.contains(ssrc.toString()) && !subscription.exclude.contains(ssrc.toString())
-            }.toSet()
+            wantedSsrcs = descs.filter { desc ->
+                subscription.include.contains(desc.sourceName) && !subscription.exclude.contains(desc.sourceName)
+            }.map(AudioSourceDesc::ssrc).toSet()
         }
 
         fun isSsrcWanted(ssrc: Long): Boolean {
