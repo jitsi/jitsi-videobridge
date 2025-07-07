@@ -296,7 +296,7 @@ class Colibri2ConferenceHandler(
             sources.mediaSources.filter { it.type == MediaType.AUDIO }.forEach {
                 it.sources.forEach { s ->
                     audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id))
-                    conference.getLocalEndpoints().forEach {e ->
+                    conference.getLocalEndpoints().forEach { e ->
                         if (e.visitor) {
                             return@forEach
                         }

@@ -517,7 +517,6 @@ class BridgeChannelMessageTest : ShouldSpec() {
             }
         }
 
-
         xcontext("Serializing performance") {
             val times = 1_000_000
 
