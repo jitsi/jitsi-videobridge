@@ -1260,7 +1260,6 @@ class Endpoint @JvmOverloads constructor(
             if (subscription.exclude.contains("*")) {
                 excludeWildcard = true
                 includeWildcard = false
-                wantedSsrcs = emptySet()
                 return
             }
             val descs = this@Endpoint.conference.getAudioSourceDescs().filter({ desc -> desc.owner != localEndpointId })
@@ -1268,7 +1267,6 @@ class Endpoint @JvmOverloads constructor(
                 excludeWildcard = false
                 // Toggle the include wildcard only if the exclude is not wildcard.
                 includeWildcard = true
-                wantedSsrcs = descs.map(AudioSourceDesc::ssrc).toSet()
                 return
             }
             excludeWildcard = false
@@ -1289,8 +1287,8 @@ class Endpoint @JvmOverloads constructor(
         }
 
         fun onConferenceSourceAdded(ssrcs: Set<Long>) {
-            if (includeWildcard) {
-                wantedSsrcs = wantedSsrcs.union(ssrcs)
+            if (!includeWildcard) {
+                wantedSsrcs = wantedSsrcs.union(ssrcs.filter { isSsrcWanted(it) }.toSet())
             }
         }
 
