@@ -20,7 +20,7 @@ import org.jitsi.nlj.RtpLayerDesc
 /**
  * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
  */
-data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Double)
+data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Long)
 
 /**
  * An immutable representation of the layers to be considered when allocating bandwidth for an endpoint. The order is

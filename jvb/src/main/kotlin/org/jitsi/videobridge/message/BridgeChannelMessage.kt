@@ -504,7 +504,7 @@ class ReceiverAudioSubscriptionMessage(
  * (that the client can't determine on its own)
  */
 class ConnectionStats(
-    val estimatedDownlinkBandwidth: Double,
+    val estimatedDownlinkBandwidth: Long,
 ) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "ConnectionStats"

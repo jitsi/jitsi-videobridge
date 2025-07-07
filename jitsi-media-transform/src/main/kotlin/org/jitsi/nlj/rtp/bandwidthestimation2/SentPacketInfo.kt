@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2019 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.jitsi.nlj.rtp.bandwidthestimation2
 
-@file:JvmName("ClockUtils")
-
-package org.jitsi.nlj.util
-
-import org.jitsi.utils.TimeUtils
-import java.time.Duration
+import org.jitsi.utils.NEVER
 import java.time.Instant
 
-@JvmField
-val NEVER: Instant = Instant.MIN
+/** Sent packet info,
+ * based loosely on WebRTC rtc_base/network/sent_packet.{h,cc} in
+ * WebRTC tag branch-heads/7204 (Chromium 138)
+ * stripped down to only the fields needed.
+ */
 
-fun Instant.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.epochSecond, this.nano)
+class PacketInfo(
+    var includedInFeedback: Boolean = false,
+    var includedInAllocation: Boolean = false,
+    var packetSizeBytes: Long = 0
+)
 
-fun Duration.formatMilli(): String = TimeUtils.formatTimeAsFullMillis(this.seconds, this.nano)
-
-fun <T> Iterable<T>.sumOf(selector: (T) -> Duration): Duration {
-    var sum: Duration = Duration.ZERO
-    for (element in this) {
-        sum += selector(element)
-    }
-    return sum
-}
+class SentPacketInfo(
+    var packetId: Int = -1,
+    var sendTime: Instant = NEVER,
+    val info: PacketInfo = PacketInfo(),
+)

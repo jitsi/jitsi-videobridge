@@ -88,9 +88,9 @@ class PacketStreamStats {
         }
 
         /**
-         * Expose [bitrate] as a [Double] in order to make it accessible from java (since [Bandwidth] is an inline
+         * Expose [bitrate] as a [Long] in order to make it accessible from java (since [Bandwidth] is an inline
          * class).
          */
-        fun getBitrateBps(): Double = bitrate.bps
+        fun getBitrateBps(): Long = bitrate.bps
     }
 }

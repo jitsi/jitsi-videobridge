@@ -15,10 +15,11 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
-import org.jitsi.nlj.util.mbps
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -28,23 +29,21 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.properties.Delegates
 
-private val defaultInitBw: Bandwidth = 2.5.mbps
-
 class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logger) :
     BandwidthEstimator(diagnosticContext) {
     override val algorithmName = "Google CC"
 
     /* TODO: Use configuration service to set this default value. */
-    override var initBw: Bandwidth = defaultInitBw
+    override var initBw: Bandwidth = BandwidthEstimatorConfig.initBw
     /* TODO: observable which sets the components' values if we're in initial state. */
 
-    override var minBw: Bandwidth by Delegates.observable(GoogleCcEstimatorConfig.minBw) {
+    override var minBw: Bandwidth by Delegates.observable(BandwidthEstimatorConfig.minBw) {
             _, _, newValue ->
         bitrateEstimatorAbsSendTime.setMinBitrate(newValue.bps.toInt())
         sendSideBandwidthEstimation.setMinMaxBitrate(newValue.bps.toInt(), maxBw.bps.toInt())
     }
 
-    override var maxBw: Bandwidth by Delegates.observable(GoogleCcEstimatorConfig.maxBw) {
+    override var maxBw: Bandwidth by Delegates.observable(BandwidthEstimatorConfig.maxBw) {
             _, _, newValue ->
         sendSideBandwidthEstimation.setMinMaxBitrate(minBw.bps.toInt(), newValue.bps.toInt())
     }
@@ -126,13 +125,26 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
     }
 
     override fun reset() {
-        initBw = defaultInitBw
-        minBw = GoogleCcEstimatorConfig.minBw
-        maxBw = GoogleCcEstimatorConfig.maxBw
+        initBw = BandwidthEstimatorConfig.initBw
+        minBw = BandwidthEstimatorConfig.minBw
+        maxBw = BandwidthEstimatorConfig.maxBw
 
         bitrateEstimatorAbsSendTime.reset()
-        sendSideBandwidthEstimation.reset(initBw.bps.toLong())
+        sendSideBandwidthEstimation.reset(initBw.bps)
 
         sendSideBandwidthEstimation.setMinMaxBitrate(minBw.bps.toInt(), maxBw.bps.toInt())
+    }
+
+    companion object {
+        /* Default config settings to use when the classic Google CC estimator engine is used. */
+        val defaultRateTrackerWindowSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-window-size".from(JitsiConfig.newConfig)
+        }
+        val defaultRateTrackerBucketSize: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-bucket-size".from(JitsiConfig.newConfig)
+        }
+        val defaultInitialIgnoreBwePeriod: Duration by config {
+            "jmt.bwe.estimator.GoogleCc.default-initial-ignore-bwe-period".from(JitsiConfig.newConfig)
+        }
     }
 }

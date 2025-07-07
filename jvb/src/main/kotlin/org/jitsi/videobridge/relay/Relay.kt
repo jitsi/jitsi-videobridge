@@ -49,7 +49,6 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
-import org.jitsi.nlj.util.sumOf
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
@@ -70,6 +69,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
+import org.jitsi.utils.sumOf
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.CryptexConfig
 import org.jitsi.videobridge.EncodingsManager
@@ -956,7 +956,7 @@ class Relay @JvmOverloads constructor(
         s?.expire()
     }
 
-    val incomingBitrateBps: Double
+    val incomingBitrateBps: Long
         get() = transceiver.getTransceiverStats().rtpReceiverStats.packetStreamStats.getBitrateBps() +
             synchronized(endpointsLock) {
                 relayedEndpoints.values.sumOf { it.getIncomingStats().getBitrateBps() }
@@ -968,7 +968,7 @@ class Relay @JvmOverloads constructor(
                 relayedEndpoints.values.sumOf { it.getIncomingStats().packetRate }
             }
 
-    val outgoingBitrateBps: Double
+    val outgoingBitrateBps: Long
         get() = transceiver.getTransceiverStats().outgoingPacketStreamStats.getBitrateBps() +
             senders.values.sumOf { it.getOutgoingStats().getBitrateBps() }
 

@@ -140,6 +140,10 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>jicoco-mediajson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>jicoco-metrics</artifactId>
     </dependency>
     <dependency>

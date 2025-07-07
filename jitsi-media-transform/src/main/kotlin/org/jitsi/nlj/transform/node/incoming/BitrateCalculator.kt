@@ -17,13 +17,17 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.config.JitsiConfig
-import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.findRtpLayerDescs
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorEngine
+import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
+import org.jitsi.nlj.rtp.bandwidthestimation2.GoogCcTransportCcEngine
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.Bandwidth
@@ -138,19 +142,41 @@ open class BitrateCalculator(
          */
         val GRACE_PERIOD = 10.secs
 
+        private val _windowSize: Duration? by optionalconfig {
+            "jmt.rtp.bitrate-calculator.window-size".from(JitsiConfig.newConfig)
+        }
+
+        /** The default bitrate calculator window size if not set in jvb.conf, based on the BWE algorithm in use.*/
+        private fun defaultWindowSize(): Duration {
+            return when (BandwidthEstimatorConfig.engine) {
+                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerWindowSize
+                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerWindowSize
+            }
+        }
+
         /**
          * The size of the window over which to calculate average rates.
          */
-        val windowSize: Duration by config {
-            "jmt.rtp.bitrate-calculator.window-size".from(JitsiConfig.newConfig)
+        val windowSize: Duration
+            get() = _windowSize ?: defaultWindowSize()
+
+        private val _bucketSize: Duration? by optionalconfig {
+            "jmt.rtp.bitrate-calculator.bucket-size".from(JitsiConfig.newConfig)
+        }
+
+        /** The default bitrate calculator bucket size if not set in jvb.conf, based on the BWE algorithm in use.*/
+        private fun defaultBucketSize(): Duration {
+            return when (BandwidthEstimatorConfig.engine) {
+                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerBucketSize
+                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerBucketSize
+            }
         }
 
         /**
          * The size of the buckets to use when calculating average rates.
          */
-        val bucketSize: Duration by config {
-            "jmt.rtp.bitrate-calculator.bucket-size".from(JitsiConfig.newConfig)
-        }
+        val bucketSize
+            get() = _bucketSize ?: defaultBucketSize()
 
         fun createBitrateTracker() = BitrateTracker(windowSize, bucketSize)
         fun createRateTracker() = RateTracker(windowSize, bucketSize)

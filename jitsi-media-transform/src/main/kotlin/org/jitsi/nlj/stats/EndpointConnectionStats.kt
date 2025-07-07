@@ -18,7 +18,6 @@ package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.LossTracker
-import org.jitsi.nlj.util.toDoubleMillis
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
@@ -29,6 +28,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.secs
+import org.jitsi.utils.toDoubleMillis
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

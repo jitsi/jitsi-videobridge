@@ -16,15 +16,15 @@
 package org.jitsi.nlj.rtp.bandwidthestimation
 
 import io.kotest.core.spec.style.ShouldSpec
-import io.kotest.matchers.doubles.shouldBeBetween
+import io.kotest.matchers.longs.shouldBeBetween
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.nlj.util.NEVER
 import org.jitsi.nlj.util.atRate
 import org.jitsi.nlj.util.bits
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.nlj.util.mbps
+import org.jitsi.utils.NEVER
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -240,7 +240,7 @@ class BandwidthEstimationTest : ShouldSpec() {
                 bottleneck.stop()
 
                 val finalBw = estimator.getCurrentBw(clock.instant())
-                finalBw.bps.shouldBeBetween((bottleneckRate / 1.2).bps, (bottleneckRate * 1.2).bps, 0.0)
+                finalBw.bps.shouldBeBetween((bottleneckRate / 1.2).bps, (bottleneckRate * 1.2).bps)
             }
         }
     }

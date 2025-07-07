@@ -22,11 +22,14 @@ import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrUpdater
+import org.jitsi.nlj.rtp.ClassicTransportCcEngine
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
+import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorEngine
 import org.jitsi.nlj.rtp.bandwidthestimation.GoogleCcEstimator
+import org.jitsi.nlj.rtp.bandwidthestimation2.GoogCcTransportCcEngine
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.transform.NodeDebugStateVisitor
 import org.jitsi.nlj.transform.NodeEventVisitor
@@ -106,8 +109,21 @@ class RtpSenderImpl(
     // a generic handler here and then the bridge can put it into its PacketQueue and have
     // its handler (likely in another thread) grab the packet and send it out
     private var outgoingPacketHandler: PacketHandler? = null
-    override val bandwidthEstimator: BandwidthEstimator = GoogleCcEstimator(diagnosticContext, logger)
-    private val transportCcEngine = TransportCcEngine(bandwidthEstimator, logger)
+
+    private val transportCcEngine: TransportCcEngine =
+        when (BandwidthEstimatorConfig.engine) {
+            BandwidthEstimatorEngine.GoogleCc ->
+                ClassicTransportCcEngine(GoogleCcEstimator(diagnosticContext, logger), logger)
+
+            BandwidthEstimatorEngine.GoogleCc2 ->
+                GoogCcTransportCcEngine(diagnosticContext, logger, backgroundExecutor, { dataSize, probingData ->
+                    return@GoogCcTransportCcEngine probingDataSender.sendProbing(
+                        null,
+                        dataSize.bytes.toInt(),
+                        probingData
+                    )
+                })
+        }.also { it.start() }
 
     private val srtpEncryptWrapper = SrtpEncryptNode()
     private val srtcpEncryptWrapper = SrtcpEncryptNode()
@@ -234,7 +250,7 @@ class RtpSenderImpl(
     }
 
     override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int =
-        probingDataSender.sendProbing(mediaSsrcs, numBytes)
+        probingDataSender.sendProbing(mediaSsrcs, numBytes, null)
 
     override fun onOutgoingPacket(handler: PacketHandler) {
         outgoingPacketHandler = handler
@@ -297,6 +313,12 @@ class RtpSenderImpl(
 
     override fun getTransportCcEngineStats() = transportCcEngine.getStatistics()
 
+    override fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener) =
+        transportCcEngine.addBandwidthListener(listener)
+
+    override fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener) =
+        transportCcEngine.removeBandwidthListener(listener)
+
     override fun handleEvent(event: Event) {
         when (event) {
             is SetLocalSsrcEvent -> {
@@ -322,7 +344,6 @@ class RtpSenderImpl(
         this["local_video_ssrc"] = localVideoSsrc?.toString() ?: "null"
         this["local_audio_ssrc"] = localAudioSsrc?.toString() ?: "null"
         this["transport_cc_engine"] = transportCcEngine.getStatistics().toJson()
-        this["bandwidth_estimation"] = bandwidthEstimator.getStats().toJson()
         NodeDebugStateVisitor(this, mode).reverseVisit(outputPipelineTerminationNode)
     }
 

@@ -17,6 +17,7 @@
 package org.jitsi.nlj.util
 
 import java.text.DecimalFormat
+import kotlin.math.roundToLong
 
 /**
  * Model an amount of data, internally represented as a number of bits.
@@ -34,21 +35,15 @@ class DataSize(
 
     operator fun minus(other: DataSize): DataSize = DataSize(bits - other.bits)
 
-    operator fun minusAssign(other: DataSize) {
-        bits -= other.bits
-    }
-
     operator fun plus(other: DataSize): DataSize = DataSize(bits + other.bits)
-
-    operator fun plusAssign(other: DataSize) {
-        bits += other.bits
-    }
 
     operator fun times(other: Int): DataSize = DataSize(bits * other)
 
-    operator fun timesAssign(other: Int) {
-        bits *= other
-    }
+    operator fun times(other: Double): DataSize = DataSize((bits * other).roundToLong())
+
+    operator fun div(other: Double): DataSize = DataSize((bits / other).roundToLong())
+
+    operator fun div(other: DataSize): Double = bits.toDouble() / other.bits.toDouble()
 
     override fun toString(): String {
         // To determine which unit we'll print in,
@@ -77,7 +72,20 @@ class DataSize(
     }
 
     override fun hashCode(): Int = bits.hashCode()
+
+    fun toWholeBytes(): DataSize {
+        return (bits / 8.0).roundToLong().bytes
+    }
+
+    companion object {
+        val ZERO = DataSize(0)
+        val INFINITY = DataSize(Long.MAX_VALUE)
+    }
 }
+
+operator fun Int.times(other: DataSize): DataSize = other * this
+
+operator fun Double.times(other: DataSize): DataSize = other * this
 
 val Int.bits: DataSize
     get() = DataSize(this.toLong())
@@ -96,3 +104,17 @@ val Long.kilobytes: DataSize
     get() = DataSize(this * 1000 * 8)
 val Long.megabytes: DataSize
     get() = DataSize(this * 1000 * 1000 * 8)
+
+/**
+ * Returns the maximum of two [DataSize]s
+ */
+fun max(a: DataSize, b: DataSize): DataSize {
+    return if (a >= b) a else b
+}
+
+/**
+ * Returns the minimum of two [DataSize]s
+ */
+fun min(a: DataSize, b: DataSize): DataSize {
+    return if (a <= b) a else b
+}

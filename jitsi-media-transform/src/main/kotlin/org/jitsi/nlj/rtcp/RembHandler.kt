@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.rtcp
 
-import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -34,7 +34,7 @@ class RembHandler(
     private val logger = createChildLogger(parentLogger)
     private var sawSpuriousRemb = false
 
-    private val bweUpdateListeners: MutableList<BandwidthEstimator.Listener> =
+    private val bweUpdateListeners: MutableList<TransportCcEngine.BandwidthListener> =
         CopyOnWriteArrayList()
 
     override fun rtcpPacketReceived(packet: RtcpPacket?, receivedTime: Instant?) {
@@ -44,7 +44,7 @@ class RembHandler(
         }
     }
 
-    fun addListener(bweUpdateListener: BandwidthEstimator.Listener) {
+    fun addListener(bweUpdateListener: TransportCcEngine.BandwidthListener) {
         bweUpdateListeners.add(bweUpdateListener)
     }
 
@@ -52,7 +52,7 @@ class RembHandler(
         if (streamInformationStore.supportsTcc) {
             if (!sawSpuriousRemb) {
                 logger.warn {
-                    "Ignoring unexpected REMB, when using TCC (for ${rembPacket.bitrate.bps} bps). Will " +
+                    "Ignoring unexpected REMB, when using TCC (for ${rembPacket.bitrate.bps}). Will " +
                         "suppress future logs for this endpoint."
                 }
                 endpointsWithSpuriousRemb.incrementAndGet()
