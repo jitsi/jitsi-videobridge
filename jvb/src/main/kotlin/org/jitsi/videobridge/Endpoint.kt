@@ -417,6 +417,18 @@ class Endpoint @JvmOverloads constructor(
      *  Keep track of this endpoint's audio sources.
      */
     var audioSources: ArrayList<AudioSourceDesc> = ArrayList()
+        set(newValue) {
+            val oldValue = field
+            val removedSsrcs = oldValue.map { it.ssrc }.toSet() - newValue.map { it.ssrc }.toSet()
+            val addedSsrcs = newValue.map { it.ssrc }.toSet() - oldValue.map { it.ssrc }.toSet()
+            conference.getLocalEndpoints().forEach { e ->
+                if (e.id != id) {
+                    e.conferenceAudioSourceAdded(addedSsrcs)
+                    e.conferenceAudioSourceRemoved(removedSsrcs)
+                }
+            }
+            field = newValue
+        }
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
