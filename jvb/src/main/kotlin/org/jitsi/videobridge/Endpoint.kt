@@ -421,10 +421,10 @@ class Endpoint @JvmOverloads constructor(
             val oldValue = field
             val removedDescs = oldValue.filterNot { newValue.contains(it) }.toSet()
             val addedDescs = newValue.filterNot { oldValue.contains(it) }.toSet()
-            conference.getLocalEndpoints().forEach { e ->
-                if (e.id != id) {
-                    e.conferenceAudioSourceAdded(addedDescs)
-                    e.conferenceAudioSourceRemoved(removedDescs)
+            conference.localEndpoints.forEach {
+                if (it.id != id) {
+                    it.conferenceAudioSourceAdded(addedDescs)
+                    it.conferenceAudioSourceRemoved(removedDescs)
                 }
             }
             field = newValue
