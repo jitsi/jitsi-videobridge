@@ -558,7 +558,7 @@ class Endpoint @JvmOverloads constructor(
             audioSubscription = AudioSubscriptionEntry()
             return
         }
-        audioSubscription.updateSubscription(subscription, id)
+        audioSubscription.updateSubscription(subscription)
     }
 
     fun conferenceAudioSourceAdded(descs: Set<AudioSourceDesc>) {
@@ -1259,12 +1259,12 @@ class Endpoint @JvmOverloads constructor(
         )
         private var wantedSsrcs: Set<Long> = emptySet()
 
-        fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, localEndpointId: String) {
+        fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage) {
             latestSubscription = subscription
             if (subscription.exclude.contains("*") || subscription.include.contains("*")) {
                 return
             }
-            val descs = this@Endpoint.conference.getAudioSourceDescs().filter({ desc -> desc.owner != localEndpointId })
+            val descs = this@Endpoint.conference.getAudioSourceDescs().filter({ desc -> desc.owner != id })
             wantedSsrcs = descs.filter { desc ->
                 subscription.include.contains(desc.sourceName) && !subscription.exclude.contains(desc.sourceName)
             }.map(AudioSourceDesc::ssrc).toSet()
