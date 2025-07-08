@@ -419,12 +419,12 @@ class Endpoint @JvmOverloads constructor(
     override var audioSources: List<AudioSourceDesc> = ArrayList()
         set(newValue) {
             val oldValue = field
-            val removedSsrcs = oldValue.map { it.ssrc }.toSet() - newValue.map { it.ssrc }.toSet()
-            val addedSsrcs = newValue.map { it.ssrc }.toSet() - oldValue.map { it.ssrc }.toSet()
+            val removedDescs = oldValue.filterNot { newValue.contains(it) }.toSet()
+            val addedDescs = newValue.filterNot { oldValue.contains(it) }.toSet()
             conference.getLocalEndpoints().forEach { e ->
                 if (e.id != id) {
-                    e.conferenceAudioSourceAdded(addedSsrcs)
-                    e.conferenceAudioSourceRemoved(removedSsrcs)
+                    e.conferenceAudioSourceAdded(addedDescs)
+                    e.conferenceAudioSourceRemoved(removedDescs)
                 }
             }
             field = newValue
@@ -561,12 +561,12 @@ class Endpoint @JvmOverloads constructor(
         audioSubscription.updateSubscription(subscription, id)
     }
 
-    fun conferenceAudioSourceAdded(ssrcs: Set<Long>) {
-        audioSubscription.onConferenceSourceAdded(ssrcs)
+    fun conferenceAudioSourceAdded(descs: Set<AudioSourceDesc>) {
+        audioSubscription.onConferenceSourceAdded(descs)
     }
 
-    fun conferenceAudioSourceRemoved(ssrcs: Set<Long>) {
-        audioSubscription.onConferenceSourceRemoved(ssrcs)
+    fun conferenceAudioSourceRemoved(descs: Set<AudioSourceDesc>) {
+        audioSubscription.onConferenceSourceRemoved(descs)
     }
 
     override val isSendingAudio: Boolean
@@ -1252,48 +1252,48 @@ class Endpoint @JvmOverloads constructor(
     }
 
     private inner class AudioSubscriptionEntry {
-        private var excludeWildcard = false
-        private var includeWildcard = true
+        // The latest subscription message initialized with a wildcard include
+        private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage(
+            listOf("*"),
+            emptyList()
+        )
         private var wantedSsrcs: Set<Long> = emptySet()
 
         fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, localEndpointId: String) {
-            if (subscription.exclude.contains("*")) {
-                excludeWildcard = true
-                includeWildcard = false
+            latestSubscription = subscription
+            if (subscription.exclude.contains("*") || subscription.include.contains("*")) {
                 return
             }
             val descs = this@Endpoint.conference.getAudioSourceDescs().filter({ desc -> desc.owner != localEndpointId })
-            if (subscription.include.contains("*")) {
-                excludeWildcard = false
-                // Toggle the include wildcard only if the exclude is not wildcard.
-                includeWildcard = true
-                return
-            }
-            excludeWildcard = false
-            includeWildcard = false
             wantedSsrcs = descs.filter { desc ->
                 subscription.include.contains(desc.sourceName) && !subscription.exclude.contains(desc.sourceName)
             }.map(AudioSourceDesc::ssrc).toSet()
         }
 
         fun isSsrcWanted(ssrc: Long): Boolean {
-            if (excludeWildcard) {
+            if (latestSubscription.exclude.contains("*")) {
                 return false
             }
-            if (includeWildcard) {
+            if (latestSubscription.include.contains("*")) {
                 return true
             }
             return wantedSsrcs.contains(ssrc)
         }
 
-        fun onConferenceSourceAdded(ssrcs: Set<Long>) {
-            if (!includeWildcard) {
-                wantedSsrcs = wantedSsrcs.union(ssrcs.filter { isSsrcWanted(it) }.toSet())
+        fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) {
+            // If the subscription has a wildcard include or exclude, we don't filter the sources.
+            // Getting out of wildcard state is only done by new subscription, which re-initialize watedSsrcs.
+            if (latestSubscription.include.contains("*") || latestSubscription.exclude.contains("*")) {
+                return
             }
+            wantedSsrcs = wantedSsrcs.union(descs.filter { isSsrcWanted(it.ssrc) }.map(AudioSourceDesc::ssrc).toSet())
         }
 
-        fun onConferenceSourceRemoved(ssrcs: Set<Long>) {
-            wantedSsrcs = wantedSsrcs.subtract(ssrcs)
+        fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) {
+            if (latestSubscription.include.contains("*") || latestSubscription.exclude.contains("*")) {
+                return
+            }
+            wantedSsrcs = wantedSsrcs.subtract(descs.map(AudioSourceDesc::ssrc).toSet())
         }
     }
 }
