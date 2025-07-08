@@ -416,7 +416,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      *  Keep track of this endpoint's audio sources.
      */
-    var audioSources: ArrayList<AudioSourceDesc> = ArrayList()
+    override var audioSources: List<AudioSourceDesc> = ArrayList()
         set(newValue) {
             val oldValue = field
             val removedSsrcs = oldValue.map { it.ssrc }.toSet() - newValue.map { it.ssrc }.toSet()

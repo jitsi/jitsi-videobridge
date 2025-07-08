@@ -27,6 +27,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.cc.allocation.MediaSourceContainer
 import org.jitsi.videobridge.cc.allocation.ReceiverConstraintsMap
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
+import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.json.simple.JSONObject
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -254,6 +255,11 @@ abstract class AbstractEndpoint protected constructor(
      * Whether the remote endpoint is currently sending video.
      */
     abstract val isSendingVideo: Boolean
+
+    /**
+     * The set of [AudioSourcedesc]s that this endpoint has advertised.
+     */
+    abstract var audioSources: List<AudioSourceDesc>
 
     /**
      * Adds a payload type to this endpoint.
