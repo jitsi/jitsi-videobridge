@@ -553,13 +553,8 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    fun setAudioSubscription(subscription: ReceiverAudioSubscriptionMessage?) {
-        if (subscription == null) {
-            audioSubscription = AudioSubscriptionEntry(id)
-            return
-        }
+    fun setAudioSubscription(subscription: ReceiverAudioSubscriptionMessage) =
         audioSubscription.updateSubscription(subscription, conference.getAudioSourceDescs())
-    }
 
     fun conferenceAudioSourceAdded(descs: Set<AudioSourceDesc>) {
         audioSubscription.onConferenceSourceAdded(descs)
