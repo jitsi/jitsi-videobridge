@@ -17,6 +17,7 @@ package org.jitsi.videobridge.message
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter
 import com.fasterxml.jackson.annotation.JsonAnySetter
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -484,18 +485,35 @@ class SourceVideoTypeMessage(
 /*
  * A message sent from a client to the bridge to indicate which audio sources it wants to receive.
  */
-class ReceiverAudioSubscriptionMessage(
-    /*
-     * The list of audio sourceNames to include. If * is specified, all audio sources are included.
-     */
-    val include: List<String>,
-    /*
-     * The list of audio sourceNames to exclude. If * is specified, all audio sources are excluded.
-     */
-    val exclude: List<String>,
-) : BridgeChannelMessage() {
+sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
+    object All : ReceiverAudioSubscriptionMessage()
+    object None : ReceiverAudioSubscriptionMessage()
+    data class Custom(
+        /*
+         * The list of audio sourceNames to include.
+         */
+        val include: List<String>,
+        /*
+         * The list of audio sourceNames to exclude
+         */
+        val exclude: List<String>,
+    ) : ReceiverAudioSubscriptionMessage()
     companion object {
         const val TYPE = "ReceiverAudioSubscription"
+        @JvmStatic
+        @JsonCreator
+        fun jsonCreator(
+            mode: String,
+            include: List<String>? = null,
+            exclude: List<String>? = null
+        ): ReceiverAudioSubscriptionMessage {
+            return when (mode) {
+                "All" -> All
+                "None" -> None
+                "Custom" -> Custom(include ?: emptyList(), exclude ?: emptyList())
+                else -> throw IllegalArgumentException("Unknown mode: $mode")
+            }
+        }
     }
 }
 

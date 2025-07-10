@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2018 - present 8x8, Inc.
+ * Copyright @ 2025 - present 8x8, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,60 +19,48 @@ package org.jitsi.videobridge
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
-class AudioSubscription(
-    private val endpointId: String,
-    sources: List<AudioSourceDesc> = emptyList()
-) {
-    private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage(
-        listOf("*"),
-        emptyList()
-    )
-    // Set every source to wantedSsrcs as initial state is including everything (include=["*"])
-    private var wantedSsrcs: Set<Long> = sources.map { it.ssrc }.toSet()
+class AudioSubscription() {
+    private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage.All
+    // wantedSsrcs is a set of SSRCs that the endpoint wants to receive audio for.
+    // This is only managed when the subscription is "Custom".
+    private var wantedSsrcs: Set<Long> = emptySet()
 
     fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, sources: List<AudioSourceDesc>) {
         latestSubscription = subscription
-        val descs = sources.filter { desc -> desc.owner != endpointId }
-        // If exclude is wildcard, exclude everything
-        if (subscription.exclude.contains("*")) {
-            wantedSsrcs = emptySet()
-            return
+        when (subscription) {
+            is ReceiverAudioSubscriptionMessage.All -> return
+            is ReceiverAudioSubscriptionMessage.None -> return
+            is ReceiverAudioSubscriptionMessage.Custom -> {
+                wantedSsrcs = sources.filter { desc ->
+                    subscription.include.contains(desc.sourceName) && !subscription.exclude.contains(desc.sourceName)
+                }.map(AudioSourceDesc::ssrc).toSet()
+            }
         }
-        // If include is wildcard, put all Ssrcs to wantedSsrcs except ones the exclude list specifies
-        if (subscription.include.contains("*")) {
-            wantedSsrcs = descs.filterNot { desc ->
-                subscription.exclude.contains(desc.sourceName)
-            }.map(AudioSourceDesc::ssrc).toSet()
-            return
-        }
-        wantedSsrcs = descs.filter { desc ->
-            subscription.include.contains(desc.sourceName) && !subscription.exclude.contains(desc.sourceName)
-        }.map(AudioSourceDesc::ssrc).toSet()
     }
 
-    fun isSsrcWanted(ssrc: Long): Boolean =  wantedSsrcs.contains(ssrc)
+    fun isSsrcWanted(ssrc: Long): Boolean {
+        return when (latestSubscription) {
+            is ReceiverAudioSubscriptionMessage.All -> true
+            is ReceiverAudioSubscriptionMessage.None -> false
+            is ReceiverAudioSubscriptionMessage.Custom -> wantedSsrcs.contains(ssrc)
+        }
+    }
 
     fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) {
-        var newSsrcs: Set<Long>
-        if (latestSubscription.exclude.contains("*")) {
-            newSsrcs = descs.filter{ desc ->
-                latestSubscription.include.contains(desc.sourceName)
-            }.map(AudioSourceDesc::ssrc).toSet()
-            wantedSsrcs = wantedSsrcs.union(newSsrcs)
-            return
+        when (latestSubscription) {
+            is ReceiverAudioSubscriptionMessage.All -> return
+            is ReceiverAudioSubscriptionMessage.None -> return
+            is ReceiverAudioSubscriptionMessage.Custom -> {
+                val subscription = latestSubscription as ReceiverAudioSubscriptionMessage.Custom
+                // If the subscription is custom, we need to check if the new sources are included in the subscription.
+                val newSsrcs = descs.filter { desc ->
+                    subscription.include.contains(desc.sourceName) &&
+                            !subscription.exclude.contains(desc.sourceName)
+                }.map(AudioSourceDesc::ssrc).toSet()
+                wantedSsrcs = wantedSsrcs.union(newSsrcs)
+                return
+            }
         }
-        if (latestSubscription.include.contains("*")) {
-            newSsrcs = descs.filterNot { desc ->
-                latestSubscription.exclude.contains(desc.sourceName)
-            }.map(AudioSourceDesc::ssrc).toSet()
-            wantedSsrcs = wantedSsrcs.union(newSsrcs)
-            return
-        }
-        newSsrcs = descs.filter { desc ->
-            latestSubscription.include.contains(desc.sourceName) &&
-                    !latestSubscription.exclude.contains(desc.sourceName)
-        }.map(AudioSourceDesc::ssrc).toSet()
-        wantedSsrcs = wantedSsrcs.union(newSsrcs)
     }
 
     fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) {
