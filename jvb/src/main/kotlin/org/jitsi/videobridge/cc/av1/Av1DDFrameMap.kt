@@ -231,6 +231,10 @@ internal class FrameHistory(size: Int) :
     }
 
     private fun doFind(pred: (Av1DDFrame) -> Boolean, startIndex: Long, endIndex: Long, increment: Int): Av1DDFrame? {
+        require((increment > 0 && startIndex <= endIndex) || (increment < 0 && startIndex >= endIndex)) {
+            "Values of startIndex=$startIndex, endIndex=$endIndex, and increment=$increment " +
+                "could lead to infinite loop"
+        }
         var index = startIndex
         while (index != endIndex) {
             val frame = getIndex(index)
