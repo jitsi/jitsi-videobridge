@@ -257,7 +257,7 @@ abstract class AbstractEndpoint protected constructor(
     abstract val isSendingVideo: Boolean
 
     /**
-     * The set of [AudioSourcedesc]s that this endpoint has advertised.
+     * The set of [AudioSourceDesc]s that this endpoint has advertised.
      */
     abstract var audioSources: List<AudioSourceDesc>
 
