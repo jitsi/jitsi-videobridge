@@ -20,50 +20,62 @@ import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
 class AudioSubscriptionEntry(
-    private val endpointId: String
+    private val endpointId: String,
+    sources: List<AudioSourceDesc> = emptyList()
 ) {
     private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage(
         listOf("*"),
         emptyList()
     )
-    private var wantedSsrcs: Set<Long> = emptySet()
+    // Set every source to wantedSsrcs as initial state is including everything (include=["*"])
+    private var wantedSsrcs: Set<Long> = sources.map { it.ssrc }.toSet()
 
     fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, sources: List<AudioSourceDesc>) {
         latestSubscription = subscription
-        if (subscription.exclude.contains("*") || subscription.include.contains("*")) {
+        val descs = sources.filter { desc -> desc.owner != endpointId }
+        // If exclude is wildcard, exclude everything
+        if (subscription.exclude.contains("*")) {
+            wantedSsrcs = emptySet()
             return
         }
-        val descs = sources.filter { desc -> desc.owner != endpointId }
+        // If include is wildcard, put all Ssrcs to wantedSsrcs except ones the exclude list specifies
+        if (subscription.include.contains("*")) {
+            wantedSsrcs = descs.filterNot { desc ->
+                subscription.exclude.contains(desc.sourceName)
+            }.map(AudioSourceDesc::ssrc).toSet()
+            return
+        }
         wantedSsrcs = descs.filter { desc ->
             subscription.include.contains(desc.sourceName) && !subscription.exclude.contains(desc.sourceName)
         }.map(AudioSourceDesc::ssrc).toSet()
     }
 
-    fun isSsrcWanted(ssrc: Long): Boolean {
-        if (latestSubscription.exclude.contains("*")) {
-            return false
-        }
-        if (latestSubscription.include.contains("*")) {
-            return true
-        }
-        return wantedSsrcs.contains(ssrc)
-    }
+    fun isSsrcWanted(ssrc: Long): Boolean =  wantedSsrcs.contains(ssrc)
 
     fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) {
-        if (latestSubscription.include.contains("*") || latestSubscription.exclude.contains("*")) {
+        var newSsrcs: Set<Long>
+        if (latestSubscription.exclude.contains("*")) {
+            newSsrcs = descs.filter{ desc ->
+                latestSubscription.include.contains(desc.sourceName)
+            }.map(AudioSourceDesc::ssrc).toSet()
+            wantedSsrcs = wantedSsrcs.union(newSsrcs)
             return
         }
-        val filteredDescs = descs.filter { desc ->
+        if (latestSubscription.include.contains("*")) {
+            newSsrcs = descs.filterNot { desc ->
+                latestSubscription.exclude.contains(desc.sourceName)
+            }.map(AudioSourceDesc::ssrc).toSet()
+            wantedSsrcs = wantedSsrcs.union(newSsrcs)
+            return
+        }
+        newSsrcs = descs.filter { desc ->
             latestSubscription.include.contains(desc.sourceName) &&
-                !latestSubscription.exclude.contains(desc.sourceName)
+                    !latestSubscription.exclude.contains(desc.sourceName)
         }.map(AudioSourceDesc::ssrc).toSet()
-        wantedSsrcs = wantedSsrcs.union(filteredDescs)
+        wantedSsrcs = wantedSsrcs.union(newSsrcs)
     }
 
     fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) {
-        if (latestSubscription.include.contains("*") || latestSubscription.exclude.contains("*")) {
-            return
-        }
         wantedSsrcs = wantedSsrcs.subtract(descs.map(AudioSourceDesc::ssrc).toSet())
     }
 }
