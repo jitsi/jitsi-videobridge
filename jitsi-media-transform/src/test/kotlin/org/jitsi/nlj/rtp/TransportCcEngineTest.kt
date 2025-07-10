@@ -19,10 +19,14 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
+import org.jitsi.nlj.util.BufferPool
+import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacketBuilder
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.instantOfEpochMicro
 import org.jitsi.utils.time.FakeClock
 import java.util.logging.Level
@@ -54,9 +58,20 @@ class TransportCcEngineTest : FunSpec() {
         it.addLossListener(lossListener)
     }
 
+    private fun makePacket(length: DataSize): PacketInfo {
+        val len = length.bytes.toInt()
+        val buf = BufferPool.getBuffer(len)
+        buf.fill(0, 0, len)
+
+        val packet = RtpPacket(buf, 0, len).apply {
+            version = 2
+        }
+        return PacketInfo(packet)
+    }
+
     init {
         test("Missing packet reports") {
-            transportCcEngine.mediaPacketSent(4, 1300.bytes)
+            transportCcEngine.mediaPacketSent(makePacket(1300.bytes), 4)
 
             val tccPacket = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 0)) {
                 SetBase(1, instantOfEpochMicro(100))
@@ -79,7 +94,7 @@ class TransportCcEngineTest : FunSpec() {
             lossListener.numLost shouldBe 0
         }
         test("Duplicate packet reports") {
-            transportCcEngine.mediaPacketSent(4, 1300.bytes)
+            transportCcEngine.mediaPacketSent(makePacket(1300.bytes), 4)
 
             val tccPacket = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 1)) {
                 SetBase(4, instantOfEpochMicro(130))
@@ -105,8 +120,8 @@ class TransportCcEngineTest : FunSpec() {
             lossListener.numLost shouldBe 0
         }
         test("Packets reported after lost") {
-            transportCcEngine.mediaPacketSent(4, 1300.bytes)
-            transportCcEngine.mediaPacketSent(5, 1300.bytes)
+            transportCcEngine.mediaPacketSent(makePacket(1300.bytes), 4)
+            transportCcEngine.mediaPacketSent(makePacket(1300.bytes), 5)
 
             val tccPacket = with(RtcpFbTccPacketBuilder(mediaSourceSsrc = 123, feedbackPacketSeqNum = 1)) {
                 SetBase(4, instantOfEpochMicro(130))
@@ -136,9 +151,9 @@ class TransportCcEngineTest : FunSpec() {
             lossListener.numLost shouldBe 0
         }
         test("Packet unreported") {
-            transportCcEngine.mediaPacketSent(4, 1300.bytes)
+            transportCcEngine.mediaPacketSent(makePacket(1300.bytes), 4)
             /* Force the report of sequence 4 to be evicted from the packet history */
-            transportCcEngine.mediaPacketSent(1004, 1300.bytes)
+            transportCcEngine.mediaPacketSent(makePacket(1300.bytes), 1004)
 
             with(transportCcEngine.getStatistics()) {
                 numMissingPacketReports shouldBe 0
