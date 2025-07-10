@@ -19,7 +19,7 @@ package org.jitsi.videobridge
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
-class AudioSubscriptionEntry(
+class AudioSubscription(
     private val endpointId: String,
     sources: List<AudioSourceDesc> = emptyList()
 ) {
