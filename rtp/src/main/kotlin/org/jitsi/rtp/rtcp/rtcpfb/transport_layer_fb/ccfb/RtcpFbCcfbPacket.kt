@@ -101,10 +101,12 @@ class RtcpFbCcfbPacketBuilder(
     val packets: List<PacketInfo> = listOf(),
     val reportTimestampCompactNtp: Long
 ) {
+    private val groupedPackets = packets.groupBy { it.ssrc }
+
     private fun blockLength(): Int {
         var totalSize = RtcpFbPacket.HEADER_SIZE + kTimestampLength
 
-        packets.groupBy { it.ssrc }.forEach { (ssrc, packets) ->
+        groupedPackets.forEach { (ssrc, packets) ->
             val blockSize = packets.size * 2
             totalSize += kHeaderPerMediaSsrcLength + blockSize + RtpUtils.getNumPaddingBytes(blockSize)
         }
@@ -114,8 +116,8 @@ class RtcpFbCcfbPacketBuilder(
 
     fun writeTo(buf: ByteArray, offset: Int) {
         val blockLength = blockLength()
-        val paddingBytes = RtpUtils.getNumPaddingBytes(blockLength)
-        val packetSize = blockLength + paddingBytes
+        assert(blockLength % 4 == 0) // Will never need padding
+        val packetSize = blockLength
         require(buf.size - offset >= packetSize) {
             "Buffer of size ${buf.size} with offset $offset too small for CCFB packet of size $packetSize"
         }
@@ -128,7 +130,7 @@ class RtcpFbCcfbPacketBuilder(
         RtcpFbPacket.setMediaSourceSsrc(buf, offset, mediaSourceSsrc)
         var position = offset + RtcpFbPacket.HEADER_SIZE
 
-        packets.groupBy { it.ssrc }.forEach { (ssrc, packets) ->
+        groupedPackets.forEach { (ssrc, packets) ->
             check(packets.size <= 16384) {
                 "Unexpected number of reports: ${packets.size}"
             }
