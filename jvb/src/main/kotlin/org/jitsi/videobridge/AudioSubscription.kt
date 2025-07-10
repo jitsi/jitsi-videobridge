@@ -21,6 +21,7 @@ import org.jitsi.videobridge.relay.AudioSourceDesc
 
 class AudioSubscription() {
     private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage.All
+
     // wantedSsrcs is a set of SSRCs that the endpoint wants to receive audio for.
     // This is only managed when the subscription is "Custom".
     private var wantedSsrcs: Set<Long> = emptySet()
@@ -55,7 +56,7 @@ class AudioSubscription() {
                 // If the subscription is custom, we need to check if the new sources are included in the subscription.
                 val newSsrcs = descs.filter { desc ->
                     subscription.include.contains(desc.sourceName) &&
-                            !subscription.exclude.contains(desc.sourceName)
+                        !subscription.exclude.contains(desc.sourceName)
                 }.map(AudioSourceDesc::ssrc).toSet()
                 wantedSsrcs = wantedSsrcs.union(newSsrcs)
                 return

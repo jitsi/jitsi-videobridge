@@ -500,6 +500,7 @@ sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
     ) : ReceiverAudioSubscriptionMessage()
     companion object {
         const val TYPE = "ReceiverAudioSubscription"
+
         @JvmStatic
         @JsonCreator
         fun jsonCreator(
@@ -511,7 +512,7 @@ sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
                 "All" -> All
                 "None" -> None
                 "Custom" -> Custom(include ?: emptyList(), exclude ?: emptyList())
-                else -> throw IllegalArgumentException("Unknown mode: $mode")
+                else -> throw IllegalArgumentException("Unknown ReceiverAudioSubscription mode: $mode")
             }
         }
     }
