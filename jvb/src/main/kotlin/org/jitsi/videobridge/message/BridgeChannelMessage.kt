@@ -486,8 +486,16 @@ class SourceVideoTypeMessage(
  * A message sent from a client to the bridge to indicate which audio sources it wants to receive.
  */
 sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
-    object All : ReceiverAudioSubscriptionMessage()
-    object None : ReceiverAudioSubscriptionMessage()
+    object All : ReceiverAudioSubscriptionMessage() {
+        override fun createJson(): String {
+            return """{"colibriClass":"$TYPE","mode":"All"}"""
+        }
+    }
+    object None : ReceiverAudioSubscriptionMessage() {
+        override fun createJson(): String {
+            return """{"colibriClass":"$TYPE","mode":"None"}"""
+        }
+    }
     data class Custom(
         /*
          * The list of audio sourceNames to include.
