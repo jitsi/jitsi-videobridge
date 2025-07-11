@@ -31,9 +31,14 @@ class AudioSubscription() {
         when (subscription) {
             is ReceiverAudioSubscriptionMessage.All -> return
             is ReceiverAudioSubscriptionMessage.None -> return
-            is ReceiverAudioSubscriptionMessage.Custom -> {
+            is ReceiverAudioSubscriptionMessage.Include -> {
                 wantedSsrcs = sources.filter { desc ->
-                    subscription.include.contains(desc.sourceName) && !subscription.exclude.contains(desc.sourceName)
+                    subscription.list.contains(desc.sourceName)
+                }.map(AudioSourceDesc::ssrc).toSet()
+            }
+            is ReceiverAudioSubscriptionMessage.Exclude -> {
+                wantedSsrcs = sources.filterNot { desc ->
+                    subscription.list.contains(desc.sourceName)
                 }.map(AudioSourceDesc::ssrc).toSet()
             }
         }
@@ -43,7 +48,12 @@ class AudioSubscription() {
         return when (latestSubscription) {
             is ReceiverAudioSubscriptionMessage.All -> true
             is ReceiverAudioSubscriptionMessage.None -> false
-            is ReceiverAudioSubscriptionMessage.Custom -> wantedSsrcs.contains(ssrc)
+            is ReceiverAudioSubscriptionMessage.Include -> {
+                return wantedSsrcs.contains(ssrc)
+            }
+            is ReceiverAudioSubscriptionMessage.Exclude -> {
+                return wantedSsrcs.contains(ssrc)
+            }
         }
     }
 
@@ -51,12 +61,20 @@ class AudioSubscription() {
         when (latestSubscription) {
             is ReceiverAudioSubscriptionMessage.All -> return
             is ReceiverAudioSubscriptionMessage.None -> return
-            is ReceiverAudioSubscriptionMessage.Custom -> {
-                val subscription = latestSubscription as ReceiverAudioSubscriptionMessage.Custom
-                // If the subscription is custom, we need to check if the new sources are included in the subscription.
+            is ReceiverAudioSubscriptionMessage.Include -> {
+                val subscription = latestSubscription as ReceiverAudioSubscriptionMessage.Include
+                // If the subscription is include, we need to check if the new sources are included in the subscription.
                 val newSsrcs = descs.filter { desc ->
-                    subscription.include.contains(desc.sourceName) &&
-                        !subscription.exclude.contains(desc.sourceName)
+                    subscription.list.contains(desc.sourceName)
+                }.map(AudioSourceDesc::ssrc).toSet()
+                wantedSsrcs = wantedSsrcs.union(newSsrcs)
+                return
+            }
+            is ReceiverAudioSubscriptionMessage.Exclude -> {
+                val subscription = latestSubscription as ReceiverAudioSubscriptionMessage.Exclude
+                // If the subscription is exclude, we need to check if the new sources are excluded from the subscription.
+                val newSsrcs = descs.filterNot { desc ->
+                    subscription.list.contains(desc.sourceName)
                 }.map(AudioSourceDesc::ssrc).toSet()
                 wantedSsrcs = wantedSsrcs.union(newSsrcs)
                 return

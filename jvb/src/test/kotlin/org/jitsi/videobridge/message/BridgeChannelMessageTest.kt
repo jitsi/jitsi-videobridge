@@ -460,61 +460,66 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.None>()
             }
 
-            context("Custom subscription with include and exclude lists") {
+            context("Include subscription with list") {
                 val includeList = listOf("endpoint1", "endpoint2", "endpoint3")
+                val message = ReceiverAudioSubscriptionMessage.Include(includeList)
+                val parsed = parse(message.toJson())
+
+                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Include>()
+                parsed.list shouldContainExactly includeList
+            }
+
+            context("Exclude subscription with list") {
                 val excludeList = listOf("endpoint4", "endpoint5")
-                val message = ReceiverAudioSubscriptionMessage.Custom(includeList, excludeList)
+                val message = ReceiverAudioSubscriptionMessage.Exclude(excludeList)
                 val parsed = parse(message.toJson())
 
-                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Custom>()
-                parsed.include shouldContainExactly includeList
-                parsed.exclude shouldContainExactly excludeList
+                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Exclude>()
+                parsed.list shouldContainExactly excludeList
             }
 
-            context("Custom subscription with empty lists") {
-                val message = ReceiverAudioSubscriptionMessage.Custom(emptyList(), emptyList())
+            context("Include subscription with empty list") {
+                val message = ReceiverAudioSubscriptionMessage.Include(emptyList())
                 val parsed = parse(message.toJson())
 
-                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Custom>()
-                parsed.include shouldBe emptyList()
-                parsed.exclude shouldBe emptyList()
+                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Include>()
+                parsed.list shouldBe emptyList()
             }
 
-            context("Custom subscription with only include list") {
-                val includeList = listOf("endpoint1", "endpoint2")
-                val message = ReceiverAudioSubscriptionMessage.Custom(includeList, emptyList())
+            context("Exclude subscription with empty list") {
+                val message = ReceiverAudioSubscriptionMessage.Exclude(emptyList())
                 val parsed = parse(message.toJson())
 
-                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Custom>()
-                parsed.include shouldContainExactly includeList
-                parsed.exclude shouldBe emptyList()
+                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Exclude>()
+                parsed.list shouldBe emptyList()
             }
 
-            context("Custom subscription with only exclude list") {
-                val excludeList = listOf("endpoint3", "endpoint4")
-                val message = ReceiverAudioSubscriptionMessage.Custom(emptyList(), excludeList)
-                val parsed = parse(message.toJson())
-
-                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Custom>()
-                parsed.include shouldBe emptyList()
-                parsed.exclude shouldContainExactly excludeList
-            }
-
-            context("parsing Custom from JSON") {
+            context("parsing Include from JSON") {
                 val jsonString = """
                     {
                         "colibriClass": "ReceiverAudioSubscription",
-                        "mode": "Custom",
-                        "include": ["endpoint1", "endpoint2"],
-                        "exclude": ["endpoint3"]
+                        "mode": "Include",
+                        "list": ["endpoint1", "endpoint2"]
                     }
                 """
                 val parsed = parse(jsonString)
 
-                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Custom>()
-                parsed.include shouldContainExactly
-                    listOf("endpoint1", "endpoint2")
-                parsed.exclude shouldContainExactly listOf("endpoint3")
+                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Include>()
+                parsed.list shouldContainExactly listOf("endpoint1", "endpoint2")
+            }
+
+            context("parsing Exclude from JSON") {
+                val jsonString = """
+                    {
+                        "colibriClass": "ReceiverAudioSubscription",
+                        "mode": "Exclude",
+                        "list": ["endpoint3"]
+                    }
+                """
+                val parsed = parse(jsonString)
+
+                parsed.shouldBeInstanceOf<ReceiverAudioSubscriptionMessage.Exclude>()
+                parsed.list shouldContainExactly listOf("endpoint3")
             }
 
             context("parsing All from JSON") {

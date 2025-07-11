@@ -496,30 +496,19 @@ sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
             return """{"colibriClass":"$TYPE","mode":"None"}"""
         }
     }
-    data class Custom(
-        /*
-         * The list of audio sourceNames to include.
-         */
-        val include: List<String>,
-        /*
-         * The list of audio sourceNames to exclude
-         */
-        val exclude: List<String>,
-    ) : ReceiverAudioSubscriptionMessage()
+    data class Include(val list: List<String>) : ReceiverAudioSubscriptionMessage()
+    data class Exclude(val list: List<String>) : ReceiverAudioSubscriptionMessage()
     companion object {
         const val TYPE = "ReceiverAudioSubscription"
 
         @JvmStatic
         @JsonCreator
-        fun jsonCreator(
-            mode: String,
-            include: List<String>? = null,
-            exclude: List<String>? = null
-        ): ReceiverAudioSubscriptionMessage {
+        fun jsonCreator(mode: String, list: List<String>? = null,): ReceiverAudioSubscriptionMessage {
             return when (mode) {
                 "All" -> All
                 "None" -> None
-                "Custom" -> Custom(include ?: emptyList(), exclude ?: emptyList())
+                "Include" -> Include(list ?: emptyList())
+                "Exclude" -> Exclude(list ?: emptyList())
                 else -> throw IllegalArgumentException("Unknown ReceiverAudioSubscription mode: $mode")
             }
         }
