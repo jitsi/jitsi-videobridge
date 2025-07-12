@@ -73,6 +73,7 @@ import org.jitsi.videobridge.dcsctp.DcSctpTransport
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ConnectionStats
 import org.jitsi.videobridge.message.ForwardedSourcesMessage
+import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.message.SenderSourceConstraintsMessage
 import org.jitsi.videobridge.metrics.QueueMetrics
@@ -365,6 +366,11 @@ class Endpoint @JvmOverloads constructor(
     private var latestBandwidth: Bandwidth? = null
 
     /**
+     * Last updated ReceiverAudioSubscription
+     */
+    private var audioSubscription: AudioSubscription = AudioSubscription()
+
+    /**
      * Recurring event to send connection stats messages.
      */
     private val connectionStatsSender =
@@ -410,7 +416,19 @@ class Endpoint @JvmOverloads constructor(
     /**
      *  Keep track of this endpoint's audio sources.
      */
-    var audioSources: ArrayList<AudioSourceDesc> = ArrayList()
+    override var audioSources: List<AudioSourceDesc> = ArrayList()
+        set(newValue) {
+            val oldValue = field
+            val removedDescs = oldValue.filterNot { newValue.contains(it) }.toSet()
+            val addedDescs = newValue.filterNot { oldValue.contains(it) }.toSet()
+            conference.localEndpoints.forEach {
+                if (it.id != id) {
+                    it.conferenceAudioSourceAdded(addedDescs)
+                    it.conferenceAudioSourceRemoved(removedDescs)
+                }
+            }
+            field = newValue
+        }
 
     private fun setupIceTransport() {
         iceTransport.incomingDataHandler = object : IceTransport.IncomingDataHandler {
@@ -533,6 +551,17 @@ class Endpoint @JvmOverloads constructor(
             EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
             EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
         }
+    }
+
+    fun setAudioSubscription(subscription: ReceiverAudioSubscriptionMessage) =
+        audioSubscription.updateSubscription(subscription, conference.getAudioSourceDescs())
+
+    fun conferenceAudioSourceAdded(descs: Set<AudioSourceDesc>) {
+        audioSubscription.onConferenceSourceAdded(descs)
+    }
+
+    fun conferenceAudioSourceRemoved(descs: Set<AudioSourceDesc>) {
+        audioSubscription.onConferenceSourceRemoved(descs)
     }
 
     override val isSendingAudio: Boolean
@@ -909,7 +938,7 @@ class Endpoint @JvmOverloads constructor(
 
         return when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> acceptVideo && bitrateController.accept(packetInfo)
-            is AudioRtpPacket -> acceptAudio
+            is AudioRtpPacket -> acceptAudio && audioSubscription.isSsrcWanted(packet.ssrc)
             is RtcpSrPacket -> {
                 // TODO: For SRs we're only interested in the ntp/rtp timestamp
                 //  association, so we could only accept srs from the main ssrc

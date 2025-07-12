@@ -158,6 +158,21 @@ public class EndpointMessageTransport
     }
 
     @Override
+    public BridgeChannelMessage receiverAudioSubscription(
+            @NotNull ReceiverAudioSubscriptionMessage receiverAudioSubscriptionMessage
+    )
+    {
+        if (getLogger().isDebugEnabled())
+        {
+            getLogger().debug("Received audio subscription: " + receiverAudioSubscriptionMessage);
+        }
+
+        endpoint.setAudioSubscription(receiverAudioSubscriptionMessage);
+
+        return null;
+    }
+
+    @Override
     public void unhandledMessage(@NotNull BridgeChannelMessage message)
     {
         getLogger().warn("Received a message with an unexpected type: " + message.getClass().getSimpleName());
