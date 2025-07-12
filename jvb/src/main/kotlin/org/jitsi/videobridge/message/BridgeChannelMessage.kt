@@ -503,7 +503,7 @@ sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
 
         @JvmStatic
         @JsonCreator
-        fun jsonCreator(mode: String, list: List<String>? = null,): ReceiverAudioSubscriptionMessage {
+        fun jsonCreator(mode: String, list: List<String>? = null): ReceiverAudioSubscriptionMessage {
             return when (mode) {
                 "All" -> All
                 "None" -> None

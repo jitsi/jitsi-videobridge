@@ -148,7 +148,6 @@ class AudioSubscriptionTest : ShouldSpec() {
             }
         }
 
-
         context("onConferenceSourceAdded with Include subscription") {
             should("add new sources that match include criteria") {
                 val initialSources = listOf(
