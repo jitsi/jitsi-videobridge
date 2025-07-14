@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.rtcp
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetLocalSsrcEvent
@@ -28,7 +30,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.NEVER
+import org.jitsi.utils.RateLimit
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -54,9 +56,9 @@ class KeyframeRequester @JvmOverloads constructor(
     private val logger = createChildLogger(parentLogger)
 
     // Map a SSRC to the timestamp (represented as an [Instant]) of when we last requested a keyframe for it
-    private val keyframeRequests = mutableMapOf<Long, Instant>()
+    private val keyframeLimiter = mutableMapOf<Long, RateLimit>()
+    private val keyframeLimiterSyncRoot = Any()
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
-    private val keyframeRequestsSyncRoot = Any()
     private var localSsrc: Long? = null
     private var waitInterval = DEFAULT_WAIT_INTERVAL
 
@@ -127,14 +129,14 @@ class KeyframeRequester @JvmOverloads constructor(
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
-        synchronized(keyframeRequestsSyncRoot) {
-            return if (Duration.between(keyframeRequests.getOrDefault(mediaSsrc, NEVER), now) < waitInterval) {
-                logger.cdebug {
-                    "Sent a keyframe request less than $waitInterval ago for $mediaSsrc, ignoring request"
-                }
+        synchronized(keyframeLimiterSyncRoot) {
+            val limiter = keyframeLimiter.computeIfAbsent(mediaSsrc) {
+                RateLimit(minInterval = minInterval, maxRequests = maxRequests, interval = maxRequestInterval)
+            }
+            return if (!limiter.accept(now)) {
+                logger.cdebug { "Ignoring keyframe request for $mediaSsrc, rate limited" }
                 false
             } else {
-                keyframeRequests[mediaSsrc] = now
                 logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc" }
                 true
             }
@@ -221,6 +223,15 @@ class KeyframeRequester @JvmOverloads constructor(
     }
 
     companion object {
+        private val minInterval: Duration by config {
+            "jmt.keyframe.min-interval".from(JitsiConfig.newConfig)
+        }
+        private val maxRequests: Int by config {
+            "jmt.keyframe.max-requests".from(JitsiConfig.newConfig)
+        }
+        private val maxRequestInterval: Duration by config {
+            "jmt.keyframe.max-request-interval".from(JitsiConfig.newConfig)
+        }
         private val DEFAULT_WAIT_INTERVAL = Duration.ofMillis(100)
     }
 }
