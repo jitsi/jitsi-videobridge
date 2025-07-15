@@ -44,17 +44,10 @@ class AudioSubscription() {
         }
     }
 
-    fun isSsrcWanted(ssrc: Long): Boolean {
-        return when (latestSubscription) {
-            is ReceiverAudioSubscriptionMessage.All -> true
-            is ReceiverAudioSubscriptionMessage.None -> false
-            is ReceiverAudioSubscriptionMessage.Include -> {
-                return wantedSsrcs.contains(ssrc)
-            }
-            is ReceiverAudioSubscriptionMessage.Exclude -> {
-                return wantedSsrcs.contains(ssrc)
-            }
-        }
+    fun isSsrcWanted(ssrc: Long): Boolean = when (latestSubscription) {
+        is ReceiverAudioSubscriptionMessage.All -> true
+        is ReceiverAudioSubscriptionMessage.None -> false
+        else -> wantedSsrcs.contains(ssrc)
     }
 
     fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) {
