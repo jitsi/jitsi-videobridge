@@ -160,14 +160,20 @@ class KeyframeRequester @JvmOverloads constructor(
         val pkt = when {
             streamInformationStore.supportsPli -> {
                 numPlisGenerated++
-                RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
+                RtcpFbPliPacketBuilder(
+                    mediaSourceSsrc = mediaSsrc
+                ).apply {
+                    localSsrc?.let { rtcpHeader.senderSsrc = it }
+                }.build()
             }
             streamInformationStore.supportsFir -> {
                 numFirsGenerated++
                 RtcpFbFirPacketBuilder(
                     mediaSenderSsrc = mediaSsrc,
                     firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
-                ).build()
+                ).apply {
+                    localSsrc?.let { rtcpHeader.senderSsrc = it }
+                }.build()
             }
             else -> {
                 logger.warn("Can not send neither PLI nor FIR")
