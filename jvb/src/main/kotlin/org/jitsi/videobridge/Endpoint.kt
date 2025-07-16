@@ -789,9 +789,11 @@ class Endpoint @JvmOverloads constructor(
      */
     fun handleIncomingPacket(packetInfo: PacketInfo) {
         if (visitor) {
-            /* Never forward RTP/RTCP from a visitor. */
-            ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
-            return
+            if (packetInfo.packet !is RtcpFbPliPacket && packetInfo.packet !is RtcpFbFirPacket) {
+                /* Never forward RTP/RTCP from a visitor, except PLI/FIR. */
+                ByteBufferPool.returnBuffer(packetInfo.packet.buffer)
+                return
+            }
         }
 
         packetInfo.endpointId = id
