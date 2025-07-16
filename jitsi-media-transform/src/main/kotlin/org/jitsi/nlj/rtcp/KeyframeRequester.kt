@@ -31,14 +31,15 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.RateLimit
+import org.jitsi.utils.durationOfDoubleSeconds
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.utils.min
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.min
 
 /**
  * [KeyframeRequester] handles a few things around keyframes:
@@ -60,7 +61,7 @@ class KeyframeRequester @JvmOverloads constructor(
     private val keyframeLimiterSyncRoot = Any()
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private var localSsrc: Long? = null
-    private var waitInterval = DEFAULT_WAIT_INTERVAL
+    private var waitInterval = minInterval
 
     // Stats
 
@@ -131,9 +132,9 @@ class KeyframeRequester @JvmOverloads constructor(
         }
         synchronized(keyframeLimiterSyncRoot) {
             val limiter = keyframeLimiter.computeIfAbsent(mediaSsrc) {
-                RateLimit(minInterval = minInterval, maxRequests = maxRequests, interval = maxRequestInterval)
+                RateLimit(defaultMinInterval = minInterval, maxRequests = maxRequests, interval = maxRequestInterval)
             }
-            return if (!limiter.accept(now)) {
+            return if (!limiter.accept(now, waitInterval)) {
                 logger.cdebug { "Ignoring keyframe request for $mediaSsrc, rate limited" }
                 false
             } else {
@@ -219,7 +220,7 @@ class KeyframeRequester @JvmOverloads constructor(
 
     fun onRttUpdate(newRtt: Double) {
         // avg(rtt) + stddev(rtt) would be more accurate than rtt + 10.
-        waitInterval = Duration.ofMillis(min(DEFAULT_WAIT_INTERVAL.toMillis(), newRtt.toLong() + 10))
+        waitInterval = min(minInterval, durationOfDoubleSeconds((newRtt + 10) / 1e3))
     }
 
     companion object {
@@ -232,7 +233,6 @@ class KeyframeRequester @JvmOverloads constructor(
         private val maxRequestInterval: Duration by config {
             "jmt.keyframe.max-request-interval".from(JitsiConfig.newConfig)
         }
-        private val DEFAULT_WAIT_INTERVAL = Duration.ofMillis(100)
     }
 }
 
