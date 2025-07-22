@@ -80,8 +80,6 @@ class AudioSubscription(private val conference: Conference) {
 
     fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) {
         wantedSsrcs = wantedSsrcs.subtract(descs.map(AudioSourceDesc::ssrc).toSet())
-        descs.forEach {
-            conference.subscribedLocalAudioSources.remove(it.sourceName)
-        }
+        conference.subscribedLocalAudioSources.removeAll(descs.map(AudioSourceDesc::sourceName))
     }
 }
