@@ -368,7 +368,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Last updated ReceiverAudioSubscription
      */
-    private var audioSubscription: AudioSubscription = AudioSubscription()
+    private var audioSubscription: AudioSubscription = AudioSubscription(conference)
 
     /**
      * Recurring event to send connection stats messages.

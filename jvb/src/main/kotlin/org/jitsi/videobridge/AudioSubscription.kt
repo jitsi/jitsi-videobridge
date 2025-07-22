@@ -19,7 +19,7 @@ package org.jitsi.videobridge
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
-class AudioSubscription() {
+class AudioSubscription(private val conference: Conference) {
     private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage.All
 
     // wantedSsrcs is a set of SSRCs that the endpoint wants to receive audio for.
@@ -32,9 +32,12 @@ class AudioSubscription() {
             is ReceiverAudioSubscriptionMessage.All -> return
             is ReceiverAudioSubscriptionMessage.None -> return
             is ReceiverAudioSubscriptionMessage.Include -> {
-                wantedSsrcs = sources.filter { desc ->
+                val (local, remote) = sources.partition { desc ->
                     subscription.list.contains(desc.sourceName)
-                }.map(AudioSourceDesc::ssrc).toSet()
+                }
+                wantedSsrcs = local.map(AudioSourceDesc::ssrc).toSet()
+                conference.subscribedLocalAudioSources.addAll(local.map(AudioSourceDesc::sourceName))
+                // TODO: Notify remote sources to other relays
             }
             is ReceiverAudioSubscriptionMessage.Exclude -> {
                 wantedSsrcs = sources.filterNot { desc ->
@@ -77,5 +80,8 @@ class AudioSubscription() {
 
     fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) {
         wantedSsrcs = wantedSsrcs.subtract(descs.map(AudioSourceDesc::ssrc).toSet())
+        descs.forEach {
+            conference.subscribedLocalAudioSources.remove(it.sourceName)
+        }
     }
 }

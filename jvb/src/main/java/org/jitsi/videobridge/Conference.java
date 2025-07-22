@@ -170,6 +170,15 @@ public class Conference
     private final boolean routeLoudestOnly = LoudestConfig.getRouteLoudestOnly();
 
     /**
+     * A list of local audio source names that at least one endpoint subscribes to.
+     */
+    private Set<String> subscribedLocalAudioSources = new HashSet<>();
+
+    public Set<String> getSubscribedLocalAudioSources() {
+        return subscribedLocalAudioSources;
+    }
+
+    /**
      * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
      * endpoints stopping or starting to their video streams (which affects the order).
      */
@@ -1262,6 +1271,13 @@ public class Conference
         SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
         if (ranking == null || !routeLoudestOnly)
             return false;
+        // return false if the source is explicitly subscribed by any other endpoint.
+        List<AudioSourceDesc> sources = endpoint.getAudioSources();
+        for (AudioSourceDesc source : sources) {
+            if (subscribedLocalAudioSources.contains(source.getSourceName())) {
+                return false;
+            }
+        }
         if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
             return false;
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
