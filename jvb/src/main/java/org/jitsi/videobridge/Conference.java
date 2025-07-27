@@ -34,6 +34,7 @@ import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import static org.jitsi.videobridge.JvbAudioLastNKt.jvbAudioLastNSingleton;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -1220,12 +1221,24 @@ public class Conference
     public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long level)
     {
         SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
+        
+        // Check if we should drop based on the loudest-only configuration
         if (ranking == null || !routeLoudestOnly)
             return false;
         if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
             return false;
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
             return false;
+            
+        // Check if we should drop based on the audio last-n configuration
+        int audioLastN = jvbAudioLastNSingleton.get();
+        if (audioLastN != -1 && ranking.energyRanking >= audioLastN)
+        {
+            VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
+            return true;
+        }
+        
+        // If we reach here, the packet should be dropped based on loudest-only config
         VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;
     }

@@ -99,12 +99,28 @@ import java.security.SecureRandom
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.Optional
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
+import java.util.concurrent.atomic.AtomicReference
+import java.util.function.Consumer
+import java.util.function.Supplier
+import java.util.stream.Collectors
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
+import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
+import org.jitsi.videobridge.jvbAudioLastNSingleton
 import org.jitsi.videobridge.sctp.SctpConfig.Companion.config as sctpConfig
+import java.util.Optional
 
 /**
  * Models a local endpoint (participant) in a [Conference]
@@ -981,7 +997,26 @@ class Endpoint @JvmOverloads constructor(
 
         return when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> acceptVideo && bitrateController.accept(packetInfo)
-            is AudioRtpPacket -> acceptAudio
+            is AudioRtpPacket -> {
+                if (!acceptAudio) {
+                    return false
+                }
+
+                // Check if this endpoint is among the loudest speakers based on audio last-n
+                val audioLastN = jvbAudioLastNSingleton.get()
+                if (audioLastN != -1) {
+                    // Check if the source endpoint is among the loudest speakers
+                    val sourceEndpointId = packetInfo.endpointId
+                    if (sourceEndpointId != null) {
+                        val sourceEndpoint = conference.getEndpoint(sourceEndpointId)
+                        if (sourceEndpoint != null && !conference.speechActivity.isAmongLoudest(sourceEndpoint.id)) {
+                            // This endpoint is not among the loudest speakers, so don't forward the audio
+                            return false
+                        }
+                    }
+                }
+                true
+            }
             is RtcpSrPacket -> {
                 // TODO: For SRs we're only interested in the ntp/rtp timestamp
                 //  association, so we could only accept srs from the main ssrc
