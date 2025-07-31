@@ -167,7 +167,8 @@ public class EndpointMessageTransport
             getLogger().debug("Received audio subscription: " + receiverAudioSubscriptionMessage);
         }
 
-        endpoint.setAudioSubscription(receiverAudioSubscriptionMessage);
+        Conference conference = endpoint.getConference();
+        conference.setEndpointAudioSubscription(endpoint.getId(), receiverAudioSubscriptionMessage);
 
         return null;
     }
