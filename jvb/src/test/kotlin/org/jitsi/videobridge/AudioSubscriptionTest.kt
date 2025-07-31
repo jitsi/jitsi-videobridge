@@ -18,20 +18,13 @@ package org.jitsi.videobridge
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.mockk
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
-
 
 class AudioSubscriptionTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
-    val conference: Conference = mockk {
-        every { subscribedLocalAudioSources } returns mutableSetOf<String>()
-    }
-
-    private val audioSubscription = AudioSubscription(conference)
+    private val audioSubscription = AudioSubscription()
 
     init {
         context("Mode=None subscription") {
