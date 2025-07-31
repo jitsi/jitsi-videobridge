@@ -23,7 +23,7 @@ class AudioSubscription() {
     private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage.All
 
     // wantedSsrcs is a set of SSRCs that the endpoint wants to receive audio for.
-    // This is only managed when the subscription is "Custom".
+    // This is only managed when the subscription is "Include" or "Exclude".
     private var wantedSsrcs: Set<Long> = emptySet()
 
     fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, sources: List<AudioSourceDesc>) {
@@ -32,8 +32,14 @@ class AudioSubscription() {
             is ReceiverAudioSubscriptionMessage.All -> return
             is ReceiverAudioSubscriptionMessage.None -> return
             is ReceiverAudioSubscriptionMessage.Include -> {
-                val (local, remote) = sources.partition { desc ->
-                    subscription.list.contains(desc.sourceName)
+                wantedSsrcs = emptySet()
+                subscription.list.forEach {
+                    val desc = sources.find { source -> source.sourceName == it }
+                    if (desc != null) {
+                        wantedSsrcs = wantedSsrcs.union(setOf(desc.ssrc))
+                    } else {
+                        // TODO: notify relays about remote subscriptions
+                    }
                 }
                 wantedSsrcs = local.map(AudioSourceDesc::ssrc).toSet()
                 conference.subscribedLocalAudioSources.addAll(local.map(AudioSourceDesc::sourceName))
