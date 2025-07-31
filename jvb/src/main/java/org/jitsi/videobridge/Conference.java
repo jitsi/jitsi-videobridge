@@ -1299,12 +1299,10 @@ public class Conference
         if (ranking == null || !routeLoudestOnly)
             return false;
         // return false if the source is explicitly subscribed by any other endpoint.
-        List<AudioSourceDesc> sources = endpoint.getAudioSources();
-        for (AudioSourceDesc source : sources) {
-            if (audioSubscriptionManager.getSubscribedLocalAudioSources().contains(source.getSourceName()))
-            {
-                return false;
-            }
+        AudioSourceDesc source = endpoint.getAudioSources().get(0); // assume one source per endpoint
+        if (audioSubscriptionManager.getSubscribedLocalAudioSources().contains(source.getSourceName()))
+        {
+            return false;
         }
         if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
             return false;
