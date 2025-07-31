@@ -41,9 +41,6 @@ class AudioSubscription() {
                         // TODO: notify relays about remote subscriptions
                     }
                 }
-                wantedSsrcs = local.map(AudioSourceDesc::ssrc).toSet()
-                conference.subscribedLocalAudioSources.addAll(local.map(AudioSourceDesc::sourceName))
-                // TODO: Notify remote sources to other relays
             }
             is ReceiverAudioSubscriptionMessage.Exclude -> {
                 wantedSsrcs = sources.filterNot { desc ->
