@@ -173,7 +173,7 @@ public class Conference
      * Audio subscription manager for handling endpoint subscriptions.
      */
     @NotNull
-    private final AudioSubscriptionManager audioSubscriptionManager = new AudioSubscriptionManager(this);
+    private final AudioSubscriptionManager audioSubscriptionManager = new AudioSubscriptionManager();
 
     /**
      * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
@@ -1091,7 +1091,7 @@ public class Conference
      */
     public void setEndpointAudioSubscription(String endpointId, ReceiverAudioSubscriptionMessage subscription)
     {
-        audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription);
+        audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription, getAudioSourceDescs());
     }
 
     /**

@@ -20,7 +20,7 @@ import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import java.util.concurrent.ConcurrentHashMap
 
-class AudioSubscriptionManager(private val conference: Conference) {
+class AudioSubscriptionManager() {
     /**
      * A map of endpoint IDs to their audio subscriptions.
      */
@@ -36,14 +36,18 @@ class AudioSubscriptionManager(private val conference: Conference) {
      * @param endpointId the ID of the endpoint
      * @param subscription the audio subscription message
      */
-    fun setEndpointAudioSubscription(endpointId: String, subscription: ReceiverAudioSubscriptionMessage) {
+    fun setEndpointAudioSubscription(
+        endpointId: String,
+        subscription: ReceiverAudioSubscriptionMessage,
+        audioSources: List<AudioSourceDesc>
+    ) {
         val audioSubscription = audioSubscriptions.getOrPut(endpointId) {
             AudioSubscription()
         }
 
         // Update subscribed local sources before updating subscription
         updateSubscribedLocalAudioSourcesForEndpoint(endpointId, subscription)
-        audioSubscription.updateSubscription(subscription, conference.audioSourceDescs)
+        audioSubscription.updateSubscription(subscription, audioSources)
     }
 
     /**
