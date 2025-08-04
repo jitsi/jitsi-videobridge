@@ -200,6 +200,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                     )
                 }
                 manager.removeEndpoint(mockEndpoint.id)
+                manager.removeSources(mockEndpoint.audioSources.toSet())
                 // Only source3 should remain (from endpoint2)
                 manager.getSubscribedLocalAudioSources() shouldContainExactlyInAnyOrder setOf("source3")
             }
@@ -246,6 +247,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                     )
                 }
                 manager.removeEndpoint(mockEndpoint.id)
+                manager.removeSources(mockEndpoint.audioSources.toSet())
 
                 // Only source3 should remain (from endpoint2)
                 manager.getSubscribedLocalAudioSources() shouldContainExactlyInAnyOrder setOf("source3")
@@ -270,6 +272,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                     )
                 }
                 manager.removeEndpoint(mockEndpoint.id)
+                manager.removeSources(mockEndpoint.audioSources.toSet())
 
                 // endpoint2 should no longer want source1 since it was removed from the conference
                 manager.isEndpointAudioWanted("endpoint2", 1001L) shouldBe false
