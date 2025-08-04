@@ -1298,16 +1298,16 @@ public class Conference
         SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
         if (ranking == null || !routeLoudestOnly)
             return false;
-        // return false if the source is explicitly subscribed by any other endpoint.
+        if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
+            return false;
+        if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
+            return false;
+        // return false if the source is subscribed with an "Include" subscription by any other endpoint.
         AudioSourceDesc source = endpoint.getAudioSources().get(0); // assume one source per endpoint
         if (audioSubscriptionManager.getSubscribedLocalAudioSources().contains(source.getSourceName()))
         {
             return false;
         }
-        if (ranking.isDominant && LoudestConfig.Companion.getAlwaysRouteDominant())
-            return false;
-        if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
-            return false;
         VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;
     }
