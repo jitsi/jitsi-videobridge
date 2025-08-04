@@ -959,7 +959,8 @@ public class Conference
         endpoint.getSsrcs().forEach(ssrc -> {
             endpointsBySsrc.remove(ssrc, endpoint);
         });
-        audioSubscriptionManager.onEndpointRemoved(endpoint);
+        audioSubscriptionManager.removeEndpoint(endpoint.getId());
+        audioSubscriptionManager.removeSources(new HashSet<>(endpoint.getAudioSources()));
         endpointsChanged(removedEndpoint.getVisitor());
     }
 
@@ -1081,7 +1082,7 @@ public class Conference
 
     public void removeAudioSources(Set<AudioSourceDesc> audioSources)
     {
-        audioSubscriptionManager.onSourcesRemoved(audioSources);
+        audioSubscriptionManager.removeSources(audioSources);
     }
 
     /**

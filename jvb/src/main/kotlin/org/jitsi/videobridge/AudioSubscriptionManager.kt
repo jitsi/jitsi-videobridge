@@ -106,20 +106,19 @@ class AudioSubscriptionManager() {
 
     /**
      * Called when an endpoint is removed from the conference.
-     * @param endpoint the endpoint that was removed
+     * @param id the endpoint ID that was removed
      */
-    fun onEndpointRemoved(endpoint: AbstractEndpoint) {
+    fun removeEndpoint(id: String) {
         // Remove the endpoint from all sets
         // This is necessary to precisely maintain the number of subscriptions to a source
         subscribedLocalAudioSources.values.forEach { endpointSet ->
-            endpointSet.remove(endpoint.id)
+            endpointSet.remove(id)
         }
         subscribedLocalAudioSources.entries.removeIf { it.value.isEmpty() }
-        audioSubscriptions.remove(endpoint.id)
-        onSourcesRemoved(endpoint.audioSources.toSet())
+        audioSubscriptions.remove(id)
     }
 
-    fun onSourcesRemoved(sources: Set<AudioSourceDesc>) {
+    fun removeSources(sources: Set<AudioSourceDesc>) {
         subscribedLocalAudioSources.keys.removeAll(sources.mapNotNull { it.sourceName })
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceRemoved(sources)

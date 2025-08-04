@@ -179,7 +179,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                         AudioSourceDesc(1002L, "endpoint1", "source2")
                     )
                 }
-                manager.onEndpointRemoved(mockEndpoint)
+                manager.removeEndpoint(mockEndpoint.id)
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false
             }
 
@@ -199,7 +199,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                         AudioSourceDesc(1002L, "endpoint1", "source2")
                     )
                 }
-                manager.onEndpointRemoved(mockEndpoint)
+                manager.removeEndpoint(mockEndpoint.id)
                 // Only source3 should remain (from endpoint2)
                 manager.getSubscribedLocalAudioSources() shouldContainExactlyInAnyOrder setOf("source3")
             }
@@ -209,7 +209,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                     every { id } returns "non-existent"
                     every { audioSources } returns emptyList()
                 }
-                manager.onEndpointRemoved(mockEndpoint)
+                manager.removeEndpoint(mockEndpoint.id)
                 manager.getSubscribedLocalAudioSources().shouldBeEmpty()
             }
 
@@ -224,7 +224,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                         AudioSourceDesc(1001L, "endpoint1", "source1")
                     )
                 }
-                manager.onEndpointRemoved(mockEndpoint)
+                manager.removeEndpoint(mockEndpoint.id)
                 manager.getSubscribedLocalAudioSources().shouldBeEmpty()
             }
 
@@ -245,7 +245,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                         AudioSourceDesc(1002L, "endpoint1", "source2")
                     )
                 }
-                manager.onEndpointRemoved(mockEndpoint)
+                manager.removeEndpoint(mockEndpoint.id)
 
                 // Only source3 should remain (from endpoint2)
                 manager.getSubscribedLocalAudioSources() shouldContainExactlyInAnyOrder setOf("source3")
@@ -269,7 +269,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                         AudioSourceDesc(1001L, "endpoint1", "source1")
                     )
                 }
-                manager.onEndpointRemoved(mockEndpoint)
+                manager.removeEndpoint(mockEndpoint.id)
 
                 // endpoint2 should no longer want source1 since it was removed from the conference
                 manager.isEndpointAudioWanted("endpoint2", 1001L) shouldBe false
@@ -308,7 +308,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 val removedSources = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
-                manager.onSourcesRemoved(removedSources)
+                manager.removeSources(removedSources)
 
                 // Removed source should no longer be wanted
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false
@@ -323,7 +323,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 val removedSources = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
-                manager.onSourcesRemoved(removedSources)
+                manager.removeSources(removedSources)
 
                 // source1 should be removed from subscribed sources
                 manager.getSubscribedLocalAudioSources() shouldContainExactlyInAnyOrder setOf("source2")
@@ -431,7 +431,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                     every { id } returns "endpoint1"
                     every { audioSources } returns emptyList()
                 }
-                manager.onEndpointRemoved(mockEndpoint)
+                manager.removeEndpoint(mockEndpoint.id)
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false // removed
                 manager.isEndpointAudioWanted("endpoint2", 1002L) shouldBe true // unchanged
             }
