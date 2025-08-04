@@ -27,7 +27,7 @@ class AudioSubscriptionManager() {
     private val audioSubscriptions = ConcurrentHashMap<String, AudioSubscription>()
 
     /**
-     * A map of local audio source names to a set of endpoint IDs that explicitly subscribe to the source.
+     * A map of local audio source names to a set of endpoint IDs that subscribe to the source with an "Include" type.
      */
     private val subscribedLocalAudioSources = mutableMapOf<String, MutableSet<String>>()
 
