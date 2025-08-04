@@ -29,7 +29,7 @@ class AudioSubscriptionManager() {
     /**
      * A map of local audio source names to a set of endpoint IDs that subscribe to the source with an "Include" type.
      */
-    private val subscribedLocalAudioSources = mutableMapOf<String, MutableSet<String>>()
+    private val subscribedLocalAudioSources = ConcurrentHashMap<String, MutableSet<String>>()
 
     /**
      * Sets the audio subscription for a given endpoint.
