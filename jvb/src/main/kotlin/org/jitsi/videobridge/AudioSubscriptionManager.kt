@@ -53,6 +53,17 @@ class AudioSubscriptionManager() {
     }
 
     /**
+     * Called when a new endpoint joins the conference.
+     * Creates a new audio subscription with the default state (ALL mode).
+     * @param endpointId the ID of the new endpoint
+     */
+    fun addEndpoint(endpointId: String) = synchronized(lock) {
+        if (!audioSubscriptions.containsKey(endpointId)) {
+            audioSubscriptions[endpointId] = AudioSubscription()
+        }
+    }
+
+    /**
      * Checks if audio from a given SSRC is wanted by a specific endpoint.
      * @param endpointId the ID of the endpoint
      * @param ssrc the SSRC to check
@@ -60,7 +71,7 @@ class AudioSubscriptionManager() {
      */
     fun isEndpointAudioWanted(endpointId: String, ssrc: Long): Boolean {
         val subscription = audioSubscriptions[endpointId]
-        return subscription?.isSsrcWanted(ssrc) ?: true
+        return subscription?.isSsrcWanted(ssrc) ?: false
     }
 
     /**

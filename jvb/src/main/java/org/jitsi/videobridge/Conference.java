@@ -995,6 +995,9 @@ public class Conference
                         replacedEndpoint + " has been replaced by new " +
                         "endpoint with same id: " + endpoint);
             }
+
+            // Add default audio subscription for this endpoint
+            audioSubscriptionManager.addEndpoint(endpoint.getId());
         });
 
         updateEndpointsCache();
