@@ -62,11 +62,12 @@ class AudioSubscriptionManager() {
     }
 
     /**
-     * Gets the set of local audio source names that are explicitly subscribed to by at least one endpoint.
-     * @return a set of source names
+     * Checks if a specific local audio source is explicitly subscribed to by any endpoint.
+     * @param sourceName the name of the audio source
+     * @return true if the source is explicitly subscribed, false otherwise
      */
-    fun getSubscribedLocalAudioSources(): Set<String> {
-        return subscribedLocalAudioSources.keys.toSet()
+    fun isExplicitlySubscribed(sourceName: String?): Boolean {
+        return subscribedLocalAudioSources.containsKey(sourceName)
     }
 
     /**

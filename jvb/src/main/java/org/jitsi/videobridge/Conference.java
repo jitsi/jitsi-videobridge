@@ -1305,7 +1305,7 @@ public class Conference
             return false;
         // return false if the source is subscribed with an "Include" subscription by any other endpoint.
         AudioSourceDesc source = endpoint.getAudioSources().get(0); // assume one source per endpoint
-        if (audioSubscriptionManager.getSubscribedLocalAudioSources().contains(source.getSourceName()))
+        if (audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
         {
             return false;
         }
