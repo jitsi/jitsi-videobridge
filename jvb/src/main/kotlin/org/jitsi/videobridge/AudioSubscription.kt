@@ -26,29 +26,32 @@ class AudioSubscription() {
     // This is only managed when the subscription is "Include" or "Exclude".
     private var wantedSsrcs: Set<Long> = emptySet()
 
-    fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, sources: List<AudioSourceDesc>) {
-        latestSubscription = subscription
-        when (subscription) {
-            is ReceiverAudioSubscriptionMessage.All -> return
-            is ReceiverAudioSubscriptionMessage.None -> return
-            is ReceiverAudioSubscriptionMessage.Include -> {
-                wantedSsrcs = emptySet()
-                subscription.list.forEach {
-                    val desc = sources.find { source -> source.sourceName == it }
-                    if (desc != null) {
-                        wantedSsrcs = wantedSsrcs.union(setOf(desc.ssrc))
-                    } else {
-                        // TODO: notify relays about remote subscriptions
+    private val lock: Any = Any()
+
+    fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, sources: List<AudioSourceDesc>) =
+        synchronized(lock) {
+            latestSubscription = subscription
+            when (subscription) {
+                is ReceiverAudioSubscriptionMessage.All -> return
+                is ReceiverAudioSubscriptionMessage.None -> return
+                is ReceiverAudioSubscriptionMessage.Include -> {
+                    wantedSsrcs = emptySet()
+                    subscription.list.forEach {
+                        val desc = sources.find { source -> source.sourceName == it }
+                        if (desc != null) {
+                            wantedSsrcs = wantedSsrcs.union(setOf(desc.ssrc))
+                        } else {
+                            // TODO: notify relays about remote subscriptions
+                        }
                     }
                 }
-            }
-            is ReceiverAudioSubscriptionMessage.Exclude -> {
-                wantedSsrcs = sources.filterNot { desc ->
-                    subscription.list.contains(desc.sourceName)
-                }.map(AudioSourceDesc::ssrc).toSet()
+                is ReceiverAudioSubscriptionMessage.Exclude -> {
+                    wantedSsrcs = sources.filterNot { desc ->
+                        subscription.list.contains(desc.sourceName)
+                    }.map(AudioSourceDesc::ssrc).toSet()
+                }
             }
         }
-    }
 
     fun isSsrcWanted(ssrc: Long): Boolean = when (latestSubscription) {
         is ReceiverAudioSubscriptionMessage.All -> true
@@ -56,7 +59,7 @@ class AudioSubscription() {
         else -> wantedSsrcs.contains(ssrc)
     }
 
-    fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) {
+    fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) = synchronized(lock) {
         when (latestSubscription) {
             is ReceiverAudioSubscriptionMessage.All -> return
             is ReceiverAudioSubscriptionMessage.None -> return
@@ -67,7 +70,6 @@ class AudioSubscription() {
                     subscription.list.contains(desc.sourceName)
                 }.map(AudioSourceDesc::ssrc).toSet()
                 wantedSsrcs = wantedSsrcs.union(newSsrcs)
-                return
             }
             is ReceiverAudioSubscriptionMessage.Exclude -> {
                 val subscription = latestSubscription as ReceiverAudioSubscriptionMessage.Exclude
@@ -76,12 +78,11 @@ class AudioSubscription() {
                     subscription.list.contains(desc.sourceName)
                 }.map(AudioSourceDesc::ssrc).toSet()
                 wantedSsrcs = wantedSsrcs.union(newSsrcs)
-                return
             }
         }
     }
 
-    fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) {
+    fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) = synchronized(lock) {
         wantedSsrcs = wantedSsrcs.subtract(descs.map(AudioSourceDesc::ssrc).toSet())
     }
 }

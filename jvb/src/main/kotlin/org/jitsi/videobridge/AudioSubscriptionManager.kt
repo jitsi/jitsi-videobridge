@@ -31,6 +31,8 @@ class AudioSubscriptionManager() {
      */
     private val subscribedLocalAudioSources = ConcurrentHashMap<String, MutableSet<String>>()
 
+    private val lock: Any = Any()
+
     /**
      * Sets the audio subscription for a given endpoint.
      * @param endpointId the ID of the endpoint
@@ -40,7 +42,7 @@ class AudioSubscriptionManager() {
         endpointId: String,
         subscription: ReceiverAudioSubscriptionMessage,
         audioSources: List<AudioSourceDesc>
-    ) {
+    ) = synchronized(lock) {
         val audioSubscription = audioSubscriptions.getOrPut(endpointId) {
             AudioSubscription()
         }
@@ -99,7 +101,7 @@ class AudioSubscriptionManager() {
      * Called when new audio sources are added to the conference.
      * @param sources the new audio source descriptions
      */
-    fun onSourcesAdded(sources: Set<AudioSourceDesc>) {
+    fun onSourcesAdded(sources: Set<AudioSourceDesc>) = synchronized(lock) {
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceAdded(sources)
         }
@@ -109,7 +111,7 @@ class AudioSubscriptionManager() {
      * Called when an endpoint is removed from the conference.
      * @param id the endpoint ID that was removed
      */
-    fun removeEndpoint(id: String) {
+    fun removeEndpoint(id: String) = synchronized(lock) {
         // Remove the endpoint from all sets
         // This is necessary to precisely maintain the number of subscriptions to a source
         subscribedLocalAudioSources.values.forEach { endpointSet ->
@@ -119,7 +121,7 @@ class AudioSubscriptionManager() {
         audioSubscriptions.remove(id)
     }
 
-    fun removeSources(sources: Set<AudioSourceDesc>) {
+    fun removeSources(sources: Set<AudioSourceDesc>) = synchronized(lock) {
         subscribedLocalAudioSources.keys.removeAll(sources.mapNotNull { it.sourceName })
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceRemoved(sources)
