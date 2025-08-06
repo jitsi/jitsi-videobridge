@@ -60,7 +60,7 @@ class AudioSubscriptionManager() {
      */
     fun isEndpointAudioWanted(endpointId: String, ssrc: Long): Boolean {
         val subscription = audioSubscriptions[endpointId]
-        return subscription?.isSsrcWanted(ssrc) ?: false
+        return subscription?.isSsrcWanted(ssrc) ?: true
     }
 
     /**
