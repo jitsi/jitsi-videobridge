@@ -1307,10 +1307,13 @@ public class Conference
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
             return false;
         // return false if the source is subscribed with an "Include" subscription by any other endpoint.
-        AudioSourceDesc source = endpoint.getAudioSources().get(0); // assume one source per endpoint
-        if (audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
-        {
-            return false;
+        List<AudioSourceDesc> sources = endpoint.getAudioSources();
+        if (!sources.isEmpty()) {
+            AudioSourceDesc source = sources.get(0); // assume one source per endpoint
+            if (audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
+            {
+                return false;
+            }
         }
         VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;
