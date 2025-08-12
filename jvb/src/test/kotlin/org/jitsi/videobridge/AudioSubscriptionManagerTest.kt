@@ -18,8 +18,6 @@ package org.jitsi.videobridge
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.mockk
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
@@ -209,11 +207,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("handle removal of non-existent endpoint") {
-                val mockEndpoint: AbstractEndpoint = mockk {
-                    every { id } returns "non-existent"
-                    every { audioSources } returns emptyList()
-                }
-                manager.removeEndpoint(mockEndpoint.id)
+                manager.removeEndpoint("non-existent")
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe false
                 manager.isExplicitlySubscribed("source3") shouldBe false
@@ -226,13 +220,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isExplicitlySubscribed("source2") shouldBe false
                 manager.isExplicitlySubscribed("source3") shouldBe false
 
-                val mockEndpoint: AbstractEndpoint = mockk {
-                    every { id } returns "endpoint1"
-                    every { audioSources } returns listOf(
-                        AudioSourceDesc(1001L, "endpoint1", "source1")
-                    )
-                }
-                manager.removeEndpoint(mockEndpoint.id)
+                manager.removeEndpoint("endpoint1")
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe false
                 manager.isExplicitlySubscribed("source3") shouldBe false
