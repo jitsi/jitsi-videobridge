@@ -39,7 +39,7 @@ class AudioSubscription() {
                     subscription.list.forEach {
                         val desc = sources.find { source -> source.sourceName == it }
                         if (desc != null) {
-                            wantedSsrcs = wantedSsrcs.union(setOf(desc.ssrc))
+                            wantedSsrcs += desc.ssrc
                         } else {
                             // TODO: notify relays about remote subscriptions
                         }
