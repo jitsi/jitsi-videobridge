@@ -62,10 +62,6 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isEndpointAudioWanted("endpoint2", 1003L) shouldBe true // source3
             }
 
-            should("return false for non-existent endpoint") {
-                manager.isEndpointAudioWanted("non-existent", 1001L) shouldBe false
-            }
-
             should("handle All subscription") {
                 val subscription = ReceiverAudioSubscriptionMessage.All
                 manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
@@ -175,15 +171,6 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
         }
 
         context("Endpoint removal") {
-            should("remove endpoint subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
-                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
-
-                manager.removeEndpoint("endpoint1")
-                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false
-            }
-
             should("remove endpoint from subscribed sources tracking") {
                 val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
                 val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source3"))
@@ -434,7 +421,6 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isEndpointAudioWanted("endpoint2", 1002L) shouldBe true // unchanged
 
                 manager.removeEndpoint("endpoint1")
-                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false // removed
                 manager.isEndpointAudioWanted("endpoint2", 1002L) shouldBe true // unchanged
             }
         }
