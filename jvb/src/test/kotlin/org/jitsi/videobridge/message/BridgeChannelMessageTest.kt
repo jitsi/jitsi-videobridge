@@ -238,12 +238,12 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.videoConstraints shouldBe VideoConstraints(360)
             }
             context("without source names") {
-                val message = AddReceiverMessage("bridge1", null, VideoConstraints(360))
+                val message = AddReceiverMessage("bridge1", "source1", VideoConstraints(360))
                 val parsed = parse(message.toJson())
 
                 parsed.shouldBeInstanceOf<AddReceiverMessage>()
                 parsed.bridgeId shouldBe "bridge1"
-                parsed.sourceName shouldBe null
+                parsed.sourceName shouldBe "source1"
                 parsed.videoConstraints shouldBe VideoConstraints(360)
             }
         }

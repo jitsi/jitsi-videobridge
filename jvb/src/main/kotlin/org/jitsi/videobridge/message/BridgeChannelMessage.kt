@@ -401,15 +401,14 @@ class SenderSourceConstraintsMessage(
  */
 class AddReceiverMessage(
     val bridgeId: String,
-    // Used in the multi-stream mode
-    val sourceName: String?,
+    val sourceName: String,
     val videoConstraints: VideoConstraints
 ) : BridgeChannelMessage() {
     /**
      * Serialize manually because it's faster than Jackson.
      */
     override fun createJson(): String = "{\"colibriClass\":\"$TYPE\",\"bridgeId\":\"$bridgeId\"," +
-        (if (sourceName != null) "\"sourceName\":\"$sourceName\"," else "") +
+        "\"sourceName\":\"$sourceName\"," +
         "\"videoConstraints\":$videoConstraints}"
 
     companion object {
