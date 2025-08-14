@@ -146,8 +146,6 @@ class RelayedEndpoint(
         relay.sendMessage(
             AddReceiverMessage(
                 RelayConfig.config.relayId,
-                // Endpoint ID - will be removed
-                null,
                 sourceName,
                 maxVideoConstraints
             )
