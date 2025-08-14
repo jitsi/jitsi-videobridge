@@ -170,6 +170,12 @@ public class Conference
     private final boolean routeLoudestOnly = LoudestConfig.getRouteLoudestOnly();
 
     /**
+     * Audio subscription manager for handling endpoint subscriptions.
+     */
+    @NotNull
+    private final AudioSubscriptionManager audioSubscriptionManager = new AudioSubscriptionManager();
+
+    /**
      * The task of updating the ordered list of endpoints in the conference. It runs periodically in order to adapt to
      * endpoints stopping or starting to their video streams (which affects the order).
      */
@@ -953,8 +959,8 @@ public class Conference
         endpoint.getSsrcs().forEach(ssrc -> {
             endpointsBySsrc.remove(ssrc, endpoint);
         });
-        var audioSet = new HashSet<>(endpoint.getAudioSources());
-        getLocalEndpoints().forEach(e -> e.conferenceAudioSourceRemoved(audioSet));
+        audioSubscriptionManager.removeEndpoint(endpoint.getId());
+        audioSubscriptionManager.removeSources(new HashSet<>(endpoint.getAudioSources()));
         endpointsChanged(removedEndpoint.getVisitor());
     }
 
@@ -1067,6 +1073,37 @@ public class Conference
     public Logger getLogger()
     {
         return logger;
+    }
+
+    public void addAudioSources(Set<AudioSourceDesc> audioSources)
+    {
+        audioSubscriptionManager.onSourcesAdded(audioSources);
+    }
+
+    public void removeAudioSources(Set<AudioSourceDesc> audioSources)
+    {
+        audioSubscriptionManager.removeSources(audioSources);
+    }
+
+    /**
+     * Sets the audio subscription for a given endpoint.
+     * @param endpointId the ID of the endpoint
+     * @param subscription the audio subscription message
+     */
+    public void setEndpointAudioSubscription(String endpointId, ReceiverAudioSubscriptionMessage subscription)
+    {
+        audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription, getAudioSourceDescs());
+    }
+
+    /**
+     * Checks if audio from a given SSRC is wanted by a specific endpoint.
+     * @param endpointId the ID of the endpoint
+     * @param ssrc the SSRC to check
+     * @return true if the audio is wanted, false otherwise
+     */
+    public boolean isEndpointAudioWanted(String endpointId, long ssrc)
+    {
+        return audioSubscriptionManager.isEndpointAudioWanted(endpointId, ssrc);
     }
 
     /**
@@ -1266,6 +1303,16 @@ public class Conference
             return false;
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
             return false;
+        // return false if the source is subscribed with an "Include" subscription by any other endpoint.
+        List<AudioSourceDesc> sources = endpoint.getAudioSources();
+        if (!sources.isEmpty())
+        {
+            AudioSourceDesc source = sources.get(0); // assume one source per endpoint
+            if (audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
+            {
+                return false;
+            }
+        }
         VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;
     }
