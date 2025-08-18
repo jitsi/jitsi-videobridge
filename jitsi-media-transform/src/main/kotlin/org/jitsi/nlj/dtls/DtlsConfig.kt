@@ -54,6 +54,10 @@ class DtlsConfig {
         }
     }
 
+    val useAlgUnsigned: Boolean by config {
+        "jmt.dtls.use-alg-unsigned".from(JitsiConfig.newConfig)
+    }
+
     companion object {
         val config = DtlsConfig()
     }
