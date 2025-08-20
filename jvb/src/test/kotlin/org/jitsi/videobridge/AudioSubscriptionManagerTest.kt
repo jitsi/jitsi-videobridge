@@ -18,8 +18,14 @@ package org.jitsi.videobridge
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.relay.Relay
+import org.jitsi.videobridge.relay.RelayedEndpoint
 
 class AudioSubscriptionManagerTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
@@ -29,6 +35,23 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
         AudioSourceDesc(1002L, "endpoint2", "source2"),
         AudioSourceDesc(1003L, "endpoint3", "source3")
     )
+
+    private val mockRelay = mockk<Relay>()
+    private val mockRelayedEndpoint = mockk<RelayedEndpoint>()
+    private val mockLocalEndpoint = mockk<Endpoint>()
+
+    private fun createManagerWithMockSourceOwner(): AudioSubscriptionManager {
+        every { mockRelayedEndpoint.relay } returns mockRelay
+        every { mockRelay.sendMessage(any()) } just Runs
+
+        return AudioSubscriptionManager { sourceName ->
+            when (sourceName) {
+                "remote1", "remote2", "remote3" -> mockRelayedEndpoint
+                "source1", "source2", "source3" -> mockLocalEndpoint
+                else -> null
+            }
+        }
+    }
 
     private val manager = AudioSubscriptionManager()
 
@@ -464,6 +487,160 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe false
                 manager.isExplicitlySubscribed("source3") shouldBe false
+            }
+        }
+        context("Remote audio source subscriptions") {
+            should("add remote sources to subscribedRemoteAudioSources when endpoint subscribes to them") {
+                val managerWithMocks = createManagerWithMockSourceOwner()
+                val localSources = listOf(
+                    AudioSourceDesc(1001L, "endpoint1", "source1")
+                )
+                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("source1", "remote1", "remote2")
+                )
+
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", includeSubscription, localSources)
+
+                // Local source should not be in remote sources
+                managerWithMocks.isExplicitlySubscribed("source1") shouldBe true
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("source1") shouldBe false
+
+                // Remote sources should be tracked
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe true
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote2") shouldBe true
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1")
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe setOf("endpoint1")
+            }
+
+            should("handle multiple endpoints subscribing to same remote source") {
+                val managerWithMocks = createManagerWithMockSourceOwner()
+                val includeSubscription1 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1", "remote2")
+                )
+                val includeSubscription2 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1", "remote3")
+                )
+
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", includeSubscription1, emptyList())
+                managerWithMocks.setEndpointAudioSubscription("endpoint2", includeSubscription2, emptyList())
+
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1", "endpoint2")
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe setOf("endpoint1")
+                managerWithMocks.getRemoteSourceSubscribers("remote3") shouldBe setOf("endpoint2")
+            }
+
+            should("remove old remote sources when endpoint updates subscription") {
+                val managerWithMocks = createManagerWithMockSourceOwner()
+                val initialSubscription = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1", "remote2")
+                )
+                val updatedSubscription = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote2", "remote3")
+                )
+
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", initialSubscription, emptyList())
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1")
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe setOf("endpoint1")
+
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", updatedSubscription, emptyList())
+
+                // remote1 should be removed, remote2 should remain, remote3 should be added
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe false
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe emptySet()
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe setOf("endpoint1")
+                managerWithMocks.getRemoteSourceSubscribers("remote3") shouldBe setOf("endpoint1")
+            }
+
+            should("remove remote source when last subscriber is removed") {
+                val managerWithMocks = createManagerWithMockSourceOwner()
+                val includeSubscription1 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1")
+                )
+                val includeSubscription2 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1")
+                )
+                val noneSubscription = ReceiverAudioSubscriptionMessage.None
+
+                // Two endpoints subscribe to same remote source
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", includeSubscription1, emptyList())
+                managerWithMocks.setEndpointAudioSubscription("endpoint2", includeSubscription2, emptyList())
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1", "endpoint2")
+
+                // First endpoint unsubscribes (switches to None)
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", noneSubscription, emptyList())
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint2")
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe true
+
+                // Last endpoint unsubscribes - source should be completely removed
+                managerWithMocks.setEndpointAudioSubscription("endpoint2", noneSubscription, emptyList())
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe false
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe emptySet()
+            }
+
+            should("handle endpoint removal from conference") {
+                val managerWithMocks = createManagerWithMockSourceOwner()
+                val includeSubscription1 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1", "remote2")
+                )
+                val includeSubscription2 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1")
+                )
+
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", includeSubscription1, emptyList())
+                managerWithMocks.setEndpointAudioSubscription("endpoint2", includeSubscription2, emptyList())
+
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1", "endpoint2")
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe setOf("endpoint1")
+
+                // Remove endpoint1 from conference
+                managerWithMocks.removeEndpoint("endpoint1")
+
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint2")
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe true
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote2") shouldBe false
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe emptySet()
+            }
+
+            should("ignore unknown sources (not owned by any endpoint)") {
+                val managerWithMocks = createManagerWithMockSourceOwner()
+                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1", "unknown_source")
+                )
+
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", includeSubscription, emptyList())
+
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe true
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("unknown_source") shouldBe false
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1")
+                managerWithMocks.getRemoteSourceSubscribers("unknown_source") shouldBe emptySet()
+            }
+
+            should("correctly handle overlapping subscriptions from multiple endpoints") {
+                val managerWithMocks = createManagerWithMockSourceOwner()
+                val subscription1 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote1", "remote2")
+                )
+                val subscription2 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote2", "remote3")
+                )
+                val updatedSubscription1 = ReceiverAudioSubscriptionMessage.Include(
+                    list = listOf("remote3")
+                )
+
+                // Initial subscriptions
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", subscription1, emptyList())
+                managerWithMocks.setEndpointAudioSubscription("endpoint2", subscription2, emptyList())
+
+                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1")
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe setOf("endpoint1", "endpoint2")
+                managerWithMocks.getRemoteSourceSubscribers("remote3") shouldBe setOf("endpoint2")
+
+                // Update endpoint1 subscription
+                managerWithMocks.setEndpointAudioSubscription("endpoint1", updatedSubscription1, emptyList())
+
+                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe false // No subscribers left
+                managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe setOf("endpoint2")
+                managerWithMocks.getRemoteSourceSubscribers("remote3") shouldBe setOf("endpoint1", "endpoint2")
             }
         }
     }

@@ -70,14 +70,28 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
     }
 
     /**
-     * Checks if a specific local audio source is explicitly subscribed to by any endpoint.
+     * Checks if a specific audio source is explicitly subscribed to by any endpoint.
      * @param sourceName the name of the audio source
      * @return true if the source is explicitly subscribed, false otherwise
      */
-    fun isExplicitlySubscribed(sourceName: String?): Boolean {
-        return subscribedLocalAudioSources.containsKey(sourceName) ||
-            subscribedRemoteAudioSources.containsKey(sourceName)
-    }
+    fun isExplicitlySubscribed(sourceName: String?): Boolean = subscribedLocalAudioSources.containsKey(sourceName) ||
+        subscribedRemoteAudioSources.containsKey(sourceName)
+
+    /**
+     * Checks if a specific remote audio source is explicitly subscribed to by any endpoint.
+     * @param sourceName the name of the remote audio source
+     * @return true if the remote source is explicitly subscribed, false otherwise
+     */
+    fun isRemoteSourceExplicitlySubscribed(sourceName: String?): Boolean =
+        subscribedRemoteAudioSources.containsKey(sourceName)
+
+    /**
+     * Gets the set of endpoint IDs that subscribe to a specific local audio source.
+     * @param sourceName the name of the local audio source
+     * @return a set of endpoint IDs that subscribe to the source
+     */
+    fun getRemoteSourceSubscribers(sourceName: String?): Set<String> =
+        subscribedRemoteAudioSources[sourceName] ?: emptySet()
 
     /**
      * Updates the subscribed local audio sources for a specific endpoint based on their subscription.
