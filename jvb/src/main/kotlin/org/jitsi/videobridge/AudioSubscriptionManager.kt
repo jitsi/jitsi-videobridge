@@ -18,6 +18,7 @@ package org.jitsi.videobridge
 
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.relay.RelayedEndpoint
 import java.util.concurrent.ConcurrentHashMap
 
 class AudioSubscriptionManager(private val findSourceOwner: (String) -> AbstractEndpoint? = { null }) {
@@ -30,6 +31,11 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
      * A map of local audio source names to a set of endpoint IDs that subscribe to the source with an "Include" type.
      */
     private val subscribedLocalAudioSources = ConcurrentHashMap<String, MutableSet<String>>()
+
+    /**
+     * A map of remote audio source names to a set of endpoint IDs that subscribe to the source with an "Include" type.s
+     */
+    private val subscribedRemoteAudioSources = ConcurrentHashMap<String, MutableSet<String>>()
 
     private val lock: Any = Any()
 
@@ -48,7 +54,7 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
         }
 
         // Update subscribed local sources before updating subscription
-        updateSubscribedLocalAudioSourcesForEndpoint(endpointId, subscription)
+        updateSubscribedAudioSourcesForEndpoint(endpointId, subscription, audioSources)
         audioSubscription.updateSubscription(subscription, audioSources)
     }
 
@@ -69,31 +75,59 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
      * @return true if the source is explicitly subscribed, false otherwise
      */
     fun isExplicitlySubscribed(sourceName: String?): Boolean {
-        return subscribedLocalAudioSources.containsKey(sourceName)
+        return subscribedLocalAudioSources.containsKey(sourceName) ||
+            subscribedRemoteAudioSources.containsKey(sourceName)
     }
 
     /**
      * Updates the subscribed local audio sources for a specific endpoint based on their subscription.
      * @param endpointId the ID of the endpoint
      * @param subscription the audio subscription message
+     * @param audioSources the list of available local audio sources
      */
-    private fun updateSubscribedLocalAudioSourcesForEndpoint(
+    private fun updateSubscribedAudioSourcesForEndpoint(
         endpointId: String,
-        subscription: ReceiverAudioSubscriptionMessage
+        subscription: ReceiverAudioSubscriptionMessage,
+        audioSources: List<AudioSourceDesc>
     ) {
-        subscribedLocalAudioSources.values.forEach { endpointSet ->
-            endpointSet.remove(endpointId)
+        removeEndpointFromSubscribedLocalAudioSources(endpointId)
+        val emptyEntries = mutableSetOf<String>()
+        subscribedRemoteAudioSources.forEach {
+            it.value.remove(endpointId)
+            if (it.value.isEmpty()) {
+                // Do not remove entry here because this source may still be included in new subscription
+                emptyEntries.add(it.key)
+            }
         }
-        subscribedLocalAudioSources.entries.removeIf { it.value.isEmpty() }
         when (subscription) {
             is ReceiverAudioSubscriptionMessage.Include -> {
                 subscription.list.forEach { sourceName ->
-                    subscribedLocalAudioSources.getOrPut(sourceName) { mutableSetOf() }.add(endpointId)
+                    val localSource = audioSources.find { it.sourceName == sourceName }
+                    if (localSource != null) {
+                        subscribedLocalAudioSources.getOrPut(sourceName) { mutableSetOf() }.add(endpointId)
+                    } else {
+                        val endpoint = findSourceOwner(sourceName)
+                        if (endpoint is RelayedEndpoint) {
+                            val entry = subscribedRemoteAudioSources.get(sourceName)
+                            if (entry != null) {
+                                entry.add(endpointId)
+                                emptyEntries.remove(sourceName) // The source is still subscribed by this endpoint
+                            } else {
+                                subscribedRemoteAudioSources[sourceName] = mutableSetOf(endpointId)
+                                // TODO: Notify relay of new explicit subscription
+                            }
+                        }
+                    }
                 }
             }
             else -> {
                 // For All, None, and Exclude subscriptions, we don't track explicit subscriptions
             }
+        }
+        // SourceNames remaining in emptyEntries here are no longer subscribed by any endpoint
+        emptyEntries.forEach { sourceName ->
+            subscribedRemoteAudioSources.remove(sourceName)
+            // TODO: Notify the relay of removed explicit subscription
         }
     }
 
@@ -112,12 +146,15 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
      * @param id the endpoint ID that was removed
      */
     fun removeEndpoint(id: String) = synchronized(lock) {
-        // Remove the endpoint from all sets
+        // Remove the endpoint from all sets in both local and remote map
         // This is necessary to precisely maintain the number of subscriptions to a source
-        subscribedLocalAudioSources.values.forEach { endpointSet ->
-            endpointSet.remove(id)
+        removeEndpointFromSubscribedLocalAudioSources(id)
+        subscribedRemoteAudioSources.forEach {
+            it.value.remove(id)
+            if (it.value.isEmpty()) {
+                subscribedRemoteAudioSources.remove(it.key)
+            }
         }
-        subscribedLocalAudioSources.entries.removeIf { it.value.isEmpty() }
         audioSubscriptions.remove(id)
     }
 
@@ -125,6 +162,15 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
         subscribedLocalAudioSources.keys.removeAll(sources.mapNotNull { it.sourceName })
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceRemoved(sources)
+        }
+    }
+
+    fun removeEndpointFromSubscribedLocalAudioSources(endpointId: String) = synchronized(lock) {
+        subscribedLocalAudioSources.forEach {
+            it.value.remove(endpointId)
+            if (it.value.isEmpty()) {
+                subscribedLocalAudioSources.remove(it.key)
+            }
         }
     }
 }
