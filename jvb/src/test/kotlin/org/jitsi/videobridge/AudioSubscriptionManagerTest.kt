@@ -601,20 +601,6 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 managerWithMocks.getRemoteSourceSubscribers("remote2") shouldBe emptySet()
             }
 
-            should("ignore unknown sources (not owned by any endpoint)") {
-                val managerWithMocks = createManagerWithMockSourceOwner()
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("remote1", "unknown_source")
-                )
-
-                managerWithMocks.setEndpointAudioSubscription("endpoint1", includeSubscription, emptyList())
-
-                managerWithMocks.isRemoteSourceExplicitlySubscribed("remote1") shouldBe true
-                managerWithMocks.isRemoteSourceExplicitlySubscribed("unknown_source") shouldBe false
-                managerWithMocks.getRemoteSourceSubscribers("remote1") shouldBe setOf("endpoint1")
-                managerWithMocks.getRemoteSourceSubscribers("unknown_source") shouldBe emptySet()
-            }
-
             should("correctly handle overlapping subscriptions from multiple endpoints") {
                 val managerWithMocks = createManagerWithMockSourceOwner()
                 val subscription1 = ReceiverAudioSubscriptionMessage.Include(

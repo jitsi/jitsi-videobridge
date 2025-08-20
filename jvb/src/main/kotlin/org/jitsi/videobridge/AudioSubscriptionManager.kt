@@ -121,14 +121,15 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
                         subscribedLocalAudioSources.getOrPut(sourceName) { mutableSetOf() }.add(endpointId)
                     } else {
                         val endpoint = findSourceOwner(sourceName)
-                        if (endpoint is RelayedEndpoint) {
-                            val entry = subscribedRemoteAudioSources.get(sourceName)
-                            if (entry != null) {
-                                entry.add(endpointId)
-                                emptyEntries.remove(sourceName) // The source is still subscribed by this endpoint
-                            } else {
-                                subscribedRemoteAudioSources[sourceName] = mutableSetOf(endpointId)
+                        val entry = subscribedRemoteAudioSources.get(sourceName)
+                        if (entry != null) {
+                            entry.add(endpointId)
+                            emptyEntries.remove(sourceName) // The source is still subscribed by this endpoint
+                        } else {
+                            subscribedRemoteAudioSources[sourceName] = mutableSetOf(endpointId)
+                            if (endpoint is RelayedEndpoint) {
                                 // TODO: Notify relay of new explicit subscription
+                                print("new subscription")
                             }
                         }
                     }
