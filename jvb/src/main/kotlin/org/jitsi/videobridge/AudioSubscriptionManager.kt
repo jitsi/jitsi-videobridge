@@ -154,6 +154,29 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceAdded(sources)
         }
+        sources.forEach{ source ->
+            if (source.sourceName == null) {
+                return@forEach // Skip sources without a name
+            }
+            val owner = findSourceOwner(source.sourceName)
+            if (owner is Endpoint) {
+                // Move corresponding entry from subscribedRemoteAudioSources to subscribedLocalAudioSources
+                // This handles the case when an explicit subscription precedes the source being added
+                if (subscribedRemoteAudioSources.containsKey(source.sourceName)) {
+                    subscribedLocalAudioSources.getOrPut(source.sourceName){
+                        mutableSetOf()
+                    }.addAll(subscribedRemoteAudioSources[source.sourceName] ?: emptySet())
+                    subscribedRemoteAudioSources.remove(source.sourceName)
+                }
+            } else if (owner is RelayedEndpoint) {
+                // Notify relay of new explicit subscription
+                // This also handles the case when an explicit subscription precedes the source being added
+                if (subscribedRemoteAudioSources.containsKey(source.sourceName)) {
+                    // TODO: Notify relay of new explicit subscription
+                    print("new subscription for relayed endpoint")
+                }
+            }
+        }
     }
 
     /**
@@ -174,7 +197,9 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
     }
 
     fun removeSources(sources: Set<AudioSourceDesc>) = synchronized(lock) {
-        subscribedLocalAudioSources.keys.removeAll(sources.mapNotNull { it.sourceName })
+        val sourceNames = sources.mapNotNull { it.sourceName }
+        subscribedLocalAudioSources.keys.removeAll(sourceNames)
+        subscribedRemoteAudioSources.keys.removeAll(sourceNames)
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceRemoved(sources)
         }
