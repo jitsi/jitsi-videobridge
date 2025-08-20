@@ -20,7 +20,7 @@ import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import java.util.concurrent.ConcurrentHashMap
 
-class AudioSubscriptionManager() {
+class AudioSubscriptionManager(private val findSourceOwner: (String) -> AbstractEndpoint? = { null }) {
     /**
      * A map of endpoint IDs to their audio subscriptions.
      */
