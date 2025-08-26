@@ -24,10 +24,12 @@ import org.jitsi.utils.NEVER
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.cc.allocation.MediaSourceContainer
 import org.jitsi.videobridge.cc.allocation.ReceiverConstraintsMap
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -64,6 +66,22 @@ abstract class AbstractEndpoint protected constructor(
      * The map of source name -> ReceiverConstraintsMap.
      */
     private val receiverVideoConstraints = ConcurrentHashMap<String, ReceiverConstraintsMap>()
+
+    private data class SourceAndHeight(
+        val sourceName: String,
+        val maxHeight: Int
+    )
+
+    private val receiverVideoConstraintsQueue = PacketQueue<SourceAndHeight>(
+        128,
+        null,
+        "receiver-constraints-$id",
+        { (sourceName, newMaxHeight) ->
+            receiverVideoConstraintsChanged(sourceName, newMaxHeight)
+            true
+        },
+        TaskPools.IO_POOL
+    )
 
     /**
      * The statistics id of this <tt>Endpoint</tt>.
@@ -230,6 +248,14 @@ abstract class AbstractEndpoint protected constructor(
     }
 
     /**
+     * Enqueues a call to send a receiver video constrains message.
+     * We use a queue to prevent races in sending these constraint messages.
+     */
+    private fun sendReceiverVideoConstraintsChanged(sourceName: String, newMaxHeight: Int) {
+        receiverVideoConstraintsQueue.add(SourceAndHeight(sourceName, newMaxHeight))
+    }
+
+    /**
      * Computes and sets the [.maxReceiverVideoConstraints] from the specified video constraints of the media
      * source identified by the given source name.
      *
@@ -297,12 +323,14 @@ abstract class AbstractEndpoint protected constructor(
      */
     fun addReceiver(receiverId: String, sourceName: String, newVideoConstraints: VideoConstraints) {
         val sourceConstraints = receiverVideoConstraints.computeIfAbsent(sourceName) { ReceiverConstraintsMap() }
-        val oldVideoConstraints = sourceConstraints.put(receiverId, newVideoConstraints)
-        if (oldVideoConstraints == null || oldVideoConstraints != newVideoConstraints) {
-            logger.debug {
-                "Changed receiver constraints: $receiverId->$sourceName: ${newVideoConstraints.maxHeight}"
+        synchronized(sourceConstraints) {
+            val oldVideoConstraints = sourceConstraints.put(receiverId, newVideoConstraints)
+            if (oldVideoConstraints == null || oldVideoConstraints != newVideoConstraints) {
+                logger.debug {
+                    "Changed receiver constraints: $receiverId->$sourceName: ${newVideoConstraints.maxHeight}"
+                }
+                sendReceiverVideoConstraintsChanged(sourceName, sourceConstraints.maxHeight)
             }
-            receiverVideoConstraintsChanged(sourceName, sourceConstraints.maxHeight)
         }
     }
 
@@ -320,9 +348,11 @@ abstract class AbstractEndpoint protected constructor(
      */
     fun removeReceiver(receiverId: String) {
         for ((sourceName, sourceConstraints) in receiverVideoConstraints) {
-            if (sourceConstraints.remove(receiverId) != null) {
-                logger.debug { "Removed receiver $receiverId for $sourceName" }
-                receiverVideoConstraintsChanged(sourceName, sourceConstraints.maxHeight)
+            synchronized(sourceConstraints) {
+                if (sourceConstraints.remove(receiverId) != null) {
+                    logger.debug { "Removed receiver $receiverId for $sourceName" }
+                    sendReceiverVideoConstraintsChanged(sourceName, sourceConstraints.maxHeight)
+                }
             }
         }
     }
@@ -337,9 +367,11 @@ abstract class AbstractEndpoint protected constructor(
     fun removeSourceReceiver(receiverId: String, sourceName: String) {
         val sourceConstraints = receiverVideoConstraints[sourceName]
         if (sourceConstraints != null) {
-            if (sourceConstraints.remove(receiverId) != null) {
-                logger.debug { "Removed receiver $receiverId for $sourceName" }
-                receiverVideoConstraintsChanged(sourceName, sourceConstraints.maxHeight)
+            synchronized(sourceConstraints) {
+                if (sourceConstraints.remove(receiverId) != null) {
+                    logger.debug { "Removed receiver $receiverId for $sourceName" }
+                    sendReceiverVideoConstraintsChanged(sourceName, sourceConstraints.maxHeight)
+                }
             }
         }
     }
