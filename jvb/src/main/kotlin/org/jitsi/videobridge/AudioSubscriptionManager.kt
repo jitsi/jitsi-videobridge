@@ -59,6 +59,13 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
     }
 
     /**
+     * Adds a subscription to a local source from a remote endpoint
+     */
+    fun addAudioSubscription(bridgeId: String, sourceName: String) = synchronized(lock) {
+        subscribedLocalAudioSources.getOrPut(sourceName) { mutableSetOf() }.add(bridgeId)
+    }
+
+    /**
      * Checks if audio from a given SSRC is wanted by a specific endpoint.
      * @param endpointId the ID of the endpoint
      * @param ssrc the SSRC to check
