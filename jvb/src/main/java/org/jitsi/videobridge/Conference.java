@@ -1097,6 +1097,11 @@ public class Conference
         audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription, getAudioSourceDescs());
     }
 
+    public void addAudioSubscription(String bridgeId, String sourceName)
+    {
+        audioSubscriptionManager.addAudioSubscription(bridgeId, sourceName);
+    }
+
     /**
      * Checks if audio from a given SSRC is wanted by a specific endpoint.
      * @param endpointId the ID of the endpoint
