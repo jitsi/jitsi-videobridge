@@ -161,7 +161,7 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceAdded(sources)
         }
-        sources.forEach{ source ->
+        sources.forEach { source ->
             if (source.sourceName == null) {
                 return@forEach // Skip sources without a name
             }
@@ -170,7 +170,7 @@ class AudioSubscriptionManager(private val findSourceOwner: (String) -> Abstract
                 // Move corresponding entry from subscribedRemoteAudioSources to subscribedLocalAudioSources
                 // This handles the case when an explicit subscription precedes the source being added
                 if (subscribedRemoteAudioSources.containsKey(source.sourceName)) {
-                    subscribedLocalAudioSources.getOrPut(source.sourceName){
+                    subscribedLocalAudioSources.getOrPut(source.sourceName) {
                         mutableSetOf()
                     }.addAll(subscribedRemoteAudioSources[source.sourceName] ?: emptySet())
                     subscribedRemoteAudioSources.remove(source.sourceName)
