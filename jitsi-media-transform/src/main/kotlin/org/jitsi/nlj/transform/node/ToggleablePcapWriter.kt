@@ -65,7 +65,14 @@ class ToggleablePcapWriter(
         override fun trace(f: () -> Unit) = f.invoke()
     }
 
+    init {
+        if (startEnabled) {
+            enable()
+        }
+    }
+
     companion object {
         private val allowed: Boolean by config("jmt.debug.pcap.enabled".from(JitsiConfig.newConfig))
+        private val startEnabled: Boolean by config("jmt.debug.pcap.start-enabled".from(JitsiConfig.newConfig))
     }
 }
