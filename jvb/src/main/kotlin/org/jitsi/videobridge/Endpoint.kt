@@ -619,7 +619,17 @@ class Endpoint @JvmOverloads constructor(
             val newActiveSources =
                 newEffectiveConstraints.entries.filter {
                     !it.value.isDisabled() && it.key.videoType.isEnabled()
-                }.map { it.key }.toList()
+                }.map { it.key }.toMutableList()
+
+            // Populate any currently-disabled sources with an enabled video type into the ssrc cache, if there's room,
+            // so we have mappings for them already if they become enabled later (e.g. because of lastN).
+            val remainingMapSpace = videoSsrcs.size - newActiveSources.size
+            if (remainingMapSpace > 0) {
+                newActiveSources += newEffectiveConstraints.entries.filter {
+                    it.value.isDisabled() && it.key.videoType.isEnabled()
+                }.take(remainingMapSpace).map { it.key }.toList()
+            }
+
             val newActiveSourceNames = newActiveSources.map { it.sourceName }.toSet()
             /* safe unlocked access of activeSources. BitrateController will not overlap calls to this method. */
             if (activeSources != newActiveSourceNames) {
