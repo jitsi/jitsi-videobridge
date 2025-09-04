@@ -42,6 +42,7 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.videobridge.AbstractEndpoint
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
+import org.jitsi.videobridge.message.AddAudioSubscriptionMessage
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.util.TaskPools
 import org.json.simple.JSONObject
@@ -231,6 +232,10 @@ class RelayedEndpoint(
         }
 
         logger.info("Expired.")
+    }
+
+    override fun addAudioSubscription(bridgeId: String, sourceName: String) {
+        relay.sendMessage(AddAudioSubscriptionMessage(bridgeId, sourceName))
     }
 
     private inner class RtpReceiverEventHandlerImpl : RtpReceiverEventHandler {
