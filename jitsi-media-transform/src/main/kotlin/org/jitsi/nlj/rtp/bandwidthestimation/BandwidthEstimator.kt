@@ -39,9 +39,7 @@ import java.util.LinkedList
  *
  * All bandwidths/bitrates are in bits per second.
  */
-abstract class BandwidthEstimator(
-    protected val diagnosticContext: DiagnosticContext
-) {
+abstract class BandwidthEstimator(protected val diagnosticContext: DiagnosticContext) {
     /**
      * The [TimeSeriesLogger] to be used by this instance to print time
      * series.

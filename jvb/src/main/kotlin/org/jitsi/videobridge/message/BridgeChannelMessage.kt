@@ -92,9 +92,7 @@ sealed class BridgeChannelMessage {
 
         @JvmStatic
         @Throws(JsonProcessingException::class, JsonMappingException::class)
-        fun parse(string: String): BridgeChannelMessage {
-            return mapper.readValue(string)
-        }
+        fun parse(string: String): BridgeChannelMessage = mapper.readValue(string)
         const val TYPE_PROPERTY_NAME = "colibriClass"
     }
 }
@@ -292,10 +290,7 @@ class DominantSpeakerMessage @JvmOverloads constructor(
  * A message sent from the bridge to a client, indicating that the bridge's connection to another endpoint changed
  * status.
  */
-class EndpointConnectionStatusMessage(
-    val endpoint: String,
-    activeBoolean: Boolean
-) : BridgeChannelMessage() {
+class EndpointConnectionStatusMessage(val endpoint: String, activeBoolean: Boolean) : BridgeChannelMessage() {
 
     // For whatever reason we encode the boolean in JSON as a string.
     val active: String = activeBoolean.toString()
@@ -379,10 +374,7 @@ class AudioSourcesMap(
 /**
  * A message sent from the bridge to a client (sender), indicating constraints for the sender's video stream.
  */
-class SenderSourceConstraintsMessage(
-    val sourceName: String,
-    val maxHeight: Int
-) : BridgeChannelMessage() {
+class SenderSourceConstraintsMessage(val sourceName: String, val maxHeight: Int) : BridgeChannelMessage() {
 
     /**
      * Serialize manually because it's faster than Jackson.
@@ -399,11 +391,8 @@ class SenderSourceConstraintsMessage(
  * A message sent from one bridge to another (via a relay connection) indicating that the first bridge wishes to
  * receive video streams from the specified endpoint with the specified constraints.
  */
-class AddReceiverMessage(
-    val bridgeId: String,
-    val sourceName: String,
-    val videoConstraints: VideoConstraints
-) : BridgeChannelMessage() {
+class AddReceiverMessage(val bridgeId: String, val sourceName: String, val videoConstraints: VideoConstraints) :
+    BridgeChannelMessage() {
     /**
      * Serialize manually because it's faster than Jackson.
      */
@@ -420,10 +409,7 @@ class AddReceiverMessage(
  * A message sent from one bridge to another (via a relay connection) indicating that it no longer wishes to receive
  * video streams from the specified endpoint.
  */
-class RemoveReceiverMessage(
-    val bridgeId: String,
-    val endpointId: String
-) : BridgeChannelMessage() {
+class RemoveReceiverMessage(val bridgeId: String, val endpointId: String) : BridgeChannelMessage() {
     /**
      * Serialize manually because it's faster than Jackson.
      */
@@ -483,14 +469,10 @@ class SourceVideoTypeMessage(
  */
 sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
     object All : ReceiverAudioSubscriptionMessage() {
-        override fun createJson(): String {
-            return """{"colibriClass":"$TYPE","mode":"All"}"""
-        }
+        override fun createJson(): String = """{"colibriClass":"$TYPE","mode":"All"}"""
     }
     object None : ReceiverAudioSubscriptionMessage() {
-        override fun createJson(): String {
-            return """{"colibriClass":"$TYPE","mode":"None"}"""
-        }
+        override fun createJson(): String = """{"colibriClass":"$TYPE","mode":"None"}"""
     }
     data class Include(val list: List<String>) : ReceiverAudioSubscriptionMessage()
     data class Exclude(val list: List<String>) : ReceiverAudioSubscriptionMessage()
@@ -499,14 +481,12 @@ sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
 
         @JvmStatic
         @JsonCreator
-        fun jsonCreator(mode: String, list: List<String>? = null): ReceiverAudioSubscriptionMessage {
-            return when (mode) {
-                "All" -> All
-                "None" -> None
-                "Include" -> Include(list ?: emptyList())
-                "Exclude" -> Exclude(list ?: emptyList())
-                else -> throw IllegalArgumentException("Unknown ReceiverAudioSubscription mode: $mode")
-            }
+        fun jsonCreator(mode: String, list: List<String>? = null): ReceiverAudioSubscriptionMessage = when (mode) {
+            "All" -> All
+            "None" -> None
+            "Include" -> Include(list ?: emptyList())
+            "Exclude" -> Exclude(list ?: emptyList())
+            else -> throw IllegalArgumentException("Unknown ReceiverAudioSubscription mode: $mode")
         }
     }
 }
@@ -515,9 +495,7 @@ sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
  * A message from the bridge to an endpoint giving information about the connection to the bridge
  * (that the client can't determine on its own)
  */
-class ConnectionStats(
-    val estimatedDownlinkBandwidth: Long,
-) : BridgeChannelMessage() {
+class ConnectionStats(val estimatedDownlinkBandwidth: Long,) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "ConnectionStats"
     }

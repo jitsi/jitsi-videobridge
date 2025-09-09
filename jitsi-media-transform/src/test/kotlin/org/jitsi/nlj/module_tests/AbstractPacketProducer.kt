@@ -38,9 +38,7 @@ abstract class AbstractPacketProducer : PacketProducer {
  * Read data from a PCAP file and play it out at a rate consistent with the packet arrival times.  I.e. if the PCAP
  * file captured data flowing at 2mbps, this producer will play it out at 2mbps
  */
-class PcapPacketProducer(
-    pcapFilePath: String
-) : AbstractPacketProducer() {
+class PcapPacketProducer(pcapFilePath: String) : AbstractPacketProducer() {
     private val pcap = Pcap.openStream(pcapFilePath)
     var running: Boolean = true
 

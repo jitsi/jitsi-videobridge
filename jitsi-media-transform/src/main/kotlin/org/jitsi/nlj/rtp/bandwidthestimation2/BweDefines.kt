@@ -35,10 +35,7 @@ val kBitrateWindow = 1.secs
 /**
  * Input to Rate Control.
  */
-data class RateControlInput(
-    var bwState: BandwidthUsage,
-    var estimatedThroughput: Bandwidth?
-) {
+data class RateControlInput(var bwState: BandwidthUsage, var estimatedThroughput: Bandwidth?) {
     /**
      * Assigns the values of the fields of [source] to the respective
      * fields of this [RateControlInput].

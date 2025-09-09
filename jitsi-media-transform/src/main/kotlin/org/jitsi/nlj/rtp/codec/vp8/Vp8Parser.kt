@@ -29,10 +29,7 @@ import org.jitsi.utils.logging2.createChildLogger
  * height can only be acquired from keyframes).  This class updates the layer descriptions with information
  * from frames, and also diagnoses packet format variants that the Jitsi videobridge won't be able to route.
  */
-class Vp8Parser(
-    source: MediaSourceDesc,
-    parentLogger: Logger
-) : VideoCodecParser(source) {
+class Vp8Parser(source: MediaSourceDesc, parentLogger: Logger) : VideoCodecParser(source) {
     private val logger = createChildLogger(parentLogger)
 
     // Consistency

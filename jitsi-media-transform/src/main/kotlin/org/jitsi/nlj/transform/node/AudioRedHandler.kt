@@ -37,10 +37,8 @@ import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiffAsInt
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
-class AudioRedHandler(
-    streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
-) : MultipleOutputTransformerNode("RedHandler") {
+class AudioRedHandler(streamInformationStore: ReadOnlyStreamInformationStore, parentLogger: Logger) :
+    MultipleOutputTransformerNode("RedHandler") {
 
     private val logger = createChildLogger(parentLogger)
     private val stats = Stats()

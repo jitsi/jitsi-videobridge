@@ -38,10 +38,7 @@ import java.util.*
  * Based on WebRTC modules/congestion_controller/goog_cc/probe_bitrate_estimator.{h,cc} in
  * WebRTC tag branch-heads/7204 (Chromium 138).
  */
-class ProbeBitrateEstimator(
-    parentLogger: Logger,
-    private val diagnosticContext: DiagnosticContext
-) {
+class ProbeBitrateEstimator(parentLogger: Logger, private val diagnosticContext: DiagnosticContext) {
     // TODO: pass parent logger in so we have log contexts
     private val logger = createChildLogger(parentLogger)
 

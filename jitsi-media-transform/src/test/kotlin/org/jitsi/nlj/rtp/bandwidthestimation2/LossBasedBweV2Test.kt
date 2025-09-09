@@ -53,37 +53,34 @@ const val kPacketSize = 15_000
 
 private var transportSequenceNumber = 0L
 
-private fun config(enabled: Boolean, valid: Boolean): LossBasedBweV2.Config {
-    return LossBasedBweV2.Config(
-        enabled = enabled,
-        bandwidthRampupUpperBoundFactor = if (valid) 1.2 else 0.0,
-        candidateFactors = doubleArrayOf(1.1, 1.0, 0.95),
-        higherBandwidthBiasFactor = 0.01,
-        inherentLossLowerBound = 0.001,
-        inherentLossUpperBoundBandwidthBalance = 14.kbps,
-        inherentLossUpperBoundOffset = 0.9,
-        initialInherentLossEstimate = 0.01,
-        newtonIterations = 2,
-        newtonStepSize = 0.4,
-        observationWindowSize = 15,
-        sendingRateSmoothingFactor = 0.01,
-        instantUpperBoundTemporalWeightFactor = 0.97,
-        instantUpperBoundBandwidthBalance = 90.kbps,
-        instantUpperBoundLossOffset = 0.1,
-        temporalWeightFactor = 0.98,
-        minNumObservations = 1,
-        observationDurationLowerBound = kObservationDurationLowerBound,
-        maxIncreaseFactor = kMaxIncreaseFactor,
-        delayedIncreaseWindow = kDelayedIncreaseWindow
-    )
-}
+private fun config(enabled: Boolean, valid: Boolean): LossBasedBweV2.Config = LossBasedBweV2.Config(
+    enabled = enabled,
+    bandwidthRampupUpperBoundFactor = if (valid) 1.2 else 0.0,
+    candidateFactors = doubleArrayOf(1.1, 1.0, 0.95),
+    higherBandwidthBiasFactor = 0.01,
+    inherentLossLowerBound = 0.001,
+    inherentLossUpperBoundBandwidthBalance = 14.kbps,
+    inherentLossUpperBoundOffset = 0.9,
+    initialInherentLossEstimate = 0.01,
+    newtonIterations = 2,
+    newtonStepSize = 0.4,
+    observationWindowSize = 15,
+    sendingRateSmoothingFactor = 0.01,
+    instantUpperBoundTemporalWeightFactor = 0.97,
+    instantUpperBoundBandwidthBalance = 90.kbps,
+    instantUpperBoundLossOffset = 0.1,
+    temporalWeightFactor = 0.98,
+    minNumObservations = 1,
+    observationDurationLowerBound = kObservationDurationLowerBound,
+    maxIncreaseFactor = kMaxIncreaseFactor,
+    delayedIncreaseWindow = kDelayedIncreaseWindow
+)
 
-private fun shortObservationConfig(config: LossBasedBweV2.Config = LossBasedBweV2.Config()): LossBasedBweV2.Config {
-    return config.copy(
+private fun shortObservationConfig(config: LossBasedBweV2.Config = LossBasedBweV2.Config()): LossBasedBweV2.Config =
+    config.copy(
         minNumObservations = 1,
         observationWindowSize = 2
     )
-}
 
 private fun createPacketResultsWithReceivedPackets(firstPacketTimestamp: Instant): List<PacketResult> {
     val enoughFeedback = List(2) { PacketResult() }

@@ -21,12 +21,8 @@ package org.jitsi.nlj.rtp
  * contains more information, such as whether or not it's
  * a keyframe
  */
-abstract class ParsedVideoPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int,
-    encodingId: Int
-) : VideoRtpPacket(buffer, offset, length, encodingId) {
+abstract class ParsedVideoPacket(buffer: ByteArray, offset: Int, length: Int, encodingId: Int) :
+    VideoRtpPacket(buffer, offset, length, encodingId) {
 
     abstract val isKeyframe: Boolean
     abstract val isStartOfFrame: Boolean

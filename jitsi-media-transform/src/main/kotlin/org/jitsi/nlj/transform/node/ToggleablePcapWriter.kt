@@ -23,10 +23,7 @@ import org.jitsi.utils.logging2.Logger
 import java.util.Date
 import kotlin.io.path.Path
 
-class ToggleablePcapWriter(
-    private val parentLogger: Logger,
-    private val prefix: String
-) {
+class ToggleablePcapWriter(private val parentLogger: Logger, private val prefix: String) {
     private var pcapWriter: PcapWriter? = null
     private val pcapLock = Any()
 

@@ -23,15 +23,13 @@ import org.jitsi.test_utils.SrtpData
 
 class SrtpTransformerFactory {
     companion object {
-        fun createSrtpTransformers(srtpData: SrtpData): SrtpTransformers {
-            return SrtpUtil.initializeTransformer(
-                srtpData.srtpProfileInformation,
-                srtpData.keyingMaterial,
-                srtpData.tlsRole,
-                // TODO: add tests for the cryptex=true case
-                cryptex = false,
-                StdoutLogger()
-            )
-        }
+        fun createSrtpTransformers(srtpData: SrtpData): SrtpTransformers = SrtpUtil.initializeTransformer(
+            srtpData.srtpProfileInformation,
+            srtpData.keyingMaterial,
+            srtpData.tlsRole,
+            // TODO: add tests for the cryptex=true case
+            cryptex = false,
+            StdoutLogger()
+        )
     }
 }

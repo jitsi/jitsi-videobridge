@@ -48,11 +48,7 @@ import org.jitsi.rtp.util.RtpUtils
  *        |                  profile-specific extensions                  |
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class RtcpRrPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpPacket(buffer, offset, length) {
+class RtcpRrPacket(buffer: ByteArray, offset: Int, length: Int) : RtcpPacket(buffer, offset, length) {
     val reportBlocks: List<RtcpReportBlock> by lazy {
         (0 until reportCount).map {
             RtcpReportBlock.fromBuffer(buffer, offset + REPORT_BLOCKS_OFFSET + it * RtcpReportBlock.SIZE_BYTES)

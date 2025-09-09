@@ -44,7 +44,9 @@ class NackHandler(
     private val packetCache: PacketCache,
     private val onNackedPacketsReady: PacketHandler,
     parentLogger: Logger
-) : NodeStatsProducer, RtcpListener, EndpointConnectionStats.EndpointConnectionStatsListener {
+) : NodeStatsProducer,
+    RtcpListener,
+    EndpointConnectionStats.EndpointConnectionStatsListener {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0

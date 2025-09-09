@@ -84,9 +84,7 @@ private class InFlightBytesTracker {
  * [RtcpFbTccPacket] according to
  * https://datatracker.ietf.org/doc/html/draft-holmer-rmcat-transport-wide-cc-extensions-01
  */
-class TransportFeedbackAdapter(
-    parentLogger: Logger
-) {
+class TransportFeedbackAdapter(parentLogger: Logger) {
     val logger = parentLogger.createChildLogger(javaClass.name)
 
     fun addPacket(packet: PacketInfo, tccSeqNum: Long, overheadBytes: DataSize, creationTime: Instant) {
@@ -303,13 +301,10 @@ class TransportFeedbackAdapter(
 
     fun getOutstandingData() = inFlight.getOutstandingData()
 
-    private data class SsrcAndRtpSequenceNumber(
-        val ssrc: Long,
-        val rtpSequenceNumber: Int
-    ) : Comparable<SsrcAndRtpSequenceNumber> {
-        override fun compareTo(other: SsrcAndRtpSequenceNumber): Int {
-            return compareValuesBy(this, other, { it.ssrc }, { it.rtpSequenceNumber })
-        }
+    private data class SsrcAndRtpSequenceNumber(val ssrc: Long, val rtpSequenceNumber: Int) :
+        Comparable<SsrcAndRtpSequenceNumber> {
+        override fun compareTo(other: SsrcAndRtpSequenceNumber): Int =
+            compareValuesBy(this, other, { it.ssrc }, { it.rtpSequenceNumber })
     }
 
     private fun toTransportFeedback(
@@ -399,18 +394,16 @@ class TransportFeedbackAdapter(
     private val history = TreeMap<Long, PacketFeedback>()
 
     /** Jitsi local */
-    fun getStatisitics(): StatisticsSnapshot {
-        return StatisticsSnapshot(
-            inFlight.inFlightData,
-            pendingUntrackedSize,
-            lastSendTime,
-            lastUntrackedSendTime,
-            lastAckSeqNum,
-            history.size,
-            currentOffset,
-            lastTransportFeedbackBaseTime,
-        )
-    }
+    fun getStatisitics(): StatisticsSnapshot = StatisticsSnapshot(
+        inFlight.inFlightData,
+        pendingUntrackedSize,
+        lastSendTime,
+        lastUntrackedSendTime,
+        lastAckSeqNum,
+        history.size,
+        currentOffset,
+        lastTransportFeedbackBaseTime,
+    )
 
     class StatisticsSnapshot(
         val inFlight: DataSize,
@@ -422,29 +415,25 @@ class TransportFeedbackAdapter(
         val currentOffset: Instant,
         val lastTransportFeedbackBaseTime: Instant
     ) {
-        fun toJson(): OrderedJsonObject {
-            return OrderedJsonObject().apply {
-                put("in_flight_bytes", inFlight.bytes)
-                put("pending_untracked_size", pendingUntrackedSize.bytes)
-                put("last_send_time", lastSendTime.toEpochMilliOrInf())
-                put("last_untracked_send_time", lastUntrackedSendTime.toEpochMilliOrInf())
-                put("last_ack_seq_num", lastAckSeqNum)
-                put("history_size", historySize)
-                put("current_offset", currentOffset.toEpochMilliOrInf())
-                put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf())
-            }
+        fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
+            put("in_flight_bytes", inFlight.bytes)
+            put("pending_untracked_size", pendingUntrackedSize.bytes)
+            put("last_send_time", lastSendTime.toEpochMilliOrInf())
+            put("last_untracked_send_time", lastUntrackedSendTime.toEpochMilliOrInf())
+            put("last_ack_seq_num", lastAckSeqNum)
+            put("history_size", historySize)
+            put("current_offset", currentOffset.toEpochMilliOrInf())
+            put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf())
         }
     }
 }
 
-private fun Instant.toEpochMilliOrInf(): Number {
-    return try {
-        this.toEpochMilli()
-    } catch (e: ArithmeticException) {
-        if (this < Instant.EPOCH) {
-            Double.NEGATIVE_INFINITY
-        } else {
-            Double.POSITIVE_INFINITY
-        }
+private fun Instant.toEpochMilliOrInf(): Number = try {
+    this.toEpochMilli()
+} catch (e: ArithmeticException) {
+    if (this < Instant.EPOCH) {
+        Double.NEGATIVE_INFINITY
+    } else {
+        Double.POSITIVE_INFINITY
     }
 }

@@ -20,10 +20,7 @@ package org.jitsi.rtp.rtcp.rtcpfb
  * Represents an RTCP feedback packet whose packet types falls in the valid range
  * (according to the spec), but isn't currently implemented/supported.
  */
-class UnsupportedRtcpFbPacket(
-    buf: ByteArray,
-    offset: Int,
-    packetLengthBytes: Int
-) : RtcpFbPacket(buf, offset, packetLengthBytes) {
+class UnsupportedRtcpFbPacket(buf: ByteArray, offset: Int, packetLengthBytes: Int) :
+    RtcpFbPacket(buf, offset, packetLengthBytes) {
     override fun clone(): UnsupportedRtcpFbPacket = UnsupportedRtcpFbPacket(cloneBuffer(0), 0, length)
 }

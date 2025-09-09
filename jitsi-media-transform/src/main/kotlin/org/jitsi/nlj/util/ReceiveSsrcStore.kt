@@ -20,9 +20,7 @@ import org.jitsi.utils.OrderedJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 
-class ReceiveSsrcStore(
-    private val ssrcAssociationStore: SsrcAssociationStore
-) {
+class ReceiveSsrcStore(private val ssrcAssociationStore: SsrcAssociationStore) {
     // NOTE: to enable efficient lookup for various use cases, we store
     // different 'views' of the receive SSRCs in multiple data structures
     // (below).  Updates to these data structures do not happen atomically,

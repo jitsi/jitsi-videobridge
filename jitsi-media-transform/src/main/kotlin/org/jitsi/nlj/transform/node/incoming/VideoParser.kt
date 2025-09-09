@@ -265,11 +265,7 @@ class VideoParser(
             o["num_layering_changes"] = numLayeringChanges
         }
 
-        data class Snapshot(
-            val numKeyframes: Int,
-            var numLayeringChanges: Int,
-            var numPacketsDroppedUnknownPt: Int
-        ) {
+        data class Snapshot(val numKeyframes: Int, var numLayeringChanges: Int, var numPacketsDroppedUnknownPt: Int) {
             fun toJson() = OrderedJsonObject().apply {
                 put("num_packets_dropped_unknown_pt", numPacketsDroppedUnknownPt)
                 put("num_keyframes", numKeyframes)

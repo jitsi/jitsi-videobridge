@@ -24,9 +24,7 @@ import java.util.*
  *
  * The intended use case is AV1 Dependency Descriptor history.
  */
-open class TreeCache<T>(
-    private val minSize: Int
-) {
+open class TreeCache<T>(private val minSize: Int) {
     private val map = TreeMap<Long, T>()
 
     private var highestIndex = -1L

@@ -57,11 +57,8 @@ import org.jitsi.rtp.util.RtpUtils
  * one FCI entry per target media sender.
  */
 // TODO: support multiple FIR blocks
-class RtcpFbFirPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : PayloadSpecificRtcpFbPacket(buffer, offset, length) {
+class RtcpFbFirPacket(buffer: ByteArray, offset: Int, length: Int) :
+    PayloadSpecificRtcpFbPacket(buffer, offset, length) {
 
     override fun clone(): RtcpFbFirPacket = RtcpFbFirPacket(cloneBuffer(0), 0, length)
 

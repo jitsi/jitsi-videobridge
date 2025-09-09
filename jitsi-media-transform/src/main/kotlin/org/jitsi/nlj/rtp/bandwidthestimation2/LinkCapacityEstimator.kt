@@ -28,17 +28,13 @@ class LinkCapacityEstimator {
     private var estimateKbps: Double? = null
     private var deviationKbps: Double = 0.4
 
-    fun upperBound(): Bandwidth {
-        return estimateKbps?.let {
-            (it + 3 * deviationEstimateKbps()).kbps
-        } ?: Bandwidth.INFINITY
-    }
+    fun upperBound(): Bandwidth = estimateKbps?.let {
+        (it + 3 * deviationEstimateKbps()).kbps
+    } ?: Bandwidth.INFINITY
 
-    fun lowerBound(): Bandwidth {
-        return estimateKbps?.let {
-            (max(0.0, it - 3 * deviationEstimateKbps())).kbps
-        } ?: Bandwidth.ZERO
-    }
+    fun lowerBound(): Bandwidth = estimateKbps?.let {
+        (max(0.0, it - 3 * deviationEstimateKbps())).kbps
+    } ?: Bandwidth.ZERO
 
     fun reset() {
         estimateKbps = null

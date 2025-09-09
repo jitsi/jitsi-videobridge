@@ -161,14 +161,12 @@ open class ArrayCache<T>(
     /**
      * Checks whether the cache contains an item with a given index.
      */
-    fun containsIndex(index: Long): Boolean {
-        return if (synchronize) {
-            synchronized(syncRoot) {
-                doContains(index)
-            }
-        } else {
+    fun containsIndex(index: Long): Boolean = if (synchronize) {
+        synchronized(syncRoot) {
             doContains(index)
         }
+    } else {
+        doContains(index)
     }
 
     private fun doContains(index: Long): Boolean {
@@ -269,13 +267,8 @@ open class ArrayCache<T>(
         addRatio("hitRate", "numHits", "numRequests", 1)
     }
 
-    inner class Container(
-        var item: T? = null,
-        var index: Long = -1,
-        var timeAdded: Long = -1
-    ) {
-        fun clone(shouldCloneItem: Boolean): Container {
-            return Container(item?.let { if (shouldCloneItem) cloneItem(it) else it }, index, timeAdded)
-        }
+    inner class Container(var item: T? = null, var index: Long = -1, var timeAdded: Long = -1) {
+        fun clone(shouldCloneItem: Boolean): Container =
+            Container(item?.let { if (shouldCloneItem) cloneItem(it) else it }, index, timeAdded)
     }
 }

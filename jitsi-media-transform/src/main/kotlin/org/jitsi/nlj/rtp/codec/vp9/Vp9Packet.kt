@@ -197,23 +197,19 @@ class Vp9Packet private constructor(
             return "type=VP9Packet len=$vp9PayloadLength hashCode=$hashCode"
         }
 
-    override fun toString(): String {
-        return super.toString() + ", SID=$spatialLayerIndex, TID=$temporalLayerIndex"
-    }
+    override fun toString(): String = super.toString() + ", SID=$spatialLayerIndex, TID=$temporalLayerIndex"
 
-    override fun clone(): Vp9Packet {
-        return Vp9Packet(
-            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length,
-            isKeyframe = isKeyframe,
-            isStartOfFrame = isStartOfFrame,
-            isEndOfFrame = isEndOfFrame,
-            encodingId = encodingId,
-            pictureId = pictureId,
-            TL0PICIDX = TL0PICIDX
-        ).also { postClone(it) }
-    }
+    override fun clone(): Vp9Packet = Vp9Packet(
+        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length,
+        isKeyframe = isKeyframe,
+        isStartOfFrame = isStartOfFrame,
+        isEndOfFrame = isEndOfFrame,
+        encodingId = encodingId,
+        pictureId = pictureId,
+        TL0PICIDX = TL0PICIDX
+    ).also { postClone(it) }
 
     companion object {
         private val logger = createLogger()

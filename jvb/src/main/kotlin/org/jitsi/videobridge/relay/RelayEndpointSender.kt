@@ -60,9 +60,8 @@ class RelayEndpointSender(
     val rtcpEventNotifier = RtcpEventNotifier().apply {
         addRtcpEventListener(
             object : RtcpListener {
-                override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
+                override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?): Unit =
                     throw IllegalStateException("got rtcpPacketReceived callback from a sender")
-                }
                 override fun rtcpPacketSent(packet: RtcpPacket) {
                     relay.rtcpPacketSent(packet, id)
                 }

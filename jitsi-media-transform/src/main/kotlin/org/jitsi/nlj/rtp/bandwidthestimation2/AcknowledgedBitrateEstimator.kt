@@ -24,9 +24,7 @@ import java.time.Instant
  * Based on WebRTC modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.{h,cc} in
  * WebRTC tag branch-heads/7204 (Chromium 138).
  */
-class AcknowledgedBitrateEstimator(
-    val bitrateEstimator: BitrateEstimator
-) : AcknowledgedBitrateEstimatorInterface {
+class AcknowledgedBitrateEstimator(val bitrateEstimator: BitrateEstimator) : AcknowledgedBitrateEstimatorInterface {
     private var alrEndedTime: Instant? = null
     private var inAlr = false
 
@@ -57,6 +55,6 @@ class AcknowledgedBitrateEstimator(
     }
 }
 
-private fun List<PacketResult>.isSortedByReceiveTime(): Boolean {
-    return this.asSequence().zipWithNext { a, b -> a.receiveTime <= b.receiveTime }.all { it }
-}
+private fun List<PacketResult>.isSortedByReceiveTime(): Boolean = this.asSequence().zipWithNext { a, b ->
+    a.receiveTime <= b.receiveTime
+}.all { it }

@@ -35,10 +35,8 @@ import java.util.function.Supplier
  * the entire bridge and sets a bridge-wide last-n value (via [JvbLastN]) to a number
  * less than that (based on [reductionScale]).
  */
-class LastNReducer(
-    private val conferencesSupplier: Supplier<Collection<Conference>>,
-    private val jvbLastN: JvbLastN
-) : JvbLoadReducer {
+class LastNReducer(private val conferencesSupplier: Supplier<Collection<Conference>>, private val jvbLastN: JvbLastN) :
+    JvbLoadReducer {
     private val logger = createLogger()
 
     private val reductionScale: Double by config(
@@ -65,16 +63,14 @@ class LastNReducer(
         logger.cinfo { this.toString() }
     }
 
-    private fun getMaxForwardedEps(): Int? {
-        return conferencesSupplier.get()
-            .flatMap { it.endpoints }
-            .asSequence()
-            .filterIsInstance<Endpoint>()
-            .map {
-                it.numForwardedSources()
-            }
-            .maxOrNull()
-    }
+    private fun getMaxForwardedEps(): Int? = conferencesSupplier.get()
+        .flatMap { it.endpoints }
+        .asSequence()
+        .filterIsInstance<Endpoint>()
+        .map {
+            it.numForwardedSources()
+        }
+        .maxOrNull()
 
     override fun reduceLoad() {
         // Find the highest amount of endpoints any endpoint on this bridge is forwarding video for

@@ -123,51 +123,49 @@ class RtcpFbCcfbPacketTest : ShouldSpec() {
 }
 
 class PacketInfoMatcher(private val expected: PacketInfo) : Matcher<PacketInfo> {
-    override fun test(value: PacketInfo): MatcherResult {
-        return when (expected) {
-            is ReceivedPacketInfo -> if (value !is ReceivedPacketInfo) {
-                MatcherResult(
-                    false,
-                    { "Value should be $expected but was $value" },
-                    { "Value should not be $expected" }
-                )
-            } else {
-                // PacketInfo is equal after serializing-deserializing if members are equal
-                // except for arrival time offset that may differ because of conversion back and
-                // forth to CompactNtp.
-
-                val arrivalTimeOffsetEqual =
-                    (
-                        value.arrivalTimeOffset.isInfinite() && expected.arrivalTimeOffset.isInfinite() &&
-                            value == expected
-                        ) ||
-                        (
-                            value.arrivalTimeOffset.isFinite() && expected.arrivalTimeOffset.isFinite() &&
-                                abs(value.arrivalTimeOffset - expected.arrivalTimeOffset) < 1.secs / 1024
-                            )
-                MatcherResult(
-                    value.ssrc == expected.ssrc &&
-                        value.sequenceNumber == expected.sequenceNumber &&
-                        arrivalTimeOffsetEqual &&
-                        value.ecn == expected.ecn,
-                    { "Value should be $expected but was $value" },
-                    { "Value should not be $expected" }
-                )
-            }
-
-            is UnreceivedPacketInfo -> MatcherResult(
-                value is UnreceivedPacketInfo &&
-                    value.ssrc == expected.ssrc &&
-                    value.sequenceNumber == expected.sequenceNumber,
+    override fun test(value: PacketInfo): MatcherResult = when (expected) {
+        is ReceivedPacketInfo -> if (value !is ReceivedPacketInfo) {
+            MatcherResult(
+                false,
                 { "Value should be $expected but was $value" },
                 { "Value should not be $expected" }
             )
+        } else {
+            // PacketInfo is equal after serializing-deserializing if members are equal
+            // except for arrival time offset that may differ because of conversion back and
+            // forth to CompactNtp.
 
-            else ->
+            val arrivalTimeOffsetEqual =
+                (
+                    value.arrivalTimeOffset.isInfinite() && expected.arrivalTimeOffset.isInfinite() &&
+                        value == expected
+                    ) ||
+                    (
+                        value.arrivalTimeOffset.isFinite() && expected.arrivalTimeOffset.isFinite() &&
+                            abs(value.arrivalTimeOffset - expected.arrivalTimeOffset) < 1.secs / 1024
+                        )
+            MatcherResult(
+                value.ssrc == expected.ssrc &&
+                    value.sequenceNumber == expected.sequenceNumber &&
+                    arrivalTimeOffsetEqual &&
+                    value.ecn == expected.ecn,
+                { "Value should be $expected but was $value" },
+                { "Value should not be $expected" }
+            )
+        }
+
+        is UnreceivedPacketInfo -> MatcherResult(
+            value is UnreceivedPacketInfo &&
+                value.ssrc == expected.ssrc &&
+                value.sequenceNumber == expected.sequenceNumber,
+            { "Value should be $expected but was $value" },
+            { "Value should not be $expected" }
+        )
+
+        else ->
                 /* The Kotlin compiler is fine with the above "when" clauses, but for some reason IntelliJ
                  * doesn't recognize that they're exhaustive.  Placate it. */
-                MatcherResult(false, { "Something went wrong." }, { "Something went wrong" })
-        }
+            MatcherResult(false, { "Something went wrong." }, { "Something went wrong" })
     }
 }
 

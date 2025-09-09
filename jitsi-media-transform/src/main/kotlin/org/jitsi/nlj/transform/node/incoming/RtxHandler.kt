@@ -33,10 +33,8 @@ import java.util.concurrent.ConcurrentHashMap
  * look like their original packets.
  * https://tools.ietf.org/html/rfc4588
  */
-class RtxHandler(
-    private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
-) : TransformerNode("RTX handler") {
+class RtxHandler(private val streamInformationStore: ReadOnlyStreamInformationStore, parentLogger: Logger) :
+    TransformerNode("RTX handler") {
     private val logger = createChildLogger(parentLogger)
     private var numPaddingPacketsReceived = 0
     private var numRtxPacketsReceived = 0
@@ -93,12 +91,10 @@ class RtxHandler(
         return packetInfo
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("num_rtx_packets_received", numRtxPacketsReceived)
-            addNumber("num_padding_packets_received", numPaddingPacketsReceived)
-            addString("rtx_payload_types", rtxPtToRtxPayloadType.values.toString())
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("num_rtx_packets_received", numRtxPacketsReceived)
+        addNumber("num_padding_packets_received", numPaddingPacketsReceived)
+        addString("rtx_payload_types", rtxPtToRtxPayloadType.values.toString())
     }
 
     override fun statsJson() = super.statsJson().apply {

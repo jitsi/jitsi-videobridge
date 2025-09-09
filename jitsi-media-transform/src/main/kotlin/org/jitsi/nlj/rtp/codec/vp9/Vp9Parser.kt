@@ -32,10 +32,7 @@ import kotlin.math.max
  * structure is only carried in keyframes).  This class updates the layer descriptions with information
  * from frames, and also diagnoses packet format variants that the Jitsi videobridge won't be able to route.
  */
-class Vp9Parser(
-    source: MediaSourceDesc,
-    parentLogger: Logger
-) : VideoCodecParser(source) {
+class Vp9Parser(source: MediaSourceDesc, parentLogger: Logger) : VideoCodecParser(source) {
     private val logger = createChildLogger(parentLogger)
 
     private val pictureIdState = StateChangeLogger("missing picture id", logger)

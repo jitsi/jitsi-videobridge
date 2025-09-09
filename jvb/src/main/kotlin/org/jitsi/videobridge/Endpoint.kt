@@ -322,9 +322,8 @@ class Endpoint @JvmOverloads constructor(
 
     private val bandwidthProbing = BandwidthProbing(
         object : BandwidthProbing.ProbingDataSender {
-            override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int {
-                return transceiver.sendProbing(mediaSsrcs, numBytes)
-            }
+            override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int =
+                transceiver.sendProbing(mediaSsrcs, numBytes)
         },
         { bitrateController.getStatusSnapshot() }
     ).apply {
@@ -536,11 +535,9 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
-        return when (feature) {
-            EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
-            EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
-        }
+    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean = when (feature) {
+        EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
+        EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
     }
     override val isSendingAudio: Boolean
         get() =

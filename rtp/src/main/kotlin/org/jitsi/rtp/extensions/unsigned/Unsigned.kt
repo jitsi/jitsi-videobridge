@@ -34,25 +34,19 @@ fun Short.toPositiveInt(): Int = toInt() and 0xFFFF
 fun Int.toPositiveLong(): Long = toLong() and 0xFFFFFFFF
 
 // TODO: i think these should be able to make the above functions obsolete
-fun Number.toPositiveShort(): Short {
-    return when (this) {
-        is Byte -> this.toShort() and 0xFF
-        else -> this.toShort()
-    }
+fun Number.toPositiveShort(): Short = when (this) {
+    is Byte -> this.toShort() and 0xFF
+    else -> this.toShort()
 }
-fun Number.toPositiveInt(): Int {
-    return when (this) {
-        is Byte -> this.toInt() and 0xFF
-        is Short -> this.toInt() and 0xFFFF
-        else -> this.toInt()
-    }
+fun Number.toPositiveInt(): Int = when (this) {
+    is Byte -> this.toInt() and 0xFF
+    is Short -> this.toInt() and 0xFFFF
+    else -> this.toInt()
 }
 
-fun Number.toPositiveLong(): Long {
-    return when (this) {
-        is Byte -> this.toLong() and 0xFF
-        is Short -> this.toLong() and 0xFFFF
-        is Int -> this.toLong() and 0xFFFFFFFF
-        else -> this.toLong()
-    }
+fun Number.toPositiveLong(): Long = when (this) {
+    is Byte -> this.toLong() and 0xFF
+    is Short -> this.toLong() and 0xFFFF
+    is Int -> this.toLong() and 0xFFFFFFFF
+    else -> this.toLong()
 }

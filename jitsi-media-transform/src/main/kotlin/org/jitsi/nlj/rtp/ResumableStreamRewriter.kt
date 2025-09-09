@@ -106,18 +106,16 @@ class ResumableStreamRewriter(val keepHistory: Boolean = false) {
     val gapsLeft: Int
         get() = history?.gapsLeft ?: 0
 
-    private class RewriteHistoryItem(
-        var accept: Boolean?,
-        val newIndex: Long
-    )
+    private class RewriteHistoryItem(var accept: Boolean?, val newIndex: Long)
 
-    private class StreamRewriteHistory(highestSeqSent: Int) : ArrayCache<RewriteHistoryItem>(
-        MAX_REWRITE_HISTORY,
-        /* We don't want to clone objects that get put in the tracker. */
-        { it },
-        /* Caller should have this object synchronized if needed. */
-        synchronize = false
-    ) {
+    private class StreamRewriteHistory(highestSeqSent: Int) :
+        ArrayCache<RewriteHistoryItem>(
+            MAX_REWRITE_HISTORY,
+            /* We don't want to clone objects that get put in the tracker. */
+            { it },
+            /* Caller should have this object synchronized if needed. */
+            synchronize = false
+        ) {
         var firstIndex: Long = -1L
 
         var gapsLeft = 0

@@ -33,7 +33,8 @@ import java.util.function.Supplier
 class BandwidthProbing(
     private val probingDataSender: ProbingDataSender,
     private val statusSnapshotSupplier: Supplier<BitrateControllerStatusSnapshot>
-) : PeriodicRunnable(config.paddingPeriodMs), TransportCcEngine.BandwidthListener {
+) : PeriodicRunnable(config.paddingPeriodMs),
+    TransportCcEngine.BandwidthListener {
 
     /** Whether or not probing is currently enabled */
     var enabled = false

@@ -33,9 +33,7 @@ import java.time.Instant
  * Based on WebRTC modules/congestion_controller/goog_cc/inter_arrival_delta.{h,cc} in
  * WebRTC tag branch-heads/7204 (Chromium 138).
  */
-class InterArrivalDelta(
-    private val sendTimeGroupLength: Duration
-) {
+class InterArrivalDelta(private val sendTimeGroupLength: Duration) {
     // TODO: pass parent logger in so we have log contexts
     private val logger = createLogger()
 

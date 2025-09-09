@@ -1228,10 +1228,8 @@ class Vp9AdaptiveSourceProjectionTest {
         }
     }
 
-    private class NonScalableVp9PacketGenerator(
-        val initialRtpState: RtpState? = null,
-        val encodingId: Int = 0
-    ) : Vp9PacketGenerator() {
+    private class NonScalableVp9PacketGenerator(val initialRtpState: RtpState? = null, val encodingId: Int = 0) :
+        Vp9PacketGenerator() {
         private var seq = 0
             private set
         override var ts: Long = 0
@@ -1376,8 +1374,7 @@ class Vp9AdaptiveSourceProjectionTest {
         val isKsvc: Boolean = true,
         val initialRtpState: RtpState? = null,
         val encodingId: Int = 0
-    ) :
-        Vp9PacketGenerator() {
+    ) : Vp9PacketGenerator() {
         private var seq = 0
             private set
         override var ts: Long = 0
@@ -1609,8 +1606,7 @@ class Vp9AdaptiveSourceProjectionTest {
         override val packetsPerFrame: Int,
         val numEncodings: Int = 1,
         val initialRtpState: RtpState? = null
-    ) :
-        Vp9PacketGenerator() {
+    ) : Vp9PacketGenerator() {
         private var seq = IntArray(numEncodings) { 0 }
         override var ts: Long = 0
             private set

@@ -39,10 +39,7 @@ import java.nio.file.Path
 import java.util.Random
 import kotlin.io.path.Path
 
-class PcapWriter(
-    parentLogger: Logger,
-    filePath: Path = Path(directory, "${Random().nextLong()}.pcap")
-) {
+class PcapWriter(parentLogger: Logger, filePath: Path = Path(directory, "${Random().nextLong()}.pcap")) {
     constructor(parentLogger: Logger, filePath: String) : this(parentLogger, Path(filePath))
 
     private val logger = createChildLogger(parentLogger)

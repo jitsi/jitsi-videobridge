@@ -24,11 +24,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-class MucPublisher(
-    val executor: ScheduledExecutorService,
-    val interval: Duration,
-    val xmppConnection: XmppConnection
-) {
+class MucPublisher(val executor: ScheduledExecutorService, val interval: Duration, val xmppConnection: XmppConnection) {
     val logger = createLogger()
 
     var task: ScheduledFuture<*>? = null

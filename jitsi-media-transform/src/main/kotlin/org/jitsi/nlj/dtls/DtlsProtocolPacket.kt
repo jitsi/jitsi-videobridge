@@ -18,11 +18,7 @@ package org.jitsi.nlj.dtls
 
 import org.jitsi.rtp.Packet
 
-class DtlsProtocolPacket(
-    buf: ByteArray,
-    offset: Int,
-    length: Int
-) : Packet(buf, offset, length) {
+class DtlsProtocolPacket(buf: ByteArray, offset: Int, length: Int) : Packet(buf, offset, length) {
 
     override fun clone(): DtlsProtocolPacket = DtlsProtocolPacket(cloneBuffer(0), 0, length)
 }

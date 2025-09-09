@@ -44,11 +44,7 @@ import java.nio.charset.StandardCharsets
  *
  *
  */
-class RtcpSdesPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpPacket(buffer, offset, length) {
+class RtcpSdesPacket(buffer: ByteArray, offset: Int, length: Int) : RtcpPacket(buffer, offset, length) {
 
     val sdesChunks: List<SdesChunk> by lazy {
         getSdesChunks(buffer, offset, length)
@@ -74,10 +70,7 @@ class RtcpSdesPacket(
 }
 
 // Offset should point to the start of this sdes chunk
-class SdesChunk(
-    buffer: ByteArray,
-    offset: Int
-) {
+class SdesChunk(buffer: ByteArray, offset: Int) {
     val sizeBytes: Int by lazy {
         val dataSize = 4 + sdesItems.map(SdesItem::sizeBytes).sum()
         dataSize + RtpUtils.getNumPaddingBytes(dataSize)
@@ -130,9 +123,7 @@ enum class SdesItemType(val value: Int) {
  *
  * length = the length of the data field
  */
-abstract class SdesItem(
-    val type: SdesItemType
-) {
+abstract class SdesItem(val type: SdesItemType) {
     abstract val sizeBytes: Int
 
     companion object {
@@ -175,18 +166,12 @@ abstract class SdesItem(
     }
 }
 
-class UnknownSdesItem(
-    private val sdesTypeValue: Int,
-    buf: ByteArray,
-    offset: Int,
-    length: Int
-) : SdesItem(SdesItemType.UNKNOWN) {
+class UnknownSdesItem(private val sdesTypeValue: Int, buf: ByteArray, offset: Int, length: Int) :
+    SdesItem(SdesItemType.UNKNOWN) {
     private val dataField = copyData(buf, offset, length)
     override val sizeBytes: Int = SDES_ITEM_HEADER_SIZE + dataField.size
 
-    override fun toString(): String {
-        return "Unknown SDES type($sdesTypeValue) data = ${dataField.toHex()}"
-    }
+    override fun toString(): String = "Unknown SDES type($sdesTypeValue) data = ${dataField.toHex()}"
 }
 
 object EmptySdesItem : SdesItem(SdesItemType.EMPTY) {

@@ -412,8 +412,7 @@ class Av1DDAdaptiveSourceProjectionTest {
                  */
                 val extFrameNum = frameNumsIndexTracker.update(packet.frameNumber)
                 frameNumsDropped.add(extFrameNum)
-            } else if (expectAccept(frameInfo)
-            ) {
+            } else if (expectAccept(frameInfo)) {
                 Assert.assertTrue(accepted)
 
                 context.rewriteRtp(packetInfo)
@@ -1545,9 +1544,7 @@ private open class Av1PacketGenerator(
     }
 }
 
-private class NonScalableAv1PacketGenerator(
-    packetsPerFrame: Int
-) :
+private class NonScalableAv1PacketGenerator(packetsPerFrame: Int) :
     Av1PacketGenerator(
         packetsPerFrame,
         arrayOf(0),
@@ -1556,22 +1553,17 @@ private class NonScalableAv1PacketGenerator(
         "80000180003a410180ef808680"
     )
 
-private class TemporallyScaledPacketGenerator(
-    packetsPerFrame: Int,
-    encodingId: Int = 0
-) : Av1PacketGenerator(
-    packetsPerFrame = packetsPerFrame,
-    keyframeTemplates = arrayOf(0),
-    normalTemplates = arrayOf(1, 3, 2, 4),
-    framesPerTimestamp = 1,
-    templateDdHex = "800001800214eaa860414d141020842701df010d",
-    encodingId = encodingId
-)
+private class TemporallyScaledPacketGenerator(packetsPerFrame: Int, encodingId: Int = 0) :
+    Av1PacketGenerator(
+        packetsPerFrame = packetsPerFrame,
+        keyframeTemplates = arrayOf(0),
+        normalTemplates = arrayOf(1, 3, 2, 4),
+        framesPerTimestamp = 1,
+        templateDdHex = "800001800214eaa860414d141020842701df010d",
+        encodingId = encodingId
+    )
 
-private class ScalableAv1PacketGenerator(
-    packetsPerFrame: Int,
-    encodingId: Int = 0
-) :
+private class ScalableAv1PacketGenerator(packetsPerFrame: Int, encodingId: Int = 0) :
     Av1PacketGenerator(
         packetsPerFrame = packetsPerFrame,
         keyframeTemplates = arrayOf(1, 6, 11),
@@ -1583,10 +1575,7 @@ private class ScalableAv1PacketGenerator(
         encodingId = encodingId
     )
 
-private class KeyScalableAv1PacketGenerator(
-    packetsPerFrame: Int,
-    encodingId: Int = 0
-) :
+private class KeyScalableAv1PacketGenerator(packetsPerFrame: Int, encodingId: Int = 0) :
     Av1PacketGenerator(
         packetsPerFrame = packetsPerFrame,
         keyframeTemplates = arrayOf(0, 5, 10),
@@ -1597,10 +1586,7 @@ private class KeyScalableAv1PacketGenerator(
         encodingId = encodingId
     )
 
-private class SingleEncodingSimulcastAv1PacketGenerator(
-    packetsPerFrame: Int,
-    encodingId: Int = 0
-) :
+private class SingleEncodingSimulcastAv1PacketGenerator(packetsPerFrame: Int, encodingId: Int = 0) :
     Av1PacketGenerator(
         packetsPerFrame = packetsPerFrame,
         keyframeTemplates = arrayOf(1, 6, 11),

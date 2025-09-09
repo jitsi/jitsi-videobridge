@@ -63,10 +63,7 @@ class TestBitrateObserver {
     }
 }
 
-class RtpStream(
-    val fps: Int,
-    var bitrateBps: Long
-) {
+class RtpStream(val fps: Int, var bitrateBps: Long) {
     init {
         require(fps > 0)
     }
@@ -101,10 +98,7 @@ class RtpStream(
     }
 }
 
-class StreamGenerator(
-    private var capacity: Long,
-    timeNow: Long
-) {
+class StreamGenerator(private var capacity: Long, timeNow: Long) {
     /** All streams being transmitted on this simulated channel. */
     private val streams = ArrayList<RtpStream>()
 

@@ -128,10 +128,8 @@ class AimdRateControl(private val sendSide: Boolean = false) {
         return false
     }
 
-    fun initialTimeToReduceFurther(atTime: Instant): Boolean {
-        return validEstimate() &&
-            timeToReduceFurther(atTime, latestEstimate() / 2 - 1.bps)
-    }
+    fun initialTimeToReduceFurther(atTime: Instant): Boolean = validEstimate() &&
+        timeToReduceFurther(atTime, latestEstimate() / 2 - 1.bps)
 
     fun latestEstimate() = currentBitrate
 

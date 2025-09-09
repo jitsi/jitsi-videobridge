@@ -33,16 +33,12 @@ open class VideoRtpPacket @JvmOverloads constructor(
 
     open val layerIds: Collection<Int> = listOf(0)
 
-    override fun toString(): String {
-        return super.toString() + ", EncID=$encodingId"
-    }
+    override fun toString(): String = super.toString() + ", EncID=$encodingId"
 
-    override fun clone(): VideoRtpPacket {
-        return VideoRtpPacket(
-            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length,
-            encodingId = encodingId
-        ).also { postClone(it) }
-    }
+    override fun clone(): VideoRtpPacket = VideoRtpPacket(
+        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length,
+        encodingId = encodingId
+    ).also { postClone(it) }
 }

@@ -36,10 +36,7 @@ import java.time.Instant
  * Field trial settings have been generally removed, set to their default settings, and APIs that aren't
  * used by Chrome have also been removed.
  */
-class DelayBasedBwe(
-    parentLogger: Logger,
-    private val diagnosticContext: DiagnosticContext
-) {
+class DelayBasedBwe(parentLogger: Logger, private val diagnosticContext: DiagnosticContext) {
     private val logger = parentLogger.createChildLogger(javaClass.name)
 
     private var interArrivalDelta: InterArrivalDelta? = null
@@ -228,9 +225,7 @@ class DelayBasedBwe(
         rateControl.setMinBitrate(minBitrate)
     }
 
-    fun getExpectedBwePeriod(): Duration {
-        return rateControl.getExpectedBandwidthPeriod()
-    }
+    fun getExpectedBwePeriod(): Duration = rateControl.getExpectedBandwidthPeriod()
 
     fun lastEstimate(): Bandwidth = prevBitrate
     fun lastState(): BandwidthUsage = prevState

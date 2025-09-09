@@ -87,9 +87,7 @@ open class JitterStats {
 /**
  * Tracks the jitter of packets *within* the bridge (not over the network)
  */
-class BridgeJitterStats(
-    private val clock: Clock = Clock.systemUTC()
-) : JitterStats() {
+class BridgeJitterStats(private val clock: Clock = Clock.systemUTC()) : JitterStats() {
 
     fun packetSent(packetInfo: PacketInfo) {
         packetInfo.receivedTime?.let { super.addPacket(it, clock.instant()) }

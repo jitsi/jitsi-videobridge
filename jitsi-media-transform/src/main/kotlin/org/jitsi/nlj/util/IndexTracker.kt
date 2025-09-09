@@ -149,7 +149,5 @@ sealed class IndexTracker<T> {
         getIndex(seq, true)
     }
 
-    fun debugState(): String {
-        return "{roc=$roc, highestSeqNumReceived=$highestSeqNumReceived}"
-    }
+    fun debugState(): String = "{roc=$roc, highestSeqNumReceived=$highestSeqNumReceived}"
 }

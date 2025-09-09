@@ -18,11 +18,8 @@ package org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb
 
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 
-abstract class TransportLayerRtcpFbPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpFbPacket(buffer, offset, length) {
+abstract class TransportLayerRtcpFbPacket(buffer: ByteArray, offset: Int, length: Int) :
+    RtcpFbPacket(buffer, offset, length) {
 
     companion object {
         const val PT = 205

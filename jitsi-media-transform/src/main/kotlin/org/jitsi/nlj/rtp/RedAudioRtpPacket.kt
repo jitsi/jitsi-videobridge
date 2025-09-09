@@ -19,11 +19,7 @@ import org.jitsi.rtp.rtp.RedPacketBuilder
 import org.jitsi.rtp.rtp.RedPacketParser
 import java.lang.IllegalStateException
 
-class RedAudioRtpPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : AudioRtpPacket(buffer, offset, length) {
+class RedAudioRtpPacket(buffer: ByteArray, offset: Int, length: Int) : AudioRtpPacket(buffer, offset, length) {
 
     private var removed = false
 

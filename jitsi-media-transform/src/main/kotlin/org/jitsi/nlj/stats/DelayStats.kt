@@ -20,8 +20,7 @@ import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.stats.BucketStats
 import java.util.concurrent.atomic.LongAdder
 
-open class DelayStats(thresholds: List<Long> = defaultThresholds) :
-    BucketStats(thresholds, "_delay_ms", "_ms") {
+open class DelayStats(thresholds: List<Long> = defaultThresholds) : BucketStats(thresholds, "_delay_ms", "_ms") {
 
     fun addDelay(delayMs: Long) = addValue(delayMs)
 
@@ -35,9 +34,7 @@ class PacketDelayStats(thresholds: List<Long> = defaultThresholds) : DelayStats(
 
     fun addUnknown() = numPacketsWithoutTimestamps.increment()
 
-    override fun toJson(format: Format): OrderedJsonObject {
-        return super.toJson(format).apply {
-            put("packets_without_timestamps", numPacketsWithoutTimestamps.sum())
-        }
+    override fun toJson(format: Format): OrderedJsonObject = super.toJson(format).apply {
+        put("packets_without_timestamps", numPacketsWithoutTimestamps.sum())
     }
 }

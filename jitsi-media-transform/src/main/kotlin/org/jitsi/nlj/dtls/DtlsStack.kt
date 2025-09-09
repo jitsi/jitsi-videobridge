@@ -50,9 +50,7 @@ import kotlin.math.min
  * or server.  This can be done by calling either the [actAsClient] or [actAsServer] methods.  Once the role has
  * been set, [start] can be called to start the negotiation.
  */
-class DtlsStack(
-    parentLogger: Logger
-) {
+class DtlsStack(parentLogger: Logger) {
     private val logger = createChildLogger(parentLogger)
     private val roleSet = CountDownLatch(1)
 

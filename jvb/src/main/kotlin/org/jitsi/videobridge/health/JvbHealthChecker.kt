@@ -57,9 +57,8 @@ class JvbHealthChecker : HealthCheckService {
         return Result(success = true)
     }
 
-    private fun InetAddress.isValid(): Boolean {
-        return !this.isSiteLocalAddress && !this.isLinkLocalAddress && !this.isLoopbackAddress
-    }
+    private fun InetAddress.isValid(): Boolean =
+        !this.isSiteLocalAddress && !this.isLinkLocalAddress && !this.isLoopbackAddress
 
     private fun hasValidAddress(): Boolean {
         if (Harvesters.INSTANCE.singlePortHarvesters.any { it.localAddress.address.isValid() }) {

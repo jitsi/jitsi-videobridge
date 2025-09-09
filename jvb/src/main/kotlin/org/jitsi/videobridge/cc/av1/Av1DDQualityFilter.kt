@@ -37,10 +37,7 @@ import java.time.Instant
  * their quality, i.e. packets that correspond to qualities that are above a
  * given quality target. Instances of this class are thread-safe.
  */
-internal class Av1DDQualityFilter(
-    val av1FrameMap: Map<Long, Av1DDFrameMap>,
-    parentLogger: Logger
-) {
+internal class Av1DDQualityFilter(val av1FrameMap: Map<Long, Av1DDFrameMap>, parentLogger: Logger) {
     /**
      * The [Logger] to be used by this instance to print debug
      * information.
@@ -444,12 +441,7 @@ internal class Av1DDQualityFilter(
             return debugState
         }
 
-    data class AcceptResult(
-        val accept: Boolean,
-        val isResumption: Boolean,
-        val mark: Boolean,
-        val newDt: Int?
-    )
+    data class AcceptResult(val accept: Boolean, val isResumption: Boolean, val mark: Boolean, val newDt: Int?)
 
     companion object {
         /**

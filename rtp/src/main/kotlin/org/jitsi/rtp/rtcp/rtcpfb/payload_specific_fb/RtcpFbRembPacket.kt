@@ -53,11 +53,8 @@ import org.jitsi.rtp.util.getShortAsInt
  * @author George Politis
  * @author Boris Grozev
  */
-class RtcpFbRembPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : PayloadSpecificRtcpFbPacket(buffer, offset, length) {
+class RtcpFbRembPacket(buffer: ByteArray, offset: Int, length: Int) :
+    PayloadSpecificRtcpFbPacket(buffer, offset, length) {
 
     val bitrate: Long = getBitrate(buffer, offset)
 
@@ -72,9 +69,7 @@ class RtcpFbRembPacket(
         }.toList()
     }
 
-    override fun clone(): RtcpFbRembPacket {
-        return RtcpFbRembPacket(cloneBuffer(0), 0, length)
-    }
+    override fun clone(): RtcpFbRembPacket = RtcpFbRembPacket(cloneBuffer(0), 0, length)
 
     companion object {
         const val FMT = 15

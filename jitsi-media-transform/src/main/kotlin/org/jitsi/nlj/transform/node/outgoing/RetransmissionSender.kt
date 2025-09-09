@@ -29,10 +29,8 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import java.util.concurrent.ConcurrentHashMap
 
-class RetransmissionSender(
-    private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
-) : ModifierNode("Retransmission sender") {
+class RetransmissionSender(private val streamInformationStore: ReadOnlyStreamInformationStore, parentLogger: Logger) :
+    ModifierNode("Retransmission sender") {
     private val logger = createChildLogger(parentLogger)
 
     /**
@@ -108,16 +106,14 @@ class RetransmissionSender(
         return packetInfo
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("num_retransmissions_requested", numRetransmissionsRequested)
-            addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
-            addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
-            addString(
-                "rtx_payload_types(orig -> rtx)",
-                this@RetransmissionSender.origPtToRtxPayloadType.toString()
-            )
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("num_retransmissions_requested", numRetransmissionsRequested)
+        addNumber("num_retransmissions_rtx_sent", numRetransmittedRtxPackets)
+        addNumber("num_retransmissions_plain_sent", numRetransmittedPlainPackets)
+        addString(
+            "rtx_payload_types(orig -> rtx)",
+            this@RetransmissionSender.origPtToRtxPayloadType.toString()
+        )
     }
 
     override fun statsJson() = super.statsJson().apply {

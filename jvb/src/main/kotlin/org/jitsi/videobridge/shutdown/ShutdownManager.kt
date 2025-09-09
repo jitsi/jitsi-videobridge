@@ -38,10 +38,7 @@ import java.util.concurrent.TimeUnit
  * actively move participants off this bridge. We stay in [SHUTTING_DOWN] for [config.shuttingDownDelay] before we
  * actually perform the shutdown.
  */
-class ShutdownManager(
-    private val shutdownService: ShutdownService,
-    parentLogger: Logger
-) {
+class ShutdownManager(private val shutdownService: ShutdownService, parentLogger: Logger) {
     val logger = createChildLogger(parentLogger)
 
     var state: ShutdownState = RUNNING

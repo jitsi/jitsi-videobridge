@@ -26,10 +26,7 @@ import kotlin.math.min
  * WebRTC tag branch-heads/7204 (Chromium 138).
  */
 
-class IntervalBudget(
-    initialTargetRateKbps: Int,
-    private val canBuildUpUnderuse: Boolean = false
-) {
+class IntervalBudget(initialTargetRateKbps: Int, private val canBuildUpUnderuse: Boolean = false) {
     private var targetRateKbps: Int = 0
     private var maxBytesInBudget: Long = 0
     private var bytesRemaining: Long = 0
@@ -60,9 +57,7 @@ class IntervalBudget(
         bytesRemaining = max(bytesRemaining - bytes, -maxBytesInBudget)
     }
 
-    fun bytesRemaining(): Long {
-        return max(0, bytesRemaining)
-    }
+    fun bytesRemaining(): Long = max(0, bytesRemaining)
 
     fun budgetRatio(): Double {
         if (maxBytesInBudget == 0L) {

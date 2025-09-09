@@ -687,7 +687,4 @@ class Av1DDAdaptiveSourceProjectionContext(
     }
 }
 
-data class Av1PersistentState(
-    val frameNumber: Int,
-    val templateId: Int
-)
+data class Av1PersistentState(val frameNumber: Int, val templateId: Int)

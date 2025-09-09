@@ -71,8 +71,6 @@ internal class CompoundRtcpPacketTest : ShouldSpec() {
     ).build()
 }
 
-private class DummyPacket(
-    buf: ByteArray
-) : Packet(buf, 0, buf.size) {
+private class DummyPacket(buf: ByteArray) : Packet(buf, 0, buf.size) {
     override fun clone(): Packet = DummyPacket(cloneBuffer(0))
 }

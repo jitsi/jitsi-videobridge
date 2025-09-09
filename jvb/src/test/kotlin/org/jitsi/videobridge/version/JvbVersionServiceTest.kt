@@ -19,27 +19,28 @@ package org.jitsi.videobridge.version
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
-class JvbVersionServiceTest : ShouldSpec({
-    context("parsing a version") {
-        context("from a valid version string") {
-            should("parse correctly") {
-                with(JvbVersionService().parseVersionString("2.1-296-g817c1a45")) {
-                    this.applicationName shouldBe "JVB"
-                    this.versionMajor shouldBe 2
-                    versionMinor shouldBe 1
-                    nightlyBuildID shouldBe "296-g817c1a45"
+class JvbVersionServiceTest :
+    ShouldSpec({
+        context("parsing a version") {
+            context("from a valid version string") {
+                should("parse correctly") {
+                    with(JvbVersionService().parseVersionString("2.1-296-g817c1a45")) {
+                        this.applicationName shouldBe "JVB"
+                        this.versionMajor shouldBe 2
+                        versionMinor shouldBe 1
+                        nightlyBuildID shouldBe "296-g817c1a45"
+                    }
+                }
+            }
+            context("from null") {
+                should("use the defaults") {
+                    with(JvbVersionService().parseVersionString(null)) {
+                        this.applicationName shouldBe "JVB"
+                        this.versionMajor shouldBe 2
+                        versionMinor shouldBe 1
+                        nightlyBuildID shouldBe null
+                    }
                 }
             }
         }
-        context("from null") {
-            should("use the defaults") {
-                with(JvbVersionService().parseVersionString(null)) {
-                    this.applicationName shouldBe "JVB"
-                    this.versionMajor shouldBe 2
-                    versionMinor shouldBe 1
-                    nightlyBuildID shouldBe null
-                }
-            }
-        }
-    }
-})
+    })

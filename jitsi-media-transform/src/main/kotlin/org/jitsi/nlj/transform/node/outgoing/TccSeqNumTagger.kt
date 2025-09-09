@@ -26,10 +26,8 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.TccHeaderExtension
 import java.lang.ref.WeakReference
 
-class TccSeqNumTagger(
-    transportCcEngine: TransportCcEngine,
-    streamInformationStore: ReadOnlyStreamInformationStore
-) : ModifierNode("TCC sequence number tagger") {
+class TccSeqNumTagger(transportCcEngine: TransportCcEngine, streamInformationStore: ReadOnlyStreamInformationStore) :
+    ModifierNode("TCC sequence number tagger") {
     private var currTccSeqNum: Long = 1
     private var tccExtensionId: Int? = null
 
@@ -65,10 +63,8 @@ class TccSeqNumTagger(
         return packetInfo
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addString("tcc_ext_id", tccExtensionId.toString())
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addString("tcc_ext_id", tccExtensionId.toString())
     }
 
     override fun stop() {

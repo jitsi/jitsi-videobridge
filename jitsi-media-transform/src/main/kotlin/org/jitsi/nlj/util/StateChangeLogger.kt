@@ -23,10 +23,7 @@ import org.jitsi.utils.logging2.cinfo
  * Class that logs when state first becomes false, or changes from false to true,
  * without logging on every packet.
  */
-class StateChangeLogger(
-    val desc: String,
-    val logger: Logger
-) {
+class StateChangeLogger(val desc: String, val logger: Logger) {
     var state: Boolean? = null
 
     fun setState(newState: Boolean, instance: Any, instanceDesc: () -> String) {

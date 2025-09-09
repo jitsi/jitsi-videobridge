@@ -53,7 +53,9 @@ class RelayMessageTransport(
     private val relay: Relay,
     private val eventHandler: EndpointMessageTransportEventHandler,
     parentLogger: Logger
-) : AbstractEndpointMessageTransport(parentLogger), ColibriWebSocket.EventHandler, DataChannelMessageListener {
+) : AbstractEndpointMessageTransport(parentLogger),
+    ColibriWebSocket.EventHandler,
+    DataChannelMessageListener {
     /**
      * The last connected/accepted web-socket by this instance, if any.
      */
@@ -323,12 +325,10 @@ class RelayMessageTransport(
         }
     }
 
-    private fun createServerHello(): ServerHelloMessage {
-        return if (VersionConfig.config.announceVersion()) {
-            ServerHelloMessage(relay.conference.videobridge.version.toString())
-        } else {
-            ServerHelloMessage()
-        }
+    private fun createServerHello(): ServerHelloMessage = if (VersionConfig.config.announceVersion()) {
+        ServerHelloMessage(relay.conference.videobridge.version.toString())
+    } else {
+        ServerHelloMessage()
     }
 
     /**

@@ -27,10 +27,7 @@ import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 
-class RembHandler(
-    val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
-) : RtcpListener {
+class RembHandler(val streamInformationStore: ReadOnlyStreamInformationStore, parentLogger: Logger) : RtcpListener {
     private val logger = createChildLogger(parentLogger)
     private var sawSpuriousRemb = false
 

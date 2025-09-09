@@ -23,12 +23,8 @@ import java.util.concurrent.ExecutorService
 /**
  * A [PacketQueue] of [PacketInfo]s, returning buffers when released.
  */
-class PacketInfoQueue(
-    id: String,
-    executor: ExecutorService,
-    handler: (PacketInfo) -> Boolean,
-    capacity: Int = 1024
-) : PacketQueue<PacketInfo>(capacity, null, id, handler, executor) {
+class PacketInfoQueue(id: String, executor: ExecutorService, handler: (PacketInfo) -> Boolean, capacity: Int = 1024) :
+    PacketQueue<PacketInfo>(capacity, null, id, handler, executor) {
     override fun releasePacket(pkt: PacketInfo) {
         BufferPool.returnBuffer(pkt.packet.buffer)
     }
