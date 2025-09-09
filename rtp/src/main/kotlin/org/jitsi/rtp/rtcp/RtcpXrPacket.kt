@@ -31,11 +31,7 @@ package org.jitsi.rtp.rtcp
  *  :                         report blocks                         :
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class RtcpXrPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpPacket(buffer, offset, length) {
+class RtcpXrPacket(buffer: ByteArray, offset: Int, length: Int) : RtcpPacket(buffer, offset, length) {
     override fun clone(): RtcpXrPacket = RtcpXrPacket(cloneBuffer(0), 0, length)
 
     companion object {

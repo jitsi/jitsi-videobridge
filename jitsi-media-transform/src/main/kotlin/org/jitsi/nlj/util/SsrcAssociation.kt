@@ -18,11 +18,7 @@ package org.jitsi.nlj.util
 
 import org.jitsi.nlj.rtp.SsrcAssociationType
 
-abstract class SsrcAssociation(
-    val primarySsrc: Long,
-    val secondarySsrc: Long,
-    val type: SsrcAssociationType
-) {
+abstract class SsrcAssociation(val primarySsrc: Long, val secondarySsrc: Long, val type: SsrcAssociationType) {
     override fun toString(): String = "$secondarySsrc -> $primarySsrc ($type)"
 }
 
@@ -31,19 +27,13 @@ abstract class SsrcAssociation(
  * the endpoint itself; i.e. the processor of a [LocalSsrcAssociation]
  * is also the 'owner' of the SSRCs signaled in the association.
  */
-class LocalSsrcAssociation(
-    primarySsrc: Long,
-    secondarySsrc: Long,
-    type: SsrcAssociationType
-) : SsrcAssociation(primarySsrc, secondarySsrc, type)
+class LocalSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: SsrcAssociationType) :
+    SsrcAssociation(primarySsrc, secondarySsrc, type)
 
 /**
  * A [RemoteSsrcAssociation] is an SSRC association which belongs to
  * another endpoint; i.e. the processor of a [RemoteSsrcAssociation]
  * does not 'own' the SSRCs signaled in the association.
  */
-class RemoteSsrcAssociation(
-    primarySsrc: Long,
-    secondarySsrc: Long,
-    type: SsrcAssociationType
-) : SsrcAssociation(primarySsrc, secondarySsrc, type)
+class RemoteSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: SsrcAssociationType) :
+    SsrcAssociation(primarySsrc, secondarySsrc, type)

@@ -50,9 +50,7 @@ private val kBitrateDropTimeout = 5.secs
  * Field trial settings have been generally removed, set to their default settings.
  */
 class ProbeControllerTest : FreeSpec() {
-    class ProbeControllerFixture(
-        val config: ProbeControllerConfig = ProbeControllerConfig()
-    ) {
+    class ProbeControllerFixture(val config: ProbeControllerConfig = ProbeControllerConfig()) {
         private val clock = FakeClock().apply { setTime(Instant.ofEpochMilli(100000L)) }
 
         fun createController(): ProbeController = ProbeController(logger, diagnosticContext, config)

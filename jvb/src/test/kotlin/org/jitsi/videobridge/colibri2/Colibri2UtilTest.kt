@@ -23,28 +23,29 @@ import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
 import org.jitsi.xmpp.extensions.colibri2.IqProviderUtils
 import org.jivesoftware.smack.util.PacketParserUtils
 
-class Colibri2UtilTest : ShouldSpec({
-    IqProviderUtils.registerProviders()
-    val iq = ConferenceModifyIQ.builder("id").setMeetingId("m").build()
-    context("createConferenceAlreadyExistsError") {
-        val error = createConferenceAlreadyExistsError(iq, "i")
+class Colibri2UtilTest :
+    ShouldSpec({
+        IqProviderUtils.registerProviders()
+        val iq = ConferenceModifyIQ.builder("id").setMeetingId("m").build()
+        context("createConferenceAlreadyExistsError") {
+            val error = createConferenceAlreadyExistsError(iq, "i")
 
-        val parsedIq = parseIQ(error.toXML().toString())
-        val colibri2ErrorExtension =
-            parsedIq.error.getExtension<Colibri2Error>(Colibri2Error.ELEMENT, Colibri2Error.NAMESPACE)
-        colibri2ErrorExtension shouldNotBe null
-        colibri2ErrorExtension.reason shouldBe Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS
-    }
+            val parsedIq = parseIQ(error.toXML().toString())
+            val colibri2ErrorExtension =
+                parsedIq.error.getExtension<Colibri2Error>(Colibri2Error.ELEMENT, Colibri2Error.NAMESPACE)
+            colibri2ErrorExtension shouldNotBe null
+            colibri2ErrorExtension.reason shouldBe Colibri2Error.Reason.CONFERENCE_ALREADY_EXISTS
+        }
 
-    context("createConferenceNotFoundError") {
-        val error = createConferenceNotFoundError(iq, "i")
+        context("createConferenceNotFoundError") {
+            val error = createConferenceNotFoundError(iq, "i")
 
-        val parsedIq = parseIQ(error.toXML().toString())
-        val colibri2ErrorExtension =
-            parsedIq.error.getExtension<Colibri2Error>(Colibri2Error.ELEMENT, Colibri2Error.NAMESPACE)
-        colibri2ErrorExtension shouldNotBe null
-        colibri2ErrorExtension.reason shouldBe Colibri2Error.Reason.CONFERENCE_NOT_FOUND
-    }
-})
+            val parsedIq = parseIQ(error.toXML().toString())
+            val colibri2ErrorExtension =
+                parsedIq.error.getExtension<Colibri2Error>(Colibri2Error.ELEMENT, Colibri2Error.NAMESPACE)
+            colibri2ErrorExtension shouldNotBe null
+            colibri2ErrorExtension.reason shouldBe Colibri2Error.Reason.CONFERENCE_NOT_FOUND
+        }
+    })
 
 fun parseIQ(xml: String) = PacketParserUtils.parseIQ(PacketParserUtils.getParserFor(xml))

@@ -19,9 +19,8 @@ package org.jitsi
 import org.jitsi.config.AbstractReadOnlyConfigurationService
 import java.util.Properties
 
-class TestReadOnlyConfigurationService(
-    override var properties: Properties = Properties()
-) : AbstractReadOnlyConfigurationService() {
+class TestReadOnlyConfigurationService(override var properties: Properties = Properties()) :
+    AbstractReadOnlyConfigurationService() {
 
     val props: Properties
         get() = properties

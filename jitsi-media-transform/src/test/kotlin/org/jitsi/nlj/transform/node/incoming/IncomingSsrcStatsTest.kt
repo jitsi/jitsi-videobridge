@@ -25,15 +25,9 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import java.time.Instant
 
-private data class StatPacketInfo(
-    val packetInfo: PacketInfo,
-    val sentTime: Instant
-)
+private data class StatPacketInfo(val packetInfo: PacketInfo, val sentTime: Instant)
 
-private data class JitterPacketInfo(
-    val statPacketInfo: StatPacketInfo,
-    val expectedJitter: Double
-)
+private data class JitterPacketInfo(val statPacketInfo: StatPacketInfo, val expectedJitter: Double)
 
 private fun createStatPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long): StatPacketInfo {
     val packetInfo = PacketInfo(RtpPacket(ByteArray(50), 0, 50))

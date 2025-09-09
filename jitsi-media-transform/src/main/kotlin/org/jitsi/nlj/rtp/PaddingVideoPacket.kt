@@ -19,11 +19,8 @@ package org.jitsi.nlj.rtp
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.rtp.rtp.RtpHeader
 
-class PaddingVideoPacket private constructor(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : VideoRtpPacket(buffer, offset, length) {
+class PaddingVideoPacket private constructor(buffer: ByteArray, offset: Int, length: Int) :
+    VideoRtpPacket(buffer, offset, length) {
 
     override fun clone(): PaddingVideoPacket = throw NotImplementedError("clone() not supported for padding packets.")
 

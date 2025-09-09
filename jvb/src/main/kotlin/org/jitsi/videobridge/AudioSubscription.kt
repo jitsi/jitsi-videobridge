@@ -19,7 +19,7 @@ package org.jitsi.videobridge
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
-class AudioSubscription() {
+class AudioSubscription {
     private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage.All
 
     // wantedSsrcs is a set of SSRCs that the endpoint wants to receive audio for.

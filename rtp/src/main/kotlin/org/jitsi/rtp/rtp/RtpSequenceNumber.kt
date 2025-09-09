@@ -85,11 +85,8 @@ class RtpSequenceNumberProgression(
 }
 
 // Copied mostly from IntProgressionIterator
-class RtpSequenceNumberProgressionIterator(
-    first: RtpSequenceNumber,
-    last: RtpSequenceNumber,
-    val step: Int
-) : Iterator<RtpSequenceNumber> {
+class RtpSequenceNumberProgressionIterator(first: RtpSequenceNumber, last: RtpSequenceNumber, val step: Int) :
+    Iterator<RtpSequenceNumber> {
     private val finalElement = last
     private var hasNext: Boolean = if (step > 0) first <= last else first >= last
     private var next = if (hasNext) first else finalElement

@@ -48,11 +48,9 @@ class PaddingTermination(parentLogger: Logger) : TransformerNode("Padding termin
         return packetInfo
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("num_padded_packets_seen", numPaddedPacketsSeen)
-            addNumber("num_padding_only_packets_seen", numPaddingOnlyPacketsSeen)
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("num_padded_packets_seen", numPaddedPacketsSeen)
+        addNumber("num_padding_only_packets_seen", numPaddingOnlyPacketsSeen)
     }
 
     override fun statsJson() = super.statsJson().apply {

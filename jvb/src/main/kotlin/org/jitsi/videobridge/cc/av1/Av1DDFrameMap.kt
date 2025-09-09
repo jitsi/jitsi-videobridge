@@ -13,23 +13,17 @@ import kotlin.math.min
 /**
  * A history of recent frames on a Av1 stream.
  */
-class Av1DDFrameMap(
-    parentLogger: Logger
-) {
+class Av1DDFrameMap(parentLogger: Logger) {
     /** Cache mapping frame IDs to frames.  */
     private val frameHistory = FrameHistory(FRAME_MAP_SIZE)
     private val logger: Logger = createChildLogger(parentLogger)
 
     /** Find a frame in the frame map, based on a packet.  */
     @Synchronized
-    fun findFrame(packet: Av1DDPacket): Av1DDFrame? {
-        return frameHistory[packet.frameNumber]
-    }
+    fun findFrame(packet: Av1DDPacket): Av1DDFrame? = frameHistory[packet.frameNumber]
 
     /** Get the current size of the map.  */
-    fun size(): Int {
-        return frameHistory.numCached
-    }
+    fun size(): Int = frameHistory.numCached
 
     /** Check whether this is a large jump from previous state, so the map should be reset.  */
     private fun isLargeJump(packet: Av1DDPacket): Boolean {
@@ -114,32 +108,22 @@ class Av1DDFrameMap(
     fun getIndex(frameIndex: Long) = frameHistory.getIndex(frameIndex)
 
     @Synchronized
-    fun nextFrame(frame: Av1DDFrame): Av1DDFrame? {
-        return frameHistory.findAfter(frame) { true }
-    }
+    fun nextFrame(frame: Av1DDFrame): Av1DDFrame? = frameHistory.findAfter(frame) { true }
 
     @Synchronized
-    fun nextFrameWith(frame: Av1DDFrame, pred: (Av1DDFrame) -> Boolean): Av1DDFrame? {
-        return frameHistory.findAfter(frame, pred)
-    }
+    fun nextFrameWith(frame: Av1DDFrame, pred: (Av1DDFrame) -> Boolean): Av1DDFrame? =
+        frameHistory.findAfter(frame, pred)
 
     @Synchronized
-    fun prevFrame(frame: Av1DDFrame): Av1DDFrame? {
-        return frameHistory.findBefore(frame) { true }
-    }
+    fun prevFrame(frame: Av1DDFrame): Av1DDFrame? = frameHistory.findBefore(frame) { true }
 
     @Synchronized
-    fun prevFrameWith(frame: Av1DDFrame, pred: (Av1DDFrame) -> Boolean): Av1DDFrame? {
-        return frameHistory.findBefore(frame, pred)
-    }
+    fun prevFrameWith(frame: Av1DDFrame, pred: (Av1DDFrame) -> Boolean): Av1DDFrame? =
+        frameHistory.findBefore(frame, pred)
 
-    fun findPrevAcceptedFrame(frame: Av1DDFrame): Av1DDFrame? {
-        return prevFrameWith(frame) { it.isAccepted }
-    }
+    fun findPrevAcceptedFrame(frame: Av1DDFrame): Av1DDFrame? = prevFrameWith(frame) { it.isAccepted }
 
-    fun findNextAcceptedFrame(frame: Av1DDFrame): Av1DDFrame? {
-        return nextFrameWith(frame) { it.isAccepted }
-    }
+    fun findNextAcceptedFrame(frame: Av1DDFrame): Av1DDFrame? = nextFrameWith(frame) { it.isAccepted }
 
     companion object {
         const val FRAME_MAP_SIZE = 500 // Matches PacketCache default size.

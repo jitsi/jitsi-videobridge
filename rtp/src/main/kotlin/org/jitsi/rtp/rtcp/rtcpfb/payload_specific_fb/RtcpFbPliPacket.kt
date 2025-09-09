@@ -37,11 +37,8 @@ import org.jitsi.rtp.util.RtpUtils
  * PLI does not require parameters.  Therefore, the length field MUST be
  *  2, and there MUST NOT be any Feedback Control Information.
  */
-class RtcpFbPliPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : PayloadSpecificRtcpFbPacket(buffer, offset, length) {
+class RtcpFbPliPacket(buffer: ByteArray, offset: Int, length: Int) :
+    PayloadSpecificRtcpFbPacket(buffer, offset, length) {
 
     override fun clone(): RtcpFbPliPacket = RtcpFbPliPacket(cloneBuffer(0), 0, length)
 
@@ -51,10 +48,7 @@ class RtcpFbPliPacket(
     }
 }
 
-class RtcpFbPliPacketBuilder(
-    val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(),
-    var mediaSourceSsrc: Long = -1
-) {
+class RtcpFbPliPacketBuilder(val rtcpHeader: RtcpHeaderBuilder = RtcpHeaderBuilder(), var mediaSourceSsrc: Long = -1) {
 
     fun build(): RtcpFbPliPacket {
         val buf = BufferPool.getArray(RtcpFbPliPacket.SIZE_BYTES)

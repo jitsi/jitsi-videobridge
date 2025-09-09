@@ -53,9 +53,7 @@ fun ByteArray.put3Bytes(byteIndex: Int, value: Int) = writeUint24(this, byteInde
 fun ByteArray.getInt(byteIndex: Int): Int = readInt(this, byteIndex)
 fun ByteArray.putInt(byteIndex: Int, value: Int) = writeInt(this, byteIndex, value)
 
-fun byteArrayOf(vararg elements: Number): ByteArray {
-    return elements.map { it.toByte() }.toByteArray()
-}
+fun byteArrayOf(vararg elements: Number): ByteArray = elements.map { it.toByte() }.toByteArray()
 
 /**
  * Shifts the data from [startPos] to [endPos] [numBytes] to the right.

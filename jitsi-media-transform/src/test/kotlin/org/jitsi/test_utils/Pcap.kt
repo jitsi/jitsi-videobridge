@@ -33,11 +33,7 @@ data class SrtpData(
     var tlsRole: TlsRole
 )
 
-data class SourceAssociation(
-    var primarySsrc: Long,
-    var secondarySsrc: Long,
-    var associationType: SsrcAssociationType
-)
+data class SourceAssociation(var primarySsrc: Long, var secondarySsrc: Long, var associationType: SsrcAssociationType)
 
 data class PcapInformation(
     var filePath: String,

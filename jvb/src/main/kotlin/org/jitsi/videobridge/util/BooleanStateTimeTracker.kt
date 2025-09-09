@@ -19,10 +19,7 @@ package org.jitsi.videobridge.util
 import java.time.Clock
 import java.time.Duration
 
-class BooleanStateTimeTracker(
-    initialState: Boolean = false,
-    private val clock: Clock = Clock.systemUTC()
-) {
+class BooleanStateTimeTracker(initialState: Boolean = false, private val clock: Clock = Clock.systemUTC()) {
     private var totalTimeOn: Duration = Duration.ofMillis(0)
     private var totalTimeOff: Duration = Duration.ofMillis(0)
     var state: Boolean = initialState

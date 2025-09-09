@@ -24,9 +24,7 @@ import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig.Companion.config
 
-class ColibriWebSocketService(
-    webserverIsTls: Boolean
-) {
+class ColibriWebSocketService(webserverIsTls: Boolean) {
     private val baseUrls: List<String>
     private val relayBaseUrls: List<String>
 

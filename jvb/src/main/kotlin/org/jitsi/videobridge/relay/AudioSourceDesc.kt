@@ -19,8 +19,4 @@ package org.jitsi.videobridge.relay
  * Description of an audio source, parallel to [MediaSourceDesc] which is just for video.
  * TODO: these should be made more parallel and share a common base class, probably.
  */
-data class AudioSourceDesc(
-    val ssrc: Long,
-    val owner: String? = null,
-    val sourceName: String? = null,
-)
+data class AudioSourceDesc(val ssrc: Long, val owner: String? = null, val sourceName: String? = null,)

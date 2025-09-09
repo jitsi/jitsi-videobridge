@@ -63,9 +63,7 @@ enum class LossBasedState {
 private val kInitHoldDuration = 300.ms
 private val kMaxHoldDuration = 60.secs
 
-private fun isValid(datarate: Bandwidth?): Boolean {
-    return datarate?.isFinite() ?: false
-}
+private fun isValid(datarate: Bandwidth?): Boolean = datarate?.isFinite() ?: false
 
 private fun isValid(timestamp: Instant) = timestamp.isFinite()
 
@@ -139,19 +137,13 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
     /** Returns true iff a BWE can be calculated, i.e., the estimator has been
      initialized with a BWE and then has received enough `PacketResult`s.
      */
-    fun isReady(): Boolean {
-        return isEnabled() &&
-            isValid(currentBestEstimate.lossLimitedBandwidth) &&
-            numObservations >= config.minNumObservations
-    }
+    fun isReady(): Boolean = isEnabled() &&
+        isValid(currentBestEstimate.lossLimitedBandwidth) &&
+        numObservations >= config.minNumObservations
 
-    fun readyToUseInStartPhase(): Boolean {
-        return isReady() && config.useInStartPhase
-    }
+    fun readyToUseInStartPhase(): Boolean = isReady() && config.useInStartPhase
 
-    fun useInStartPhase(): Boolean {
-        return config.useInStartPhase
-    }
+    fun useInStartPhase(): Boolean = config.useInStartPhase
 
     /** Returns [Bandwidth.INFINITY] if no BWE can be calculated. */
     fun getLossBasedResult(): Result {
@@ -669,10 +661,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         }
     }
 
-    private data class Derivatives(
-        var first: Double = 0.0,
-        var second: Double = 0.0
-    )
+    private data class Derivatives(var first: Double = 0.0, var second: Double = 0.0)
 
     private class Observation {
         var numPackets = 0
@@ -937,12 +926,10 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         return derivatives
     }
 
-    private fun getFeasibleInherentLoss(channelParameters: ChannelParameters): Double {
-        return min(
-            max(channelParameters.inherentLoss, config.inherentLossLowerBound),
-            getInherentLossUpperBound(channelParameters.lossLimitedBandwidth)
-        )
-    }
+    private fun getFeasibleInherentLoss(channelParameters: ChannelParameters): Double = min(
+        max(channelParameters.inherentLoss, config.inherentLossLowerBound),
+        getInherentLossUpperBound(channelParameters.lossLimitedBandwidth)
+    )
 
     private fun getInherentLossUpperBound(bandwidth: Bandwidth): Double {
         if (bandwidth == Bandwidth.ZERO) {
@@ -956,14 +943,12 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         return min(inherentLossUpperBound, 1.0)
     }
 
-    private fun adjustBiasFactor(lossRate: Double, biasFactor: Double): Double {
-        return biasFactor *
-            (config.lossThresholdOfHighBandwidthPreference - lossRate) /
-            (
-                config.bandwidthPreferenceSmoothingFactor +
-                    abs(config.lossThresholdOfHighBandwidthPreference - lossRate)
-                )
-    }
+    private fun adjustBiasFactor(lossRate: Double, biasFactor: Double): Double = biasFactor *
+        (config.lossThresholdOfHighBandwidthPreference - lossRate) /
+        (
+            config.bandwidthPreferenceSmoothingFactor +
+                abs(config.lossThresholdOfHighBandwidthPreference - lossRate)
+            )
 
     private fun getHighBandwidthBias(bandwidth: Bandwidth): Double {
         if (isValid(bandwidth)) {
@@ -1034,9 +1019,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
             (1.0 - config.sendingRateSmoothingFactor) * instantaneousSendingRate
     }
 
-    private fun getInstantUpperBound(): Bandwidth {
-        return cachedInstantUpperBound ?: maxBitrate
-    }
+    private fun getInstantUpperBound(): Bandwidth = cachedInstantUpperBound ?: maxBitrate
 
     private fun calculateInstantUpperBound() {
         var instantLimit = maxBitrate
@@ -1051,9 +1034,7 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         cachedInstantUpperBound = instantLimit
     }
 
-    private fun getInstantLowerBound(): Bandwidth {
-        return cachedInstantLowerBound ?: Bandwidth.ZERO
-    }
+    private fun getInstantLowerBound(): Bandwidth = cachedInstantLowerBound ?: Bandwidth.ZERO
 
     private fun calculateInstantLowerBound() {
         var instanceLowerBound = Bandwidth.ZERO
@@ -1148,23 +1129,19 @@ class LossBasedBweV2(configIn: Config = defaultConfig) {
         return true
     }
 
-    private fun isEstimateIncreasingWhenLossLimited(oldEstimate: Bandwidth, newEstimate: Bandwidth): Boolean {
-        return (
-            oldEstimate < newEstimate ||
-                (
-                    oldEstimate == newEstimate &&
-                        (
-                            lossBasedResult.state == LossBasedState.kIncreasing ||
-                                lossBasedResult.state == LossBasedState.kIncreaseUsingPadding
-                            )
-                    )
-            ) &&
-            isInLossLimitedState()
-    }
+    private fun isEstimateIncreasingWhenLossLimited(oldEstimate: Bandwidth, newEstimate: Bandwidth): Boolean = (
+        oldEstimate < newEstimate ||
+            (
+                oldEstimate == newEstimate &&
+                    (
+                        lossBasedResult.state == LossBasedState.kIncreasing ||
+                            lossBasedResult.state == LossBasedState.kIncreaseUsingPadding
+                        )
+                )
+        ) &&
+        isInLossLimitedState()
 
-    private fun isInLossLimitedState(): Boolean {
-        return lossBasedResult.state != LossBasedState.kDelayBasedEstimate
-    }
+    private fun isInLossLimitedState(): Boolean = lossBasedResult.state != LossBasedState.kDelayBasedEstimate
 
     private fun canKeepIncreasingState(estimate: Bandwidth): Boolean {
         if (config.paddingDuration == Duration.ZERO ||

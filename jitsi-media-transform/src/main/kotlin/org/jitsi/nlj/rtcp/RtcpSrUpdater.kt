@@ -23,9 +23,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 /**
  * Updates RTCP Sender Reports with the current octet and packet count.
  */
-class RtcpSrUpdater(
-    val statsTracker: OutgoingStatisticsTracker
-) : TransformerNode("RtcpSrUpdater") {
+class RtcpSrUpdater(val statsTracker: OutgoingStatisticsTracker) : TransformerNode("RtcpSrUpdater") {
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         // TODO support compound packets

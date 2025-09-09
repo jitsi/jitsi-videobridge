@@ -36,9 +36,8 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
-class IncomingStatisticsTracker(
-    private val streamInformationStore: ReadOnlyStreamInformationStore
-) : ObserverNode("Incoming statistics tracker") {
+class IncomingStatisticsTracker(private val streamInformationStore: ReadOnlyStreamInformationStore) :
+    ObserverNode("Incoming statistics tracker") {
     private val ssrcStats: MutableMap<Long, IncomingSsrcStats> = ConcurrentHashMap()
 
     override fun observe(packetInfo: PacketInfo) {
@@ -60,12 +59,10 @@ class IncomingStatisticsTracker(
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            val stats = getSnapshot()
-            stats.ssrcStats.forEach { (ssrc, streamStats) ->
-                addJson(ssrc.toString(), streamStats.toJson())
-            }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        val stats = getSnapshot()
+        stats.ssrcStats.forEach { (ssrc, streamStats) ->
+            addJson(ssrc.toString(), streamStats.toJson())
         }
     }
 
@@ -111,11 +108,7 @@ class IncomingStatisticsSnapshot(
  * is tuned for use in generating an RR packet.
  * TODO: max dropout/max misorder/probation handling according to appendix A.1
  */
-class IncomingSsrcStats(
-    private val ssrc: Long,
-    private var baseSeqNum: Int,
-    private val mediaType: MediaType
-) {
+class IncomingSsrcStats(private val ssrc: Long, private var baseSeqNum: Int, private val mediaType: MediaType) {
     // TODO: for now we'll synchronize access to all the stats so we can create a consistent snapshot when it's
     // requested from another context.  it'd be great to be able to avoid this (coroutines make it easy to switch
     // contexts and could be a nice option here in the future).  another option would be doing the RR generation
@@ -123,6 +116,7 @@ class IncomingSsrcStats(
     // acceptable for RRs?
     private var statsLock = Any()
     // Start variables protected by statsLock
+
     /**
      * This will be initialized to the first sequence number we process
      */

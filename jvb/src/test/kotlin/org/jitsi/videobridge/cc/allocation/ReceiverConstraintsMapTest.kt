@@ -20,65 +20,66 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
-class ReceiverConstraintsMapTest : ShouldSpec({
-    isolationMode = IsolationMode.InstancePerLeaf
+class ReceiverConstraintsMapTest :
+    ShouldSpec({
+        isolationMode = IsolationMode.InstancePerLeaf
 
-    val constraints = ReceiverConstraintsMap()
+        val constraints = ReceiverConstraintsMap()
 
-    context("receiver constraints map") {
-        should("track the max height correctly") {
-            constraints.maxHeight shouldBe 0
-            constraints.put("a", vc(1))
-            constraints.maxHeight shouldBe 1
-            constraints.put("b", vc(2))
-            constraints.maxHeight shouldBe 2
-            constraints.put("c", vc(3))
-            constraints.maxHeight shouldBe 3
+        context("receiver constraints map") {
+            should("track the max height correctly") {
+                constraints.maxHeight shouldBe 0
+                constraints.put("a", vc(1))
+                constraints.maxHeight shouldBe 1
+                constraints.put("b", vc(2))
+                constraints.maxHeight shouldBe 2
+                constraints.put("c", vc(3))
+                constraints.maxHeight shouldBe 3
 
-            constraints.remove("c")
-            constraints.maxHeight shouldBe 2
+                constraints.remove("c")
+                constraints.maxHeight shouldBe 2
 
-            constraints.put("a", vc(4))
-            constraints.maxHeight shouldBe 4
+                constraints.put("a", vc(4))
+                constraints.maxHeight shouldBe 4
 
-            constraints.put("a", vc(3))
-            constraints.maxHeight shouldBe 3
+                constraints.put("a", vc(3))
+                constraints.maxHeight shouldBe 3
 
-            constraints.remove("a")
-            constraints.maxHeight shouldBe 2
+                constraints.remove("a")
+                constraints.maxHeight shouldBe 2
 
-            constraints.remove("b")
-            constraints.maxHeight shouldBe 0
+                constraints.remove("b")
+                constraints.maxHeight shouldBe 0
 
-            constraints.put("a", vc(-1))
-            constraints.maxHeight shouldBe -1
+                constraints.put("a", vc(-1))
+                constraints.maxHeight shouldBe -1
 
-            constraints.put("b", vc(100))
-            constraints.maxHeight shouldBe -1
+                constraints.put("b", vc(100))
+                constraints.maxHeight shouldBe -1
 
-            constraints.remove("a")
-            constraints.maxHeight shouldBe 100
+                constraints.remove("a")
+                constraints.maxHeight shouldBe 100
+            }
+            should("track max height correctly when existing keys are updated") {
+                constraints.put("b", vc(1))
+                constraints.maxHeight shouldBe 1
+
+                constraints.put("b", vc(2))
+                constraints.maxHeight shouldBe 2
+
+                constraints.put("b", vc(1))
+                constraints.maxHeight shouldBe 1
+
+                constraints.put("b", vc(-1))
+                constraints.maxHeight shouldBe -1
+
+                constraints.put("b", vc(1))
+                constraints.maxHeight shouldBe 1
+
+                constraints.put("b", vc(2))
+                constraints.maxHeight shouldBe 2
+            }
         }
-        should("track max height correctly when existing keys are updated") {
-            constraints.put("b", vc(1))
-            constraints.maxHeight shouldBe 1
-
-            constraints.put("b", vc(2))
-            constraints.maxHeight shouldBe 2
-
-            constraints.put("b", vc(1))
-            constraints.maxHeight shouldBe 1
-
-            constraints.put("b", vc(-1))
-            constraints.maxHeight shouldBe -1
-
-            constraints.put("b", vc(1))
-            constraints.maxHeight shouldBe 1
-
-            constraints.put("b", vc(2))
-            constraints.maxHeight shouldBe 2
-        }
-    }
-})
+    })
 
 private fun vc(maxHeight: Int) = VideoConstraints(maxHeight, 30.0)

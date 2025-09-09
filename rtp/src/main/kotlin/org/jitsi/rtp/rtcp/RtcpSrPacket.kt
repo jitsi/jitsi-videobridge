@@ -135,11 +135,7 @@ data class SenderInfoBuilder(
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
-class RtcpSrPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpPacket(buffer, offset, length) {
+class RtcpSrPacket(buffer: ByteArray, offset: Int, length: Int) : RtcpPacket(buffer, offset, length) {
 
     val senderInfo: SenderInfo by lazy { SenderInfo() }
 
@@ -151,21 +147,19 @@ class RtcpSrPacket(
 
     override fun clone(): RtcpSrPacket = RtcpSrPacket(cloneBuffer(0), 0, length)
 
-    fun cloneWithoutReportBlocks(): RtcpSrPacket {
-        return RtcpSrPacketBuilder(
-            rtcpHeader = RtcpHeaderBuilder(
-                reportCount = 0,
-                senderSsrc = this.senderSsrc
-            ),
-            senderInfo = SenderInfoBuilder(
-                ntpTimestampMsw = this.senderInfo.ntpTimestampMsw,
-                ntpTimestampLsw = this.senderInfo.ntpTimestampLsw,
-                rtpTimestamp = this.senderInfo.rtpTimestamp,
-                sendersPacketCount = this.senderInfo.sendersPacketCount,
-                sendersOctetCount = this.senderInfo.sendersOctetCount
-            )
-        ).build()
-    }
+    fun cloneWithoutReportBlocks(): RtcpSrPacket = RtcpSrPacketBuilder(
+        rtcpHeader = RtcpHeaderBuilder(
+            reportCount = 0,
+            senderSsrc = this.senderSsrc
+        ),
+        senderInfo = SenderInfoBuilder(
+            ntpTimestampMsw = this.senderInfo.ntpTimestampMsw,
+            ntpTimestampLsw = this.senderInfo.ntpTimestampLsw,
+            rtpTimestamp = this.senderInfo.rtpTimestamp,
+            sendersPacketCount = this.senderInfo.sendersPacketCount,
+            sendersOctetCount = this.senderInfo.sendersOctetCount
+        )
+    ).build()
 
     // SenderInfo is defined differently so that we can scope these variables under a the 'senderInfo'
     // member here.  Is there a better way?

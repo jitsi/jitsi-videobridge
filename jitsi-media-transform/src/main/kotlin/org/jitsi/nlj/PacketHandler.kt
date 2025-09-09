@@ -29,7 +29,9 @@ interface PacketHandler {
 /**
  * A [PacketHandler] which tracks statistics about the packets it handles
  */
-abstract class StatsKeepingPacketHandler : PacketHandler, NodeStatsProducer {
+abstract class StatsKeepingPacketHandler :
+    PacketHandler,
+    NodeStatsProducer {
     private val statistics = Statistics()
 
     final override fun processPacket(packetInfo: PacketInfo) {

@@ -67,13 +67,10 @@ private class Ep : SsrcRewriter {
 
     private var nextSendSsrc = 1L
 
-    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
-        return null
-    }
+    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? = null
 
-    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
-        return AudioSourceDesc(ssrc, "anon-$ssrc", "anon-$ssrc-a0")
-    }
+    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? =
+        AudioSourceDesc(ssrc, "anon-$ssrc", "anon-$ssrc-a0")
 
     override fun getNextSendSsrc(): Long {
         synchronized(this) {
@@ -107,7 +104,7 @@ private class PacketGenerator(val ssrc: Long, random: Random) {
     }
 }
 
-private class PacketChecker() {
+private class PacketChecker {
 
     private val ssrcs = HashMap<Long, RtpPacket>()
 

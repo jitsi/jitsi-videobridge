@@ -138,7 +138,8 @@ class Relay @JvmOverloads constructor(
     iceControlling: Boolean,
     useUniquePort: Boolean,
     clock: Clock = Clock.systemUTC()
-) : EncodingsManager.EncodingsUpdateListener, PotentialPacketHandler {
+) : EncodingsManager.EncodingsUpdateListener,
+    PotentialPacketHandler {
 
     /**
      * The [Logger] used by the [Relay] class to print debug information.
@@ -559,11 +560,9 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
-        return when (feature) {
-            EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
-            EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
-        }
+    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean = when (feature) {
+        EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
+        EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
     }
 
     /**

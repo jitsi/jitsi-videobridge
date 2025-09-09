@@ -79,10 +79,8 @@ class BitrateControllerTraceTest : ShouldSpec() {
         }
     }
 
-    class Endpoint(
-        override val id: String,
-        override val mediaSources: Array<MediaSourceDesc> = emptyArray()
-    ) : MediaSourceContainer {
+    class Endpoint(override val id: String, override val mediaSources: Array<MediaSourceDesc> = emptyArray()) :
+        MediaSourceContainer {
         val layer7 = MockRtpLayerDesc(tid = 0, eid = 0, height = 180, frameRate = 7.5, 0.bps)
         val layer30 = MockRtpLayerDesc(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = 0.bps)
     }

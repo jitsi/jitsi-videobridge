@@ -76,18 +76,16 @@ class EventTimeline(
         } ?: Duration.ofMillis(-1)
     }
 
-    override fun toString(): String {
-        return with(StringBuffer()) {
-            referenceTime?.let {
-                append("Reference time: $referenceTime; ")
-                synchronized(timeline) {
-                    append(timeline.joinToString(separator = "; "))
-                }
-            } ?: run {
-                append("[No timeline]")
+    override fun toString(): String = with(StringBuffer()) {
+        referenceTime?.let {
+            append("Reference time: $referenceTime; ")
+            synchronized(timeline) {
+                append(timeline.joinToString(separator = "; "))
             }
-            toString()
+        } ?: run {
+            append("[No timeline]")
         }
+        toString()
     }
 }
 
@@ -183,9 +181,7 @@ open class PacketInfo @JvmOverloads constructor(
      * Get the contained packet cast to [ExpectedPacketType]
      */
     @Suppress("UNCHECKED_CAST")
-    fun <ExpectedPacketType : Packet> packetAs(): ExpectedPacketType {
-        return packet as ExpectedPacketType
-    }
+    fun <ExpectedPacketType : Packet> packetAs(): ExpectedPacketType = packet as ExpectedPacketType
 
     /**
      * Create a deep clone of this PacketInfo (both the contained packet and the metadata map

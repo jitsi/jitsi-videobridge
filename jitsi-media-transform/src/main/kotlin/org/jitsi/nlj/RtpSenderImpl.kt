@@ -281,30 +281,26 @@ class RtpSenderImpl(
         }
     }
 
-    override fun isFeatureEnabled(feature: Features): Boolean {
-        return when (feature) {
-            Features.TRANSCEIVER_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
-        }
+    override fun isFeatureEnabled(feature: Features): Boolean = when (feature) {
+        Features.TRANSCEIVER_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
     }
 
     /**
      * Handles packets that have gone through the incoming queue and sends them
      * through the sender pipeline
      */
-    private fun handlePacket(packetInfo: PacketInfo): Boolean {
-        return if (running) {
-            packetInfo.addEvent(PACKET_QUEUE_EXIT_EVENT)
+    private fun handlePacket(packetInfo: PacketInfo): Boolean = if (running) {
+        packetInfo.addEvent(PACKET_QUEUE_EXIT_EVENT)
 
-            val root = when (packetInfo.packet) {
-                is RtcpPacket -> outgoingRtcpRoot
-                else -> outgoingRtpRoot
-            }
-            root.processPacket(packetInfo)
-            true
-        } else {
-            BufferPool.returnBuffer(packetInfo.packet.buffer)
-            false
+        val root = when (packetInfo.packet) {
+            is RtcpPacket -> outgoingRtcpRoot
+            else -> outgoingRtpRoot
         }
+        root.processPacket(packetInfo)
+        true
+    } else {
+        BufferPool.returnBuffer(packetInfo.packet.buffer)
+        false
     }
 
     override fun getStreamStats() = statsTracker.getSnapshot()

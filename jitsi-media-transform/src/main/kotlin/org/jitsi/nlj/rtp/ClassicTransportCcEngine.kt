@@ -225,17 +225,15 @@ class ClassicTransportCcEngine(
         }
     }
 
-    override fun getStatistics(): StatisticsSnapshot {
-        return StatisticsSnapshot(
-            numPacketsReported.sum(),
-            numPacketsReportedLost.sum(),
-            numDuplicateReports.sum(),
-            numPacketsReportedAfterLost.sum(),
-            numPacketsUnreported.sum(),
-            numMissingPacketReports.sum(),
-            bandwidthEstimator.getStats()
-        )
-    }
+    override fun getStatistics(): StatisticsSnapshot = StatisticsSnapshot(
+        numPacketsReported.sum(),
+        numPacketsReportedLost.sum(),
+        numDuplicateReports.sum(),
+        numPacketsReportedAfterLost.sum(),
+        numPacketsUnreported.sum(),
+        numMissingPacketReports.sum(),
+        bandwidthEstimator.getStats()
+    )
 
     override fun addBandwidthListener(listener: BandwidthListener) = bandwidthEstimator.addListener(listener)
 
@@ -260,10 +258,7 @@ class ClassicTransportCcEngine(
      * and the time stamps of the outgoing packet
      * in [packetSendTime]
      */
-    private data class PacketDetail internal constructor(
-        val packetLength: DataSize,
-        val packetSendTime: Instant
-    ) {
+    private data class PacketDetail internal constructor(val packetLength: DataSize, val packetSendTime: Instant) {
         /**
          * [state] represents the state of this packet detail with regards to the
          * reception of a TCC feedback from the remote side.  [PacketDetail]s start out
@@ -282,26 +277,25 @@ class ClassicTransportCcEngine(
         val numMissingPacketReports: Long,
         val bandwidthEstimatorStats: BandwidthEstimator.StatisticsSnapshot
     ) : TransportCcEngine.StatisticsSnapshot() {
-        override fun toJson(): Map<*, *> {
-            return OrderedJsonObject().also {
-                it.put("name", ClassicTransportCcEngine::class.java.simpleName)
-                it.put("numPacketsReported", numPacketsReported)
-                it.put("numPacketsReportedLost", numPacketsReportedLost)
-                it.put("numDuplicateReports", numDuplicateReports)
-                it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
-                it.put("numPacketsUnreported", numPacketsUnreported)
-                it.put("numMissingPacketReports", numMissingPacketReports)
-                it.put("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
-            }
+        override fun toJson(): Map<*, *> = OrderedJsonObject().also {
+            it.put("name", ClassicTransportCcEngine::class.java.simpleName)
+            it.put("numPacketsReported", numPacketsReported)
+            it.put("numPacketsReportedLost", numPacketsReportedLost)
+            it.put("numDuplicateReports", numDuplicateReports)
+            it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
+            it.put("numPacketsUnreported", numPacketsUnreported)
+            it.put("numMissingPacketReports", numMissingPacketReports)
+            it.put("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
         }
     }
 
-    private inner class PacketDetailTracker(clock: Clock) : ArrayCache<PacketDetail>(
-        MAX_OUTGOING_PACKETS_HISTORY,
-        /* We don't want to clone [PacketDetail] objects that get put in the tracker. */
-        { it },
-        clock = clock
-    ) {
+    private inner class PacketDetailTracker(clock: Clock) :
+        ArrayCache<PacketDetail>(
+            MAX_OUTGOING_PACKETS_HISTORY,
+            /* We don't want to clone [PacketDetail] objects that get put in the tracker. */
+            { it },
+            clock = clock
+        ) {
         override fun discardItem(item: PacketDetail) {
             if (item.state == PacketDetailState.Unreported) {
                 numPacketsUnreported.increment()

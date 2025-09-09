@@ -47,10 +47,7 @@ data class BitrateProberConfig(
     var allowStartProbingImmediately: Boolean = false
 )
 
-class BitrateProber(
-    parentLogger: Logger,
-    configIn: BitrateProberConfig = BitrateProberConfig()
-) {
+class BitrateProber(parentLogger: Logger, configIn: BitrateProberConfig = BitrateProberConfig()) {
     private val logger = createChildLogger(parentLogger)
 
     fun setEnabled(enable: Boolean) {

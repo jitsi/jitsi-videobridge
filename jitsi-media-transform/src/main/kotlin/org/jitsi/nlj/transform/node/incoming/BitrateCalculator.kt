@@ -124,17 +124,13 @@ open class BitrateCalculator(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("bitrate_bps", bitrate.bps)
-            addNumber("packet_rate_pps", packetRatePps)
-            addBoolean("active", active)
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("bitrate_bps", bitrate.bps)
+        addNumber("packet_rate_pps", packetRatePps)
+        addBoolean("active", active)
     }
 
-    override fun getNodeStatsToAggregate(): NodeStatsBlock {
-        return super.getNodeStats()
-    }
+    override fun getNodeStatsToAggregate(): NodeStatsBlock = super.getNodeStats()
 
     companion object {
         /**
@@ -147,11 +143,9 @@ open class BitrateCalculator(
         }
 
         /** The default bitrate calculator window size if not set in jvb.conf, based on the BWE algorithm in use.*/
-        private fun defaultWindowSize(): Duration {
-            return when (BandwidthEstimatorConfig.engine) {
-                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerWindowSize
-                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerWindowSize
-            }
+        private fun defaultWindowSize(): Duration = when (BandwidthEstimatorConfig.engine) {
+            BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerWindowSize
+            BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerWindowSize
         }
 
         /**
@@ -165,11 +159,9 @@ open class BitrateCalculator(
         }
 
         /** The default bitrate calculator bucket size if not set in jvb.conf, based on the BWE algorithm in use.*/
-        private fun defaultBucketSize(): Duration {
-            return when (BandwidthEstimatorConfig.engine) {
-                BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerBucketSize
-                BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerBucketSize
-            }
+        private fun defaultBucketSize(): Duration = when (BandwidthEstimatorConfig.engine) {
+            BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultRateTrackerBucketSize
+            BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultRateTrackerBucketSize
         }
 
         /**

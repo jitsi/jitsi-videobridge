@@ -335,15 +335,13 @@ class Transceiver(
     /**
      * Get various media and network stats
      */
-    fun getTransceiverStats(): TransceiverStats {
-        return TransceiverStats(
-            endpointConnectionStats.getSnapshot(),
-            rtpReceiver.getStats(),
-            rtpSender.getStreamStats(),
-            rtpSender.getPacketStreamStats(),
-            rtpSender.getTransportCcEngineStats()
-        )
-    }
+    fun getTransceiverStats(): TransceiverStats = TransceiverStats(
+        endpointConnectionStats.getSnapshot(),
+        rtpReceiver.getStats(),
+        rtpSender.getStreamStats(),
+        rtpSender.getPacketStreamStats(),
+        rtpSender.getTransportCcEngineStats()
+    )
 
     fun addEndpointConnectionStatsListener(listener: EndpointConnectionStats.EndpointConnectionStatsListener) =
         endpointConnectionStats.addListener(listener)

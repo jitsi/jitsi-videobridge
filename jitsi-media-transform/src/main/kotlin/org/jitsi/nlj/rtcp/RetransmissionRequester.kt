@@ -219,9 +219,7 @@ class RetransmissionRequester(
     /**
      * Tracks a request for retransmission of a specific RTP packet.
      */
-    private class PacketRetransmissionRequest(
-        val seqNum: Int
-    ) {
+    private class PacketRetransmissionRequest(val seqNum: Int) {
         var numTimesRequested = 0
             private set
         var firstRequestTimestamp: Instant = Instant.MIN

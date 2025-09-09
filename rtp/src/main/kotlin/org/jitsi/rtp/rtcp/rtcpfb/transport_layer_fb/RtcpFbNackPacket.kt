@@ -43,11 +43,8 @@ import java.util.SortedSet
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
-class RtcpFbNackPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : TransportLayerRtcpFbPacket(buffer, offset, length) {
+class RtcpFbNackPacket(buffer: ByteArray, offset: Int, length: Int) :
+    TransportLayerRtcpFbPacket(buffer, offset, length) {
 
     private val numNackBlocks: Int =
         (packetLength - HEADER_SIZE) / NackBlock.SIZE_BYTES
@@ -132,9 +129,7 @@ private fun List<Int>.chunkMaxDifference(maxDifference: Int): List<List<Int>> {
  * |            PID                |             BLP               |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-private class NackBlock(
-    val missingSeqNums: SortedSet<Int> = sortedSetOf()
-) {
+private class NackBlock(val missingSeqNums: SortedSet<Int> = sortedSetOf()) {
 
     fun writeTo(buf: ByteArray, offset: Int) {
         putMissingSeqNums(buf, offset, missingSeqNums)

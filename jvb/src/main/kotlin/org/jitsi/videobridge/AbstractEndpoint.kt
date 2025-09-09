@@ -67,10 +67,7 @@ abstract class AbstractEndpoint protected constructor(
      */
     private val receiverVideoConstraints = ConcurrentHashMap<String, ReceiverConstraintsMap>()
 
-    private data class SourceAndHeight(
-        val sourceName: String,
-        val maxHeight: Int
-    )
+    private data class SourceAndHeight(val sourceName: String, val maxHeight: Int)
 
     private val receiverVideoConstraintsQueue = PacketQueue<SourceAndHeight>(
         128,

@@ -37,14 +37,12 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
     override var initBw: Bandwidth = BandwidthEstimatorConfig.initBw
     /* TODO: observable which sets the components' values if we're in initial state. */
 
-    override var minBw: Bandwidth by Delegates.observable(BandwidthEstimatorConfig.minBw) {
-            _, _, newValue ->
+    override var minBw: Bandwidth by Delegates.observable(BandwidthEstimatorConfig.minBw) { _, _, newValue ->
         bitrateEstimatorAbsSendTime.setMinBitrate(newValue.bps.toInt())
         sendSideBandwidthEstimation.setMinMaxBitrate(newValue.bps.toInt(), maxBw.bps.toInt())
     }
 
-    override var maxBw: Bandwidth by Delegates.observable(BandwidthEstimatorConfig.maxBw) {
-            _, _, newValue ->
+    override var maxBw: Bandwidth by Delegates.observable(BandwidthEstimatorConfig.maxBw) { _, _, newValue ->
         sendSideBandwidthEstimation.setMinMaxBitrate(minBw.bps.toInt(), newValue.bps.toInt())
     }
 
@@ -101,9 +99,7 @@ class GoogleCcEstimator(diagnosticContext: DiagnosticContext, parentLogger: Logg
         sendSideBandwidthEstimation.onRttUpdate(newRtt)
     }
 
-    override fun getCurrentBw(now: Instant): Bandwidth {
-        return sendSideBandwidthEstimation.latestEstimate.bps
-    }
+    override fun getCurrentBw(now: Instant): Bandwidth = sendSideBandwidthEstimation.latestEstimate.bps
 
     override fun getStats(now: Instant): StatisticsSnapshot = StatisticsSnapshot(
         "GoogleCcEstimator",

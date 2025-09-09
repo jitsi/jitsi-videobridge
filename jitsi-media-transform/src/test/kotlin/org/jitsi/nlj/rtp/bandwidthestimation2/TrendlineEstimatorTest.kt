@@ -128,10 +128,7 @@ class TrendlineEstimatorTest : FreeSpec() {
     }
 }
 
-class PacketTimeGenerator(
-    private val initialClock: Long,
-    private val timeBetweenPackets: Double
-) {
+class PacketTimeGenerator(private val initialClock: Long, private val timeBetweenPackets: Double) {
     private var packets = 0
 
     fun get(idx: Int): Long = (initialClock + timeBetweenPackets * idx).toLong()

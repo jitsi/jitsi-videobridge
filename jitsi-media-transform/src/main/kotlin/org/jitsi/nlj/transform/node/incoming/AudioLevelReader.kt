@@ -30,9 +30,7 @@ import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
 /**
  * https://tools.ietf.org/html/rfc6464#section-3
  */
-class AudioLevelReader(
-    streamInformationStore: ReadOnlyStreamInformationStore
-) {
+class AudioLevelReader(streamInformationStore: ReadOnlyStreamInformationStore) {
     /**
      *  Process packets without cryptex pre-SRTP to allow the "skip decryption" optimization if they are to be dropped.
      */
@@ -55,10 +53,7 @@ class AudioLevelReader(
         }
     }
 
-    inner class AudioLevelReaderNode(
-        name: String,
-        val shouldProcess: (PacketInfo) -> Boolean
-    ) : ObserverNode(name) {
+    inner class AudioLevelReaderNode(name: String, val shouldProcess: (PacketInfo) -> Boolean) : ObserverNode(name) {
 
         override fun observe(packetInfo: PacketInfo) {
             if (!shouldProcess(packetInfo)) return

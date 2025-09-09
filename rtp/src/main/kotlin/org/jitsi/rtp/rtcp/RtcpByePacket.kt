@@ -39,11 +39,7 @@ import org.jitsi.rtp.extensions.unsigned.toPositiveLong
  * (opt) |     length    |               reason for leaving            ...
  *       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class RtcpByePacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpPacket(buffer, offset, length) {
+class RtcpByePacket(buffer: ByteArray, offset: Int, length: Int) : RtcpPacket(buffer, offset, length) {
     val ssrcs: List<Long> by lazy {
         val ssrcStartOffset = offset + 4
         (0 until reportCount)

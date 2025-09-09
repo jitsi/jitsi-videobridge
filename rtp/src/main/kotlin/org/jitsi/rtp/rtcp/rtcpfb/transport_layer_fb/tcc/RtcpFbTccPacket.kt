@@ -154,9 +154,7 @@ class RtcpFbTccPacketBuilder(
         return true
     }
 
-    fun BaseTime(): Instant {
-        return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
-    }
+    fun BaseTime(): Instant = Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
 
     private fun AddDeltaSize(deltaSize: DeltaSize): Boolean {
         if (num_seq_no_ == kMaxReportedPackets) {
@@ -288,11 +286,9 @@ class RtcpFbTccPacketBuilder(
     value = ["NM_METHOD_NAMING_CONVENTION"],
     justification = "This class is a port and use the original names."
 )
-class RtcpFbTccPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : TransportLayerRtcpFbPacket(buffer, offset, length), Iterable<PacketReport> {
+class RtcpFbTccPacket(buffer: ByteArray, offset: Int, length: Int) :
+    TransportLayerRtcpFbPacket(buffer, offset, length),
+    Iterable<PacketReport> {
 
     /**
      * Because much of time this packet is one that we built (not one
@@ -429,13 +425,9 @@ class RtcpFbTccPacket(
 
     val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
-    fun GetPacketStatusCount(): Int {
-        return num_seq_no_
-    }
+    fun GetPacketStatusCount(): Int = num_seq_no_
 
-    fun BaseTime(): Instant {
-        return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
-    }
+    fun BaseTime(): Instant = Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
 
     fun GetBaseDelta(prev_timestamp: Instant): Duration {
         var delta = Duration.between(prev_timestamp, BaseTime())

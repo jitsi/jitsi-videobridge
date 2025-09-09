@@ -20,7 +20,7 @@ import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import java.util.concurrent.ConcurrentHashMap
 
-class AudioSubscriptionManager() {
+class AudioSubscriptionManager {
     /**
      * A map of endpoint IDs to their audio subscriptions.
      */
@@ -68,9 +68,7 @@ class AudioSubscriptionManager() {
      * @param sourceName the name of the audio source
      * @return true if the source is explicitly subscribed, false otherwise
      */
-    fun isExplicitlySubscribed(sourceName: String?): Boolean {
-        return subscribedLocalAudioSources.containsKey(sourceName)
-    }
+    fun isExplicitlySubscribed(sourceName: String?): Boolean = subscribedLocalAudioSources.containsKey(sourceName)
 
     /**
      * Updates the subscribed local audio sources for a specific endpoint based on their subscription.

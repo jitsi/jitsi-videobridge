@@ -18,11 +18,7 @@ package org.jitsi.rtp
 
 import org.jitsi.rtp.rtp.RtpPacket
 
-class UnparsedPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : Packet(buffer, offset, length) {
+class UnparsedPacket(buffer: ByteArray, offset: Int, length: Int) : Packet(buffer, offset, length) {
 
     constructor(buffer: ByteArray) : this(buffer, 0, buffer.size)
 

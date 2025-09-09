@@ -936,11 +936,8 @@ class RtpPacketTest : ShouldSpec() {
 }
 
 // This imitates PaddingVideoPacket in jmt
-class PaddingOnlyPacket private constructor(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtpPacket(buffer, offset, length) {
+class PaddingOnlyPacket private constructor(buffer: ByteArray, offset: Int, length: Int) :
+    RtpPacket(buffer, offset, length) {
 
     override fun clone(): PaddingOnlyPacket = throw NotImplementedError("clone() not supported for padding packets.")
 

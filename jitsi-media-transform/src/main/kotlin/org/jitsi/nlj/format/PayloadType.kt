@@ -142,10 +142,8 @@ class H264PayloadType(
     rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
 ) : VideoPayloadType(pt, PayloadTypeEncoding.H264, parameters = parameters, rtcpFeedbackSet = rtcpFeedbackSet)
 
-class RtxPayloadType(
-    pt: Byte,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters) {
+class RtxPayloadType(pt: Byte, parameters: PayloadTypeParams = ConcurrentHashMap()) :
+    VideoPayloadType(pt, PayloadTypeEncoding.RTX, parameters = parameters) {
     val associatedPayloadType: Int =
         parameters["apt"]?.toInt() ?: error("RtxPayloadType must contain 'apt'")
 }
@@ -157,22 +155,14 @@ abstract class AudioPayloadType(
     parameters: PayloadTypeParams = ConcurrentHashMap()
 ) : PayloadType(pt, encoding, MediaType.AUDIO, clockRate, parameters)
 
-class OpusPayloadType(
-    pt: Byte,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, parameters = parameters)
+class OpusPayloadType(pt: Byte, parameters: PayloadTypeParams = ConcurrentHashMap()) :
+    AudioPayloadType(pt, PayloadTypeEncoding.OPUS, parameters = parameters)
 
-class TelephoneEventPayloadType(
-    pt: Byte,
-    clockRate: Int,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.TELEPHONE_EVENT, clockRate, parameters)
+class TelephoneEventPayloadType(pt: Byte, clockRate: Int, parameters: PayloadTypeParams = ConcurrentHashMap()) :
+    AudioPayloadType(pt, PayloadTypeEncoding.TELEPHONE_EVENT, clockRate, parameters)
 
-class AudioRedPayloadType(
-    pt: Byte,
-    clockRate: Int = 48000,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.RED, clockRate, parameters)
+class AudioRedPayloadType(pt: Byte, clockRate: Int = 48000, parameters: PayloadTypeParams = ConcurrentHashMap()) :
+    AudioPayloadType(pt, PayloadTypeEncoding.RED, clockRate, parameters)
 
 class VideoRedPayloadType(
     pt: Byte,
@@ -181,14 +171,8 @@ class VideoRedPayloadType(
     rtcpFeedbackSet: RtcpFeedbackSet = emptySet()
 ) : VideoPayloadType(pt, PayloadTypeEncoding.RED, clockRate, parameters, rtcpFeedbackSet)
 
-class OtherAudioPayloadType(
-    pt: Byte,
-    clockRate: Int,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
+class OtherAudioPayloadType(pt: Byte, clockRate: Int, parameters: PayloadTypeParams = ConcurrentHashMap()) :
+    AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
 
-class OtherVideoPayloadType(
-    pt: Byte,
-    clockRate: Int,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
+class OtherVideoPayloadType(pt: Byte, clockRate: Int, parameters: PayloadTypeParams = ConcurrentHashMap()) :
+    VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)

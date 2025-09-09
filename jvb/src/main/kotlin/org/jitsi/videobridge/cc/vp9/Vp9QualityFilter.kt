@@ -460,11 +460,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             return debugState
         }
 
-    data class AcceptResult(
-        val accept: Boolean,
-        val isResumption: Boolean,
-        val mark: Boolean
-    )
+    data class AcceptResult(val accept: Boolean, val isResumption: Boolean, val mark: Boolean)
 
     companion object {
         /**

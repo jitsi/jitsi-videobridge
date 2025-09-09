@@ -53,11 +53,7 @@ import org.jitsi.rtp.util.isPadding
     value = ["EI_EXPOSE_REP2"],
     justification = "We intentionally pass a reference to our buffer when using observableWhenChanged."
 )
-open class RtpPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : Packet(buffer, offset, length) {
+open class RtpPacket(buffer: ByteArray, offset: Int, length: Int) : Packet(buffer, offset, length) {
 
     constructor(buffer: ByteArray) : this(buffer, 0, buffer.size)
 
@@ -402,13 +398,11 @@ open class RtpPacket(
         this.pendingHeaderExtensions = null
     }
 
-    override fun clone(): RtpPacket {
-        return RtpPacket(
-            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length
-        ).also { postClone(it) }
-    }
+    override fun clone(): RtpPacket = RtpPacket(
+        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length
+    ).also { postClone(it) }
 
     /** Extra operations that need to be done after [clone].  All subclasses overriding [clone]
      * must call this method on the newly-created clone. */

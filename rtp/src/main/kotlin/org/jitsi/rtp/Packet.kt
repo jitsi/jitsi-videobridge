@@ -19,11 +19,9 @@ package org.jitsi.rtp
 import org.jitsi.rtp.extensions.bytearray.hashCodeOfSegment
 import org.jitsi.rtp.util.BufferPool
 
-abstract class Packet(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : ByteArrayBufferImpl(buffer, offset, length), Cloneable {
+abstract class Packet(buffer: ByteArray, offset: Int, length: Int) :
+    ByteArrayBufferImpl(buffer, offset, length),
+    Cloneable {
 
     inline fun <OtherType : Packet> toOtherType(otherTypeCreator: (ByteArray, Int, Int) -> OtherType): OtherType =
         otherTypeCreator(buffer, offset, length)

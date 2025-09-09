@@ -22,9 +22,7 @@ import kotlin.math.roundToLong
 /**
  * Model an amount of data, internally represented as a number of bits.
  */
-class DataSize(
-    bits: Long
-) : Comparable<DataSize> {
+class DataSize(bits: Long) : Comparable<DataSize> {
 
     var bits: Long = bits
         private set
@@ -73,9 +71,7 @@ class DataSize(
 
     override fun hashCode(): Int = bits.hashCode()
 
-    fun toWholeBytes(): DataSize {
-        return (bits / 8.0).roundToLong().bytes
-    }
+    fun toWholeBytes(): DataSize = (bits / 8.0).roundToLong().bytes
 
     companion object {
         val ZERO = DataSize(0)
@@ -108,13 +104,9 @@ val Long.megabytes: DataSize
 /**
  * Returns the maximum of two [DataSize]s
  */
-fun max(a: DataSize, b: DataSize): DataSize {
-    return if (a >= b) a else b
-}
+fun max(a: DataSize, b: DataSize): DataSize = if (a >= b) a else b
 
 /**
  * Returns the minimum of two [DataSize]s
  */
-fun min(a: DataSize, b: DataSize): DataSize {
-    return if (a <= b) a else b
-}
+fun min(a: DataSize, b: DataSize): DataSize = if (a <= b) a else b

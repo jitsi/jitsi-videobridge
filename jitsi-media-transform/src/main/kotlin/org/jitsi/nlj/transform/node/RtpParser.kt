@@ -27,10 +27,8 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 
-class RtpParser(
-    private val streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
-) : TransformerNode("RTP Parser") {
+class RtpParser(private val streamInformationStore: ReadOnlyStreamInformationStore, parentLogger: Logger) :
+    TransformerNode("RTP Parser") {
     private val logger = createChildLogger(parentLogger)
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {

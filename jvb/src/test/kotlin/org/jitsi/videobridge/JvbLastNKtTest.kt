@@ -19,17 +19,18 @@ package org.jitsi.videobridge
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
-class JvbLastNKtTest : ShouldSpec({
-    context("calculateLastN") {
-        should("return the correct result") {
-            calculateLastN(-1, -1) shouldBe -1
-            calculateLastN(-1, 10) shouldBe 10
-            calculateLastN(10, -1) shouldBe 10
-            calculateLastN(2, 3) shouldBe 2
-            calculateLastN(-1, -1, -1) shouldBe -1
-            calculateLastN(-1, 10, -1) shouldBe 10
-            calculateLastN(2, 3, 3) shouldBe 2
-            calculateLastN(2, 3, 33) shouldBe 2
+class JvbLastNKtTest :
+    ShouldSpec({
+        context("calculateLastN") {
+            should("return the correct result") {
+                calculateLastN(-1, -1) shouldBe -1
+                calculateLastN(-1, 10) shouldBe 10
+                calculateLastN(10, -1) shouldBe 10
+                calculateLastN(2, 3) shouldBe 2
+                calculateLastN(-1, -1, -1) shouldBe -1
+                calculateLastN(-1, 10, -1) shouldBe 10
+                calculateLastN(2, 3, 3) shouldBe 2
+                calculateLastN(2, 3, 33) shouldBe 2
+            }
         }
-    }
-})
+    })

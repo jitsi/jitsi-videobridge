@@ -258,9 +258,7 @@ class Vp9Frame internal constructor(
      * belongs to the same RTP stream as the frame that this instance refers to,
      * false otherwise.
      */
-    fun matchesSSRC(vp9Frame: Vp9Frame): Boolean {
-        return ssrc == vp9Frame.ssrc
-    }
+    fun matchesSSRC(vp9Frame: Vp9Frame): Boolean = ssrc == vp9Frame.ssrc
 
     /**
      * Determines whether the [VideoRtpPacket] that is specified as an
@@ -274,9 +272,7 @@ class Vp9Frame internal constructor(
      * argument is part of the VP9 picture that is represented by this
      * [Vp9Frame] instance, false otherwise.
      */
-    private fun matchesSSRC(pkt: VideoRtpPacket): Boolean {
-        return ssrc == pkt.ssrc
-    }
+    private fun matchesSSRC(pkt: VideoRtpPacket): Boolean = ssrc == pkt.ssrc
 
     /**
      * Checks whether the specified RTP packet is part of this frame.
@@ -285,10 +281,8 @@ class Vp9Frame internal constructor(
      * @return true if the specified RTP packet is part of this frame, false
      * otherwise.
      */
-    fun matchesFrame(pkt: Vp9Packet): Boolean {
-        return matchesSSRC(pkt) && timestamp == pkt.timestamp &&
-            spatialLayer == pkt.spatialLayerIndex
-    }
+    fun matchesFrame(pkt: Vp9Packet): Boolean = matchesSSRC(pkt) && timestamp == pkt.timestamp &&
+        spatialLayer == pkt.spatialLayerIndex
 
     /**
      * Validates that the specified RTP packet consistently matches all the

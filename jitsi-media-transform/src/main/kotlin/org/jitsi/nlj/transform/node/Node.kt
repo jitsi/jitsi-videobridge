@@ -43,9 +43,11 @@ import kotlin.properties.Delegates
  * 2) Adding and removing parent nodes
  * 3) Propagating [visit] calls
  */
-sealed class Node(
-    var name: String
-) : PacketHandler, EventHandler, NodeStatsProducer, Stoppable {
+sealed class Node(var name: String) :
+    PacketHandler,
+    EventHandler,
+    NodeStatsProducer,
+    Stoppable {
 
     private var nextNode: Node? = null
     private val inputNodes: MutableList<Node> by lazy { mutableListOf<Node>() }
@@ -396,18 +398,14 @@ abstract class TransformerNode(name: String) : StatsKeepingNode(name) {
         }
     }
 
-    final override fun packetDiscarded(packetInfo: PacketInfo) {
-        throw Exception(
-            "No subclass of TransformerNode should call packetDiscarded, return null from 'transform' instead"
-        )
-    }
+    final override fun packetDiscarded(packetInfo: PacketInfo): Unit = throw Exception(
+        "No subclass of TransformerNode should call packetDiscarded, return null from 'transform' instead"
+    )
 }
 
 /** A [TransformerNode] which gets its transformation function dynamically. */
-class PluggableTransformerNode(
-    name: String,
-    val transform: () -> ((PacketInfo) -> PacketInfo?)?
-) : TransformerNode(name) {
+class PluggableTransformerNode(name: String, val transform: () -> ((PacketInfo) -> PacketInfo?)?) :
+    TransformerNode(name) {
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         transform()?.let { return it.invoke(packetInfo) }
         return packetInfo
@@ -434,23 +432,16 @@ abstract class ModifierNode(name: String) : NeverDiscardNode(name) {
 abstract class FilterNode(name: String) : TransformerNode(name) {
     protected abstract fun accept(packetInfo: PacketInfo): Boolean
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        return if (accept(packetInfo)) {
-            packetInfo
-        } else {
-            null
-        }
+    override fun transform(packetInfo: PacketInfo): PacketInfo? = if (accept(packetInfo)) {
+        packetInfo
+    } else {
+        null
     }
 }
 
 typealias PacketInfoPredicate = Predicate<PacketInfo>
-abstract class PredicateFilterNode(
-    name: String,
-    val predicate: PacketInfoPredicate
-) : FilterNode(name) {
-    override fun accept(packetInfo: PacketInfo): Boolean {
-        return predicate.test(packetInfo)
-    }
+abstract class PredicateFilterNode(name: String, val predicate: PacketInfoPredicate) : FilterNode(name) {
+    override fun accept(packetInfo: PacketInfo): Boolean = predicate.test(packetInfo)
 }
 
 /**

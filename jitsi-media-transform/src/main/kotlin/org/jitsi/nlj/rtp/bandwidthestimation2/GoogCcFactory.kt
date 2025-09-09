@@ -32,9 +32,8 @@ class GoogCcFactoryConfig(
     val rateControlSettings: CongestionWindowConfig = CongestionWindowConfig()
 )
 
-class GoogCcNetworkControllerFactory(
-    private val factoryConfig: GoogCcFactoryConfig = GoogCcFactoryConfig()
-) : NetworkControllerFactoryInterface {
+class GoogCcNetworkControllerFactory(private val factoryConfig: GoogCcFactoryConfig = GoogCcFactoryConfig()) :
+    NetworkControllerFactoryInterface {
     override fun create(config: NetworkControllerConfig): NetworkControllerInterface {
         val googCcConfig = GoogCcConfig(feedbackOnly = factoryConfig.feedbackOnly)
         return GoogCcNetworkController(config, googCcConfig)

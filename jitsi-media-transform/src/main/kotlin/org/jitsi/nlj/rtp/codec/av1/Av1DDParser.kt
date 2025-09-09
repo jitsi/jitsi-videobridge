@@ -35,11 +35,8 @@ import org.jitsi.utils.logging2.createChildLogger
  * descriptions with information from frames, and also diagnoses packet format variants that the Jitsi videobridge
  * won't be able to route.
  */
-class Av1DDParser(
-    source: MediaSourceDesc,
-    parentLogger: Logger,
-    private val diagnosticContext: DiagnosticContext
-) : VideoCodecParser(source) {
+class Av1DDParser(source: MediaSourceDesc, parentLogger: Logger, private val diagnosticContext: DiagnosticContext) :
+    VideoCodecParser(source) {
     private val logger = createChildLogger(parentLogger)
 
     /** History of AV1 templates. */
@@ -173,7 +170,4 @@ class TemplateHistory(minHistory: Int) {
     }
 }
 
-data class Av1DdInfo(
-    val structure: Av1TemplateDependencyStructure,
-    val changed: Boolean
-)
+data class Av1DdInfo(val structure: Av1TemplateDependencyStructure, val changed: Boolean)

@@ -40,11 +40,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
 /** A simulated packet, for bandwidth estimation testing. */
-data class SimulatedPacket(
-    val sendTime: Instant,
-    val packetSize: DataSize,
-    val ssrc: Long
-)
+data class SimulatedPacket(val sendTime: Instant, val packetSize: DataSize, val ssrc: Long)
 
 abstract class FixedRateSender(
     private val executor: ScheduledExecutorService,
@@ -56,8 +52,7 @@ abstract class FixedRateSender(
 
     var running = false
 
-    var rate: Bandwidth by Delegates.observable(0.bps) {
-            _, _, _ ->
+    var rate: Bandwidth by Delegates.observable(0.bps) { _, _, _ ->
         nextPacket?.cancel(false)
         schedulePacket(false)
     }

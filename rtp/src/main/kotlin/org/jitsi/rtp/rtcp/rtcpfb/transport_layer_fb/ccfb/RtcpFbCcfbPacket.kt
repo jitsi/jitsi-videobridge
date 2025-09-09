@@ -63,19 +63,12 @@ enum class EcnMarking(val bits: Byte) {
     }
 }
 
-sealed class PacketInfo(
-    val ssrc: Long = 0,
-    val sequenceNumber: Int = 0
-) {
-    override fun toString(): String {
-        return "ssrc=$ssrc, sequenceNumber=$sequenceNumber"
-    }
+sealed class PacketInfo(val ssrc: Long = 0, val sequenceNumber: Int = 0) {
+    override fun toString(): String = "ssrc=$ssrc, sequenceNumber=$sequenceNumber"
 }
 
 class UnreceivedPacketInfo(ssrc: Long = 0, sequenceNumber: Int = 0) : PacketInfo(ssrc, sequenceNumber) {
-    override fun toString(): String {
-        return "Unreceived: " + super.toString()
-    }
+    override fun toString(): String = "Unreceived: " + super.toString()
 }
 
 class ReceivedPacketInfo(
@@ -84,9 +77,8 @@ class ReceivedPacketInfo(
     val arrivalTimeOffset: Duration = MIN_DURATION,
     val ecn: EcnMarking = EcnMarking.kNotEct
 ) : PacketInfo(ssrc, sequenceNumber) {
-    override fun toString(): String {
-        return "Received: " + super.toString() + ", arrivalTimeOffset=$arrivalTimeOffset, ecn=$ecn"
-    }
+    override fun toString(): String =
+        "Received: " + super.toString() + ", arrivalTimeOffset=$arrivalTimeOffset, ecn=$ecn"
 }
 
 private const val kHeaderPerMediaSsrcLength = 8
@@ -209,13 +201,9 @@ private fun atoToTimeDelta(receiveInfo: Int): Duration {
     return ato.secs / 1024
 }
 
-private fun toEcnMarking(receiveInfo: Int): EcnMarking {
-    return EcnMarking.fromBits(((receiveInfo shr 13) and 0b11).toByte())
-}
+private fun toEcnMarking(receiveInfo: Int): EcnMarking = EcnMarking.fromBits(((receiveInfo shr 13) and 0b11).toByte())
 
-private fun to2BitEcn(ecnMarking: EcnMarking): Int {
-    return ecnMarking.bits.toInt() shl 13
-}
+private fun to2BitEcn(ecnMarking: EcnMarking): Int = ecnMarking.bits.toInt() shl 13
 
 /*
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -245,11 +233,8 @@ private fun to2BitEcn(ecnMarking: EcnMarking): Int {
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-class RtcpFbCcfbPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : TransportLayerRtcpFbPacket(buffer, offset, length) {
+class RtcpFbCcfbPacket(buffer: ByteArray, offset: Int, length: Int) :
+    TransportLayerRtcpFbPacket(buffer, offset, length) {
     /**
      * Because much of time this packet is one that we built (not one
      * that came in from the network) we don't care about re-parsing all
@@ -258,10 +243,7 @@ class RtcpFbCcfbPacket(
      * if we access them (which we do for packets that are received from
      * the network but not for ones we send out).
      */
-    private data class CcfbData(
-        val packets: List<PacketInfo>,
-        val reportTimestampCompactNtp: Long
-    )
+    private data class CcfbData(val packets: List<PacketInfo>, val reportTimestampCompactNtp: Long)
 
     private val data: CcfbData by lazy(LazyThreadSafetyMode.NONE) {
         val packets = mutableListOf<PacketInfo>()

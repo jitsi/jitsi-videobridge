@@ -69,9 +69,7 @@ class Vp8Packet private constructor(
         /** This uses [get] rather than initialization because [isMarked] is a var. */
         get() = isMarked
 
-    override fun meetsRoutingNeeds(): Boolean {
-        return hasPictureId && hasTemporalLayerIndex
-    }
+    override fun meetsRoutingNeeds(): Boolean = hasPictureId && hasTemporalLayerIndex
 
     val hasTemporalLayerIndex =
         DePacketizer.VP8PayloadDescriptor.hasTemporalLayerIndex(buffer, payloadOffset, payloadLength)
@@ -151,23 +149,19 @@ class Vp8Packet private constructor(
             return "type=Vp8Packet len=$vp8PayloadLength hashCode=$hashCode"
         }
 
-    override fun toString(): String {
-        return super.toString() + ", TID=$temporalLayerIndex"
-    }
+    override fun toString(): String = super.toString() + ", TID=$temporalLayerIndex"
 
-    override fun clone(): Vp8Packet {
-        return Vp8Packet(
-            cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
-            BYTES_TO_LEAVE_AT_START_OF_PACKET,
-            length,
-            isKeyframe = isKeyframe,
-            isStartOfFrame = isStartOfFrame,
-            encodingId = encodingId,
-            height = height,
-            pictureId = pictureId,
-            TL0PICIDX = TL0PICIDX
-        ).also { postClone(it) }
-    }
+    override fun clone(): Vp8Packet = Vp8Packet(
+        cloneBuffer(BYTES_TO_LEAVE_AT_START_OF_PACKET),
+        BYTES_TO_LEAVE_AT_START_OF_PACKET,
+        length,
+        isKeyframe = isKeyframe,
+        isStartOfFrame = isStartOfFrame,
+        encodingId = encodingId,
+        height = height,
+        pictureId = pictureId,
+        TL0PICIDX = TL0PICIDX
+    ).also { postClone(it) }
 
     companion object {
         private val logger = createLogger()

@@ -56,8 +56,7 @@ class RemoteBandwidthEstimator(
     /**
      * The remote bandwidth estimation is enabled when REMB support is signaled, but TCC is not signaled.
      */
-    private var enabled: Boolean by observableWhenChanged(false) {
-            _, _, newValue ->
+    private var enabled: Boolean by observableWhenChanged(false) { _, _, newValue ->
         logger.debug { "Setting enabled=$newValue." }
     }
     private var astExtId: Int? = null

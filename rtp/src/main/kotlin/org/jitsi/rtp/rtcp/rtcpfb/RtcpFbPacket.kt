@@ -47,11 +47,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
  *    Note that an RTCP FB packet re-interprets the standard report count
  *    (RC) field of the RTCP header as a FMT field
  */
-abstract class RtcpFbPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpPacket(buffer, offset, length) {
+abstract class RtcpFbPacket(buffer: ByteArray, offset: Int, length: Int) : RtcpPacket(buffer, offset, length) {
 
     var mediaSourceSsrc: Long
         get() = getMediaSourceSsrc(buffer, offset)

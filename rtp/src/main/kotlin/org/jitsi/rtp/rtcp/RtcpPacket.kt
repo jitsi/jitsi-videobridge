@@ -38,11 +38,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
  *   scanning a compound RTCP packet, while counting 32-bit words
  *   avoids a validity check for a multiple of 4.)
  */
-abstract class RtcpPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : Packet(buffer, offset, length) {
+abstract class RtcpPacket(buffer: ByteArray, offset: Int, length: Int) : Packet(buffer, offset, length) {
 
     var version: Int
         get() = RtcpHeader.getVersion(buffer, offset)

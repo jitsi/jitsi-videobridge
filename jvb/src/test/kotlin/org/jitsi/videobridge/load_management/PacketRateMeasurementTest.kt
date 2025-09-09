@@ -20,19 +20,20 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 
-class PacketRateMeasurementTest : ShouldSpec({
-    context("division") {
-        context("between two PacketRateMeasurements") {
-            should("yield the correct result") {
-                PacketRateMeasurement(10) / PacketRateMeasurement(2) shouldBe 5.0
+class PacketRateMeasurementTest :
+    ShouldSpec({
+        context("division") {
+            context("between two PacketRateMeasurements") {
+                should("yield the correct result") {
+                    PacketRateMeasurement(10) / PacketRateMeasurement(2) shouldBe 5.0
+                }
             }
-        }
-        context("between a PacketRateMeasurement and another measurement type") {
-            should("throw an exception") {
-                shouldThrow<UnsupportedOperationException> {
-                    PacketRateMeasurement(10) / MockLoadMeasurement(1.1)
+            context("between a PacketRateMeasurement and another measurement type") {
+                should("throw an exception") {
+                    shouldThrow<UnsupportedOperationException> {
+                        PacketRateMeasurement(10) / MockLoadMeasurement(1.1)
+                    }
                 }
             }
         }
-    }
-})
+    })

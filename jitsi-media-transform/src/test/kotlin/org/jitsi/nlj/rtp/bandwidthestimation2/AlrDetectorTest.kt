@@ -30,14 +30,9 @@ import io.kotest.matchers.shouldNotBe
 
 const val kEstimatedBitrateBps = 300000
 
-data class TimestampHolder(
-    var time: Long
-)
+data class TimestampHolder(var time: Long)
 
-class SimulateOutgoingTrafficIn(
-    val alrDetector: AlrDetector,
-    var timestampMs: TimestampHolder
-) {
+class SimulateOutgoingTrafficIn(val alrDetector: AlrDetector, var timestampMs: TimestampHolder) {
     fun forTimeMs(timeMs: Int): SimulateOutgoingTrafficIn {
         intervalMs = timeMs
         produceTraffic()

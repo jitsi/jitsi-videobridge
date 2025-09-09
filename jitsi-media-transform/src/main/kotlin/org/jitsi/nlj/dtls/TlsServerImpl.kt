@@ -100,23 +100,19 @@ class TlsServerImpl(
 
     override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
 
-    override fun getRSAEncryptionCredentials(): TlsCredentialedDecryptor {
-        return BcDefaultTlsCredentialedDecryptor(
-            (context.crypto as BcTlsCrypto),
-            certificateInfo.certificate,
-            PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded)
-        )
-    }
+    override fun getRSAEncryptionCredentials(): TlsCredentialedDecryptor = BcDefaultTlsCredentialedDecryptor(
+        (context.crypto as BcTlsCrypto),
+        certificateInfo.certificate,
+        PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded)
+    )
 
-    override fun getECDSASignerCredentials(): TlsCredentialedSigner {
-        return BcDefaultTlsCredentialedSigner(
-            TlsCryptoParameters(context),
-            (context.crypto as BcTlsCrypto),
-            PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
-            certificateInfo.certificate,
-            SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa)
-        )
-    }
+    override fun getECDSASignerCredentials(): TlsCredentialedSigner = BcDefaultTlsCredentialedSigner(
+        TlsCryptoParameters(context),
+        (context.crypto as BcTlsCrypto),
+        PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
+        certificateInfo.certificate,
+        SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa)
+    )
 
     override fun getCertificateRequest(): CertificateRequest {
         val signatureAlgorithms = Vector<SignatureAndHashAlgorithm>(1)

@@ -31,10 +31,8 @@ import kotlin.math.min
  * Based on WebRTC modules/congestion_controller/goog_cc/trendline_estimator.{h,cc} in
  * WebRTC tag branch-heads/7204 (Chromium 138).
  */
-class TrendlineEstimator(
-    parentLogger: Logger,
-    private val diagnosticContext: DiagnosticContext
-) : DelayIncreaseDetectorInterface {
+class TrendlineEstimator(parentLogger: Logger, private val diagnosticContext: DiagnosticContext) :
+    DelayIncreaseDetectorInterface {
     private val settings = TrendlineEstimatorSettings()
 
     // Parameters
@@ -237,7 +235,7 @@ class TrendlineEstimator(
 }
 
 /* TODO: this class is redundant if we don't have field trial settings - remove it? */
-private class TrendlineEstimatorSettings() {
+private class TrendlineEstimatorSettings {
     // Sort the packets in the window. Should be redundant,
     // but then almost no cost.
     val enableSort = false
@@ -257,11 +255,7 @@ private class TrendlineEstimatorSettings() {
     }
 }
 
-private data class PacketTiming(
-    val arrivalTimeMs: Double,
-    val smoothedDelayMs: Double,
-    val rawDelayMs: Double
-)
+private data class PacketTiming(val arrivalTimeMs: Double, val smoothedDelayMs: Double, val rawDelayMs: Double)
 
 private fun linearFitSlope(packets: ArrayDeque<PacketTiming>): Double? {
     check(packets.size >= 2)

@@ -118,9 +118,7 @@ internal constructor(
         created = null
     )
 
-    fun rewriteSeqNo(seq: Int): Int {
-        return applySequenceNumberDelta(seq, sequenceNumberDelta)
-    }
+    fun rewriteSeqNo(seq: Int): Int = applySequenceNumberDelta(seq, sequenceNumberDelta)
 
     /**
      * Rewrites an RTP packet.

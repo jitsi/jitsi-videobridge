@@ -50,10 +50,10 @@ class PacketCache(
 
     private var stopped = false
 
-    private fun getCache(ssrc: Long): RtpPacketCache {
-        return packetCaches.computeIfAbsent(ssrc) { RtpPacketCache(size) }.also { it.setLastAccess() }
-            .also { expireCaches(it.lastAccessMillis) }
-    }
+    private fun getCache(ssrc: Long): RtpPacketCache = packetCaches.computeIfAbsent(ssrc) {
+        RtpPacketCache(size)
+    }.also { it.setLastAccess() }
+        .also { expireCaches(it.lastAccessMillis) }
 
     private fun expireCaches(now: Long) {
         synchronized(packetCaches) {
@@ -116,14 +116,12 @@ class PacketCache(
 /**
  * Implements a cache for RTP packets.
  */
-class RtpPacketCache(
-    size: Int,
-    synchronize: Boolean = true
-) : ArrayCache<RtpPacket>(
-    size = size,
-    cloneItem = RtpPacket::clone,
-    synchronize = synchronize
-) {
+class RtpPacketCache(size: Int, synchronize: Boolean = true) :
+    ArrayCache<RtpPacket>(
+        size = size,
+        cloneItem = RtpPacket::clone,
+        synchronize = synchronize
+    ) {
     var lastAccessMillis: Long = 0
         private set
 
@@ -153,9 +151,7 @@ class RtpPacketCache(
     /**
      * Gets a packet with a given RTP sequence number from the cache (clones the packet).
      */
-    fun get(sequenceNumber: Int): Container? {
-        return doGet(sequenceNumber, true)
-    }
+    fun get(sequenceNumber: Int): Container? = doGet(sequenceNumber, true)
 
     fun doGet(sequenceNumber: Int, shouldCloneItem: Boolean): Container? {
         // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests
@@ -169,9 +165,7 @@ class RtpPacketCache(
     /**
      * Gets a packet with a given RTP sequence number from the cache (does not clone the packet).
      */
-    fun peek(sequenceNumber: Int): Container? {
-        return doGet(sequenceNumber, false)
-    }
+    fun peek(sequenceNumber: Int): Container? = doGet(sequenceNumber, false)
 
     fun contains(sequenceNumber: Int): Boolean {
         // Note that we use [interpret] because we don't want the ROC to get out of sync because of funny requests

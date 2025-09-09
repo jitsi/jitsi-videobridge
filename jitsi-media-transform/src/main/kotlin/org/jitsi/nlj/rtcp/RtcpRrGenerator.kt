@@ -45,13 +45,11 @@ private data class SenderInfo(
 ) {
     private fun hasReceivedSr(): Boolean = lastSrReceivedTime != null
 
-    fun getDelaySinceLastSr(now: Instant): Long {
-        return if (hasReceivedSr()) {
-            // This value is in 1/65536 of a second, so multiplying by 65536 gives us the value
-            Duration.between(lastSrReceivedTime, now).times(65536).seconds
-        } else {
-            0
-        }
+    fun getDelaySinceLastSr(now: Instant): Long = if (hasReceivedSr()) {
+        // This value is in 1/65536 of a second, so multiplying by 65536 gives us the value
+        Duration.between(lastSrReceivedTime, now).times(65536).seconds
+    } else {
+        0
     }
 }
 

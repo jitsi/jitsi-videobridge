@@ -503,19 +503,14 @@ class IceTransport @JvmOverloads constructor(
  * Models a transition from one ICE state to another and provides convenience
  * functions to test the transition.
  */
-private data class IceProcessingStateTransition(
-    val oldState: IceProcessingState,
-    val newState: IceProcessingState
-) {
+private data class IceProcessingStateTransition(val oldState: IceProcessingState, val newState: IceProcessingState) {
     // We should be using newState.isEstablished() here, but we see
     // transitions from RUNNING to TERMINATED, which can happen if the Agent is
     // free prior to being started, so we handle that case separately below.
     fun completed(): Boolean = newState == IceProcessingState.COMPLETED
 
-    fun failed(): Boolean {
-        return newState == IceProcessingState.FAILED ||
-            (oldState == IceProcessingState.RUNNING && newState == IceProcessingState.TERMINATED)
-    }
+    fun failed(): Boolean = newState == IceProcessingState.FAILED ||
+        (oldState == IceProcessingState.RUNNING && newState == IceProcessingState.TERMINATED)
 }
 
 private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean = remoteUfrag != null && remotePassword != null

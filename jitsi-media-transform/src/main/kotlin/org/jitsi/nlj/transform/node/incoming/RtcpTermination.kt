@@ -38,10 +38,8 @@ import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
 
-class RtcpTermination(
-    private val rtcpEventNotifier: RtcpEventNotifier,
-    parentLogger: Logger
-) : TransformerNode("RTCP termination") {
+class RtcpTermination(private val rtcpEventNotifier: RtcpEventNotifier, parentLogger: Logger) :
+    TransformerNode("RTCP termination") {
     private val logger = createChildLogger(parentLogger)
     private var packetReceiveCounts = mutableMapOf<String, Int>()
 
@@ -125,13 +123,11 @@ class RtcpTermination(
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            packetReceiveCounts.forEach { (type, count) ->
-                addNumber("num_${type}_rx", count)
-            }
-            addNumber("num_failed_to_forward", numFailedToForward)
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        packetReceiveCounts.forEach { (type, count) ->
+            addNumber("num_${type}_rx", count)
         }
+        addNumber("num_failed_to_forward", numFailedToForward)
     }
 
     override fun statsJson() = super.statsJson().apply {

@@ -52,10 +52,7 @@ import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
 import org.jivesoftware.smackx.muc.MUCRole
 
-class Colibri2ConferenceHandler(
-    private val conference: Conference,
-    parentLogger: Logger
-) {
+class Colibri2ConferenceHandler(private val conference: Conference, parentLogger: Logger) {
     private val logger = createChildLogger(parentLogger)
 
     /**

@@ -65,8 +65,7 @@ class TccGeneratorNode(
     private val tccFeedbackBitrate = BitrateTracker(1.secs, 10.ms)
     private var numTccSent: Int = 0
     private var numMultipleTccPackets = 0
-    private var enabled: Boolean by observableWhenChanged(false) {
-            _, _, newValue ->
+    private var enabled: Boolean by observableWhenChanged(false) { _, _, newValue ->
         logger.debug("Setting enabled=$newValue")
     }
     private val rtpSequenceIndexTracker = RtpSequenceIndexTracker()
@@ -240,14 +239,12 @@ class TccGeneratorNode(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("num_tcc_packets_sent", numTccSent)
-            addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate.bps)
-            addString("tcc_extension_id", tccExtensionId.toString())
-            addNumber("num_multiple_tcc_packets", numMultipleTccPackets)
-            addBoolean("enabled", enabled)
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("num_tcc_packets_sent", numTccSent)
+        addNumber("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate.bps)
+        addString("tcc_extension_id", tccExtensionId.toString())
+        addNumber("num_multiple_tcc_packets", numMultipleTccPackets)
+        addBoolean("enabled", enabled)
     }
 
     override fun statsJson() = super.statsJson().apply {

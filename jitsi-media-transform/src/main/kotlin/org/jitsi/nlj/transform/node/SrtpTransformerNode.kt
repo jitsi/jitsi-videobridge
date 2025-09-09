@@ -121,22 +121,20 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("num_cached_packets", numCachedPackets)
-            if (firstPacketReceivedTimestamp != -1L && firstPacketForwardedTimestamp != -1L) {
-                val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
-                addNumber("time_initial_hold_ms", timeBetweenReceivedAndForwarded)
-            } else {
-                addString("state", "hold_for_transformer")
-            }
-            addNumber("num_srtp_processed", numSrtpProcessed)
-            addNumber("num_srtp_fail", numSrtpFail)
-            addNumber("num_srtp_auth_fail", numSrtpAuthFail)
-            addNumber("num_srtp_replay_fail", numSrtpReplayFail)
-            addNumber("num_srtp_replay_old", numSrtpReplayOld)
-            addNumber("num_srtp_invalid_packet", numSrtpInvalidPacket)
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("num_cached_packets", numCachedPackets)
+        if (firstPacketReceivedTimestamp != -1L && firstPacketForwardedTimestamp != -1L) {
+            val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
+            addNumber("time_initial_hold_ms", timeBetweenReceivedAndForwarded)
+        } else {
+            addString("state", "hold_for_transformer")
         }
+        addNumber("num_srtp_processed", numSrtpProcessed)
+        addNumber("num_srtp_fail", numSrtpFail)
+        addNumber("num_srtp_auth_fail", numSrtpAuthFail)
+        addNumber("num_srtp_replay_fail", numSrtpReplayFail)
+        addNumber("num_srtp_replay_old", numSrtpReplayOld)
+        addNumber("num_srtp_invalid_packet", numSrtpInvalidPacket)
     }
 
     override fun statsJson() = super.statsJson().apply {

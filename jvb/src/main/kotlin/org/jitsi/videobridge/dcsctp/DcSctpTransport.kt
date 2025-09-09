@@ -37,10 +37,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
-class DcSctpTransport(
-    val name: String,
-    parentLogger: Logger
-) {
+class DcSctpTransport(val name: String, parentLogger: Logger) {
     val logger = createChildLogger(parentLogger)
     private val lock = Any()
     private var socket: DcSctpSocketInterface? = null
@@ -138,22 +135,14 @@ class DcSctpTransport(
     }
 }
 
-abstract class DcSctpBaseCallbacks(
-    val transport: DcSctpTransport,
-    val clock: Clock = Clock.systemUTC()
-) : DcSctpSocketCallbacks {
+abstract class DcSctpBaseCallbacks(val transport: DcSctpTransport, val clock: Clock = Clock.systemUTC()) :
+    DcSctpSocketCallbacks {
     /* Methods we can usefully implement for every JVB socket */
-    override fun createTimeout(p0: DcSctpSocketCallbacks.DelayPrecision): Timeout {
-        return ATimeout(transport)
-    }
+    override fun createTimeout(p0: DcSctpSocketCallbacks.DelayPrecision): Timeout = ATimeout(transport)
 
-    override fun Now(): Instant {
-        return clock.instant()
-    }
+    override fun Now(): Instant = clock.instant()
 
-    override fun getRandomInt(low: Long, high: Long): Long {
-        return ThreadLocalRandom.current().nextLong(low, high)
-    }
+    override fun getRandomInt(low: Long, high: Long): Long = ThreadLocalRandom.current().nextLong(low, high)
 
     /* Methods we wouldn't normally expect to be called for a JVB SCTP socket. */
     override fun OnConnectionRestarted() {

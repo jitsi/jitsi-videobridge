@@ -18,11 +18,8 @@ package org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb
 
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 
-abstract class PayloadSpecificRtcpFbPacket(
-    buffer: ByteArray,
-    offset: Int,
-    length: Int
-) : RtcpFbPacket(buffer, offset, length) {
+abstract class PayloadSpecificRtcpFbPacket(buffer: ByteArray, offset: Int, length: Int) :
+    RtcpFbPacket(buffer, offset, length) {
 
     companion object {
         const val PT = 206

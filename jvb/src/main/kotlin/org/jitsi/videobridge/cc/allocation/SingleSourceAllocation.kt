@@ -197,14 +197,12 @@ internal class SingleSourceAllocation(
             layers.idealLayer?.layer
         )
 
-    override fun toString(): String {
-        return (
-            "[id=" + endpointId +
-                " constraints=" + constraints +
-                " ratedPreferredIdx=" + layers.preferredIndex +
-                " ratedTargetIdx=" + targetIdx
-            )
-    }
+    override fun toString(): String = (
+        "[id=" + endpointId +
+            " constraints=" + constraints +
+            " ratedPreferredIdx=" + layers.preferredIndex +
+            " ratedTargetIdx=" + targetIdx
+        )
 
     /**
      * Selects from a list of layers the ones which should be considered when allocating bandwidth, as well as the
@@ -363,10 +361,9 @@ private fun <T> List<T>.lastIndexWhich(predicate: (T) -> Boolean): Int {
  * consider frame rates at least as high as the preferred. In practice this means we consider
  * 180p/7.5fps, 180p/15fps, 180p/30fps, 360p/30fps and 720p/30fps.
  */
-private fun getPreferred(constraints: VideoConstraints): VideoConstraints {
-    return if (constraints.maxHeight > 180 || !constraints.heightIsLimited()) {
+private fun getPreferred(constraints: VideoConstraints): VideoConstraints =
+    if (constraints.maxHeight > 180 || !constraints.heightIsLimited()) {
         VideoConstraints(config.onstagePreferredHeightPx, config.onstagePreferredFramerate)
     } else {
         VideoConstraints.UNLIMITED
     }
-}

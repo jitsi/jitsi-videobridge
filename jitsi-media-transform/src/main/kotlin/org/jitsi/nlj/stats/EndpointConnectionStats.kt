@@ -45,10 +45,7 @@ private data class SsrcAndTimestamp(val ssrc: Long, val timestamp: Long)
 /**
  * Tracks stats which are not necessarily tied to send or receive but the endpoint overall
  */
-class EndpointConnectionStats(
-    parentLogger: Logger,
-    private val clock: Clock = Clock.systemUTC()
-) : RtcpListener {
+class EndpointConnectionStats(parentLogger: Logger, private val clock: Clock = Clock.systemUTC()) : RtcpListener {
     interface EndpointConnectionStatsListener {
         fun onRttUpdate(newRttMs: Double)
     }
@@ -90,14 +87,12 @@ class EndpointConnectionStats(
         endpointConnectionStatsListeners.remove(listener)
     }
 
-    fun getSnapshot(): Snapshot {
-        return synchronized(lock) {
-            Snapshot(
-                rtt = rtt,
-                incomingLossStats = incomingLossTracker.getSnapshot(),
-                outgoingLossStats = outgoingLossTracker.getSnapshot()
-            )
-        }
+    fun getSnapshot(): Snapshot = synchronized(lock) {
+        Snapshot(
+            rtt = rtt,
+            incomingLossStats = incomingLossTracker.getSnapshot(),
+            outgoingLossStats = outgoingLossTracker.getSnapshot()
+        )
     }
 
     override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {

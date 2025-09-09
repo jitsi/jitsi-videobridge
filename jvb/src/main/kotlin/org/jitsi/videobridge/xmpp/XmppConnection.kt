@@ -168,9 +168,7 @@ class XmppConnection : IQListener {
      * Returns ids of [MucClient] that have been added.
      * @return JSON string of the list of ids
      */
-    fun getMucClientIds(): String {
-        return JSONArray().apply { addAll(mucClientManager.mucClientIds) }.toJSONString()
-    }
+    fun getMucClientIds(): String = JSONArray().apply { addAll(mucClientManager.mucClientIds) }.toJSONString()
 
     /**
      * Removes a {@link MucClient} with an ID described in JSON.

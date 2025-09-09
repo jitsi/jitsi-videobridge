@@ -104,11 +104,7 @@ class VlaExtension {
         }
     }
 
-    data class ResolutionAndFrameRate(
-        val width: Int,
-        val height: Int,
-        val maxFramerate: Int
-    )
+    data class ResolutionAndFrameRate(val width: Int, val height: Int, val maxFramerate: Int)
 
     data class SpatialLayer(
         val id: Int,
@@ -120,10 +116,7 @@ class VlaExtension {
             "width=${res?.width}, height=${res?.height}, maxFramerate=${res?.maxFramerate})"
     }
 
-    data class Stream(
-        val id: Int,
-        val spatialLayers: List<SpatialLayer>
-    )
+    data class Stream(val id: Int, val spatialLayers: List<SpatialLayer>)
 }
 
 typealias ParsedVla = List<Stream>

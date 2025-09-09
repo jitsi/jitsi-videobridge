@@ -515,16 +515,14 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
     /**
      * {@inheritDoc}
      */
-    override fun toString(): String {
-        return "SSRCs: received=" +
-            receivedSsrcs.entries.joinToString(", ", "[", "]") {
-                "(${it.key}->${it.value})"
-            } +
-            " mappings=" +
-            sendSources.entries.joinToString(", ", "[", "]") {
-                "(${it.key}->${it.value})"
-            }
-    }
+    override fun toString(): String = "SSRCs: received=" +
+        receivedSsrcs.entries.joinToString(", ", "[", "]") {
+            "(${it.key}->${it.value})"
+        } +
+        " mappings=" +
+        sendSources.entries.joinToString(", ", "[", "]") {
+            "(${it.key}->${it.value})"
+        }
 }
 
 /**
@@ -738,13 +736,11 @@ private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int)
     override fun toString() = "[AV1DD FrameNum]$frameNumDelta [Av1DD templateId]$templateIdDelta"
 }
 
-private fun RtpPacket.getCodecState(): CodecState? {
-    return when {
-        this is Vp8Packet && isRewritable() -> Vp8CodecState(this)
-        this is Vp9Packet -> Vp9CodecState(this)
-        this is Av1DDPacket -> Av1DDCodecState(this)
-        else -> null
-    }
+private fun RtpPacket.getCodecState(): CodecState? = when {
+    this is Vp8Packet && isRewritable() -> Vp8CodecState(this)
+    this is Vp9Packet -> Vp9CodecState(this)
+    this is Av1DDPacket -> Av1DDCodecState(this)
+    else -> null
 }
 
 private fun Vp8Packet.isRewritable(): Boolean = hasTL0PICIDX

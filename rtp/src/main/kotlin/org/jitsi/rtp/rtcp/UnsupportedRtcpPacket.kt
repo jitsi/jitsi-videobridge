@@ -20,10 +20,7 @@ package org.jitsi.rtp.rtcp
  * Represents an RTCP packet whose packet types falls in the valid range
  * (according to the spec), but isn't currently implemented/supported.
  */
-class UnsupportedRtcpPacket(
-    buf: ByteArray,
-    offset: Int,
-    packetLengthBytes: Int
-) : RtcpPacket(buf, offset, packetLengthBytes) {
+class UnsupportedRtcpPacket(buf: ByteArray, offset: Int, packetLengthBytes: Int) :
+    RtcpPacket(buf, offset, packetLengthBytes) {
     override fun clone(): UnsupportedRtcpPacket = UnsupportedRtcpPacket(cloneBuffer(0), 0, length)
 }

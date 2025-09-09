@@ -38,17 +38,12 @@ class LossTracker : LossListener {
     }
 
     @Synchronized
-    fun getSnapshot(): Snapshot {
-        return Snapshot(
-            lostPackets.getAccumulatedCount(),
-            receivedPackets.getAccumulatedCount()
-        )
-    }
+    fun getSnapshot(): Snapshot = Snapshot(
+        lostPackets.getAccumulatedCount(),
+        receivedPackets.getAccumulatedCount()
+    )
 
-    data class Snapshot(
-        val packetsLost: Long,
-        val packetsReceived: Long
-    ) {
+    data class Snapshot(val packetsLost: Long, val packetsReceived: Long) {
         fun toJson() = OrderedJsonObject().apply {
             put("packets_lost", packetsLost)
             put("packets_received", packetsReceived)

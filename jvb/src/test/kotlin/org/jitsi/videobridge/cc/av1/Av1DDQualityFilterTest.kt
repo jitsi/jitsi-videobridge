@@ -774,65 +774,71 @@ private open class DDBasedGenerator(
 }
 
 /** Generate a non-scalable AV1 stream, with a single keyframe at the start. */
-private class SingleLayerFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
-    av1FrameMaps,
-    10000,
-    arrayOf(0),
-    arrayOf(1),
-    "80000180003a410180ef808680"
-)
+private class SingleLayerFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) :
+    DDBasedGenerator(
+        av1FrameMaps,
+        10000,
+        arrayOf(0),
+        arrayOf(1),
+        "80000180003a410180ef808680"
+    )
 
 /** Generate a temporally-scaled series of AV1 frames, with a single keyframe at the start. */
-private class TemporallyScaledFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
-    av1FrameMaps,
-    10000,
-    arrayOf(0),
-    arrayOf(1, 3, 2, 4),
-    "800001800214eaa860414d141020842701df010d"
-)
+private class TemporallyScaledFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) :
+    DDBasedGenerator(
+        av1FrameMaps,
+        10000,
+        arrayOf(0),
+        arrayOf(1, 3, 2, 4),
+        "800001800214eaa860414d141020842701df010d"
+    )
 
 /** Generate a spatially-scaled series of AV1 frames (L3T3), with full spatial dependencies and periodic keyframes. */
-private class SVCFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
-    av1FrameMaps,
-    144,
-    arrayOf(1, 6, 11),
-    arrayOf(0, 5, 10, 3, 8, 13, 2, 7, 12, 4, 9, 14),
-    "d0013481e81485214eafffaaaa863cf0430c10c302afc0aaa0063c00430010c002a000a800060000" +
-        "40001d954926e082b04a0941b820ac1282503157f974000ca864330e222222eca8655304224230ec" +
-        "a87753013f00b3027f016704ff02cf"
-)
+private class SVCFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) :
+    DDBasedGenerator(
+        av1FrameMaps,
+        144,
+        arrayOf(1, 6, 11),
+        arrayOf(0, 5, 10, 3, 8, 13, 2, 7, 12, 4, 9, 14),
+        "d0013481e81485214eafffaaaa863cf0430c10c302afc0aaa0063c00430010c002a000a800060000" +
+            "40001d954926e082b04a0941b820ac1282503157f974000ca864330e222222eca8655304224230ec" +
+            "a87753013f00b3027f016704ff02cf"
+    )
 
 /** Generate a spatially-scaled series of AV1 frames (L3T3), with keyframe spatial dependencies and periodic
  *  keyframes. */
-private class KSVCFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
-    av1FrameMaps,
-    144,
-    arrayOf(0, 5, 10),
-    arrayOf(1, 6, 11, 3, 8, 13, 2, 7, 12, 4, 9, 14),
-    "8f008581e81485214eaaaaa8000600004000100002aa80a8000600004000100002a000a80006000040" +
-        "0016d549241b5524906d54923157e001974ca864330e222396eca8655304224390eca87753013f00b3027f016704ff02cf"
-)
+private class KSVCFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) :
+    DDBasedGenerator(
+        av1FrameMaps,
+        144,
+        arrayOf(0, 5, 10),
+        arrayOf(1, 6, 11, 3, 8, 13, 2, 7, 12, 4, 9, 14),
+        "8f008581e81485214eaaaaa8000600004000100002aa80a8000600004000100002a000a80006000040" +
+            "0016d549241b5524906d54923157e001974ca864330e222396eca8655304224390eca87753013f00b3027f016704ff02cf"
+    )
 
 /** Generate a spatially-scaled series of AV1 frames (L2T2), with keyframe spatial dependencies and periodic
  *  keyframes, with temporal structures shifted. */
 /* Note that as of Chrome 111, L3T3_KEY_SHIFT is not supported yet, so we're testing L2T2_KEY_SHIFT instead. */
-private class KSVCShiftFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
-    av1FrameMaps,
-    144,
-    arrayOf(0, 4, 1),
-    arrayOf(2, 6, 3, 5),
-    "8700ed80e3061eaa82804028280514d14134518010a091889a09409fc059c13fc0b3c0"
-)
+private class KSVCShiftFrameGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) :
+    DDBasedGenerator(
+        av1FrameMaps,
+        144,
+        arrayOf(0, 4, 1),
+        arrayOf(2, 6, 3, 5),
+        "8700ed80e3061eaa82804028280514d14134518010a091889a09409fc059c13fc0b3c0"
+    )
 
 /** Generate a single-stream temporally-scaled simulcast (S3T3) series of AV1 frames, with periodic keyframes. */
-private class SingleEncodingSimulcastGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : DDBasedGenerator(
-    av1FrameMaps,
-    144,
-    arrayOf(1, 6, 11),
-    arrayOf(0, 5, 10, 3, 8, 13, 2, 7, 12, 4, 9, 14),
-    "c1000180081485214ea000a8000600004000100002a000a8000600004000100002a000a8000600004" +
-        "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434"
-) {
+private class SingleEncodingSimulcastGenerator(av1FrameMaps: HashMap<Long, Av1DDFrameMap>) :
+    DDBasedGenerator(
+        av1FrameMaps,
+        144,
+        arrayOf(1, 6, 11),
+        arrayOf(0, 5, 10, 3, 8, 13, 2, 7, 12, 4, 9, 14),
+        "c1000180081485214ea000a8000600004000100002a000a8000600004000100002a000a8000600004" +
+            "0001d954926caa493655248c55fe5d00032a190cc38e58803b2a1954c10e10843b2a1dd4c01dc010803bc0218077c0434"
+    ) {
     // All frames of the initial picture get the DD structure attached
     override fun isKeyframe(keyCycle: Int) = keyCycle < keyframeTemplates.size
 }

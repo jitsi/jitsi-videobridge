@@ -23,10 +23,8 @@ import org.jitsi.rtp.rtp.header_extensions.OneByteHeaderExtensionParser
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
-class HeaderExtEncoder(
-    streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger
-) : ModifierNode("Header extension encoder") {
+class HeaderExtEncoder(streamInformationStore: ReadOnlyStreamInformationStore, parentLogger: Logger) :
+    ModifierNode("Header extension encoder") {
     private val logger = createChildLogger(parentLogger)
     private var extmapAllowMixed = false
 

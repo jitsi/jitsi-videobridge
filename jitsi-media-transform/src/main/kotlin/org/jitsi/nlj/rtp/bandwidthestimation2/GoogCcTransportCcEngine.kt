@@ -356,12 +356,10 @@ class GoogCcTransportCcEngine(
         val transportAdapterState: TransportFeedbackAdapter.StatisticsSnapshot,
         val networkControllerState: GoogCcNetworkController.StatisticsSnapshot
     ) : TransportCcEngine.StatisticsSnapshot() {
-        override fun toJson(): Map<*, *> {
-            return OrderedJsonObject().apply {
-                put("name", GoogCcTransportCcEngine::class.java.simpleName)
-                put("transport_adapter", transportAdapterState.toJson())
-                put("network_controller", networkControllerState.toJson())
-            }
+        override fun toJson(): Map<*, *> = OrderedJsonObject().apply {
+            put("name", GoogCcTransportCcEngine::class.java.simpleName)
+            put("transport_adapter", transportAdapterState.toJson())
+            put("network_controller", networkControllerState.toJson())
         }
     }
 }

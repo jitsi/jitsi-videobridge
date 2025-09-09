@@ -18,19 +18,18 @@ package org.jitsi.videobridge.colibri2
 import org.jivesoftware.smack.packet.StanzaError
 import java.lang.Exception
 
-internal open class IqProcessingException(
-    val condition: StanzaError.Condition,
-    message: String
-) : Exception(message) {
+internal open class IqProcessingException(val condition: StanzaError.Condition, message: String) : Exception(message) {
     override fun toString() = "$condition $message"
 }
 
-internal class UnknownEndpointException(val endpointId: String) : IqProcessingException(
-    StanzaError.Condition.item_not_found,
-    "Unknown endpoint $endpointId"
-)
+internal class UnknownEndpointException(val endpointId: String) :
+    IqProcessingException(
+        StanzaError.Condition.item_not_found,
+        "Unknown endpoint $endpointId"
+    )
 
-internal class FeatureNotImplementedException(message: String) : IqProcessingException(
-    StanzaError.Condition.feature_not_implemented,
-    message
-)
+internal class FeatureNotImplementedException(message: String) :
+    IqProcessingException(
+        StanzaError.Condition.feature_not_implemented,
+        message
+    )

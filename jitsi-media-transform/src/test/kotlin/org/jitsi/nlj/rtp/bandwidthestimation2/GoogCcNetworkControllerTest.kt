@@ -49,12 +49,10 @@ private fun createRouteChange(
     startRate: Bandwidth? = null,
     minRate: Bandwidth? = null,
     maxRate: Bandwidth? = null
-): NetworkRouteChange {
-    return NetworkRouteChange(
-        atTime = time,
-        constraints = TargetRateConstraints(minDataRate = minRate, maxDataRate = maxRate, startingRate = startRate)
-    )
-}
+): NetworkRouteChange = NetworkRouteChange(
+    atTime = time,
+    constraints = TargetRateConstraints(minDataRate = minRate, maxDataRate = maxRate, startingRate = startRate)
+)
 
 private fun createPacketResult(
     arrivalTime: Instant,
@@ -71,9 +69,7 @@ private fun createPacketResult(
     return packetResult
 }
 
-class Ref<T>(
-    var v: T
-)
+class Ref<T>(var v: T)
 
 // Simulate sending packets and receiving transport feedback during
 // `runtime_ms`, then return the final target birate.
@@ -115,9 +111,7 @@ fun packetTransmissionAndFeedbackBlock(
 
 // Scenarios:
 
-class NetworkControllerTextFixture(
-    googccConfig: GoogCcFactoryConfig = GoogCcFactoryConfig()
-) {
+class NetworkControllerTextFixture(googccConfig: GoogCcFactoryConfig = GoogCcFactoryConfig()) {
     private val logger = createLogger()
     private val diagnosticContext = DiagnosticContext()
 

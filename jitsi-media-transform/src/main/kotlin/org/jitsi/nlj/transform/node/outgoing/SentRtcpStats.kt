@@ -30,11 +30,9 @@ class SentRtcpStats : ObserverNode("Sent RTCP stats") {
         sentRtcpCounts.merge(rtcpPacket::class.simpleName!!, 1, Int::plus)
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            sentRtcpCounts.forEach { (rtcpType, count) ->
-                addNumber("num_${rtcpType}_tx", count)
-            }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        sentRtcpCounts.forEach { (rtcpType, count) ->
+            addNumber("num_${rtcpType}_tx", count)
         }
     }
 
