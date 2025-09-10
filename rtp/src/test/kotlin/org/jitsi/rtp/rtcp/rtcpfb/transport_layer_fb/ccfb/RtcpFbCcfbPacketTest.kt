@@ -162,11 +162,6 @@ class PacketInfoMatcher(private val expected: PacketInfo) : Matcher<PacketInfo> 
                 { "Value should be $expected but was $value" },
                 { "Value should not be $expected" }
             )
-
-            else ->
-                /* The Kotlin compiler is fine with the above "when" clauses, but for some reason IntelliJ
-                 * doesn't recognize that they're exhaustive.  Placate it. */
-                MatcherResult(false, { "Something went wrong." }, { "Something went wrong" })
         }
     }
 }
