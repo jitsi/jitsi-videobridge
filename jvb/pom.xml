@@ -164,9 +164,8 @@
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-stdlib-jdk8</artifactId>
+      <artifactId>kotlin-stdlib</artifactId>
       <version>${kotlin.version}</version>
-      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.containers</groupId>
@@ -268,6 +267,12 @@
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter-api</artifactId>
         <version>${junit.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.junit.platform</groupId>
+        <artifactId>junit-platform-launcher</artifactId>
+        <version>${junit.platform.version}</version>
         <scope>test</scope>
     </dependency>
     <dependency>
