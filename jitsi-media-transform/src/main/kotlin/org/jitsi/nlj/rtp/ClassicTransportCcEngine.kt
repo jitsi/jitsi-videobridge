@@ -260,6 +260,7 @@ class ClassicTransportCcEngine(
      * and the time stamps of the outgoing packet
      * in [packetSendTime]
      */
+    @ConsistentCopyVisibility
     private data class PacketDetail internal constructor(
         val packetLength: DataSize,
         val packetSendTime: Instant

@@ -33,7 +33,7 @@
         <mockk.version>1.14.5</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
-        <spotbugs.version>4.6.0</spotbugs.version>
+        <spotbugs.version>4.9.4</spotbugs.version>
         <jackson.version>2.17.1</jackson.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <jersey.version>3.0.10</jersey.version>

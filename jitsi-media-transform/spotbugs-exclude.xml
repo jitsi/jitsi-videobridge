@@ -11,7 +11,10 @@
     <!-- We expose arrays in multiple places on purpose. -->
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
-
+    <!-- We throw from constructors on illegal arguments, i.e. programming errors. -->
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    <!-- We don't expect to run on 32-bit platforms. -->
+    <Bug pattern="AT_NONATOMIC_64BIT_PRIMITIVE"/>
   </Or>
 </Match>
 
@@ -30,6 +33,7 @@
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
     <!-- False positives with kotlin's "when" -->
     <Bug pattern="SF_SWITCH_NO_DEFAULT"/>
+    <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     <!-- False positives with lazy vals -->
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
     <!-- False positives with lazy vals -->
@@ -44,10 +48,11 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
     <Bug pattern="UR_UNINIT_READ"/>
     <Bug pattern="UC_USELESS_OBJECT"/>
+    <Bug pattern="AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
+    <Bug pattern="MS_EXPOSE_REP"/>
   </Or>
   <Source name="~.*\.kt" />
 </Match>
-
 
 <!-- Tests -->
 <Match>

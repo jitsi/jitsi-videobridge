@@ -16,10 +16,12 @@
 
 package org.jitsi.rtp;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.*;
 
 //TODO documentation
+@SuppressFBWarnings({"PA_PUBLIC_PRIMITIVE_ATTRIBUTE"})
 public abstract class ByteArrayBufferImpl
     implements ByteArrayBuffer
 {
