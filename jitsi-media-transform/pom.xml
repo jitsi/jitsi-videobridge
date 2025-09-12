@@ -175,7 +175,7 @@
                 <!-- To try and get both java and kotlin sources in the sources jar -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>
