@@ -1,6 +1,5 @@
 package org.jitsi.nlj.transform.node.incoming
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
@@ -27,10 +26,6 @@ import org.jitsi.utils.time.FakeClock
 import java.time.Duration
 import java.util.Random
 
-@SuppressFBWarnings(
-    value = ["NP_ALWAYS_NULL"],
-    justification = "False positives with 'lateinit'."
-)
 class TccGeneratorNodeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 

@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.extensions.bytearray.getInt
 import org.jitsi.rtp.extensions.bytearray.putInt
 import org.jitsi.rtp.extensions.unsigned.toPositiveLong
@@ -58,6 +59,7 @@ abstract class RtcpFbPacket(
         set(value) = setMediaSourceSsrc(buffer, offset, value)
 
     companion object {
+        @SuppressFBWarnings(value = ["MS_EXPOSE_REP"])
         val PACKET_TYPES = listOf(TransportLayerRtcpFbPacket.PT, PayloadSpecificRtcpFbPacket.PT)
         const val MEDIA_SOURCE_SSRC_OFFSET = RtcpHeader.SIZE_BYTES
         const val HEADER_SIZE = RtcpHeader.SIZE_BYTES + 4

@@ -25,7 +25,7 @@ class Util {
     companion object {
         fun getMbps(numBytes: Number, duration: Duration): Double {
             val mbps = (numBytes.toLong() * 8.0) / (duration.toMillis() * 1000)
-            return if (mbps == Double.NaN) -1.0 else mbps
+            return if (mbps.isNaN()) -1.0 else mbps
         }
     }
 }

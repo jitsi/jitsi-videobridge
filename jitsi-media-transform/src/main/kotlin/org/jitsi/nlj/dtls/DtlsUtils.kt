@@ -59,13 +59,11 @@ class DtlsUtils {
             Security.addProvider(BouncyCastleProvider())
         }
 
-        val config = DtlsConfig()
-
         fun generateCertificateInfo(): CertificateInfo {
             val cn = generateCN("TODO-APP-NAME", "TODO-APP-VERSION")
             val keyPair = generateEcKeyPair()
             val x509certificate = generateCertificate(cn, keyPair)
-            val localFingerprintHashFunction = config.localFingerprintHashFunction
+            val localFingerprintHashFunction = DtlsConfig.config.localFingerprintHashFunction
             val localFingerprint = x509certificate.getFingerprint(localFingerprintHashFunction)
 
             val certificate = org.bouncycastle.tls.Certificate(
@@ -188,7 +186,7 @@ class DtlsUtils {
              *    preferred hash function (out of those offered by the peer) and verify
              *    that each certificate used matches one fingerprint out of that set.
              */
-            config.acceptedFingerprintHashFunctions.forEach { hashFunction ->
+            DtlsConfig.config.acceptedFingerprintHashFunctions.forEach { hashFunction ->
                 val fingerprints = remoteFingerprints[hashFunction] ?: return@forEach
 
                 val certificateFingerprint = certificate.getFingerprint(hashFunction)
@@ -204,7 +202,7 @@ class DtlsUtils {
             /* If we got here none of our accepted fingerprint functions were listed. */
             throw DtlsException(
                 "No fingerprint declared over the signaling path with any of the accepted hash functions: " +
-                    config.acceptedFingerprintHashFunctions.joinToString()
+                    DtlsConfig.config.acceptedFingerprintHashFunctions.joinToString()
             )
         }
 

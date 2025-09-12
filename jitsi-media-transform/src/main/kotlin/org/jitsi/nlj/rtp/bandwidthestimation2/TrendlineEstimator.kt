@@ -17,7 +17,6 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -155,7 +154,6 @@ class TrendlineEstimator(
         return hypothesis
     }
 
-    @SuppressFBWarnings("FE_FLOATING_POINT_EQUALITY")
     private fun detect(trend: Double, tsDelta: Double, nowMs: Long) {
         if (numOfDeltas < 2) {
             hypothesis = BandwidthUsage.kBwNormal

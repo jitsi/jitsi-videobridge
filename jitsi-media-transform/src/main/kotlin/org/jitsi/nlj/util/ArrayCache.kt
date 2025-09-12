@@ -16,7 +16,6 @@
 
 package org.jitsi.nlj.util
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import java.lang.Integer.max
@@ -29,10 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * @author Boris Grozev
  */
-@SuppressFBWarnings(
-    value = ["CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE", "RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"],
-    justification = "False positives."
-)
 open class ArrayCache<T>(
     val size: Int,
     private val cloneItem: (T) -> T,

@@ -88,7 +88,7 @@ interface StreamInformationStore : ReadOnlyStreamInformationStore {
     fun addRtpPayloadType(payloadType: PayloadType)
     fun clearRtpPayloadTypes()
 
-    fun setExtmapAllowMixed(extmapAllowMixed: Boolean)
+    fun setExtmapAllowMixed(allow: Boolean)
 
     fun addSsrcAssociation(ssrcAssociation: SsrcAssociation)
 

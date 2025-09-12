@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetLocalSsrcEvent
@@ -101,7 +100,6 @@ class RemoteBandwidthEstimator(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT", "False positive")
     override fun observe(packetInfo: PacketInfo) {
         if (!enabled) return
 

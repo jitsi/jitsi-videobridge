@@ -16,12 +16,17 @@
 
 package org.jitsi.nlj.util
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.text.DecimalFormat
 import kotlin.math.roundToLong
 
 /**
  * Model an amount of data, internally represented as a number of bits.
  */
+@SuppressFBWarnings(
+    value = ["SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR"],
+    justification = "Spotbugs thinks this is a singleton, but it isn't"
+)
 class DataSize(
     bits: Long
 ) : Comparable<DataSize> {

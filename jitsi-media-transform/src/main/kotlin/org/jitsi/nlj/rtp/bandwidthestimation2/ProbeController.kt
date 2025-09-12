@@ -589,7 +589,7 @@ class ProbeController(
     }
 
     companion object {
-        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(ProbeController.javaClass)
+        private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(ProbeController::class.java)
 
         private fun maybeLogProbeClusterCreated(diagnosticContext: DiagnosticContext, probe: ProbeClusterConfig) {
             val minDataSize = probe.targetDataRate * probe.targetDuration

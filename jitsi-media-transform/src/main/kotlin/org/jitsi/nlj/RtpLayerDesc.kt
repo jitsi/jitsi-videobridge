@@ -192,7 +192,6 @@ abstract class RtpLayerDesc(
         /**
          * Get a string description of a layer index.
          */
-        @JvmStatic
         fun indexString(index: Int): String = if (index == SUSPENDED_INDEX) {
             "SUSP"
         } else {

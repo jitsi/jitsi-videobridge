@@ -15,11 +15,14 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * webrtc/modules/remote_bitrate_estimator/include/bwe_defines.h
  *
  * @author Lyubomir Marinov
  */
+@SuppressFBWarnings("PA_PUBLIC_PRIMITIVE_ATTRIBUTE")
 class RateControlInput
 {
     public BandwidthUsage bwState;
