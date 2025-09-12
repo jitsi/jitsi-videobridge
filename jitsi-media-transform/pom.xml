@@ -289,7 +289,7 @@
           <plugin>
               <groupId>com.github.spotbugs</groupId>
               <artifactId>spotbugs-maven-plugin</artifactId>
-              <version>4.8.5.0</version>
+              <version>4.9.4.2</version>
               <configuration>
                   <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
                   <includeTests>true</includeTests>
