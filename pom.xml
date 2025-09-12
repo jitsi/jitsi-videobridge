@@ -35,6 +35,7 @@
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
         <spotbugs.version>4.9.4</spotbugs.version>
         <jackson.version>2.17.1</jackson.version>
+        <jacoco.version>0.8.13</jacoco.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <jersey.version>3.0.10</jersey.version>
         <prometheus.version>0.16.0</prometheus.version>
@@ -140,7 +141,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.8</version>
+                        <version>${jacoco.version}</version>
                         <executions>
                             <execution>
                                 <goals>
