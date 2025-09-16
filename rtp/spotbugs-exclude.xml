@@ -13,7 +13,6 @@
     <Bug pattern="SE_BAD_FIELD_STORE"/>
     <!-- False positives with lazy vals -->
     <Bug pattern="NP_NULL_ON_SOME_PATH"/>
-    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
     <Bug pattern="BC_IMPOSSIBLE_INSTANCEOF"/>
     <!-- False positives with kotlin companions -->
     <Bug pattern="NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
@@ -22,6 +21,10 @@
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     <Bug pattern="EI_EXPOSE_REP"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
+    <!-- We throw from constructors on illegal arguments, i.e. programming errors. -->
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    <!-- False positives for an unknown reason -->
+    <Bug pattern="MS_EXPOSE_REP"/>
   </Or>
 </Match>
 

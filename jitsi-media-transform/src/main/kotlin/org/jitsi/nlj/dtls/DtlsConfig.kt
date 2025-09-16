@@ -22,7 +22,7 @@ import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
 import java.time.Duration
 
-class DtlsConfig {
+class DtlsConfig private constructor() {
     val handshakeTimeout: Duration by config {
         "jmt.dtls.handshake-timeout".from(JitsiConfig.newConfig)
     }

@@ -24,16 +24,23 @@
 
     <properties>
         <jetty.version>11.0.24</jetty.version>
-        <kotlin.version>2.0.0</kotlin.version>
+        <kotlin.version>2.2.20</kotlin.version>
         <kotest.version>5.9.1</kotest.version>
-        <junit.version>5.10.2</junit.version>
+        <junit.version>5.13.4</junit.version>
+        <junit.platform.version>1.13.4</junit.platform.version>
         <jitsi.utils.version>1.0-146-g45b9f50</jitsi.utils.version>
         <jicoco.version>1.1-159-gf9c2712</jicoco.version>
-        <mockk.version>1.13.11</mockk.version>
+        <mockk.version>1.14.5</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
+        <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
+        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
-        <spotbugs.version>4.6.0</spotbugs.version>
+        <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+        <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
+        <spotbugs.version>4.9.4</spotbugs.version>
+        <spotbugs-maven-plugin.version>4.9.4.2</spotbugs-maven-plugin.version>
         <jackson.version>2.17.1</jackson.version>
+        <jacoco.version>0.8.13</jacoco.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <jersey.version>3.0.10</jersey.version>
         <prometheus.version>0.16.0</prometheus.version>
@@ -45,7 +52,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
@@ -55,7 +62,7 @@
                         <configuration>
                             <rules>
                                 <requireMavenVersion>
-                                    <version>3.5.0</version>
+                                    <version>3.6.3</version>
                                 </requireMavenVersion>
                             </rules>
                         </configuration>
@@ -139,7 +146,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.8</version>
+                        <version>${jacoco.version}</version>
                         <executions>
                             <execution>
                                 <goals>

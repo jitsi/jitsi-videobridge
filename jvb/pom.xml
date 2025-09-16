@@ -164,9 +164,8 @@
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-stdlib-jdk8</artifactId>
+      <artifactId>kotlin-stdlib</artifactId>
       <version>${kotlin.version}</version>
-      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.containers</groupId>
@@ -271,6 +270,12 @@
         <scope>test</scope>
     </dependency>
     <dependency>
+        <groupId>org.junit.platform</groupId>
+        <artifactId>junit-platform-launcher</artifactId>
+        <version>${junit.platform.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
         <groupId>io.kotest</groupId>
         <artifactId>kotest-runner-junit5-jvm</artifactId>
         <version>${kotest.version}</version>
@@ -299,7 +304,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-         <version>3.2.0</version>
+         <version>3.7.1</version>
          <executions>
            <execution>
              <id>assemble-archive</id>
@@ -358,7 +363,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
+        <version>3.5.1</version>
         <executions>
           <execution>
             <id>exec-exec</id>
@@ -433,7 +438,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>${maven-compiler-plugin.version}</version>
         <executions>
           <!-- Replacing default-compile as it is treated specially by maven -->
           <execution>
@@ -471,7 +476,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.2</version>
+        <version>${maven-surefire-plugin.version}</version>
         <configuration>
           <systemPropertyVariables>
             <java.util.logging.config.file>${project.basedir}/lib/logging.properties</java.util.logging.config.file>
@@ -482,7 +487,7 @@
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.8.5.0</version>
+        <version>${spotbugs-maven-plugin.version}</version>
         <configuration>
           <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
           <includeTests>true</includeTests>
@@ -522,7 +527,7 @@
          -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.4.1</version>
+        <version>3.4.2</version>
         <configuration>
           <archive>
             <manifest>

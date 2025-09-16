@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.dtls
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
@@ -49,10 +48,6 @@ import java.util.Hashtable
 /**
  * Implementation of [DefaultTlsClient].
  */
-@SuppressFBWarnings(
-    value = ["NP_ALWAYS_NULL"],
-    justification = "False positives with 'lateinit'."
-)
 class TlsClientImpl(
     private val certificateInfo: CertificateInfo,
     /**
@@ -72,6 +67,7 @@ class TlsClientImpl(
      * Only set after a handshake has completed
      */
     lateinit var srtpKeyingMaterial: ByteArray
+        private set
 
     var chosenSrtpProtectionProfile: Int = 0
 
@@ -133,7 +129,7 @@ class TlsClientImpl(
 
     override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
 
-    override fun getHandshakeTimeoutMillis(): Int = DtlsUtils.config.handshakeTimeout.toMillis().toInt()
+    override fun getHandshakeTimeoutMillis(): Int = DtlsConfig.config.handshakeTimeout.toMillis().toInt()
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
