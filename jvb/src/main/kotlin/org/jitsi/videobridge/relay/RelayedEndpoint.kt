@@ -127,9 +127,10 @@ class RelayedEndpoint(
     /** Relayed endpoints are not automatically expired. **/
     override fun shouldExpire(): Boolean = false
 
-    override fun requestKeyframe(mediaSsrc: Long) = relay.transceiver.requestKeyFrame(mediaSsrc)
+    override fun requestKeyframe(requesterID: String, mediaSsrc: Long) =
+        relay.transceiver.requestKeyFrame(requesterID, mediaSsrc)
 
-    override fun requestKeyframe() = relay.transceiver.requestKeyFrame(mediaSource?.primarySSRC)
+    override fun requestKeyframe() = relay.transceiver.requestKeyFrame(null, mediaSource?.primarySSRC)
 
     override val isSendingAudio
         get() = rtpReceiver.isReceivingAudio()

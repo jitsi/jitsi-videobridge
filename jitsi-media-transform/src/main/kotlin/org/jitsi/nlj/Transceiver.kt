@@ -234,7 +234,8 @@ class Transceiver(
     fun getMediaSources(): Array<MediaSourceDesc> = mediaSources.getMediaSources()
 
     @JvmOverloads
-    fun requestKeyFrame(mediaSsrc: Long? = null) = rtpSender.requestKeyframe(mediaSsrc)
+    fun requestKeyFrame(requesterID: String? = null, mediaSsrc: Long? = null) =
+        rtpSender.requestKeyframe(requesterID, mediaSsrc)
 
     fun addPayloadType(payloadType: PayloadType) {
         logger.cdebug { "Payload type added: $payloadType" }

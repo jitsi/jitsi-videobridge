@@ -223,7 +223,8 @@ class Endpoint @JvmOverloads constructor(
                 newEffectiveConstraints: EffectiveConstraintsMap,
             ) = this@Endpoint.effectiveVideoConstraintsChanged(oldEffectiveConstraints, newEffectiveConstraints)
 
-            override fun keyframeNeeded(endpointId: String?, ssrc: Long) = conference.requestKeyframe(endpointId, ssrc)
+            override fun keyframeNeeded(endpointId: String?, ssrc: Long) =
+                conference.requestKeyframe(id, endpointId, ssrc)
         },
         { getOrderedEndpoints() },
         diagnosticContext,
@@ -802,7 +803,8 @@ class Endpoint @JvmOverloads constructor(
 
     override fun requestKeyframe() = transceiver.requestKeyFrame()
 
-    override fun requestKeyframe(mediaSsrc: Long) = transceiver.requestKeyFrame(mediaSsrc)
+    override fun requestKeyframe(requesterID: String, mediaSsrc: Long) =
+        transceiver.requestKeyFrame(requesterID, mediaSsrc)
 
     /** Whether we are currently oversending to this endpoint. */
     fun isOversending(): Boolean = bitrateController.isOversending()

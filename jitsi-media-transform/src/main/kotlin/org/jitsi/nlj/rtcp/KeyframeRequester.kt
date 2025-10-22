@@ -56,8 +56,8 @@ class KeyframeRequester @JvmOverloads constructor(
 ) : TransformerNode("Keyframe Requester") {
     private val logger = createChildLogger(parentLogger)
 
-    // Map a SSRC to the timestamp (represented as an [Instant]) of when we last requested a keyframe for it
-    private val keyframeLimiter = mutableMapOf<Long, RateLimit>()
+    // Map the tuple of requester and SSRC to a rate limiter
+    private val keyframeLimiter = mutableMapOf<String, MutableMap<Long, RateLimit>>()
     private val keyframeLimiterSyncRoot = Any()
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private var localSsrc: Long? = null
@@ -93,14 +93,14 @@ class KeyframeRequester @JvmOverloads constructor(
         when (pliOrFirPacket) {
             is RtcpFbPliPacket -> {
                 sourceSsrc = pliOrFirPacket.mediaSourceSsrc
-                canSend = canSendKeyframeRequest(sourceSsrc, now)
+                canSend = canSendKeyframeRequest(packetInfo.endpointId, sourceSsrc, now)
                 forward = canSend && streamInformationStore.supportsPli
                 if (forward) numPlisForwarded++
                 if (!canSend) numPlisDropped++
             }
             is RtcpFbFirPacket -> {
                 sourceSsrc = pliOrFirPacket.mediaSenderSsrc
-                canSend = canSendKeyframeRequest(sourceSsrc, now)
+                canSend = canSendKeyframeRequest(packetInfo.endpointId, sourceSsrc, now)
                 // When both are supported, we favor generating a PLI rather than forwarding a FIR
                 forward = canSend && streamInformationStore.supportsFir && !streamInformationStore.supportsPli
                 if (forward) {
@@ -124,34 +124,43 @@ class KeyframeRequester @JvmOverloads constructor(
     }
 
     /**
-     * Returns 'true' when at least one method is supported, AND we haven't sent a request very recently.
+     * Returns 'true' when at least one method is supported, AND this requester hasn't sent a request very recently.
      */
-    private fun canSendKeyframeRequest(mediaSsrc: Long, now: Instant): Boolean {
+    private fun canSendKeyframeRequest(requesterID: String?, mediaSsrc: Long, now: Instant): Boolean {
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
+        if (requesterID == null) {
+            /* This is a timed request sent by the system; allow it. */
+            return true
+        }
         synchronized(keyframeLimiterSyncRoot) {
-            val limiter = keyframeLimiter.computeIfAbsent(mediaSsrc) {
-                RateLimit(defaultMinInterval = minInterval, maxRequests = maxRequests, interval = maxRequestInterval)
-            }
+            val limiter = keyframeLimiter.computeIfAbsent(requesterID) { mutableMapOf() }
+                .computeIfAbsent(mediaSsrc) {
+                    RateLimit(
+                        defaultMinInterval = minInterval,
+                        maxRequests = maxRequests,
+                        interval = maxRequestInterval
+                    )
+                }
             return if (!limiter.accept(now, waitInterval)) {
-                logger.cdebug { "Ignoring keyframe request for $mediaSsrc, rate limited" }
+                logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, rate limited" }
                 false
             } else {
-                logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc" }
+                logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
                 true
             }
         }
     }
 
-    fun requestKeyframe(mediaSsrc: Long? = null) {
+    fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null) {
         val ssrc = mediaSsrc ?: streamInformationStore.primaryMediaSsrcs.firstOrNull() ?: run {
             numApiRequestsDropped++
             logger.cdebug { "No video SSRC found to request keyframe" }
             return
         }
         numApiRequests++
-        if (!canSendKeyframeRequest(ssrc, clock.instant())) {
+        if (!canSendKeyframeRequest(requesterID, ssrc, clock.instant())) {
             numApiRequestsDropped++
             return
         }
