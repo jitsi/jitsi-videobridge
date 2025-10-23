@@ -408,15 +408,17 @@ public class Conference
      * Requests a keyframe from the endpoint with the specified id, if the
      * endpoint is found in the conference.
      *
+     * @param requesterID the id of the endpoint requesting a keyframe
      * @param endpointID the id of the endpoint to request a keyframe from.
+     * @param mediaSsrc the primary SSRC of the source for which to request a keyframe
      */
-    public void requestKeyframe(String endpointID, long mediaSsrc)
+    public void requestKeyframe(String requesterID, String endpointID, long mediaSsrc)
     {
         AbstractEndpoint remoteEndpoint = getEndpoint(endpointID);
 
         if (remoteEndpoint != null)
         {
-            remoteEndpoint.requestKeyframe(mediaSsrc);
+            remoteEndpoint.requestKeyframe(requesterID, mediaSsrc);
         }
         else if (logger.isDebugEnabled())
         {

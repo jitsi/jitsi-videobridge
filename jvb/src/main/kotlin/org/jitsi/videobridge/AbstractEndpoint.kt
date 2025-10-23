@@ -224,7 +224,7 @@ abstract class AbstractEndpoint protected constructor(
      *
      * @param mediaSsrc the media SSRC to request a keyframe from.
      */
-    abstract fun requestKeyframe(mediaSsrc: Long)
+    abstract fun requestKeyframe(requesterID: String, mediaSsrc: Long)
 
     /**
      * Requests a keyframe from this endpoint on the first video SSRC

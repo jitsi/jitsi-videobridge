@@ -43,7 +43,7 @@ abstract class RtpSender :
     abstract fun addBandwidthListener(listener: TransportCcEngine.BandwidthListener)
     abstract fun removeBandwidthListener(listener: TransportCcEngine.BandwidthListener)
     abstract fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot
-    abstract fun requestKeyframe(mediaSsrc: Long? = null)
+    abstract fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null)
     abstract fun addLossListener(lossListener: LossListener)
     abstract fun setFeature(feature: Features, enabled: Boolean)
     abstract fun isFeatureEnabled(feature: Features): Boolean

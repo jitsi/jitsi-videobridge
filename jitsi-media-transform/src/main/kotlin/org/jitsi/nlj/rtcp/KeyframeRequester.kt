@@ -56,8 +56,9 @@ class KeyframeRequester @JvmOverloads constructor(
 ) : TransformerNode("Keyframe Requester") {
     private val logger = createChildLogger(parentLogger)
 
-    // Map a SSRC to the timestamp (represented as an [Instant]) of when we last requested a keyframe for it
-    private val keyframeLimiter = mutableMapOf<Long, RateLimit>()
+    // Map the tuple of requester and SSRC to a rate limiter
+    private val perReceiverKeyframeLimiter = mutableMapOf<String, MutableMap<Long, RateLimit>>()
+    private val perSourceKeyframeLimiter = mutableMapOf<Long, RateLimit>()
     private val keyframeLimiterSyncRoot = Any()
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private var localSsrc: Long? = null
@@ -93,14 +94,14 @@ class KeyframeRequester @JvmOverloads constructor(
         when (pliOrFirPacket) {
             is RtcpFbPliPacket -> {
                 sourceSsrc = pliOrFirPacket.mediaSourceSsrc
-                canSend = canSendKeyframeRequest(sourceSsrc, now)
+                canSend = canSendKeyframeRequest(packetInfo.endpointId, sourceSsrc, now)
                 forward = canSend && streamInformationStore.supportsPli
                 if (forward) numPlisForwarded++
                 if (!canSend) numPlisDropped++
             }
             is RtcpFbFirPacket -> {
                 sourceSsrc = pliOrFirPacket.mediaSenderSsrc
-                canSend = canSendKeyframeRequest(sourceSsrc, now)
+                canSend = canSendKeyframeRequest(packetInfo.endpointId, sourceSsrc, now)
                 // When both are supported, we favor generating a PLI rather than forwarding a FIR
                 forward = canSend && streamInformationStore.supportsFir && !streamInformationStore.supportsPli
                 if (forward) {
@@ -124,34 +125,59 @@ class KeyframeRequester @JvmOverloads constructor(
     }
 
     /**
-     * Returns 'true' when at least one method is supported, AND we haven't sent a request very recently.
+     * Returns 'true' when at least one method is supported, AND this requester hasn't sent a request very recently.
      */
-    private fun canSendKeyframeRequest(mediaSsrc: Long, now: Instant): Boolean {
+    private fun canSendKeyframeRequest(requesterID: String?, mediaSsrc: Long, now: Instant): Boolean {
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
+        if (requesterID == null) {
+            /* This request is either triggered by a dominant speaker switch, or possibly came over a proxy connection.
+             *  Always allow it. */
+            return true
+        }
         synchronized(keyframeLimiterSyncRoot) {
-            val limiter = keyframeLimiter.computeIfAbsent(mediaSsrc) {
-                RateLimit(defaultMinInterval = minInterval, maxRequests = maxRequests, interval = maxRequestInterval)
+            val perReceiverLimiter = perReceiverKeyframeLimiter.computeIfAbsent(requesterID) { mutableMapOf() }
+                .computeIfAbsent(mediaSsrc) {
+                    RateLimit(
+                        defaultMinInterval = minInterval,
+                        maxRequests = maxRequests,
+                        interval = maxRequestInterval
+                    )
+                }
+            if (!perReceiverLimiter.accept(now, waitInterval)) {
+                logger.cdebug {
+                    "Ignoring keyframe request for $mediaSsrc from $requesterID, per-receiver rate limited"
+                }
+                return false
             }
-            return if (!limiter.accept(now, waitInterval)) {
-                logger.cdebug { "Ignoring keyframe request for $mediaSsrc, rate limited" }
-                false
-            } else {
-                logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc" }
-                true
+
+            val perSourceLimiter = perSourceKeyframeLimiter.computeIfAbsent(mediaSsrc) {
+                RateLimit(
+                    defaultMinInterval = sourceWideMinInterval,
+                    maxRequests = sourceWideMaxRequests,
+                    interval = sourceWideMaxRequestInterval
+                )
             }
+
+            if (!perSourceLimiter.accept(now, waitInterval)) {
+                logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, per-source rate limited" }
+                return false
+            }
+
+            logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
+            return true
         }
     }
 
-    fun requestKeyframe(mediaSsrc: Long? = null) {
+    fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null) {
         val ssrc = mediaSsrc ?: streamInformationStore.primaryMediaSsrcs.firstOrNull() ?: run {
             numApiRequestsDropped++
             logger.cdebug { "No video SSRC found to request keyframe" }
             return
         }
         numApiRequests++
-        if (!canSendKeyframeRequest(ssrc, clock.instant())) {
+        if (!canSendKeyframeRequest(requesterID, ssrc, clock.instant())) {
             numApiRequestsDropped++
             return
         }
@@ -232,6 +258,16 @@ class KeyframeRequester @JvmOverloads constructor(
         }
         private val maxRequestInterval: Duration by config {
             "jmt.keyframe.max-request-interval".from(JitsiConfig.newConfig)
+        }
+
+        private val sourceWideMinInterval: Duration by config {
+            "jmt.keyframe.source-wide-min-interval".from(JitsiConfig.newConfig)
+        }
+        private val sourceWideMaxRequests: Int by config {
+            "jmt.keyframe.source-wide-max-requests".from(JitsiConfig.newConfig)
+        }
+        private val sourceWideMaxRequestInterval: Duration by config {
+            "jmt.keyframe.source-wide-max-request-interval".from(JitsiConfig.newConfig)
         }
     }
 }

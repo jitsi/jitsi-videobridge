@@ -83,7 +83,7 @@ class KeyframeRequesterTest : ShouldSpec() {
 
         context("requesting a keyframe") {
             context("without a specific SSRC") {
-                keyframeRequester.requestKeyframe()
+                keyframeRequester.requestKeyframe("ep1")
                 should("result in a sent PLI request with the first video SSRC") {
                     sentKeyframeRequests shouldHaveSize 1
                     val packet = sentKeyframeRequests.last().packet
@@ -92,7 +92,7 @@ class KeyframeRequesterTest : ShouldSpec() {
                 }
             }
             context("when PLI is supported") {
-                keyframeRequester.requestKeyframe(123L)
+                keyframeRequester.requestKeyframe("ep1", 123L)
                 should("result in a sent PLI request") {
                     sentKeyframeRequests shouldHaveSize 1
                     val packet = sentKeyframeRequests.last().packet
@@ -104,13 +104,13 @@ class KeyframeRequesterTest : ShouldSpec() {
                     context("within the wait interval") {
                         clock.elapse(10.ms)
                         context("on the same SSRC") {
-                            keyframeRequester.requestKeyframe(123L)
+                            keyframeRequester.requestKeyframe("ep1", 123L)
                             should("not send anything") {
                                 sentKeyframeRequests.shouldBeEmpty()
                             }
                         }
-                        context("on a different SSRC") {
-                            keyframeRequester.requestKeyframe(456L)
+                        context("for a different SSRC") {
+                            keyframeRequester.requestKeyframe("ep1", 456L)
                             should("result in a sent PLI request") {
                                 sentKeyframeRequests shouldHaveSize 1
                                 val packet = sentKeyframeRequests.last().packet
@@ -121,7 +121,7 @@ class KeyframeRequesterTest : ShouldSpec() {
                     }
                     context("after the wait interval has expired") {
                         clock.elapse(1.secs)
-                        keyframeRequester.requestKeyframe(123L)
+                        keyframeRequester.requestKeyframe("ep1", 123L)
                         should("result in a sent PLI request") {
                             sentKeyframeRequests shouldHaveSize 1
                             val packet = sentKeyframeRequests.last().packet
@@ -133,7 +133,7 @@ class KeyframeRequesterTest : ShouldSpec() {
             }
             context("when PLI isn't supported") {
                 streamInformationStore.supportsPli = false
-                keyframeRequester.requestKeyframe(123L)
+                keyframeRequester.requestKeyframe("ep1", 123L)
                 should("result in a sent FIR request") {
                     sentKeyframeRequests shouldHaveSize 1
                     val packet = sentKeyframeRequests.last().packet
@@ -144,7 +144,7 @@ class KeyframeRequesterTest : ShouldSpec() {
             context("when neither PLI nor FIR is supported") {
                 streamInformationStore.supportsFir = false
                 streamInformationStore.supportsPli = false
-                keyframeRequester.requestKeyframe(123L)
+                keyframeRequester.requestKeyframe("ep1", 123L)
                 should("not send anything") {
                     sentKeyframeRequests.shouldBeEmpty()
                 }
