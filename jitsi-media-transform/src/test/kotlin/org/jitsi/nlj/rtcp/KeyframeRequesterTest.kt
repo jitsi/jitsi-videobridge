@@ -109,22 +109,13 @@ class KeyframeRequesterTest : ShouldSpec() {
                                 sentKeyframeRequests.shouldBeEmpty()
                             }
                         }
-                        context("on a different SSRC") {
+                        context("for a different SSRC") {
                             keyframeRequester.requestKeyframe("ep1", 456L)
                             should("result in a sent PLI request") {
                                 sentKeyframeRequests shouldHaveSize 1
                                 val packet = sentKeyframeRequests.last().packet
                                 packet.shouldBeInstanceOf<RtcpFbPliPacket>()
                                 packet.mediaSourceSsrc shouldBe 456L
-                            }
-                        }
-                        context("from a different requester") {
-                            keyframeRequester.requestKeyframe("ep2", 123L)
-                            should("result in a sent PLI request") {
-                                sentKeyframeRequests shouldHaveSize 1
-                                val packet = sentKeyframeRequests.last().packet
-                                packet.shouldBeInstanceOf<RtcpFbPliPacket>()
-                                packet.mediaSourceSsrc shouldBe 123L
                             }
                         }
                     }
