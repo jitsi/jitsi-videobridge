@@ -57,7 +57,8 @@ class KeyframeRequester @JvmOverloads constructor(
     private val logger = createChildLogger(parentLogger)
 
     // Map the tuple of requester and SSRC to a rate limiter
-    private val keyframeLimiter = mutableMapOf<String, MutableMap<Long, RateLimit>>()
+    private val perReceiverKeyframeLimiter = mutableMapOf<String, MutableMap<Long, RateLimit>>()
+    private val perSourceKeyframeLimiter = mutableMapOf<Long, RateLimit>()
     private val keyframeLimiterSyncRoot = Any()
     private val firCommandSequenceNumber: AtomicInteger = AtomicInteger(0)
     private var localSsrc: Long? = null
@@ -131,11 +132,12 @@ class KeyframeRequester @JvmOverloads constructor(
             return false
         }
         if (requesterID == null) {
-            /* This is a timed request sent by the system; allow it. */
+            /* This request is either triggered by a dominant speaker switch, or possibly came over a proxy connection.
+             *  Always allow it. */
             return true
         }
         synchronized(keyframeLimiterSyncRoot) {
-            val limiter = keyframeLimiter.computeIfAbsent(requesterID) { mutableMapOf() }
+            val perReceiverLimiter = perReceiverKeyframeLimiter.computeIfAbsent(requesterID) { mutableMapOf() }
                 .computeIfAbsent(mediaSsrc) {
                     RateLimit(
                         defaultMinInterval = minInterval,
@@ -143,13 +145,28 @@ class KeyframeRequester @JvmOverloads constructor(
                         interval = maxRequestInterval
                     )
                 }
-            return if (!limiter.accept(now, waitInterval)) {
-                logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, rate limited" }
-                false
-            } else {
-                logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
-                true
+            if (!perReceiverLimiter.accept(now, waitInterval)) {
+                logger.cdebug {
+                    "Ignoring keyframe request for $mediaSsrc from $requesterID, per-receiver rate limited"
+                }
+                return false
             }
+
+            val perSourceLimiter = perSourceKeyframeLimiter.computeIfAbsent(mediaSsrc) {
+                RateLimit(
+                    defaultMinInterval = sourceWideMinInterval,
+                    maxRequests = sourceWideMaxRequests,
+                    interval = sourceWideMaxRequestInterval
+                )
+            }
+
+            if (!perSourceLimiter.accept(now, waitInterval)) {
+                logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, per-source rate limited" }
+                return false
+            }
+
+            logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
+            return true
         }
     }
 
@@ -241,6 +258,16 @@ class KeyframeRequester @JvmOverloads constructor(
         }
         private val maxRequestInterval: Duration by config {
             "jmt.keyframe.max-request-interval".from(JitsiConfig.newConfig)
+        }
+
+        private val sourceWideMinInterval: Duration by config {
+            "jmt.keyframe.source-wide-min-interval".from(JitsiConfig.newConfig)
+        }
+        private val sourceWideMaxRequests: Int by config {
+            "jmt.keyframe.source-wide-max-requests".from(JitsiConfig.newConfig)
+        }
+        private val sourceWideMaxRequestInterval: Duration by config {
+            "jmt.keyframe.source-wide-max-request-interval".from(JitsiConfig.newConfig)
         }
     }
 }
