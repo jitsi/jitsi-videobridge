@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.export
 
+import com.fasterxml.jackson.databind.JsonNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.OpusPayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -25,7 +26,10 @@ import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.xmpp.extensions.colibri2.Connect
 
-class ExporterWrapper(parentLogger: Logger) : PotentialPacketHandler {
+class ExporterWrapper(
+    parentLogger: Logger,
+    private val handleTranscriptionResult: ((JsonNode) -> Unit)
+) : PotentialPacketHandler {
     val logger = createChildLogger(parentLogger)
     var started = false
     private var exporter: Exporter? = null
@@ -78,7 +82,7 @@ class ExporterWrapper(parentLogger: Logger) : PotentialPacketHandler {
             logger.warn("Exporter already exists, stopping previous one.")
             stop()
         }
-        exporter = Exporter(connect.url, logger).apply {
+        exporter = Exporter(connect.url, logger, handleTranscriptionResult).apply {
             start()
         }
         started = true

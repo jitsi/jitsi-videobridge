@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.export
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
@@ -28,7 +30,12 @@ import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import java.net.URI
 
-internal class Exporter(private val url: URI, val logger: Logger) {
+internal class Exporter(
+    private val url: URI,
+    val logger: Logger,
+    private val handleTranscriptionResult: ((JsonNode) -> Unit)
+) {
+
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
             "${javaClass.simpleName}-packet-queue",
@@ -51,6 +58,10 @@ internal class Exporter(private val url: URI, val logger: Logger) {
             logger.error("Websocket error", cause)
             webSocketFailures.inc()
         }
+
+        override fun onWebSocketText(message: String?) = super.onWebSocketText(message).also {
+            message?.let { handleIncomingMessage(it) }
+        }
     }
 
     private val serializer = MediaJsonSerializer {
@@ -63,6 +74,19 @@ internal class Exporter(private val url: URI, val logger: Logger) {
     }
 
     fun isConnected() = recorderWebSocket.isConnected
+
+    private fun handleIncomingMessage(message: String) {
+        try {
+            val jsonNode = objectMapper.readTree(message)
+            logger.debug { "Received message from websocket: $jsonNode" }
+
+            if (jsonNode.get("type")?.asText() == "transcription-result") {
+                handleTranscriptionResult(jsonNode)
+            }
+        } catch (e: Exception) {
+            logger.warn("Failed to parse incoming websocket message: $message", e)
+        }
+    }
 
     /** Run inside the queue thread, handle a packet. */
     private fun doHandlePacket(packet: PacketInfo): Boolean {
@@ -101,5 +125,7 @@ internal class Exporter(private val url: URI, val logger: Logger) {
             "exporter_websocket_failures",
             "Number of websocket connection failures from Exporter"
         )
+
+        private val objectMapper = jacksonObjectMapper()
     }
 }
