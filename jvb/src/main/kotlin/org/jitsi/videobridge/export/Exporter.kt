@@ -29,12 +29,21 @@ import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import java.net.URI
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.min
+import kotlin.math.pow
 
 internal class Exporter(
     private val url: URI,
     val logger: Logger,
     private val handleTranscriptionResult: ((JsonNode) -> Unit)
 ) {
+    private val isShuttingDown = AtomicBoolean(false)
+    private val reconnectAttempts = AtomicInteger(0)
+    private var reconnectFuture: ScheduledFuture<*>? = null
 
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
@@ -48,15 +57,23 @@ internal class Exporter(
         override fun onWebSocketClose(statusCode: Int, reason: String?) =
             super.onWebSocketClose(statusCode, reason).also {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
+                if (!isShuttingDown.get()) {
+                    scheduleReconnect()
+                }
             }
 
         override fun onWebSocketConnect(session: Session?) = super.onWebSocketConnect(session).also {
             logger.info("Websocket connected: $isConnected")
+            reconnectAttempts.set(0)
+            cancelReconnect()
         }
 
         override fun onWebSocketError(cause: Throwable?) = super.onWebSocketError(cause).also {
             logger.error("Websocket error", cause)
             webSocketFailures.inc()
+            if (!isShuttingDown.get()) {
+                scheduleReconnect()
+            }
         }
 
         override fun onWebSocketText(message: String?) = super.onWebSocketText(message).also {
@@ -105,11 +122,48 @@ internal class Exporter(
         }
     }
 
+    private fun scheduleReconnect() {
+        if (isShuttingDown.get()) {
+            return
+        }
+
+        val attempt = reconnectAttempts.incrementAndGet()
+        if (attempt > MAX_RECONNECT_ATTEMPTS) {
+            logger.warn("Max reconnection attempts ($MAX_RECONNECT_ATTEMPTS) reached, giving up")
+            return
+        }
+
+        // 0 s, 1 s, 2 s, 4 s, 8 s, 16 s, 30 s, 30 s ...
+        val delayMs = if (attempt == 1) 0 else min(500 * (2.0.pow(attempt - 1)).toLong(), 30000)
+        logger.info("Scheduling reconnection attempt $attempt in $delayMs ms")
+
+        cancelReconnect()
+        reconnectFuture = TaskPools.SCHEDULED_POOL.schedule({
+            if (!isShuttingDown.get()) {
+                try {
+                    logger.info("Attempting reconnection (attempt $attempt)")
+                    webSocketClient.connect(recorderWebSocket, url, ClientUpgradeRequest())
+                } catch (e: Exception) {
+                    logger.warn("Reconnection attempt $attempt failed", e)
+                    scheduleReconnect()
+                }
+            }
+        }, delayMs, TimeUnit.MILLISECONDS)
+    }
+
+    private fun cancelReconnect() {
+        reconnectFuture?.cancel(false)
+        reconnectFuture = null
+    }
+
     fun start() {
+        isShuttingDown.set(false)
         webSocketClient.connect(recorderWebSocket, url, ClientUpgradeRequest())
     }
 
     fun stop() {
+        isShuttingDown.set(true)
+        cancelReconnect()
         recorderWebSocket.session?.close(org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN, "closing")
         recorderWebSocket.session?.disconnect()
         queue.close()
@@ -127,5 +181,7 @@ internal class Exporter(
         )
 
         private val objectMapper = jacksonObjectMapper()
+
+        private const val MAX_RECONNECT_ATTEMPTS = 10
     }
 }
