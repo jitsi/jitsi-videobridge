@@ -64,6 +64,7 @@ internal class Exporter(
 
         override fun onWebSocketConnect(session: Session?) = super.onWebSocketConnect(session).also {
             logger.info("Websocket connected: $isConnected")
+            serializer = initSerializer(this)
             reconnectAttempts.set(0)
             cancelReconnect()
         }
@@ -81,9 +82,11 @@ internal class Exporter(
         }
     }
 
-    private val serializer = MediaJsonSerializer {
-        if (recorderWebSocket.isConnected) {
-            recorderWebSocket.remote?.sendString(it.toJson())
+    private var serializer: MediaJsonSerializer? = null
+
+    private fun initSerializer(ws: WebSocketAdapter) = MediaJsonSerializer {
+        if (ws.isConnected) {
+            ws.remote?.sendString(it.toJson())
                 ?: logger.warn("Websocket is connected, but remote is null")
         } else {
             logger.warn("Not connected, cannot send event: $it")
@@ -108,7 +111,7 @@ internal class Exporter(
     /** Run inside the queue thread, handle a packet. */
     private fun doHandlePacket(packet: PacketInfo): Boolean {
         if (recorderWebSocket.isConnected) {
-            serializer.encode(packet.packetAs(), packet.endpointId!!)
+            serializer?.encode(packet.packetAs(), packet.endpointId!!)
         }
         ByteBufferPool.returnBuffer(packet.packet.buffer)
         return true
