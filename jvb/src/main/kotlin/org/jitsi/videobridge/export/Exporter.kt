@@ -21,6 +21,8 @@ import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.utils.logging2.Logger
@@ -35,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.time.Duration
 
 internal class Exporter(
     private val url: URI,
@@ -131,13 +134,12 @@ internal class Exporter(
         }
 
         val attempt = reconnectAttempts.incrementAndGet()
-        if (attempt > MAX_RECONNECT_ATTEMPTS) {
-            logger.warn("Max reconnection attempts ($MAX_RECONNECT_ATTEMPTS) reached, giving up")
+        if (attempt > maxReconnectAttempts) {
+            logger.warn("Max reconnection attempts ($maxReconnectAttempts) reached, giving up")
             return
         }
 
-        // 0 s, 1 s, 2 s, 4 s, 8 s, 16 s, 30 s, 30 s ...
-        val delayMs = if (attempt == 1) 0 else min(500 * (2.0.pow(attempt - 1)).toLong(), 30000)
+        val delayMs = getDelayMs(attempt)
         logger.info("Scheduling reconnection attempt $attempt in $delayMs ms")
 
         cancelReconnect()
@@ -185,6 +187,16 @@ internal class Exporter(
 
         private val objectMapper = jacksonObjectMapper()
 
-        private const val MAX_RECONNECT_ATTEMPTS = 10
+        private val maxReconnectAttempts: Int by config {
+            "videobridge.exporter.max-reconnect-attempts".from(JitsiConfig.newConfig)
+        }
+
+        private val baseDelay: Duration by config {
+            "videobridge.exporter.base-delay".from(JitsiConfig.newConfig)
+        }
+
+        // 0, base, base * 2, max at 30 seconds
+        private fun getDelayMs(attempt: Int) =
+            if (attempt == 1) 0 else min(baseDelay.inWholeMilliseconds * 2.0.pow(attempt - 2).toLong(), 30000)
     }
 }
