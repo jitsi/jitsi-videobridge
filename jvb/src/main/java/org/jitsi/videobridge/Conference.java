@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
@@ -230,7 +231,10 @@ public class Conference
         }
 
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
-        exporter = new ExporterWrapper(logger);
+        exporter = new ExporterWrapper(logger, j -> {
+            handleTranscriptionMessage(j);
+            return Unit.INSTANCE;
+        });
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
@@ -1418,6 +1422,27 @@ public class Conference
     @NotNull public EncodingsManager getEncodingsManager()
     {
         return encodingsManager;
+    }
+
+    /**
+     * Handles transcription messages received from the websocket.
+     *
+     * @param transcriptionMessage the transcription message as JsonNode
+     */
+    private void handleTranscriptionMessage(JsonNode transcriptionMessage)
+    {
+        try
+        {
+            EndpointMessage endpointMessage = new EndpointMessage("");
+            endpointMessage.put("msgPayload", transcriptionMessage);
+            endpointMessage.put("from", "transcriber");
+
+            broadcastMessage(endpointMessage, true);
+        }
+        catch (Exception e)
+        {
+            logger.warn("Failed to broadcast transcription message", e);
+        }
     }
 
     /**
