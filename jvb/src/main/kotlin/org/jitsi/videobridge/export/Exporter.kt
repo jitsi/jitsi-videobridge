@@ -195,8 +195,15 @@ internal class Exporter(
             "videobridge.exporter.base-delay".from(JitsiConfig.newConfig)
         }
 
+        private val maxDelay: Duration by config {
+            "videobridge.exporter.max-delay".from(JitsiConfig.newConfig)
+        }
+
         // 0, base, base * 2, max at 30 seconds
-        private fun getDelayMs(attempt: Int) =
-            if (attempt == 1) 0 else min(baseDelay.inWholeMilliseconds * 2.0.pow(attempt - 2).toLong(), 30000)
+        private fun getDelayMs(attempt: Int) = if (attempt == 1) {
+            0
+        } else {
+            min(baseDelay.inWholeMilliseconds * 2.0.pow(attempt - 2).toLong(), maxDelay.inWholeMilliseconds)
+        }
     }
 }
