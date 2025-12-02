@@ -41,6 +41,7 @@ import kotlin.time.Duration
 
 internal class Exporter(
     private val url: URI,
+    private val httpHeaders: Map<String, String>,
     val logger: Logger,
     private val handleTranscriptionResult: ((JsonNode) -> Unit)
 ) {
@@ -147,7 +148,7 @@ internal class Exporter(
             if (!isShuttingDown.get()) {
                 try {
                     logger.info("Attempting reconnection (attempt $attempt)")
-                    webSocketClient.connect(recorderWebSocket, url, ClientUpgradeRequest())
+                    webSocketClient.connect(recorderWebSocket, url, createUpgradeRequest())
                 } catch (e: Exception) {
                     logger.warn("Reconnection attempt $attempt failed", e)
                     scheduleReconnect()
@@ -161,9 +162,15 @@ internal class Exporter(
         reconnectFuture = null
     }
 
+    private fun createUpgradeRequest() = ClientUpgradeRequest().apply {
+        httpHeaders.forEach { (name, value) ->
+            setHeader(name, value)
+        }
+    }
+
     fun start() {
         isShuttingDown.set(false)
-        webSocketClient.connect(recorderWebSocket, url, ClientUpgradeRequest())
+        webSocketClient.connect(recorderWebSocket, url, createUpgradeRequest())
     }
 
     fun stop() {
