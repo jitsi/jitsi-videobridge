@@ -82,7 +82,10 @@ class ExporterWrapper(
             logger.warn("Exporter already exists, stopping previous one.")
             stop()
         }
-        exporter = Exporter(connect.url, logger, handleTranscriptionResult).apply {
+        val httpHeaders = connect.getHttpHeaders().associate { header ->
+            header.name to header.value
+        }
+        exporter = Exporter(connect.url, httpHeaders, logger, handleTranscriptionResult).apply {
             start()
         }
         started = true
