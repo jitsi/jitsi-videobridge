@@ -134,14 +134,6 @@ internal class SingleSourceAllocation(
                 }
             }
         }
-        // If the stream is non-scalable enable oversending regardless of maxOversendBitrate
-        if (allowOversending && targetIdx < 0 && layers.oversendIndex >= 0 && layers.hasOnlyOneLayer()) {
-            logger.warn(
-                "Oversending above maxOversendBitrate, layer bitrate " +
-                    "${layers.layers[layers.oversendIndex].bitrate} bps"
-            )
-            targetIdx = layers.oversendIndex
-        }
 
         val resultingTargetBitrate = targetBitrate
         return resultingTargetBitrate - initialTargetBitrate

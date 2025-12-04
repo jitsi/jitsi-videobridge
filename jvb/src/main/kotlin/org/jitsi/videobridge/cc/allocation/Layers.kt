@@ -43,11 +43,3 @@ data class Layers(
         val noLayers = Layers(emptyList(), -1, -1)
     }
 }
-
-/**
- * Checks if the [Layers] instance effectively describes a single layer. When the temporal layer fields are used but
- * all frames belong to the base layer we see multiple entries in [this.layers], but they represent the same set of
- * frames.
- */
-fun Layers.hasOnlyOneLayer(): Boolean = layers.isNotEmpty() &&
-    layers.all { it.layer.height == layers[0].layer.height && it.bitrate == layers[0].bitrate }
