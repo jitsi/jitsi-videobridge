@@ -62,9 +62,11 @@ internal class Exporter(
         override fun onWebSocketClose(statusCode: Int, reason: String?) =
             super.onWebSocketClose(statusCode, reason).also {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
+                val internalError = statusCode == 1011
+                if (internalError) webSocketInternalErrors.inc()
                 if (!isShuttingDown.get()) {
                     // Avoid reconnect loops with no delay in case of an "internal error" (1011)
-                    scheduleReconnect(statusCode == 1011)
+                    scheduleReconnect(internalError)
                 }
             }
 
@@ -202,6 +204,11 @@ internal class Exporter(
         private val webSocketFailures = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_websocket_failures",
             "Number of websocket connection failures from Exporter"
+        )
+
+        private val webSocketInternalErrors = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_websocket_internal_errors",
+            "Number of websocket connection which were connected but closed with code 1011"
         )
 
         private val startsCount = VideobridgeMetricsContainer.instance.registerCounter(
