@@ -23,6 +23,7 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.utils.logging2.Logger
@@ -62,7 +63,8 @@ internal class Exporter(
             super.onWebSocketClose(statusCode, reason).also {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
                 if (!isShuttingDown.get()) {
-                    scheduleReconnect()
+                    // Avoid reconnect loops with no delay in case of an "internal error" (1011)
+                    scheduleReconnect(statusCode == 1011)
                 }
             }
 
@@ -129,18 +131,23 @@ internal class Exporter(
         }
     }
 
-    private fun scheduleReconnect() {
+    private fun scheduleReconnect(
+        // Ignore the number of attempts and schedule using the maximum configured delay instead.
+        maxDelay: Boolean = false
+    ) {
         if (isShuttingDown.get()) {
             return
         }
 
         val attempt = reconnectAttempts.incrementAndGet()
-        if (attempt > maxReconnectAttempts) {
-            logger.warn("Max reconnection attempts ($maxReconnectAttempts) reached, giving up")
-            return
+        maxReconnectAttempts?.let {
+            if (attempt > it) {
+                logger.warn("Max reconnection attempts ($it) reached, giving up")
+                return
+            }
         }
 
-        val delayMs = getDelayMs(attempt)
+        val delayMs = if (maxDelay) Companion.maxDelay.inWholeMilliseconds else getDelayMs(attempt)
         logger.info("Scheduling reconnection attempt $attempt in $delayMs ms")
 
         cancelReconnect()
@@ -194,7 +201,7 @@ internal class Exporter(
 
         private val objectMapper = jacksonObjectMapper()
 
-        private val maxReconnectAttempts: Int by config {
+        private val maxReconnectAttempts: Int? by optionalconfig {
             "videobridge.exporter.max-reconnect-attempts".from(JitsiConfig.newConfig)
         }
 
