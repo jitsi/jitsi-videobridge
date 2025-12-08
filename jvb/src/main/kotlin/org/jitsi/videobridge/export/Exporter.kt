@@ -107,7 +107,10 @@ internal class Exporter(
             logger.debug { "Received message from websocket: $jsonNode" }
 
             if (jsonNode.get("type")?.asText() == "transcription-result") {
+                transcriptsReceivedCount.inc()
                 handleTranscriptionResult(jsonNode)
+            } else {
+                otherMessagesReceivedCount.inc()
             }
         } catch (e: Exception) {
             logger.warn("Failed to parse incoming websocket message: $message", e)
@@ -118,6 +121,7 @@ internal class Exporter(
     private fun doHandlePacket(packet: PacketInfo): Boolean {
         if (recorderWebSocket.isConnected) {
             serializer?.encode(packet.packetAs(), packet.endpointId!!)
+            packetsSentCount.inc()
         }
         ByteBufferPool.returnBuffer(packet.packet.buffer)
         return true
@@ -177,6 +181,7 @@ internal class Exporter(
 
     fun start() {
         isShuttingDown.set(false)
+        startsCount.inc()
         webSocketClient.connect(recorderWebSocket, url, createUpgradeRequest())
     }
 
@@ -197,6 +202,26 @@ internal class Exporter(
         private val webSocketFailures = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_websocket_failures",
             "Number of websocket connection failures from Exporter"
+        )
+
+        private val startsCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_starts",
+            "Number of times Exporter has been started"
+        )
+
+        private val packetsSentCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_packets_sent",
+            "Number of packets sent by Exporter"
+        )
+
+        private val transcriptsReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_transcripts_received",
+            "Number of transcription results received by Exporter"
+        )
+
+        private val otherMessagesReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_other_messages_received",
+            "Number of non-transcription messages received by Exporter"
         )
 
         private val objectMapper = jacksonObjectMapper()
