@@ -29,6 +29,10 @@ curl 0:8080/metrics -H 'Accept: text/plain; version=0.0.4;'
 curl 0:8080/metrics -H 'Accept: application/json'
 ```
 
+Note: Conference size distribution metrics (by total endpoints, by audio senders, and by video senders) are available as
+Prometheus histograms (`conferences_by_size`, `conferences_by_audio_sender`, `conferences_by_video_sender`) but are not
+exposed via the JSON `/colibri/stats` endpoint.
+
 # XMPP MUC
 The statistics can also be published periodically via XMPP (which allows jicofo to monitor a set of bridges and perform
 load balancing, or allows an application to monitor the MUC and collect metrics from multiple bridges). In this case the
@@ -49,15 +53,7 @@ value (when the report was generated), and "total" means a cumulative value sinc
 
 * `bit_rate_download` - the current incoming bitrate (RTP) in kilobits per second.
 * `bit_rate_upload` - the current outgoing bitrate (RTP) in kilobits per second.
-* `conference_sizes` - the current distribution of conference sizes (counting all endpoints, including `octo` endpoints
-which are connected to a different jitsi-videobridge instance). The value is an array of integers of size 22,
-and the value at (zero-based) index `i` is the number of conferences with `i` participants. The last element (index 21)
-also includes conferences with more than 21 participants.
 * `conferences` - The current number of conferences.
-* `conferences_by_audio_senders` - the current distribution of the number of endpoints which are sending (non-silence)
-in all conferences. The semantics are similar to `conference_sizes`, e.g. a value of `v` at index `i` means that there
-are exactly `v` conferences in which `i` endpoints are sending audio.
-* `conferences_by_video_senders` - like `conferences_by_audio_senders`, but for video senders.
 * `current_timestamp` - the UTC time at which the report was generated.
 * `dtls_failed_endpoints` - the total number of endpoints which failed to establish a DTLS connection.
 * `endpoints` - the current number of endpoints, including `octo` endpoints.
