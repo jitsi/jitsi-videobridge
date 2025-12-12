@@ -25,6 +25,7 @@ import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.xmpp.extensions.colibri2.Connect
+import org.json.simple.JSONObject
 
 class ExporterWrapper(
     parentLogger: Logger,
@@ -89,5 +90,12 @@ class ExporterWrapper(
             start()
         }
         started = true
+    }
+
+    fun debugState() = JSONObject().apply {
+        put("started", started)
+        exporter?.let {
+            put("exporter", it.debugState())
+        }
     }
 }

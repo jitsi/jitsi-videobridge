@@ -31,11 +31,13 @@ import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
+import org.json.simple.JSONObject
 import java.net.URI
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.Duration
@@ -50,6 +52,14 @@ internal class Exporter(
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
 
+    // Instance-level counters for debugState
+    private val instancePacketsSent = AtomicLong(0)
+    private val instanceWebSocketFailures = AtomicLong(0)
+    private val instanceWebSocketInternalErrors = AtomicLong(0)
+    private val instanceStarts = AtomicLong(0)
+    private val instanceTranscriptsReceived = AtomicLong(0)
+    private val instanceOtherMessagesReceived = AtomicLong(0)
+
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
             "${javaClass.simpleName}-packet-queue",
@@ -63,7 +73,10 @@ internal class Exporter(
             super.onWebSocketClose(statusCode, reason).also {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
                 val internalError = statusCode == 1011
-                if (internalError) webSocketInternalErrors.inc()
+                if (internalError) {
+                    webSocketInternalErrors.inc()
+                    instanceWebSocketInternalErrors.incrementAndGet()
+                }
                 if (!isShuttingDown.get()) {
                     // Avoid reconnect loops with no delay in case of an "internal error" (1011)
                     scheduleReconnect(internalError)
@@ -80,6 +93,7 @@ internal class Exporter(
         override fun onWebSocketError(cause: Throwable?) = super.onWebSocketError(cause).also {
             logger.error("Websocket error", cause)
             webSocketFailures.inc()
+            instanceWebSocketFailures.incrementAndGet()
             if (!isShuttingDown.get()) {
                 scheduleReconnect()
             }
@@ -110,9 +124,11 @@ internal class Exporter(
 
             if (jsonNode.get("type")?.asText() == "transcription-result") {
                 transcriptsReceivedCount.inc()
+                instanceTranscriptsReceived.incrementAndGet()
                 handleTranscriptionResult(jsonNode)
             } else {
                 otherMessagesReceivedCount.inc()
+                instanceOtherMessagesReceived.incrementAndGet()
             }
         } catch (e: Exception) {
             logger.warn("Failed to parse incoming websocket message: $message", e)
@@ -124,6 +140,7 @@ internal class Exporter(
         if (recorderWebSocket.isConnected) {
             serializer?.encode(packet.packetAs(), packet.endpointId!!)
             packetsSentCount.inc()
+            instancePacketsSent.incrementAndGet()
         }
         ByteBufferPool.returnBuffer(packet.packet.buffer)
         return true
@@ -184,6 +201,7 @@ internal class Exporter(
     fun start() {
         isShuttingDown.set(false)
         startsCount.inc()
+        instanceStarts.incrementAndGet()
         webSocketClient.connect(recorderWebSocket, url, createUpgradeRequest())
     }
 
@@ -193,6 +211,20 @@ internal class Exporter(
         recorderWebSocket.session?.close(org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN, "closing")
         recorderWebSocket.session?.disconnect()
         queue.close()
+    }
+
+    fun debugState(): JSONObject = JSONObject().apply {
+        put("url", url.toString())
+        put("is_connected", isConnected())
+        put("is_shutting_down", isShuttingDown.get())
+        put("reconnect_attempts", reconnectAttempts.get())
+        put("packets_sent", instancePacketsSent.get())
+        put("websocket_failures", instanceWebSocketFailures.get())
+        put("websocket_internal_errors", instanceWebSocketInternalErrors.get())
+        put("starts", instanceStarts.get())
+        put("transcripts_received", instanceTranscriptsReceived.get())
+        put("other_messages_received", instanceOtherMessagesReceived.get())
+        put("queue_size", queue.size())
     }
 
     companion object {
