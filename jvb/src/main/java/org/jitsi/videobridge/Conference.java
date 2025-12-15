@@ -1338,7 +1338,6 @@ public class Conference
             return new JSONObject();
         }
 
-        boolean full = mode == DebugStateMode.FULL || mode == DebugStateMode.STATS;
         JSONObject debugState = new JSONObject();
         debugState.put("id", id);
 
@@ -1354,7 +1353,7 @@ public class Conference
             debugState.put("meeting_id", meetingId);
         }
 
-        if (full)
+        if (mode == DebugStateMode.FULL)
         {
             debugState.put("expired", expired.get());
             debugState.put("creation_time", creationTime);
@@ -1393,6 +1392,11 @@ public class Conference
             {
                 relays.put(r.getId(), r.debugState(mode));
             }
+        }
+
+        if (mode != DebugStateMode.SHORT)
+        {
+            debugState.put("exporter", exporter.debugState());
         }
 
         return debugState;
