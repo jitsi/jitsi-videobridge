@@ -394,6 +394,7 @@ public class AdaptiveSourceProjection
                     "context",
                     contextCopy == null ? "null" : contextCopy.getClass().getSimpleName());
         }
+        debugState.put("needsKeyframe", contextCopy == null ? "N/A" : contextCopy.needsKeyframe());
         debugState.put("targetIndex", targetIndex);
 
         return debugState;
