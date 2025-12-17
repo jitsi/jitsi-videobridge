@@ -15,14 +15,15 @@
  */
 package org.jitsi.videobridge.export
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
+import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.PingEvent
+import org.jitsi.mediajson.PongEvent
+import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.PacketInfo
@@ -47,7 +48,7 @@ internal class Exporter(
     private val url: URI,
     private val httpHeaders: Map<String, String>,
     val logger: Logger,
-    private val handleTranscriptionResult: ((JsonNode) -> Unit),
+    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
     private val pingEnabled: Boolean = false,
     private val pingIntervalMs: Int = 0,
     private val pingTimeoutMs: Int = 0
@@ -60,6 +61,7 @@ internal class Exporter(
     private var pingScheduledFuture: ScheduledFuture<*>? = null
     private var pingTimeoutFuture: ScheduledFuture<*>? = null
     private val nextPingId = AtomicInteger(0)
+    private val lastPingSentId = AtomicInteger(0)
     private val lastPongReceivedMs = AtomicLong(0)
 
     // Instance-level counters for debugState
@@ -69,6 +71,7 @@ internal class Exporter(
     private val instanceStarts = AtomicLong(0)
     private val instanceTranscriptsReceived = AtomicLong(0)
     private val instanceOtherMessagesReceived = AtomicLong(0)
+    private val instanceParseFailures = AtomicLong(0)
 
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
@@ -131,30 +134,36 @@ internal class Exporter(
 
     private fun handleIncomingMessage(message: String) {
         try {
-            val jsonNode = objectMapper.readTree(message)
-            logger.debug { "Received message from websocket: $jsonNode" }
+            val event = Event.parse(message)
+            logger.debug { "Received message from websocket: ${event.toJson()}" }
 
-            when (jsonNode.get("event")?.asText()) {
-                "pong" -> {
-                    logger.debug { "Received pong message" }
-                    lastPongReceivedMs.set(System.currentTimeMillis())
-                    // Cancel any pending timeout
-                    pingTimeoutFuture?.cancel(false)
-                    pingTimeoutFuture = null
+            when (event) {
+                is PongEvent -> {
+                    val expectedId = lastPingSentId.get()
+                    if (event.id == expectedId) {
+                        logger.debug { "Received pong with matching id=${event.id}" }
+                        lastPongReceivedMs.set(System.currentTimeMillis())
+                        // Cancel any pending timeout
+                        pingTimeoutFuture?.cancel(false)
+                        pingTimeoutFuture = null
+                    } else {
+                        logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
+                    }
+                }
+                is TranscriptionResultEvent -> {
+                    transcriptsReceivedCount.inc()
+                    instanceTranscriptsReceived.incrementAndGet()
+                    handleTranscriptionResult(event)
                 }
                 else -> {
-                    if (jsonNode.get("type")?.asText() == "transcription-result") {
-                        transcriptsReceivedCount.inc()
-                        instanceTranscriptsReceived.incrementAndGet()
-                        handleTranscriptionResult(jsonNode)
-                    } else {
-                        otherMessagesReceivedCount.inc()
-                        instanceOtherMessagesReceived.incrementAndGet()
-                    }
+                    otherMessagesReceivedCount.inc()
+                    instanceOtherMessagesReceived.incrementAndGet()
                 }
             }
         } catch (e: Exception) {
             logger.warn("Failed to parse incoming websocket message: $message", e)
+            parseFailuresCount.inc()
+            instanceParseFailures.incrementAndGet()
         }
     }
 
@@ -168,6 +177,7 @@ internal class Exporter(
 
         try {
             recorderWebSocket.remote?.sendString(pingEvent.toJson())
+            lastPingSentId.set(pingId)
             logger.debug { "Sent ping with id=$pingId" }
 
             // Schedule timeout check
@@ -303,6 +313,7 @@ internal class Exporter(
         put("starts", instanceStarts.get())
         put("transcripts_received", instanceTranscriptsReceived.get())
         put("other_messages_received", instanceOtherMessagesReceived.get())
+        put("parse_failures", instanceParseFailures.get())
         put("queue_size", queue.size())
         put("ping_enabled", pingEnabled)
         if (pingEnabled) {
@@ -348,7 +359,10 @@ internal class Exporter(
             "Number of non-transcription messages received by Exporter"
         )
 
-        private val objectMapper = jacksonObjectMapper()
+        private val parseFailuresCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_parse_failures",
+            "Number of messages that failed to parse"
+        )
 
         private val maxReconnectAttempts: Int? by optionalconfig {
             "videobridge.exporter.max-reconnect-attempts".from(JitsiConfig.newConfig)
