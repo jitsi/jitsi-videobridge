@@ -22,6 +22,7 @@ import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
+import org.jitsi.mediajson.PingEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.PacketInfo
@@ -46,11 +47,20 @@ internal class Exporter(
     private val url: URI,
     private val httpHeaders: Map<String, String>,
     val logger: Logger,
-    private val handleTranscriptionResult: ((JsonNode) -> Unit)
+    private val handleTranscriptionResult: ((JsonNode) -> Unit),
+    private val pingEnabled: Boolean = false,
+    private val pingIntervalMs: Int = 0,
+    private val pingTimeoutMs: Int = 0
 ) {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
+
+    // Ping/pong state
+    private var pingScheduledFuture: ScheduledFuture<*>? = null
+    private var pingTimeoutFuture: ScheduledFuture<*>? = null
+    private val nextPingId = AtomicInteger(0)
+    private val lastPongReceivedMs = AtomicLong(0)
 
     // Instance-level counters for debugState
     private val instancePacketsSent = AtomicLong(0)
@@ -72,6 +82,7 @@ internal class Exporter(
         override fun onWebSocketClose(statusCode: Int, reason: String?) =
             super.onWebSocketClose(statusCode, reason).also {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
+                stopPing()
                 val internalError = statusCode == 1011
                 if (internalError) {
                     webSocketInternalErrors.inc()
@@ -88,6 +99,7 @@ internal class Exporter(
             serializer = initSerializer(this)
             reconnectAttempts.set(0)
             cancelReconnect()
+            startPing()
         }
 
         override fun onWebSocketError(cause: Throwable?) = super.onWebSocketError(cause).also {
@@ -122,17 +134,83 @@ internal class Exporter(
             val jsonNode = objectMapper.readTree(message)
             logger.debug { "Received message from websocket: $jsonNode" }
 
-            if (jsonNode.get("type")?.asText() == "transcription-result") {
-                transcriptsReceivedCount.inc()
-                instanceTranscriptsReceived.incrementAndGet()
-                handleTranscriptionResult(jsonNode)
-            } else {
-                otherMessagesReceivedCount.inc()
-                instanceOtherMessagesReceived.incrementAndGet()
+            when (jsonNode.get("event")?.asText()) {
+                "pong" -> {
+                    logger.debug { "Received pong message" }
+                    lastPongReceivedMs.set(System.currentTimeMillis())
+                    // Cancel any pending timeout
+                    pingTimeoutFuture?.cancel(false)
+                    pingTimeoutFuture = null
+                }
+                else -> {
+                    if (jsonNode.get("type")?.asText() == "transcription-result") {
+                        transcriptsReceivedCount.inc()
+                        instanceTranscriptsReceived.incrementAndGet()
+                        handleTranscriptionResult(jsonNode)
+                    } else {
+                        otherMessagesReceivedCount.inc()
+                        instanceOtherMessagesReceived.incrementAndGet()
+                    }
+                }
             }
         } catch (e: Exception) {
             logger.warn("Failed to parse incoming websocket message: $message", e)
         }
+    }
+
+    private fun sendPing() {
+        if (!recorderWebSocket.isConnected || isShuttingDown.get()) {
+            return
+        }
+
+        val pingId = nextPingId.incrementAndGet()
+        val pingEvent = PingEvent(pingId)
+
+        try {
+            recorderWebSocket.remote?.sendString(pingEvent.toJson())
+            logger.debug { "Sent ping with id=$pingId" }
+
+            // Schedule timeout check
+            pingTimeoutFuture?.cancel(false)
+            pingTimeoutFuture = TaskPools.SCHEDULED_POOL.schedule({
+                handlePingTimeout()
+            }, pingTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            logger.warn("Failed to send ping message", e)
+        }
+    }
+
+    private fun handlePingTimeout() {
+        logger.warn("Ping timeout, reconnecting websocket")
+
+        // Force reconnect on timeout
+        stopPing()
+        recorderWebSocket.session?.close(1000, "Ping timeout")
+        scheduleReconnect()
+    }
+
+    private fun startPing() {
+        if (!pingEnabled || pingIntervalMs <= 0) {
+            return
+        }
+
+        logger.info("Starting ping with interval=$pingIntervalMs ms, timeout=$pingTimeoutMs ms")
+        stopPing()
+
+        // Schedule recurring ping
+        pingScheduledFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            { sendPing() },
+            pingIntervalMs.toLong(),
+            pingIntervalMs.toLong(),
+            TimeUnit.MILLISECONDS
+        )
+    }
+
+    private fun stopPing() {
+        pingScheduledFuture?.cancel(false)
+        pingScheduledFuture = null
+        pingTimeoutFuture?.cancel(false)
+        pingTimeoutFuture = null
     }
 
     /** Run inside the queue thread, handle a packet. */
@@ -207,6 +285,7 @@ internal class Exporter(
 
     fun stop() {
         isShuttingDown.set(true)
+        stopPing()
         cancelReconnect()
         recorderWebSocket.session?.close(org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN, "closing")
         recorderWebSocket.session?.disconnect()
@@ -225,6 +304,12 @@ internal class Exporter(
         put("transcripts_received", instanceTranscriptsReceived.get())
         put("other_messages_received", instanceOtherMessagesReceived.get())
         put("queue_size", queue.size())
+        put("ping_enabled", pingEnabled)
+        if (pingEnabled) {
+            put("ping_interval_ms", pingIntervalMs)
+            put("ping_timeout_ms", pingTimeoutMs)
+            put("last_pong_received_ms", lastPongReceivedMs.get())
+        }
     }
 
     companion object {
