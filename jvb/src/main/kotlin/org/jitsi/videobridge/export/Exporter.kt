@@ -21,6 +21,8 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
 import org.jitsi.mediajson.Event
+import org.jitsi.mediajson.PingEvent
+import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
@@ -48,10 +50,20 @@ internal class Exporter(
     private val httpHeaders: Map<String, String>,
     val logger: Logger,
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    private val pingEnabled: Boolean = false,
+    private val pingIntervalMs: Int = 0,
+    private val pingTimeoutMs: Int = 0
 ) {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
+
+    // Ping/pong state
+    private var pingScheduledFuture: ScheduledFuture<*>? = null
+    private var pingTimeoutFuture: ScheduledFuture<*>? = null
+    private val nextPingId = AtomicInteger(0)
+    private val lastPingSentId = AtomicInteger(0)
+    private val lastPongReceivedMs = AtomicLong(0)
 
     // Instance-level counters for debugState
     private val instancePacketsSent = AtomicLong(0)
@@ -74,6 +86,7 @@ internal class Exporter(
         override fun onWebSocketClose(statusCode: Int, reason: String?) =
             super.onWebSocketClose(statusCode, reason).also {
                 logger.info("Websocket closed with status $statusCode, reason: $reason")
+                stopPing()
                 val internalError = statusCode == 1011
                 if (internalError) {
                     webSocketInternalErrors.inc()
@@ -90,6 +103,7 @@ internal class Exporter(
             serializer = initSerializer(this)
             reconnectAttempts.set(0)
             cancelReconnect()
+            startPing()
         }
 
         override fun onWebSocketError(cause: Throwable?) = super.onWebSocketError(cause).also {
@@ -130,6 +144,18 @@ internal class Exporter(
                     instanceTranscriptsReceived.incrementAndGet()
                     handleTranscriptionResult(event)
                 }
+                is PongEvent -> {
+                    val expectedId = lastPingSentId.get()
+                    if (event.id == expectedId) {
+                        logger.debug { "Received pong with matching id=${event.id}" }
+                        lastPongReceivedMs.set(System.currentTimeMillis())
+                        // Cancel any pending timeout
+                        pingTimeoutFuture?.cancel(false)
+                        pingTimeoutFuture = null
+                    } else {
+                        logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
+                    }
+                }
                 else -> {
                     otherMessagesReceivedCount.inc()
                     instanceOtherMessagesReceived.incrementAndGet()
@@ -140,6 +166,61 @@ internal class Exporter(
             parseFailuresCount.inc()
             instanceParseFailures.incrementAndGet()
         }
+    }
+
+    private fun sendPing() {
+        if (!recorderWebSocket.isConnected || isShuttingDown.get()) {
+            return
+        }
+
+        val pingId = nextPingId.incrementAndGet()
+        val pingEvent = PingEvent(pingId)
+
+        try {
+            recorderWebSocket.remote?.sendString(pingEvent.toJson())
+            lastPingSentId.set(pingId)
+            logger.debug { "Sent ping with id=$pingId" }
+
+            // Schedule timeout check
+            pingTimeoutFuture = TaskPools.SCHEDULED_POOL.schedule({
+                handlePingTimeout()
+            }, pingTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            logger.warn("Failed to send ping message", e)
+        }
+    }
+
+    private fun handlePingTimeout() {
+        logger.warn("Ping timeout, reconnecting websocket")
+
+        // Force reconnect on timeout
+        stopPing()
+        recorderWebSocket.session?.close(1000, "Ping timeout")
+        scheduleReconnect()
+    }
+
+    private fun startPing() {
+        if (!pingEnabled || pingIntervalMs <= 0) {
+            return
+        }
+
+        logger.info("Starting ping with interval=$pingIntervalMs ms, timeout=$pingTimeoutMs ms")
+        stopPing()
+
+        // Schedule recurring ping
+        pingScheduledFuture = TaskPools.SCHEDULED_POOL.scheduleAtFixedRate(
+            { sendPing() },
+            pingIntervalMs.toLong(),
+            pingIntervalMs.toLong(),
+            TimeUnit.MILLISECONDS
+        )
+    }
+
+    private fun stopPing() {
+        pingScheduledFuture?.cancel(false)
+        pingScheduledFuture = null
+        pingTimeoutFuture?.cancel(false)
+        pingTimeoutFuture = null
     }
 
     /** Run inside the queue thread, handle a packet. */
@@ -214,6 +295,7 @@ internal class Exporter(
 
     fun stop() {
         isShuttingDown.set(true)
+        stopPing()
         cancelReconnect()
         if (recorderWebSocket.isConnected) {
             recorderWebSocket.remote?.sendString(SessionEndEvent().toJson())
@@ -236,6 +318,12 @@ internal class Exporter(
         put("other_messages_received", instanceOtherMessagesReceived.get())
         put("parse_failures", instanceParseFailures.get())
         put("queue_size", queue.size())
+        put("ping_enabled", pingEnabled)
+        if (pingEnabled) {
+            put("ping_interval_ms", pingIntervalMs)
+            put("ping_timeout_ms", pingTimeoutMs)
+            put("last_pong_received_ms", lastPongReceivedMs.get())
+        }
     }
 
     companion object {
