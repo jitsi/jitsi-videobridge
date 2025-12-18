@@ -181,6 +181,7 @@ internal class Exporter(
             logger.debug { "Sent ping with id=$pingId" }
 
             // Schedule timeout check
+            pingTimeoutFuture?.cancel(false)
             pingTimeoutFuture = TaskPools.SCHEDULED_POOL.schedule({
                 handlePingTimeout()
             }, pingTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
