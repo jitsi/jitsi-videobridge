@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.export
 
-import com.fasterxml.jackson.databind.JsonNode
+import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.OpusPayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -29,7 +29,7 @@ import org.json.simple.JSONObject
 
 class ExporterWrapper(
     parentLogger: Logger,
-    private val handleTranscriptionResult: ((JsonNode) -> Unit)
+    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit)
 ) : PotentialPacketHandler {
     val logger = createChildLogger(parentLogger)
     var started = false
