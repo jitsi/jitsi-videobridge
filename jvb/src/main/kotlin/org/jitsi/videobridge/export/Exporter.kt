@@ -24,6 +24,7 @@ import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
+import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
@@ -52,7 +53,8 @@ internal class Exporter(
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
     private val pingEnabled: Boolean = false,
     private val pingIntervalMs: Int = 0,
-    private val pingTimeoutMs: Int = 0
+    private val pingTimeoutMs: Int = 0,
+    private val handleMediaEvent: ((MediaEvent) -> Unit)
 ) {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
@@ -71,6 +73,7 @@ internal class Exporter(
     private val instanceWebSocketInternalErrors = AtomicLong(0)
     private val instanceStarts = AtomicLong(0)
     private val instanceTranscriptsReceived = AtomicLong(0)
+    private val instanceMediaEventsReceived = AtomicLong(0)
     private val instanceOtherMessagesReceived = AtomicLong(0)
     private val instanceParseFailures = AtomicLong(0)
 
@@ -164,6 +167,11 @@ internal class Exporter(
                     } else {
                         logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
                     }
+                }
+                is MediaEvent -> {
+                    mediaEventsReceivedCount.inc()
+                    instanceMediaEventsReceived.incrementAndGet()
+                    handleMediaEvent(event)
                 }
                 else -> {
                     otherMessagesReceivedCount.inc()
@@ -328,6 +336,7 @@ internal class Exporter(
         put("websocket_internal_errors", instanceWebSocketInternalErrors.get())
         put("starts", instanceStarts.get())
         put("transcripts_received", instanceTranscriptsReceived.get())
+        put("media_events_received", instanceMediaEventsReceived.get())
         put("other_messages_received", instanceOtherMessagesReceived.get())
         put("parse_failures", instanceParseFailures.get())
         put("queue_size", queue.size())
@@ -368,6 +377,11 @@ internal class Exporter(
         private val transcriptsReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_transcripts_received",
             "Number of transcription results received by Exporter"
+        )
+
+        private val mediaEventsReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_media_events_received",
+            "Number of media events received by Exporter"
         )
 
         private val otherMessagesReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(

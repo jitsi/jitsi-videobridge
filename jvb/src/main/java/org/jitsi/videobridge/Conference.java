@@ -19,6 +19,7 @@ import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.mediajson.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.format.*;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
@@ -233,6 +234,9 @@ public class Conference
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
         exporter = new ExporterWrapper(logger, j -> {
             handleTranscriptionMessage(j);
+            return Unit.INSTANCE;
+        }, m -> {
+            handleMediaMessage(m);
             return Unit.INSTANCE;
         });
         this.id = Objects.requireNonNull(id, "id");
@@ -1454,6 +1458,68 @@ public class Conference
         catch (Exception e)
         {
             logger.warn("Failed to broadcast transcription message", e);
+        }
+    }
+
+    /**
+     * Handles media events received from the websocket and converts them to RTP packets.
+     *
+     * @param mediaEvent the media event containing Opus audio data
+     */
+    private void handleMediaMessage(MediaEvent mediaEvent)
+    {
+        try
+        {
+            // Extract fields from the media event
+            String tag = mediaEvent.getMedia().getTag();
+            int sequenceNumber = mediaEvent.getMedia().getChunk();
+            long timestamp = mediaEvent.getMedia().getTimestamp();
+            String payloadBase64 = mediaEvent.getMedia().getPayload();
+
+            // Base64-decode the payload
+            byte[] payload = java.util.Base64.getDecoder().decode(payloadBase64);
+
+            // Create RTP packet buffer (12-byte header + payload)
+            int headerSize = 12; // Minimum RTP header without CSRCs or extensions
+            byte[] buffer = new byte[headerSize + payload.length];
+
+            // Create an AudioRtpPacket
+            org.jitsi.nlj.rtp.AudioRtpPacket rtpPacket =
+                new org.jitsi.nlj.rtp.AudioRtpPacket(buffer, 0, buffer.length);
+
+            // Set RTP header fields
+            rtpPacket.setVersion(2);
+            rtpPacket.setPayloadType(111); // Standard Opus payload type
+            rtpPacket.setSequenceNumber(sequenceNumber);
+            rtpPacket.setTimestamp(timestamp);
+            rtpPacket.setSsrc(localAudioSsrc);
+
+            // Copy payload into the buffer after the RTP header
+            System.arraycopy(payload, 0, buffer, headerSize, payload.length);
+
+            RtpPacket.HeaderExtension audioLevel = rtpPacket.addHeaderExtension(1, 1);
+            audioLevel.getBuffer()[0] = 55;
+
+            // Wrap in PacketInfo and inject into conference
+            PacketInfo packetInfo = new PacketInfo(rtpPacket);
+            packetInfo.setPayloadType(new OpusPayloadType((byte) 111));
+
+            // With a single endpoint, don't set the ID so that the translation is echoed back.
+            if (getEndpointCount() > 1)
+            {
+                packetInfo.setEndpointId(tag.substring(0, 8));
+            }
+
+            // Inject the packet into the conference
+            handleIncomingPacket(packetInfo);
+
+            logger.info("Injected media packet from tag " + tag +
+                        " (seq=" + sequenceNumber + ", ts=" + timestamp +
+                        ", payload=" + payload.length + " bytes)");
+        }
+        catch (Exception e)
+        {
+            logger.warn("Failed to handle media message", e);
         }
     }
 

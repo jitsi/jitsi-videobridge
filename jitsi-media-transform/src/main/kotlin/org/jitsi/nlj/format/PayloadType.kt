@@ -170,12 +170,15 @@ abstract class AudioPayloadType(
     override fun channelsString(): String = if (channels > 1) "/$channels" else ""
 }
 
-class OpusPayloadType(
-    pt: Byte,
-    clockRate: Int = 48000,
-    channels: Int = 2,
-    parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, clockRate, channels, parameters = parameters)
+class OpusPayloadType : AudioPayloadType {
+    @JvmOverloads
+    constructor(
+        pt: Byte,
+        clockRate: Int = 48000,
+        channels: Int = 2,
+        parameters: PayloadTypeParams = ConcurrentHashMap()
+    ) : super(pt, PayloadTypeEncoding.OPUS, clockRate, channels, parameters = parameters)
+}
 
 class TelephoneEventPayloadType(
     pt: Byte,

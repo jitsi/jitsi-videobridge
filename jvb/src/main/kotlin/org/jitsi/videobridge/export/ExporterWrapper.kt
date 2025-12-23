@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.export
 
+import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -28,7 +29,8 @@ import org.json.simple.JSONObject
 
 class ExporterWrapper(
     parentLogger: Logger,
-    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit)
+    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    private val handleMediaEvent: ((MediaEvent) -> Unit)
 ) : PotentialPacketHandler {
     val logger = createChildLogger(parentLogger)
     var started = false
@@ -96,7 +98,8 @@ class ExporterWrapper(
             handleTranscriptionResult,
             pingEnabled,
             pingIntervalMs,
-            pingTimeoutMs
+            pingTimeoutMs,
+            handleMediaEvent
         ).apply {
             start()
         }
