@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.export
 
+import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.OpusPayloadType
@@ -29,7 +30,8 @@ import org.json.simple.JSONObject
 
 class ExporterWrapper(
     parentLogger: Logger,
-    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit)
+    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    private val handleMediaEvent: ((MediaEvent) -> Unit)
 ) : PotentialPacketHandler {
     val logger = createChildLogger(parentLogger)
     var started = false
@@ -86,7 +88,7 @@ class ExporterWrapper(
         val httpHeaders = connect.getHttpHeaders().associate { header ->
             header.name to header.value
         }
-        exporter = Exporter(connect.url, httpHeaders, logger, handleTranscriptionResult).apply {
+        exporter = Exporter(connect.url, httpHeaders, logger, handleTranscriptionResult, handleMediaEvent).apply {
             start()
         }
         started = true

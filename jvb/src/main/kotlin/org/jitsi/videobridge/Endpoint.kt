@@ -51,6 +51,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.NEVER
 import org.jitsi.utils.concurrent.PeriodicRunnable
@@ -867,7 +868,17 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    override fun send(packetInfo: PacketInfo) = transceiver.sendPacket(packetInfo)
+    override fun send(packetInfo: PacketInfo) {
+        if (packetInfo.endpointId == null) {
+            val otherEndpoint = conference.endpoints.find { it.id != id }
+            val ssrc = otherEndpoint?.audioSources?.first()?.ssrc
+            if (ssrc != null) {
+                packetInfo.packetAs<RtpPacket>().ssrc = ssrc
+                logger.info("Set SSRC to $ssrc for outgoing packet.")
+            }
+        }
+        transceiver.sendPacket(packetInfo)
+    }
 
     /**
      * To find out whether the endpoint should be expired, we check the activity timestamps from the transceiver.
