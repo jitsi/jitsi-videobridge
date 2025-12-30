@@ -15,9 +15,9 @@
  */
 package org.jitsi.videobridge;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import kotlin.*;
 import org.jetbrains.annotations.*;
+import org.jitsi.mediajson.*;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
@@ -1433,7 +1433,7 @@ public class Conference
      *
      * @param transcriptionMessage the transcription message as JsonNode
      */
-    private void handleTranscriptionMessage(JsonNode transcriptionMessage)
+    private void handleTranscriptionMessage(TranscriptionResultEvent transcriptionMessage)
     {
         try
         {

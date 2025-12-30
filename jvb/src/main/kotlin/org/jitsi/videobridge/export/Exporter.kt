@@ -15,13 +15,13 @@
  */
 package org.jitsi.videobridge.export
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.eclipse.jetty.websocket.api.Session
 import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
+import org.jitsi.mediajson.Event
+import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.PacketInfo
@@ -46,7 +46,7 @@ internal class Exporter(
     private val url: URI,
     private val httpHeaders: Map<String, String>,
     val logger: Logger,
-    private val handleTranscriptionResult: ((JsonNode) -> Unit)
+    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
 ) {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
@@ -59,6 +59,7 @@ internal class Exporter(
     private val instanceStarts = AtomicLong(0)
     private val instanceTranscriptsReceived = AtomicLong(0)
     private val instanceOtherMessagesReceived = AtomicLong(0)
+    private val instanceParseFailures = AtomicLong(0)
 
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
@@ -119,19 +120,24 @@ internal class Exporter(
 
     private fun handleIncomingMessage(message: String) {
         try {
-            val jsonNode = objectMapper.readTree(message)
-            logger.debug { "Received message from websocket: $jsonNode" }
+            val event = Event.parse(message)
+            logger.debug { "Received message from websocket: ${event.toJson()}" }
 
-            if (jsonNode.get("type")?.asText() == "transcription-result") {
-                transcriptsReceivedCount.inc()
-                instanceTranscriptsReceived.incrementAndGet()
-                handleTranscriptionResult(jsonNode)
-            } else {
-                otherMessagesReceivedCount.inc()
-                instanceOtherMessagesReceived.incrementAndGet()
+            when (event) {
+                is TranscriptionResultEvent -> {
+                    transcriptsReceivedCount.inc()
+                    instanceTranscriptsReceived.incrementAndGet()
+                    handleTranscriptionResult(event)
+                }
+                else -> {
+                    otherMessagesReceivedCount.inc()
+                    instanceOtherMessagesReceived.incrementAndGet()
+                }
             }
         } catch (e: Exception) {
             logger.warn("Failed to parse incoming websocket message: $message", e)
+            parseFailuresCount.inc()
+            instanceParseFailures.incrementAndGet()
         }
     }
 
@@ -224,6 +230,7 @@ internal class Exporter(
         put("starts", instanceStarts.get())
         put("transcripts_received", instanceTranscriptsReceived.get())
         put("other_messages_received", instanceOtherMessagesReceived.get())
+        put("parse_failures", instanceParseFailures.get())
         put("queue_size", queue.size())
     }
 
@@ -263,7 +270,10 @@ internal class Exporter(
             "Number of non-transcription messages received by Exporter"
         )
 
-        private val objectMapper = jacksonObjectMapper()
+        private val parseFailuresCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_parse_failures",
+            "Number of messages that failed to parse"
+        )
 
         private val maxReconnectAttempts: Int? by optionalconfig {
             "videobridge.exporter.max-reconnect-attempts".from(JitsiConfig.newConfig)
