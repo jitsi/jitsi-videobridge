@@ -21,6 +21,7 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
 import org.jitsi.mediajson.Event
+import org.jitsi.mediajson.SessionEndEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
@@ -214,6 +215,9 @@ internal class Exporter(
     fun stop() {
         isShuttingDown.set(true)
         cancelReconnect()
+        if (recorderWebSocket.isConnected) {
+            recorderWebSocket.remote?.sendString(SessionEndEvent().toJson())
+        }
         recorderWebSocket.session?.close(org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN, "closing")
         recorderWebSocket.session?.disconnect()
         queue.close()
