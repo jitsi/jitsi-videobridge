@@ -29,7 +29,7 @@
         <junit.version>5.13.4</junit.version>
         <junit.platform.version>1.13.4</junit.platform.version>
         <jitsi.utils.version>1.0-146-g45b9f50</jitsi.utils.version>
-        <jicoco.version>1.1-163-gc1ea8ca</jicoco.version>
+        <jicoco.version>1.1-164-g4c67b0d</jicoco.version>
         <mockk.version>1.14.5</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
