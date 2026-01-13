@@ -24,6 +24,8 @@ class SctpConfig private constructor() {
     val enabled: Boolean by config { "videobridge.sctp.enabled".from(JitsiConfig.newConfig) }
     fun enabled() = enabled
 
+    val maxChannels: Int by config { "videobridge.sctp.max-channels".from(JitsiConfig.newConfig) }
+
     companion object {
         @JvmField
         val config = SctpConfig()
