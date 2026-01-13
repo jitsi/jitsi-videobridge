@@ -18,6 +18,7 @@ package org.jitsi.videobridge.datachannel;
 
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.sctp.*;
 
 import java.nio.*;
@@ -64,6 +65,7 @@ public class DataChannelStack
             if (dataChannels.size() >= SctpConfig.config.getMaxChannels())
             {
                 logger.warn("Data channel limit exceeded.");
+                VideobridgeMetrics.rejectedDataChannels.inc();
                 return;
             }
 

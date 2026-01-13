@@ -30,7 +30,7 @@ object VideobridgeMetrics {
         "shutting_down",
         "Whether the bridge is shutting down."
     )
-    val drainMode = VideobridgeMetricsContainer.instance.registerBooleanMetric(
+    val drainMode = metricsContainer.registerBooleanMetric(
         "drain_mode",
         "Whether the bridge is in drain shutdown mode.",
         VideobridgeConfig.initialDrainMode
@@ -279,5 +279,11 @@ object VideobridgeMetrics {
         "startup_time",
         "The startup time of the service.",
         System.currentTimeMillis()
+    )
+
+    @JvmField
+    val rejectedDataChannels = metricsContainer.registerCounter(
+        "rejected_data_channels",
+        "Number of data channels rejected by the bridge."
     )
 }
