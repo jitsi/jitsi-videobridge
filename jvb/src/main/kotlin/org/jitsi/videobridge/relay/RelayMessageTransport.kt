@@ -25,6 +25,7 @@ import org.jitsi.videobridge.datachannel.DataChannel
 import org.jitsi.videobridge.datachannel.DataChannelStack.DataChannelMessageListener
 import org.jitsi.videobridge.datachannel.protocol.DataChannelMessage
 import org.jitsi.videobridge.datachannel.protocol.DataChannelStringMessage
+import org.jitsi.videobridge.message.AddAudioSubscriptionMessage
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.ClientHelloMessage
@@ -162,6 +163,13 @@ class RelayMessageTransport(
         }
 
         ep.addReceiver(relay.id, sourceName, message.videoConstraints)
+        return null
+    }
+
+    override fun addAudioSubscription(message: AddAudioSubscriptionMessage): BridgeChannelMessage? {
+        val sourceName = message.sourceName
+        val ep = relay.conference.findSourceOwner(sourceName)
+        ep?.addAudioSubscription(message.bridgeId, message.sourceName)
         return null
     }
 

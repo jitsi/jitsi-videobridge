@@ -1081,6 +1081,10 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
+    override fun addAudioSubscription(bridgeId: String, sourceName: String) {
+        conference.addAudioSubscription(bridgeId, sourceName)
+    }
+
     companion object {
         private val droppedPacketsMetric = VideobridgeMetricsContainer.instance.registerCounter(
             "srtp_send_queue_dropped_packets",
