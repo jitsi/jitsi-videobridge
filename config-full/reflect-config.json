@@ -1,0 +1,47 @@
+[
+    {
+        "name": "org.glassfish.jersey.inject.hk2.SupplierFactoryBridge",
+        "allDeclaredConstructors": true,
+        "allPublicConstructors": true,
+        "allDeclaredMethods": true,
+        "allPublicMethods": true,
+        "allDeclaredFields": true,
+        "allPublicFields": true
+    },
+    {
+        "name": "org.glassfish.jersey.server.internal.monitoring.CoreMonitoringBinder$1",
+        "allDeclaredConstructors": true
+    },
+    {
+        "name": "jakarta.ws.rs.core.UriInfo",
+        "allDeclaredMethods": true
+    },
+    {
+        "name": "org.glassfish.jersey.server.ExtendedUriInfo",
+        "allDeclaredMethods": true
+    },
+    {
+        "name": "jakarta.ws.rs.container.ResourceInfo",
+        "allDeclaredMethods": true
+    },
+    {
+        "name": "jakarta.ws.rs.core.HttpHeaders",
+        "allDeclaredMethods": true
+    },
+    {
+        "name": "jakarta.ws.rs.core.Request",
+        "allDeclaredMethods": true
+    },
+    {
+        "name": "jakarta.ws.rs.core.SecurityContext",
+        "allDeclaredMethods": true
+    },
+    {
+        "name": "jakarta.ws.rs.ext.Providers",
+        "allDeclaredMethods": true
+    },
+    {
+        "name": "jakarta.ws.rs.core.Application",
+        "allDeclaredMethods": true
+    }
+]

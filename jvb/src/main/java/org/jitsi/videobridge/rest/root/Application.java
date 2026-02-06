@@ -30,8 +30,9 @@ import org.jitsi.videobridge.xmpp.*;
 
 import static org.jitsi.videobridge.rest.RestConfig.config;
 
-public class Application extends ResourceConfig
-{
+import org.glassfish.jersey.jackson.JacksonFeature;
+
+public class Application extends ResourceConfig {
     public Application(
             Videobridge videobridge,
             XmppConnection xmppConnection,
@@ -40,27 +41,32 @@ public class Application extends ResourceConfig
 
     {
         register(
-            new ServiceBinder(
-                videobridge,
-                xmppConnection,
-                healthChecker
-            )
-        );
+                new ServiceBinder(
+                        videobridge,
+                        xmppConnection,
+                        healthChecker));
         // Filters
         register(ConfigFilter.class);
-        // Register all resources in the package
-        packages("org.jitsi.videobridge.rest.root");
+        register(JacksonFeature.class);
+        // Register all resources explicitly for native image compatibility
+        register(org.jitsi.videobridge.rest.root.colibri.debug.Debug.class);
+        register(org.jitsi.videobridge.rest.root.colibri.drain.Drain.class);
+        register(org.jitsi.videobridge.rest.root.colibri.mucclient.MucClient.class);
+        register(org.jitsi.videobridge.rest.root.colibri.shutdown.Shutdown.class);
+        register(org.jitsi.videobridge.rest.root.colibri.stats.Stats.class);
+        register(org.jitsi.videobridge.rest.root.colibri.v2.conferences.Conferences.class);
+        register(org.jitsi.videobridge.rest.root.debug.Debug.class);
+        register(org.jitsi.videobridge.rest.root.debug.DebugFeatures.class);
+        register(org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures.class);
+        register(org.jitsi.videobridge.rest.root.stats.Stats.class);
 
-        if (config.isEnabled(RestApis.HEALTH))
-        {
+        if (config.isEnabled(RestApis.HEALTH)) {
             register(new org.jitsi.rest.Health(healthChecker));
         }
-        if (config.isEnabled(RestApis.VERSION))
-        {
+        if (config.isEnabled(RestApis.VERSION)) {
             register(new org.jitsi.rest.Version(version));
         }
-        if (config.isEnabled(RestApis.PROMETHEUS))
-        {
+        if (config.isEnabled(RestApis.PROMETHEUS)) {
             register(new Prometheus(VideobridgeMetricsContainer.getInstance()));
         }
     }
