@@ -34,6 +34,7 @@ import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.json.simple.JSONObject
 import java.net.URI
+import java.time.Duration
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -41,7 +42,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.time.Duration
 
 internal class Exporter(
     private val url: URI,
@@ -177,7 +177,7 @@ internal class Exporter(
             }
         }
 
-        val delayMs = if (maxDelay) Companion.maxDelay.inWholeMilliseconds else getDelayMs(attempt)
+        val delayMs = if (maxDelay) Companion.maxDelay.toMillis() else getDelayMs(attempt)
         logger.info("Scheduling reconnection attempt $attempt in $delayMs ms")
 
         cancelReconnect()
@@ -295,7 +295,7 @@ internal class Exporter(
         private fun getDelayMs(attempt: Int) = if (attempt == 1) {
             0
         } else {
-            min(baseDelay.inWholeMilliseconds * 2.0.pow(attempt - 2).toLong(), maxDelay.inWholeMilliseconds)
+            min(baseDelay.toMillis() * 2.0.pow(attempt - 2).toLong(), maxDelay.toMillis())
         }
     }
 }
