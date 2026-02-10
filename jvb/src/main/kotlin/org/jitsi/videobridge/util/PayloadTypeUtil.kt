@@ -99,7 +99,7 @@ class PayloadTypeUtil {
                 AV1 -> Av1PayloadType(id, parameters, rtcpFeedbackSet)
                 H264 -> H264PayloadType(id, parameters, rtcpFeedbackSet)
                 RTX -> RtxPayloadType(id, parameters)
-                OPUS -> OpusPayloadType(id, parameters)
+                OPUS -> OpusPayloadType(id, clockRate, channels, parameters)
                 TELEPHONE_EVENT -> TelephoneEventPayloadType(id, clockRate, channels, parameters)
                 RED -> when (mediaType) {
                     AUDIO -> AudioRedPayloadType(id, clockRate, channels, parameters)

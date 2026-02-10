@@ -172,8 +172,10 @@ abstract class AudioPayloadType(
 
 class OpusPayloadType(
     pt: Byte,
+    clockRate: Int = 48000,
+    channels: Int = 2,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, parameters = parameters)
+) : AudioPayloadType(pt, PayloadTypeEncoding.OPUS, clockRate, channels, parameters = parameters)
 
 class TelephoneEventPayloadType(
     pt: Byte,
