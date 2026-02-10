@@ -74,21 +74,8 @@ class MediaJsonSerializer(
         }
 
         if ((packetInfo.payloadType?.encoding ?: PayloadTypeEncoding.OPUS) != state.encoding.payloadTypeEncoding) {
-            if (state.encodingChanges >= MAX_ENCODING_CHANGES) {
-                logger.warn("SSRC ${p.ssrc} has changed format more than $MAX_ENCODING_CHANGES times, ignoring")
-                return@synchronized
-            }
-            logger.info("SSRC ${p.ssrc} changed format from ${state.encoding} to ${packetInfo.encoding()}")
-            ssrcsStarted[p.ssrc] = SsrcState(
-                p.timestamp,
-                (
-                    Duration.between(ref, Clock.systemUTC().instant())
-                        .toNanos() * (packetInfo.payloadType?.clockRate?.toDouble() ?: 48000.0) * 1e-9
-                    ).toLong(),
-                packetInfo.encoding(),
-                state.encodingChanges + 1
-            )
-            handleEvent(createStart(epId, p.ssrc, state.encoding))
+            logger.debug { "Dropping packet with encoding ${packetInfo.payloadType?.encoding}" }
+            return@synchronized
         }
 
         handleEvent(encodeMedia(p, state, epId))
@@ -126,8 +113,7 @@ class MediaJsonSerializer(
         initialRtpTimestamp: Long,
         // Offset of this SSRC since the start time in RTP units
         startOffset: Long,
-        val encoding: Encoding,
-        val encodingChanges: Int = 0
+        val encoding: Encoding
     ) {
         private val seqIndexTracker = RtpSequenceIndexTracker()
         private val timestampIndexTracker = RtpTimestampIndexTracker().apply { update(initialRtpTimestamp) }
