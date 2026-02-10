@@ -49,10 +49,6 @@ class ExporterWrapper(
     /** Whether we want to accept a packet. */
     override fun wants(packet: PacketInfo): Boolean {
         if (!isConnected() || packet.packet !is AudioRtpPacket) return false
-        if (packet.payloadType !is OpusPayloadType) {
-            logger.warn("Ignore audio with unsupported payload type: ${packet.payloadType}")
-            return false
-        }
         return true
     }
 
