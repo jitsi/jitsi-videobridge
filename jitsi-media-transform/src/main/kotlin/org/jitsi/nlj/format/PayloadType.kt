@@ -64,10 +64,17 @@ abstract class PayloadType(
     val rtcpFeedbackSet = CopyOnWriteArraySet(rtcpFeedbackSet)
 
     override fun toString(): String = with(StringBuffer()) {
-        append(pt).append(" -> ").append(encoding).append(" (").append(clockRate).append("): ").append(parameters)
+        append(pt).append(" -> ").append(encodingName())
+            .append(" (").append(clockRate)
+            .append(channelsString())
+            .append("): ").append(parameters)
 
         toString()
     }
+
+    open fun encodingName() = encoding.name.lowercase()
+
+    open fun channelsString() = ""
 }
 
 enum class PayloadTypeEncoding {
@@ -154,8 +161,14 @@ abstract class AudioPayloadType(
     pt: Byte,
     encoding: PayloadTypeEncoding,
     clockRate: Int = 48000,
+    /**
+     * The number of channels
+     */
+    val channels: Int = 1,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : PayloadType(pt, encoding, MediaType.AUDIO, clockRate, parameters)
+) : PayloadType(pt, encoding, MediaType.AUDIO, clockRate, parameters) {
+    override fun channelsString(): String = if (channels > 1) "/$channels" else ""
+}
 
 class OpusPayloadType(
     pt: Byte,
@@ -165,14 +178,16 @@ class OpusPayloadType(
 class TelephoneEventPayloadType(
     pt: Byte,
     clockRate: Int,
+    channels: Int = 1,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.TELEPHONE_EVENT, clockRate, parameters)
+) : AudioPayloadType(pt, PayloadTypeEncoding.TELEPHONE_EVENT, clockRate, channels, parameters)
 
 class AudioRedPayloadType(
     pt: Byte,
     clockRate: Int = 48000,
+    channels: Int = 1,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.RED, clockRate, parameters)
+) : AudioPayloadType(pt, PayloadTypeEncoding.RED, clockRate, channels, parameters)
 
 class VideoRedPayloadType(
     pt: Byte,
@@ -183,12 +198,19 @@ class VideoRedPayloadType(
 
 class OtherAudioPayloadType(
     pt: Byte,
+    private val encodingName: String,
     clockRate: Int,
+    channels: Int = 1,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
+) : AudioPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, channels, parameters) {
+    override fun encodingName() = encodingName.lowercase()
+}
 
 class OtherVideoPayloadType(
     pt: Byte,
+    private val encodingName: String,
     clockRate: Int,
     parameters: PayloadTypeParams = ConcurrentHashMap()
-) : VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters)
+) : VideoPayloadType(pt, PayloadTypeEncoding.OTHER, clockRate, parameters) {
+    override fun encodingName() = encodingName.lowercase()
+}

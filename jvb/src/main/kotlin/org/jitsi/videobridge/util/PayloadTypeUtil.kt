@@ -91,6 +91,7 @@ class PayloadTypeUtil {
             val id = ext.id.toByte()
             val encoding = createFrom(ext.name)
             val clockRate = ext.clockrate
+            val channels = ext.channels
 
             return when (encoding) {
                 VP8 -> Vp8PayloadType(id, parameters, rtcpFeedbackSet)
@@ -99,15 +100,15 @@ class PayloadTypeUtil {
                 H264 -> H264PayloadType(id, parameters, rtcpFeedbackSet)
                 RTX -> RtxPayloadType(id, parameters)
                 OPUS -> OpusPayloadType(id, parameters)
-                TELEPHONE_EVENT -> TelephoneEventPayloadType(id, clockRate, parameters)
+                TELEPHONE_EVENT -> TelephoneEventPayloadType(id, clockRate, channels, parameters)
                 RED -> when (mediaType) {
-                    AUDIO -> AudioRedPayloadType(id, clockRate, parameters)
+                    AUDIO -> AudioRedPayloadType(id, clockRate, channels, parameters)
                     VIDEO -> VideoRedPayloadType(id, clockRate, parameters, rtcpFeedbackSet)
                     else -> null
                 }
                 OTHER -> when (mediaType) {
-                    AUDIO -> OtherAudioPayloadType(id, clockRate, parameters)
-                    VIDEO -> OtherVideoPayloadType(id, clockRate, parameters)
+                    AUDIO -> OtherAudioPayloadType(id, ext.name, clockRate, channels, parameters)
+                    VIDEO -> OtherVideoPayloadType(id, ext.name, clockRate, parameters)
                     else -> null
                 }
             }

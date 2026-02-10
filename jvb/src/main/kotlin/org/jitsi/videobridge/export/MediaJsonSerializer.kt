@@ -23,8 +23,8 @@ import org.jitsi.mediajson.MediaFormat
 import org.jitsi.mediajson.Start
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.format.AudioPayloadType
 import org.jitsi.nlj.format.PayloadType
-import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.RtpTimestampIndexTracker
@@ -88,9 +88,9 @@ class MediaJsonSerializer(
         Start(
             "$epId-$ssrc",
             MediaFormat(
-                payloadType.encoding.name,
+                payloadType.encodingName(),
                 payloadType.clockRate,
-                if (payloadType.encoding == PayloadTypeEncoding.OPUS) 2 else 1,
+                (payloadType as? AudioPayloadType)?.channels ?: 1,
                 payloadType.parameters
             ),
             CustomParameters(endpointId = epId)
