@@ -17,7 +17,6 @@ package org.jitsi.videobridge.export
 
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.format.OpusPayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger

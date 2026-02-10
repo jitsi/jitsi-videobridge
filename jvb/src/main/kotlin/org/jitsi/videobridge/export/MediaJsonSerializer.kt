@@ -23,7 +23,7 @@ import org.jitsi.mediajson.MediaFormat
 import org.jitsi.mediajson.Start
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.RtpTimestampIndexTracker
@@ -62,25 +62,47 @@ class MediaJsonSerializer(
         val state = ssrcsStarted.computeIfAbsent(p.ssrc) { ssrc ->
             SsrcState(
                 p.timestamp,
-                (Duration.between(ref, Clock.systemUTC().instant()).toNanos() * 48.0e-6).toLong()
+                (
+                    Duration.between(ref, Clock.systemUTC().instant())
+                        .toNanos() * (packetInfo.payloadType?.clockRate?.toDouble() ?: 48000.0) * 1e-9
+                    ).toLong(),
+                packetInfo.encoding()
             ).also {
                 logger.info("Starting SSRC $ssrc for endpoint $epId ")
-                handleEvent(createStart(epId, ssrc, packetInfo.payloadType))
+                handleEvent(createStart(epId, ssrc, it.encoding))
             }
+        }
+
+        if ((packetInfo.payloadType?.encoding ?: PayloadTypeEncoding.OPUS) != state.encoding.payloadTypeEncoding) {
+            if (state.encodingChanges >= MAX_ENCODING_CHANGES) {
+                logger.warn("SSRC ${p.ssrc} has changed format more than $MAX_ENCODING_CHANGES times, ignoring")
+                return@synchronized
+            }
+            logger.info("SSRC ${p.ssrc} changed format from ${state.encoding} to ${packetInfo.encoding()}")
+            ssrcsStarted[p.ssrc] = SsrcState(
+                p.timestamp,
+                (
+                    Duration.between(ref, Clock.systemUTC().instant())
+                        .toNanos() * (packetInfo.payloadType?.clockRate?.toDouble() ?: 48000.0) * 1e-9
+                    ).toLong(),
+                packetInfo.encoding(),
+                state.encodingChanges + 1
+            )
+            handleEvent(createStart(epId, p.ssrc, state.encoding))
         }
 
         handleEvent(encodeMedia(p, state, epId))
     }
 
-    private fun createStart(epId: String, ssrc: Long, payloadType: PayloadType?) = StartEvent(
+    private fun createStart(epId: String, ssrc: Long, encoding: Encoding) = StartEvent(
         ++seq,
         Start(
             "$epId-$ssrc",
             MediaFormat(
-                payloadType?.encoding?.toString()?.lowercase() ?:"opus",
-                payloadType?.clockRate ?:48000,
-                2,
-                payloadType?.parameters
+                encoding.payloadTypeEncoding.name,
+                encoding.clockRate,
+                encoding.channels,
+                encoding.parameters
             ),
             CustomParameters(endpointId = epId)
         )
@@ -104,11 +126,34 @@ class MediaJsonSerializer(
         initialRtpTimestamp: Long,
         // Offset of this SSRC since the start time in RTP units
         startOffset: Long,
+        val encoding: Encoding,
+        val encodingChanges: Int = 0
     ) {
         private val seqIndexTracker = RtpSequenceIndexTracker()
         private val timestampIndexTracker = RtpTimestampIndexTracker().apply { update(initialRtpTimestamp) }
         private val offset = startOffset - initialRtpTimestamp
         fun getTimestamp(rtpTimestamp: Long): Long = offset + timestampIndexTracker.update(rtpTimestamp)
         fun getSequenceNumber(seq: Int) = seqIndexTracker.update(seq).toInt()
+    }
+
+    private data class Encoding(
+        val payloadTypeEncoding: PayloadTypeEncoding,
+        val clockRate: Int,
+        val channels: Int,
+        val parameters: Map<String, String>?
+    )
+
+    private fun PacketInfo.encoding(): Encoding {
+        return Encoding(
+            payloadType?.encoding ?: PayloadTypeEncoding.OPUS,
+            payloadType?.clockRate ?: 48000,
+            if (payloadType?.encoding == null || payloadType?.encoding == PayloadTypeEncoding.OPUS) 2 else 1,
+            payloadType?.parameters
+        )
+    }
+
+    companion object {
+        // Maximum number of times that an SSRC is allowed to change its format
+        const val MAX_ENCODING_CHANGES = 50
     }
 }
