@@ -85,8 +85,9 @@ class ExporterWrapper(
         // Extract ping configuration if present
         val ping = connect.getPing()
         val pingEnabled = ping != null
-        val pingIntervalMs = ping?.interval ?: 0
-        val pingTimeoutMs = ping?.timeout ?: 0
+        // Default values in case ping is enabled, but no values are specified.
+        val pingIntervalMs = ping?.interval ?: 10000
+        val pingTimeoutMs = ping?.timeout ?: 3000
 
         exporter = Exporter(
             connect.url,
