@@ -23,6 +23,7 @@ import org.jitsi.mediajson.MediaFormat
 import org.jitsi.mediajson.Start
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
@@ -38,8 +39,6 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * Encodes the media in a conference into a mediajson format. Maintains state for each SSRC in order to maintain a
  * common space for timestamps.
  *
- * Note this supports only OPUS and assumes a common clock with a rate of 48000 for all SSRCs (which is required by
- * OPUS/RTP).
  */
 class MediaJsonSerializer(
     /** Encoded mediajson events are sent to this function */
@@ -59,37 +58,40 @@ class MediaJsonSerializer(
             logger.info("Ignoring packet without endpoint ID, SSRC ${p.ssrc}")
             return@synchronized
         }
+        val payloadType = packetInfo.payloadType ?: run {
+            logger.info("Ignoring packet without payloadType, SSRC ${p.ssrc}")
+            return@synchronized
+        }
+
         val state = ssrcsStarted.computeIfAbsent(p.ssrc) { ssrc ->
+            val now = Clock.systemUTC().instant()
             SsrcState(
                 p.timestamp,
-                (
-                    Duration.between(ref, Clock.systemUTC().instant())
-                        .toNanos() * (packetInfo.payloadType?.clockRate?.toDouble() ?: 48000.0) * 1e-9
-                    ).toLong(),
-                packetInfo.encoding()
+                (Duration.between(ref, now).toNanos() * payloadType.clockRate.toDouble() * 1e-9).toLong(),
+                payloadType
             ).also {
                 logger.info("Starting SSRC $ssrc for endpoint $epId ")
-                handleEvent(createStart(epId, ssrc, it.encoding))
+                handleEvent(createStart(epId, ssrc, payloadType))
             }
         }
 
-        if ((packetInfo.payloadType?.encoding ?: PayloadTypeEncoding.OPUS) != state.encoding.payloadTypeEncoding) {
-            logger.debug { "Dropping packet with encoding ${packetInfo.payloadType?.encoding}" }
+        if (payloadType.pt != state.payloadType.pt) {
+            logger.debug("SSRC ${p.ssrc} changed payload type from ${state.payloadType.pt} to ${payloadType.pt}")
             return@synchronized
         }
 
         handleEvent(encodeMedia(p, state, epId))
     }
 
-    private fun createStart(epId: String, ssrc: Long, encoding: Encoding) = StartEvent(
+    private fun createStart(epId: String, ssrc: Long, payloadType: PayloadType) = StartEvent(
         ++seq,
         Start(
             "$epId-$ssrc",
             MediaFormat(
-                encoding.payloadTypeEncoding.name,
-                encoding.clockRate,
-                encoding.channels,
-                encoding.parameters
+                payloadType.encoding.name,
+                payloadType.clockRate,
+                if (payloadType.encoding == PayloadTypeEncoding.OPUS) 2 else 1,
+                payloadType.parameters
             ),
             CustomParameters(endpointId = epId)
         )
@@ -113,33 +115,12 @@ class MediaJsonSerializer(
         initialRtpTimestamp: Long,
         // Offset of this SSRC since the start time in RTP units
         startOffset: Long,
-        val encoding: Encoding
+        val payloadType: PayloadType
     ) {
         private val seqIndexTracker = RtpSequenceIndexTracker()
         private val timestampIndexTracker = RtpTimestampIndexTracker().apply { update(initialRtpTimestamp) }
         private val offset = startOffset - initialRtpTimestamp
         fun getTimestamp(rtpTimestamp: Long): Long = offset + timestampIndexTracker.update(rtpTimestamp)
         fun getSequenceNumber(seq: Int) = seqIndexTracker.update(seq).toInt()
-    }
-
-    private data class Encoding(
-        val payloadTypeEncoding: PayloadTypeEncoding,
-        val clockRate: Int,
-        val channels: Int,
-        val parameters: Map<String, String>?
-    )
-
-    private fun PacketInfo.encoding(): Encoding {
-        return Encoding(
-            payloadType?.encoding ?: PayloadTypeEncoding.OPUS,
-            payloadType?.clockRate ?: 48000,
-            if (payloadType?.encoding == null || payloadType?.encoding == PayloadTypeEncoding.OPUS) 2 else 1,
-            payloadType?.parameters
-        )
-    }
-
-    companion object {
-        // Maximum number of times that an SSRC is allowed to change its format
-        const val MAX_ENCODING_CHANGES = 50
     }
 }
