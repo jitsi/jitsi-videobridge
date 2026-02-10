@@ -22,6 +22,8 @@ import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.MediaFormat
 import org.jitsi.mediajson.Start
 import org.jitsi.mediajson.StartEvent
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.RtpSequenceIndexTracker
 import org.jitsi.nlj.util.RtpTimestampIndexTracker
@@ -51,28 +53,34 @@ class MediaJsonSerializer(
     var seq = 0
 
     val logger = createLogger()
-    fun encode(p: AudioRtpPacket, epId: String) = synchronized(ssrcsStarted) {
+    fun encode(packetInfo: PacketInfo) = synchronized(ssrcsStarted) {
+        val p: AudioRtpPacket = packetInfo.packetAs()
+        val epId = packetInfo.endpointId ?: run {
+            logger.info("Ignoring packet without endpoint ID, SSRC ${p.ssrc}")
+            return@synchronized
+        }
         val state = ssrcsStarted.computeIfAbsent(p.ssrc) { ssrc ->
             SsrcState(
                 p.timestamp,
                 (Duration.between(ref, Clock.systemUTC().instant()).toNanos() * 48.0e-6).toLong()
             ).also {
                 logger.info("Starting SSRC $ssrc for endpoint $epId ")
-                handleEvent(createStart(epId, ssrc))
+                handleEvent(createStart(epId, ssrc, packetInfo.payloadType))
             }
         }
 
         handleEvent(encodeMedia(p, state, epId))
     }
 
-    private fun createStart(epId: String, ssrc: Long) = StartEvent(
+    private fun createStart(epId: String, ssrc: Long, payloadType: PayloadType?) = StartEvent(
         ++seq,
         Start(
             "$epId-$ssrc",
             MediaFormat(
-                "opus",
-                48000,
-                2
+                payloadType?.encoding?.toString()?.lowercase() ?:"opus",
+                payloadType?.clockRate ?:48000,
+                2,
+                payloadType?.parameters
             ),
             CustomParameters(endpointId = epId)
         )

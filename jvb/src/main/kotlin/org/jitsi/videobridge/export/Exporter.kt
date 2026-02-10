@@ -145,7 +145,7 @@ internal class Exporter(
     /** Run inside the queue thread, handle a packet. */
     private fun doHandlePacket(packet: PacketInfo): Boolean {
         if (recorderWebSocket.isConnected) {
-            serializer?.encode(packet.packetAs(), packet.endpointId!!)
+            serializer?.encode(packet)
             packetsSentCount.inc()
             instancePacketsSent.incrementAndGet()
         }
