@@ -64,23 +64,28 @@ class MediaJsonSerializer(
         }
 
         val state = ssrcsStarted.computeIfAbsent(p.ssrc) { ssrc ->
-            val now = Clock.systemUTC().instant()
-            SsrcState(
-                p.timestamp,
-                (Duration.between(ref, now).toNanos() * payloadType.clockRate.toDouble() * 1e-9).toLong(),
-                payloadType
-            ).also {
+            createSsrcState(p.timestamp, payloadType).also {
                 logger.info("Starting SSRC $ssrc for endpoint $epId ")
                 handleEvent(createStart(epId, ssrc, payloadType))
             }
         }
 
         if (payloadType.pt != state.payloadType.pt) {
-            logger.debug("SSRC ${p.ssrc} changed payload type from ${state.payloadType.pt} to ${payloadType.pt}")
-            return@synchronized
+            logger.info("SSRC ${p.ssrc} changed payload type from ${state.payloadType} to $payloadType.")
+            ssrcsStarted[p.ssrc] = createSsrcState(p.timestamp, payloadType)
+            handleEvent(createStart(epId, p.ssrc, payloadType))
         }
 
         handleEvent(encodeMedia(p, state, epId))
+    }
+
+    private fun createSsrcState(timestamp: Long, payloadType: PayloadType): SsrcState {
+        val now = Clock.systemUTC().instant()
+        return SsrcState(
+            timestamp,
+            (Duration.between(ref, now).toNanos() * payloadType.clockRate.toDouble() * 1e-9).toLong(),
+            payloadType
+        )
     }
 
     private fun createStart(epId: String, ssrc: Long, payloadType: PayloadType) = StartEvent(
