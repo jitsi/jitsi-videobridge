@@ -3,7 +3,7 @@ Section: net
 Priority: extra
 Maintainer: Jitsi Team <dev@jitsi.org>
 Uploaders: Emil Ivov <emcho@jitsi.org>, Damian Minkov <damencho@jitsi.org>
-Build-Depends: debhelper (>= 9), dh-systemd, openjdk-11-jdk | openjdk-17-jdk, maven
+Build-Depends: debhelper (>= 9), dh-systemd, openjdk-17-jdk | openjdk-21-jdk, maven
 Standards-Version: 3.9.3
 Homepage: https://jitsi.org/videobridge
 
@@ -11,7 +11,7 @@ Package: jitsi-videobridge2
 Replaces: jitsi-videobridge
 Conflicts: jitsi-videobridge (<= 1400-1)
 Architecture: all
-Pre-Depends: openjdk-11-jre-headless | openjdk-11-jre | openjdk-17-jre-headless | openjdk-17-jre, libssl3 | libssl1.1
+Pre-Depends: openjdk-17-jre-headless | openjdk-17-jre | openjdk-21-jre-headless | openjdk-21-jre, libssl3 | libssl1.1
 Depends: ${misc:Depends}, procps, uuid-runtime, ruby-hocon
 Recommends: libpcap0.8
 Description: WebRTC compatible Selective Forwarding Unit (SFU)
