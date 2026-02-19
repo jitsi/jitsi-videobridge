@@ -80,13 +80,15 @@ internal class AllocationSettingsWrapper(
 
     private var videoConstraints: Map<String, VideoConstraints> = emptyMap()
 
-    private var defaultConstraints: VideoConstraints = VideoConstraints(config.defaultMaxHeightPx)
+    private var defaultConstraints: VideoConstraints = VideoConstraints(config.initialMaxHeightPx)
 
     private var assumedBandwidthBps: Long = -1
 
     private var onStageSources: List<String> = emptyList()
 
     private var allocationSettings = create()
+
+    private var everSet = false
 
     private fun create(): AllocationSettings = AllocationSettings(
         onStageSources = onStageSources,
@@ -120,7 +122,12 @@ internal class AllocationSettingsWrapper(
                 changed = true
             }
         }
-        message.defaultConstraints?.let {
+        val newDefaultConstraints = message.defaultConstraints ?: if (!everSet) {
+            defaultDefaultConstraints
+        } else {
+            null
+        }
+        newDefaultConstraints?.let {
             if (defaultConstraints != it) {
                 defaultConstraints = it
                 changed = true
@@ -134,10 +141,12 @@ internal class AllocationSettingsWrapper(
         }
         message.assumedBandwidthBps?.let {
             config.assumedBandwidthLimit?.let { limit ->
-                val limited = it.coerceAtMost(limit.bps.toLong())
-                logger.warn("Setting assumed bandwidth ${limited.bps} (receiver asked for $it).")
-                this.assumedBandwidthBps = limited
-                changed = true
+                val limited = it.coerceAtMost(limit.bps)
+                if (assumedBandwidthBps != limited) {
+                    logger.warn("Setting assumed bandwidth ${limited.bps} (receiver asked for $it).")
+                    this.assumedBandwidthBps = limited
+                    changed = true
+                }
             } ?: run {
                 if (it.bps >= 0.bps) {
                     logger.info("Ignoring assumed-bandwidth-bps, not allowed in config.")
@@ -148,6 +157,7 @@ internal class AllocationSettingsWrapper(
         if (changed) {
             allocationSettings = create()
         }
+        everSet = true
         return changed
     }
 
@@ -161,5 +171,9 @@ internal class AllocationSettingsWrapper(
             return true
         }
         return false
+    }
+
+    companion object {
+        val defaultDefaultConstraints = VideoConstraints(maxHeight = config.defaultMaxHeightPx)
     }
 }

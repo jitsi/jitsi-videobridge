@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc.allocation
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import org.jitsi.config.withNewConfig
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 
 class AllocationSettingsTest : ShouldSpec() {
@@ -47,6 +48,76 @@ class AllocationSettingsTest : ShouldSpec() {
                         // There's no error when endpoint is used in constraint
                         "E1" to VideoConstraints(360)
                     )
+                }
+            }
+            context("with initial constraints different from default default constraints") {
+                withNewConfig(
+                    """
+                        videobridge.cc.initial-max-height-px = 0
+                        videobridge.cc.default-max-height-px = 180
+                    """.trimIndent()
+                ) {
+                    should("consider an empty receiver video constraints a change") {
+                        val allocationSettings = AllocationSettingsWrapper()
+                        val changed =
+                            allocationSettings.setBandwidthAllocationSettings(ReceiverVideoConstraintsMessage())
+                        changed shouldBe true
+                    }
+                    should("consider the default receiver video constraints a change") {
+                        val allocationSettings = AllocationSettingsWrapper()
+                        val changed =
+                            allocationSettings.setBandwidthAllocationSettings(
+                                ReceiverVideoConstraintsMessage(defaultConstraints = VideoConstraints(maxHeight = 180))
+                            )
+                        changed shouldBe true
+                    }
+                    should("not consider the initial receiver video constraints a change") {
+                        val allocationSettings = AllocationSettingsWrapper()
+                        val changed =
+                            allocationSettings.setBandwidthAllocationSettings(
+                                ReceiverVideoConstraintsMessage(defaultConstraints = VideoConstraints(maxHeight = 0))
+                            )
+                        changed shouldBe false
+                    }
+                    should("not apply the default default constraints after they've been set explicitly") {
+                        val allocationSettings = AllocationSettingsWrapper()
+                        allocationSettings.setBandwidthAllocationSettings(
+                            ReceiverVideoConstraintsMessage(defaultConstraints = VideoConstraints(maxHeight = 720))
+                        )
+                        val changed = allocationSettings.setBandwidthAllocationSettings(
+                            ReceiverVideoConstraintsMessage()
+                        )
+                        changed shouldBe false
+                        allocationSettings.get().defaultConstraints shouldBe VideoConstraints(maxHeight = 720)
+                    }
+                }
+            }
+            context("With an assumed bandwidth limit set") {
+                withNewConfig("videobridge.cc.assumed-bandwidth-limit = 10 Mbps") {
+                    should("limit an assumed bandwidth to the desired rate") {
+                        val allocationSettings = AllocationSettingsWrapper()
+                        val changed = allocationSettings.setBandwidthAllocationSettings(
+                            ReceiverVideoConstraintsMessage(assumedBandwidthBps = 20_000_000)
+                        )
+                        changed shouldBe true
+                        allocationSettings.get().assumedBandwidthBps shouldBe 10_000_000
+                    }
+                    should("Not limit a value less than the configured limit") {
+                        val allocationSettings = AllocationSettingsWrapper()
+                        val changed = allocationSettings.setBandwidthAllocationSettings(
+                            ReceiverVideoConstraintsMessage(assumedBandwidthBps = 2_000_000)
+                        )
+                        changed shouldBe true
+                        allocationSettings.get().assumedBandwidthBps shouldBe 2_000_000
+                    }
+                    should("Not consider the default value to be a change") {
+                        val allocationSettings = AllocationSettingsWrapper()
+                        // Set this twice because of the initial vs. default max height difference above.
+                        val constraints = ReceiverVideoConstraintsMessage(assumedBandwidthBps = -1)
+                        allocationSettings.setBandwidthAllocationSettings(constraints)
+                        val changed = allocationSettings.setBandwidthAllocationSettings(constraints)
+                        changed shouldBe false
+                    }
                 }
             }
         }
