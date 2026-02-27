@@ -6,8 +6,7 @@ import org.bouncycastle.operator.ContentSigner
 import java.io.OutputStream
 
 /**
- * A "signing" algorithm which produces an empty signature.  Defined by
- * draft-ietf-lamps-x509-alg-none, current implementation based on version -05.
+ * A "signing" algorithm which produces an empty signature.  Defined by RFC 9925.
  * Should be treated as an unknown algorithm by all recipients, so any attempt to
  * validate it will return false.
  */
