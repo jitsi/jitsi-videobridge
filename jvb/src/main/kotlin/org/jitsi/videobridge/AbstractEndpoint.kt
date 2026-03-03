@@ -303,6 +303,11 @@ abstract class AbstractEndpoint protected constructor(
     abstract fun setExtmapAllowMixed(allow: Boolean)
 
     /**
+     * Handles incoming AddAudioSubscriptionMessage
+     */
+    abstract fun addAudioSubscription(bridgeId: String, sourceName: String)
+
+    /**
      * Notifies this instance that the max video constraints that the bridge needs to receive from a source of this
      * endpoint has changed. Each implementation handles this notification differently.
      *
