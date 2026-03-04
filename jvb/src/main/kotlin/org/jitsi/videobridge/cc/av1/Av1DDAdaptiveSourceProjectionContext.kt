@@ -291,10 +291,10 @@ class Av1DDAdaptiveSourceProjectionContext(
     ): Av1DDFrameProjection {
         if (frameIsNewSsrc(frame)) {
             return createEncodingSwitchProjection(frame, initialPacket, mark, newDt, receivedTime)
-        } else if (isResumption) {
-            return createResumptionProjection(frame, initialPacket, mark, newDt, receivedTime)
         } else if (isReset) {
             return createResetProjection(frame, initialPacket, mark, newDt, receivedTime)
+        } else if (isResumption) {
+            return createResumptionProjection(frame, initialPacket, mark, newDt, receivedTime)
         }
 
         return createInEncodingProjection(frame, initialPacket, mark, newDt, receivedTime)
@@ -384,7 +384,7 @@ class Av1DDAdaptiveSourceProjectionContext(
         lastFrameNumberIndexResumption = frame.index
 
         /* These must be non-null because we don't execute this function unless
-            frameIsNewSsrc has returned false.
+            frameIsNewSsrc and isReset were both false.
          */
         val lastFrame = prevFrame(frame)!!
         val lastProjectedFrame = lastAv1FrameProjection.av1Frame!!
