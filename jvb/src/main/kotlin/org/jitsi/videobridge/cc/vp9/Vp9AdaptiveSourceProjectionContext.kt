@@ -266,10 +266,10 @@ class Vp9AdaptiveSourceProjectionContext(
     ): Vp9FrameProjection {
         if (frameIsNewSsrc(frame)) {
             return createEncodingSwitchProjection(frame, initialPacket, mark, receivedTime)
-        } else if (isResumption) {
-            return createResumptionProjection(frame, initialPacket, mark, receivedTime)
         } else if (isReset) {
             return createResetProjection(frame, initialPacket, mark, receivedTime)
+        } else if (isResumption) {
+            return createResumptionProjection(frame, initialPacket, mark, receivedTime)
         }
 
         return createInEncodingProjection(frame, initialPacket, mark, receivedTime)
@@ -370,7 +370,7 @@ class Vp9AdaptiveSourceProjectionContext(
         lastPicIdIndexResumption = frame.index
 
         /* These must be non-null because we don't execute this function unless
-            frameIsNewSsrc has returned false.
+            frameIsNewSsrc and isReset were both false.
          */
         val lastFrame = prevFrame(frame)!!
         val lastProjectedFrame = lastVp9FrameProjection.vp9Frame!!
