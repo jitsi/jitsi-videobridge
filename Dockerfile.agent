@@ -1,0 +1,26 @@
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
+
+WORKDIR /app
+
+COPY pom.xml .
+COPY jvb/pom.xml jvb/
+COPY rtp/pom.xml rtp/
+COPY jitsi-media-transform/pom.xml jitsi-media-transform/
+COPY config config/
+COPY jvb/src jvb/src
+COPY rtp/src rtp/src
+COPY jitsi-media-transform/src jitsi-media-transform/src
+
+RUN mvn clean package -pl jvb -am -P buildFatJar -DskipTests
+
+FROM ghcr.io/graalvm/native-image-community:25
+
+WORKDIR /app
+
+COPY --from=builder /app/jvb/target/jitsi-videobridge-*-jar-with-dependencies.jar jvb.jar
+
+# Create directory for agent output
+RUN mkdir -p /app/config-output
+
+# Run with agent to capture dynamic configuration
+ENTRYPOINT ["java", "-agentlib:native-image-agent=config-output-dir=/app/config-output", "-Dvideobridge.http-servers.private.host=0.0.0.0", "-jar", "jvb.jar"]

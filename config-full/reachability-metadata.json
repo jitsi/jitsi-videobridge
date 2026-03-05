@@ -1,0 +1,2725 @@
+{
+  "reflection": [
+    {
+      "type": "boolean"
+    },
+    {
+      "type": "char[]"
+    },
+    {
+      "type": "com.fasterxml.jackson.core.Versioned"
+    },
+    {
+      "type": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationIntrospector",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule"
+    },
+    {
+      "type": "com.fasterxml.jackson.module.jakarta.xmlbind.deser.DataHandlerDeserializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.fasterxml.jackson.module.jakarta.xmlbind.ser.DataHandlerSerializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector"
+    },
+    {
+      "type": "com.sun.crypto.provider.AESCipher$General",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ARCFOURCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ChaCha20Cipher$ChaCha20Poly1305",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESedeCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DHParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.TlsMasterSecretGenerator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.xml.internal.stream.XMLInputFactoryImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.typesafe.config.Config"
+    },
+    {
+      "type": "com.typesafe.config.ConfigMergeable"
+    },
+    {
+      "type": "com.typesafe.config.ConfigObject"
+    },
+    {
+      "type": "com.typesafe.config.ConfigValue"
+    },
+    {
+      "type": "io.prometheus.client.Striped64"
+    },
+    {
+      "type": "jakarta.activation.DataSource"
+    },
+    {
+      "type": "jakarta.inject.Inject"
+    },
+    {
+      "type": "jakarta.inject.Named",
+      "methods": [
+        {
+          "name": "value",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "jakarta.inject.Singleton"
+    },
+    {
+      "type": "jakarta.ws.rs.container.ContainerRequestFilter"
+    },
+    {
+      "type": "jakarta.ws.rs.container.ResourceInfo",
+      "methods": [
+        {
+          "name": "getResourceClass",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "jakarta.ws.rs.core.Application"
+    },
+    {
+      "type": "jakarta.ws.rs.core.Feature"
+    },
+    {
+      "type": "jakarta.ws.rs.ext.ExceptionMapper"
+    },
+    {
+      "type": "jakarta.ws.rs.ext.MessageBodyReader"
+    },
+    {
+      "type": "jakarta.ws.rs.ext.MessageBodyWriter"
+    },
+    {
+      "type": "jakarta.xml.bind.JAXBContext"
+    },
+    {
+      "type": "jakarta.xml.bind.JAXBException"
+    },
+    {
+      "type": "java.awt.image.RenderedImage"
+    },
+    {
+      "type": "java.io.Serializable"
+    },
+    {
+      "type": "java.lang.Boolean",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getBoolean",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "valueOf",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Byte"
+    },
+    {
+      "type": "java.lang.CharSequence"
+    },
+    {
+      "type": "java.lang.Class",
+      "methods": [
+        {
+          "name": "isSealed",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.ClassValue"
+    },
+    {
+      "type": "java.lang.Class[]"
+    },
+    {
+      "type": "java.lang.Comparable"
+    },
+    {
+      "type": "java.lang.Double"
+    },
+    {
+      "type": "java.lang.Enum"
+    },
+    {
+      "type": "java.lang.Float"
+    },
+    {
+      "type": "java.lang.Integer"
+    },
+    {
+      "type": "java.lang.Iterable"
+    },
+    {
+      "type": "java.lang.Long"
+    },
+    {
+      "type": "java.lang.Number"
+    },
+    {
+      "type": "java.lang.Object"
+    },
+    {
+      "type": "java.lang.Short"
+    },
+    {
+      "type": "java.lang.String"
+    },
+    {
+      "type": "java.lang.System",
+      "methods": [
+        {
+          "name": "getSecurityManager",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Thread"
+    },
+    {
+      "type": "java.lang.annotation.Retention",
+      "methods": [
+        {
+          "name": "value",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.annotation.Target",
+      "methods": [
+        {
+          "name": "value",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.constant.Constable"
+    },
+    {
+      "type": "java.lang.management.ManagementFactory",
+      "methods": [
+        {
+          "name": "getRuntimeMXBean",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.management.RuntimeMXBean",
+      "methods": [
+        {
+          "name": "getUptime",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.net.InetAddress"
+    },
+    {
+      "type": "java.security.AccessController",
+      "methods": [
+        {
+          "name": "doPrivileged",
+          "parameterTypes": [
+            "java.security.PrivilegedAction"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.security.AlgorithmParametersSpi"
+    },
+    {
+      "type": "java.security.KeyStoreSpi"
+    },
+    {
+      "type": "java.time.Duration"
+    },
+    {
+      "type": "java.time.temporal.TemporalAmount"
+    },
+    {
+      "type": "java.util.Collection"
+    },
+    {
+      "type": "java.util.List"
+    },
+    {
+      "type": "java.util.Map"
+    },
+    {
+      "type": "java.util.concurrent.Executors",
+      "methods": [
+        {
+          "name": "newVirtualThreadPerTaskExecutor",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.util.concurrent.Flow$Subscriber"
+    },
+    {
+      "type": "javassist.util.proxy.MethodHandler"
+    },
+    {
+      "type": "javax.xml.transform.Source"
+    },
+    {
+      "type": "javax.xml.transform.dom.DOMSource"
+    },
+    {
+      "type": "javax.xml.transform.sax.SAXSource"
+    },
+    {
+      "type": "javax.xml.transform.stream.StreamSource"
+    },
+    {
+      "type": "jdk.internal.ValueBased"
+    },
+    {
+      "type": "kotlin.Any"
+    },
+    {
+      "type": "kotlin.Boolean"
+    },
+    {
+      "type": "kotlin.CharSequence"
+    },
+    {
+      "type": "kotlin.Comparable"
+    },
+    {
+      "type": "kotlin.Double"
+    },
+    {
+      "type": "kotlin.Enum"
+    },
+    {
+      "type": "kotlin.Int"
+    },
+    {
+      "type": "kotlin.Long"
+    },
+    {
+      "type": "kotlin.Metadata",
+      "methods": [
+        {
+          "name": "bv",
+          "parameterTypes": []
+        },
+        {
+          "name": "d1",
+          "parameterTypes": []
+        },
+        {
+          "name": "d2",
+          "parameterTypes": []
+        },
+        {
+          "name": "k",
+          "parameterTypes": []
+        },
+        {
+          "name": "mv",
+          "parameterTypes": []
+        },
+        {
+          "name": "pn",
+          "parameterTypes": []
+        },
+        {
+          "name": "xi",
+          "parameterTypes": []
+        },
+        {
+          "name": "xs",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "kotlin.Number"
+    },
+    {
+      "type": "kotlin.SafePublicationLazyImpl"
+    },
+    {
+      "type": "kotlin.String"
+    },
+    {
+      "type": "kotlin.collections.Collection"
+    },
+    {
+      "type": "kotlin.collections.Iterable"
+    },
+    {
+      "type": "kotlin.collections.List"
+    },
+    {
+      "type": "kotlin.collections.Map"
+    },
+    {
+      "type": "kotlin.collections.MutableMap"
+    },
+    {
+      "type": "kotlin.collections.Set"
+    },
+    {
+      "type": "kotlin.jvm.internal.DefaultConstructorMarker"
+    },
+    {
+      "type": "kotlin.reflect.jvm.internal.ReflectionFactoryImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "kotlin.reflect.jvm.internal.impl.km.jvm.internal.JvmMetadataExtensions"
+    },
+    {
+      "type": "kotlin.reflect.jvm.internal.impl.load.java.ErasedOverridabilityCondition"
+    },
+    {
+      "type": "kotlin.reflect.jvm.internal.impl.load.java.FieldOverridabilityCondition"
+    },
+    {
+      "type": "kotlin.reflect.jvm.internal.impl.load.java.JavaIncompatibilityRulesOverridabilityCondition"
+    },
+    {
+      "type": "org.bouncycastle.tls.CipherSuite",
+      "fields": [
+        {
+          "name": "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
+        },
+        {
+          "name": "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        },
+        {
+          "name": "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+        },
+        {
+          "name": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        },
+        {
+          "name": "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+        }
+      ]
+    },
+    {
+      "type": "org.eclipse.jetty.http.Http1FieldPreEncoder"
+    },
+    {
+      "type": "org.eclipse.jetty.servlets.CrossOriginFilter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.eclipse.jetty.util.TypeUtil",
+      "methods": [
+        {
+          "name": "getClassLoaderLocation",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        },
+        {
+          "name": "getCodeSourceLocation",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        },
+        {
+          "name": "getModuleLocation",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        },
+        {
+          "name": "getSystemClassLoaderLocation",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.hk2.api.DynamicConfiguration"
+    },
+    {
+      "type": "org.glassfish.hk2.internal.PerThreadContext"
+    },
+    {
+      "type": "org.glassfish.hk2.osgiresourcelocator.ServiceLoader",
+      "methods": [
+        {
+          "name": "lookupProviderClasses",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.hk2.utilities.Binder"
+    },
+    {
+      "type": "org.glassfish.hk2.utilities.binding.AbstractBinder"
+    },
+    {
+      "type": "org.glassfish.jaxb.runtime.v2.ContextFactory"
+    },
+    {
+      "type": "org.glassfish.jersey.inject.hk2.ContextInjectionResolverImpl",
+      "fields": [
+        {
+          "name": "serviceLocator"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.inject.hk2.Hk2InjectionManagerFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.inject.hk2.Hk2RequestScope",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.inject.hk2.InstanceSupplierFactoryBridge"
+    },
+    {
+      "type": "org.glassfish.jersey.inject.hk2.JerseyErrorService",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.inject.hk2.RequestContext",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.glassfish.jersey.process.internal.RequestScope"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.inject.hk2.SupplierFactoryBridge"
+    },
+    {
+      "type": "org.glassfish.jersey.internal.JaxrsProviders",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "jakarta.inject.Provider",
+            "jakarta.inject.Provider",
+            "jakarta.inject.Provider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.internal.RuntimeDelegateImpl"
+    },
+    {
+      "type": "org.glassfish.jersey.internal.config.ExternalPropertiesAutoDiscoverable",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.internal.inject.AbstractBinder"
+    },
+    {
+      "type": "org.glassfish.jersey.internal.inject.Binder"
+    },
+    {
+      "type": "org.glassfish.jersey.internal.inject.Custom"
+    },
+    {
+      "type": "org.glassfish.jersey.internal.inject.ParamConverters$AggregatedProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.glassfish.jersey.internal.inject.InjectionManager"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.internal.inject.ReferencingFactory"
+    },
+    {
+      "type": "org.glassfish.jersey.jackson.JacksonFeature",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.jackson.internal.DefaultJacksonJaxbJsonProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "jakarta.ws.rs.ext.Providers",
+            "jakarta.ws.rs.core.Configuration"
+          ]
+        },
+        {
+          "name": "findAndRegisterModules",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.jackson.internal.jackson.jaxrs.base.JsonMappingExceptionMapper"
+    },
+    {
+      "type": "org.glassfish.jersey.jackson.internal.jackson.jaxrs.base.JsonParseExceptionMapper"
+    },
+    {
+      "type": "org.glassfish.jersey.jackson.internal.jackson.jaxrs.base.ProviderBase"
+    },
+    {
+      "type": "org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJaxbJsonProvider"
+    },
+    {
+      "type": "org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider",
+      "fields": [
+        {
+          "name": "_providers"
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.jetty.JettyHttpContainerProvider"
+    },
+    {
+      "type": "org.glassfish.jersey.logging.LoggingFeatureAutoDiscoverable",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.AbstractFormProvider"
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.AbstractMessageReaderWriterProvider"
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.BasicTypesMessageProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.ByteArrayProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.DataSourceProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.EnumMessageProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.FileProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.FormMultivaluedMapProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.FormProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.InputStreamProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.ReaderProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.RenderedImageProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.SourceProvider$DomSourceReader",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "jakarta.inject.Provider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.SourceProvider$SaxSourceReader",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "jakarta.inject.Provider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.SourceProvider$SourceWriter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "jakarta.inject.Provider",
+            "jakarta.inject.Provider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.SourceProvider$StreamSourceReader",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.StreamingOutputProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.message.internal.StringMessageProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.process.Inflector"
+    },
+    {
+      "type": "org.glassfish.jersey.process.internal.RequestScope"
+    },
+    {
+      "type": "org.glassfish.jersey.server.BackgroundScheduler"
+    },
+    {
+      "type": "org.glassfish.jersey.server.ChunkedResponseWriter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.ManagedAsyncExecutor"
+    },
+    {
+      "type": "org.glassfish.jersey.server.ResourceConfig"
+    },
+    {
+      "type": "org.glassfish.jersey.server.ServerExecutorProvidersConfigurator$DefaultBackgroundSchedulerProvider"
+    },
+    {
+      "type": "org.glassfish.jersey.server.ServerExecutorProvidersConfigurator$DefaultManagedAsyncExecutorProvider"
+    },
+    {
+      "type": "org.glassfish.jersey.server.internal.JsonWithPaddingInterceptor",
+      "fields": [
+        {
+          "name": "containerRequestProvider"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.internal.MappableExceptionWrapperInterceptor",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.internal.monitoring.MonitoringAutodiscoverable",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.internal.monitoring.MonitoringContainerListener",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.internal.process.RequestProcessingConfigurator$ContainerRequestFactory"
+    },
+    {
+      "type": "org.glassfish.jersey.server.internal.process.RequestProcessingConfigurator$UriRoutingContextFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.glassfish.jersey.server.internal.process.RequestProcessingContextReference"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.internal.process.RequestProcessingContextReference",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.model.Parameter$ServerParameterService",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.wadl.WadlFeature",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.wadl.internal.WadlAutoDiscoverable",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.server.wadl.processor.OptionsMethodProcessor$GenericOptionsInflector"
+    },
+    {
+      "type": "org.glassfish.jersey.server.wadl.processor.OptionsMethodProcessor$PlainTextOptionsInflector"
+    },
+    {
+      "type": "org.glassfish.jersey.servlet.WebComponent$HttpServletRequestReferencingFactory"
+    },
+    {
+      "type": "org.glassfish.jersey.servlet.WebComponent$HttpServletResponseReferencingFactory"
+    },
+    {
+      "type": "org.glassfish.jersey.servlet.WebComponent$WebComponentBinder"
+    },
+    {
+      "type": "org.glassfish.jersey.servlet.async.AsyncContextDelegateProviderImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.servlet.init.FilterUrlMappingsProviderImpl"
+    },
+    {
+      "type": "org.glassfish.jersey.servlet.internal.spi.ServletContainerProvider[]"
+    },
+    {
+      "type": "org.glassfish.jersey.spi.AbstractThreadPoolProvider"
+    },
+    {
+      "type": "org.glassfish.jersey.spi.ScheduledThreadPoolExecutorProvider",
+      "methods": [
+        {
+          "name": "preDestroy",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.glassfish.jersey.spi.ThreadPoolExecutorProvider",
+      "methods": [
+        {
+          "name": "preDestroy",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.ice4j.ice.KeepAliveStrategy"
+    },
+    {
+      "type": "org.ice4j.ice.NominationStrategy"
+    },
+    {
+      "type": "org.ice4j.ice.harvest.HarvestConfig"
+    },
+    {
+      "type": "org.ice4j.ice.harvest.HarvestConfig$StaticMapping"
+    },
+    {
+      "type": "org.jitsi.rest.Health"
+    },
+    {
+      "type": "org.jitsi.rest.Version"
+    },
+    {
+      "type": "org.jitsi.videobridge.ice.Harvesters"
+    },
+    {
+      "type": "org.jitsi.videobridge.ice.Harvesters$Companion"
+    },
+    {
+      "type": "org.jitsi.videobridge.load_management.CpuMeasurement"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.binders.ServiceBinder"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.filters.ConfigFilter",
+      "fields": [
+        {
+          "name": "resourceInfo"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.prometheus.Prometheus"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.Application"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.colibri.debug.Debug"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.colibri.drain.Drain"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.colibri.mucclient.MucClient"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.colibri.shutdown.Shutdown"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.colibri.stats.Stats"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.colibri.v2.conferences.Conferences",
+      "fields": [
+        {
+          "name": "videobridge"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "createConference",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.debug.Debug"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.debug.DebugFeatures"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures"
+    },
+    {
+      "type": "org.jitsi.videobridge.rest.root.stats.Stats"
+    },
+    {
+      "type": "org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jitsi.xmpp.extensions.colibri2.Colibri2Relay",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jitsi.xmpp.extensions.colibri2.Connects",
+      "fields": [
+        {
+          "name": "ELEMENT"
+        },
+        {
+          "name": "NAMESPACE"
+        }
+      ]
+    },
+    {
+      "type": "org.jitsi.xmpp.extensions.colibri2.Sources",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jitsi.xmpp.mucclient.MucClientConfiguration"
+    },
+    {
+      "type": "org.jivesoftware.smack.ReconnectionManager"
+    },
+    {
+      "type": "org.jivesoftware.smack.android.AndroidSmackInitializer"
+    },
+    {
+      "type": "org.jivesoftware.smack.compress.packet.Compressed",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.compress.packet.Failure",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.experimental.ExperimentalInitializer"
+    },
+    {
+      "type": "org.jivesoftware.smack.extensions.ExtensionsInitializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.im.SmackImInitializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.initializer.VmArgInitializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.java7.Java7SmackInitializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.legacy.LegacyInitializer"
+    },
+    {
+      "type": "org.jivesoftware.smack.packet.TlsFailure",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.packet.TlsProceed",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.roster.Roster"
+    },
+    {
+      "type": "org.jivesoftware.smack.roster.provider.RosterPacketProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.roster.provider.RosterVerStreamFeatureProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.roster.provider.SubscriptionPreApprovalStreamFeatureProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.sasl.javax.SASLJavaXSmackInitializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.sasl.packet.SaslNonza$Challenge",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.sasl.packet.SaslNonza$SASLFailure",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.sasl.packet.SaslNonza$Success",
+      "fields": [
+        {
+          "name": "QNAME"
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.sasl.provided.SASLProvidedSmackInitializer"
+    },
+    {
+      "type": "org.jivesoftware.smack.sm.provider.StreamManagementStreamFeatureProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.tcp.TCPInitializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.util.dns.dnsjava.DNSJavaResolver"
+    },
+    {
+      "type": "org.jivesoftware.smack.util.dns.javax.JavaxResolver",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smack.util.dns.minidns.MiniDnsResolver"
+    },
+    {
+      "type": "org.jivesoftware.smack.xml.stax.StaxXmlPullParserFactory"
+    },
+    {
+      "type": "org.jivesoftware.smackx.address.provider.MultipleAddressesProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.amp.provider.AMPExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.attention.packet.AttentionExtension$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.blocking.provider.BlockContactsIQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.blocking.provider.BlockListIQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.blocking.provider.BlockedErrorExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.blocking.provider.UnblockContactsIQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.bob.provider.BoBDataExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.bob.provider.BoBIQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.bytestreams.ibb.InBandBytestreamManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.bytestreams.ibb.provider.CloseIQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.bytestreams.ibb.provider.DataPacketProvider$IQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.bytestreams.ibb.provider.DataPacketProvider$PacketExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.bytestreams.ibb.provider.OpenIQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.bytestreams.socks5.Socks5BytestreamManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.bytestreams.socks5.provider.BytestreamsProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.caps.EntityCapsManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.caps.provider.CapsExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.chatstates.provider.ChatStateExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.AdHocCommandManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.provider.AdHocCommandDataProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.provider.AdHocCommandDataProvider$BadActionError",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.provider.AdHocCommandDataProvider$BadLocaleError",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.provider.AdHocCommandDataProvider$BadPayloadError",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.provider.AdHocCommandDataProvider$BadSessionIDError",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.provider.AdHocCommandDataProvider$MalformedActionError",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.commands.provider.AdHocCommandDataProvider$SessionExpiredError",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.delay.provider.DelayInformationProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.delay.provider.LegacyDelayInformationProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.disco.ServiceDiscoveryManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.disco.provider.DiscoverInfoProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.disco.provider.DiscoverItemsProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.filetransfer.FileTransferManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.forward.provider.ForwardedProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.geoloc.provider.GeoLocationProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.iqlast.LastActivityManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.iqlast.packet.LastActivity$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.iqprivate.PrivateDataManager$PrivateDataIQProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.iqregister.provider.RegistrationProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.iqregister.provider.RegistrationStreamFeatureProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.iqversion.VersionManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.iqversion.provider.VersionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.jingle.provider.JingleErrorProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.jingle.provider.JingleProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.jiveproperties.provider.JivePropertiesExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.last_interaction.provider.IdleProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.mediaelement.MediaElementManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.message_correct.provider.MessageCorrectProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.mood.provider.MoodProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.muc.MultiUserChatManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.muc.bookmarkautojoin.MucBookmarkAutojoinManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.muc.packet.GroupChatInvitation$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.muc.provider.MUCAdminProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.muc.provider.MUCOwnerProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.muc.provider.MUCUserProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.nick.provider.NickProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.offline.packet.OfflineMessageInfo$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.offline.packet.OfflineMessageRequest$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.omemo.OmemoInitializer"
+    },
+    {
+      "type": "org.jivesoftware.smackx.ox.util.OpenPgpInitializer"
+    },
+    {
+      "type": "org.jivesoftware.smackx.ping.PingManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.ping.provider.PingProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.privacy.PrivacyListManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.privacy.provider.PrivacyProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.AffiliationProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.AffiliationsProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.ConfigEventProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.EventProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.FormNodeProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.ItemProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.ItemsProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.PubSubProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.RetractEventProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.SimpleNodeProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.SubscriptionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.pubsub.provider.SubscriptionsProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.receipts.DeliveryReceipt$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.receipts.DeliveryReceiptManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.receipts.DeliveryReceiptRequest$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.rsm.provider.RSMSetProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.search.UserSearch$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.sharedgroups.packet.SharedGroupsInfo$Provider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.shim.provider.HeaderProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.shim.provider.HeadersProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.si.provider.StreamInitiationProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.softwareinfo.form.SoftwareInfoForm"
+    },
+    {
+      "type": "org.jivesoftware.smackx.time.EntityTimeManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.time.provider.TimeProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.usertune.provider.UserTuneProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.vcardtemp.VCardManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.vcardtemp.provider.VCardProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.xdata.XDataManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.xdata.provider.DataFormProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jivesoftware.smackx.xdatalayout.XDataLayoutManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.xdatavalidation.XDataValidationManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.xhtmlim.XHTMLManager"
+    },
+    {
+      "type": "org.jivesoftware.smackx.xhtmlim.provider.XHTMLExtensionProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jvnet.hk2.external.generator.ServiceLocatorGeneratorImpl"
+    },
+    {
+      "type": "org.jvnet.hk2.internal.DynamicConfigurationServiceImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.glassfish.hk2.api.ServiceLocator"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.jvnet.hk2.internal.ServiceLocatorRuntimeImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.glassfish.hk2.api.ServiceLocator"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.osgi.framework.BundleReference"
+    },
+    {
+      "type": "org.slf4j.jul.JULServiceProvider"
+    },
+    {
+      "type": "sun.management.VMManagementImpl",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "compTimeMonitoringSupport"
+        },
+        {
+          "name": "currentThreadCpuTimeSupport"
+        },
+        {
+          "name": "objectMonitorUsageSupport"
+        },
+        {
+          "name": "otherThreadCpuTimeSupport"
+        },
+        {
+          "name": "remoteDiagnosticCommandsSupport"
+        },
+        {
+          "name": "synchronizerUsageSupport"
+        },
+        {
+          "name": "threadAllocatedMemorySupport"
+        },
+        {
+          "name": "threadContentionMonitoringSupport"
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA224withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA256withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.NativePRNG",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA224",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.X509Factory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.PSSParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAKeyFactory$Legacy",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAPSSSignature",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA224withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.KeyManagerFactoryImpl$SunX509",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityInfoAccessExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.BasicConstraintsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CRLDistributionPointsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CertificatePoliciesExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.ExtendedKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.KeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.NetscapeCertTypeExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.PrivateKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.SubjectKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en_US"
+    },
+    {
+      "type": "sun.util.resources.cldr.CalendarData"
+    },
+    {
+      "type": {
+        "proxy": [
+          "jakarta.ws.rs.container.ResourceInfo",
+          "org.glassfish.hk2.api.ProxyCtl"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "glob": "META-INF/services/com.fasterxml.jackson.databind.Module"
+    },
+    {
+      "glob": "META-INF/services/jakarta.ws.rs.container.DynamicFeature"
+    },
+    {
+      "glob": "META-INF/services/jakarta.ws.rs.core.Feature"
+    },
+    {
+      "glob": "META-INF/services/jakarta.ws.rs.ext.RuntimeDelegate"
+    },
+    {
+      "glob": "META-INF/services/jakarta.xml.bind.JAXBContext"
+    },
+    {
+      "glob": "META-INF/services/jakarta.xml.bind.JAXBContextFactory"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "glob": "META-INF/services/java.util.spi.ResourceBundleControlProvider"
+    },
+    {
+      "glob": "META-INF/services/javax.xml.stream.XMLInputFactory"
+    },
+    {
+      "glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.km.internal.extensions.MetadataExtensions"
+    },
+    {
+      "glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition"
+    },
+    {
+      "glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.util.ModuleVisibilityHelper"
+    },
+    {
+      "glob": "META-INF/services/org.eclipse.jetty.http.HttpFieldPreEncoder"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.hk2.extension.ServiceLocatorGenerator"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.internal.inject.InjectionManagerFactory"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.internal.spi.AutoDiscoverable"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.internal.spi.ForcedAutoDiscoverable"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.model.internal.spi.ParameterServiceProvider"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.server.spi.ComponentProvider"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.server.spi.ContainerProvider"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.server.spi.ExternalRequestScope"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.servlet.internal.spi.ServletContainerProvider"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.servlet.spi.AsyncContextDelegateProvider"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.servlet.spi.FilterUrlMappingsProvider"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.spi.ExternalConfigurationProvider"
+    },
+    {
+      "glob": "META-INF/services/org.glassfish.jersey.spi.HeaderDelegateProvider"
+    },
+    {
+      "glob": "META-INF/services/org.jivesoftware.smack.xml.XmlPullParserFactory"
+    },
+    {
+      "glob": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
+    },
+    {
+      "glob": "application.conf"
+    },
+    {
+      "glob": "application.json"
+    },
+    {
+      "glob": "application.properties"
+    },
+    {
+      "glob": "com/sun/research/ws/wadl/jaxb.properties"
+    },
+    {
+      "glob": "jakarta/servlet/LocalStrings.properties"
+    },
+    {
+      "glob": "jakarta/servlet/LocalStrings_en.properties"
+    },
+    {
+      "glob": "jakarta/servlet/LocalStrings_en_US.properties"
+    },
+    {
+      "glob": "jakarta/servlet/http/LocalStrings.properties"
+    },
+    {
+      "glob": "jakarta/servlet/http/LocalStrings_en.properties"
+    },
+    {
+      "glob": "jakarta/servlet/http/LocalStrings_en_US.properties"
+    },
+    {
+      "glob": "jakarta/xml/bind/Messages.properties"
+    },
+    {
+      "glob": "jakarta/xml/bind/Messages_en.properties"
+    },
+    {
+      "glob": "jakarta/xml/bind/Messages_en_US.properties"
+    },
+    {
+      "glob": "jndi.properties"
+    },
+    {
+      "glob": "kotlin/collections/collections.kotlin_builtins"
+    },
+    {
+      "glob": "kotlin/kotlin.kotlin_builtins"
+    },
+    {
+      "glob": "org.jivesoftware.smack.extensions/extensions.providers"
+    },
+    {
+      "glob": "org.jivesoftware.smack.extensions/extensions.xml"
+    },
+    {
+      "glob": "org.jivesoftware.smack.im/smackim.providers"
+    },
+    {
+      "glob": "org.jivesoftware.smack.im/smackim.xml"
+    },
+    {
+      "glob": "org.jivesoftware.smack.tcp/smacktcp.providers"
+    },
+    {
+      "glob": "org.jivesoftware.smack/smack-config.xml"
+    },
+    {
+      "glob": "org.jivesoftware.smack/version"
+    },
+    {
+      "glob": "org/eclipse/jetty/http/encoding.properties"
+    },
+    {
+      "glob": "org/eclipse/jetty/http/mime.properties"
+    },
+    {
+      "glob": "org/eclipse/jetty/version/build.properties"
+    },
+    {
+      "glob": "org/glassfish/jersey/internal/build.properties"
+    },
+    {
+      "glob": "org/glassfish/jersey/internal/localization.properties"
+    },
+    {
+      "glob": "org/glassfish/jersey/internal/localization_en.properties"
+    },
+    {
+      "glob": "org/glassfish/jersey/internal/localization_en_US.properties"
+    },
+    {
+      "glob": "org/glassfish/jersey/server/internal/localization.properties"
+    },
+    {
+      "glob": "org/glassfish/jersey/server/internal/localization_en.properties"
+    },
+    {
+      "glob": "org/glassfish/jersey/server/internal/localization_en_US.properties"
+    },
+    {
+      "glob": "reference.conf"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/net/www/content-types.properties"
+    },
+    {
+      "module": "java.logging",
+      "glob": "sun/util/logging/resources/logging_en.properties"
+    },
+    {
+      "module": "java.logging",
+      "glob": "sun/util/logging/resources/logging_en_US.properties"
+    },
+    {
+      "bundle": "jakarta.servlet.LocalStrings"
+    },
+    {
+      "bundle": "jakarta.servlet.http.LocalStrings"
+    },
+    {
+      "bundle": "jakarta.xml.bind.Messages"
+    },
+    {
+      "bundle": "org.glassfish.jersey.internal.localization"
+    },
+    {
+      "bundle": "org.glassfish.jersey.server.internal.localization"
+    },
+    {
+      "bundle": "sun.util.logging.resources.logging"
+    }
+  ]
+}
