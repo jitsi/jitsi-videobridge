@@ -88,7 +88,6 @@ import org.jitsi.videobridge.metrics.QueueMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
-import org.jitsi.videobridge.sctp.DataChannelHandler
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
 import org.jitsi.videobridge.transport.ice.IceTransport
@@ -101,6 +100,7 @@ import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import org.json.simple.JSONObject
+import java.nio.ByteBuffer
 import java.time.Clock
 import java.time.Instant
 import java.util.*
@@ -175,8 +175,19 @@ class Relay @JvmOverloads constructor(
     /** The role we'll play in the SCTP handshake, if negotiated */
     private var sctpRole: Sctp.Role? = null
 
-    private val dataChannelHandler = DataChannelHandler()
-    private var dataChannelStack: DataChannelStack? = null
+    private var dataChannelStack = DataChannelStack(
+        { data, sid, ppid ->
+            val message = DcSctpMessage(sid.toShort(), ppid, data.array())
+            val status = sctpTransport?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
+            return@DataChannelStack if (status == SendStatus.kSuccess) {
+                0
+            } else {
+                logger.error("Error sending to SCTP: $status")
+                -1
+            }
+        },
+        logger
+    )
 
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-sctp")
     private val sctpRecvPcap = toggleablePcapWriter.newObserverNode(outbound = false, suffix = "rx_sctp")
@@ -308,7 +319,13 @@ class Relay @JvmOverloads constructor(
         "${javaClass.simpleName}-incoming-data-channel-queue",
         TaskPools.IO_POOL,
         { packetInfo ->
-            dataChannelHandler.consume(packetInfo)
+            packetInfo.packetAs<DataChannelPacket>().let { packet ->
+                dataChannelStack.onIncomingDataChannelPacket(
+                    ByteBuffer.wrap(packet.buffer),
+                    packet.sid,
+                    packet.ppid
+                )
+            }
             true
         },
         TransportConfig.queueSize
@@ -1129,27 +1146,12 @@ class Relay @JvmOverloads constructor(
 
         override fun OnConnected() {
             try {
-                logger.info("SCTP connection is ready, creating the Data channel stack")
-                val dataChannelStack = DataChannelStack(
-                    { data, sid, ppid ->
-                        val message = DcSctpMessage(sid.toShort(), ppid, data.array())
-                        val status = sctpTransport?.send(message, DcSctpTransport.DEFAULT_SEND_OPTIONS)
-                        return@DataChannelStack if (status == SendStatus.kSuccess) {
-                            0
-                        } else {
-                            logger.error("Error sending to SCTP: $status")
-                            -1
-                        }
-                    },
-                    logger
-                )
-                this@Relay.dataChannelStack = dataChannelStack
+                logger.info("SCTP connection is ready")
                 // This handles if the remote side will be opening the data channel
                 dataChannelStack.onDataChannelStackEvents { dataChannel ->
                     logger.info("Remote side opened a data channel.")
                     messageTransport.setDataChannel(dataChannel)
                 }
-                dataChannelHandler.setDataChannelStack(dataChannelStack)
                 if (sctpRole == Sctp.Role.CLIENT) {
                     // This logic is for opening the data channel locally
                     logger.info("Will open the data channel.")
