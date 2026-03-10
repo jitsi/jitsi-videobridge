@@ -1017,6 +1017,7 @@ class Endpoint @JvmOverloads constructor(
     override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
         put("bitrate_controller", bitrateController.debugState(mode))
         put("bandwidth_probing", bandwidthProbing.getDebugState())
+        put("cryptex", cryptex)
         put("ice_transport", iceTransport.getDebugState())
         put("dtls_transport", dtlsTransport.getDebugState())
         put("transceiver", transceiver.debugState(mode))
