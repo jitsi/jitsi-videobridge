@@ -135,7 +135,7 @@ class Endpoint @JvmOverloads constructor(
     /** The [DcSctpTransport] instance we'll use to manage the SCTP connection */
     private var sctpTransport: DcSctpTransport? = null
 
-    private val dataChannelHandler = DataChannelHandler()
+    private val dataChannelHandler = DataChannelHandler(logger)
     private var dataChannelStack: DataChannelStack? = null
 
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-sctp")

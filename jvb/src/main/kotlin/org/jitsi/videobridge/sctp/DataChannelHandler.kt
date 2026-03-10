@@ -17,20 +17,25 @@ package org.jitsi.videobridge.sctp
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.ConsumerNode
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.datachannel.DataChannelStack
 import org.jitsi.videobridge.datachannel.protocol.DataChannelPacket
 import org.jitsi.videobridge.util.TaskPools
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * A node which can be placed in the pipeline to cache Data channel packets
  * until the DataChannelStack is ready to handle them.
  */
-class DataChannelHandler : ConsumerNode("Data channel handler") {
+class DataChannelHandler(parentLogger: Logger) : ConsumerNode("Data channel handler") {
     private val dataChannelStackLock = Any()
     private var dataChannelStack: DataChannelStack? = null
-    private val cachedDataChannelPackets = LinkedBlockingQueue<PacketInfo>()
+    private val cachedDataChannelPackets = LinkedBlockingQueue<PacketInfo>(100)
+    private val droppedPacketCount = AtomicLong(0)
+    private val logger = createChildLogger(parentLogger)
 
     public override fun consume(packetInfo: PacketInfo) {
         synchronized(dataChannelStackLock) {
@@ -41,7 +46,15 @@ class DataChannelHandler : ConsumerNode("Data channel handler") {
                         packet.sid,
                         packet.ppid
                     ) ?: run {
-                        cachedDataChannelPackets.add(packetInfo)
+                        // Queue is full, drop the oldest packet and add the new one
+                        if (!cachedDataChannelPackets.offer(packetInfo)) {
+                            cachedDataChannelPackets.poll() // Remove oldest
+                            cachedDataChannelPackets.offer(packetInfo) // Add newest
+                            val dropped = droppedPacketCount.incrementAndGet()
+                            if (dropped % 100 == 0L) {
+                                logger.warn("Dropped $dropped data channel packets due to full cache")
+                            }
+                        }
                     }
                 }
                 else -> Unit
@@ -52,11 +65,8 @@ class DataChannelHandler : ConsumerNode("Data channel handler") {
     fun setDataChannelStack(dataChannelStack: DataChannelStack) {
         // Submit this to the pool since we wait on the lock and process any
         // cached packets here as well
-
-        // Submit this to the pool since we wait on the lock and process any
-        // cached packets here as well
         TaskPools.IO_POOL.execute {
-            // We grab the lock here so that we can set the SCTP manager and
+            // We grab the lock here so that we can set the data channel stack and
             // process any previously-cached packets as an atomic operation.
             // It also prevents another thread from coming in via
             // #doProcessPackets and processing packets at the same time in
@@ -71,6 +81,7 @@ class DataChannelHandler : ConsumerNode("Data channel handler") {
                         dcp.ppid
                     )
                 }
+                cachedDataChannelPackets.clear()
             }
         }
     }

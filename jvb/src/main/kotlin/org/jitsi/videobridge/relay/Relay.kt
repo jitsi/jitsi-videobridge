@@ -175,7 +175,7 @@ class Relay @JvmOverloads constructor(
     /** The role we'll play in the SCTP handshake, if negotiated */
     private var sctpRole: Sctp.Role? = null
 
-    private val dataChannelHandler = DataChannelHandler()
+    private val dataChannelHandler = DataChannelHandler(logger)
     private var dataChannelStack: DataChannelStack? = null
 
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-sctp")
