@@ -3,7 +3,7 @@
 ## IPv6 Configuration
 
 JVB supports IPv6 in dual-stack (IPv4 + IPv6) environments.
-To enable it, add the following to your `application.conf`:
+To enable it, add the following to your `jvb.conf`:
 ```hocon
 ice4j {
   harvest {
@@ -25,7 +25,6 @@ ice4j {
 ```
 
 ### Notes
-- STUN/TURN is not required for the Videobridge itself, only for P2P connections
 - Jitsi Web and the Videobridge can have different IPv6 addresses
 - When IPv6 is enabled, a UDP6 listener will open on port 10000
 
