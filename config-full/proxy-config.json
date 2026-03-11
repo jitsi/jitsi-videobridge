@@ -1,0 +1,50 @@
+[
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "jakarta.ws.rs.core.UriInfo"
+        ]
+    },
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "org.glassfish.jersey.server.ExtendedUriInfo"
+        ]
+    },
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "jakarta.ws.rs.container.ResourceInfo"
+        ]
+    },
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "jakarta.ws.rs.core.HttpHeaders"
+        ]
+    },
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "jakarta.ws.rs.core.Request"
+        ]
+    },
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "jakarta.ws.rs.core.SecurityContext"
+        ]
+    },
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "jakarta.ws.rs.ext.Providers"
+        ]
+    },
+    {
+        "interfaces": [
+            "org.glassfish.hk2.api.ProxyCtl",
+            "jakarta.ws.rs.core.Application"
+        ]
+    }
+]

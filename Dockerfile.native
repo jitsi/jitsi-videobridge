@@ -1,0 +1,61 @@
+# Stage 1: Build the fat jar
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
+
+WORKDIR /app
+
+# Copy pom.xml files first to leverage cache
+COPY pom.xml .
+COPY jvb/pom.xml jvb/
+COPY rtp/pom.xml rtp/
+COPY jitsi-media-transform/pom.xml jitsi-media-transform/
+
+# Copy config files potentially needed for build (though usually not for compilation)
+COPY config config/
+
+# Copy source code
+COPY jvb/src jvb/src
+COPY rtp/src rtp/src
+COPY jitsi-media-transform/src jitsi-media-transform/src
+
+# Build the fat jar
+# -pl jvb : build only the jvb project (and dependencies)
+# -am: also make dependencies
+# -P buildFatJar : enable the profile for fat jar
+# -DskipTests : skip tests for faster build
+RUN mvn clean package -pl jvb -am -P buildFatJar -DskipTests
+
+# Stage 2: Build the native image
+FROM ghcr.io/graalvm/native-image-community:25 AS native-builder
+
+WORKDIR /app
+
+# Copy the fat jar from the builder stage
+COPY --from=builder /app/jvb/target/jitsi-videobridge-*-jar-with-dependencies.jar jvb.jar
+
+# Copy generated GraalVM configuration
+COPY config-full /app/config-full
+
+# Build the native image
+# --no-fallback: fail if native image cannot be built (don't fallback to JVM)
+# -H:+ReportExceptionStackTraces: better error reporting
+# -H:ConfigurationFileDirectories: use generated config
+RUN native-image \
+    --no-fallback \
+    -H:+ReportExceptionStackTraces \
+    -H:ConfigurationFileDirectories=/app/config-full \
+    -jar jvb.jar \
+    jvb
+
+# Stage 3: Create the final image
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+# Copy the native executable
+COPY --from=native-builder /app/jvb .
+
+# Expose ports (standard JVB ports)
+EXPOSE 9600/udp 8080/tcp 443/tcp
+
+# Run the native executable
+ENTRYPOINT ["./jvb"]
