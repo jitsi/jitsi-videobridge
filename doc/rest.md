@@ -5,7 +5,7 @@ The two interfaces use different ports. The _private_ interface exposes
 HTTP endpoints which are not meant to be publicly accessible (but might be used
 by other components of the infrastructure, e.g. a signaling server), such as:
 
-* The [COLIBRI control interface](rest-colibri.md) (```/colibri/```)
+* The [COLIBRI control interface](rest-colibri2.md) (```/colibri/```)
 * The health-check interface (```/about/health```)
 * The version interface (```/about/version```)
 
