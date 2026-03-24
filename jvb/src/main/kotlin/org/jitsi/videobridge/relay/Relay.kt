@@ -1025,6 +1025,11 @@ class Relay @JvmOverloads constructor(
             it.mediaType == MediaType.VIDEO
         }.sumOf { it.durationActive }
         VideobridgeMetrics.totalVideoStreamMillisecondsReceived.add(durationActiveVideo.toMillis())
+
+        if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
+            logger.info("Expiring a relay with ICE connected, but not DTLS.")
+            VideobridgeMetrics.relaysDtlsFailed.inc()
+        }
     }
 
     fun expire() {

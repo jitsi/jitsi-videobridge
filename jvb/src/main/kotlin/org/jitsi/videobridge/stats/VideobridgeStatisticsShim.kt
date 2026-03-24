@@ -185,6 +185,7 @@ object VideobridgeStatisticsShim {
             put(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT, VideobridgeMetrics.colibriWebSocketMessagesSent.get())
             put(TOTAL_BYTES_RECEIVED, VideobridgeMetrics.totalBytesReceived.get())
             put("dtls_failed_endpoints", VideobridgeMetrics.endpointsDtlsFailed.get())
+            put("dtls_failed_relays", VideobridgeMetrics.relaysDtlsFailed.get())
             put(TOTAL_BYTES_SENT, VideobridgeMetrics.totalBytesSent.get())
             put(TOTAL_PACKETS_RECEIVED, VideobridgeMetrics.packetsReceived.get())
             put(TOTAL_PACKETS_SENT, VideobridgeMetrics.packetsSent.get())

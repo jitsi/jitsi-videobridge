@@ -157,6 +157,12 @@ object VideobridgeMetrics {
     )
 
     @JvmField
+    val relaysDtlsFailed = metricsContainer.registerCounter(
+        "relays_dtls_failed",
+        "Number of relays whose ICE connection was established, but DTLS wasn't (at time of expiration)."
+    )
+
+    @JvmField
     val stressLevel = metricsContainer.registerDoubleGauge(
         "stress",
         "Current stress (between 0 and 1)."
