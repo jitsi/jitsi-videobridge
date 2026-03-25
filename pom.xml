@@ -29,7 +29,7 @@
         <junit.version>5.13.4</junit.version>
         <junit.platform.version>1.13.4</junit.platform.version>
         <jitsi.utils.version>1.0-146-g45b9f50</jitsi.utils.version>
-        <jicoco.version>1.1-166-gd76c6ed</jicoco.version>
+        <jicoco.version>1.1-167-g28409d2</jicoco.version>
         <mockk.version>1.14.5</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
@@ -41,7 +41,7 @@
         <spotbugs-maven-plugin.version>4.9.4.2</spotbugs-maven-plugin.version>
         <jackson.version>2.17.1</jackson.version>
         <jacoco.version>0.8.13</jacoco.version>
-        <bouncycastle.version>1.78.1</bouncycastle.version>
+        <bouncycastle.version>1.83</bouncycastle.version>
         <jersey.version>3.0.10</jersey.version>
         <prometheus.version>0.16.0</prometheus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
