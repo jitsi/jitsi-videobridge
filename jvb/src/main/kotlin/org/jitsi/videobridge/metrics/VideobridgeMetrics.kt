@@ -151,9 +151,21 @@ object VideobridgeMetrics {
     )
 
     @JvmField
+    val endpointsIceFailed = metricsContainer.registerCounter(
+        "endpoints_ice_failed",
+        "Number of endpoints for which ICE failed to establish."
+    )
+
+    @JvmField
     val endpointsDtlsFailed = metricsContainer.registerCounter(
         "endpoints_dtls_failed",
         "Number of endpoints whose ICE connection was established, but DTLS wasn't (at time of expiration)."
+    )
+
+    @JvmField
+    val relaysIceFailed = metricsContainer.registerCounter(
+        "relays_ice_failed",
+        "Number of relays for which ICE failed to establish."
     )
 
     @JvmField

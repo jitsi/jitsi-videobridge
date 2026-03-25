@@ -470,6 +470,7 @@ class Endpoint @JvmOverloads constructor(
             }
 
             override fun failed() {
+                VideobridgeMetrics.endpointsIceFailed.inc()
             }
 
             override fun consentUpdated(time: Instant) {

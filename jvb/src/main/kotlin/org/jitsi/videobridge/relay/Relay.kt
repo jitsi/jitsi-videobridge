@@ -397,7 +397,9 @@ class Relay @JvmOverloads constructor(
 
             override fun connected() {}
 
-            override fun failed() {}
+            override fun failed() {
+                VideobridgeMetrics.relaysIceFailed.inc()
+            }
 
             override fun consentUpdated(time: Instant) {
                 transceiver.packetIOActivity.lastIceActivityInstant = time
