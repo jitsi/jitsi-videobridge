@@ -245,6 +245,7 @@ public class Conference
                     {
                         logger.info( () -> {
                             String reqStr = request.getRequest().toXML().toString();
+                            reqStr = RedactColibriIp.Companion.redactHttpHeaderValues(reqStr);
                             if (VideobridgeConfig.getRedactRemoteAddresses())
                             {
                                 reqStr = RedactColibriIp.Companion.redact(reqStr);
