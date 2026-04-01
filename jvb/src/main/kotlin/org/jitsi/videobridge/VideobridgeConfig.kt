@@ -29,5 +29,10 @@ class VideobridgeConfig private constructor() {
         val redactRemoteAddresses: Boolean by config {
             "videobridge.redact-remote-addresses".from(JitsiConfig.newConfig)
         }
+
+        @JvmStatic
+        val redactColibriHttpHeaders: Boolean by config {
+            "videobridge.redact-colibri-http-headers".from(JitsiConfig.newConfig)
+        }
     }
 }

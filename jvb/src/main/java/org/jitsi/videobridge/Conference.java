@@ -245,7 +245,10 @@ public class Conference
                     {
                         logger.info( () -> {
                             String reqStr = request.getRequest().toXML().toString();
-                            reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
+                            if (VideobridgeConfig.getRedactColibriHttpHeaders())
+                            {
+                                reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
+                            }
                             if (VideobridgeConfig.getRedactRemoteAddresses())
                             {
                                 reqStr = RedactColibri.Companion.redactIp(reqStr);
@@ -264,6 +267,10 @@ public class Conference
                         if (processingDelay > 100)
                         {
                             String reqStr = request.getRequest().toXML().toString();
+                            if (VideobridgeConfig.getRedactColibriHttpHeaders())
+                            {
+                                reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
+                            }
                             if (VideobridgeConfig.getRedactRemoteAddresses())
                             {
                                 reqStr = RedactColibri.Companion.redactIp(reqStr);
