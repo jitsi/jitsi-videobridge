@@ -245,10 +245,10 @@ public class Conference
                     {
                         logger.info( () -> {
                             String reqStr = request.getRequest().toXML().toString();
-                            reqStr = RedactColibriIp.Companion.redactHttpHeaderValues(reqStr);
+                            reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
                             if (VideobridgeConfig.getRedactRemoteAddresses())
                             {
-                                reqStr = RedactColibriIp.Companion.redact(reqStr);
+                                reqStr = RedactColibri.Companion.redactIp(reqStr);
                             }
                             return "RECV colibri2 request: " + reqStr;
                         });
@@ -266,7 +266,7 @@ public class Conference
                             String reqStr = request.getRequest().toXML().toString();
                             if (VideobridgeConfig.getRedactRemoteAddresses())
                             {
-                                reqStr = RedactColibriIp.Companion.redact(reqStr);
+                                reqStr = RedactColibri.Companion.redactIp(reqStr);
                             }
                             logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
                                     + totalDelay + " ms): " + reqStr);
