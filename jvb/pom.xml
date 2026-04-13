@@ -206,12 +206,6 @@
     </dependency>
     <!-- runtime -->
     <dependency>
-      <groupId>rusv</groupId>
-      <artifactId>agafua-syslog</artifactId>
-      <version>0.4</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
       <groupId>io.sentry</groupId>
       <artifactId>sentry</artifactId>
       <version>7.20.0</version>
