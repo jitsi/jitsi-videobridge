@@ -23,7 +23,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <jetty.version>11.0.24</jetty.version>
+        <jetty.version>12.0.35</jetty.version>
         <kotlin.version>2.2.20</kotlin.version>
         <kotest.version>5.9.1</kotest.version>
         <junit.version>5.13.4</junit.version>
@@ -42,7 +42,7 @@
         <jackson.version>2.17.1</jackson.version>
         <jacoco.version>0.8.13</jacoco.version>
         <bouncycastle.version>1.83</bouncycastle.version>
-        <jersey.version>3.0.10</jersey.version>
+        <jersey.version>3.1.11</jersey.version>
         <prometheus.version>0.16.0</prometheus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>

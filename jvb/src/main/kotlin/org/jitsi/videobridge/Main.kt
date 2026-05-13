@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge
 
-import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.ee10.servlet.ServletHolder
 import org.glassfish.jersey.servlet.ServletContainer
 import org.ice4j.ice.harvest.AbstractUdpListener
 import org.ice4j.ice.harvest.MappingCandidateHarvesters

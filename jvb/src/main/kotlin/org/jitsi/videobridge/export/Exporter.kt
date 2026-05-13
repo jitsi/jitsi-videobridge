@@ -15,8 +15,8 @@
  */
 package org.jitsi.videobridge.export
 
+import org.eclipse.jetty.websocket.api.Callback
 import org.eclipse.jetty.websocket.api.Session
-import org.eclipse.jetty.websocket.api.WebSocketAdapter
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
@@ -82,31 +82,38 @@ internal class Exporter(
             1024
         )
     }
-    private val recorderWebSocket = object : WebSocketAdapter() {
-        override fun onWebSocketClose(statusCode: Int, reason: String?) =
-            super.onWebSocketClose(statusCode, reason).also {
-                logger.info("Websocket closed with status $statusCode, reason: $reason")
-                stopPing()
-                val internalError = statusCode == 1011
-                if (internalError) {
-                    webSocketInternalErrors.inc()
-                    instanceWebSocketInternalErrors.incrementAndGet()
-                }
-                if (!isShuttingDown.get()) {
-                    // Avoid reconnect loops with no delay in case of an "internal error" (1011)
-                    scheduleReconnect(internalError)
-                }
-            }
+    private inner class RecorderWebSocket : Session.Listener.AutoDemanding {
+        @Volatile
+        var session: Session? = null
 
-        override fun onWebSocketConnect(session: Session?) = super.onWebSocketConnect(session).also {
+        val isConnected: Boolean
+            get() = session != null
+
+        override fun onWebSocketClose(statusCode: Int, reason: String?) {
+            session = null
+            logger.info("Websocket closed with status $statusCode, reason: $reason")
+            stopPing()
+            val internalError = statusCode == 1011
+            if (internalError) {
+                webSocketInternalErrors.inc()
+                instanceWebSocketInternalErrors.incrementAndGet()
+            }
+            if (!isShuttingDown.get()) {
+                // Avoid reconnect loops with no delay in case of an "internal error" (1011)
+                scheduleReconnect(internalError)
+            }
+        }
+
+        override fun onWebSocketOpen(session: Session) {
+            this.session = session
             logger.info("Websocket connected: $isConnected")
-            serializer = initSerializer(this)
+            serializer = initSerializer()
             reconnectAttempts.set(0)
             cancelReconnect()
             startPing()
         }
 
-        override fun onWebSocketError(cause: Throwable?) = super.onWebSocketError(cause).also {
+        override fun onWebSocketError(cause: Throwable?) {
             logger.error("Websocket error", cause)
             webSocketFailures.inc()
             instanceWebSocketFailures.incrementAndGet()
@@ -115,17 +122,19 @@ internal class Exporter(
             }
         }
 
-        override fun onWebSocketText(message: String?) = super.onWebSocketText(message).also {
-            message?.let { handleIncomingMessage(it) }
+        override fun onWebSocketText(message: String) {
+            handleIncomingMessage(message)
         }
     }
 
+    private val recorderWebSocket = RecorderWebSocket()
+
     private var serializer: MediaJsonSerializer? = null
 
-    private fun initSerializer(ws: WebSocketAdapter) = MediaJsonSerializer {
-        if (ws.isConnected) {
-            ws.remote?.sendString(it.toJson())
-                ?: logger.warn("Websocket is connected, but remote is null")
+    private fun initSerializer() = MediaJsonSerializer {
+        val session = recorderWebSocket.session
+        if (session != null) {
+            session.sendText(it.toJson(), Callback.NOOP)
         } else {
             logger.warn("Not connected, cannot send event: $it")
         }
@@ -177,7 +186,7 @@ internal class Exporter(
         val pingEvent = PingEvent(pingId)
 
         try {
-            recorderWebSocket.remote?.sendString(pingEvent.toJson())
+            recorderWebSocket.session?.sendText(pingEvent.toJson(), Callback.NOOP)
             lastPingSentId.set(pingId)
             logger.debug { "Sent ping with id=$pingId" }
 
@@ -195,7 +204,7 @@ internal class Exporter(
 
         // Force reconnect on timeout
         stopPing()
-        recorderWebSocket.session?.close(1000, "Ping timeout")
+        recorderWebSocket.session?.close(1000, "Ping timeout", Callback.NOOP)
         scheduleReconnect()
     }
 
@@ -298,9 +307,13 @@ internal class Exporter(
         stopPing()
         cancelReconnect()
         if (recorderWebSocket.isConnected) {
-            recorderWebSocket.remote?.sendString(SessionEndEvent().toJson())
+            recorderWebSocket.session?.sendText(SessionEndEvent().toJson(), Callback.NOOP)
         }
-        recorderWebSocket.session?.close(org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN, "closing")
+        recorderWebSocket.session?.close(
+            org.eclipse.jetty.websocket.core.CloseStatus.SHUTDOWN,
+            "closing",
+            Callback.NOOP
+        )
         recorderWebSocket.session?.disconnect()
         queue.close()
     }

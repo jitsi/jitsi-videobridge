@@ -15,7 +15,8 @@
  */
 package org.jitsi.videobridge;
 
-import org.eclipse.jetty.websocket.api.*;
+import org.eclipse.jetty.websocket.api.Callback;
+import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.core.CloseStatus;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
@@ -325,7 +326,7 @@ public class EndpointMessageTransport
                 Session session = webSocket.getSession();
                 if (session != null)
                 {
-                    session.close(CloseStatus.NORMAL, "replaced");
+                    session.close(CloseStatus.NORMAL, "replaced", Callback.NOOP);
                 }
             }
 
@@ -405,7 +406,11 @@ public class EndpointMessageTransport
             {
                 //  1001 indicates that an endpoint is "going away", such as a server
                 //  going down or a browser having navigated away from a page.
-                webSocket.getSession().close(CloseStatus.SHUTDOWN, "endpoint closed");
+                Session session = webSocket.getSession();
+                if (session != null)
+                {
+                    session.close(CloseStatus.SHUTDOWN, "endpoint closed", Callback.NOOP);
+                }
                 webSocket = null;
                 getLogger().debug(() -> "Endpoint expired, closed colibri web-socket.");
             }

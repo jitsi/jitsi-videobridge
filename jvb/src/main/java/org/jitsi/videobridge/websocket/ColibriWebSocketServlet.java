@@ -15,9 +15,9 @@
  */
 package org.jitsi.videobridge.websocket;
 
-import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.ee10.websocket.server.*;
+import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.websocket.api.*;
-import org.eclipse.jetty.websocket.server.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
@@ -81,7 +81,7 @@ class ColibriWebSocketServlet
             }
             catch (IOException ioe)
             {
-                response.setStatusCode(Response.SC_INTERNAL_SERVER_ERROR);
+                response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR_500);
                 return null;
             }
         });
