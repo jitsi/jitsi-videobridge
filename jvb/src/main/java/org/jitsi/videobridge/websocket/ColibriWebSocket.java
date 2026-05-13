@@ -15,7 +15,8 @@
  */
 package org.jitsi.videobridge.websocket;
 
-import org.eclipse.jetty.websocket.api.*;
+import org.eclipse.jetty.websocket.api.Callback;
+import org.eclipse.jetty.websocket.api.Session;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.util.*;
@@ -29,7 +30,7 @@ import java.util.concurrent.*;
 /**
  * @author Boris Grozev
  */
-public class ColibriWebSocket extends WebSocketAdapter
+public class ColibriWebSocket implements Session.Listener.AutoDemanding
 {
     /**
      * The logger instance used by this {@link ColibriWebSocket}.
@@ -52,6 +53,9 @@ public class ColibriWebSocket extends WebSocketAdapter
     /** The recurring task to send pings on the connection, if needed. */
     private ScheduledFuture<?> pinger = null;
 
+    /** The {@link Session} associated with this socket, set once the upgrade completes. */
+    private volatile Session session;
+
     /**
      * Initializes a new {@link ColibriWebSocket} instance.
      */
@@ -62,6 +66,11 @@ public class ColibriWebSocket extends WebSocketAdapter
     {
         this.logger = new LoggerImpl(getClass().getName(), new LogContext(Map.of("id", id)));
         this.eventHandler = Objects.requireNonNull(eventHandler, "eventHandler");
+    }
+
+    public Session getSession()
+    {
+        return session;
     }
 
     /**
@@ -76,16 +85,14 @@ public class ColibriWebSocket extends WebSocketAdapter
     }
 
     /**
-     * {@inheritDoc}
-     * </p>
      * Handles the event of this web socket being connected. Finds the
      * destination COLIBRI {@link Endpoint} and authenticates the request
      * based on the password.
      */
     @Override
-    public void onWebSocketConnect(Session sess)
+    public void onWebSocketOpen(Session sess)
     {
-        super.onWebSocketConnect(sess);
+        this.session = sess;
 
         if (WebsocketServiceConfig.config.getSendKeepalivePings())
         {
@@ -104,6 +111,7 @@ public class ColibriWebSocket extends WebSocketAdapter
     @Override
     public void onWebSocketClose(int statusCode, String reason)
     {
+        session = null;
         eventHandler.webSocketClosed(this, statusCode, reason);
         if (pinger != null)
         {
@@ -113,14 +121,13 @@ public class ColibriWebSocket extends WebSocketAdapter
 
     public void sendString(String message)
     {
-        RemoteEndpoint remote = getRemote();
-        if (remote != null)
+        Session s = session;
+        if (s != null)
         {
-            // We'll use the async version of sendString since this may be called
+            // We'll use the async version of sendText since this may be called
             // from multiple threads.  It's just fire-and-forget though, so we
-            // don't wait on the result
-
-            remote.sendString(message, WriteCallback.NOOP);
+            // don't wait on the result.
+            s.sendText(message, Callback.NOOP);
             synchronized (this)
             {
                 lastSendTime = clock.instant();
@@ -138,10 +145,10 @@ public class ColibriWebSocket extends WebSocketAdapter
                 if (Duration.between(lastSendTime, now).
                     compareTo(WebsocketServiceConfig.config.getKeepalivePingInterval()) < 0)
                 {
-                    RemoteEndpoint remote = getRemote();
-                    if (remote != null)
+                    Session s = session;
+                    if (s != null)
                     {
-                        remote.sendPing(ByteBuffer.allocate(0), WriteCallback.NOOP);
+                        s.sendPing(ByteBuffer.allocate(0), Callback.NOOP);
                         lastSendTime = clock.instant();
                     }
                 }

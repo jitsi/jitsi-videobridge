@@ -16,9 +16,9 @@
 
 package org.jitsi.videobridge.websocket
 
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
-import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler
+import org.eclipse.jetty.ee10.servlet.ServletHolder
+import org.eclipse.jetty.ee10.websocket.server.config.JettyWebSocketServletContainerInitializer
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
 import org.jitsi.videobridge.relay.RelayConfig
