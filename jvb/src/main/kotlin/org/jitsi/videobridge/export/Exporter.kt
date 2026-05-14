@@ -82,7 +82,7 @@ internal class Exporter(
             1024
         )
     }
-    private inner class RecorderWebSocket : Session.Listener.AutoDemanding {
+    inner class RecorderWebSocket : Session.Listener.AutoDemanding {
         @Volatile
         var session: Session? = null
 
