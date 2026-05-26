@@ -57,6 +57,7 @@ internal class Exporter(
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
+
     @Volatile private var connectionOpenedAtMs: Long = 0
 
     // Ping/pong state
