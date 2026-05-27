@@ -58,7 +58,7 @@ internal class Exporter(
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
 
-    @Volatile private var connectionOpenedAtMs: Long = 0
+    private var connectionOpenedAtMs: Long = 0
 
     // Ping/pong state
     private var pingScheduledFuture: ScheduledFuture<*>? = null
@@ -95,7 +95,10 @@ internal class Exporter(
             val openedAt = connectionOpenedAtMs
             val stableConnection = openedAt > 0 &&
                 System.currentTimeMillis() - openedAt > stableConnectionThreshold.toMillis()
-            if (stableConnection) reconnectAttempts.set(0)
+            if (stableConnection) {
+                reconnectAttempts.set(0)
+                connectionOpenedAtMs = 0
+            }
 
             session = null
             logger.info("Websocket closed with status $statusCode, reason: $reason")
