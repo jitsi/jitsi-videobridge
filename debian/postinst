@@ -78,16 +78,6 @@ case "$1" in
         if [ ! -f $HOCON_CONFIG ]; then
             echo "Generating a default hocon config"
             echo "videobridge {
-    http-servers {
-        public {
-            port = 9090
-        }
-    }
-    websockets {
-        enabled = true
-        domain = \"$JVB_HOSTNAME:443\"
-        tls = true
-    }
     apis.xmpp-client.configs {
         shard {
             HOSTNAME=localhost
