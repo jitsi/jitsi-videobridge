@@ -58,6 +58,8 @@ internal class Exporter(
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
 
+    private var connectionOpenedAtMs: Long = 0
+
     // Ping/pong state
     private var pingScheduledFuture: ScheduledFuture<*>? = null
     private var pingTimeoutFuture: ScheduledFuture<*>? = null
@@ -90,6 +92,14 @@ internal class Exporter(
             get() = session != null
 
         override fun onWebSocketClose(statusCode: Int, reason: String?) {
+            val openedAt = connectionOpenedAtMs
+            val stableConnection = openedAt > 0 &&
+                System.currentTimeMillis() - openedAt > stableConnectionThreshold.toMillis()
+            if (stableConnection) {
+                reconnectAttempts.set(0)
+                connectionOpenedAtMs = 0
+            }
+
             session = null
             logger.info("Websocket closed with status $statusCode, reason: $reason")
             stopPing()
@@ -99,16 +109,15 @@ internal class Exporter(
                 instanceWebSocketInternalErrors.incrementAndGet()
             }
             if (!isShuttingDown.get()) {
-                // Avoid reconnect loops with no delay in case of an "internal error" (1011)
-                scheduleReconnect(internalError)
+                scheduleReconnect()
             }
         }
 
         override fun onWebSocketOpen(session: Session) {
             this.session = session
+            connectionOpenedAtMs = System.currentTimeMillis()
             logger.info("Websocket connected: $isConnected")
             serializer = initSerializer()
-            reconnectAttempts.set(0)
             cancelReconnect()
             startPing()
         }
@@ -251,10 +260,7 @@ internal class Exporter(
         }
     }
 
-    private fun scheduleReconnect(
-        // Ignore the number of attempts and schedule using the maximum configured delay instead.
-        maxDelay: Boolean = false
-    ) {
+    private fun scheduleReconnect() {
         if (isShuttingDown.get()) {
             return
         }
@@ -267,7 +273,7 @@ internal class Exporter(
             }
         }
 
-        val delayMs = if (maxDelay) Companion.maxDelay.toMillis() else getDelayMs(attempt)
+        val delayMs = getDelayMs(attempt)
         logger.info("Scheduling reconnection attempt $attempt in $delayMs ms")
 
         cancelReconnect()
@@ -390,6 +396,10 @@ internal class Exporter(
 
         private val maxDelay: Duration by config {
             "videobridge.exporter.max-delay".from(JitsiConfig.newConfig)
+        }
+
+        val stableConnectionThreshold: Duration by config {
+            "videobridge.exporter.stable-connection-threshold".from(JitsiConfig.newConfig)
         }
 
         // 0, base, base * 2, max at 30 seconds
