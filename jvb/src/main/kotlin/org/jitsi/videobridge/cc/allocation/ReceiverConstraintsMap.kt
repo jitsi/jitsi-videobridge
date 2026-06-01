@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.utils.OrderedJsonObject
 
 /**
@@ -70,10 +72,10 @@ class ReceiverConstraintsMap {
         return maxSeen
     }
 
-    fun getDebugState() = OrderedJsonObject().apply {
+    fun getDebugState(): ObjectNode = OrderedJsonObject().apply {
         put("maxHeight", maxHeight)
-        put("constraints", map.toMap())
+        set<ObjectNode>("constraints", ObjectMapper().valueToTree(map.mapValues { it.value.toString() }.toMap()))
     }
 
-    override fun toString() = getDebugState().toJSONString()
+    override fun toString() = getDebugState().toString()
 }

@@ -31,6 +31,6 @@ public class Stats
     @Produces(MediaType.APPLICATION_JSON)
     public String getStats()
     {
-        return VideobridgeStatisticsShim.INSTANCE.getStatsJson().toJSONString();
+        return VideobridgeStatisticsShim.INSTANCE.getStatsJson().toString();
     }
 }

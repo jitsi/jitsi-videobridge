@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtp
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimator
 import org.jitsi.nlj.util.ArrayCache
@@ -283,7 +284,7 @@ class ClassicTransportCcEngine(
         val numMissingPacketReports: Long,
         val bandwidthEstimatorStats: BandwidthEstimator.StatisticsSnapshot
     ) : TransportCcEngine.StatisticsSnapshot() {
-        override fun toJson(): Map<*, *> {
+        override fun toJson(): ObjectNode {
             return OrderedJsonObject().also {
                 it.put("name", ClassicTransportCcEngine::class.java.simpleName)
                 it.put("numPacketsReported", numPacketsReported)
@@ -292,7 +293,7 @@ class ClassicTransportCcEngine(
                 it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
                 it.put("numPacketsUnreported", numPacketsUnreported)
                 it.put("numMissingPacketReports", numMissingPacketReports)
-                it.put("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
+                it.set<ObjectNode>("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
             }
         }
     }

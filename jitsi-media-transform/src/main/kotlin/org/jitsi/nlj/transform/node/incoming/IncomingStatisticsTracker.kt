@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.JitterStats
@@ -98,9 +99,9 @@ class IncomingStatisticsSnapshot(
      */
     val ssrcStats: Map<Long, IncomingSsrcStats.Snapshot>
 ) {
-    fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
+    fun toJson(): ObjectNode = OrderedJsonObject().apply {
         ssrcStats.forEach { (ssrc, snapshot) ->
-            put(ssrc, snapshot.toJson())
+            set<ObjectNode>(ssrc.toString(), snapshot.toJson())
         }
     }
 }

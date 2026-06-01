@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.dcsctp
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.DcSctpOptions
 import org.jitsi.dcsctp4j.DcSctpSocketCallbacks
@@ -83,7 +84,7 @@ class DcSctpTransport(
         }
     }
 
-    fun getDebugState(): OrderedJsonObject {
+    fun getDebugState(): ObjectNode {
         val metrics = synchronized(lock) {
             socket?.metrics
         }

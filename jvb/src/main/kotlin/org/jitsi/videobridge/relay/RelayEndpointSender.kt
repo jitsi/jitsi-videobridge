@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.relay
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.PacketHandler
@@ -31,6 +32,7 @@ import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -41,7 +43,6 @@ import org.jitsi.videobridge.metrics.QueueMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.TaskPools
-import org.json.simple.JSONObject
 import java.time.Instant
 
 /**
@@ -120,11 +121,11 @@ class RelayEndpointSender(
 
     fun getOutgoingStats() = rtpSender.getPacketStreamStats()
 
-    fun getDebugState(mode: DebugStateMode) = JSONObject().apply {
-        this["expired"] = expired
-        this["id"] = id
-        this["sender"] = rtpSender.debugState(mode)
-        this["stream_information_store"] = streamInformationStore.debugState(mode)
+    fun getDebugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+        put("expired", expired)
+        put("id", id)
+        set<ObjectNode>("sender", rtpSender.debugState(mode))
+        set<ObjectNode>("stream_information_store", streamInformationStore.debugState(mode))
     }
 
     fun expire() {
@@ -136,7 +137,7 @@ class RelayEndpointSender(
         try {
             updateStatsOnExpire()
             rtpSender.stop()
-            logger.cdebug { getDebugState(DebugStateMode.FULL).toJSONString() }
+            logger.cdebug { getDebugState(DebugStateMode.FULL).toString() }
             rtpSender.tearDown()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)

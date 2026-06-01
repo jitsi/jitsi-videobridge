@@ -19,6 +19,8 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.kotest.assertions.throwables.shouldThrow
@@ -31,8 +33,6 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.VideoType
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
-import org.json.simple.JSONObject
-import org.json.simple.parser.JSONParser
 
 @Suppress("BlockingMethodInNonBlockingContext")
 class BridgeChannelMessageTest : ShouldSpec() {
@@ -42,11 +42,11 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 // Any message will do, this one is just simple
                 val message = ClientHelloMessage()
 
-                val parsed = JSONParser().parse(message.toJson())
-                parsed.shouldBeInstanceOf<JSONObject>()
+                val parsed = jacksonObjectMapper().readTree(message.toJson())
+                parsed.shouldBeInstanceOf<ObjectNode>()
                 val parsedColibriClass = parsed["colibriClass"]
-                parsedColibriClass.shouldBeInstanceOf<String>()
-                parsedColibriClass shouldBe ClientHelloMessage.TYPE
+                parsedColibriClass.shouldBeInstanceOf<TextNode>()
+                parsedColibriClass.asText() shouldBe ClientHelloMessage.TYPE
             }
         }
         context("parsing an invalid message") {
@@ -550,9 +550,9 @@ class BridgeChannelMessageTest : ShouldSpec() {
 
             val objectMapper = ObjectMapper()
             fun toJsonJackson(m: DominantSpeakerMessage): String = objectMapper.writeValueAsString(m)
-            fun toJsonJsonSimple(m: DominantSpeakerMessage) = JSONObject().apply {
-                this["dominantSpeakerEndpoint"] = m.dominantSpeakerEndpoint
-            }.toJSONString()
+            fun toJsonJsonSimple(m: DominantSpeakerMessage) = jacksonObjectMapper().createObjectNode().apply {
+                put("dominantSpeakerEndpoint", m.dominantSpeakerEndpoint)
+            }.toString()
 
             fun toJsonStringConcat(m: DominantSpeakerMessage) =
                 "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\",\"dominantSpeakerEndpoint\":\"" +

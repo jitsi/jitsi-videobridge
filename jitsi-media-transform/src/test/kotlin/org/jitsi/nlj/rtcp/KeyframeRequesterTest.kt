@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.rtcp
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -70,7 +71,7 @@ class KeyframeRequesterTest : ShouldSpec() {
 
         override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? = null
 
-        override fun debugState(mode: DebugStateMode) = OrderedJsonObject()
+        override fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject()
     }
     private val logger = StdoutLogger()
     private val clock: FakeClock = FakeClock()

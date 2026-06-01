@@ -200,14 +200,14 @@ class ProbingDataSender(
     }
 
     fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
-        this["num_bytes_of_probing_data_sent_as_rtx"] = numProbingBytesSentRtx
-        this["num_bytes_of_probing_data_sent_as_dummy"] = numProbingBytesSentDummyData
-        this["rtx_supported"] = rtxSupported
+        put("num_bytes_of_probing_data_sent_as_rtx", numProbingBytesSentRtx)
+        put("num_bytes_of_probing_data_sent_as_dummy", numProbingBytesSentDummyData)
+        put("rtx_supported", rtxSupported)
         if (mode == DebugStateMode.FULL) {
-            this["local_video_ssrc"] = localVideoSsrc.toString()
-            this["curr_dummy_timestamp"] = currDummyTimestamp.toString()
-            this["curr_dummy_seq_num"] = currDummySeqNum.toString()
-            this["video_payload_types"] = videoPayloadTypes.toString()
+            put("local_video_ssrc", localVideoSsrc.toString())
+            put("curr_dummy_timestamp", currDummyTimestamp.toString())
+            put("curr_dummy_seq_num", currDummySeqNum.toString())
+            put("video_payload_types", videoPayloadTypes.toString())
         }
     }
 

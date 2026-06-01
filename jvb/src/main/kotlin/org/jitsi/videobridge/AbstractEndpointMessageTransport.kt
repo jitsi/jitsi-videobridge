@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.queue.PacketQueue
@@ -24,7 +26,6 @@ import org.jitsi.videobridge.message.MessageHandler
 import org.jitsi.videobridge.metrics.QueueMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.TaskPools
-import org.json.simple.JSONObject
 import java.io.IOException
 import java.time.Clock
 
@@ -84,9 +85,11 @@ abstract class AbstractEndpointMessageTransport(parentLogger: Logger) : MessageH
 
     open fun close() {}
 
-    open val debugState: JSONObject
-        get() = JSONObject().apply {
-            this["received_counts"] = JSONObject(getReceivedCounts())
+    open val debugState: ObjectNode
+        get() = OrderedJsonObject().apply {
+            val counts = OrderedJsonObject()
+            getReceivedCounts().forEach { (k, v) -> counts.put(k, v) }
+            set<ObjectNode>("received_counts", counts)
         }
 
     /**

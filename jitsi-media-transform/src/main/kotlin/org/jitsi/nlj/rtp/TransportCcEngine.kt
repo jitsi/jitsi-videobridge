@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtp
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.util.Bandwidth
@@ -67,7 +68,7 @@ abstract class TransportCcEngine : RtcpListener {
     abstract fun stop()
 
     abstract class StatisticsSnapshot {
-        abstract fun toJson(): Map<*, *>
+        abstract fun toJson(): ObjectNode
     }
 
     interface BandwidthListener {

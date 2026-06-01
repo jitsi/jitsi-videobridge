@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.RtpSenderImpl
 import org.jitsi.utils.OrderedJsonObject
@@ -24,51 +25,49 @@ import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.Endpoint
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayEndpointSender
-import org.json.simple.JSONObject
 
 object QueueStats {
     /** Gets statistics for the different `PacketQueue`s that this bridge uses. */
     @JvmStatic
-    fun getQueueStats() = JSONObject().apply {
-        this["srtp_send_queue"] = getJsonFromQueueStatisticsAndErrorHandler(
+    fun getQueueStats(): ObjectNode = OrderedJsonObject().apply {
+        getJsonFromQueueStatisticsAndErrorHandler(
             Endpoint.queueErrorCounter,
             "Endpoint-outgoing-packet-queue"
-        )
-        this["relay_srtp_send_queue"] = getJsonFromQueueStatisticsAndErrorHandler(
+        )?.let { set<ObjectNode>("srtp_send_queue", it) }
+        getJsonFromQueueStatisticsAndErrorHandler(
             Relay.queueErrorCounter,
             "Relay-outgoing-packet-queue"
-        )
-        this["relay_endpoint_sender_srtp_send_queue"] = getJsonFromQueueStatisticsAndErrorHandler(
+        )?.let { set<ObjectNode>("relay_srtp_send_queue", it) }
+        getJsonFromQueueStatisticsAndErrorHandler(
             RelayEndpointSender.queueErrorCounter,
             "RelayEndpointSender-outgoing-packet-queue"
-        )
-        this["rtp_receiver_queue"] = getJsonFromQueueStatisticsAndErrorHandler(
+        )?.let { set<ObjectNode>("relay_endpoint_sender_srtp_send_queue", it) }
+        getJsonFromQueueStatisticsAndErrorHandler(
             RtpReceiverImpl.queueErrorCounter,
             "rtp-receiver-incoming-packet-queue"
-        )
-        this["rtp_sender_queue"] = getJsonFromQueueStatisticsAndErrorHandler(
+        )?.let { set<ObjectNode>("rtp_receiver_queue", it) }
+        getJsonFromQueueStatisticsAndErrorHandler(
             RtpSenderImpl.queueErrorCounter,
             "rtp-sender-incoming-packet-queue"
-        )
-        this["colibri_queue"] = getStatistics()["colibri-queue"]
-        this[AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID] =
-            getJsonFromQueueStatisticsAndErrorHandler(
-                null,
-                AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID
-            )
+        )?.let { set<ObjectNode>("rtp_sender_queue", it) }
+        getStatistics().get("colibri-queue")?.let { set<com.fasterxml.jackson.databind.JsonNode>("colibri_queue", it) }
+        getJsonFromQueueStatisticsAndErrorHandler(
+            null,
+            AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID
+        )?.let { set<ObjectNode>(AbstractEndpointMessageTransport.INCOMING_MESSAGE_QUEUE_ID, it) }
     }
 
     private fun getJsonFromQueueStatisticsAndErrorHandler(
         countingErrorHandler: CountingErrorHandler?,
         queueName: String
-    ): OrderedJsonObject? {
-        var json = getStatistics()[queueName] as OrderedJsonObject?
+    ): ObjectNode? {
+        var json = getStatistics().get(queueName) as? ObjectNode
         if (countingErrorHandler != null) {
             if (json == null) {
                 json = OrderedJsonObject()
-                json["dropped_packets"] = countingErrorHandler.numPacketsDropped
+                json.put("dropped_packets", countingErrorHandler.numPacketsDropped)
             }
-            json["exceptions"] = countingErrorHandler.numExceptions
+            json.put("exceptions", countingErrorHandler.numExceptions)
         }
 
         return json

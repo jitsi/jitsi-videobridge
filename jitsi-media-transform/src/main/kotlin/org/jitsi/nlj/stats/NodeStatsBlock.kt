@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.stats
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.utils.OrderedJsonObject
 
@@ -62,6 +63,10 @@ class NodeStatsBlock(val name: String) {
      * Adds a block with a given name from a from a JSON-ish key-value object map.
      */
     fun addJson(name: String, json: Map<*, *>) {
+        addBlock(fromJson(name, json))
+    }
+
+    fun addJson(name: String, json: ObjectNode) {
         addBlock(fromJson(name, json))
     }
 
@@ -156,15 +161,24 @@ class NodeStatsBlock(val name: String) {
     /**
      * Returns a JSON representation of this [NodeStatsBlock].
      */
-    fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
+    fun toJson(): ObjectNode = OrderedJsonObject().apply {
         stats.forEach { (name, value) ->
             when (value) {
-                is NodeStatsBlock -> put(name, value.toJson())
-                else -> put(name, value)
+                is NodeStatsBlock -> set<ObjectNode>(name, value.toJson())
+                is Long -> put(name, value)
+                is Double -> put(name, value)
+                is Boolean -> put(name, value)
+                is String -> put(name, value)
+                else -> put(name, value.toString())
             }
         }
         compoundStats.forEach { (name, function) ->
-            put(name, function.invoke(this@NodeStatsBlock))
+            val num = function.invoke(this@NodeStatsBlock)
+            when (num) {
+                is Long -> put(name, num)
+                is Double -> put(name, num)
+                else -> put(name, num.toLong())
+            }
         }
     }
 
@@ -184,6 +198,17 @@ class NodeStatsBlock(val name: String) {
                     is Number -> addNumber(key.toString(), value)
                     is Boolean -> addBoolean(key.toString(), value)
                     else -> addString(key.toString(), value.toString())
+                }
+            }
+        }
+
+        fun fromJson(name: String, json: ObjectNode): NodeStatsBlock = NodeStatsBlock(name).apply {
+            json.fields().forEach { (key, value) ->
+                when {
+                    value.isObject -> addBlock(fromJson(key, value as ObjectNode))
+                    value.isNumber -> addNumber(key, value.numberValue())
+                    value.isBoolean -> addBoolean(key, value.booleanValue())
+                    else -> addString(key, value.asText())
                 }
             }
         }

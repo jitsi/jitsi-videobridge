@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.ice4j.util.Buffer
 import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.ErrorKind
@@ -65,6 +66,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -99,7 +101,6 @@ import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
-import org.json.simple.JSONObject
 import java.nio.ByteBuffer
 import java.time.Clock
 import java.time.Instant
@@ -331,34 +332,34 @@ class Relay @JvmOverloads constructor(
         TransportConfig.queueSize
     )
 
-    fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
-        put("ice_transport", iceTransport.getDebugState())
-        put("dtls_transport", dtlsTransport.getDebugState())
-        put("transceiver", transceiver.debugState(mode))
+    fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+        set<ObjectNode>("ice_transport", iceTransport.getDebugState())
+        set<ObjectNode>("dtls_transport", dtlsTransport.getDebugState())
+        set<ObjectNode>("transceiver", transceiver.debugState(mode))
         put("mesh_id", meshId)
-        put("message_transport", messageTransport.debugState)
+        set<ObjectNode>("message_transport", messageTransport.debugState)
         sctpTransport?.let {
-            put("sctp", it.getDebugState())
+            set<ObjectNode>("sctp", it.getDebugState())
         }
 
         if (mode == DebugStateMode.FULL) {
-            val remoteEndpoints = JSONObject()
-            val endpointsBySsrcMap = JSONObject()
+            val remoteEndpoints = OrderedJsonObject()
+            val endpointsBySsrcMap = OrderedJsonObject()
             synchronized(endpointsLock) {
                 for (r in relayedEndpoints.values) {
-                    remoteEndpoints[r.id] = r.debugState(mode)
+                    remoteEndpoints.set<ObjectNode>(r.id, r.debugState(mode))
                 }
                 for ((s, e) in endpointsBySsrc) {
-                    endpointsBySsrcMap[s] = e.id
+                    endpointsBySsrcMap.put(s.toString(), e.id)
                 }
             }
-            put("remote_endpoints", remoteEndpoints)
-            put("endpoints_by_ssrc", endpointsBySsrcMap)
-            val endpointSenders = JSONObject()
+            set<ObjectNode>("remote_endpoints", remoteEndpoints)
+            set<ObjectNode>("endpoints_by_ssrc", endpointsBySsrcMap)
+            val endpointSenders = OrderedJsonObject()
             for (s in senders.values) {
-                endpointSenders[s.id] = s.getDebugState(mode)
+                endpointSenders.set<ObjectNode>(s.id, s.getDebugState(mode))
             }
-            put("senders", endpointSenders)
+            set<ObjectNode>("senders", endpointSenders)
         }
     }
 
@@ -1047,9 +1048,9 @@ class Relay @JvmOverloads constructor(
             updateStatsOnExpire()
             transceiver.stop()
             srtpTransformers?.close()
-            logger.cdebug { transceiver.debugState(DebugStateMode.FULL).toJSONString() }
-            logger.cdebug { iceTransport.getDebugState().toJSONString() }
-            logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
+            logger.cdebug { transceiver.debugState(DebugStateMode.FULL).toString() }
+            logger.cdebug { iceTransport.getDebugState().toString() }
+            logger.cdebug { dtlsTransport.getDebugState().toString() }
 
             transceiver.teardown()
             messageTransport.close()
@@ -1103,12 +1104,12 @@ class Relay @JvmOverloads constructor(
         val bytesSent = AtomicLong(0)
         val packetsSent = AtomicLong(0)
 
-        private fun getJson(): JSONObject {
-            val jsonObject = JSONObject()
-            jsonObject["bytes_received"] = bytesReceived.get()
-            jsonObject["bytes_sent"] = bytesSent.get()
-            jsonObject["packets_received"] = packetsReceived.get()
-            jsonObject["packets_sent"] = packetsSent.get()
+        private fun getJson(): ObjectNode {
+            val jsonObject = OrderedJsonObject()
+            jsonObject.put("bytes_received", bytesReceived.get())
+            jsonObject.put("bytes_sent", bytesSent.get())
+            jsonObject.put("packets_received", packetsReceived.get())
+            jsonObject.put("packets_sent", packetsSent.get())
             return jsonObject
         }
     }

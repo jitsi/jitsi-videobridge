@@ -19,8 +19,9 @@ package org.jitsi.videobridge.rest.root.colibri.mucclient;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.json.simple.*;
-import org.json.simple.parser.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import jakarta.inject.*;
 import jakarta.servlet.http.*;
@@ -40,39 +41,53 @@ public class MucClient
     @Path("/add")
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response addMucClient(String requestBody) throws ParseException
+    public Response addMucClient(String requestBody)
     {
         //NOTE: unfortunately MucClientConfiguration is not a compliant bean (it doesn't have
         // a no-arg ctor) so we can't parse the json directly into a MucClientConfiguration
         // instance and just take that as an argument here, we have to read the json
         // ourselves.
-        Object o = new JSONParser().parse(requestBody);
-        if (!(o instanceof JSONObject))
+        try
+        {
+            JsonNode node = new ObjectMapper().readTree(requestBody);
+            if (!(node instanceof ObjectNode))
+            {
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+            }
+            if (xmppConnection.addMucClient((ObjectNode)node))
+            {
+                return Response.ok().build();
+            }
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+        }
+        catch (Exception e)
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        if (xmppConnection.addMucClient((JSONObject)o))
-        {
-            return Response.ok().build();
-        }
-        return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
     }
 
     @Path("/remove")
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response removeMucClient(String requestBody) throws ParseException
+    public Response removeMucClient(String requestBody)
     {
-        Object o = new JSONParser().parse(requestBody);
-        if (!(o instanceof JSONObject))
+        try
+        {
+            JsonNode node = new ObjectMapper().readTree(requestBody);
+            if (!(node instanceof ObjectNode))
+            {
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+            }
+            if (xmppConnection.removeMucClient((ObjectNode)node))
+            {
+                return Response.ok().build();
+            }
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+        }
+        catch (Exception e)
         {
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         }
-        if (xmppConnection.removeMucClient((JSONObject)o))
-        {
-            return Response.ok().build();
-        }
-        return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
     }
 
     @Path("/list")

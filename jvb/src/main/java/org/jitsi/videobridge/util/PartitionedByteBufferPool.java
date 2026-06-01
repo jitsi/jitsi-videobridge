@@ -16,11 +16,12 @@
 
 package org.jitsi.videobridge.util;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.utils.stats.*;
-import org.json.simple.*;
 
 import java.time.*;
 import java.util.concurrent.*;
@@ -121,10 +122,9 @@ class PartitionedByteBufferPool
     /**
      * Adds statistics for this pool to the given JSON object.
      */
-    @SuppressWarnings("unchecked")
-    OrderedJsonObject getStats()
+    ObjectNode getStats()
     {
-        OrderedJsonObject stats = new OrderedJsonObject();
+        ObjectNode stats = JsonNodeFactory.instance.objectNode();
 
         stats.put("default_size", defaultBufferSize);
 
@@ -132,7 +132,7 @@ class PartitionedByteBufferPool
         long returns = 0;
         long allocations = 0;
         long storedBytes = 0;
-        JSONArray partitionStats = new JSONArray();
+        ArrayNode partitionStats = JsonNodeFactory.instance.arrayNode();
 
         for (Partition p : partitions)
         {
@@ -151,7 +151,7 @@ class PartitionedByteBufferPool
             "allocation_percent",
             100D * allocations / Math.max(1, requests));
 
-        stats.put("partitions", partitionStats);
+        stats.set("partitions", partitionStats);
         return stats;
     }
 
@@ -387,11 +387,10 @@ class PartitionedByteBufferPool
         /**
          * Gets a snapshot of the statistics of this partition in JSON format.
          */
-        @SuppressWarnings("unchecked")
-        private OrderedJsonObject getStatsJson()
+        private ObjectNode getStatsJson()
         {
             long now = System.currentTimeMillis();
-            OrderedJsonObject stats = new OrderedJsonObject();
+            ObjectNode stats = JsonNodeFactory.instance.objectNode();
             stats.put("id", id);
 
             long numRequestsSum = numRequests.sum();

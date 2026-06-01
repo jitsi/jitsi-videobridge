@@ -52,7 +52,7 @@ class DuplicateTermination() : TransformerNode("Duplicate termination") {
     }
 
     override fun statsJson() = super.statsJson().apply {
-        this["num_duplicate_packets_dropped"] = numDuplicatePacketsDropped
+        put("num_duplicate_packets_dropped", numDuplicatePacketsDropped)
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

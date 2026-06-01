@@ -20,7 +20,8 @@ import org.eclipse.jetty.http.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import jakarta.inject.*;
 import jakarta.ws.rs.*;
@@ -63,13 +64,12 @@ public class Drain
         return setDrainMode(false);
     }
 
-    @SuppressWarnings("unchecked")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public String getDrainState()
     {
-        JSONObject obj = new JSONObject();
+        ObjectNode obj = JsonNodeFactory.instance.objectNode();
         obj.put("drain", videobridge.getDrainMode());
-        return obj.toJSONString();
+        return obj.toString();
     }
 }

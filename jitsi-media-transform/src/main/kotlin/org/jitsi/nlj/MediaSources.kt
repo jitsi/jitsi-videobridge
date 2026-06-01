@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.utils.OrderedJsonObject
 
 /**
@@ -59,15 +60,16 @@ class MediaSources {
 
     fun getMediaSources(): Array<MediaSourceDesc> = sources
 
-    fun debugState() = OrderedJsonObject().apply {
+    fun debugState(): ObjectNode = OrderedJsonObject().apply {
         sources.forEach { source ->
-            this[source.sourceName] = OrderedJsonObject().apply {
-                this["owner"] = source.owner
-                this["video_type"] = source.videoType.toString()
+            val sourceNode = OrderedJsonObject().apply {
+                put("owner", source.owner)
+                put("video_type", source.videoType.toString())
                 source.rtpEncodings.forEach {
-                    this["rtp_encoding_${it.primarySSRC}"] = it.debugState()
+                    set<ObjectNode>("rtp_encoding_${it.primarySSRC}", it.debugState())
                 }
             }
+            set<ObjectNode>(source.sourceName, sourceNode)
         }
     }
 }

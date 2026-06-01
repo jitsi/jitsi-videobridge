@@ -70,7 +70,7 @@ class Av1DDRtpLayerDesc(
      * Extracts a [NodeStatsBlock] from an [RtpLayerDesc].
      */
     override fun debugState() = super.debugState().apply {
-        this["dt"] = dt
+        put("dt", dt)
     }
 
     override fun indexString(): String = indexString(index)

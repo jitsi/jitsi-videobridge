@@ -16,7 +16,7 @@
 package org.jitsi.videobridge.cc.allocation
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import org.json.simple.JSONObject
+import org.jitsi.utils.OrderedJsonObject
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class VideoConstraints @JvmOverloads constructor(
@@ -29,10 +29,10 @@ data class VideoConstraints @JvmOverloads constructor(
             "maxFrameRate must be either -1, or >= 0"
         }
     }
-    override fun toString(): String = JSONObject().apply {
-        this["maxHeight"] = maxHeight
-        this["maxFrameRate"] = maxFrameRate
-    }.toJSONString()
+    override fun toString(): String = OrderedJsonObject().apply {
+        put("maxHeight", maxHeight)
+        put("maxFrameRate", maxFrameRate)
+    }.toString()
 
     fun heightIsLimited() = maxHeight != UNLIMITED_HEIGHT
     fun frameRateIsLimited() = maxFrameRate != UNLIMITED_FRAME_RATE

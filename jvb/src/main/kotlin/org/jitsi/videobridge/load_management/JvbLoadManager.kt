@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.load_management
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
@@ -111,7 +112,7 @@ open class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
         put("stress", getCurrentStressLevel().toString())
         put("reducer_enabled", reducerEnabled.toString())
         loadReducer?.let {
-            put("reducer", it.getStats())
+            set<ObjectNode>("reducer", it.getStats())
         }
     }
 

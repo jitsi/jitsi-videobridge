@@ -15,6 +15,9 @@
  */
 package org.jitsi.videobridge.cc.av1
 
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
@@ -26,6 +29,7 @@ import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.rtp.header_extensions.toShortString
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -33,8 +37,6 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
-import org.json.simple.JSONArray
-import org.json.simple.JSONObject
 import java.time.Duration
 import java.time.Instant
 
@@ -661,19 +663,19 @@ class Av1DDAdaptiveSourceProjectionContext(
         lastAv1FrameProjection.getNextTemplateId() ?: 0
     )
 
-    override fun getDebugState(): JSONObject {
-        val debugState = JSONObject()
-        debugState["class"] = Av1DDAdaptiveSourceProjectionContext::class.java.simpleName
+    override fun getDebugState(): ObjectNode {
+        val debugState = OrderedJsonObject()
+        debugState.put("class", Av1DDAdaptiveSourceProjectionContext::class.java.simpleName)
 
-        val mapSizes = JSONArray()
+        val mapSizes: ArrayNode = jacksonObjectMapper().createArrayNode()
         for ((key, value) in av1FrameMaps.entries) {
-            val sizeInfo = JSONObject()
-            sizeInfo["ssrc"] = key
-            sizeInfo["size"] = value.size()
+            val sizeInfo = OrderedJsonObject()
+            sizeInfo.put("ssrc", key)
+            sizeInfo.put("size", value.size())
             mapSizes.add(sizeInfo)
         }
-        debugState["av1FrameMaps"] = mapSizes
-        debugState["av1QualityFilter"] = av1QualityFilter.debugState
+        debugState.set<ObjectNode>("av1FrameMaps", mapSizes)
+        debugState.set<ObjectNode>("av1QualityFilter", av1QualityFilter.debugState)
 
         return debugState
     }

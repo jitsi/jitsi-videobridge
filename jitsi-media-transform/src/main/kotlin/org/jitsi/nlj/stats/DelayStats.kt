@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.stats
 
-import org.jitsi.utils.OrderedJsonObject
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.utils.stats.BucketStats
 import java.util.concurrent.atomic.LongAdder
 
@@ -35,7 +35,7 @@ class PacketDelayStats(thresholds: List<Long> = defaultThresholds) : DelayStats(
 
     fun addUnknown() = numPacketsWithoutTimestamps.increment()
 
-    override fun toJson(format: Format): OrderedJsonObject {
+    override fun toJson(format: Format): ObjectNode {
         return super.toJson(format).apply {
             put("packets_without_timestamps", numPacketsWithoutTimestamps.sum())
         }

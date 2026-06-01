@@ -16,6 +16,8 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.util.bps
@@ -42,16 +44,19 @@ data class AllocationSettings @JvmOverloads constructor(
     /** A non-negative value is assumed as the available bandwidth in bps. A negative value is ignored. */
     val assumedBandwidthBps: Long = -1
 ) {
-    fun toJson() = OrderedJsonObject().apply {
-        put("on_stage_sources", onStageSources)
-        put("selected_sources", selectedSources)
-        put("video_constraints", videoConstraints)
-        put("last_n", lastN)
-        put("default_constraints", defaultConstraints)
-        put("assumed_bandwidth_bps", assumedBandwidthBps)
+    fun toJson(): ObjectNode {
+        val mapper = ObjectMapper()
+        return OrderedJsonObject().apply {
+            set<ObjectNode>("on_stage_sources", mapper.valueToTree(onStageSources))
+            set<ObjectNode>("selected_sources", mapper.valueToTree(selectedSources))
+            set<ObjectNode>("video_constraints", mapper.valueToTree(videoConstraints.mapValues { it.value.toString() }))
+            put("last_n", lastN)
+            put("default_constraints", defaultConstraints.toString())
+            put("assumed_bandwidth_bps", assumedBandwidthBps)
+        }
     }
 
-    override fun toString(): String = toJson().toJSONString()
+    override fun toString(): String = toJson().toString()
 
     fun getConstraints(endpointId: String) = videoConstraints.getOrDefault(endpointId, defaultConstraints)
 

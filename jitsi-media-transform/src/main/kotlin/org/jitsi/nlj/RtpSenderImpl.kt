@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
@@ -333,17 +334,17 @@ class RtpSenderImpl(
         probingDataSender.handleEvent(event)
     }
 
-    override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+    override fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
         if (mode == DebugStateMode.FULL) {
             appendAll(super.getNodeStats().toJson())
-            this["packet_queue"] = incomingPacketQueue.debugState
-            this["running"] = running
+            put("packet_queue", incomingPacketQueue.debugState.toString())
+            put("running", running)
         }
         appendAll(nackHandler.getNodeStats().toJson())
-        this["probing_data_sender"] = probingDataSender.debugState(mode)
-        this["local_video_ssrc"] = localVideoSsrc?.toString() ?: "null"
-        this["local_audio_ssrc"] = localAudioSsrc?.toString() ?: "null"
-        this["transport_cc_engine"] = transportCcEngine.getStatistics().toJson()
+        set<ObjectNode>("probing_data_sender", probingDataSender.debugState(mode))
+        put("local_video_ssrc", localVideoSsrc?.toString() ?: "null")
+        put("local_audio_ssrc", localAudioSsrc?.toString() ?: "null")
+        set<ObjectNode>("transport_cc_engine", transportCcEngine.getStatistics().toJson())
         NodeDebugStateVisitor(this, mode).reverseVisit(outputPipelineTerminationNode)
     }
 

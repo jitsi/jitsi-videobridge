@@ -18,7 +18,7 @@ package org.jitsi.videobridge.cc;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import org.jitsi.nlj.*;
 import org.jitsi.rtp.rtcp.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Implementations of this interface are responsible for projecting a specific
@@ -95,5 +95,5 @@ public interface AdaptiveSourceProjectionContext
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
-    JSONObject getDebugState();
+    ObjectNode getDebugState();
 }

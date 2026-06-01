@@ -15,12 +15,14 @@
  */
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.utils.NEVER
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
@@ -30,7 +32,6 @@ import org.jitsi.videobridge.cc.allocation.ReceiverConstraintsMap
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.util.TaskPools
-import org.json.simple.JSONObject
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
@@ -236,15 +237,15 @@ abstract class AbstractEndpoint protected constructor(
     abstract fun requestKeyframe()
 
     /** A JSON representation of the parts of this object's state that are deemed useful for debugging. */
-    open fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
-        val receiverVideoConstraints = JSONObject()
+    open fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+        val receiverVideoConstraints = OrderedJsonObject()
         this@AbstractEndpoint.receiverVideoConstraints.forEach { (sourceName, receiverConstraints) ->
-            receiverVideoConstraints[sourceName] = receiverConstraints.getDebugState()
+            receiverVideoConstraints.set<ObjectNode>(sourceName, receiverConstraints.getDebugState())
         }
-        this["receiver_video_constraints"] = receiverVideoConstraints
-        this["max_receiver_video_constraints"] = HashMap(maxReceiverVideoConstraints)
-        this["expired"] = isExpired
-        this["stats_id"] = statsId
+        set<ObjectNode>("receiver_video_constraints", receiverVideoConstraints)
+        put("max_receiver_video_constraints", HashMap(maxReceiverVideoConstraints).toString())
+        put("expired", isExpired)
+        put("stats_id", statsId)
     }
 
     /**

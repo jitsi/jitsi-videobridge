@@ -251,10 +251,10 @@ class TccGeneratorNode(
     }
 
     override fun statsJson() = super.statsJson().apply {
-        this["num_tcc_packets_sent"] = numTccSent
-        this["tcc_feedback_bitrate_bps"] = tccFeedbackBitrate.rate.bps
-        this["tcc_extension_id"] = tccExtensionId.toString()
-        this["num_multiple_tcc_packets"] = numMultipleTccPackets
-        this["enabled"] = enabled
+        put("num_tcc_packets_sent", numTccSent)
+        put("tcc_feedback_bitrate_bps", tccFeedbackBitrate.rate.bps)
+        put("tcc_extension_id", tccExtensionId.toString())
+        put("num_multiple_tcc_packets", numMultipleTccPackets)
+        put("enabled", enabled)
     }
 }

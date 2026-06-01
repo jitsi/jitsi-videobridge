@@ -24,8 +24,8 @@ class VideoMuteNode : ObserverNode("VideoMuteNode") {
     }
 
     override fun statsJson() = super.statsJson().apply {
-        this["num_video_packets_discarded"] = numMutedPackets
-        this["force_mute"] = forceMute
+        put("num_video_packets_discarded", numMutedPackets)
+        put("force_mute", forceMute)
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

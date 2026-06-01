@@ -24,7 +24,9 @@ import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.time.*;
 import java.util.*;
@@ -706,25 +708,23 @@ public class VP8AdaptiveSourceProjectionContext
      * {@inheritDoc}
      */
     @Override
-    @SuppressWarnings("unchecked")
-    public synchronized JSONObject getDebugState()
+    public synchronized ObjectNode getDebugState()
     {
-        JSONObject debugState = new JSONObject();
+        ObjectNode debugState = JsonNodeFactory.instance.objectNode();
         debugState.put(
                 "class",
                 VP8AdaptiveSourceProjectionContext.class.getSimpleName());
 
-        JSONArray mapSizes = new JSONArray();
+        ArrayNode mapSizes = JsonNodeFactory.instance.arrayNode();
         for (Map.Entry<Long, VP8FrameMap> entry: vp8FrameMaps.entrySet())
         {
-            JSONObject sizeInfo = new JSONObject();
+            ObjectNode sizeInfo = JsonNodeFactory.instance.objectNode();
             sizeInfo.put("ssrc", entry.getKey());
             sizeInfo.put("size", entry.getValue().size());
             mapSizes.add(sizeInfo);
         }
-        debugState.put(
-                "vp8FrameMaps", mapSizes);
-        debugState.put("vp8QualityFilter", vp8QualityFilter.getDebugState());
+        debugState.set("vp8FrameMaps", mapSizes);
+        debugState.set("vp8QualityFilter", vp8QualityFilter.getDebugState());
 
         return debugState;
     }

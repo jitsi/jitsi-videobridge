@@ -27,7 +27,8 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.av1.*;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi.videobridge.cc.vp9.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.lang.*;
 import java.util.*;
@@ -375,18 +376,22 @@ public class AdaptiveSourceProjection
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
-    @SuppressWarnings("unchecked")
-    public JSONObject getDebugState(@NotNull DebugStateMode mode)
+    public ObjectNode getDebugState(@NotNull DebugStateMode mode)
     {
-        JSONObject debugState = new JSONObject();
+        ObjectNode debugState = JsonNodeFactory.instance.objectNode();
 
         debugState.put("targetSsrc", targetSsrc);
         AdaptiveSourceProjectionContext contextCopy = context;
         if (mode == DebugStateMode.FULL)
         {
-            debugState.put(
-                    "context",
-                    contextCopy == null ? null : contextCopy.getDebugState());
+            if (contextCopy == null)
+            {
+                debugState.putNull("context");
+            }
+            else
+            {
+                debugState.set("context", contextCopy.getDebugState());
+            }
         }
         else if (mode == DebugStateMode.STATS)
         {
@@ -394,7 +399,7 @@ public class AdaptiveSourceProjection
                     "context",
                     contextCopy == null ? "null" : contextCopy.getClass().getSimpleName());
         }
-        debugState.put("needsKeyframe", contextCopy == null ? "N/A" : contextCopy.needsKeyframe());
+        debugState.put("needsKeyframe", contextCopy == null ? "N/A" : Boolean.toString(contextCopy.needsKeyframe()));
         debugState.put("targetIndex", targetIndex);
 
         return debugState;

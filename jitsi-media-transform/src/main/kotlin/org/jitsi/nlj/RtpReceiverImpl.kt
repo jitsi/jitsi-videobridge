@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
@@ -284,7 +285,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun doProcessPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
 
-    override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+    override fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
         NodeDebugStateVisitor(this, mode).visit(inputTreeRoot)
     }
 

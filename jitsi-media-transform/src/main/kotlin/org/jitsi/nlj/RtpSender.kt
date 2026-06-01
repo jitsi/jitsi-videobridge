@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
@@ -22,7 +23,6 @@ import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketStreamStats
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
-import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Not an 'RtpSender' in the sense that it sends only RTP (and not
@@ -55,5 +55,5 @@ abstract class RtpSender :
      */
     var preProcesor: ((PacketInfo) -> PacketInfo?)? = null
 
-    abstract fun debugState(mode: DebugStateMode): OrderedJsonObject
+    abstract fun debugState(mode: DebugStateMode): ObjectNode
 }

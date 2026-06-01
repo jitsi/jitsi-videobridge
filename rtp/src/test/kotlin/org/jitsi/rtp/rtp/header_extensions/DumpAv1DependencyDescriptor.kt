@@ -26,7 +26,7 @@ fun main(args: Array<String>) {
             val reader = Av1DependencyDescriptorReader(descBinary, 0, descBinary.size)
             val desc = reader.parse(structure)
             desc.newTemplateDependencyStructure?.let { structure = it }
-            println(desc.toJSONString())
+            println(desc.toString())
             val frameInfo = desc.frameInfo
             println(frameInfo)
         } catch (e: Exception) {

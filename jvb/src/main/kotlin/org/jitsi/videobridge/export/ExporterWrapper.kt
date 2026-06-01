@@ -15,16 +15,17 @@
  */
 package org.jitsi.videobridge.export
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.xmpp.extensions.colibri2.Connect
-import org.json.simple.JSONObject
 
 class ExporterWrapper(
     parentLogger: Logger,
@@ -103,10 +104,10 @@ class ExporterWrapper(
         started = true
     }
 
-    fun debugState() = JSONObject().apply {
+    fun debugState(): ObjectNode = OrderedJsonObject().apply {
         put("started", started)
         exporter?.let {
-            put("exporter", it.debugState())
+            set<ObjectNode>("exporter", it.debugState())
         }
     }
 }

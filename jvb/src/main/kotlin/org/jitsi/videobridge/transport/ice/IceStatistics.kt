@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.transport.ice
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.stats.BucketStats
 import java.util.concurrent.ConcurrentHashMap
@@ -37,10 +38,10 @@ class IceStatistics {
         statsByHarvesterName.computeIfAbsent(harvesterName) { Stats() }.add(rttMs = rttMs)
     }
 
-    fun toJson() = OrderedJsonObject().apply {
-        put("all", combinedStats.toJson())
+    fun toJson(): ObjectNode = OrderedJsonObject().apply {
+        set<ObjectNode>("all", combinedStats.toJson())
         statsByHarvesterName.forEach { (harvesterName, stats) ->
-            put(harvesterName, stats.toJson())
+            set<ObjectNode>(harvesterName, stats.toJson())
         }
     }
 
@@ -60,9 +61,9 @@ class IceStatistics {
             buckets.addValue((rttMs + 0.5).toLong())
         }
 
-        fun toJson() = OrderedJsonObject().apply {
+        fun toJson(): ObjectNode = OrderedJsonObject().apply {
             put("average", sum.sum() / count.toDouble())
-            put("buckets", buckets.toJson())
+            set<ObjectNode>("buckets", buckets.toJson())
         }
     }
 }

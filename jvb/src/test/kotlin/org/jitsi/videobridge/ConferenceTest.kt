@@ -15,12 +15,12 @@
  */
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.DebugStateMode
-import org.json.simple.JSONObject
-import org.json.simple.parser.JSONParser
 import org.jxmpp.jid.impl.JidCreate
 
 /**
@@ -39,7 +39,7 @@ class ConferenceTest : ConfigTest() {
                 createLocalEndpoint("abcdabcd", true, false, false, false)
                 endpointCount shouldBe 1
                 DebugStateMode.entries.forEach { mode ->
-                    getDebugState(mode, null).shouldBeValidJson()
+                    getDebugState(mode, null).shouldBeValidJsonConf()
                 }
             }
         }
@@ -49,11 +49,11 @@ class ConferenceTest : ConfigTest() {
                 createRelay("relay-id", "mesh-id", true, true)
                 hasRelays() shouldBe true
                 DebugStateMode.entries.forEach { mode ->
-                    getDebugState(mode, null).shouldBeValidJson()
+                    getDebugState(mode, null).shouldBeValidJsonConf()
                 }
             }
         }
     }
 }
 
-fun JSONObject.shouldBeValidJson() = JSONParser().parse(this.toJSONString())
+fun ObjectNode.shouldBeValidJsonConf() = ObjectMapper().readTree(this.toString())

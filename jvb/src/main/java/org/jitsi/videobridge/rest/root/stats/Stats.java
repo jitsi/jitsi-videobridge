@@ -19,7 +19,7 @@ import jakarta.inject.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.jitsi.nlj.*;
-import org.jitsi.utils.*;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.rest.annotations.*;
@@ -35,11 +35,11 @@ public class Stats
     @Produces(MediaType.APPLICATION_JSON)
     public String rtcstats()
     {
-        OrderedJsonObject debugState = videobridge.getDebugState(
+        ObjectNode debugState = videobridge.getDebugState(
                 null,
                 null,
                 DebugStateMode.STATS);
 
-        return debugState.toJSONString();
+        return debugState.toString();
     }
 }

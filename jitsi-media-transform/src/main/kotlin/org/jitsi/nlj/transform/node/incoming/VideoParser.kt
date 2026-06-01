@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -259,10 +260,10 @@ class VideoParser(
             addNumber("num_keyframes", numKeyframes)
             addNumber("num_layering_changes", numLayeringChanges)
         }
-        fun addToJson(o: OrderedJsonObject) {
-            o["num_packets_dropped_unknown_pt"] = numPacketsDroppedUnknownPt
-            o["num_keyframes"] = numKeyframes
-            o["num_layering_changes"] = numLayeringChanges
+        fun addToJson(o: ObjectNode) {
+            o.put("num_packets_dropped_unknown_pt", numPacketsDroppedUnknownPt)
+            o.put("num_keyframes", numKeyframes)
+            o.put("num_layering_changes", numLayeringChanges)
         }
 
         data class Snapshot(

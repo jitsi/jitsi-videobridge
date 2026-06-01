@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.transport.dtls
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.ice4j.util.Buffer
 import org.jitsi.nlj.dtls.DtlsClient
 import org.jitsi.nlj.dtls.DtlsServer
@@ -214,7 +215,7 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         }
     }
 
-    fun getDebugState(): OrderedJsonObject = stats.toJson().apply {
+    fun getDebugState(): ObjectNode = stats.toJson().apply {
         put("running", running.get())
         put("role", dtlsStack.role?.javaClass?.simpleName ?: "null")
         put("is_connected", isConnected)
@@ -226,7 +227,7 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         var numPacketsSent: Int = 0,
         var numOutgoingPacketsDroppedNoHandler: Int = 0
     ) {
-        fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
+        fun toJson(): ObjectNode = OrderedJsonObject().apply {
             put("num_packets_received", numPacketsReceived)
             put("num_incoming_packets_dropped_no_handler", numIncomingPacketsDroppedNoHandler)
             put("num_packets_sent", numPacketsSent)

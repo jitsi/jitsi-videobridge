@@ -15,9 +15,11 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.util.bps
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
@@ -26,7 +28,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig
 import org.jitsi.videobridge.util.TaskPools
-import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -108,14 +109,14 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         value = ["IS2_INCONSISTENT_SYNC"],
         justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
     )
-    val debugState: JSONObject
+    val debugState: ObjectNode
         get() {
-            val debugState = JSONObject()
-            debugState["trustBwe"] = trustBwe.get()
-            debugState["bweBps"] = bweBps
-            debugState["allocation"] = allocation.debugState
-            debugState["allocationSettings"] = allocationSettings.toJson()
-            debugState["effectiveConstraints"] = effectiveConstraints.mapKeys { it.key.sourceName }
+            val debugState = OrderedJsonObject()
+            debugState.put("trustBwe", trustBwe.get())
+            debugState.put("bweBps", bweBps)
+            debugState.set<ObjectNode>("allocation", allocation.debugState)
+            debugState.set<ObjectNode>("allocationSettings", allocationSettings.toJson())
+            debugState.put("effectiveConstraints", effectiveConstraints.mapKeys { it.key.sourceName }.toString())
             return debugState
         }
 

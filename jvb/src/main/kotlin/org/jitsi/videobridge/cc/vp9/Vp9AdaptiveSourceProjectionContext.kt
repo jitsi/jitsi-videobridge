@@ -15,6 +15,9 @@
  */
 package org.jitsi.videobridge.cc.vp9
 
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
@@ -28,6 +31,7 @@ import org.jitsi.rtp.util.RtpUtils.Companion.applyTimestampDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiff
 import org.jitsi.rtp.util.isNewerThan
+import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -35,8 +39,6 @@ import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
-import org.json.simple.JSONArray
-import org.json.simple.JSONObject
 import java.time.Duration
 import java.time.Instant
 
@@ -608,19 +610,19 @@ class Vp9AdaptiveSourceProjectionContext(
     )
 
     @Synchronized
-    override fun getDebugState(): JSONObject {
-        val debugState = JSONObject()
-        debugState["class"] = Vp9AdaptiveSourceProjectionContext::class.java.simpleName
+    override fun getDebugState(): ObjectNode {
+        val debugState = OrderedJsonObject()
+        debugState.put("class", Vp9AdaptiveSourceProjectionContext::class.java.simpleName)
 
-        val mapSizes = JSONArray()
+        val mapSizes: ArrayNode = jacksonObjectMapper().createArrayNode()
         for ((key, value) in vp9PictureMaps.entries) {
-            val sizeInfo = JSONObject()
-            sizeInfo["ssrc"] = key
-            sizeInfo["size"] = value.size()
+            val sizeInfo = OrderedJsonObject()
+            sizeInfo.put("ssrc", key)
+            sizeInfo.put("size", value.size())
             mapSizes.add(sizeInfo)
         }
-        debugState["vp9FrameMaps"] = mapSizes
-        debugState["vp9QualityFilter"] = vp9QualityFilter.debugState
+        debugState.set<ObjectNode>("vp9FrameMaps", mapSizes)
+        debugState.set<ObjectNode>("vp9QualityFilter", vp9QualityFilter.debugState)
 
         return debugState
     }

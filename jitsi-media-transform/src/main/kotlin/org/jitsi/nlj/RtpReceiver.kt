@@ -15,12 +15,12 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.RtpReceiverStats
 import org.jitsi.nlj.util.Bandwidth
-import org.jitsi.utils.OrderedJsonObject
 
 abstract class RtpReceiver :
     StatsKeepingPacketHandler(),
@@ -39,7 +39,7 @@ abstract class RtpReceiver :
      */
     abstract fun enqueuePacket(p: PacketInfo)
 
-    abstract fun debugState(mode: DebugStateMode): OrderedJsonObject
+    abstract fun debugState(mode: DebugStateMode): ObjectNode
 
     /**
      * Set the SRTP transformers to be used for RTP/RTCP encryption and decryption
