@@ -337,7 +337,7 @@ class RtpSenderImpl(
     override fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
         if (mode == DebugStateMode.FULL) {
             appendAll(super.getNodeStats().toJson())
-            put("packet_queue", incomingPacketQueue.debugState.toString())
+            set<ObjectNode>("packet_queue", incomingPacketQueue.debugState)
             put("running", running)
         }
         appendAll(nackHandler.getNodeStats().toJson())

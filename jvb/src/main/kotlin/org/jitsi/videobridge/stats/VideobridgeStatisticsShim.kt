@@ -91,7 +91,14 @@ import java.util.TimeZone
 object VideobridgeStatisticsShim {
     fun getStatsJson(): ObjectNode = OrderedJsonObject().apply {
         getStats().forEach { (k, v) ->
-            put(k, v.toString())
+            when (v) {
+                is Boolean -> put(k, v)
+                is Long -> put(k, v)
+                is Int -> put(k, v)
+                is Double -> put(k, v)
+                is Float -> put(k, v)
+                else -> put(k, v.toString())
+            }
         }
     }
 

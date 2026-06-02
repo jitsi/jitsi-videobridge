@@ -259,27 +259,24 @@ class Av1DependencyDescriptorHeaderExtension(
             put("frameDependencyTemplateId", frameDependencyTemplateId)
             put("frameNumber", frameNumber)
             newTemplateDependencyStructure?.let {
-                set<com.fasterxml.jackson.databind.node.ObjectNode>(
-                    "templateStructure",
-                    mapper.valueToTree(it.toString())
-                )
+                put("templateStructure", it.toString())
             }
             customDtis?.let {
-                set<com.fasterxml.jackson.databind.node.ObjectNode>(
+                set<com.fasterxml.jackson.databind.node.ArrayNode>(
                     "customDTIs",
-                    mapper.valueToTree(it)
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
                 )
             }
             customFdiffs?.let {
-                set<com.fasterxml.jackson.databind.node.ObjectNode>(
+                set<com.fasterxml.jackson.databind.node.ArrayNode>(
                     "customFdiffs",
-                    mapper.valueToTree(it)
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
                 )
             }
             customChains?.let {
-                set<com.fasterxml.jackson.databind.node.ObjectNode>(
+                set<com.fasterxml.jackson.databind.node.ArrayNode>(
                     "customChains",
-                    mapper.valueToTree(it)
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
                 )
             }
             activeDecodeTargetsBitmask?.let {
@@ -491,7 +488,7 @@ class Av1TemplateDependencyStructure(
             put("templateIdOffset", templateIdOffset)
             set<com.fasterxml.jackson.databind.node.ObjectNode>(
                 "templateInfo",
-                mapper.valueToTree(
+                mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
                     templateInfo.map {
                         it.toString()
                     }.toIndexedMap()
@@ -499,11 +496,13 @@ class Av1TemplateDependencyStructure(
             )
             set<com.fasterxml.jackson.databind.node.ObjectNode>(
                 "decodeTargetProtectedBy",
-                mapper.valueToTree(decodeTargetProtectedBy.toIndexedMap())
+                mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
+                    decodeTargetProtectedBy.toIndexedMap()
+                )
             )
             set<com.fasterxml.jackson.databind.node.ObjectNode>(
                 "decodeTargetLayers",
-                mapper.valueToTree(
+                mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
                     decodeTargetLayers.map {
                         it.toString()
                     }.toIndexedMap()
@@ -512,7 +511,7 @@ class Av1TemplateDependencyStructure(
             if (maxRenderResolutions.isNotEmpty()) {
                 set<com.fasterxml.jackson.databind.node.ObjectNode>(
                     "maxRenderResolutions",
-                    mapper.valueToTree(
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
                         maxRenderResolutions.map {
                             it.toString()
                         }.toIndexedMap()
@@ -873,8 +872,8 @@ open class FrameInfo(
             put("spatialId", spatialId)
             put("temporalId", temporalId)
             set<com.fasterxml.jackson.databind.node.ObjectNode>("dti", mapper.valueToTree(dti.map { it.name }))
-            set<com.fasterxml.jackson.databind.node.ObjectNode>("fdiff", mapper.valueToTree(fdiff))
-            set<com.fasterxml.jackson.databind.node.ObjectNode>("chains", mapper.valueToTree(chains))
+            set<com.fasterxml.jackson.databind.node.ArrayNode>("fdiff", mapper.valueToTree(fdiff))
+            set<com.fasterxml.jackson.databind.node.ArrayNode>("chains", mapper.valueToTree(chains))
         }.toString()
     }
 
