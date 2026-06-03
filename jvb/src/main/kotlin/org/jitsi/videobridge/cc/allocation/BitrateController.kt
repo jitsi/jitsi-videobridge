@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.MediaSourceDesc
@@ -24,7 +25,6 @@ import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -151,7 +151,7 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun transformRtcp(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
 
-    fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("bitrate_allocator", bandwidthAllocator.debugState)
         set<ObjectNode>("packet_handler", packetHandler.debugState(mode))
         put("forwarded_sources", forwardedSources.toString())

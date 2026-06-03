@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -33,7 +34,6 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.SsrcAssociation
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -326,7 +326,7 @@ class Transceiver(
         rtpReceiver.forceMuteVideo(shouldMute)
     }
 
-    fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("stream_information_store", streamInformationStore.debugState(mode))
         set<ObjectNode>("media_sources", mediaSources.debugState())
         set<ObjectNode>("endpoint_connection_stats", endpointConnectionStats.getSnapshot().toJson())

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.export
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.eclipse.jetty.websocket.api.Callback
 import org.eclipse.jetty.websocket.api.Session
@@ -30,7 +31,6 @@ import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.PacketInfoQueue
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.ByteBufferPool
@@ -325,7 +325,7 @@ internal class Exporter(
         queue.close()
     }
 
-    fun debugState(): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("url", url.toString())
         put("is_connected", isConnected())
         put("is_shutting_down", isShuttingDown.get())

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.dcsctp
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.dcsctp4j.DcSctpMessage
 import org.jitsi.dcsctp4j.DcSctpOptions
@@ -25,7 +26,6 @@ import org.jitsi.dcsctp4j.SendOptions
 import org.jitsi.dcsctp4j.SendStatus
 import org.jitsi.dcsctp4j.Timeout
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.sctp.SctpConfig
@@ -88,7 +88,7 @@ class DcSctpTransport(
         val metrics = synchronized(lock) {
             socket?.metrics
         }
-        return OrderedJsonObject().apply {
+        return JsonNodeFactory.instance.objectNode().apply {
             if (metrics != null) {
                 put("tx_packets_count", metrics.txPacketsCount)
                 put("tx_messages_count", metrics.txMessagesCount)

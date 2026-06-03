@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.rtp
 
-import org.jitsi.utils.OrderedJsonObject
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import org.jitsi.utils.secs
 import org.jitsi.utils.stats.RateTracker
 
@@ -49,7 +49,7 @@ class LossTracker : LossListener {
         val packetsLost: Long,
         val packetsReceived: Long
     ) {
-        fun toJson() = OrderedJsonObject().apply {
+        fun toJson() = JsonNodeFactory.instance.objectNode().apply {
             put("packets_lost", packetsLost)
             put("packets_received", packetsReceived)
         }

@@ -16,10 +16,10 @@
 
 package org.jitsi.videobridge.load_management
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createLogger
@@ -117,7 +117,7 @@ class LastNReducer(
 
     override fun impactTime(): Duration = impactTime
 
-    override fun getStats() = OrderedJsonObject().apply {
+    override fun getStats() = JsonNodeFactory.instance.objectNode().apply {
         put("jvbLastN", jvbLastN.jvbLastN)
     }
 

@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
@@ -68,7 +69,6 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -285,7 +285,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun doProcessPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
 
-    override fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+    override fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         NodeDebugStateVisitor(this, mode).visit(inputTreeRoot)
     }
 

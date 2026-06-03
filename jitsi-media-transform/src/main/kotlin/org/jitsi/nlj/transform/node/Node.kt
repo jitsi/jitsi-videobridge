@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
@@ -29,7 +30,6 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
-import org.jitsi.utils.OrderedJsonObject
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
@@ -54,7 +54,7 @@ sealed class Node(
     protected val nodeEntryString = "Entered node $name"
     protected val nodeExitString = "Exited node $name"
 
-    open fun statsJson(): ObjectNode = OrderedJsonObject()
+    open fun statsJson(): ObjectNode = JsonNodeFactory.instance.objectNode()
 
     open fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
@@ -311,7 +311,7 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
          * Gets the aggregated statistics for all classes as a JSON map.
          */
         fun getStatsJson(): ObjectNode {
-            val jsonObject = OrderedJsonObject()
+            val jsonObject = JsonNodeFactory.instance.objectNode()
             globalStats.forEach { (className, stats) ->
                 jsonObject.set<ObjectNode>(className, stats.toJson())
             }

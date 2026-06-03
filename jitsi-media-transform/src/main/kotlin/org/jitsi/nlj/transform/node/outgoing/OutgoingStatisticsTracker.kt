@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.PacketOrigin
@@ -26,7 +27,6 @@ import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bytes
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import java.util.concurrent.ConcurrentHashMap
@@ -121,7 +121,7 @@ class OutgoingStatisticsSnapshot(
      */
     val ssrcStats: Map<Long, OutgoingSsrcStats.Snapshot>
 ) {
-    fun toJson(): ObjectNode = OrderedJsonObject().apply {
+    fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         ssrcStats.forEach { (ssrc, snapshot) ->
             set<ObjectNode>(ssrc.toString(), snapshot.toJson())
         }
@@ -158,7 +158,7 @@ class OutgoingSsrcStats(
         val octetCount: Int,
         val mostRecentRtpTimestamp: Long
     ) {
-        fun toJson() = OrderedJsonObject().apply {
+        fun toJson() = JsonNodeFactory.instance.objectNode().apply {
             put("packet_count", packetCount)
             put("octet_count", octetCount)
             put("most_recent_rtp_timestamp", mostRecentRtpTimestamp)

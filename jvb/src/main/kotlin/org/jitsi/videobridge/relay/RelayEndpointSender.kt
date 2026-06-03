@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.relay
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
@@ -32,7 +33,6 @@ import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.StreamInformationStoreImpl
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -121,7 +121,7 @@ class RelayEndpointSender(
 
     fun getOutgoingStats() = rtpSender.getPacketStreamStats()
 
-    fun getDebugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+    fun getDebugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("expired", expired)
         put("id", id)
         set<ObjectNode>("sender", rtpSender.debugState(mode))

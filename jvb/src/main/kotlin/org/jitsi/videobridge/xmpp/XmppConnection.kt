@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.stats.DelayStats
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
@@ -332,7 +331,7 @@ class XmppConnection : IQListener {
         )
 
         @JvmStatic
-        fun getStatsJson(): ObjectNode = OrderedJsonObject().apply {
+        fun getStatsJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             set<ObjectNode>("colibri", colibriDelayStats.toJson())
             set<ObjectNode>("colibri_processing", colibriProcessingDelayStats.toJson())
             set<ObjectNode>("health", healthDelayStats.toJson())

@@ -16,9 +16,9 @@
 
 package org.jitsi.nlj.stats
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.util.appendLnIndent
-import org.jitsi.utils.OrderedJsonObject
 
 class NodeStatsBlock(val name: String) {
     private val stats = mutableMapOf<String, Any>()
@@ -161,7 +161,7 @@ class NodeStatsBlock(val name: String) {
     /**
      * Returns a JSON representation of this [NodeStatsBlock].
      */
-    fun toJson(): ObjectNode = OrderedJsonObject().apply {
+    fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         stats.forEach { (name, value) ->
             when (value) {
                 is NodeStatsBlock -> set<ObjectNode>(name, value.toJson())

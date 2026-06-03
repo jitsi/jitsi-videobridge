@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge.transport.ice
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.net.InetAddresses
 import org.ice4j.Transport
@@ -32,7 +33,6 @@ import org.ice4j.util.Buffer
 import org.ice4j.util.BufferHandler
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -286,7 +286,7 @@ class IceTransport @JvmOverloads constructor(
         }
     }
 
-    fun getDebugState(): ObjectNode = OrderedJsonObject().apply {
+    fun getDebugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("keepAliveStrategy", IceConfig.config.keepAliveStrategy.toString())
         put("nominationStrategy", IceConfig.config.nominationStrategy.toString())
         put("advertisePrivateCandidates", IceConfig.config.advertisePrivateCandidates)
@@ -461,7 +461,7 @@ class IceTransport @JvmOverloads constructor(
         val numPacketsSent = LongAdder()
         val numOutgoingPacketsDroppedStopped = LongAdder()
 
-        fun toJson(): ObjectNode = OrderedJsonObject().apply {
+        fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             put("num_packets_received", numPacketsReceived.sum())
             put("num_incoming_packets_dropped_no_handler", numIncomingPacketsDroppedNoHandler.sum())
             put("num_packets_sent", numPacketsSent.sum())

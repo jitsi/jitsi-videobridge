@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
@@ -31,7 +32,6 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -199,7 +199,7 @@ class ProbingDataSender(
         }
     }
 
-    fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
+    fun debugState(mode: DebugStateMode) = JsonNodeFactory.instance.objectNode().apply {
         put("num_bytes_of_probing_data_sent_as_rtx", numProbingBytesSentRtx)
         put("num_bytes_of_probing_data_sent_as_dummy", numProbingBytesSentDummyData)
         put("rtx_supported", rtxSupported)

@@ -16,12 +16,12 @@
 
 package org.jitsi.nlj.stats
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsSnapshot
-import org.jitsi.utils.OrderedJsonObject
 
 data class TransceiverStats(
     val endpointConnectionStats: EndpointConnectionStats.Snapshot,
@@ -30,7 +30,7 @@ data class TransceiverStats(
     val outgoingPacketStreamStats: PacketStreamStats.Snapshot,
     val tccEngineStats: TransportCcEngine.StatisticsSnapshot
 ) {
-    fun toJson(): ObjectNode = OrderedJsonObject().apply {
+    fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("endpoint_connection_stats", endpointConnectionStats.toJson())
         set<ObjectNode>("rtp_receiver_stats", rtpReceiverStats.toJson())
         set<ObjectNode>("outgoing_stats", outgoingStats.toJson())
@@ -44,7 +44,7 @@ data class RtpReceiverStats(
     val packetStreamStats: PacketStreamStats.Snapshot,
     val videoParserStats: VideoParser.Stats.Snapshot
 ) {
-    fun toJson(): ObjectNode = OrderedJsonObject().apply {
+    fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("incoming_stats", incomingStats.toJson())
         set<ObjectNode>("packet_stream_stats", packetStreamStats.toJson())
         set<ObjectNode>("video_parser_stats", videoParserStats.toJson())

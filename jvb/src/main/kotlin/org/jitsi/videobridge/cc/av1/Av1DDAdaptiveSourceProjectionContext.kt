@@ -29,7 +29,6 @@ import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.rtp.rtp.header_extensions.toShortString
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNewerThan
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -664,12 +663,12 @@ class Av1DDAdaptiveSourceProjectionContext(
     )
 
     override fun getDebugState(): ObjectNode {
-        val debugState = OrderedJsonObject()
+        val debugState = JsonNodeFactory.instance.objectNode()
         debugState.put("class", Av1DDAdaptiveSourceProjectionContext::class.java.simpleName)
 
         val mapSizes: ArrayNode = JsonNodeFactory.instance.arrayNode()
         for ((key, value) in av1FrameMaps.entries) {
-            val sizeInfo = OrderedJsonObject()
+            val sizeInfo = JsonNodeFactory.instance.objectNode()
             sizeInfo.put("ssrc", key)
             sizeInfo.put("size", value.size())
             mapSizes.add(sizeInfo)

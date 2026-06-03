@@ -16,12 +16,12 @@
 
 package org.jitsi.videobridge.cc
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.bytes
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.PeriodicRunnable
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -133,7 +133,7 @@ class BandwidthProbing(
         }
     }
 
-    fun getDebugState(): ObjectNode = OrderedJsonObject().apply {
+    fun getDebugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("enabled", enabled)
         put("latest_bwe", latestBwe)
         put("last_total_needed_bps", lastTotalNeededBps)

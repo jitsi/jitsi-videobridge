@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
@@ -29,7 +30,6 @@ import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbRembPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -358,7 +358,7 @@ class GoogCcTransportCcEngine(
         val networkControllerState: GoogCcNetworkController.StatisticsSnapshot
     ) : TransportCcEngine.StatisticsSnapshot() {
         override fun toJson(): ObjectNode {
-            return OrderedJsonObject().apply {
+            return JsonNodeFactory.instance.objectNode().apply {
                 put("name", GoogCcTransportCcEngine::class.java.simpleName)
                 set<ObjectNode>("transport_adapter", transportAdapterState.toJson())
                 set<ObjectNode>("network_controller", networkControllerState.toJson())

@@ -15,12 +15,12 @@
  */
 package org.jitsi.videobridge.relay
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.eclipse.jetty.websocket.api.Callback
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.eclipse.jetty.websocket.core.CloseStatus
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
 import org.jitsi.videobridge.VersionConfig
@@ -421,7 +421,7 @@ class RelayMessageTransport(
         get() {
             val debugState = super.debugState
             debugState.put("numOutgoingMessagesDropped", numOutgoingMessagesDropped.get())
-            val sentCounts = OrderedJsonObject()
+            val sentCounts = JsonNodeFactory.instance.objectNode()
             sentMessagesCounts.forEach { (k, v) -> sentCounts.put(k, v.get()) }
             debugState.set<ObjectNode>("sent_counts", sentCounts)
             return debugState

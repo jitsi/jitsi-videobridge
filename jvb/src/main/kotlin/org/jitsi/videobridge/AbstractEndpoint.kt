@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.MediaSourceDesc
@@ -22,7 +23,6 @@ import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.utils.NEVER
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging2.Logger
@@ -237,8 +237,8 @@ abstract class AbstractEndpoint protected constructor(
     abstract fun requestKeyframe()
 
     /** A JSON representation of the parts of this object's state that are deemed useful for debugging. */
-    open fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
-        val receiverVideoConstraints = OrderedJsonObject()
+    open fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        val receiverVideoConstraints = JsonNodeFactory.instance.objectNode()
         this@AbstractEndpoint.receiverVideoConstraints.forEach { (sourceName, receiverConstraints) ->
             receiverVideoConstraints.set<ObjectNode>(sourceName, receiverConstraints.getDebugState())
         }

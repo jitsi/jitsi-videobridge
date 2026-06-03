@@ -17,11 +17,11 @@
 package org.jitsi.videobridge.cc.allocation
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.util.bps
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.createChildLogger
@@ -46,7 +46,7 @@ data class AllocationSettings @JvmOverloads constructor(
 ) {
     fun toJson(): ObjectNode {
         val mapper = ObjectMapper()
-        return OrderedJsonObject().apply {
+        return JsonNodeFactory.instance.objectNode().apply {
             set<ObjectNode>("on_stage_sources", mapper.valueToTree(onStageSources))
             set<ObjectNode>("selected_sources", mapper.valueToTree(selectedSources))
             set<ObjectNode>("video_constraints", mapper.valueToTree(videoConstraints.mapValues { it.value.toString() }))

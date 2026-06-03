@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
@@ -33,7 +34,6 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.LRUCache
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.message.AudioSourceMapping
@@ -504,7 +504,7 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
      */
     fun getDebugState(): ObjectNode {
         synchronized(sendSources) {
-            return OrderedJsonObject().apply {
+            return JsonNodeFactory.instance.objectNode().apply {
                 put("max", this@SsrcCache.size)
                 put("received", receivedSsrcs.size)
                 put("sent", sendSources.size)

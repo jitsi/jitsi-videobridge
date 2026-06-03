@@ -16,11 +16,11 @@
 package org.jitsi.rtp.rtp.header_extensions
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
 import org.jitsi.rtp.util.BitWriter
-import org.jitsi.utils.OrderedJsonObject
 
 /**
  * The subset of the fields of an AV1 Dependency Descriptor that can be parsed statelessly.
@@ -253,7 +253,7 @@ class Av1DependencyDescriptorHeaderExtension(
 
     override fun toString(): String {
         val mapper = ObjectMapper()
-        return OrderedJsonObject().apply {
+        return JsonNodeFactory.instance.objectNode().apply {
             put("startOfFrame", startOfFrame)
             put("endOfFrame", endOfFrame)
             put("frameDependencyTemplateId", frameDependencyTemplateId)
@@ -484,7 +484,7 @@ class Av1TemplateDependencyStructure(
 
     override fun toString(): String {
         val mapper = ObjectMapper()
-        return OrderedJsonObject().apply {
+        return JsonNodeFactory.instance.objectNode().apply {
             put("templateIdOffset", templateIdOffset)
             set<com.fasterxml.jackson.databind.node.ObjectNode>(
                 "templateInfo",
@@ -868,7 +868,7 @@ open class FrameInfo(
 
     fun toJson(): String {
         val mapper = ObjectMapper()
-        return OrderedJsonObject().apply {
+        return JsonNodeFactory.instance.objectNode().apply {
             put("spatialId", spatialId)
             put("temporalId", temporalId)
             set<com.fasterxml.jackson.databind.node.ObjectNode>("dti", mapper.valueToTree(dti.map { it.name }))
@@ -902,7 +902,7 @@ class DecodeTargetLayer(
     val temporalId: Int
 ) {
     override fun toString(): String {
-        return OrderedJsonObject().apply {
+        return JsonNodeFactory.instance.objectNode().apply {
             put("spatialId", spatialId)
             put("temporalId", temporalId)
         }.toString()
@@ -914,7 +914,7 @@ data class Resolution(
     val height: Int
 ) {
     override fun toString(): String {
-        return OrderedJsonObject().apply {
+        return JsonNodeFactory.instance.objectNode().apply {
             put("width", width)
             put("height", height)
         }.toString()

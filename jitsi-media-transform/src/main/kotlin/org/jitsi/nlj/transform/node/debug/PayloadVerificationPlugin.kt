@@ -16,11 +16,11 @@
 
 package org.jitsi.nlj.transform.node.debug
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodePlugin
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.createLogger
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -36,7 +36,7 @@ class PayloadVerificationPlugin {
         val numFailures = AtomicInteger()
 
         @JvmStatic
-        fun getStatsJson(): ObjectNode = OrderedJsonObject().apply {
+        fun getStatsJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             put("num_payload_verification_failures", numFailures.get())
         }
 

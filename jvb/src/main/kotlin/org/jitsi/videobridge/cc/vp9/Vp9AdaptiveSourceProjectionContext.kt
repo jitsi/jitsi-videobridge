@@ -31,7 +31,6 @@ import org.jitsi.rtp.util.RtpUtils.Companion.applyTimestampDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getSequenceNumberDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiff
 import org.jitsi.rtp.util.isNewerThan
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -611,12 +610,12 @@ class Vp9AdaptiveSourceProjectionContext(
 
     @Synchronized
     override fun getDebugState(): ObjectNode {
-        val debugState = OrderedJsonObject()
+        val debugState = JsonNodeFactory.instance.objectNode()
         debugState.put("class", Vp9AdaptiveSourceProjectionContext::class.java.simpleName)
 
         val mapSizes: ArrayNode = JsonNodeFactory.instance.arrayNode()
         for ((key, value) in vp9PictureMaps.entries) {
-            val sizeInfo = OrderedJsonObject()
+            val sizeInfo = JsonNodeFactory.instance.objectNode()
             sizeInfo.put("ssrc", key)
             sizeInfo.put("size", value.size())
             mapSizes.add(sizeInfo)

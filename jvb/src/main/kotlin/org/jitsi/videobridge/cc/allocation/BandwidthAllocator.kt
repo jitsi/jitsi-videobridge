@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.util.bps
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.event.EventEmitter
 import org.jitsi.utils.event.SyncEventEmitter
 import org.jitsi.utils.logging.DiagnosticContext
@@ -111,7 +111,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
     )
     val debugState: ObjectNode
         get() {
-            val debugState = OrderedJsonObject()
+            val debugState = JsonNodeFactory.instance.objectNode()
             debugState.put("trustBwe", trustBwe.get())
             debugState.put("bweBps", bweBps)
             debugState.set<ObjectNode>("allocation", allocation.debugState)

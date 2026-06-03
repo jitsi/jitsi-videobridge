@@ -16,9 +16,9 @@
 package org.jitsi.nlj.util
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -85,7 +85,7 @@ class ReceiveSsrcStore(
         primaryMediaSsrcs.remove(ssrcAssociation.secondarySsrc)
     }
 
-    fun debugState(): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         val mapper = ObjectMapper()
         set<ObjectNode>(
             "receive_ssrcs",

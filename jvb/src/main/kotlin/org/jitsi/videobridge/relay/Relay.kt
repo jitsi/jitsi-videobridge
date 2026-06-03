@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.ice4j.util.Buffer
 import org.jitsi.dcsctp4j.DcSctpMessage
@@ -66,7 +67,6 @@ import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -332,7 +332,7 @@ class Relay @JvmOverloads constructor(
         TransportConfig.queueSize
     )
 
-    fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("ice_transport", iceTransport.getDebugState())
         set<ObjectNode>("dtls_transport", dtlsTransport.getDebugState())
         set<ObjectNode>("transceiver", transceiver.debugState(mode))
@@ -343,8 +343,8 @@ class Relay @JvmOverloads constructor(
         }
 
         if (mode == DebugStateMode.FULL) {
-            val remoteEndpoints = OrderedJsonObject()
-            val endpointsBySsrcMap = OrderedJsonObject()
+            val remoteEndpoints = JsonNodeFactory.instance.objectNode()
+            val endpointsBySsrcMap = JsonNodeFactory.instance.objectNode()
             synchronized(endpointsLock) {
                 for (r in relayedEndpoints.values) {
                     remoteEndpoints.set<ObjectNode>(r.id, r.debugState(mode))
@@ -355,7 +355,7 @@ class Relay @JvmOverloads constructor(
             }
             set<ObjectNode>("remote_endpoints", remoteEndpoints)
             set<ObjectNode>("endpoints_by_ssrc", endpointsBySsrcMap)
-            val endpointSenders = OrderedJsonObject()
+            val endpointSenders = JsonNodeFactory.instance.objectNode()
             for (s in senders.values) {
                 endpointSenders.set<ObjectNode>(s.id, s.getDebugState(mode))
             }
@@ -1105,7 +1105,7 @@ class Relay @JvmOverloads constructor(
         val packetsSent = AtomicLong(0)
 
         private fun getJson(): ObjectNode {
-            val jsonObject = OrderedJsonObject()
+            val jsonObject = JsonNodeFactory.instance.objectNode()
             jsonObject.put("bytes_received", bytesReceived.get())
             jsonObject.put("bytes_sent", bytesSent.get())
             jsonObject.put("packets_received", packetsReceived.get())

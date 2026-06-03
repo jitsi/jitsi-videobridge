@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.av1
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
@@ -26,7 +27,6 @@ import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getDtFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc.Companion.getIndex
 import org.jitsi.nlj.rtp.codec.av1.containsDecodeTarget
 import org.jitsi.rtp.rtp.header_extensions.DTI
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -435,7 +435,7 @@ internal class Av1DDQualityFilter(
     )
     val debugState: ObjectNode
         get() {
-            val debugState = OrderedJsonObject()
+            val debugState = JsonNodeFactory.instance.objectNode()
             debugState.put(
                 "mostRecentKeyframeGroupArrivalTimeMs",
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1

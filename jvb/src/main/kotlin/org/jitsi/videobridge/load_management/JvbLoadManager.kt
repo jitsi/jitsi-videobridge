@@ -16,12 +16,12 @@
 
 package org.jitsi.videobridge.load_management
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.utils.NEVER
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.Videobridge
@@ -107,7 +107,7 @@ open class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
 
     fun getCurrentStressLevel(): Double = mostRecentLoadMeasurement?.div(jvbLoadThreshold) ?: 0.0
 
-    fun getStats() = OrderedJsonObject().apply {
+    fun getStats() = JsonNodeFactory.instance.objectNode().apply {
         put("state", state.toString())
         put("stress", getCurrentStressLevel().toString())
         put("reducer_enabled", reducerEnabled.toString())

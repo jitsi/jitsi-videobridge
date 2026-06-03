@@ -17,6 +17,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.PacketOrigin
@@ -29,7 +30,6 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.TimeUtils
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
@@ -424,7 +424,7 @@ class TransportFeedbackAdapter(
         val lastTransportFeedbackBaseTime: Instant
     ) {
         fun toJson(): ObjectNode {
-            return OrderedJsonObject().apply {
+            return JsonNodeFactory.instance.objectNode().apply {
                 put("in_flight_bytes", inFlight.bytes)
                 put("pending_untracked_size", pendingUntrackedSize.bytes)
                 put("last_send_time", lastSendTime.toEpochMilliOrInf().toString())

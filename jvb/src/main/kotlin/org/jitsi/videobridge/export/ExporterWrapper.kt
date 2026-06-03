@@ -15,11 +15,11 @@
  */
 package org.jitsi.videobridge.export
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.PotentialPacketHandler
@@ -104,7 +104,7 @@ class ExporterWrapper(
         started = true
     }
 
-    fun debugState(): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("started", started)
         exporter?.let {
             set<ObjectNode>("exporter", it.debugState())

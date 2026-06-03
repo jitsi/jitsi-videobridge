@@ -15,11 +15,11 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Keeps track of information specific to an RTP encoded stream
@@ -172,7 +172,7 @@ constructor(
     /**
      * Extracts a [NodeStatsBlock] from an [RtpEncodingDesc].
      */
-    fun debugState(): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("rtx_ssrc", getSecondarySsrc(SsrcAssociationType.RTX))
         put("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
         put("eid", eid)

@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.util
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.format.PayloadType
@@ -26,7 +27,6 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -223,14 +223,14 @@ class StreamInformationStoreImpl : StreamInformationStore {
 
     override fun removeReceiveSsrc(ssrc: Long) = receiveSsrcStore.removeReceiveSsrc(ssrc)
 
-    override fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+    override fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("supports_pli", supportsPli)
         put("supports_fir", supportsFir)
-        val rtpExtNode = OrderedJsonObject().apply {
+        val rtpExtNode = JsonNodeFactory.instance.objectNode().apply {
             rtpExtensions.forEach { put(it.id.toString(), it.type.toString()) }
         }
         set<ObjectNode>("rtp_extensions", rtpExtNode)
-        val rtpPayloadNode = OrderedJsonObject().apply {
+        val rtpPayloadNode = JsonNodeFactory.instance.objectNode().apply {
             rtpPayloadTypes.forEach { put(it.key.toString(), it.value.toString()) }
         }
         set<ObjectNode>("rtp_payload_types", rtpPayloadNode)

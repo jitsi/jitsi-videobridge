@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.stats
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
@@ -23,7 +24,6 @@ import org.jitsi.nlj.stats.BridgeJitterStats
 import org.jitsi.nlj.stats.PacketDelayStats
 import org.jitsi.rtp.extensions.looksLikeRtcp
 import org.jitsi.rtp.extensions.looksLikeRtp
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.stats.BucketStats
 import org.jitsi.videobridge.Endpoint
@@ -104,7 +104,7 @@ object PacketTransitStats {
     @JvmStatic
     val statsJson: ObjectNode
         get() {
-            val stats = OrderedJsonObject()
+            val stats = JsonNodeFactory.instance.objectNode()
             stats.set<ObjectNode>("e2e_packet_delay", getPacketDelayStats())
             bridgeJitterStats?.let {
                 stats.put("overall_bridge_jitter", it.jitter)
@@ -116,7 +116,7 @@ object PacketTransitStats {
     val bridgeJitter
         get() = bridgeJitterStats?.jitter
 
-    private fun getPacketDelayStats() = OrderedJsonObject().apply {
+    private fun getPacketDelayStats() = JsonNodeFactory.instance.objectNode().apply {
         rtpPacketDelayStats?.let {
             put("rtp", it.toJson(format = BucketStats.Format.CumulativeRight))
         }

@@ -16,8 +16,8 @@
 
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Maintains an array of [MediaSourceDesc]. The set method preserves the existing sources that match one of the new
@@ -60,9 +60,9 @@ class MediaSources {
 
     fun getMediaSources(): Array<MediaSourceDesc> = sources
 
-    fun debugState(): ObjectNode = OrderedJsonObject().apply {
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         sources.forEach { source ->
-            val sourceNode = OrderedJsonObject().apply {
+            val sourceNode = JsonNodeFactory.instance.objectNode().apply {
                 put("owner", source.owner)
                 put("video_type", source.videoType.toString())
                 source.rtpEncodings.forEach {

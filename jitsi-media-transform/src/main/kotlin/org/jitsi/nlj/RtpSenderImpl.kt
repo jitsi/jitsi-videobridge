@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
@@ -62,7 +63,6 @@ import org.jitsi.nlj.util.StreamInformationStore
 import org.jitsi.nlj.util.appendAll
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -334,7 +334,7 @@ class RtpSenderImpl(
         probingDataSender.handleEvent(event)
     }
 
-    override fun debugState(mode: DebugStateMode): ObjectNode = OrderedJsonObject().apply {
+    override fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         if (mode == DebugStateMode.FULL) {
             appendAll(super.getNodeStats().toJson())
             set<ObjectNode>("packet_queue", incomingPacketQueue.debugState)

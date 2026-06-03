@@ -16,13 +16,13 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
 import org.jitsi.utils.NEVER
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.formatMilli
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -337,7 +337,7 @@ abstract class BandwidthEstimator(
         /**
          * Returns a JSON representation of this [StatisticsSnapshot] object.
          */
-        fun toJson(): ObjectNode = OrderedJsonObject().apply {
+        fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             stats.forEach { (name, value) ->
                 when (value) {
                     is Bandwidth -> put(name, value.bps)

@@ -17,6 +17,7 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
@@ -27,7 +28,6 @@ import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.times
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.MIN_DURATION
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -619,7 +619,7 @@ class GoogCcNetworkController(
         val inAlr: Boolean
     ) {
         fun toJson(): ObjectNode {
-            return OrderedJsonObject().apply {
+            return JsonNodeFactory.instance.objectNode().apply {
                 put("time", time.toEpochMilli())
                 put("rtt", rtt.toDouble())
                 put("target", target.bps)

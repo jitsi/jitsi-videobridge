@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge.stats
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.RtpSenderImpl
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.queue.QueueStatistics.Companion.getStatistics
 import org.jitsi.videobridge.AbstractEndpointMessageTransport
@@ -29,7 +29,7 @@ import org.jitsi.videobridge.relay.RelayEndpointSender
 object QueueStats {
     /** Gets statistics for the different `PacketQueue`s that this bridge uses. */
     @JvmStatic
-    fun getQueueStats(): ObjectNode = OrderedJsonObject().apply {
+    fun getQueueStats(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         getJsonFromQueueStatisticsAndErrorHandler(
             Endpoint.queueErrorCounter,
             "Endpoint-outgoing-packet-queue"
@@ -64,7 +64,7 @@ object QueueStats {
         var json = getStatistics().get(queueName) as? ObjectNode
         if (countingErrorHandler != null) {
             if (json == null) {
-                json = OrderedJsonObject()
+                json = JsonNodeFactory.instance.objectNode()
                 json.put("dropped_packets", countingErrorHandler.numPacketsDropped)
             }
             json.put("exceptions", countingErrorHandler.numExceptions)

@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpLayerDesc
-import org.jitsi.utils.OrderedJsonObject
 
 /**
  * The result of bandwidth allocation.
@@ -53,13 +53,13 @@ class BandwidthAllocation @JvmOverloads constructor(
     override fun toString(): String = "oversending=$oversending " + allocations.joinToString()
 
     val debugState: ObjectNode
-        get() = OrderedJsonObject().apply {
+        get() = JsonNodeFactory.instance.objectNode().apply {
             put("idealBps", idealBps)
             put("targetBps", targetBps)
             put("oversending", oversending)
             put("has_suspended_sources", hasSuspendedSources)
             put("suspended_sources", suspendedSources.toString())
-            val allocationsNode = OrderedJsonObject().apply {
+            val allocationsNode = JsonNodeFactory.instance.objectNode().apply {
                 allocations.forEach {
                     val name = it.mediaSource?.sourceName ?: it.endpointId
                     set<ObjectNode>(name, it.debugState)
@@ -103,7 +103,7 @@ data class SingleAllocation(
         "ideal=${idealLayer?.height}/${idealLayer?.frameRate} (${idealLayer?.indexString()})]"
 
     val debugState: ObjectNode
-        get() = OrderedJsonObject().apply {
+        get() = JsonNodeFactory.instance.objectNode().apply {
             targetLayer?.debugState()?.let { set<ObjectNode>("target", it) } ?: put("target", null as String?)
             idealLayer?.debugState()?.let { set<ObjectNode>("ideal", it) } ?: put("ideal", null as String?)
         }

@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.cc.vp9
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.RtpLayerDesc
@@ -24,7 +25,6 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getSidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.getTidFromIndex
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -450,7 +450,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     )
     val debugState: ObjectNode
         get() {
-            val debugState = OrderedJsonObject()
+            val debugState = JsonNodeFactory.instance.objectNode()
             debugState.put(
                 "mostRecentKeyframeGroupArrivalTimeMs",
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
