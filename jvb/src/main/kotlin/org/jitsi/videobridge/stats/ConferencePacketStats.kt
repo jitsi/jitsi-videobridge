@@ -16,8 +16,8 @@
 package org.jitsi.videobridge.stats
 
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.videobridge.metrics.Metrics
 import java.util.concurrent.atomic.AtomicLong
@@ -54,8 +54,8 @@ class ConferencePacketStats private constructor() {
     }
 
     fun toJson(): ObjectNode = OrderedJsonObject().apply {
-        val packetRates: ArrayNode = jacksonObjectMapper().createArrayNode()
-        val bitrates: ArrayNode = jacksonObjectMapper().createArrayNode()
+        val packetRates: ArrayNode = JsonNodeFactory.instance.arrayNode()
+        val bitrates: ArrayNode = JsonNodeFactory.instance.arrayNode()
 
         (0..MAX_SIZE).forEach { conferenceSize ->
             stats[conferenceSize]?.let {

@@ -16,8 +16,8 @@
 package org.jitsi.videobridge.cc.vp9
 
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.nlj.codec.vpx.VpxUtils.Companion.applyExtendedPictureIdDelta
@@ -614,7 +614,7 @@ class Vp9AdaptiveSourceProjectionContext(
         val debugState = OrderedJsonObject()
         debugState.put("class", Vp9AdaptiveSourceProjectionContext::class.java.simpleName)
 
-        val mapSizes: ArrayNode = jacksonObjectMapper().createArrayNode()
+        val mapSizes: ArrayNode = JsonNodeFactory.instance.arrayNode()
         for ((key, value) in vp9PictureMaps.entries) {
             val sizeInfo = OrderedJsonObject()
             sizeInfo.put("ssrc", key)

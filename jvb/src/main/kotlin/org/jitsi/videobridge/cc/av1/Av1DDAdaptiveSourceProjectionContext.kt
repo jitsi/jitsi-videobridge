@@ -16,8 +16,8 @@
 package org.jitsi.videobridge.cc.av1
 
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDPacket
@@ -667,7 +667,7 @@ class Av1DDAdaptiveSourceProjectionContext(
         val debugState = OrderedJsonObject()
         debugState.put("class", Av1DDAdaptiveSourceProjectionContext::class.java.simpleName)
 
-        val mapSizes: ArrayNode = jacksonObjectMapper().createArrayNode()
+        val mapSizes: ArrayNode = JsonNodeFactory.instance.arrayNode()
         for ((key, value) in av1FrameMaps.entries) {
             val sizeInfo = OrderedJsonObject()
             sizeInfo.put("ssrc", key)

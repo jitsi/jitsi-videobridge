@@ -17,8 +17,8 @@
 package org.jitsi.videobridge.xmpp
 
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jitsi.nlj.stats.DelayStats
 import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
@@ -170,7 +170,7 @@ class XmppConnection : IQListener {
      * @return JSON string of the list of ids
      */
     fun getMucClientIds(): String {
-        val arr: ArrayNode = jacksonObjectMapper().createArrayNode()
+        val arr: ArrayNode = JsonNodeFactory.instance.arrayNode()
         mucClientManager.mucClientIds.forEach { arr.add(it) }
         return arr.toString()
     }
