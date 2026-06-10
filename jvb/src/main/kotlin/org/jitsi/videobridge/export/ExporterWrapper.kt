@@ -33,18 +33,19 @@ class ExporterWrapper(
 ) : PotentialPacketHandler {
     val logger = createChildLogger(parentLogger)
     var started = false
-    private var exporter: Exporter? = null
+
+    /** One [Exporter] per [Connect]. The same audio is sent to all of them. */
+    private val exporters = mutableListOf<Exporter>()
+
     fun setConnects(connects: List<Connect>) {
         when {
             started && connects.isNotEmpty() -> throw FeatureNotImplementedException("Changing connects once enabled.")
             connects.isEmpty() -> stop()
-            connects.size > 1 -> throw FeatureNotImplementedException("Multiple connects")
-            connects[0].video -> throw FeatureNotImplementedException("Video")
-            else -> start(connects[0])
+            else -> start(connects)
         }
     }
 
-    private fun isConnected() = started && exporter?.isConnected() == true
+    private fun isConnected() = started && exporters.any { it.isConnected() }
 
     /** Whether we want to accept a packet. */
     override fun wants(packet: PacketInfo): Boolean {
@@ -52,10 +53,17 @@ class ExporterWrapper(
         return true
     }
 
-    /** Accept a packet, add it to the queue. */
+    /** Accept a packet, fanning it out to each exporter. */
     override fun send(packet: PacketInfo) {
-        exporter?.send(packet) ?: run {
+        if (exporters.isEmpty()) {
             ByteBufferPool.returnBuffer(packet.packet.buffer)
+            return
+        }
+        // Each exporter takes ownership of the packet it's given (and returns its buffer), so hand each one its
+        // own clone. The last exporter gets the original to avoid an unnecessary clone+copy.
+        val lastIndex = exporters.size - 1
+        exporters.forEachIndexed { index, exporter ->
+            exporter.send(if (index == lastIndex) packet else packet.clone())
         }
     }
 
@@ -64,21 +72,32 @@ class ExporterWrapper(
             logger.info("Stopping.")
         }
         started = false
-        exporter?.stop()
-        exporter = null
+        exporters.forEach { it.stop() }
+        exporters.clear()
     }
 
-    fun start(connect: Connect) {
+    fun start(connects: List<Connect>) {
+        if (exporters.isNotEmpty()) {
+            logger.warn("Exporters already exist, stopping previous ones.")
+            stop()
+        }
+        try {
+            connects.forEach { exporters.add(createExporter(it)) }
+        } catch (e: Exception) {
+            // Don't leave partially-started exporters behind if one of the connects is rejected.
+            stop()
+            throw e
+        }
+        started = true
+    }
+
+    private fun createExporter(connect: Connect): Exporter {
         if (connect.video) throw FeatureNotImplementedException("Video")
         if (connect.protocol != Connect.Protocols.MEDIAJSON) {
             throw FeatureNotImplementedException("Protocol ${connect.protocol}")
         }
 
         logger.info("Starting with url=${connect.url}")
-        if (exporter != null) {
-            logger.warn("Exporter already exists, stopping previous one.")
-            stop()
-        }
         val httpHeaders = connect.getHttpHeaders().associate { header ->
             header.name to header.value
         }
@@ -94,7 +113,7 @@ class ExporterWrapper(
         val exports = connect.getExports()
         val requests = connect.getRequests()
 
-        exporter = Exporter(
+        return Exporter(
             connect.url,
             httpHeaders,
             logger,
@@ -108,13 +127,11 @@ class ExporterWrapper(
         ).apply {
             start()
         }
-        started = true
     }
 
     fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("started", started)
-        exporter?.let {
-            set<ObjectNode>("exporter", it.debugState())
-        }
+        val exportersArray = putArray("exporters")
+        exporters.forEach { exportersArray.add(it.debugState()) }
     }
 }
