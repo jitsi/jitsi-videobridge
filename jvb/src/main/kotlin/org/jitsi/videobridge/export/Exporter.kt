@@ -158,6 +158,14 @@ internal class Exporter(
 
     fun isConnected() = recorderWebSocket.isConnected
 
+    /**
+     * Apply an update to a connect with the same URL (e.g. changed type, headers, ping, exports or requests).
+     * TODO: actually apply the changes; for now this is a no-op placeholder.
+     */
+    fun update(connect: Connect) {
+        logger.info("Update requested for url=$url (not yet applied).")
+    }
+
     private fun handleIncomingMessage(message: String) {
         try {
             val event = Event.parse(message)

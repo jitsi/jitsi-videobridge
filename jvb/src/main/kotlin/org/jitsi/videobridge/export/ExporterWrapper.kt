@@ -26,6 +26,7 @@ import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.xmpp.extensions.colibri2.Connect
+import java.net.URI
 
 class ExporterWrapper(
     parentLogger: Logger,
@@ -34,18 +35,47 @@ class ExporterWrapper(
     val logger = createChildLogger(parentLogger)
     var started = false
 
-    /** One [Exporter] per [Connect]. The same audio is sent to all of them. */
-    private val exporters = mutableListOf<Exporter>()
+    /** One running [Exporter] per requested connect, keyed by the connect's URL. */
+    private val exporters = mutableMapOf<URI, Entry>()
 
+    /**
+     * Reconcile the running exporters with the requested set of connects, using the URL as the connect's identity:
+     *  - stop exporters whose URL is no longer requested,
+     *  - start exporters for URLs that weren't already running,
+     *  - for URLs that are still requested, pass any change in the connect's other parameters to the existing
+     *    exporter as an update.
+     */
     fun setConnects(connects: List<Connect>) {
-        when {
-            started && connects.isNotEmpty() -> throw FeatureNotImplementedException("Changing connects once enabled.")
-            connects.isEmpty() -> stop()
-            else -> start(connects)
+        // Validate up front so a rejected connect doesn't disturb the already-running exporters.
+        connects.forEach { validate(it) }
+
+        val desired = connects.associateBy { it.url }
+
+        // Stop exporters whose URL is no longer requested.
+        (exporters.keys - desired.keys).forEach { url ->
+            logger.info("Stopping exporter for url=$url")
+            exporters.remove(url)?.exporter?.stop()
         }
+
+        desired.forEach { (url, connect) ->
+            val params = ConnectParams(connect)
+            val existing = exporters[url]
+            when {
+                // A URL that wasn't running: start a new exporter for it.
+                existing == null -> exporters[url] = Entry(createExporter(connect), params)
+                // A URL that was running, but some other parameter changed: hand the update to the exporter.
+                existing.params != params -> {
+                    logger.info("Updating exporter for url=$url")
+                    existing.exporter.update(connect)
+                    existing.params = params
+                }
+            }
+        }
+
+        started = exporters.isNotEmpty()
     }
 
-    private fun isConnected() = started && exporters.any { it.isConnected() }
+    private fun isConnected() = started && exporters.values.any { it.exporter.isConnected() }
 
     /** Whether we want to accept a packet. */
     override fun wants(packet: PacketInfo): Boolean {
@@ -55,15 +85,16 @@ class ExporterWrapper(
 
     /** Accept a packet, fanning it out to each exporter. */
     override fun send(packet: PacketInfo) {
-        if (exporters.isEmpty()) {
+        val entries = exporters.values
+        if (entries.isEmpty()) {
             ByteBufferPool.returnBuffer(packet.packet.buffer)
             return
         }
         // Each exporter takes ownership of the packet it's given (and returns its buffer), so hand each one its
         // own clone. The last exporter gets the original to avoid an unnecessary clone+copy.
-        val lastIndex = exporters.size - 1
-        exporters.forEachIndexed { index, exporter ->
-            exporter.send(if (index == lastIndex) packet else packet.clone())
+        val lastIndex = entries.size - 1
+        entries.forEachIndexed { index, entry ->
+            entry.exporter.send(if (index == lastIndex) packet else packet.clone())
         }
     }
 
@@ -72,31 +103,18 @@ class ExporterWrapper(
             logger.info("Stopping.")
         }
         started = false
-        exporters.forEach { it.stop() }
+        exporters.values.forEach { it.exporter.stop() }
         exporters.clear()
     }
 
-    fun start(connects: List<Connect>) {
-        if (exporters.isNotEmpty()) {
-            logger.warn("Exporters already exist, stopping previous ones.")
-            stop()
-        }
-        try {
-            connects.forEach { exporters.add(createExporter(it)) }
-        } catch (e: Exception) {
-            // Don't leave partially-started exporters behind if one of the connects is rejected.
-            stop()
-            throw e
-        }
-        started = true
-    }
-
-    private fun createExporter(connect: Connect): Exporter {
+    private fun validate(connect: Connect) {
         if (connect.video) throw FeatureNotImplementedException("Video")
         if (connect.protocol != Connect.Protocols.MEDIAJSON) {
             throw FeatureNotImplementedException("Protocol ${connect.protocol}")
         }
+    }
 
+    private fun createExporter(connect: Connect): Exporter {
         logger.info("Starting with url=${connect.url}")
         val httpHeaders = connect.getHttpHeaders().associate { header ->
             header.name to header.value
@@ -132,6 +150,38 @@ class ExporterWrapper(
     fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("started", started)
         val exportersArray = putArray("exporters")
-        exporters.forEach { exportersArray.add(it.debugState()) }
+        exporters.values.forEach { exportersArray.add(it.exporter.debugState()) }
+    }
+
+    /** A running exporter together with the connect parameters it was last (re)configured with. */
+    private class Entry(val exporter: Exporter, var params: ConnectParams)
+
+    /**
+     * The parameters of a [Connect] other than its URL (which is its identity). Used to detect whether a re-signaled
+     * connect for an already-running URL has changed and therefore needs to be passed to the exporter as an update.
+     * Source-name lists are normalized (sorted) so reordering alone isn't treated as a change.
+     */
+    private data class ConnectParams(
+        val protocol: Connect.Protocols,
+        val type: Connect.Types,
+        val audio: Boolean,
+        val video: Boolean,
+        val headers: Map<String, String>,
+        val pingInterval: Int?,
+        val pingTimeout: Int?,
+        val exports: List<String>,
+        val requests: List<String>
+    ) {
+        constructor(connect: Connect) : this(
+            connect.protocol,
+            connect.type,
+            connect.audio,
+            connect.video,
+            connect.getHttpHeaders().associate { it.name to it.value },
+            connect.getPing()?.interval,
+            connect.getPing()?.timeout,
+            connect.getExports().sorted(),
+            connect.getRequests().sorted()
+        )
     }
 }
