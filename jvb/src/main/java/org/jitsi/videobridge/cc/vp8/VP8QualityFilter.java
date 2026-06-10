@@ -20,7 +20,8 @@ import org.jetbrains.annotations.*;
 import org.jetbrains.annotations.Nullable;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.lang.SuppressWarnings;
 import java.time.*;
@@ -369,9 +370,9 @@ class VP8QualityFilter
             value = "IS2_INCONSISTENT_SYNC",
             justification = "We intentionally avoid synchronizing while reading" +
                     " fields only used in debug output.")
-    public JSONObject getDebugState()
+    public ObjectNode getDebugState()
     {
-        JSONObject debugState = new JSONObject();
+        ObjectNode debugState = JsonNodeFactory.instance.objectNode();
         debugState.put(
                 "mostRecentKeyframeGroupArrivalTimeMs",
             mostRecentKeyframeGroupArrivalTime != null ? mostRecentKeyframeGroupArrivalTime.toEpochMilli() : -1L);

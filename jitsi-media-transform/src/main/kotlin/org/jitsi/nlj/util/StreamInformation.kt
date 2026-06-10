@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.util
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.format.supportsPli
@@ -25,7 +27,6 @@ import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -58,7 +59,7 @@ interface ReadOnlyStreamInformationStore {
 
     fun getLocalPrimarySsrc(secondarySsrc: Long): Long?
     fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long?
-    fun debugState(mode: DebugStateMode): OrderedJsonObject
+    fun debugState(mode: DebugStateMode): ObjectNode
 
     /**
      * All signaled receive SSRCs
@@ -222,19 +223,21 @@ class StreamInformationStoreImpl : StreamInformationStore {
 
     override fun removeReceiveSsrc(ssrc: Long) = receiveSsrcStore.removeReceiveSsrc(ssrc)
 
-    override fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
-        this["supports_pli"] = supportsPli
-        this["supports_fir"] = supportsFir
-        this["rtp_extensions"] = OrderedJsonObject().apply {
+    override fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        put("supports_pli", supportsPli)
+        put("supports_fir", supportsFir)
+        val rtpExtNode = JsonNodeFactory.instance.objectNode().apply {
             rtpExtensions.forEach { put(it.id.toString(), it.type.toString()) }
         }
-        this["rtp_payload_types"] = OrderedJsonObject().apply {
+        set<ObjectNode>("rtp_extensions", rtpExtNode)
+        val rtpPayloadNode = JsonNodeFactory.instance.objectNode().apply {
             rtpPayloadTypes.forEach { put(it.key.toString(), it.value.toString()) }
         }
+        set<ObjectNode>("rtp_payload_types", rtpPayloadNode)
         if (mode == DebugStateMode.FULL) {
-            this["local_ssrc_associations"] = localSsrcAssociations.toString()
-            this["remote_ssrc_associations"] = remoteSsrcAssociations.toString()
-            this["receive_ssrc_store"] = receiveSsrcStore.debugState()
+            put("local_ssrc_associations", localSsrcAssociations.toString())
+            put("remote_ssrc_associations", remoteSsrcAssociations.toString())
+            set<ObjectNode>("receive_ssrc_store", receiveSsrcStore.debugState())
         }
     }
 }

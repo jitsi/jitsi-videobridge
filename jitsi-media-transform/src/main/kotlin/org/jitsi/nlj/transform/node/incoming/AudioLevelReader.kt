@@ -104,10 +104,10 @@ class AudioLevelReader(
         }
 
         override fun statsJson() = super.statsJson().apply {
-            this["num_audio_levels"] = stats.numAudioLevels
-            this["num_silence_packets_discarded"] = stats.numDiscardedSilence
-            this["num_force_mute_discarded"] = stats.numDiscardedForceMute
-            this["num_ranking_discarded"] = stats.numDiscardedRanking
+            put("num_audio_levels", stats.numAudioLevels)
+            put("num_silence_packets_discarded", stats.numDiscardedSilence)
+            put("num_force_mute_discarded", stats.numDiscardedForceMute)
+            put("num_ranking_discarded", stats.numDiscardedRanking)
         }
 
         override fun trace(f: () -> Unit) = f.invoke()

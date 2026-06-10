@@ -15,8 +15,8 @@
  */
 package org.jitsi.nlj.util
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.rtp.Packet
-import org.jitsi.utils.OrderedJsonObject
 import java.time.Duration
 import java.util.Collections
 import java.util.function.Predicate
@@ -75,9 +75,9 @@ inline fun getStackTrace(): String = with(StringBuffer()) {
     toString()
 }
 
-fun OrderedJsonObject.appendAll(other: OrderedJsonObject) = this.also {
-    other.forEach { (key, value) ->
-        this[key] = value
+fun ObjectNode.appendAll(other: ObjectNode): ObjectNode = this.also {
+    other.fields().forEach { (key, value) ->
+        set<ObjectNode>(key, value)
     }
 }
 

@@ -16,9 +16,10 @@
 
 package org.jitsi.videobridge.util;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.utils.*;
 import org.jitsi.utils.logging2.*;
 
 import java.util.*;
@@ -232,9 +233,9 @@ public class ByteBufferPool
     /**
      * Gets a JSON representation of the statistics about the pool.
      */
-    public static OrderedJsonObject getStatsJson()
+    public static ObjectNode getStatsJson()
     {
-        OrderedJsonObject stats = new OrderedJsonObject();
+        ObjectNode stats = JsonNodeFactory.instance.objectNode();
         long numLargeRequestsSum = numLargeRequests.sum();
 
         stats.put("num_large_requests", numLargeRequestsSum);
@@ -254,9 +255,9 @@ public class ByteBufferPool
                 (100.0 * allAllocations) / numRequestsSum);
             stats.put("stored_bytes", storedBytes);
 
-            stats.put("pool1", pool1.getStats());
-            stats.put("pool2", pool2.getStats());
-            stats.put("pool3", pool3.getStats());
+            stats.set("pool1", pool1.getStats());
+            stats.set("pool2", pool2.getStats());
+            stats.set("pool3", pool3.getStats());
         }
 
         if (bookkeepingEnabled)

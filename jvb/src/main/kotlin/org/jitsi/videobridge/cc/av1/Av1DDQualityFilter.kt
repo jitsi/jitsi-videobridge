@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.cc.av1
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_ENCODING_ID
 import org.jitsi.nlj.RtpLayerDesc.Companion.SUSPENDED_INDEX
@@ -28,7 +30,6 @@ import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import org.json.simple.JSONObject
 import java.time.Duration
 import java.time.Instant
 
@@ -432,15 +433,17 @@ internal class Av1DDQualityFilter(
         value = ["IS2_INCONSISTENT_SYNC"],
         justification = "We intentionally avoid synchronizing while reading fields only used in debug output."
     )
-    val debugState: JSONObject
+    val debugState: ObjectNode
         get() {
-            val debugState = JSONObject()
-            debugState["mostRecentKeyframeGroupArrivalTimeMs"] =
+            val debugState = JsonNodeFactory.instance.objectNode()
+            debugState.put(
+                "mostRecentKeyframeGroupArrivalTimeMs",
                 mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
-            debugState["needsKeyframe"] = needsKeyframe
-            debugState["internalTargetEncoding"] = internalTargetEncoding
-            debugState["internalTargetDt"] = internalTargetDt
-            debugState["currentIndex"] = Av1DDRtpLayerDesc.indexString(currentIndex)
+            )
+            debugState.put("needsKeyframe", needsKeyframe)
+            debugState.put("internalTargetEncoding", internalTargetEncoding)
+            debugState.put("internalTargetDt", internalTargetDt)
+            debugState.put("currentIndex", Av1DDRtpLayerDesc.indexString(currentIndex))
             return debugState
         }
 

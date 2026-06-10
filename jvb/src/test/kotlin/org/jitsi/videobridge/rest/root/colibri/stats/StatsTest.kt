@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.rest.root.colibri.stats
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import jakarta.ws.rs.core.Application
@@ -24,8 +26,6 @@ import org.eclipse.jetty.http.HttpStatus
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.test.JerseyTest
 import org.glassfish.jersey.test.TestProperties
-import org.json.simple.JSONObject
-import org.json.simple.parser.JSONParser
 import org.junit.Test
 
 class StatsTest : JerseyTest() {
@@ -46,7 +46,7 @@ class StatsTest : JerseyTest() {
         val resp = target(baseUrl).request().get()
         resp.status shouldBe HttpStatus.OK_200
         resp.mediaType shouldBe MediaType.APPLICATION_JSON_TYPE
-        val parsed = JSONParser().parse(resp.readEntity(String::class.java))
-        parsed.shouldBeInstanceOf<JSONObject>()
+        val parsed = jacksonObjectMapper().readTree(resp.readEntity(String::class.java))
+        parsed.shouldBeInstanceOf<ObjectNode>()
     }
 }

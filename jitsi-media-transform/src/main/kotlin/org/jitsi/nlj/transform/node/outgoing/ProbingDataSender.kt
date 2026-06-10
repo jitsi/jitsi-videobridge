@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.transform.node.outgoing
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
@@ -31,7 +32,6 @@ import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
@@ -199,15 +199,15 @@ class ProbingDataSender(
         }
     }
 
-    fun debugState(mode: DebugStateMode) = OrderedJsonObject().apply {
-        this["num_bytes_of_probing_data_sent_as_rtx"] = numProbingBytesSentRtx
-        this["num_bytes_of_probing_data_sent_as_dummy"] = numProbingBytesSentDummyData
-        this["rtx_supported"] = rtxSupported
+    fun debugState(mode: DebugStateMode) = JsonNodeFactory.instance.objectNode().apply {
+        put("num_bytes_of_probing_data_sent_as_rtx", numProbingBytesSentRtx)
+        put("num_bytes_of_probing_data_sent_as_dummy", numProbingBytesSentDummyData)
+        put("rtx_supported", rtxSupported)
         if (mode == DebugStateMode.FULL) {
-            this["local_video_ssrc"] = localVideoSsrc.toString()
-            this["curr_dummy_timestamp"] = currDummyTimestamp.toString()
-            this["curr_dummy_seq_num"] = currDummySeqNum.toString()
-            this["video_payload_types"] = videoPayloadTypes.toString()
+            put("local_video_ssrc", localVideoSsrc.toString())
+            put("curr_dummy_timestamp", currDummyTimestamp.toString())
+            put("curr_dummy_seq_num", currDummySeqNum.toString())
+            put("video_payload_types", videoPayloadTypes.toString())
         }
     }
 

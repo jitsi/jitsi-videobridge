@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge.cc
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
@@ -27,7 +29,6 @@ import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.videobridge.cc.allocation.BitrateControllerStatusSnapshot
 import org.jitsi.videobridge.cc.config.BandwidthProbingConfig.Companion.config
-import org.json.simple.JSONObject
 import java.util.function.Supplier
 
 class BandwidthProbing(
@@ -132,7 +133,7 @@ class BandwidthProbing(
         }
     }
 
-    fun getDebugState(): JSONObject = JSONObject().apply {
+    fun getDebugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("enabled", enabled)
         put("latest_bwe", latestBwe)
         put("last_total_needed_bps", lastTotalNeededBps)

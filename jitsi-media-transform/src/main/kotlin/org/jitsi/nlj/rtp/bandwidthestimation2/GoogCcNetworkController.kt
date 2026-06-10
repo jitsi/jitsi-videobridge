@@ -17,6 +17,8 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.DataSize
 import org.jitsi.nlj.util.bps
@@ -26,7 +28,6 @@ import org.jitsi.nlj.util.min
 import org.jitsi.nlj.util.times
 import org.jitsi.utils.MAX_DURATION
 import org.jitsi.utils.MIN_DURATION
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
@@ -617,25 +618,25 @@ class GoogCcNetworkController(
         /* Additions to the fields from goog_cc_printer */
         val inAlr: Boolean
     ) {
-        fun toJson(): OrderedJsonObject {
-            return OrderedJsonObject().apply {
+        fun toJson(): ObjectNode {
+            return JsonNodeFactory.instance.objectNode().apply {
                 put("time", time.toEpochMilli())
                 put("rtt", rtt.toDouble())
                 put("target", target.bps)
                 put("stable_target", stableTarget.bps)
-                put("pacing", pacing?.bps ?: Double.NaN)
-                put("padding", padding?.bps ?: Double.NaN)
+                put("pacing", pacing?.bps?.toDouble() ?: Double.NaN)
+                put("padding", padding?.bps?.toDouble() ?: Double.NaN)
                 put("window", window.bytes)
                 put("rate_control_state", rateControlState.name)
-                put("stable_estimate", stableEstimate?.bps ?: Double.NaN)
+                put("stable_estimate", stableEstimate?.bps?.toDouble() ?: Double.NaN)
                 put("trendline", trendline)
                 put("trendline_modified_offset", trendlineModifiedOffset)
                 put("trendline_modified_threshold", trendlineOffsetThreshold)
-                put("acknowledged_rate", acknowledgedRate?.bps ?: Double.NaN)
+                put("acknowledged_rate", acknowledgedRate?.bps?.toDouble() ?: Double.NaN)
                 put("loss_ratio", lossRatio)
                 put("send_side_target", sendSideTarget.bps)
                 put("last_loss_based_state", lossBasedState.name)
-                put("data_window", dataWindow?.bytes ?: Double.NaN)
+                put("data_window", dataWindow?.bytes?.toDouble() ?: Double.NaN)
                 put("pushback_target", pushbackTarget.bps)
                 put("in_alr", inAlr)
             }

@@ -39,7 +39,8 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jxmpp.jid.*;
 
 import java.util.*;
@@ -1338,15 +1339,14 @@ public class Conference
      * @param mode determines how much detail to include in the debug state.
      * @param endpointId the ID of the endpoint to include. If set to {@code null}, all endpoints will be included.
      */
-    @SuppressWarnings("unchecked")
-    public JSONObject getDebugState(@NotNull DebugStateMode mode, @Nullable String endpointId)
+    public ObjectNode getDebugState(@NotNull DebugStateMode mode, @Nullable String endpointId)
     {
         if (mode == DebugStateMode.STATS && !isRtcStatsEnabled)
         {
-            return new JSONObject();
+            return JsonNodeFactory.instance.objectNode();
         }
 
-        JSONObject debugState = new JSONObject();
+        ObjectNode debugState = JsonNodeFactory.instance.objectNode();
         debugState.put("id", id);
 
         // Keep this camelCase for compatibility with jvb-rtcstats-push
@@ -1368,11 +1368,11 @@ public class Conference
         }
         if (mode == DebugStateMode.FULL || mode == DebugStateMode.STATS)
         {
-            debugState.put("speech_activity", speechActivity.getDebugState(mode));
+            debugState.set("speech_activity", speechActivity.getDebugState(mode));
         }
 
-        JSONObject endpoints = new JSONObject();
-        debugState.put("endpoints", endpoints);
+        ObjectNode endpoints = JsonNodeFactory.instance.objectNode();
+        debugState.set("endpoints", endpoints);
         for (Endpoint e : endpointsCache)
         {
             if (endpointId == null || endpointId.equals(e.getId()))
@@ -1383,13 +1383,13 @@ public class Conference
                 }
                 else
                 {
-                    endpoints.put(e.getId(), e.debugState(mode));
+                    endpoints.set(e.getId(), e.debugState(mode));
                 }
             }
         }
 
-        JSONObject relays = new JSONObject();
-        debugState.put("relays", relays);
+        ObjectNode relays = JsonNodeFactory.instance.objectNode();
+        debugState.set("relays", relays);
         for (Relay r : relaysById.values())
         {
             if (mode == DebugStateMode.SHORT)
@@ -1398,13 +1398,13 @@ public class Conference
             }
             else
             {
-                relays.put(r.getId(), r.debugState(mode));
+                relays.set(r.getId(), r.debugState(mode));
             }
         }
 
         if (mode != DebugStateMode.SHORT)
         {
-            debugState.put("exporter", exporter.debugState());
+            debugState.set("exporter", exporter.debugState());
         }
 
         return debugState;

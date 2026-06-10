@@ -15,11 +15,12 @@
  */
 package org.jitsi.nlj
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
 import org.jitsi.nlj.util.DataSize
-import org.jitsi.utils.OrderedJsonObject
 
 /**
  * Keeps track of its subjective quality index,
@@ -121,13 +122,13 @@ abstract class RtpLayerDesc(
      */
     abstract fun hasZeroBitrate(nowMs: Long): Boolean
 
-    open fun debugState(): OrderedJsonObject = OrderedJsonObject().apply {
-        this["frameRate"] = frameRate
-        this["height"] = height
-        this["index"] = index
-        this["bitrate_bps"] = getBitrate(System.currentTimeMillis()).bps
-        this["target_bitrate"] = targetBitrate?.bps ?: 0
-        this["indexString"] = indexString()
+    open fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        put("frameRate", frameRate)
+        put("height", height)
+        put("index", index)
+        put("bitrate_bps", getBitrate(System.currentTimeMillis()).bps)
+        put("target_bitrate", targetBitrate?.bps ?: 0)
+        put("indexString", indexString())
     }
 
     abstract fun indexString(): String

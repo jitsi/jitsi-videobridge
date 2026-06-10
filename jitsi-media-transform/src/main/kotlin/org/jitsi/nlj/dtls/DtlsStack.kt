@@ -16,12 +16,13 @@
 
 package org.jitsi.nlj.dtls
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.BufferPool
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.ArrayBlockingQueueWithShutdown
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -235,7 +236,7 @@ class DtlsStack(
         processIncomingProtocolData()
     }
 
-    fun getDebugState(): OrderedJsonObject = OrderedJsonObject().apply {
+    fun getDebugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("localFingerprintHashFunction", certificateInfo.localFingerprint)
         put("remoteFingerprints", remoteFingerprints.map { (hash, fp) -> "$hash: $fp" }.joinToString())
         put("role", (role?.javaClass ?: "null").toString())

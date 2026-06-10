@@ -140,12 +140,12 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
     }
 
     override fun statsJson() = super.statsJson().apply {
-        this["num_srtp_processed"] = numSrtpProcessed
-        this["num_srtp_fail"] = numSrtpFail
-        this["num_srtp_auth_fail"] = numSrtpAuthFail
-        this["num_srtp_replay_fail"] = numSrtpReplayFail
-        this["num_srtp_replay_old"] = numSrtpReplayOld
-        this["num_srtp_invalid_packet"] = numSrtpInvalidPacket
+        put("num_srtp_processed", numSrtpProcessed)
+        put("num_srtp_fail", numSrtpFail)
+        put("num_srtp_auth_fail", numSrtpAuthFail)
+        put("num_srtp_replay_fail", numSrtpReplayFail)
+        put("num_srtp_replay_old", numSrtpReplayOld)
+        put("num_srtp_invalid_packet", numSrtpInvalidPacket)
     }
 
     override fun stop() {

@@ -16,8 +16,10 @@
 
 package org.jitsi.videobridge.xmpp
 
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.stats.DelayStats
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
@@ -37,8 +39,6 @@ import org.jivesoftware.smack.packet.ExtensionElement
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.jivesoftware.smackx.iqversion.packet.Version
-import org.json.simple.JSONArray
-import org.json.simple.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -123,15 +123,15 @@ class XmppConnection : IQListener {
      * is in the required format and either a new {@link MucClient} was added
      * or a client with the same ID already existed).
      */
-    fun addMucClient(jsonObject: JSONObject): Boolean {
-        if (jsonObject["id"] !is String) {
+    fun addMucClient(jsonObject: ObjectNode): Boolean {
+        val idNode = jsonObject.get("id")
+        if (idNode == null || !idNode.isTextual) {
             return false
         }
-        val config = MucClientConfiguration(jsonObject["id"] as String)
-        for (key in jsonObject.keys) {
-            val value = jsonObject[key]
-            if (key is String && value is String && key != "id") {
-                config.setProperty(key, value)
+        val config = MucClientConfiguration(idNode.asText())
+        jsonObject.fields().forEach { (key, value) ->
+            if (value.isTextual && key != "id") {
+                config.setProperty(key, value.asText())
             }
         }
         if (!config.isComplete) {
@@ -169,7 +169,9 @@ class XmppConnection : IQListener {
      * @return JSON string of the list of ids
      */
     fun getMucClientIds(): String {
-        return JSONArray().apply { addAll(mucClientManager.mucClientIds) }.toJSONString()
+        val arr: ArrayNode = JsonNodeFactory.instance.arrayNode()
+        mucClientManager.mucClientIds.forEach { arr.add(it) }
+        return arr.toString()
     }
 
     /**
@@ -188,14 +190,14 @@ class XmppConnection : IQListener {
      * the expected format, or if no MUC client with the specified ID exists),
      * returns {@code false}.
      */
-    fun removeMucClient(jsonObject: JSONObject): Boolean {
-        val id = jsonObject["id"]
-        if (id !is String) {
-            logger.info("Invalid ID: $id")
+    fun removeMucClient(jsonObject: ObjectNode): Boolean {
+        val idNode = jsonObject.get("id")
+        if (idNode == null || !idNode.isTextual) {
+            logger.info("Invalid ID: $idNode")
             return false
         }
-        logger.info("Removing muc client $id")
-        return mucClientManager.removeMucClient(id)
+        logger.info("Removing muc client ${idNode.asText()}")
+        return mucClientManager.removeMucClient(idNode.asText())
     }
 
     /**
@@ -329,11 +331,11 @@ class XmppConnection : IQListener {
         )
 
         @JvmStatic
-        fun getStatsJson(): OrderedJsonObject = OrderedJsonObject().apply {
-            put("colibri", colibriDelayStats.toJson())
-            put("colibri_processing", colibriProcessingDelayStats.toJson())
-            put("health", healthDelayStats.toJson())
-            put("version", versionDelayStats.toJson())
+        fun getStatsJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+            set<ObjectNode>("colibri", colibriDelayStats.toJson())
+            set<ObjectNode>("colibri_processing", colibriProcessingDelayStats.toJson())
+            set<ObjectNode>("health", healthDelayStats.toJson())
+            set<ObjectNode>("version", versionDelayStats.toJson())
         }
     }
 }

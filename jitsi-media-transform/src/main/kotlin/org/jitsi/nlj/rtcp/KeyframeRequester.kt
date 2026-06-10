@@ -234,14 +234,14 @@ class KeyframeRequester @JvmOverloads constructor(
     }
 
     override fun statsJson() = super.statsJson().apply {
-        this["num_api_requests"] = numApiRequests
-        this["num_api_requests_dropped"] = numApiRequestsDropped
-        this["num_firs_dropped"] = numFirsDropped
-        this["num_firs_generated"] = numFirsGenerated
-        this["num_firs_forwarded"] = numFirsForwarded
-        this["num_plis_dropped"] = numPlisDropped
-        this["num_plis_generated"] = numPlisGenerated
-        this["num_plis_forwarded"] = numPlisForwarded
+        put("num_api_requests", numApiRequests)
+        put("num_api_requests_dropped", numApiRequestsDropped)
+        put("num_firs_dropped", numFirsDropped)
+        put("num_firs_generated", numFirsGenerated)
+        put("num_firs_forwarded", numFirsForwarded)
+        put("num_plis_dropped", numPlisDropped)
+        put("num_plis_generated", numPlisGenerated)
+        put("num_plis_forwarded", numPlisForwarded)
     }
 
     fun onRttUpdate(newRtt: Double) {

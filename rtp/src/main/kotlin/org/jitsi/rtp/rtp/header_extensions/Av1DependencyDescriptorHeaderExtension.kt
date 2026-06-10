@@ -15,12 +15,12 @@
  */
 package org.jitsi.rtp.rtp.header_extensions
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
 import org.jitsi.rtp.util.BitWriter
-import org.jitsi.utils.OrderedJsonObject
-import org.json.simple.JSONAware
 
 /**
  * The subset of the fields of an AV1 Dependency Descriptor that can be parsed statelessly.
@@ -70,8 +70,7 @@ class Av1DependencyDescriptorHeaderExtension(
     frameDependencyTemplateId,
     frameNumber,
     newTemplateDependencyStructure
-),
-    JSONAware {
+) {
     val frameInfo: FrameInfo by lazy {
         val templateIndex = (frameDependencyTemplateId + 64 - structure.templateIdOffset) % 64
         if (templateIndex >= structure.templateCount) {
@@ -252,16 +251,34 @@ class Av1DependencyDescriptorHeaderExtension(
         writer.writeBits(writer.remainingBits, 0)
     }
 
-    override fun toJSONString(): String {
-        return OrderedJsonObject().apply {
+    override fun toString(): String {
+        val mapper = ObjectMapper()
+        return JsonNodeFactory.instance.objectNode().apply {
             put("startOfFrame", startOfFrame)
             put("endOfFrame", endOfFrame)
             put("frameDependencyTemplateId", frameDependencyTemplateId)
             put("frameNumber", frameNumber)
-            newTemplateDependencyStructure?.let { put("templateStructure", it) }
-            customDtis?.let { put("customDTIs", it) }
-            customFdiffs?.let { put("customFdiffs", it) }
-            customChains?.let { put("customChains", it) }
+            newTemplateDependencyStructure?.let {
+                put("templateStructure", it.toString())
+            }
+            customDtis?.let {
+                set<com.fasterxml.jackson.databind.node.ArrayNode>(
+                    "customDTIs",
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
+                )
+            }
+            customFdiffs?.let {
+                set<com.fasterxml.jackson.databind.node.ArrayNode>(
+                    "customFdiffs",
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
+                )
+            }
+            customChains?.let {
+                set<com.fasterxml.jackson.databind.node.ArrayNode>(
+                    "customChains",
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
+                )
+            }
             activeDecodeTargetsBitmask?.let {
                 if (newTemplateDependencyStructure == null ||
                     it != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
@@ -269,10 +286,8 @@ class Av1DependencyDescriptorHeaderExtension(
                     put("activeDecodeTargets", Integer.toBinaryString(it))
                 }
             }
-        }.toJSONString()
+        }.toString()
     }
-
-    override fun toString(): String = toJSONString()
 }
 
 fun Int.bitsForFdiff() = when {
@@ -296,7 +311,7 @@ class Av1TemplateDependencyStructure(
     val maxRenderResolutions: List<Resolution>,
     val maxSpatialId: Int,
     val maxTemporalId: Int
-) : JSONAware {
+) {
     val templateCount
         get() = templateInfo.size
 
@@ -467,21 +482,46 @@ class Av1TemplateDependencyStructure(
         return mask
     }
 
-    override fun toJSONString(): String {
-        return OrderedJsonObject().apply {
+    override fun toString(): String {
+        val mapper = ObjectMapper()
+        return JsonNodeFactory.instance.objectNode().apply {
             put("templateIdOffset", templateIdOffset)
-            put("templateInfo", templateInfo.toIndexedMap())
-            put("decodeTargetProtectedBy", decodeTargetProtectedBy.toIndexedMap())
-            put("decodeTargetLayers", decodeTargetLayers.toIndexedMap())
+            set<com.fasterxml.jackson.databind.node.ObjectNode>(
+                "templateInfo",
+                mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
+                    templateInfo.map {
+                        it.toString()
+                    }.toIndexedMap()
+                )
+            )
+            set<com.fasterxml.jackson.databind.node.ObjectNode>(
+                "decodeTargetProtectedBy",
+                mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
+                    decodeTargetProtectedBy.toIndexedMap()
+                )
+            )
+            set<com.fasterxml.jackson.databind.node.ObjectNode>(
+                "decodeTargetLayers",
+                mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
+                    decodeTargetLayers.map {
+                        it.toString()
+                    }.toIndexedMap()
+                )
+            )
             if (maxRenderResolutions.isNotEmpty()) {
-                put("maxRenderResolutions", maxRenderResolutions.toIndexedMap())
+                set<com.fasterxml.jackson.databind.node.ObjectNode>(
+                    "maxRenderResolutions",
+                    mapper.valueToTree<com.fasterxml.jackson.databind.node.ObjectNode>(
+                        maxRenderResolutions.map {
+                            it.toString()
+                        }.toIndexedMap()
+                    )
+                )
             }
             put("maxSpatialId", maxSpatialId)
             put("maxTemporalId", maxTemporalId)
-        }.toJSONString()
+        }.toString()
     }
-
-    override fun toString() = toJSONString()
 }
 
 fun nsBits(n: Int, v: Int): Int {
@@ -798,7 +838,7 @@ open class FrameInfo(
     open val dti: List<DTI>,
     open val fdiff: List<Int>,
     open val chains: List<Int>
-) : JSONAware {
+) {
     val fdiffCnt
         get() = fdiff.size
 
@@ -826,14 +866,15 @@ open class FrameInfo(
         return "spatialId=$spatialId, temporalId=$temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
     }
 
-    override fun toJSONString(): String {
-        return OrderedJsonObject().apply {
+    fun toJson(): String {
+        val mapper = ObjectMapper()
+        return JsonNodeFactory.instance.objectNode().apply {
             put("spatialId", spatialId)
             put("temporalId", temporalId)
-            put("dti", dti)
-            put("fdiff", fdiff)
-            put("chains", chains)
-        }.toJSONString()
+            set<com.fasterxml.jackson.databind.node.ObjectNode>("dti", mapper.valueToTree(dti.map { it.name }))
+            set<com.fasterxml.jackson.databind.node.ArrayNode>("fdiff", mapper.valueToTree(fdiff))
+            set<com.fasterxml.jackson.databind.node.ArrayNode>("chains", mapper.valueToTree(chains))
+        }.toString()
     }
 
     /** Whether the frame has a dependency on a frame earlier than this "picture", the other frames of this
@@ -859,24 +900,24 @@ class TemplateFrameInfo(
 class DecodeTargetLayer(
     val spatialId: Int,
     val temporalId: Int
-) : JSONAware {
-    override fun toJSONString(): String {
-        return OrderedJsonObject().apply {
+) {
+    override fun toString(): String {
+        return JsonNodeFactory.instance.objectNode().apply {
             put("spatialId", spatialId)
             put("temporalId", temporalId)
-        }.toJSONString()
+        }.toString()
     }
 }
 
 data class Resolution(
     val width: Int,
     val height: Int
-) : JSONAware {
-    override fun toJSONString(): String {
-        return OrderedJsonObject().apply {
+) {
+    override fun toString(): String {
+        return JsonNodeFactory.instance.objectNode().apply {
             put("width", width)
             put("height", height)
-        }.toJSONString()
+        }.toString()
     }
 }
 

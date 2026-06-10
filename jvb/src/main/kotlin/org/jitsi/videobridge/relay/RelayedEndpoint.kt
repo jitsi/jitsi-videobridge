@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.relay
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Features
 import org.jitsi.nlj.MediaSourceDesc
@@ -44,7 +45,6 @@ import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.AddReceiverMessage
 import org.jitsi.videobridge.util.TaskPools
-import org.json.simple.JSONObject
 import java.time.Instant
 
 /**
@@ -195,11 +195,11 @@ class RelayedEndpoint(
 
     fun getIncomingStats() = rtpReceiver.getStats().packetStreamStats
 
-    override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
+    override fun debugState(mode: DebugStateMode): ObjectNode = super.debugState(mode).apply {
         if (mode == DebugStateMode.FULL) {
-            this["stream_information_store"] = streamInformationStore.debugState(mode)
-            this["receiver"] = rtpReceiver.debugState(mode)
-            this["media_sources"] = _mediaSources.debugState()
+            set<ObjectNode>("stream_information_store", streamInformationStore.debugState(mode))
+            set<ObjectNode>("receiver", rtpReceiver.debugState(mode))
+            set<ObjectNode>("media_sources", _mediaSources.debugState())
         }
     }
 
@@ -225,7 +225,7 @@ class RelayedEndpoint(
         try {
             updateStatsOnExpire()
             rtpReceiver.stop()
-            logger.cdebug { debugState(DebugStateMode.FULL).toJSONString() }
+            logger.cdebug { debugState(DebugStateMode.FULL).toString() }
             rtpReceiver.tearDown()
         } catch (t: Throwable) {
             logger.error("Exception while expiring: ", t)

@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.stats
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.LossTracker
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -23,7 +25,6 @@ import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.utils.LRUCache
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -57,10 +58,10 @@ class EndpointConnectionStats(
         val incomingLossStats: LossTracker.Snapshot,
         val outgoingLossStats: LossTracker.Snapshot
     ) {
-        fun toJson() = OrderedJsonObject().apply {
+        fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
             put("rtt", rtt)
-            put("incoming_loss_stats", incomingLossStats.toJson())
-            put("outgoing_loss_stats", outgoingLossStats.toJson())
+            set<ObjectNode>("incoming_loss_stats", incomingLossStats.toJson())
+            set<ObjectNode>("outgoing_loss_stats", outgoingLossStats.toJson())
         }
     }
 

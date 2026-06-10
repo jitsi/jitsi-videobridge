@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.rtcp
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -36,7 +38,6 @@ import org.jitsi.nlj.util.RtpExtensionHandler
 import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
@@ -70,7 +71,7 @@ class KeyframeRequesterTest : ShouldSpec() {
 
         override fun getRemoteSecondarySsrc(primarySsrc: Long, associationType: SsrcAssociationType): Long? = null
 
-        override fun debugState(mode: DebugStateMode) = OrderedJsonObject()
+        override fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode()
     }
     private val logger = StdoutLogger()
     private val clock: FakeClock = FakeClock()

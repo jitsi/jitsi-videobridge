@@ -16,7 +16,7 @@
 
 package org.jitsi.videobridge.load_management
 
-import org.jitsi.utils.OrderedJsonObject
+import com.fasterxml.jackson.databind.node.ObjectNode
 import java.time.Duration
 
 interface JvbLoadReducer {
@@ -35,7 +35,7 @@ interface JvbLoadReducer {
      */
     fun impactTime(): Duration
 
-    fun getStats(): OrderedJsonObject
+    fun getStats(): ObjectNode
 
     companion object {
         const val CONFIG_BASE = "videobridge.load-management.load-reducers"

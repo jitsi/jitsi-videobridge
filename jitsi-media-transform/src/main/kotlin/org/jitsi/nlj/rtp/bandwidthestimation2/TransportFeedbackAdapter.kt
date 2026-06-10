@@ -17,6 +17,8 @@
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.util.DataSize
@@ -28,7 +30,6 @@ import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.ccfb.RtcpFbCcfbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.ReceivedPacketReport
 import org.jitsi.rtp.rtcp.rtcpfb.transport_layer_fb.tcc.RtcpFbTccPacket
 import org.jitsi.rtp.rtp.RtpPacket
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.TimeUtils
 import org.jitsi.utils.isFinite
 import org.jitsi.utils.isInfinite
@@ -422,16 +423,16 @@ class TransportFeedbackAdapter(
         val currentOffset: Instant,
         val lastTransportFeedbackBaseTime: Instant
     ) {
-        fun toJson(): OrderedJsonObject {
-            return OrderedJsonObject().apply {
+        fun toJson(): ObjectNode {
+            return JsonNodeFactory.instance.objectNode().apply {
                 put("in_flight_bytes", inFlight.bytes)
                 put("pending_untracked_size", pendingUntrackedSize.bytes)
-                put("last_send_time", lastSendTime.toEpochMilliOrInf())
-                put("last_untracked_send_time", lastUntrackedSendTime.toEpochMilliOrInf())
+                put("last_send_time", lastSendTime.toEpochMilliOrInf().toString())
+                put("last_untracked_send_time", lastUntrackedSendTime.toEpochMilliOrInf().toString())
                 put("last_ack_seq_num", lastAckSeqNum)
                 put("history_size", historySize)
-                put("current_offset", currentOffset.toEpochMilliOrInf())
-                put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf())
+                put("current_offset", currentOffset.toEpochMilliOrInf().toString())
+                put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf().toString())
             }
         }
     }

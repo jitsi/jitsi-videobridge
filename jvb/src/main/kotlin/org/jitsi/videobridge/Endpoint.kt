@@ -16,6 +16,7 @@
 
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.ice4j.util.Buffer
 import org.jitsi.config.JitsiConfig
 import org.jitsi.dcsctp4j.DcSctpMessage
@@ -91,7 +92,6 @@ import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
-import org.json.simple.JSONObject
 import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.time.Clock
@@ -1032,23 +1032,23 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    override fun debugState(mode: DebugStateMode): JSONObject = super.debugState(mode).apply {
-        put("bitrate_controller", bitrateController.debugState(mode))
-        put("bandwidth_probing", bandwidthProbing.getDebugState())
+    override fun debugState(mode: DebugStateMode): ObjectNode = super.debugState(mode).apply {
+        set<ObjectNode>("bitrate_controller", bitrateController.debugState(mode))
+        set<ObjectNode>("bandwidth_probing", bandwidthProbing.getDebugState())
         put("cryptex", cryptex)
-        put("ice_transport", iceTransport.getDebugState())
-        put("dtls_transport", dtlsTransport.getDebugState())
-        put("transceiver", transceiver.debugState(mode))
+        set<ObjectNode>("ice_transport", iceTransport.getDebugState())
+        set<ObjectNode>("dtls_transport", dtlsTransport.getDebugState())
+        set<ObjectNode>("transceiver", transceiver.debugState(mode))
         put("accept_audio", acceptAudio)
         put("accept_video", acceptVideo)
         put("visitor", visitor)
-        put("message_transport", messageTransport.debugState)
+        set<ObjectNode>("message_transport", messageTransport.debugState)
         if (doSsrcRewriting) {
-            put("audio_ssrcs", audioSsrcs.getDebugState())
-            put("video_ssrcs", videoSsrcs.getDebugState())
+            set<ObjectNode>("audio_ssrcs", audioSsrcs.getDebugState())
+            set<ObjectNode>("video_ssrcs", videoSsrcs.getDebugState())
         }
         sctpTransport?.let {
-            put("sctp", it.getDebugState())
+            set<ObjectNode>("sctp", it.getDebugState())
         }
     }
 
@@ -1062,10 +1062,10 @@ class Endpoint @JvmOverloads constructor(
             bitrateController.expire()
             updateStatsOnExpire()
             transceiver.stop()
-            logger.cdebug { transceiver.debugState(DebugStateMode.FULL).toJSONString() }
-            logger.cdebug { bitrateController.debugState(DebugStateMode.FULL).toJSONString() }
-            logger.cdebug { iceTransport.getDebugState().toJSONString() }
-            logger.cdebug { dtlsTransport.getDebugState().toJSONString() }
+            logger.cdebug { transceiver.debugState(DebugStateMode.FULL).toString() }
+            logger.cdebug { bitrateController.debugState(DebugStateMode.FULL).toString() }
+            logger.cdebug { iceTransport.getDebugState().toString() }
+            logger.cdebug { dtlsTransport.getDebugState().toString() }
 
             logger.info("Spent ${bitrateController.getTotalOversendingTime().seconds} seconds oversending")
 

@@ -26,7 +26,8 @@ import org.jitsi.videobridge.message.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.websocket.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.lang.ref.*;
 import java.util.*;
@@ -467,16 +468,15 @@ public class EndpointMessageTransport
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public JSONObject getDebugState()
+    public ObjectNode getDebugState()
     {
-        JSONObject debugState = super.getDebugState();
+        ObjectNode debugState = super.getDebugState();
         debugState.put("numOutgoingMessagesDropped", numOutgoingMessagesDropped.get());
 
-        JSONObject sentCounts = new JSONObject();
-        sentCounts.putAll(sentMessagesCounts);
-        debugState.put("sent_counts", sentCounts);
+        ObjectNode sentCounts = JsonNodeFactory.instance.objectNode();
+        sentMessagesCounts.forEach((k, v) -> sentCounts.put(k, v.get()));
+        debugState.set("sent_counts", sentCounts);
 
         return debugState;
     }

@@ -15,12 +15,12 @@
  */
 package org.jitsi.nlj.stats
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.jitsi.utils.OrderedJsonObject
 import java.lang.IllegalArgumentException
 
 class DelayStatsTest : ShouldSpec() {
@@ -50,13 +50,13 @@ class DelayStatsTest : ShouldSpec() {
                 delayStats.addDelay(150)
                 delayStats.addDelay(1500)
                 val bucketsJson = delayStats.toJson()["buckets"]
-                bucketsJson.shouldBeInstanceOf<OrderedJsonObject>()
+                bucketsJson.shouldBeInstanceOf<ObjectNode>()
 
-                bucketsJson["0_to_2_ms"] shouldBe 100
-                bucketsJson["2_to_5_ms"] shouldBe 100
-                bucketsJson["5_to_200_ms"] shouldBe 1
-                bucketsJson["200_to_999_ms"] shouldBe 0
-                bucketsJson["999_to_max_ms"] shouldBe 1
+                bucketsJson["0_to_2_ms"]?.longValue() shouldBe 100
+                bucketsJson["2_to_5_ms"]?.longValue() shouldBe 100
+                bucketsJson["5_to_200_ms"]?.longValue() shouldBe 1
+                bucketsJson["200_to_999_ms"]?.longValue() shouldBe 0
+                bucketsJson["999_to_max_ms"]?.longValue() shouldBe 1
             }
 
             should("calculate p99 and p999 correctly") {

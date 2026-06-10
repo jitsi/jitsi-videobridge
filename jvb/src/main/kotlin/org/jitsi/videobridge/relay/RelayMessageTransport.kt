@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.relay
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.eclipse.jetty.websocket.api.Callback
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
@@ -38,7 +40,6 @@ import org.jitsi.videobridge.message.VideoTypeMessage
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.websocket.ColibriWebSocket
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
-import org.json.simple.JSONObject
 import java.lang.ref.WeakReference
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
@@ -416,13 +417,13 @@ class RelayMessageTransport(
         }
     }
 
-    override val debugState: JSONObject
+    override val debugState: ObjectNode
         get() {
             val debugState = super.debugState
-            debugState["numOutgoingMessagesDropped"] = numOutgoingMessagesDropped.get()
-            val sentCounts = JSONObject()
-            sentCounts.putAll(sentMessagesCounts)
-            debugState["sent_counts"] = sentCounts
+            debugState.put("numOutgoingMessagesDropped", numOutgoingMessagesDropped.get())
+            val sentCounts = JsonNodeFactory.instance.objectNode()
+            sentMessagesCounts.forEach { (k, v) -> sentCounts.put(k, v.get()) }
+            debugState.set<ObjectNode>("sent_counts", sentCounts)
             return debugState
         }
 

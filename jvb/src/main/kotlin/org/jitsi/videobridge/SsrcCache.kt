@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.codec.vpx.VpxUtils
@@ -40,7 +42,6 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
-import org.json.simple.JSONObject
 
 /**
  * Align common fields from different source types.
@@ -501,9 +502,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
     /**
      * Returns JSON statistics useful for debugging.
      */
-    fun getDebugState(): JSONObject {
+    fun getDebugState(): ObjectNode {
         synchronized(sendSources) {
-            return JSONObject().apply {
+            return JsonNodeFactory.instance.objectNode().apply {
                 put("max", this@SsrcCache.size)
                 put("received", receivedSsrcs.size)
                 put("sent", sendSources.size)

@@ -20,7 +20,9 @@ import org.jitsi.nlj.*;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging2.*;
 import org.jitsi.videobridge.util.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.*;
 import java.util.stream.*;
@@ -394,10 +396,10 @@ public class ConferenceSpeechActivity
      * Gets a JSON representation of the parts of this object's state that
      * are deemed useful for debugging.
      */
-    @SuppressWarnings("unchecked")
-    public JSONObject getDebugState(@NotNull DebugStateMode mode)
+    public ObjectNode getDebugState(@NotNull DebugStateMode mode)
     {
-        JSONObject debugState = new JSONObject();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode debugState = JsonNodeFactory.instance.objectNode();
 
         AbstractEndpoint dominantEndpoint = getDominantEndpoint();
         debugState.put("dominantEndpoint", dominantEndpoint == null ? "null" : dominantEndpoint.getId());
@@ -407,15 +409,22 @@ public class ConferenceSpeechActivity
         }
 
         DominantSpeakerIdentification<String> dsi = this.dominantSpeakerIdentification;
-        debugState.put("dominantSpeakerIdentification", dsi == null ? null : dsi.doGetJSON());
+        if (dsi != null)
+        {
+            debugState.set("dominantSpeakerIdentification", dsi.doGetJSON());
+        }
+        else
+        {
+            debugState.putNull("dominantSpeakerIdentification");
+        }
         synchronized (syncRoot)
         {
-            debugState.put(
-                    "endpointsBySpeechActivity",
-                    endpointsBySpeechActivity.stream().map(AbstractEndpoint::getId).collect(Collectors.toList()));
-            debugState.put(
-                    "endpointsInLastNOrder",
-                    endpointsInLastNOrder.stream().map(AbstractEndpoint::getId).collect(Collectors.toList()));
+            debugState.set("endpointsBySpeechActivity",
+                mapper.valueToTree(endpointsBySpeechActivity.stream().map(AbstractEndpoint::getId)
+                    .collect(Collectors.toList())));
+            debugState.set("endpointsInLastNOrder",
+                mapper.valueToTree(endpointsInLastNOrder.stream().map(AbstractEndpoint::getId)
+                    .collect(Collectors.toList())));
         }
 
         return debugState;

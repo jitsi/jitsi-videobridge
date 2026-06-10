@@ -38,7 +38,8 @@ import jakarta.inject.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import jakarta.ws.rs.core.MediaType;
-import org.json.simple.JSONObject;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.net.*;
 
@@ -320,21 +321,21 @@ public class Debug
     @Produces(MediaType.APPLICATION_JSON)
     public String bridgeDebug(@DefaultValue("false") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject debugState = videobridge.getDebugState(
+        ObjectNode debugState = videobridge.getDebugState(
                 null,
                 null,
                 full ? DebugStateMode.FULL : DebugStateMode.SHORT);
 
         // Append the health status.
         Result result = healthCheckService.getResult();
-        JSONObject health = new JSONObject();
+        ObjectNode health = JsonNodeFactory.instance.objectNode();
         health.put("success", result.getSuccess());
         health.put("hardFailure", result.getHardFailure());
         health.put("responseCode", result.getResponseCode());
         health.put("message", result.getMessage());
-        debugState.put("health", health);
+        debugState.set("health", health);
 
-        return debugState.toJSONString();
+        return debugState.toString();
     }
 
     @GET
@@ -344,11 +345,11 @@ public class Debug
             @PathParam("confId") String confId,
             @DefaultValue("true") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridge.getDebugState(
+        ObjectNode confJson = videobridge.getDebugState(
                 confId,
                 null,
                 full ? DebugStateMode.FULL : DebugStateMode.SHORT);
-        return confJson.toJSONString();
+        return confJson.toString();
     }
 
     @GET
@@ -359,11 +360,11 @@ public class Debug
             @PathParam("epId") String epId,
             @DefaultValue("true") @QueryParam("full") boolean full)
     {
-        OrderedJsonObject confJson = videobridge.getDebugState(
+        ObjectNode confJson = videobridge.getDebugState(
                 confId,
                 epId,
                 full ? DebugStateMode.FULL : DebugStateMode.SHORT);
-        return confJson.toJSONString();
+        return confJson.toString();
     }
 
     @GET
@@ -374,34 +375,34 @@ public class Debug
         switch (feature)
         {
             case NODE_STATS: {
-                return StatsKeepingNode.Companion.getStatsJson().toJSONString();
+                return StatsKeepingNode.Companion.getStatsJson().toString();
             }
             case POOL_STATS: {
-                return ByteBufferPool.getStatsJson().toJSONString();
+                return ByteBufferPool.getStatsJson().toString();
             }
             case QUEUE_STATS: {
-                return QueueStats.getQueueStats().toJSONString();
+                return QueueStats.getQueueStats().toString();
             }
             case TRANSIT_STATS: {
-                return PacketTransitStats.getStatsJson().toJSONString();
+                return PacketTransitStats.getStatsJson().toString();
             }
             case TASK_POOL_STATS: {
-                return TaskPools.getStatsJson().toJSONString();
+                return TaskPools.getStatsJson().toString();
             }
             case XMPP_DELAY_STATS: {
-                return XmppConnection.getStatsJson().toJSONString();
+                return XmppConnection.getStatsJson().toString();
             }
             case PAYLOAD_VERIFICATION: {
-                return PayloadVerificationPlugin.getStatsJson().toJSONString();
+                return PayloadVerificationPlugin.getStatsJson().toString();
             }
             case ICE_STATS: {
-                return IceStatistics.Companion.getStats().toJson().toJSONString();
+                return IceStatistics.Companion.getStats().toJson().toString();
             }
             case CONFERENCE_PACKET_STATS: {
-                return ConferencePacketStats.stats.toJson().toJSONString();
+                return ConferencePacketStats.stats.toJson().toString();
             }
             case TOSSED_PACKET_STATS: {
-                return VideobridgeMetrics.tossedPacketsEnergy.get().toJSONString();
+                return VideobridgeMetrics.tossedPacketsEnergy.get().toString();
             }
             default: {
                 throw new NotFoundException();

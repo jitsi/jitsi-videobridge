@@ -15,10 +15,10 @@
  */
 package org.jitsi.nlj.stats
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bytes
-import org.jitsi.utils.OrderedJsonObject
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -80,7 +80,7 @@ class PacketStreamStats {
          */
         val packets: Long
     ) {
-        fun toJson() = OrderedJsonObject().apply {
+        fun toJson() = JsonNodeFactory.instance.objectNode().apply {
             put("bitrate_bps", bitrate.bps)
             put("packetrate", packetRate)
             put("total_bytes", bytes)

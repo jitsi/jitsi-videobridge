@@ -21,7 +21,8 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.util.*;
 import org.jitsi.utils.logging2.*;
-import org.json.simple.*;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * A generic implementation of an adaptive source projection context that can be
@@ -335,10 +336,9 @@ class GenericAdaptiveSourceProjectionContext
      * @return
      */
     @Override
-    @SuppressWarnings("unchecked")
-    public JSONObject getDebugState()
+    public ObjectNode getDebugState()
     {
-        JSONObject debugState = new JSONObject();
+        ObjectNode debugState = JsonNodeFactory.instance.objectNode();
         debugState.put(
                 "class",
                 GenericAdaptiveSourceProjectionContext.class.getSimpleName());

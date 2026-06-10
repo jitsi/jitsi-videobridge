@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.core.test.TestCase
@@ -25,13 +27,11 @@ import io.mockk.verify
 import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.shutdown.ShutdownServiceImpl
-import org.jitsi.utils.OrderedJsonObject
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.shutdown.ShutdownConfig
 import org.jitsi.videobridge.shutdown.ShutdownState
 import org.jitsi.videobridge.util.TaskPools
-import org.json.simple.parser.JSONParser
 
 class VideobridgeTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
@@ -95,6 +95,6 @@ class VideobridgeTest : ShouldSpec() {
     }
 }
 
-fun OrderedJsonObject.shouldBeValidJson() {
-    JSONParser().parse(this.toJSONString())
+fun ObjectNode.shouldBeValidJson() {
+    ObjectMapper().readTree(this.toString())
 }

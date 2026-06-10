@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.transform.node
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
@@ -28,8 +30,6 @@ import org.jitsi.nlj.util.BufferPool
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.addMbps
 import org.jitsi.nlj.util.addRatio
-import org.jitsi.utils.OrderedJsonObject
-import org.json.simple.JSONObject
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
@@ -54,7 +54,7 @@ sealed class Node(
     protected val nodeEntryString = "Entered node $name"
     protected val nodeExitString = "Exited node $name"
 
-    open fun statsJson(): OrderedJsonObject = OrderedJsonObject()
+    open fun statsJson(): ObjectNode = JsonNodeFactory.instance.objectNode()
 
     open fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
@@ -310,12 +310,12 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
         /**
          * Gets the aggregated statistics for all classes as a JSON map.
          */
-        fun getStatsJson(): JSONObject {
-            val jsonObject = JSONObject()
+        fun getStatsJson(): ObjectNode {
+            val jsonObject = JsonNodeFactory.instance.objectNode()
             globalStats.forEach { (className, stats) ->
-                jsonObject[className] = stats.toJson()
+                jsonObject.set<ObjectNode>(className, stats.toJson())
             }
-            jsonObject["num_payload_verification_failures"] = PayloadVerificationPlugin.numFailures.get()
+            jsonObject.put("num_payload_verification_failures", PayloadVerificationPlugin.numFailures.get())
             return jsonObject
         }
     }
@@ -354,12 +354,12 @@ sealed class StatsKeepingNode(name: String) : Node(name) {
                 addNumber("max_packet_process_time_ms", maxProcessingDurationMs)
             }
         }
-        fun appendTo(json: OrderedJsonObject) {
-            json["num_input_packets"] = numInputPackets
-            json["num_output_packets"] = numOutputPackets
-            json["num_discarded_packets"] = numDiscardedPackets
-            json["total_time_spent_ns"] = totalProcessingDurationNs
-            json["max_packet_process_time_ms"] = maxProcessingDurationMs
+        fun appendTo(json: ObjectNode) {
+            json.put("num_input_packets", numInputPackets)
+            json.put("num_output_packets", numOutputPackets)
+            json.put("num_discarded_packets", numDiscardedPackets)
+            json.put("total_time_spent_ns", totalProcessingDurationNs)
+            json.put("max_packet_process_time_ms", maxProcessingDurationMs)
         }
     }
 }
@@ -556,7 +556,7 @@ abstract class DemuxerNode(name: String) : StatsKeepingNode("$name demuxer") {
 
     override fun statsJson() = super.statsJson().apply {
         transformPaths.forEach { path ->
-            this["packets_accepted_${path.name}"] = path.packetsAccepted
+            put("packets_accepted_${path.name}", path.packetsAccepted)
         }
     }
 }

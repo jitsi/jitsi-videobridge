@@ -16,12 +16,12 @@
 
 package org.jitsi.nlj.transform
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.DemuxerNode
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.utils.OrderedJsonObject
 
 abstract class NodeVisitor {
     open fun visit(node: Node) {
@@ -59,14 +59,14 @@ class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor() {
     }
 }
 
-class NodeDebugStateVisitor(val o: OrderedJsonObject, val mode: DebugStateMode) : NodeVisitor() {
+class NodeDebugStateVisitor(val o: ObjectNode, val mode: DebugStateMode) : NodeVisitor() {
     override fun doWork(node: Node) {
         val debugState = when (mode) {
             DebugStateMode.FULL -> node.getNodeStats().toJson()
             else -> node.statsJson()
         }
-        if (debugState.isNotEmpty()) {
-            o[node.name] = debugState
+        if (!debugState.isEmpty) {
+            o.set<ObjectNode>(node.name, debugState)
         }
     }
 }

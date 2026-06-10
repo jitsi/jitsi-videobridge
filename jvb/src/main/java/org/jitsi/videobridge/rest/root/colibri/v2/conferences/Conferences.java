@@ -23,9 +23,11 @@ import org.jitsi.videobridge.rest.annotations.*;
 import org.jitsi.videobridge.rest.exceptions.*;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.extensions.colibri2.json.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jivesoftware.smack.packet.*;
-import org.json.simple.*;
-import org.json.simple.parser.*;
 
 import jakarta.inject.*;
 import jakarta.ws.rs.*;
@@ -36,6 +38,8 @@ import java.util.*;
 @EnabledByConfig(RestApis.COLIBRI)
 public class Conferences
 {
+    private static final ObjectMapper jsonMapper = new ObjectMapper();
+
     @Inject
     private Videobridge videobridge;
 
@@ -77,7 +81,7 @@ public class Conferences
 
         ConferenceSpeechActivity conferenceSpeechActivity = conference.getSpeechActivity();
 
-        return conferenceSpeechActivity.getDebugState(DebugStateMode.FULL).toJSONString();
+        return conferenceSpeechActivity.getDebugState(DebugStateMode.FULL).toString();
     }
 
     @POST
@@ -85,16 +89,16 @@ public class Conferences
     @Produces(MediaType.APPLICATION_JSON)
     public String createConference(String requestBody)
     {
-        Object requestJson;
+        JsonNode requestJson;
         try
         {
-            requestJson = new JSONParser().parse(requestBody);
-            if (!(requestJson instanceof JSONObject))
+            requestJson = jsonMapper.readTree(requestBody);
+            if (!(requestJson instanceof ObjectNode))
             {
                 throw new BadRequestException();
             }
         }
-        catch (ParseException pe)
+        catch (JsonProcessingException pe)
         {
             throw new BadRequestExceptionWithMessage(
                     "Failed to create conference, could not parse JSON: " + pe.getMessage());
@@ -105,7 +109,7 @@ public class Conferences
         try
         {
             conferenceModifyIQ
-                = Colibri2JSONDeserializer.deserializeConferenceModify((JSONObject) requestJson).build();
+                = Colibri2JSONDeserializer.deserializeConferenceModify((ObjectNode) requestJson).build();
         }
         catch (Exception e)
         {
@@ -126,16 +130,16 @@ public class Conferences
         {
             throw new NotFoundException();
         }
-        Object requestJson;
+        JsonNode requestJson;
         try
         {
-            requestJson = new JSONParser().parse(requestBody);
-            if (!(requestJson instanceof JSONObject))
+            requestJson = jsonMapper.readTree(requestBody);
+            if (!(requestJson instanceof ObjectNode))
             {
                 throw new BadRequestException();
             }
         }
-        catch (ParseException e)
+        catch (JsonProcessingException e)
         {
             throw new BadRequestException();
         }
@@ -144,7 +148,7 @@ public class Conferences
         try
         {
             conferenceModifyIQBuilder
-                = Colibri2JSONDeserializer.deserializeConferenceModify((JSONObject) requestJson);
+                = Colibri2JSONDeserializer.deserializeConferenceModify((ObjectNode) requestJson);
         }
         catch (Exception e)
         {
@@ -173,8 +177,8 @@ public class Conferences
             throw new InternalServerErrorExceptionWithMessage("Non-error, non-colibri IQ result");
         }
 
-        JSONObject responseJson = Colibri2JSONSerializer.serializeConferenceModified((ConferenceModifiedIQ)responseIq);
+        ObjectNode responseJson = Colibri2JSONSerializer.serializeConferenceModified((ConferenceModifiedIQ)responseIq);
 
-        return responseJson.toJSONString();
+        return responseJson.toString();
     }
 }

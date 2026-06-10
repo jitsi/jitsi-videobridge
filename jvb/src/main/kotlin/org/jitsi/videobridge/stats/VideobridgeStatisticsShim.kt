@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.stats
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtcp.RembHandler
 import org.jitsi.videobridge.EndpointConnectionStatusMonitor
 import org.jitsi.videobridge.VersionConfig
@@ -77,7 +79,6 @@ import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_SEN
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PACKETS_SENT_OCTO
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.TOTAL_PARTICIPANTS
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsExtension.VERSION
-import org.json.simple.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
@@ -88,9 +89,16 @@ import java.util.TimeZone
  * /colibri/stats
  */
 object VideobridgeStatisticsShim {
-    fun getStatsJson() = JSONObject().apply {
+    fun getStatsJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         getStats().forEach { (k, v) ->
-            this[k] = v
+            when (v) {
+                is Boolean -> put(k, v)
+                is Long -> put(k, v)
+                is Int -> put(k, v)
+                is Double -> put(k, v)
+                is Float -> put(k, v)
+                else -> put(k, v.toString())
+            }
         }
     }
 

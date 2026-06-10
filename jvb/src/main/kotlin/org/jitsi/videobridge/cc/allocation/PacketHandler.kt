@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.cc.allocation
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -28,7 +30,6 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjection
 import org.jitsi.videobridge.cc.RewriteException
-import org.json.simple.JSONObject
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -171,16 +172,17 @@ internal class PacketHandler(
 
     fun timeSinceFirstMedia(): Duration = firstMedia?.let { Duration.between(it, clock.instant()) } ?: Duration.ZERO
 
-    fun debugState(mode: DebugStateMode): JSONObject = JSONObject().apply {
-        this["num_dropped_packets_unknown_ssrc"] = numDroppedPacketsUnknownSsrc.toInt()
-        this["adaptive_source_projection_map"] = adaptiveSourceProjectionMap.debugState(mode)
+    fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        put("num_dropped_packets_unknown_ssrc", numDroppedPacketsUnknownSsrc.toInt())
+        set<ObjectNode>("adaptive_source_projection_map", adaptiveSourceProjectionMap.debugState(mode))
     }
 
-    private fun Map<Long, AdaptiveSourceProjection>.debugState(mode: DebugStateMode) = JSONObject().also {
-        forEach { (ssrc, adaptiveSourceProjection) ->
-            it[ssrc] = adaptiveSourceProjection.getDebugState(mode)
+    private fun Map<Long, AdaptiveSourceProjection>.debugState(mode: DebugStateMode) =
+        JsonNodeFactory.instance.objectNode().also {
+            forEach { (ssrc, adaptiveSourceProjection) ->
+                it.set<ObjectNode>(ssrc.toString(), adaptiveSourceProjection.getDebugState(mode))
+            }
         }
-    }
 
     /**
      * Signals to this instance that the allocation chosen by the `BitrateAllocator` has changed.

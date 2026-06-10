@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.JitterStats
@@ -28,7 +30,6 @@ import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.numPacketsTo
 import org.jitsi.rtp.util.rolledOverTo
 import org.jitsi.utils.MediaType
-import org.jitsi.utils.OrderedJsonObject
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -98,9 +99,9 @@ class IncomingStatisticsSnapshot(
      */
     val ssrcStats: Map<Long, IncomingSsrcStats.Snapshot>
 ) {
-    fun toJson(): OrderedJsonObject = OrderedJsonObject().apply {
+    fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         ssrcStats.forEach { (ssrc, snapshot) ->
-            put(ssrc, snapshot.toJson())
+            set<ObjectNode>(ssrc.toString(), snapshot.toJson())
         }
     }
 }
@@ -326,7 +327,7 @@ class IncomingSsrcStats(
             }
         }
 
-        fun toJson() = OrderedJsonObject().apply {
+        fun toJson() = JsonNodeFactory.instance.objectNode().apply {
             put("num_received_packets", numReceivedPackets)
             put("num_received_bytes", numReceivedBytes)
             put("max_seq_num", maxSeqNum)
