@@ -232,10 +232,13 @@ public class Conference
         }
 
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
-        exporter = new ExporterWrapper(logger, j -> {
-            handleTranscriptionMessage(j);
-            return Unit.INSTANCE;
-        });
+        exporter = new ExporterWrapper(
+            logger,
+            j -> {
+                handleTranscriptionMessage(j);
+                return Unit.INSTANCE;
+            },
+            ssrc -> getAudioSourceName(ssrc));
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
@@ -1050,6 +1053,22 @@ public class Conference
         return endpointsBySsrc.get(ssrc);
     }
 
+    /**
+     * Resolves an audio SSRC to the name of the source it belongs to, or {@code null} if it is not known. Used by the
+     * exporter to filter outbound audio by a connect's exported source names.
+     */
+    @Nullable
+    private String getAudioSourceName(long ssrc)
+    {
+        AbstractEndpoint endpoint = getEndpointBySsrc(ssrc);
+        if (endpoint == null)
+        {
+            return null;
+        }
+        AudioSourceDesc source = endpoint.getAudioSource(ssrc);
+        return source != null ? source.getSourceName() : null;
+    }
+
     public void addEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
     {
         AbstractEndpoint oldEndpoint = endpointsBySsrc.put(ssrc, endpoint);
@@ -1201,13 +1220,16 @@ public class Conference
                 prevHandler = relay;
             }
         }
-        if (exporter.wants(packetInfo))
+        for (PotentialPacketHandler exporterHandler : exporter.getPacketHandlers())
         {
-            if (prevHandler != null)
+            if (exporterHandler.wants(packetInfo))
             {
-                prevHandler.send(packetInfo.clone());
+                if (prevHandler != null)
+                {
+                    prevHandler.send(packetInfo.clone());
+                }
+                prevHandler = exporterHandler;
             }
-            prevHandler = exporter;
         }
 
         if (prevHandler != null)

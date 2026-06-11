@@ -31,7 +31,7 @@ class ExporterWrapperTest : ShouldSpec() {
     /** Records the mock [Exporter] created for each connect URL, so tests can verify calls against them. */
     private inner class Fixture {
         val exporters = mutableMapOf<URI, Exporter>()
-        val wrapper = ExporterWrapper(logger, { }) { connect ->
+        val wrapper = ExporterWrapper(logger, { }, { null }) { connect ->
             mockk<Exporter>(relaxed = true).also { exporters[connect.url] = it }
         }
         operator fun get(url: String): Exporter = exporters.getValue(URI(url))

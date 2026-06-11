@@ -18,24 +18,26 @@ package org.jitsi.videobridge.export
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.mediajson.TranscriptionResultEvent
-import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
-import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
 
 class ExporterWrapper internal constructor(
     parentLogger: Logger,
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    /** Resolves an audio SSRC to its source name, used to filter outbound audio by a connect's exports. */
+    private val getAudioSourceName: (Long) -> String?,
     /** Creates (and starts) the [Exporter] for a connect. Overridable for testing; defaults to the real one. */
     exporterFactory: ((Connect) -> Exporter)?
-) : PotentialPacketHandler {
-    constructor(parentLogger: Logger, handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit)) :
-        this(parentLogger, handleTranscriptionResult, null)
+) {
+    constructor(
+        parentLogger: Logger,
+        handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+        getAudioSourceName: (Long) -> String?
+    ) : this(parentLogger, handleTranscriptionResult, getAudioSourceName, null)
 
     val logger = createChildLogger(parentLogger)
     var started = false
@@ -44,6 +46,18 @@ class ExporterWrapper internal constructor(
 
     /** One running [Exporter] per requested connect, keyed by the connect's URL. */
     private val exporters = mutableMapOf<URI, Entry>()
+
+    /**
+     * The running exporters exposed as [PotentialPacketHandler]s for the conference's send path. Each exporter is an
+     * independent handler, so the conference's send loop clones a packet only when it actually goes to more than one
+     * handler (and not at all for an exporter that filters the packet out via its own [PotentialPacketHandler.wants]).
+     * Cached and recomputed only when the set of exporters changes, so it allocates nothing on the per-packet path.
+     */
+    @Volatile
+    private var packetHandlers: List<PotentialPacketHandler> = emptyList()
+
+    /** The current exporters as packet handlers, for the conference's send path. */
+    fun getPacketHandlers(): List<PotentialPacketHandler> = packetHandlers
 
     /**
      * Reconcile the running exporters with the requested set of connects, using the URL as the connect's identity:
@@ -94,29 +108,7 @@ class ExporterWrapper internal constructor(
         }
 
         started = exporters.isNotEmpty()
-    }
-
-    private fun isConnected() = started && exporters.values.any { it.exporter.isConnected() }
-
-    /** Whether we want to accept a packet. */
-    override fun wants(packet: PacketInfo): Boolean {
-        if (!isConnected() || packet.packet !is AudioRtpPacket) return false
-        return true
-    }
-
-    /** Accept a packet, fanning it out to each exporter. */
-    override fun send(packet: PacketInfo) {
-        val entries = exporters.values
-        if (entries.isEmpty()) {
-            ByteBufferPool.returnBuffer(packet.packet.buffer)
-            return
-        }
-        // Each exporter takes ownership of the packet it's given (and returns its buffer), so hand each one its
-        // own clone. The last exporter gets the original to avoid an unnecessary clone+copy.
-        val lastIndex = entries.size - 1
-        entries.forEachIndexed { index, entry ->
-            entry.exporter.send(if (index == lastIndex) packet else packet.clone())
-        }
+        packetHandlers = exporters.values.map { it.exporter }
     }
 
     fun stop() {
@@ -126,6 +118,7 @@ class ExporterWrapper internal constructor(
         started = false
         exporters.values.forEach { it.exporter.stop() }
         exporters.clear()
+        packetHandlers = emptyList()
     }
 
     private fun validate(connect: Connect) {
@@ -157,6 +150,7 @@ class ExporterWrapper internal constructor(
             httpHeaders,
             logger,
             handleTranscriptionResult,
+            getAudioSourceName,
             pingEnabled,
             pingIntervalMs,
             pingTimeoutMs,

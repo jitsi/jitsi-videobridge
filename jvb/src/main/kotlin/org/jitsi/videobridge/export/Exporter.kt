@@ -26,12 +26,15 @@ import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
+import org.jitsi.mediajson.SourcesEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
@@ -52,15 +55,17 @@ internal class Exporter(
     private val httpHeaders: Map<String, String>,
     val logger: Logger,
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    /** Resolves an audio SSRC to its source name, used to filter outbound audio by this connect's exports. */
+    private val getAudioSourceName: (Long) -> String?,
     private val pingEnabled: Boolean = false,
     private val pingIntervalMs: Int = 0,
     private val pingTimeoutMs: Int = 0,
     private val type: Connect.Types = Connect.Types.RECORDER,
-    /** Source names to export (send out). Stored for now; routing is not yet implemented. */
-    private var exports: List<String> = emptyList(),
-    /** Source names requested (to receive back). Stored for now; routing is not yet implemented. */
-    private var requests: List<String> = emptyList()
-) {
+    /** Source names to export (send out), communicated to the peer via a [SourcesEvent]. */
+    @Volatile private var exports: List<String> = emptyList(),
+    /** Source names requested (to receive back), communicated to the peer via a [SourcesEvent]. */
+    @Volatile private var requests: List<String> = emptyList()
+) : PotentialPacketHandler {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
@@ -127,6 +132,10 @@ internal class Exporter(
             serializer = initSerializer()
             cancelReconnect()
             startPing()
+            // Declare our exported/requested sources to the peer, if any, now that the connection is up.
+            if (exports.isNotEmpty() || requests.isNotEmpty()) {
+                sendSources()
+            }
         }
 
         override fun onWebSocketError(cause: Throwable?) {
@@ -159,6 +168,19 @@ internal class Exporter(
     fun isConnected() = recorderWebSocket.isConnected
 
     /**
+     * Whether to forward this packet to this exporter: it must be audio from a source we export. An empty [exports]
+     * list means "export all audio"; otherwise only audio from a source named in [exports] is wanted.
+     */
+    override fun wants(packet: PacketInfo): Boolean {
+        if (!isConnected()) return false
+        val audioPacket = packet.packet as? AudioRtpPacket ?: return false
+        // Avoid resolving the source name in the common "export everything" case.
+        if (exports.isEmpty()) return true
+        val sourceName = getAudioSourceName(audioPacket.ssrc)
+        return sourceName != null && sourceName in exports
+    }
+
+    /**
      * Apply an update to the connect with this exporter's URL. Only the exported/requested source names may change
      * on a running exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
      */
@@ -166,6 +188,15 @@ internal class Exporter(
         logger.info("Updating exports=$exports requests=$requests")
         this.exports = exports
         this.requests = requests
+        // If we're connected, propagate the change now; otherwise it will be sent when the connection opens.
+        sendSources()
+    }
+
+    /** Send the current exported/requested source names to the peer. No-op if not currently connected. */
+    private fun sendSources() {
+        val session = recorderWebSocket.session ?: return
+        logger.info("Sending sources: exports=$exports requests=$requests")
+        session.sendText(SourcesEvent(exports, requests).toJson(), Callback.NOOP)
     }
 
     private fun handleIncomingMessage(message: String) {
@@ -269,7 +300,7 @@ internal class Exporter(
         return true
     }
 
-    fun send(packet: PacketInfo) {
+    override fun send(packet: PacketInfo) {
         if (recorderWebSocket.isConnected) {
             queue.add(packet)
         } else {
