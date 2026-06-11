@@ -17,6 +17,7 @@ package org.jitsi.videobridge.export
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
@@ -28,6 +29,8 @@ import java.net.URI
 class ExporterWrapper internal constructor(
     parentLogger: Logger,
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    /** Handles a translated-audio media event received back from a peer. */
+    private val handleMediaEvent: ((MediaEvent) -> Unit),
     /** Resolves an audio SSRC to its source name, used to filter outbound audio by a connect's exports. */
     private val getAudioSourceName: (Long) -> String?,
     /** Creates (and starts) the [Exporter] for a connect. Overridable for testing; defaults to the real one. */
@@ -36,8 +39,9 @@ class ExporterWrapper internal constructor(
     constructor(
         parentLogger: Logger,
         handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+        handleMediaEvent: ((MediaEvent) -> Unit),
         getAudioSourceName: (Long) -> String?
-    ) : this(parentLogger, handleTranscriptionResult, getAudioSourceName, null)
+    ) : this(parentLogger, handleTranscriptionResult, handleMediaEvent, getAudioSourceName, null)
 
     val logger = createChildLogger(parentLogger)
     var started = false
@@ -150,6 +154,7 @@ class ExporterWrapper internal constructor(
             httpHeaders,
             logger,
             handleTranscriptionResult,
+            handleMediaEvent,
             getAudioSourceName,
             pingEnabled,
             pingIntervalMs,

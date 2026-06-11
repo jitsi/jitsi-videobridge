@@ -19,6 +19,8 @@ import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.mediajson.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
@@ -236,6 +238,10 @@ public class Conference
             logger,
             j -> {
                 handleTranscriptionMessage(j);
+                return Unit.INSTANCE;
+            },
+            m -> {
+                handleMediaMessage(m);
                 return Unit.INSTANCE;
             },
             ssrc -> getAudioSourceName(ssrc));
@@ -1069,6 +1075,18 @@ public class Conference
         return source != null ? source.getSourceName() : null;
     }
 
+    /**
+     * Whether the packet belongs to a synthetic source (bridge-generated audio, e.g. translated audio). Such packets
+     * are exempt from echo-suppression in {@link #sendOut}: a synthetic source is delivered purely by audio
+     * subscription, including to its owner endpoint, on every bridge.
+     */
+    private boolean isSyntheticSource(PacketInfo packetInfo)
+    {
+        Packet packet = packetInfo.getPacket();
+        return packet instanceof RtpPacket
+                && audioSubscriptionManager.isSynthetic(((RtpPacket) packet).getSsrc());
+    }
+
     public void addEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
     {
         AbstractEndpoint oldEndpoint = endpointsBySsrc.put(ssrc, endpoint);
@@ -1193,9 +1211,14 @@ public class Conference
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
 
+        boolean syntheticSource = isSyntheticSource(packetInfo);
         for (Endpoint endpoint : endpointsCache)
         {
-            if (endpoint.getId().equals(sourceEndpointId))
+            // Skip echoing a packet back to its source endpoint -- except for synthetic sources, which are
+            // bridge-generated (not the endpoint's own live audio) and whose delivery, including to their owner, is
+            // governed entirely by audio subscriptions. This holds whether the synthetic audio was injected locally
+            // or received over a relay (where the relay attributes the packet to the owner endpoint).
+            if (!syntheticSource && endpoint.getId().equals(sourceEndpointId))
             {
                 continue;
             }
@@ -1490,6 +1513,94 @@ public class Conference
         {
             logger.warn("Failed to broadcast transcription message", e);
         }
+    }
+
+    /**
+     * Handles a translated-audio "media" event received from a translator over the export websocket. The event's
+     * tag names the synthetic source the translated audio belongs to; we build an Opus RTP packet on that source's
+     * SSRC and inject it into the conference, where the synthetic-source routing delivers it (only to endpoints that
+     * explicitly subscribed to that source, and on to relays).
+     */
+    private void handleMediaMessage(MediaEvent mediaEvent)
+    {
+        org.jitsi.mediajson.Media media = mediaEvent.getMedia();
+        String sourceName = media.getTag();
+
+        AudioSourceDesc source = findSyntheticAudioSource(sourceName);
+        if (source == null)
+        {
+            logger.warn("Received translated media for unknown synthetic source: " + sourceName);
+            return;
+        }
+
+        PayloadType opusPayloadType = getOpusPayloadType();
+        if (opusPayloadType == null)
+        {
+            logger.warn("Received translated media but no Opus payload type is negotiated; dropping.");
+            return;
+        }
+
+        try
+        {
+            byte[] payload = java.util.Base64.getDecoder().decode(media.getPayload());
+            int headerSize = RtpHeader.FIXED_HEADER_SIZE_BYTES;
+            // Leave room at the end so SRTP can append its auth tag downstream without reallocating.
+            byte[] buffer = new byte[headerSize + payload.length + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET];
+            System.arraycopy(payload, 0, buffer, headerSize, payload.length);
+
+            AudioRtpPacket rtpPacket = new AudioRtpPacket(buffer, 0, headerSize + payload.length);
+            rtpPacket.setVersion(2);
+            rtpPacket.setPayloadType(opusPayloadType.getPt());
+            rtpPacket.setSequenceNumber(media.getChunk());
+            rtpPacket.setTimestamp(media.getTimestamp());
+            rtpPacket.setSsrc(source.getSsrc());
+
+            PacketInfo packetInfo = new PacketInfo(rtpPacket);
+            packetInfo.setPayloadType(opusPayloadType);
+            // Deliberately leave the endpoint ID unset: this is bridge-generated audio, not an endpoint's own live
+            // audio, so there is no self-echo to suppress. Delivery (including to the source's owner) is governed
+            // entirely by the audio subscriptions, so an endpoint can subscribe to a synthetic source of its own.
+
+            handleIncomingPacket(packetInfo);
+        }
+        catch (Exception e)
+        {
+            logger.warn("Failed to handle translated media for source " + sourceName, e);
+        }
+    }
+
+    /**
+     * Finds the synthetic audio source with the given name, or {@code null} if there is none.
+     */
+    @Nullable
+    private AudioSourceDesc findSyntheticAudioSource(String sourceName)
+    {
+        for (AudioSourceDesc source : getAudioSourceDescs())
+        {
+            if (source.getSynthetic() && sourceName.equals(source.getSourceName()))
+            {
+                return source;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the Opus payload type negotiated in this conference, or {@code null} if none is found. Payload types
+     * are never rewritten, so the Opus PT is consistent across all endpoints; the first one found is returned.
+     */
+    @Nullable
+    private PayloadType getOpusPayloadType()
+    {
+        for (Endpoint endpoint : getLocalEndpoints())
+        {
+            PayloadType payloadType = endpoint.getOpusPayloadType();
+            if (payloadType != null)
+            {
+                return payloadType;
+            }
+        }
+        return null;
     }
 
     /**

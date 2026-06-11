@@ -66,6 +66,9 @@ class AudioSubscriptionManager() {
      * @param ssrc the SSRC to check
      * @return true if the audio is wanted, false otherwise
      */
+    /** Whether the given SSRC belongs to a synthetic source. */
+    fun isSynthetic(ssrc: Long): Boolean = syntheticSsrcs.contains(ssrc)
+
     fun isEndpointAudioWanted(endpointId: String, ssrc: Long): Boolean {
         if (syntheticSsrcs.contains(ssrc)) {
             // Synthetic sources are never routed automatically; only to an endpoint that explicitly (Include)
