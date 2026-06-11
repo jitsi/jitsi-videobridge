@@ -36,6 +36,7 @@ import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
+import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
 import java.time.Duration
 import java.util.concurrent.ScheduledFuture
@@ -53,7 +54,12 @@ internal class Exporter(
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
     private val pingEnabled: Boolean = false,
     private val pingIntervalMs: Int = 0,
-    private val pingTimeoutMs: Int = 0
+    private val pingTimeoutMs: Int = 0,
+    private val type: Connect.Types = Connect.Types.RECORDER,
+    /** Source names to export (send out). Stored for now; routing is not yet implemented. */
+    private val exports: List<String> = emptyList(),
+    /** Source names requested (to receive back). Stored for now; routing is not yet implemented. */
+    private val requests: List<String> = emptyList()
 ) {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
@@ -327,6 +333,9 @@ internal class Exporter(
 
     fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("url", url.toString())
+        put("type", type.toString().lowercase())
+        putArray("exports").apply { exports.forEach { add(it) } }
+        putArray("requests").apply { requests.forEach { add(it) } }
         put("is_connected", isConnected())
         put("is_shutting_down", isShuttingDown.get())
         put("reconnect_attempts", reconnectAttempts.get())

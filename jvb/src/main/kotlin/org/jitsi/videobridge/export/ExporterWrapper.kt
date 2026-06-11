@@ -90,6 +90,10 @@ class ExporterWrapper(
         val pingIntervalMs = ping?.interval ?: 10000
         val pingTimeoutMs = ping?.timeout ?: 3000
 
+        // The source names to export (send out) and request (receive back). Not yet acted upon.
+        val exports = connect.getExports()
+        val requests = connect.getRequests()
+
         exporter = Exporter(
             connect.url,
             httpHeaders,
@@ -97,7 +101,10 @@ class ExporterWrapper(
             handleTranscriptionResult,
             pingEnabled,
             pingIntervalMs,
-            pingTimeoutMs
+            pingTimeoutMs,
+            connect.type,
+            exports,
+            requests
         ).apply {
             start()
         }
