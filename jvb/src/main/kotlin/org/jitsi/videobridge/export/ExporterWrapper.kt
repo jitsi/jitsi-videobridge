@@ -28,12 +28,19 @@ import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
 
-class ExporterWrapper(
+class ExporterWrapper internal constructor(
     parentLogger: Logger,
-    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit)
+    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    /** Creates (and starts) the [Exporter] for a connect. Overridable for testing; defaults to the real one. */
+    exporterFactory: ((Connect) -> Exporter)?
 ) : PotentialPacketHandler {
+    constructor(parentLogger: Logger, handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit)) :
+        this(parentLogger, handleTranscriptionResult, null)
+
     val logger = createChildLogger(parentLogger)
     var started = false
+
+    private val exporterFactory: (Connect) -> Exporter = exporterFactory ?: ::createExporter
 
     /** One running [Exporter] per requested connect, keyed by the connect's URL. */
     private val exporters = mutableMapOf<URI, Entry>()
@@ -50,6 +57,20 @@ class ExporterWrapper(
         connects.forEach { validate(it) }
 
         val desired = connects.associateBy { it.url }
+        val desiredParams = desired.mapValues { (_, connect) -> ConnectParams(connect) }
+
+        // Fail before changing anything if a still-running connect changed in a way that can't be applied to a live
+        // exporter (e.g. HTTP headers, which are fixed when the websocket connects). Only the exported/requested
+        // source names can be updated in place.
+        desiredParams.forEach { (url, params) ->
+            val running = exporters[url]?.params ?: return@forEach
+            val unsupported = running.nonUpdatableChangesTo(params)
+            if (unsupported.isNotEmpty()) {
+                throw FeatureNotImplementedException(
+                    "Updating connect ${unsupported.joinToString()} for url=$url"
+                )
+            }
+        }
 
         // Stop exporters whose URL is no longer requested.
         (exporters.keys - desired.keys).forEach { url ->
@@ -58,15 +79,15 @@ class ExporterWrapper(
         }
 
         desired.forEach { (url, connect) ->
-            val params = ConnectParams(connect)
+            val params = desiredParams.getValue(url)
             val existing = exporters[url]
             when {
                 // A URL that wasn't running: start a new exporter for it.
-                existing == null -> exporters[url] = Entry(createExporter(connect), params)
-                // A URL that was running, but some other parameter changed: hand the update to the exporter.
+                existing == null -> exporters[url] = Entry(exporterFactory(connect), params)
+                // A URL that was running and changed: only exports/requests can reach here (others threw above).
                 existing.params != params -> {
                     logger.info("Updating exporter for url=$url")
-                    existing.exporter.update(connect)
+                    existing.exporter.update(params.exports, params.requests)
                     existing.params = params
                 }
             }
@@ -183,5 +204,18 @@ class ExporterWrapper(
             connect.getExports().sorted(),
             connect.getRequests().sorted()
         )
+
+        /**
+         * The names of the parameters that differ from [other] and cannot be applied to an already-running exporter.
+         * Everything except [exports]/[requests] is connection-level and requires a reconnect to change, so a change
+         * to any of them is reported here (and rejected). protocol/video aren't included: [validate] already
+         * constrains them.
+         */
+        fun nonUpdatableChangesTo(other: ConnectParams): List<String> = buildList {
+            if (type != other.type) add("type")
+            if (audio != other.audio) add("audio")
+            if (headers != other.headers) add("headers")
+            if (pingInterval != other.pingInterval || pingTimeout != other.pingTimeout) add("ping")
+        }
     }
 }

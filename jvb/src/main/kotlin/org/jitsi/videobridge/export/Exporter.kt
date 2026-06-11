@@ -57,9 +57,9 @@ internal class Exporter(
     private val pingTimeoutMs: Int = 0,
     private val type: Connect.Types = Connect.Types.RECORDER,
     /** Source names to export (send out). Stored for now; routing is not yet implemented. */
-    private val exports: List<String> = emptyList(),
+    private var exports: List<String> = emptyList(),
     /** Source names requested (to receive back). Stored for now; routing is not yet implemented. */
-    private val requests: List<String> = emptyList()
+    private var requests: List<String> = emptyList()
 ) {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
@@ -159,11 +159,13 @@ internal class Exporter(
     fun isConnected() = recorderWebSocket.isConnected
 
     /**
-     * Apply an update to a connect with the same URL (e.g. changed type, headers, ping, exports or requests).
-     * TODO: actually apply the changes; for now this is a no-op placeholder.
+     * Apply an update to the connect with this exporter's URL. Only the exported/requested source names may change
+     * on a running exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
      */
-    fun update(connect: Connect) {
-        logger.info("Update requested for url=$url (not yet applied).")
+    fun update(exports: List<String>, requests: List<String>) {
+        logger.info("Updating exports=$exports requests=$requests")
+        this.exports = exports
+        this.requests = requests
     }
 
     private fun handleIncomingMessage(message: String) {
