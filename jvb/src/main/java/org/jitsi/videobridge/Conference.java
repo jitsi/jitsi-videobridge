@@ -1305,12 +1305,26 @@ public class Conference
      * Process a new audio level received from an endpoint.
      *
      * @param endpoint the endpoint for which a new audio level was received
+     * @param ssrc the SSRC of the source for which the audio level was received
      * @param level the new audio level which was received
      * @return Whether the packet providing this audio level should be dropped, according
      * to the current audio filtering configuration.
      */
-    public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long level)
+    public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long ssrc, long level)
     {
+        // Find the specific source this level belongs to. An endpoint may have more than one audio source (e.g. a
+        // real source plus a synthetic translated one), so we can't assume a single source per endpoint. The lookup
+        // is O(1) (indexed by SSRC) since this runs for every audio packet.
+        AudioSourceDesc source = endpoint.getAudioSource(ssrc);
+
+        // Synthetic sources (e.g. bridge-generated translated audio) don't participate in speech activity /
+        // loudest-speaker selection, and must not be dropped by loudest-only filtering -- they're still forwarded
+        // to relays and to endpoints that explicitly subscribe to them.
+        if (source != null && source.getSynthetic())
+        {
+            return false;
+        }
+
         SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
         if (ranking == null || !routeLoudestOnly)
             return false;
@@ -1319,14 +1333,9 @@ public class Conference
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
             return false;
         // return false if the source is subscribed with an "Include" subscription by any other endpoint.
-        List<AudioSourceDesc> sources = endpoint.getAudioSources();
-        if (!sources.isEmpty())
+        if (source != null && audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
         {
-            AudioSourceDesc source = sources.get(0); // assume one source per endpoint
-            if (audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
-            {
-                return false;
-            }
+            return false;
         }
         VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;

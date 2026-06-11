@@ -289,6 +289,22 @@ abstract class AbstractEndpoint protected constructor(
     abstract var audioSources: List<AudioSourceDesc>
 
     /**
+     * Index of this endpoint's audio sources by SSRC, for O(1) lookup on the per-packet audio path (e.g.
+     * [Conference.levelChanged]). Rebuilt only when [audioSources] changes; subclasses must call
+     * [audioSourcesChanged] from their [audioSources] setter to keep it current.
+     */
+    @Volatile
+    private var audioSourcesBySsrc: Map<Long, AudioSourceDesc> = emptyMap()
+
+    /** Returns the advertised audio source with the given [ssrc], or null if there is none. */
+    fun getAudioSource(ssrc: Long): AudioSourceDesc? = audioSourcesBySsrc[ssrc]
+
+    /** Keeps the [getAudioSource] index in sync; call from the [audioSources] setter whenever it changes. */
+    protected fun audioSourcesChanged(sources: List<AudioSourceDesc>) {
+        audioSourcesBySsrc = sources.associateBy { it.ssrc }
+    }
+
+    /**
      * Adds a payload type to this endpoint.
      */
     abstract fun addPayloadType(payloadType: PayloadType)

@@ -60,6 +60,7 @@ class RelayedEndpoint(
     override var audioSources: List<AudioSourceDesc> = listOf()
         set(value) {
             field = value
+            audioSourcesChanged(value)
             value.forEach {
                 streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO)
                 conference.addEndpointSsrc(this, it.ssrc)
@@ -240,7 +241,7 @@ class RelayedEndpoint(
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
         override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean =
-            conference.levelChanged(this@RelayedEndpoint, level)
+            conference.levelChanged(this@RelayedEndpoint, sourceSsrc, level)
 
         /**
          * Forward bwe events from the Transceiver.

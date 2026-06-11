@@ -59,6 +59,14 @@ class AudioSubscription() {
         else -> wantedSsrcs.contains(ssrc)
     }
 
+    /**
+     * Whether the given SSRC is explicitly wanted, i.e. named in an "Include" subscription. Unlike [isSsrcWanted],
+     * this is not satisfied by an "All" or "Exclude" subscription. Used to gate synthetic sources, which are only
+     * forwarded on an explicit subscription.
+     */
+    fun isExplicitlyWanted(ssrc: Long): Boolean =
+        latestSubscription is ReceiverAudioSubscriptionMessage.Include && wantedSsrcs.contains(ssrc)
+
     fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) = synchronized(lock) {
         when (latestSubscription) {
             is ReceiverAudioSubscriptionMessage.All -> return

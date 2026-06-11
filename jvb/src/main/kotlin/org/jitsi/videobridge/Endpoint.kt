@@ -436,6 +436,7 @@ class Endpoint @JvmOverloads constructor(
             val addedDescs = newValue.filterNot { oldValue.contains(it) }.toSet()
             conference.addAudioSources(addedDescs)
             field = newValue
+            audioSourcesChanged(newValue)
         }
 
     private fun setupIceTransport() {
@@ -1229,7 +1230,7 @@ class Endpoint @JvmOverloads constructor(
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
         override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean =
-            conference.levelChanged(this@Endpoint, level)
+            conference.levelChanged(this@Endpoint, sourceSsrc, level)
 
         /**
          * Forward bwe events from the Transceiver.

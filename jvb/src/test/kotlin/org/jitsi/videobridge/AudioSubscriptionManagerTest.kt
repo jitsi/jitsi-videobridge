@@ -466,5 +466,80 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isExplicitlySubscribed("source3") shouldBe false
             }
         }
+
+        context("Synthetic sources") {
+            // ssrc 2001 / "syntheticSource" is synthetic; the regular audioSourceDescs (1001-1003) are not.
+            val syntheticSsrc = 2001L
+            val syntheticDesc = AudioSourceDesc(syntheticSsrc, "endpointS", "syntheticSource", synthetic = true)
+
+            should("not be wanted under an All subscription") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage.All,
+                    audioSourceDescs
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // non-synthetic still wanted
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+
+            should("not be wanted by an endpoint with no subscription (default)") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+
+                // No subscription set for this endpoint: defaults to wanting everything except synthetic.
+                manager.isEndpointAudioWanted("no-subscription", 1001L) shouldBe true
+                manager.isEndpointAudioWanted("no-subscription", syntheticSsrc) shouldBe false
+            }
+
+            should("not be wanted under an Exclude subscription that doesn't name it") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage.Exclude(listOf("source2")),
+                    audioSourceDescs
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // non-synthetic, not excluded
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+
+            should("be wanted only when explicitly included by name") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage.Include(listOf("syntheticSource")),
+                    audioSourceDescs + syntheticDesc
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe true
+            }
+
+            should("not be wanted by an Include subscription that names a different source") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage.Include(listOf("source1")),
+                    audioSourceDescs + syntheticDesc
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // explicitly included
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+
+            should("stop being treated as synthetic once removed") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage.All,
+                    audioSourceDescs
+                )
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+
+                manager.removeSources(setOf(syntheticDesc))
+                // No longer known as synthetic, so an All subscription wants it again.
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe true
+            }
+        }
     }
 }

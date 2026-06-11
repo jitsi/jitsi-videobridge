@@ -31,6 +31,14 @@ class AudioSubscriptionManager() {
      */
     private val subscribedLocalAudioSources = ConcurrentHashMap<String, MutableSet<String>>()
 
+    /**
+     * The SSRCs of synthetic audio sources (e.g. bridge-generated translated audio) in the conference. Synthetic
+     * sources are only forwarded to an endpoint that explicitly subscribed to them (via "Include"); never under an
+     * "All"/"Exclude"/default subscription. Read lock-free from [isEndpointAudioWanted], updated under [lock].
+     */
+    @Volatile
+    private var syntheticSsrcs: Set<Long> = emptySet()
+
     private val lock: Any = Any()
 
     /**
@@ -59,6 +67,11 @@ class AudioSubscriptionManager() {
      * @return true if the audio is wanted, false otherwise
      */
     fun isEndpointAudioWanted(endpointId: String, ssrc: Long): Boolean {
+        if (syntheticSsrcs.contains(ssrc)) {
+            // Synthetic sources are never routed automatically; only to an endpoint that explicitly (Include)
+            // subscribed to them by name.
+            return audioSubscriptions[endpointId]?.isExplicitlyWanted(ssrc) ?: false
+        }
         val subscription = audioSubscriptions[endpointId]
         return subscription?.isSsrcWanted(ssrc) ?: true
     }
@@ -102,6 +115,10 @@ class AudioSubscriptionManager() {
      * @param sources the new audio source descriptions
      */
     fun onSourcesAdded(sources: Set<AudioSourceDesc>) = synchronized(lock) {
+        val addedSynthetic = sources.filter { it.synthetic }.map(AudioSourceDesc::ssrc)
+        if (addedSynthetic.isNotEmpty()) {
+            syntheticSsrcs = syntheticSsrcs + addedSynthetic
+        }
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceAdded(sources)
         }
@@ -123,6 +140,7 @@ class AudioSubscriptionManager() {
 
     fun removeSources(sources: Set<AudioSourceDesc>) = synchronized(lock) {
         subscribedLocalAudioSources.keys.removeAll(sources.mapNotNull { it.sourceName })
+        syntheticSsrcs = syntheticSsrcs - sources.map(AudioSourceDesc::ssrc).toSet()
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceRemoved(sources)
         }
