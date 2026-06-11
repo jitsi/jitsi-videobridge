@@ -1060,14 +1060,18 @@ public class Conference
     }
 
     /**
-     * Gets local audio SSRCs in the conference
-     * @return the list of audio SSRCs in the conference
+     * Gets the audio sources in the conference, both from local endpoints and from endpoints relayed over our relays
+     * (so that audio subscriptions can resolve relayed source names as well as local ones).
+     * @return the list of audio sources in the conference
      */
     public List<AudioSourceDesc> getAudioSourceDescs()
     {
         List<AudioSourceDesc> descs = new ArrayList<>();
         for (Endpoint endpoint : getLocalEndpoints()) {
             descs.addAll(endpoint.getAudioSources());
+        }
+        for (Relay relay : getRelays()) {
+            descs.addAll(relay.getAudioSources());
         }
         return descs;
     }
