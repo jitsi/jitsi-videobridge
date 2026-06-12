@@ -160,7 +160,7 @@ internal class Exporter(
 
     private var serializer: MediaJsonSerializer? = null
 
-    private fun initSerializer() = MediaJsonSerializer {
+    private fun initSerializer() = MediaJsonSerializer(getAudioSourceName) {
         val session = recorderWebSocket.session
         if (session != null) {
             session.sendText(it.toJson(), Callback.NOOP)
