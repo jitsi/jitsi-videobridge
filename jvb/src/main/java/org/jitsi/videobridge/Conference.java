@@ -199,6 +199,25 @@ public class Conference
     private final ExporterWrapper exporter;
 
     /**
+     * Source names for which an injected (translated) synthetic source has already been created, so we log its
+     * creation only once. Cleared when the source is removed, so a re-created source logs again.
+     */
+    private final Set<String> loggedInjectedSources = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Tags of received translated-media events that didn't match any synthetic source, so we warn about an
+     * unrecognized tag only once rather than on every packet.
+     */
+    private final Set<String> loggedUnknownMediaTags = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Names of synthetic sources that have been removed (unsubscribed) and not since re-added. Media for these can
+     * still arrive briefly -- the translator may have sent it before it saw the unsubscribe -- so it's an expected
+     * transient rather than an unrecognized tag, and is dropped without a warning.
+     */
+    private final Set<String> removedSyntheticSources = ConcurrentHashMap.newKeySet();
+
+    /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
      */
     private final static Pattern uuidTrimmer = Pattern.compile("(\\p{XDigit}{8})[\\p{XDigit}-]*");
@@ -1134,11 +1153,21 @@ public class Conference
     public void addAudioSources(Set<AudioSourceDesc> audioSources)
     {
         audioSubscriptionManager.onSourcesAdded(audioSources);
+        audioSources.forEach(source -> removedSyntheticSources.remove(source.getSourceName()));
     }
 
     public void removeAudioSources(Set<AudioSourceDesc> audioSources)
     {
         audioSubscriptionManager.removeSources(audioSources);
+        audioSources.forEach(source ->
+        {
+            loggedInjectedSources.remove(source.getSourceName());
+            loggedUnknownMediaTags.remove(source.getSourceName());
+            if (source.getSynthetic())
+            {
+                removedSyntheticSources.add(source.getSourceName());
+            }
+        });
     }
 
     /**
@@ -1529,7 +1558,15 @@ public class Conference
         AudioSourceDesc source = findSyntheticAudioSource(sourceName);
         if (source == null)
         {
-            logger.warn("Received translated media for unknown synthetic source: " + sourceName);
+            if (removedSyntheticSources.contains(sourceName))
+            {
+                // Expected transient: the translator sent this before it saw our unsubscribe of the source.
+                logger.debug(() -> "Dropping translated media for removed synthetic source: " + sourceName);
+            }
+            else if (loggedUnknownMediaTags.add(sourceName))
+            {
+                logger.warn("Received translated media for unknown synthetic source: " + sourceName);
+            }
             return;
         }
 
@@ -1538,6 +1575,11 @@ public class Conference
         {
             logger.warn("Received translated media but no Opus payload type is negotiated; dropping.");
             return;
+        }
+
+        if (loggedInjectedSources.add(sourceName))
+        {
+            logger.info("Creating injected synthetic source " + sourceName + " (ssrc " + source.getSsrc() + ")");
         }
 
         try
