@@ -101,15 +101,9 @@ class AudioSubscriptionManager() {
             endpointSet.remove(endpointId)
         }
         subscribedLocalAudioSources.entries.removeIf { it.value.isEmpty() }
-        when (subscription) {
-            is ReceiverAudioSubscriptionMessage.Include -> {
-                subscription.list.forEach { sourceName ->
-                    subscribedLocalAudioSources.getOrPut(sourceName) { mutableSetOf() }.add(endpointId)
-                }
-            }
-            else -> {
-                // For All, None, and Exclude subscriptions, we don't track explicit subscriptions
-            }
+        // Only the explicit `include` list counts as an explicit subscription.
+        subscription.include.forEach { sourceName ->
+            subscribedLocalAudioSources.getOrPut(sourceName) { mutableSetOf() }.add(endpointId)
         }
     }
 
