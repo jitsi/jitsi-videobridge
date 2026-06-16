@@ -17,6 +17,8 @@ package org.jitsi.videobridge.xmpp
 
 import org.jitsi.videobridge.xmpp.config.XmppClientConnectionConfig
 import org.jitsi.xmpp.extensions.DefaultPacketExtensionProvider
+import org.jitsi.xmpp.extensions.TraceParent
+import org.jitsi.xmpp.extensions.TraceParentProvider
 import org.jitsi.xmpp.extensions.colibri.ColibriStatsIqProvider
 import org.jitsi.xmpp.extensions.colibri.ForcefulShutdownIqProvider
 import org.jitsi.xmpp.extensions.colibri.GracefulShutdownIqProvider
@@ -73,5 +75,11 @@ object Smack {
         HealthCheckIQProvider.registerIQProvider()
         // Colibri2
         IqProviderUtils.registerProviders()
+
+        ProviderManager.addExtensionProvider(
+            TraceParent.ELEMENT,
+            TraceParent.NAMESPACE,
+            TraceParentProvider()
+        )
     }
 }

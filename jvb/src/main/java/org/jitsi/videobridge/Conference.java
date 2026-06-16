@@ -15,6 +15,12 @@
  */
 package org.jitsi.videobridge;
 
+import io.opentelemetry.context.Context;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.mediajson.*;
@@ -39,6 +45,7 @@ import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.extensions.TraceParent;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -150,6 +157,9 @@ public class Conference
      * information.
      */
     private final Logger logger;
+
+    private final Tracer tracer = GlobalOTel.INSTANCE.getSdk().getTracer("org.jitsi.videobridge");
+
 
     /**
      * The time when this {@link Conference} was created.
@@ -296,6 +306,27 @@ public class Conference
         colibriQueue = new ColibriQueue(
                 request ->
                 {
+                    TraceParent traceParent = request.getRequest().getExtension(TraceParent.class);
+                    Context traceContext = Context.root();
+                    if (traceParent != null)
+                    {
+                        traceContext = traceContext.with(
+                                Span.wrap(
+                                        SpanContext.createFromRemoteParent(
+                                                traceParent.getTraceId(),
+                                                traceParent.getParentId(),
+                                                TraceFlags.getSampled(),
+                                                TraceState.getDefault()
+                                        )
+                                )
+                        );
+                    }
+                    Span span = tracer.spanBuilder("colibri-request")
+                            .setAttribute("meetingId", request.getRequest().getMeetingId())
+                            .setAttribute("create", request.getRequest().getCreate())
+                            .setAttribute("expire", request.getRequest().getExpire())
+                            .setParent(traceContext)
+                            .startSpan();
                     try
                     {
                         logger.info( () -> {
@@ -345,6 +376,10 @@ public class Conference
                                         request.getRequest(),
                                         StanzaError.Condition.internal_server_error,
                                         e.getMessage()));
+                    }
+                    finally
+                    {
+                        span.end();
                     }
                     return true;
                 }
