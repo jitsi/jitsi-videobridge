@@ -717,6 +717,7 @@ public class Conference
             String id,
             boolean iceControlling,
             boolean doSsrcRewriting,
+            boolean doMidDemux,
             boolean visitor,
             boolean privateAddresses)
     {
@@ -727,7 +728,7 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, doSsrcRewriting, visitor, privateAddresses);
+                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses);
         videobridge.localEndpointCreated(visitor);
 
         endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));

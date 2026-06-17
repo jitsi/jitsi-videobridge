@@ -74,7 +74,11 @@ class Transceiver(
      * transition to another thread if necessary.
      */
     private val eventHandler: TransceiverEventHandler,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    /**
+     * Resolves the sdes:mid to stamp on an outgoing packet given its (rewritten) SSRC, or null to not stamp a mid.
+     */
+    getMidBySsrc: (Long) -> String? = { null }
 ) : Stoppable {
     private val logger = createChildLogger(parentLogger)
     val packetIOActivity = PacketIOActivity()
@@ -116,7 +120,8 @@ class Transceiver(
         backgroundExecutor,
         streamInformationStore,
         logger,
-        diagnosticContext
+        diagnosticContext,
+        getMidBySsrc
     )
     private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(

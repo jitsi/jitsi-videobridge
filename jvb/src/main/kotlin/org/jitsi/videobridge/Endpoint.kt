@@ -117,6 +117,11 @@ class Endpoint @JvmOverloads constructor(
     iceControlling: Boolean,
     private val doSsrcRewriting: Boolean,
     /**
+     * Whether the bridge should stamp the sdes:mid header extension on packets forwarded to this endpoint (and signal
+     * the per-slot mids in the source maps), so the client can demux by mid. Only meaningful when [doSsrcRewriting].
+     */
+    private val doMidDemux: Boolean,
+    /**
      * Whether this endpoint is in "visitor" mode, i.e. should be invisible to other endpoints.
      */
     override val visitor: Boolean,
@@ -288,7 +293,8 @@ class Endpoint @JvmOverloads constructor(
         diagnosticContext,
         logger,
         TransceiverEventHandlerImpl(),
-        clock
+        clock,
+        getMidBySsrc = this::getMidBySsrc
     ).apply {
         setIncomingPacketHandler(object : ConsumerNode("receiver chain handler") {
             override fun consume(packetInfo: PacketInfo) {
@@ -355,12 +361,12 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Manages remapping of video SSRCs when enabled.
      */
-    private val videoSsrcs = VideoSsrcCache(SsrcLimitConfig.config.maxVideoSsrcs, this, logger)
+    private val videoSsrcs = VideoSsrcCache(SsrcLimitConfig.config.maxVideoSsrcs, this, doMidDemux, logger)
 
     /**
      * Manages remapping of audio SSRCs when enabled.
      */
-    private val audioSsrcs = AudioSsrcCache(SsrcLimitConfig.config.maxAudioSsrcs, this, logger)
+    private val audioSsrcs = AudioSsrcCache(SsrcLimitConfig.config.maxAudioSsrcs, this, doMidDemux, logger)
 
     /**
      * Last advertised forwarded-sources in remapping mode.
@@ -810,6 +816,18 @@ class Endpoint @JvmOverloads constructor(
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
     fun doesSsrcRewriting(): Boolean = doSsrcRewriting
+
+    /**
+     * Returns the mid the bridge stamps on packets forwarded with the given (rewritten) send SSRC, or null if mid
+     * demux is not enabled for this endpoint or the SSRC is not a rewritten slot SSRC. Invoked per outgoing packet by
+     * the sender pipeline's [org.jitsi.nlj.transform.node.outgoing.MidStamper].
+     */
+    fun getMidBySsrc(ssrc: Long): String? {
+        if (!doMidDemux) {
+            return null
+        }
+        return audioSsrcs.getMidBySsrc(ssrc) ?: videoSsrcs.getMidBySsrc(ssrc)
+    }
 
     fun unmapRtcpFbSsrc(packet: RtcpFbPacket) = videoSsrcs.unmapRtcpFbSsrc(packet)
 

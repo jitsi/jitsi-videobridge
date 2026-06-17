@@ -109,7 +109,12 @@ enum class RtpExtensionType(val uri: String) {
      * Video Layers Allocation
      * https://webrtc.googlesource.com/src/+/refs/heads/main/docs/native-code/rtp-hdrext/video-layers-allocation00
      */
-    VLA("http://www.webrtc.org/experiments/rtp-hdrext/video-layers-allocation00");
+    VLA("http://www.webrtc.org/experiments/rtp-hdrext/video-layers-allocation00"),
+
+    /**
+     * The URN which identifies the sdes:mid (media identification) RTP header extension defined in RFC 8843/9143.
+     */
+    MID("urn:ietf:params:rtp-hdrext:sdes:mid");
 
     companion object {
         private val uriMap = RtpExtensionType.values().associateBy(RtpExtensionType::uri)
