@@ -195,7 +195,9 @@ class ExporterWrapper internal constructor(
     fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("started", started)
         val exportersArray = putArray("exporters")
-        exporters.values.forEach { exportersArray.add(it.exporter.debugState()) }
+        // Tag each exporter's debug info with its connect id (the identity it is stored and signaled under) so debug
+        // entries can be correlated to a specific connect.
+        exporters.forEach { (id, entry) -> exportersArray.add(entry.exporter.debugState().put("tag", id)) }
     }
 
     /** A running exporter together with the connect parameters it was last (re)configured with. */

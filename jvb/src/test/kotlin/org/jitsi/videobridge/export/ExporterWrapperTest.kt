@@ -15,9 +15,11 @@
  */
 package org.jitsi.videobridge.export
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.utils.logging2.LoggerImpl
@@ -237,6 +239,19 @@ class ExporterWrapperTest : ShouldSpec() {
                 shouldThrow<FeatureNotImplementedException> {
                     f.wrapper.applyConnects(listOf(videoConnect))
                 }
+            }
+        }
+
+        context("Debug state") {
+            should("tag each exporter's debug info with its connect id") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true), connect("b", create = true)))
+                // The mock exporters are relaxed, so give them real debug nodes for the tag to be added to.
+                every { f["a"].debugState() } returns JsonNodeFactory.instance.objectNode()
+                every { f["b"].debugState() } returns JsonNodeFactory.instance.objectNode()
+
+                val tags = f.wrapper.debugState().get("exporters").map { it.get("tag").asText() }.toSet()
+                tags shouldBe setOf("a", "b")
             }
         }
     }
