@@ -16,73 +16,66 @@
 
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
-class AudioSubscription() {
-    private var latestSubscription: ReceiverAudioSubscriptionMessage = ReceiverAudioSubscriptionMessage.All
+class AudioSubscription {
+    /** Whether to receive sources not named in [include]/[exclude] (synthetic sources excepted -- see below). */
+    private var all: Boolean = false
 
-    // wantedSsrcs is a set of SSRCs that the endpoint wants to receive audio for.
-    // This is only managed when the subscription is "Include" or "Exclude".
-    private var wantedSsrcs: Set<Long> = emptySet()
+    /** The source names being explicitly included / excluded, and the SSRCs they currently resolve to. */
+    private var include: Set<String> = emptySet()
+    private var exclude: Set<String> = emptySet()
+    private var includedSsrcs: Set<Long> = emptySet()
+    private var excludedSsrcs: Set<Long> = emptySet()
 
     private val lock: Any = Any()
 
     fun updateSubscription(subscription: ReceiverAudioSubscriptionMessage, sources: List<AudioSourceDesc>) =
         synchronized(lock) {
-            latestSubscription = subscription
-            when (subscription) {
-                is ReceiverAudioSubscriptionMessage.All -> return
-                is ReceiverAudioSubscriptionMessage.None -> return
-                is ReceiverAudioSubscriptionMessage.Include -> {
-                    wantedSsrcs = emptySet()
-                    subscription.list.forEach {
-                        val desc = sources.find { source -> source.sourceName == it }
-                        if (desc != null) {
-                            wantedSsrcs += desc.ssrc
-                        } else {
-                            // TODO: notify relays about remote subscriptions
-                        }
-                    }
-                }
-                is ReceiverAudioSubscriptionMessage.Exclude -> {
-                    wantedSsrcs = sources.filterNot { desc ->
-                        subscription.list.contains(desc.sourceName)
-                    }.map(AudioSourceDesc::ssrc).toSet()
-                }
-            }
+            all = subscription.all
+            include = subscription.include.toSet()
+            exclude = subscription.exclude.toSet()
+            includedSsrcs = ssrcsForNames(include, sources)
+            excludedSsrcs = ssrcsForNames(exclude, sources)
         }
 
-    fun isSsrcWanted(ssrc: Long): Boolean = when (latestSubscription) {
-        is ReceiverAudioSubscriptionMessage.All -> true
-        is ReceiverAudioSubscriptionMessage.None -> false
-        else -> wantedSsrcs.contains(ssrc)
+    private fun ssrcsForNames(names: Set<String>, sources: Collection<AudioSourceDesc>): Set<Long> =
+        sources.filter { it.sourceName != null && it.sourceName in names }.map(AudioSourceDesc::ssrc).toSet()
+
+    fun isSsrcWanted(ssrc: Long): Boolean = when {
+        excludedSsrcs.contains(ssrc) -> false
+        includedSsrcs.contains(ssrc) -> true
+        else -> all
     }
 
+    /**
+     * Whether the given SSRC is explicitly wanted, i.e. named in the [include] list (and not excluded). Unlike
+     * [isSsrcWanted] this is not satisfied by [all], so it gates synthetic sources, which are forwarded only on an
+     * explicit subscription.
+     */
+    fun isExplicitlyWanted(ssrc: Long): Boolean = includedSsrcs.contains(ssrc) && !excludedSsrcs.contains(ssrc)
+
     fun onConferenceSourceAdded(descs: Set<AudioSourceDesc>) = synchronized(lock) {
-        when (latestSubscription) {
-            is ReceiverAudioSubscriptionMessage.All -> return
-            is ReceiverAudioSubscriptionMessage.None -> return
-            is ReceiverAudioSubscriptionMessage.Include -> {
-                val subscription = latestSubscription as ReceiverAudioSubscriptionMessage.Include
-                // If the subscription is include, we need to check if the new sources are included in the subscription.
-                val newSsrcs = descs.filter { desc ->
-                    subscription.list.contains(desc.sourceName)
-                }.map(AudioSourceDesc::ssrc).toSet()
-                wantedSsrcs = wantedSsrcs.union(newSsrcs)
-            }
-            is ReceiverAudioSubscriptionMessage.Exclude -> {
-                val subscription = latestSubscription as ReceiverAudioSubscriptionMessage.Exclude
-                // If the subscription is exclude, we need to check if the new sources are excluded from the subscription.
-                val newSsrcs = descs.filterNot { desc ->
-                    subscription.list.contains(desc.sourceName)
-                }.map(AudioSourceDesc::ssrc).toSet()
-                wantedSsrcs = wantedSsrcs.union(newSsrcs)
-            }
-        }
+        includedSsrcs = includedSsrcs.union(ssrcsForNames(include, descs))
+        excludedSsrcs = excludedSsrcs.union(ssrcsForNames(exclude, descs))
     }
 
     fun onConferenceSourceRemoved(descs: Set<AudioSourceDesc>) = synchronized(lock) {
-        wantedSsrcs = wantedSsrcs.subtract(descs.map(AudioSourceDesc::ssrc).toSet())
+        val removed = descs.map(AudioSourceDesc::ssrc).toSet()
+        includedSsrcs = includedSsrcs.subtract(removed)
+        excludedSsrcs = excludedSsrcs.subtract(removed)
+    }
+
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        synchronized(lock) {
+            put("all", all)
+            putArray("include").apply { include.forEach { add(it) } }
+            putArray("exclude").apply { exclude.forEach { add(it) } }
+            putArray("included_ssrcs").apply { includedSsrcs.forEach { add(it) } }
+            putArray("excluded_ssrcs").apply { excludedSsrcs.forEach { add(it) } }
+        }
     }
 }

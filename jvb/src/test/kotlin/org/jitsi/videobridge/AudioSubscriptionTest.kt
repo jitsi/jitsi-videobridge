@@ -29,14 +29,14 @@ class AudioSubscriptionTest : ShouldSpec() {
     init {
         context("Mode=None subscription") {
             should("return false for any SSRC when subscription is None") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.None, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = false), emptyList())
                 audioSubscription.isSsrcWanted(1001L) shouldBe false
                 audioSubscription.isSsrcWanted(1002L) shouldBe false
                 audioSubscription.isSsrcWanted(9999L) shouldBe false
             }
 
             should("return false for any SSRC after adding conference sources") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.None, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = false), emptyList())
                 val newSources = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1"),
                     AudioSourceDesc(1002L, "endpoint2", "source2")
@@ -47,7 +47,7 @@ class AudioSubscriptionTest : ShouldSpec() {
             }
 
             should("handle source removal without affecting None behavior") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.None, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = false), emptyList())
                 val sourcesToRemove = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
@@ -59,14 +59,14 @@ class AudioSubscriptionTest : ShouldSpec() {
 
         context("Mode=All subscription") {
             should("return true for any SSRC when subscription is All") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.All, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = true), emptyList())
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
                 audioSubscription.isSsrcWanted(1002L) shouldBe true
                 audioSubscription.isSsrcWanted(9999L) shouldBe true
             }
 
             should("return true for any SSRC after adding conference sources") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.All, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = true), emptyList())
                 val newSources = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1"),
                     AudioSourceDesc(1002L, "endpoint2", "source2")
@@ -77,7 +77,7 @@ class AudioSubscriptionTest : ShouldSpec() {
             }
 
             should("handle source removal without affecting All behavior") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.All, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = true), emptyList())
                 val sourcesToRemove = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
@@ -94,8 +94,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1002L, "endpoint2", "source2"),
                     AudioSourceDesc(1003L, "endpoint3", "source3")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1", "source3")
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1", "source3")
                 )
                 audioSubscription.updateSubscription(includeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true // source1 included
@@ -109,8 +110,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1001L, "endpoint1", "source1"),
                     AudioSourceDesc(1002L, "endpoint2", "source2")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = emptyList()
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = emptyList()
                 )
                 audioSubscription.updateSubscription(includeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe false
@@ -125,8 +127,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1002L, "endpoint2", "source2"),
                     AudioSourceDesc(1003L, "endpoint3", "source3")
                 )
-                val excludeSubscription = ReceiverAudioSubscriptionMessage.Exclude(
-                    list = listOf("source2")
+                val excludeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = true,
+                    exclude = listOf("source2")
                 )
                 audioSubscription.updateSubscription(excludeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true // source1 not excluded
@@ -139,8 +142,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1001L, "endpoint1", "source1"),
                     AudioSourceDesc(1002L, "endpoint2", "source2")
                 )
-                val excludeSubscription = ReceiverAudioSubscriptionMessage.Exclude(
-                    list = emptyList()
+                val excludeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = true,
+                    exclude = emptyList()
                 )
                 audioSubscription.updateSubscription(excludeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true // nothing excluded
@@ -153,8 +157,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                 val initialSources = listOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1", "source2", "source3")
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1", "source2", "source3")
                 )
                 audioSubscription.updateSubscription(includeSubscription, initialSources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true // source1 included
@@ -172,7 +177,7 @@ class AudioSubscriptionTest : ShouldSpec() {
             }
 
             should("not add sources for None subscription") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.None, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = false), emptyList())
                 val newSources = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
@@ -181,7 +186,7 @@ class AudioSubscriptionTest : ShouldSpec() {
             }
 
             should("not change behavior for All subscription") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.All, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = true), emptyList())
                 val newSources = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
@@ -195,8 +200,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                 val initialSources = listOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
-                val excludeSubscription = ReceiverAudioSubscriptionMessage.Exclude(
-                    list = listOf("source2")
+                val excludeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = true,
+                    exclude = listOf("source2")
                 )
                 audioSubscription.updateSubscription(excludeSubscription, initialSources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true // source1 not excluded
@@ -217,8 +223,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1001L, "endpoint1", "source1"),
                     AudioSourceDesc(1002L, "endpoint2", "source2")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1", "source2")
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1", "source2")
                 )
                 audioSubscription.updateSubscription(includeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
@@ -231,22 +238,25 @@ class AudioSubscriptionTest : ShouldSpec() {
                 audioSubscription.isSsrcWanted(1002L) shouldBe true // still wanted
             }
 
-            should("remove sources from wanted list for Exclude subscription") {
+            should("remove sources from excluded set for Exclude subscription") {
                 val sources = listOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1"),
                     AudioSourceDesc(1002L, "endpoint2", "source2")
                 )
-                val excludeSubscription = ReceiverAudioSubscriptionMessage.Exclude(
-                    list = listOf("source3")
+                val excludeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = true,
+                    exclude = listOf("source1")
                 )
                 audioSubscription.updateSubscription(excludeSubscription, sources)
-                audioSubscription.isSsrcWanted(1001L) shouldBe true
-                audioSubscription.isSsrcWanted(1002L) shouldBe true
+                audioSubscription.isSsrcWanted(1001L) shouldBe false // excluded
+                audioSubscription.isSsrcWanted(1002L) shouldBe true // not excluded, wanted via all
                 val sourcesToRemove = setOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
                 audioSubscription.onConferenceSourceRemoved(sourcesToRemove)
-                audioSubscription.isSsrcWanted(1001L) shouldBe false // removed from wanted list
+                // source1 is no longer in the conference, so it drops out of the excluded set; under `all` an
+                // unknown SSRC is wanted again.
+                audioSubscription.isSsrcWanted(1001L) shouldBe true
                 audioSubscription.isSsrcWanted(1002L) shouldBe true // still wanted
             }
 
@@ -254,8 +264,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                 val sources = listOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1")
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1")
                 )
                 audioSubscription.updateSubscription(includeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
@@ -275,8 +286,9 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1003L, "endpoint1", "source3"),
                     AudioSourceDesc(1004L, "endpoint2", "source4")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1", "source3", "source4"),
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1", "source3", "source4"),
                 )
                 audioSubscription.updateSubscription(includeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true // source1 included
@@ -291,7 +303,7 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(2002L, "endpoint1", "source2"),
                     AudioSourceDesc(2003L, "endpoint1", "source3")
                 )
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.All, sources)
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = true), sources)
                 audioSubscription.isSsrcWanted(2001L) shouldBe true
                 audioSubscription.isSsrcWanted(2002L) shouldBe true
                 audioSubscription.isSsrcWanted(2003L) shouldBe true
@@ -303,7 +315,7 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(3002L, "endpoint1", "source2"),
                     AudioSourceDesc(3003L, "endpoint1", "source3")
                 )
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.None, sources)
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = false), sources)
                 audioSubscription.isSsrcWanted(3001L) shouldBe false
                 audioSubscription.isSsrcWanted(3002L) shouldBe false
                 audioSubscription.isSsrcWanted(3003L) shouldBe false
@@ -312,21 +324,22 @@ class AudioSubscriptionTest : ShouldSpec() {
 
         context("Subscription updates") {
             should("update from None to All") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.None, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = false), emptyList())
                 audioSubscription.isSsrcWanted(1001L) shouldBe false
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.All, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = true), emptyList())
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
             }
 
             should("update from All to Include") {
-                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage.All, emptyList())
+                audioSubscription.updateSubscription(ReceiverAudioSubscriptionMessage(all = true), emptyList())
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
                 val sources = listOf(
                     AudioSourceDesc(1001L, "endpoint1", "source1"),
                     AudioSourceDesc(1002L, "endpoint2", "source2")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1")
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1")
                 )
                 audioSubscription.updateSubscription(includeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
@@ -339,15 +352,17 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1002L, "endpoint2", "source2"),
                     AudioSourceDesc(1003L, "endpoint3", "source3")
                 )
-                val includeSubscription = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1", "source2")
+                val includeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1", "source2")
                 )
                 audioSubscription.updateSubscription(includeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
                 audioSubscription.isSsrcWanted(1002L) shouldBe true
                 audioSubscription.isSsrcWanted(1003L) shouldBe false
-                val excludeSubscription = ReceiverAudioSubscriptionMessage.Exclude(
-                    list = listOf("source2")
+                val excludeSubscription = ReceiverAudioSubscriptionMessage(
+                    all = true,
+                    exclude = listOf("source2")
                 )
                 audioSubscription.updateSubscription(excludeSubscription, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true // not excluded
@@ -361,15 +376,17 @@ class AudioSubscriptionTest : ShouldSpec() {
                     AudioSourceDesc(1002L, "endpoint2", "source2"),
                     AudioSourceDesc(1003L, "endpoint3", "source3")
                 )
-                val includeSubscription1 = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source1", "source2")
+                val includeSubscription1 = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source1", "source2")
                 )
                 audioSubscription.updateSubscription(includeSubscription1, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe true
                 audioSubscription.isSsrcWanted(1002L) shouldBe true
                 audioSubscription.isSsrcWanted(1003L) shouldBe false
-                val includeSubscription2 = ReceiverAudioSubscriptionMessage.Include(
-                    list = listOf("source2", "source3")
+                val includeSubscription2 = ReceiverAudioSubscriptionMessage(
+                    all = false,
+                    include = listOf("source2", "source3")
                 )
                 audioSubscription.updateSubscription(includeSubscription2, sources)
                 audioSubscription.isSsrcWanted(1001L) shouldBe false // not in new include list

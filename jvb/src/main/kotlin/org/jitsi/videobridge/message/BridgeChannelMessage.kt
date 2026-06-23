@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.core.JsonParser
@@ -481,32 +482,56 @@ class SourceVideoTypeMessage(
 /*
  * A message sent from a client to the bridge to indicate which audio sources it wants to receive.
  */
-sealed class ReceiverAudioSubscriptionMessage : BridgeChannelMessage() {
-    object All : ReceiverAudioSubscriptionMessage() {
-        override fun createJson(): String {
-            return """{"colibriClass":"$TYPE","mode":"All"}"""
-        }
-    }
-    object None : ReceiverAudioSubscriptionMessage() {
-        override fun createJson(): String {
-            return """{"colibriClass":"$TYPE","mode":"None"}"""
-        }
-    }
-    data class Include(val list: List<String>) : ReceiverAudioSubscriptionMessage()
-    data class Exclude(val list: List<String>) : ReceiverAudioSubscriptionMessage()
+data class ReceiverAudioSubscriptionMessage(
+    /**
+     * The default for any source not named in [include] or [exclude]: if true the endpoint receives it (except
+     * synthetic sources, which are received only when explicitly named in [include]); if false it does not.
+     */
+    @JsonProperty("all") val all: Boolean = false,
+    /**
+     * Sources to always receive, in addition to whatever [all] selects. This is the only way to receive a synthetic
+     * source. Allows e.g. "all regular audio plus these synthetic sources" via [all] = true with a non-empty list.
+     */
+    @JsonProperty("include") val include: List<String> = emptyList(),
+    /** Sources to never receive. Takes precedence over [all] and [include]. */
+    @JsonProperty("exclude") val exclude: List<String> = emptyList()
+) : BridgeChannelMessage() {
     companion object {
         const val TYPE = "ReceiverAudioSubscription"
 
+        /**
+         * Deserializes both the current `all`/`include`/`exclude` form and the legacy `mode`/`list` form, translating
+         * the latter into the new semantics so that no code outside the parser needs to be aware of the old syntax.
+         *
+         * Legacy mapping:
+         * - `mode: "All"`     -> [all] = true
+         * - `mode: "None"`    -> [all] = false
+         * - `mode: "Include"` -> [all] = false, [include] = `list`
+         * - `mode: "Exclude"` -> [all] = true,  [exclude] = `list`
+         */
         @JvmStatic
         @JsonCreator
-        fun jsonCreator(mode: String, list: List<String>? = null): ReceiverAudioSubscriptionMessage {
-            return when (mode) {
-                "All" -> All
-                "None" -> None
-                "Include" -> Include(list ?: emptyList())
-                "Exclude" -> Exclude(list ?: emptyList())
-                else -> throw IllegalArgumentException("Unknown ReceiverAudioSubscription mode: $mode")
+        fun fromJson(
+            @JsonProperty("all") all: Boolean?,
+            @JsonProperty("include") include: List<String>?,
+            @JsonProperty("exclude") exclude: List<String>?,
+            @JsonProperty("mode") mode: String?,
+            @JsonProperty("list") list: List<String>?
+        ): ReceiverAudioSubscriptionMessage {
+            if (mode != null) {
+                return when (mode) {
+                    "All" -> ReceiverAudioSubscriptionMessage(all = true)
+                    "None" -> ReceiverAudioSubscriptionMessage(all = false)
+                    "Include" -> ReceiverAudioSubscriptionMessage(all = false, include = list ?: emptyList())
+                    "Exclude" -> ReceiverAudioSubscriptionMessage(all = true, exclude = list ?: emptyList())
+                    else -> throw IllegalArgumentException("Unknown ReceiverAudioSubscription mode: $mode")
+                }
             }
+            return ReceiverAudioSubscriptionMessage(
+                all = all ?: false,
+                include = include ?: emptyList(),
+                exclude = exclude ?: emptyList()
+            )
         }
     }
 }

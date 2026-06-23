@@ -41,6 +41,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  *
  */
 class MediaJsonSerializer(
+    /** Resolves an audio SSRC to its source name, which is used as the media-json tag. */
+    private val getSourceName: (Long) -> String?,
     /** Encoded mediajson events are sent to this function */
     private val handleEvent: (Event) -> Unit
 ) {
@@ -62,21 +64,23 @@ class MediaJsonSerializer(
             logger.info("Ignoring packet without payloadType, SSRC ${p.ssrc}")
             return@synchronized
         }
+        // Tag the stream with its source name; fall back to endpoint+SSRC if the source isn't known.
+        val tag = getSourceName(p.ssrc) ?: "$epId-${p.ssrc}"
 
         val state = ssrcsStarted.computeIfAbsent(p.ssrc) { ssrc ->
             createSsrcState(p.timestamp, payloadType).also {
                 logger.info("Starting SSRC $ssrc for endpoint $epId ")
-                handleEvent(createStart(epId, ssrc, payloadType))
+                handleEvent(createStart(tag, epId, payloadType))
             }
         }
 
         if (payloadType.pt != state.payloadType.pt) {
             logger.info("SSRC ${p.ssrc} changed payload type from ${state.payloadType} to $payloadType.")
             ssrcsStarted[p.ssrc] = createSsrcState(p.timestamp, payloadType)
-            handleEvent(createStart(epId, p.ssrc, payloadType))
+            handleEvent(createStart(tag, epId, payloadType))
         }
 
-        handleEvent(encodeMedia(p, state, epId))
+        handleEvent(encodeMedia(p, state, tag))
     }
 
     private fun createSsrcState(timestamp: Long, payloadType: PayloadType): SsrcState {
@@ -88,10 +92,10 @@ class MediaJsonSerializer(
         )
     }
 
-    private fun createStart(epId: String, ssrc: Long, payloadType: PayloadType) = StartEvent(
+    private fun createStart(tag: String, epId: String, payloadType: PayloadType) = StartEvent(
         ++seq,
         Start(
-            "$epId-$ssrc",
+            tag,
             MediaFormat(
                 payloadType.encodingName(),
                 payloadType.clockRate,
@@ -103,12 +107,12 @@ class MediaJsonSerializer(
     )
 
     @OptIn(ExperimentalEncodingApi::class)
-    private fun encodeMedia(p: AudioRtpPacket, state: SsrcState, epId: String): Event {
+    private fun encodeMedia(p: AudioRtpPacket, state: SsrcState, tag: String): Event {
         ++seq
         return MediaEvent(
             seq,
             media = Media(
-                "$epId-${p.ssrc}",
+                tag,
                 state.getSequenceNumber(p.sequenceNumber),
                 state.getTimestamp(p.timestamp),
                 Base64.encode(p.buffer, p.payloadOffset, p.payloadOffset + p.payloadLength)
