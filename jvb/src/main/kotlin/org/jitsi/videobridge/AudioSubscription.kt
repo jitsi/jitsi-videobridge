@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 
@@ -65,5 +67,15 @@ class AudioSubscription {
         val removed = descs.map(AudioSourceDesc::ssrc).toSet()
         includedSsrcs = includedSsrcs.subtract(removed)
         excludedSsrcs = excludedSsrcs.subtract(removed)
+    }
+
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        synchronized(lock) {
+            put("all", all)
+            putArray("include").apply { include.forEach { add(it) } }
+            putArray("exclude").apply { exclude.forEach { add(it) } }
+            putArray("included_ssrcs").apply { includedSsrcs.forEach { add(it) } }
+            putArray("excluded_ssrcs").apply { excludedSsrcs.forEach { add(it) } }
+        }
     }
 }

@@ -603,5 +603,44 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
             }
         }
+
+        context("Debug state") {
+            val syntheticSsrc = 2001L
+            val syntheticDesc = AudioSourceDesc(syntheticSsrc, "endpointS", "syntheticSource", synthetic = true)
+
+            should("report known sources, subscriptions, and explicit subscribers") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = true, exclude = listOf("source2"))
+                )
+                manager.setEndpointAudioSubscription(
+                    "endpoint2",
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "syntheticSource"))
+                )
+
+                val state = manager.debugState()
+
+                // known_sources lists every known source with its synthetic flag (regulars + the synthetic one).
+                val knownSsrcs = state.get("known_sources").map { it.get("ssrc").asLong() }.toSet()
+                knownSsrcs shouldBe setOf(1001L, 1002L, 1003L, syntheticSsrc)
+                val syntheticEntry = state.get("known_sources").single { it.get("ssrc").asLong() == syntheticSsrc }
+                syntheticEntry.get("synthetic").asBoolean() shouldBe true
+
+                // subscribed_local_sources reflects only Include subscriptions.
+                val subscribed = state.get("subscribed_local_sources")
+                subscribed.has("source1") shouldBe true
+                subscribed.has("syntheticSource") shouldBe true
+                subscribed.has("source2") shouldBe false // only excluded, not an explicit subscription
+
+                // Per-endpoint subscription state, including resolved SSRCs.
+                val ep1 = state.get("subscriptions").get("endpoint1")
+                ep1.get("all").asBoolean() shouldBe true
+                ep1.get("excluded_ssrcs").map { it.asLong() } shouldBe listOf(1002L)
+                val ep2 = state.get("subscriptions").get("endpoint2")
+                ep2.get("all").asBoolean() shouldBe false
+                ep2.get("included_ssrcs").map { it.asLong() }.toSet() shouldBe setOf(1001L, syntheticSsrc)
+            }
+        }
     }
 }

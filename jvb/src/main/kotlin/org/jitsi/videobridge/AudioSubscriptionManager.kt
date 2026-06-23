@@ -16,6 +16,8 @@
 
 package org.jitsi.videobridge
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.videobridge.message.ReceiverAudioSubscriptionMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import java.util.concurrent.ConcurrentHashMap
@@ -176,6 +178,32 @@ class AudioSubscriptionManager() {
         subscribedLocalAudioSources.keys.removeAll(sources.mapNotNull { it.sourceName })
         audioSubscriptions.values.forEach { subscription ->
             subscription.onConferenceSourceRemoved(sources)
+        }
+    }
+
+    fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        synchronized(lock) {
+            // The conference's known audio sources, including which are synthetic. This is the authoritative set that
+            // routing (isEndpointAudioWanted) and subscription name resolution are gated on.
+            val sources = putArray("known_sources")
+            knownSources.forEach { src ->
+                sources.addObject().apply {
+                    put("ssrc", src.ssrc)
+                    put("name", src.sourceName)
+                    put("owner", src.owner)
+                    put("synthetic", src.synthetic)
+                }
+            }
+            // Local source names explicitly subscribed (Include) to by at least one endpoint -> the subscribers.
+            val subscribed = putObject("subscribed_local_sources")
+            subscribedLocalAudioSources.forEach { (name, endpointIds) ->
+                subscribed.putArray(name).apply { endpointIds.forEach { add(it) } }
+            }
+            // Per-endpoint subscription state (mode + resolved SSRCs).
+            val subscriptions = putObject("subscriptions")
+            audioSubscriptions.forEach { (endpointId, subscription) ->
+                subscriptions.set<ObjectNode>(endpointId, subscription.debugState())
+            }
         }
     }
 }

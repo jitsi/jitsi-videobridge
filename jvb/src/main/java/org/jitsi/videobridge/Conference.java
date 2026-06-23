@@ -1492,6 +1492,7 @@ public class Conference
         if (mode != DebugStateMode.SHORT)
         {
             debugState.set("exporter", exporter.debugState());
+            debugState.set("audio_subscriptions", audioSubscriptionManager.debugState());
         }
 
         return debugState;
