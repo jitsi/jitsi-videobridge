@@ -502,11 +502,13 @@ internal class Exporter(
             "videobridge.exporter.stable-connection-threshold".from(JitsiConfig.newConfig)
         }
 
-        // 0, base, base * 2, max at 30 seconds
+        // 0, base, base * 2, max at 30 seconds. The min is computed in Double space and converted afterwards so that
+        // a large attempt count (where 2.0.pow overflows to Infinity) clamps to maxDelay instead of overflowing Long
+        // and producing a negative (immediate) delay.
         private fun getDelayMs(attempt: Int) = if (attempt == 1) {
-            0
+            0L
         } else {
-            min(baseDelay.toMillis() * 2.0.pow(attempt - 2).toLong(), maxDelay.toMillis())
+            min(baseDelay.toMillis() * 2.0.pow(attempt - 2), maxDelay.toMillis().toDouble()).toLong()
         }
     }
 }
