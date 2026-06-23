@@ -1177,7 +1177,7 @@ public class Conference
      */
     public void setEndpointAudioSubscription(String endpointId, ReceiverAudioSubscriptionMessage subscription)
     {
-        audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription, getAudioSourceDescs());
+        audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription);
     }
 
     /**
@@ -1617,14 +1617,11 @@ public class Conference
     @Nullable
     private AudioSourceDesc findSyntheticAudioSource(String sourceName)
     {
-        for (AudioSourceDesc source : getAudioSourceDescs())
-        {
-            if (source.getSynthetic() && sourceName.equals(source.getSourceName()))
-            {
-                return source;
-            }
-        }
-        return null;
+        // Resolve via the subscription manager, which owns the authoritative set of sources under the same lock that
+        // guards the synthetic-SSRC set used at routing time. Scanning getAudioSourceDescs() here instead would read
+        // each endpoint's source field, which is updated out of step with the manager (e.g. a local endpoint updates
+        // the manager before its field, a relayed endpoint after), so a just-added synthetic source could be missed.
+        return audioSubscriptionManager.findSyntheticSource(sourceName);
     }
 
     /**
