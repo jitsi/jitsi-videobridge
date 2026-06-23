@@ -23,6 +23,7 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
 import org.jitsi.mediajson.Event
+import org.jitsi.mediajson.InfoEvent
 import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
@@ -33,8 +34,10 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
+import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import java.net.URI
 import java.time.Duration
@@ -76,6 +79,7 @@ internal class Exporter(
     private val instanceTranscriptsReceived = AtomicLong(0)
     private val instanceOtherMessagesReceived = AtomicLong(0)
     private val instanceParseFailures = AtomicLong(0)
+    private val instanceInfoReceived = AtomicLong(0)
 
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
@@ -121,6 +125,7 @@ internal class Exporter(
             serializer = initSerializer()
             cancelReconnect()
             startPing()
+            sendInfo()
         }
 
         override fun onWebSocketError(cause: Throwable?) {
@@ -175,6 +180,11 @@ internal class Exporter(
                         logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
                     }
                 }
+                is InfoEvent -> {
+                    infoReceivedCount.inc()
+                    instanceInfoReceived.incrementAndGet()
+                    logger.info("Received InfoEvent: ${event.toJson()}")
+                }
                 else -> {
                     otherMessagesReceivedCount.inc()
                     instanceOtherMessagesReceived.incrementAndGet()
@@ -184,6 +194,24 @@ internal class Exporter(
             logger.warn("Failed to parse incoming websocket message: $message", e)
             parseFailuresCount.inc()
             instanceParseFailures.incrementAndGet()
+        }
+    }
+
+    /**
+     * Send an informational message describing this application to the peer, once the connection
+     * is up. Used for runtime observability (the peer logs what it received). No-op if disconnected.
+     */
+    private fun sendInfo() {
+        val session = recorderWebSocket.session ?: return
+        val info = InfoEvent()
+            .put("application", "jitsi-videobridge")
+            .put("version", JvbVersionService.instance.currentVersion.toString())
+        RelayConfig.config.region?.let { info.put("region", it) }
+        try {
+            logger.info("Sending info to transcriber: ${info.toJson()}")
+            session.sendText(info.toJson(), Callback.NOOP)
+        } catch (e: Exception) {
+            logger.warn("Failed to send info message", e)
         }
     }
 
@@ -337,6 +365,7 @@ internal class Exporter(
         put("transcripts_received", instanceTranscriptsReceived.get())
         put("other_messages_received", instanceOtherMessagesReceived.get())
         put("parse_failures", instanceParseFailures.get())
+        put("info_received", instanceInfoReceived.get())
         put("queue_size", queue.size())
         put("ping_enabled", pingEnabled)
         if (pingEnabled) {
@@ -385,6 +414,11 @@ internal class Exporter(
         private val parseFailuresCount = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_parse_failures",
             "Number of messages that failed to parse"
+        )
+
+        private val infoReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_info_received",
+            "Number of info messages received by Exporter"
         )
 
         private val maxReconnectAttempts: Int? by optionalconfig {
