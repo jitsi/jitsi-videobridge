@@ -22,29 +22,40 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
+import org.jitsi.videobridge.colibri2.IqProcessingException
 import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
 
 class ExporterWrapperTest : ShouldSpec() {
     private val logger = LoggerImpl(javaClass.name)
 
-    /** Records the mock [Exporter] created for each connect URL, so tests can verify calls against them. */
+    /** Records the mock [Exporter] created for each connect id, so tests can verify calls against them. */
     private inner class Fixture {
-        val exporters = mutableMapOf<URI, Exporter>()
+        val exporters = mutableMapOf<String, Exporter>()
         val wrapper = ExporterWrapper(logger, { }, { }, { null }) { connect ->
-            mockk<Exporter>(relaxed = true).also { exporters[connect.url] = it }
+            mockk<Exporter>(relaxed = true).also { exporters[connect.id] = it }
         }
-        operator fun get(url: String): Exporter = exporters.getValue(URI(url))
+        operator fun get(id: String): Exporter = exporters.getValue(id)
     }
 
     private fun connect(
-        url: String,
+        id: String,
+        url: String = "wss://example.com/$id",
         type: Connect.Types = Connect.Types.TRANSCRIBER,
+        create: Boolean = false,
+        expire: Boolean = false,
         headers: Map<String, String> = emptyMap(),
         exports: List<String> = emptyList(),
         requests: List<String> = emptyList(),
         ping: Pair<Int, Int>? = null
-    ): Connect = Connect(URI(url), Connect.Protocols.MEDIAJSON, type).apply {
+    ): Connect = Connect(
+        id = id,
+        url = URI(url),
+        protocol = Connect.Protocols.MEDIAJSON,
+        type = type,
+        create = create,
+        expire = expire
+    ).apply {
         headers.forEach { (n, v) -> addHttpHeader(n, v) }
         exports.forEach { addExport(it) }
         requests.forEach { addRequest(it) }
@@ -52,107 +63,179 @@ class ExporterWrapperTest : ShouldSpec() {
     }
 
     init {
-        val urlA = "wss://example.com/a"
-        val urlB = "wss://example.com/b"
-
-        context("Starting connects") {
-            should("create an exporter per connect") {
+        context("Creating connects") {
+            should("create an exporter per connect, keyed by id") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA), connect(urlB)))
+                f.wrapper.applyConnects(listOf(connect("a", create = true), connect("b", create = true)))
 
                 f.wrapper.started shouldBe true
-                f.exporters.keys shouldBe setOf(URI(urlA), URI(urlB))
+                f.exporters.keys shouldBe setOf("a", "b")
             }
-            should("stop all and mark not started when given an empty list") {
+            should("allow multiple connects with the same url but different ids") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA), connect(urlB)))
+                val url = "wss://example.com/shared"
+                f.wrapper.applyConnects(
+                    listOf(connect("a", url = url, create = true), connect("b", url = url, create = true))
+                )
 
-                f.wrapper.setConnects(emptyList())
+                f.exporters.keys shouldBe setOf("a", "b")
+            }
+            should("reject create for an already-existing id") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
 
+                shouldThrow<IqProcessingException> {
+                    f.wrapper.applyConnects(listOf(connect("a", create = true)))
+                }
+                verify(exactly = 0) { f["a"].stop() }
+            }
+            should("reject a connect for an unknown id without create") {
+                val f = Fixture()
+                shouldThrow<IqProcessingException> {
+                    f.wrapper.applyConnects(listOf(connect("a")))
+                }
                 f.wrapper.started shouldBe false
-                verify(exactly = 1) { f[urlA].stop() }
-                verify(exactly = 1) { f[urlB].stop() }
             }
         }
 
-        context("Reconciling connects") {
-            should("stop only the exporters whose URL is no longer requested") {
+        context("Delta semantics") {
+            should("leave unmentioned connects running") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA), connect(urlB)))
+                f.wrapper.applyConnects(listOf(connect("a", create = true), connect("b", create = true)))
 
-                f.wrapper.setConnects(listOf(connect(urlA)))
+                // A delta that only updates 'a' must not touch 'b'.
+                f.wrapper.applyConnects(listOf(connect("a", exports = listOf("s1"))))
 
-                verify(exactly = 0) { f[urlA].stop() }
-                verify(exactly = 1) { f[urlB].stop() }
+                verify(exactly = 0) { f["a"].stop() }
+                verify(exactly = 0) { f["b"].stop() }
                 f.wrapper.started shouldBe true
             }
-            should("not recreate or update an exporter when an identical connect is re-signaled") {
+            should("not stop everything on an empty delta") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA, exports = listOf("s1"))))
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
 
-                f.wrapper.setConnects(listOf(connect(urlA, exports = listOf("s1"))))
+                f.wrapper.applyConnects(emptyList())
 
-                f.exporters.size shouldBe 1
-                verify(exactly = 0) { f[urlA].update(any(), any()) }
+                verify(exactly = 0) { f["a"].stop() }
+                f.wrapper.started shouldBe true
+            }
+            should("expire only the named connect") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true), connect("b", create = true)))
+
+                f.wrapper.applyConnects(listOf(connect("b", expire = true)))
+
+                verify(exactly = 0) { f["a"].stop() }
+                verify(exactly = 1) { f["b"].stop() }
+                f.wrapper.started shouldBe true
+            }
+            should("ignore an expire for an unknown id") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
+
+                f.wrapper.applyConnects(listOf(connect("unknown", expire = true)))
+
+                f.exporters.keys shouldBe setOf("a")
+                verify(exactly = 0) { f["a"].stop() }
+            }
+        }
+
+        context("stop()") {
+            should("stop all exporters and mark not started") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true), connect("b", create = true)))
+
+                f.wrapper.stop()
+
+                f.wrapper.started shouldBe false
+                verify(exactly = 1) { f["a"].stop() }
+                verify(exactly = 1) { f["b"].stop() }
             }
         }
 
         context("Updating exports/requests in place") {
             should("apply changed exports and requests to the running exporter") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA, exports = listOf("s1"), requests = listOf("s1.en"))))
-
-                f.wrapper.setConnects(
-                    listOf(connect(urlA, exports = listOf("s1", "s2"), requests = listOf("s1.en", "s2.fr")))
+                f.wrapper.applyConnects(
+                    listOf(connect("a", create = true, exports = listOf("s1"), requests = listOf("s1.en")))
                 )
 
-                verify(exactly = 1) { f[urlA].update(listOf("s1", "s2"), listOf("s1.en", "s2.fr")) }
-                verify(exactly = 0) { f[urlA].stop() }
+                f.wrapper.applyConnects(
+                    listOf(connect("a", exports = listOf("s1", "s2"), requests = listOf("s1.en", "s2.fr")))
+                )
+
+                verify(exactly = 1) { f["a"].update(listOf("s1", "s2"), listOf("s1.en", "s2.fr")) }
+                verify(exactly = 0) { f["a"].stop() }
+            }
+            should("not update for an identical re-signaled connect") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true, exports = listOf("s1"))))
+
+                f.wrapper.applyConnects(listOf(connect("a", exports = listOf("s1"))))
+
+                verify(exactly = 0) { f["a"].update(any(), any()) }
             }
             should("not treat reordered source names as a change") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA, exports = listOf("s1", "s2"))))
+                f.wrapper.applyConnects(listOf(connect("a", create = true, exports = listOf("s1", "s2"))))
 
-                f.wrapper.setConnects(listOf(connect(urlA, exports = listOf("s2", "s1"))))
+                f.wrapper.applyConnects(listOf(connect("a", exports = listOf("s2", "s1"))))
 
-                verify(exactly = 0) { f[urlA].update(any(), any()) }
+                verify(exactly = 0) { f["a"].update(any(), any()) }
             }
         }
 
         context("Rejecting non-updatable changes") {
             should("throw and leave the exporter untouched when HTTP headers change") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA, headers = mapOf("Authorization" to "Bearer a"))))
+                f.wrapper.applyConnects(
+                    listOf(connect("a", create = true, headers = mapOf("Authorization" to "Bearer a")))
+                )
 
                 shouldThrow<FeatureNotImplementedException> {
-                    f.wrapper.setConnects(listOf(connect(urlA, headers = mapOf("Authorization" to "Bearer b"))))
+                    f.wrapper.applyConnects(listOf(connect("a", headers = mapOf("Authorization" to "Bearer b"))))
                 }
 
-                verify(exactly = 0) { f[urlA].stop() }
-                verify(exactly = 0) { f[urlA].update(any(), any()) }
+                verify(exactly = 0) { f["a"].stop() }
+                verify(exactly = 0) { f["a"].update(any(), any()) }
             }
             should("throw when the ping configuration changes") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA, ping = 1000 to 2000)))
+                f.wrapper.applyConnects(listOf(connect("a", create = true, ping = 1000 to 2000)))
 
                 shouldThrow<FeatureNotImplementedException> {
-                    f.wrapper.setConnects(listOf(connect(urlA, ping = 3000 to 4000)))
+                    f.wrapper.applyConnects(listOf(connect("a", ping = 3000 to 4000)))
+                }
+            }
+            should("throw when the url changes for an existing id") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", url = "wss://example.com/a1", create = true)))
+
+                shouldThrow<FeatureNotImplementedException> {
+                    f.wrapper.applyConnects(listOf(connect("a", url = "wss://example.com/a2")))
                 }
             }
             should("throw when the type changes") {
                 val f = Fixture()
-                f.wrapper.setConnects(listOf(connect(urlA, type = Connect.Types.TRANSCRIBER)))
+                f.wrapper.applyConnects(listOf(connect("a", create = true, type = Connect.Types.TRANSCRIBER)))
 
                 shouldThrow<FeatureNotImplementedException> {
-                    f.wrapper.setConnects(listOf(connect(urlA, type = Connect.Types.TRANSLATOR)))
+                    f.wrapper.applyConnects(listOf(connect("a", type = Connect.Types.TRANSLATOR)))
                 }
             }
             should("reject a video connect") {
                 val f = Fixture()
-                val videoConnect = Connect(URI(urlA), Connect.Protocols.MEDIAJSON, Connect.Types.RECORDER, video = true)
+                val videoConnect = Connect(
+                    id = "a",
+                    url = URI("wss://example.com/a"),
+                    protocol = Connect.Protocols.MEDIAJSON,
+                    type = Connect.Types.RECORDER,
+                    video = true,
+                    create = true
+                )
 
                 shouldThrow<FeatureNotImplementedException> {
-                    f.wrapper.setConnects(listOf(videoConnect))
+                    f.wrapper.applyConnects(listOf(videoConnect))
                 }
             }
         }

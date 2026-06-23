@@ -23,7 +23,9 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
+import org.jitsi.videobridge.colibri2.IqProcessingException
 import org.jitsi.xmpp.extensions.colibri2.Connect
+import org.jivesoftware.smack.packet.StanzaError
 import java.net.URI
 
 class ExporterWrapper internal constructor(
@@ -48,8 +50,8 @@ class ExporterWrapper internal constructor(
 
     private val exporterFactory: (Connect) -> Exporter = exporterFactory ?: ::createExporter
 
-    /** One running [Exporter] per requested connect, keyed by the connect's URL. */
-    private val exporters = mutableMapOf<URI, Entry>()
+    /** One running [Exporter] per requested connect, keyed by the connect's id. */
+    private val exporters = mutableMapOf<String, Entry>()
 
     /**
      * The running exporters exposed as [PotentialPacketHandler]s for the conference's send path. Each exporter is an
@@ -64,50 +66,73 @@ class ExporterWrapper internal constructor(
     fun getPacketHandlers(): List<PotentialPacketHandler> = packetHandlers
 
     /**
-     * Reconcile the running exporters with the requested set of connects, using the URL as the connect's identity:
-     *  - stop exporters whose URL is no longer requested,
-     *  - start exporters for URLs that weren't already running,
-     *  - for URLs that are still requested, pass any change in the connect's other parameters to the existing
-     *    exporter as an update.
+     * Apply a delta of connects, using the connect's [Connect.id] as its identity. Connects not mentioned are left
+     * running unchanged. Each connect is one of:
+     *  - `expire=true`: stop and remove the exporter with that id (a no-op with a warning if it isn't running),
+     *  - `create=true`: start a new exporter; rejected if an exporter with that id is already running,
+     *  - neither: update the already-running exporter with that id; rejected if none is running (i.e. a connect for a
+     *    new id must set `create`). Only the exported/requested source names can change live; any other change is
+     *    rejected.
+     *
+     * The whole delta is validated before anything is applied, so a rejected connect doesn't disturb running exporters.
      */
-    fun setConnects(connects: List<Connect>) {
+    fun applyConnects(connects: List<Connect>) {
         // Validate up front so a rejected connect doesn't disturb the already-running exporters.
         connects.forEach { validate(it) }
 
-        val desired = connects.associateBy { it.url }
-        val desiredParams = desired.mapValues { (_, connect) -> ConnectParams(connect) }
-
-        // Fail before changing anything if a still-running connect changed in a way that can't be applied to a live
-        // exporter (e.g. HTTP headers, which are fixed when the websocket connects). Only the exported/requested
-        // source names can be updated in place.
-        desiredParams.forEach { (url, params) ->
-            val running = exporters[url]?.params ?: return@forEach
-            val unsupported = running.nonUpdatableChangesTo(params)
-            if (unsupported.isNotEmpty()) {
-                throw FeatureNotImplementedException(
-                    "Updating connect ${unsupported.joinToString()} for url=$url"
-                )
+        // Pass 1: classify each connect and fail before mutating anything.
+        val toExpire = mutableListOf<String>()
+        val toCreate = mutableListOf<Connect>()
+        val toUpdate = mutableListOf<Pair<Connect, ConnectParams>>()
+        connects.forEach { connect ->
+            val id = connect.id
+            when {
+                connect.expire -> toExpire += id
+                connect.create -> {
+                    if (exporters.containsKey(id)) {
+                        throw IqProcessingException(
+                            StanzaError.Condition.bad_request,
+                            "Connect with create=true for an already-existing id=$id"
+                        )
+                    }
+                    toCreate += connect
+                }
+                else -> {
+                    val running = exporters[id] ?: throw IqProcessingException(
+                        StanzaError.Condition.bad_request,
+                        "Connect for unknown id=$id without create=true"
+                    )
+                    val params = ConnectParams(connect)
+                    val unsupported = running.params.nonUpdatableChangesTo(params)
+                    if (unsupported.isNotEmpty()) {
+                        throw FeatureNotImplementedException(
+                            "Updating connect ${unsupported.joinToString()} for id=$id"
+                        )
+                    }
+                    toUpdate += connect to params
+                }
             }
         }
 
-        // Stop exporters whose URL is no longer requested.
-        (exporters.keys - desired.keys).forEach { url ->
-            logger.info("Stopping exporter for url=$url")
-            exporters.remove(url)?.exporter?.stop()
+        // Pass 2: apply.
+        toExpire.forEach { id ->
+            val removed = exporters.remove(id)
+            if (removed != null) {
+                logger.info("Stopping exporter id=$id")
+                removed.exporter.stop()
+            } else {
+                logger.warn("Received expire for unknown connect id=$id")
+            }
         }
-
-        desired.forEach { (url, connect) ->
-            val params = desiredParams.getValue(url)
-            val existing = exporters[url]
-            when {
-                // A URL that wasn't running: start a new exporter for it.
-                existing == null -> exporters[url] = Entry(exporterFactory(connect), params)
-                // A URL that was running and changed: only exports/requests can reach here (others threw above).
-                existing.params != params -> {
-                    logger.info("Updating exporter for url=$url")
-                    existing.exporter.update(params.exports, params.requests)
-                    existing.params = params
-                }
+        toCreate.forEach { connect ->
+            exporters[connect.id] = Entry(exporterFactory(connect), ConnectParams(connect))
+        }
+        toUpdate.forEach { (connect, params) ->
+            val existing = exporters.getValue(connect.id)
+            if (existing.params != params) {
+                logger.info("Updating exporter id=${connect.id}")
+                existing.exporter.update(params.exports, params.requests)
+                existing.params = params
             }
         }
 
@@ -177,11 +202,12 @@ class ExporterWrapper internal constructor(
     private class Entry(val exporter: Exporter, var params: ConnectParams)
 
     /**
-     * The parameters of a [Connect] other than its URL (which is its identity). Used to detect whether a re-signaled
-     * connect for an already-running URL has changed and therefore needs to be passed to the exporter as an update.
+     * The parameters of a [Connect] other than its id (which is its identity). Used to detect whether a re-signaled
+     * connect for an already-running id has changed and therefore needs to be passed to the exporter as an update.
      * Source-name lists are normalized (sorted) so reordering alone isn't treated as a change.
      */
     private data class ConnectParams(
+        val url: URI,
         val protocol: Connect.Protocols,
         val type: Connect.Types,
         val audio: Boolean,
@@ -193,6 +219,7 @@ class ExporterWrapper internal constructor(
         val requests: List<String>
     ) {
         constructor(connect: Connect) : this(
+            connect.url,
             connect.protocol,
             connect.type,
             connect.audio,
@@ -211,6 +238,7 @@ class ExporterWrapper internal constructor(
          * constrains them.
          */
         fun nonUpdatableChangesTo(other: ConnectParams): List<String> = buildList {
+            if (url != other.url) add("url")
             if (type != other.type) add("type")
             if (audio != other.audio) add("audio")
             if (headers != other.headers) add("headers")

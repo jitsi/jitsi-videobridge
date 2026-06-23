@@ -1295,9 +1295,9 @@ public class Conference
         }
     }
 
-    public void setConnects(List<Connect> exports)
+    public void applyConnects(List<Connect> connects)
     {
-        exporter.setConnects(exports);
+        exporter.applyConnects(connects);
     }
 
     public boolean hasRelays()
