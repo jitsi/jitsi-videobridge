@@ -39,7 +39,7 @@
         <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
         <spotbugs.version>4.9.4</spotbugs.version>
         <spotbugs-maven-plugin.version>4.9.4.2</spotbugs-maven-plugin.version>
-        <jackson.version>2.17.1</jackson.version>
+        <jackson.version>2.19.4</jackson.version>
         <jacoco.version>0.8.13</jacoco.version>
         <bouncycastle.version>1.83</bouncycastle.version>
         <jersey.version>3.1.11</jersey.version>
@@ -80,6 +80,17 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Pin all Jackson artifacts to a single version. Transitive deps (jersey, jicoco) otherwise
+                 leave the databind version to Maven mediation, which can resolve to 2.18.x. jackson-databind
+                 2.18.x has a regression that silently drops @JsonAnySetter properties for types deserialized
+                 via a constructor creator (e.g. EndpointMessage's "to"), stripping EndpointMessage payloads. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jicoco-config</artifactId>
