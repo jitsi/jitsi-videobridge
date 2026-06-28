@@ -57,6 +57,8 @@ import java.util.concurrent.atomic.AtomicLong
     JsonSubTypes.Type(value = SenderSourceConstraintsMessage::class, name = SenderSourceConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = AddReceiverMessage::class, name = AddReceiverMessage.TYPE),
     JsonSubTypes.Type(value = RemoveReceiverMessage::class, name = RemoveReceiverMessage.TYPE),
+    JsonSubTypes.Type(value = AddAudioSubscriptionMessage::class, name = AddAudioSubscriptionMessage.TYPE),
+    JsonSubTypes.Type(value = RemoveAudioSubscriptionMessage::class, name = RemoveAudioSubscriptionMessage.TYPE),
     JsonSubTypes.Type(value = ReceiverVideoConstraintsMessage::class, name = ReceiverVideoConstraintsMessage.TYPE),
     JsonSubTypes.Type(value = SourceVideoTypeMessage::class, name = SourceVideoTypeMessage.TYPE),
     JsonSubTypes.Type(value = ConnectionStats::class, name = ConnectionStats.TYPE),
@@ -122,6 +124,8 @@ open class MessageHandler {
             is SenderSourceConstraintsMessage -> senderSourceConstraints(message)
             is AddReceiverMessage -> addReceiver(message)
             is RemoveReceiverMessage -> removeReceiver(message)
+            is AddAudioSubscriptionMessage -> addAudioSubscription(message)
+            is RemoveAudioSubscriptionMessage -> removeAudioSubscription(message)
             is ReceiverVideoConstraintsMessage -> receiverVideoConstraints(message)
             is SourceVideoTypeMessage -> sourceVideoType(message)
             is ConnectionStats -> connectionStats(message)
@@ -149,6 +153,8 @@ open class MessageHandler {
     open fun senderSourceConstraints(message: SenderSourceConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun addReceiver(message: AddReceiverMessage) = unhandledMessageReturnNull(message)
     open fun removeReceiver(message: RemoveReceiverMessage) = unhandledMessageReturnNull(message)
+    open fun addAudioSubscription(message: AddAudioSubscriptionMessage) = unhandledMessageReturnNull(message)
+    open fun removeAudioSubscription(message: RemoveAudioSubscriptionMessage) = unhandledMessageReturnNull(message)
     open fun receiverVideoConstraints(message: ReceiverVideoConstraintsMessage) = unhandledMessageReturnNull(message)
     open fun sourceVideoType(message: SourceVideoTypeMessage) = unhandledMessageReturnNull(message)
     open fun connectionStats(message: ConnectionStats) = unhandledMessageReturnNull(message)
@@ -431,6 +437,30 @@ class RemoveReceiverMessage(
 
     companion object {
         const val TYPE = "RemoveReceiver"
+    }
+}
+
+/**
+ * A message sent from one bridge to another indicating that the bridge subscribes to the source
+ */
+class AddAudioSubscriptionMessage(
+    val bridgeId: String,
+    val sourceName: String
+) : BridgeChannelMessage() {
+    companion object {
+        const val TYPE = "AddAudioSubscription"
+    }
+}
+
+/**
+ * A message sent from one bridge to another indicating that the bridge no longer subscribes to the source
+ */
+class RemoveAudioSubscriptionMessage(
+    val bridgeId: String,
+    val sourceName: String
+) : BridgeChannelMessage() {
+    companion object {
+        const val TYPE = "RemoveAudioSubscription"
     }
 }
 

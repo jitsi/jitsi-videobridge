@@ -37,11 +37,13 @@ class AudioSubscription() {
                 is ReceiverAudioSubscriptionMessage.Include -> {
                     wantedSsrcs = emptySet()
                     subscription.list.forEach {
+                        // only add known local sources to wantedSsrc here
+                        // non-local sources are either remote sources or unknown sources
+                        // unknown sources will be handled as soon as the bridge receives colibri messages about them
+                        // remote sources are already handled in AudioSubscriptionManager
                         val desc = sources.find { source -> source.sourceName == it }
                         if (desc != null) {
                             wantedSsrcs += desc.ssrc
-                        } else {
-                            // TODO: notify relays about remote subscriptions
                         }
                     }
                 }
