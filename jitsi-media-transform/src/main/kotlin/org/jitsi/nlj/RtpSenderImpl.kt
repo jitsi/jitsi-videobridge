@@ -51,6 +51,7 @@ import org.jitsi.nlj.transform.node.ToggleablePcapWriter
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtEncoder
 import org.jitsi.nlj.transform.node.outgoing.HeaderExtStripper
+import org.jitsi.nlj.transform.node.outgoing.MidStamper
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
@@ -88,7 +89,12 @@ class RtpSenderImpl(
     val backgroundExecutor: ScheduledExecutorService,
     private val streamInformationStore: StreamInformationStore,
     parentLogger: Logger,
-    diagnosticContext: DiagnosticContext = DiagnosticContext()
+    diagnosticContext: DiagnosticContext = DiagnosticContext(),
+    /**
+     * Resolves the sdes:mid to stamp on an outgoing packet given its (rewritten) SSRC, or null to not stamp a mid.
+     * Used under SSRC rewriting for mid-based demuxing on the receiving client.
+     */
+    private val getMidBySsrc: (Long) -> String? = { null }
 ) : RtpSender() {
     private val logger = createChildLogger(parentLogger)
     private val outgoingRtpRoot: Node
@@ -167,6 +173,9 @@ class RtpSenderImpl(
             node(headerExtensionStripper)
             node(outgoingPacketCache)
             node(absSendTime)
+            // Placed right after absSendTime, which is where the RTX pipeline joins the main pipeline, so that both
+            // media packets and their retransmissions get the mid stamped.
+            node(MidStamper(streamInformationStore, getMidBySsrc))
             node(statsTracker)
             node(TccSeqNumTagger(transportCcEngine, streamInformationStore))
             node(HeaderExtEncoder(streamInformationStore, logger))
