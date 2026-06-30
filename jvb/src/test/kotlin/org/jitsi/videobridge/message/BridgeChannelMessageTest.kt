@@ -24,10 +24,12 @@ import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotInclude
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.VideoType
@@ -156,6 +158,23 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed2.otherFields["other_field2"] shouldBe 97
                 parsed2.otherFields.containsKey("other_null") shouldBe true
                 parsed2.otherFields.containsKey("nonexistent") shouldBe false
+            }
+
+            // EndpointMessage deserializes via a constructor creator ("to"). jackson-databind 2.18.x has a
+            // regression that drops @JsonAnySetter fields for creator-based types, which stripped msgPayload
+            // from forwarded EndpointMessages. This guards the round-trip (parse -> set from -> serialize).
+            should("preserve any-fields when forwarding (msgPayload is not stripped)") {
+                val payload =
+                    """{"colibriClass":"EndpointMessage","msgPayload":{"type":"face-box","faceBox":{"left":33,"right":64,"width":31}},"to":""}"""
+                val parsed3 = parse(payload) as EndpointMessage
+                parsed3.to shouldBe ""
+                withClue("otherFields=${parsed3.otherFields}") {
+                    parsed3.otherFields.containsKey("msgPayload") shouldBe true
+                }
+                parsed3.from = "3b213301"
+                withClue("json=${parsed3.toJson()}") {
+                    parsed3.toJson() shouldContain "msgPayload"
+                }
             }
         }
 
