@@ -762,11 +762,6 @@ class Relay @JvmOverloads constructor(
         setEndpointMediaSources(ep, audioSources, videoSources)
     }
 
-    /** The audio sources of all endpoints relayed over this relay. */
-    fun getAudioSources(): List<AudioSourceDesc> = synchronized(endpointsLock) {
-        relayedEndpoints.values.flatMap { it.audioSources }
-    }
-
     fun removeRemoteEndpoint(id: String) {
         val ep: RelayedEndpoint?
         synchronized(endpointsLock) {

@@ -1116,23 +1116,6 @@ public class Conference
     }
 
     /**
-     * Gets the audio sources in the conference, both from local endpoints and from endpoints relayed over our relays
-     * (so that audio subscriptions can resolve relayed source names as well as local ones).
-     * @return the list of audio sources in the conference
-     */
-    public List<AudioSourceDesc> getAudioSourceDescs()
-    {
-        List<AudioSourceDesc> descs = new ArrayList<>();
-        for (Endpoint endpoint : getLocalEndpoints()) {
-            descs.addAll(endpoint.getAudioSources());
-        }
-        for (Relay relay : getRelays()) {
-            descs.addAll(relay.getAudioSources());
-        }
-        return descs;
-    }
-
-    /**
      * Gets the conference name.
      *
      * @return the conference name
@@ -1619,9 +1602,9 @@ public class Conference
     private AudioSourceDesc findSyntheticAudioSource(String sourceName)
     {
         // Resolve via the subscription manager, which owns the authoritative set of sources under the same lock that
-        // guards the synthetic-SSRC set used at routing time. Scanning getAudioSourceDescs() here instead would read
-        // each endpoint's source field, which is updated out of step with the manager (e.g. a local endpoint updates
-        // the manager before its field, a relayed endpoint after), so a just-added synthetic source could be missed.
+        // guards the synthetic-SSRC set used at routing time. Scanning each endpoint's source field here instead
+        // would read state that is updated out of step with the manager (e.g. a local endpoint updates the manager
+        // before its field, a relayed endpoint after), so a just-added synthetic source could be missed.
         return audioSubscriptionManager.findSyntheticSource(sourceName);
     }
 
