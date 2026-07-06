@@ -79,47 +79,68 @@ class ExporterWrapper internal constructor(
      *    new id must set `create`). Only the exported/requested source names can change live; any other change is
      *    rejected.
      *
+     * Expires are applied before creates, so a single delta may both expire and re-create the same id (replacing a
+     * connect, e.g. to change its URL, in one request); any other repeated mention of an id is rejected.
+     *
      * The whole delta is validated before anything is applied, so a rejected connect doesn't disturb running exporters.
      */
     fun applyConnects(connects: List<Connect>) {
         // Validate up front so a rejected connect doesn't disturb the already-running exporters.
         connects.forEach { validate(it) }
 
-        // Pass 1: classify each connect and fail before mutating anything.
-        val toExpire = mutableListOf<String>()
+        // Pass 1: classify each connect and fail before mutating anything. Expires are collected first so that,
+        // regardless of the order within the delta, a create is checked against the map as it will be after the
+        // expires are applied.
+        val toExpire = mutableSetOf<String>()
+        connects.filter { it.expire }.forEach { connect ->
+            if (!toExpire.add(connect.id)) {
+                throw IqProcessingException(
+                    StanzaError.Condition.bad_request,
+                    "Duplicate expire for id=${connect.id}"
+                )
+            }
+        }
         val toCreate = mutableListOf<Connect>()
         val toUpdate = mutableListOf<Pair<Connect, ConnectParams>>()
-        connects.forEach { connect ->
+        connects.filterNot { it.expire }.forEach { connect ->
             val id = connect.id
-            when {
-                connect.expire -> toExpire += id
-                connect.create -> {
-                    if (exporters.containsKey(id)) {
-                        throw IqProcessingException(
-                            StanzaError.Condition.bad_request,
-                            "Connect with create=true for an already-existing id=$id"
-                        )
-                    }
-                    toCreate += connect
-                }
-                else -> {
-                    val running = exporters[id] ?: throw IqProcessingException(
+            if (toCreate.any { it.id == id } || toUpdate.any { it.first.id == id }) {
+                throw IqProcessingException(
+                    StanzaError.Condition.bad_request,
+                    "Multiple connects for id=$id"
+                )
+            }
+            if (connect.create) {
+                if (exporters.containsKey(id) && id !in toExpire) {
+                    throw IqProcessingException(
                         StanzaError.Condition.bad_request,
-                        "Connect for unknown id=$id without create=true"
+                        "Connect with create=true for an already-existing id=$id"
                     )
-                    val params = ConnectParams(connect)
-                    val unsupported = running.params.nonUpdatableChangesTo(params)
-                    if (unsupported.isNotEmpty()) {
-                        throw FeatureNotImplementedException(
-                            "Updating connect ${unsupported.joinToString()} for id=$id"
-                        )
-                    }
-                    toUpdate += connect to params
                 }
+                toCreate += connect
+            } else {
+                if (id in toExpire) {
+                    throw IqProcessingException(
+                        StanzaError.Condition.bad_request,
+                        "Connect update for id=$id expired in the same request"
+                    )
+                }
+                val running = exporters[id] ?: throw IqProcessingException(
+                    StanzaError.Condition.bad_request,
+                    "Connect for unknown id=$id without create=true"
+                )
+                val params = ConnectParams(connect)
+                val unsupported = running.params.nonUpdatableChangesTo(params)
+                if (unsupported.isNotEmpty()) {
+                    throw FeatureNotImplementedException(
+                        "Updating connect ${unsupported.joinToString()} for id=$id"
+                    )
+                }
+                toUpdate += connect to params
             }
         }
 
-        // Pass 2: apply.
+        // Pass 2: apply (expires before creates, so an expire+create of the same id replaces it).
         toExpire.forEach { id ->
             val removed = exporters.remove(id)
             if (removed != null) {

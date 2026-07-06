@@ -142,6 +142,61 @@ class ExporterWrapperTest : ShouldSpec() {
             }
         }
 
+        context("Same-id combinations within one delta") {
+            should("replace a connect via expire+create of the same id, regardless of order") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", url = "wss://example.com/a1", create = true)))
+                val old = f["a"]
+
+                f.wrapper.applyConnects(
+                    listOf(
+                        connect("a", url = "wss://example.com/a2", create = true),
+                        connect("a", url = "wss://example.com/a1", expire = true)
+                    )
+                )
+
+                verify(exactly = 1) { old.stop() }
+                f.wrapper.started shouldBe true
+                // The replacement exporter (created last for id "a") must not have been stopped.
+                verify(exactly = 0) { f["a"].stop() }
+            }
+            should("reject two creates for the same id") {
+                val f = Fixture()
+                shouldThrow<IqProcessingException> {
+                    f.wrapper.applyConnects(
+                        listOf(
+                            connect("a", url = "wss://example.com/a1", create = true),
+                            connect("a", url = "wss://example.com/a2", create = true)
+                        )
+                    )
+                }
+                f.wrapper.started shouldBe false
+                f.exporters shouldBe emptyMap()
+            }
+            should("reject an update for an id expired in the same delta") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
+
+                shouldThrow<IqProcessingException> {
+                    f.wrapper.applyConnects(
+                        listOf(connect("a", expire = true), connect("a", exports = listOf("s1")))
+                    )
+                }
+                // The whole delta is rejected before anything is applied.
+                verify(exactly = 0) { f["a"].stop() }
+                f.wrapper.started shouldBe true
+            }
+            should("reject duplicate expires for the same id") {
+                val f = Fixture()
+                f.wrapper.applyConnects(listOf(connect("a", create = true)))
+
+                shouldThrow<IqProcessingException> {
+                    f.wrapper.applyConnects(listOf(connect("a", expire = true), connect("a", expire = true)))
+                }
+                verify(exactly = 0) { f["a"].stop() }
+            }
+        }
+
         context("stop()") {
             should("stop all exporters and mark not started") {
                 val f = Fixture()
