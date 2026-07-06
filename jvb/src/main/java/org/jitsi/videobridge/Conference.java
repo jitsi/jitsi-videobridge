@@ -25,6 +25,7 @@ import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
@@ -206,21 +207,33 @@ public class Conference
 
     /**
      * Tags of received translated-media events that didn't match any synthetic source, so we warn about an
-     * unrecognized tag only once rather than on every packet.
+     * unrecognized tag only once rather than on every packet. Bounded (an unknown tag is never removed via
+     * {@link #removeAudioSources}, since it corresponds to no known source): the worst case of eviction is warning
+     * again for a tag we saw long ago.
      */
-    private final Set<String> loggedUnknownMediaTags = ConcurrentHashMap.newKeySet();
+    private final Set<String> loggedUnknownMediaTags =
+        Collections.synchronizedSet(LRUCache.lruSet(SYNTHETIC_SOURCE_LOG_CACHE_SIZE, true));
 
     /**
      * Names of synthetic sources that have been removed (unsubscribed) and not since re-added. Media for these can
      * still arrive briefly -- the translator may have sent it before it saw the unsubscribe -- so it's an expected
-     * transient rather than an unrecognized tag, and is dropped without a warning.
+     * transient rather than an unrecognized tag, and is dropped without a warning. Bounded (an entry is removed only
+     * when a source with the same name is re-added, so uniquely-named sources would otherwise accumulate for the
+     * conference's lifetime): the worst case of eviction is warning once for late media of a long-removed source.
      */
-    private final Set<String> removedSyntheticSources = ConcurrentHashMap.newKeySet();
+    private final Set<String> removedSyntheticSources =
+        Collections.synchronizedSet(LRUCache.lruSet(SYNTHETIC_SOURCE_LOG_CACHE_SIZE, true));
 
     /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
      */
     private final static Pattern uuidTrimmer = Pattern.compile("(\\p{XDigit}{8})[\\p{XDigit}-]*");
+
+    /**
+     * The maximum size of the bounded sets that suppress repeated synthetic-source log messages
+     * ({@link #loggedUnknownMediaTags}, {@link #removedSyntheticSources}).
+     */
+    private static final int SYNTHETIC_SOURCE_LOG_CACHE_SIZE = 1000;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
