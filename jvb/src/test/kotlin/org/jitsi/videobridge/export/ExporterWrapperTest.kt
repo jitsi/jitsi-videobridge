@@ -208,6 +208,16 @@ class ExporterWrapperTest : ShouldSpec() {
                 verify(exactly = 1) { f["a"].stop() }
                 verify(exactly = 1) { f["b"].stop() }
             }
+            should("reject connects after stop, so a racing delta can't start an unstoppable exporter") {
+                val f = Fixture()
+                f.wrapper.stop()
+
+                shouldThrow<IqProcessingException> {
+                    f.wrapper.applyConnects(listOf(connect("a", create = true)))
+                }
+                f.wrapper.started shouldBe false
+                f.exporters shouldBe emptyMap()
+            }
         }
 
         context("Updating exports/requests in place") {

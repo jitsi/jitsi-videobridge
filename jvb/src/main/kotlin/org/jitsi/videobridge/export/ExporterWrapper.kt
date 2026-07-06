@@ -47,14 +47,21 @@ class ExporterWrapper internal constructor(
     ) : this(parentLogger, handleTranscriptionResult, handleMediaEvent, getAudioSourceName, null)
 
     val logger = createChildLogger(parentLogger)
+
+    @Volatile
     var started = false
+
+    /** Set once [stop] has run (the conference expired), so a racing [applyConnects] can't start a new exporter
+     * that nothing would ever stop. */
+    private var stopped = false
 
     private val exporterFactory: (Connect) -> Exporter = exporterFactory ?: ::createExporter
 
     /**
-     * One running [Exporter] per requested connect, keyed by the connect's id. Mutated only on the colibri thread
-     * (via [applyConnects]/[stop]), but iterated on the debug thread by [debugState], so it must be concurrent to
-     * avoid a ConcurrentModificationException there.
+     * One running [Exporter] per requested connect, keyed by the connect's id. Mutated only under the object lock
+     * ([applyConnects] runs on the conference's colibri queue or, for colibri-over-REST, a Jetty thread; [stop] on
+     * the conference-expiry thread), but iterated without it by [debugState] on the debug REST thread, so it must
+     * also be concurrent.
      */
     private val exporters = ConcurrentHashMap<String, Entry>()
 
@@ -84,7 +91,11 @@ class ExporterWrapper internal constructor(
      *
      * The whole delta is validated before anything is applied, so a rejected connect doesn't disturb running exporters.
      */
+    @Synchronized
     fun applyConnects(connects: List<Connect>) {
+        if (stopped) {
+            throw IqProcessingException(StanzaError.Condition.bad_request, "The conference's exporter is stopped")
+        }
         // Validate up front so a rejected connect doesn't disturb the already-running exporters.
         connects.forEach { validate(it) }
 
@@ -166,10 +177,12 @@ class ExporterWrapper internal constructor(
         packetHandlers = exporters.values.map { it.exporter }
     }
 
+    @Synchronized
     fun stop() {
         if (started) {
             logger.info("Stopping.")
         }
+        stopped = true
         started = false
         exporters.values.forEach { it.exporter.stop() }
         exporters.clear()
