@@ -558,7 +558,8 @@ public class MediaSourceFactory
                         secondarySsrcs,
                         sourceSsrcs.owner,
                         sourceSsrcs.name,
-                        getVideoType(finalSources)
+                        getVideoType(finalSources),
+                        false
             );
             mediaSources.add(mediaSource);
         });
@@ -572,6 +573,16 @@ public class MediaSourceFactory
             Collection<SourceGroupPacketExtension> sourceGroups,
             String owner,
             String name)
+    {
+        return createMediaSource(sources, sourceGroups, owner, name, false);
+    }
+
+    public static MediaSourceDesc createMediaSource(
+            Collection<SourcePacketExtension> sources,
+            Collection<SourceGroupPacketExtension> sourceGroups,
+            String owner,
+            String name,
+            boolean synthetic)
     {
         Objects.requireNonNull(owner, "owner is required");
         Objects.requireNonNull(name, "name is required");
@@ -616,7 +627,8 @@ public class MediaSourceFactory
                     secondarySsrcs,
                     owner,
                     name,
-                    getVideoType(sources)
+                    getVideoType(sources),
+                    synthetic
             );
         }
         else
@@ -772,7 +784,8 @@ public class MediaSourceFactory
             Map<Long, SecondarySsrcs> allSecondarySsrcs,
             String owner,
             String name,
-            VideoType videoType
+            VideoType videoType,
+            boolean synthetic
     )
     {
         RtpEncodingDesc[] encodings =
@@ -810,7 +823,7 @@ public class MediaSourceFactory
             throw new IllegalArgumentException("The 'owner' is missing in the source description");
         }
 
-        return new MediaSourceDesc(encodings, owner, name, videoType);
+        return new MediaSourceDesc(encodings, owner, name, videoType, synthetic);
     }
 
     private static VideoType getVideoType(@NotNull Collection<SourcePacketExtension> sources)

@@ -59,7 +59,14 @@ class RelayedEndpoint(
 ) : AbstractEndpoint(conference, id, parentLogger), Relay.IncomingRelayPacketHandler {
     override var audioSources: List<AudioSourceDesc> = listOf()
         set(value) {
+            val oldValue = field
             field = value
+            audioSourcesChanged(value)
+            // Register relayed sources with the conference's audio subscription manager, so local clients can
+            // subscribe to them (Include/Exclude resolve their names) and relayed synthetic sources are suppressed
+            // for "All" subscriptions, the same as local sources.
+            conference.removeAudioSources(oldValue.filterNot { value.contains(it) }.toSet())
+            conference.addAudioSources(value.filterNot { oldValue.contains(it) }.toSet())
             value.forEach {
                 streamInformationStore.addReceiveSsrc(it.ssrc, MediaType.AUDIO)
                 conference.addEndpointSsrc(this, it.ssrc)
@@ -222,6 +229,9 @@ class RelayedEndpoint(
         }
         super.expire()
 
+        // Remove our sources from the conference's audio subscription manager.
+        conference.removeAudioSources(audioSources.toSet())
+
         try {
             updateStatsOnExpire()
             rtpReceiver.stop()
@@ -240,7 +250,7 @@ class RelayedEndpoint(
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
         override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean =
-            conference.levelChanged(this@RelayedEndpoint, level)
+            conference.levelChanged(this@RelayedEndpoint, sourceSsrc, level)
 
         /**
          * Forward bwe events from the Transceiver.
