@@ -225,6 +225,18 @@ public class Conference
         Collections.synchronizedSet(LRUCache.lruSet(SYNTHETIC_SOURCE_LOG_CACHE_SIZE, true));
 
     /**
+     * The conference's negotiated Opus payload type, resolved lazily by {@link #getOpusPayloadType()} and cached
+     * (payload types are never rewritten, so it is consistent across all endpoints for the conference's lifetime).
+     */
+    private volatile PayloadType opusPayloadType = null;
+
+    /**
+     * Whether we have warned about translated media arriving before any Opus payload type is negotiated, so the
+     * warning is logged once rather than per media event.
+     */
+    private final AtomicBoolean loggedNoOpusPayloadType = new AtomicBoolean(false);
+
+    /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
      */
     private final static Pattern uuidTrimmer = Pattern.compile("(\\p{XDigit}{8})[\\p{XDigit}-]*");
@@ -1587,7 +1599,10 @@ public class Conference
         PayloadType opusPayloadType = getOpusPayloadType();
         if (opusPayloadType == null)
         {
-            logger.warn("Received translated media but no Opus payload type is negotiated; dropping.");
+            if (loggedNoOpusPayloadType.compareAndSet(false, true))
+            {
+                logger.warn("Received translated media but no Opus payload type is negotiated; dropping.");
+            }
             return;
         }
 
@@ -1647,16 +1662,23 @@ public class Conference
 
     /**
      * Returns the Opus payload type negotiated in this conference, or {@code null} if none is found. Payload types
-     * are never rewritten, so the Opus PT is consistent across all endpoints; the first one found is returned.
+     * are never rewritten, so the Opus PT is consistent across all endpoints; the first one found is cached, since
+     * this runs per injected media event.
      */
     @Nullable
     private PayloadType getOpusPayloadType()
     {
+        PayloadType cached = opusPayloadType;
+        if (cached != null)
+        {
+            return cached;
+        }
         for (Endpoint endpoint : getLocalEndpoints())
         {
             PayloadType payloadType = endpoint.getOpusPayloadType();
             if (payloadType != null)
             {
+                opusPayloadType = payloadType;
                 return payloadType;
             }
         }
