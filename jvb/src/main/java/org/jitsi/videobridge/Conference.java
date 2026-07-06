@@ -1600,11 +1600,18 @@ public class Conference
         {
             byte[] payload = java.util.Base64.getDecoder().decode(media.getPayload());
             int headerSize = RtpHeader.FIXED_HEADER_SIZE_BYTES;
-            // Leave room at the end so SRTP can append its auth tag downstream without reallocating.
-            byte[] buffer = new byte[headerSize + payload.length + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET];
-            System.arraycopy(payload, 0, buffer, headerSize, payload.length);
+            int offset = RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET;
+            // Use a pooled buffer with the standard head and tail room, like other packet-construction sites, so
+            // downstream stages (header extensions, the SRTP auth tag) don't need to reallocate and the buffer
+            // round-trips through the pool.
+            byte[] buffer = ByteBufferPool.getBuffer(
+                offset + headerSize + payload.length + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET);
+            // The pooled buffer isn't zeroed, and the setters below don't cover every header field (e.g. the
+            // padding/extension/CSRC-count and marker bits), so clear the header region first.
+            Arrays.fill(buffer, offset, offset + headerSize, (byte) 0);
+            System.arraycopy(payload, 0, buffer, offset + headerSize, payload.length);
 
-            AudioRtpPacket rtpPacket = new AudioRtpPacket(buffer, 0, headerSize + payload.length);
+            AudioRtpPacket rtpPacket = new AudioRtpPacket(buffer, offset, headerSize + payload.length);
             rtpPacket.setVersion(2);
             rtpPacket.setPayloadType(opusPayloadType.getPt());
             rtpPacket.setSequenceNumber(media.getChunk());
