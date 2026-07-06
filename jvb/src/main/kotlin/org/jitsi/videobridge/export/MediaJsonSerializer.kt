@@ -64,31 +64,41 @@ class MediaJsonSerializer(
             logger.info("Ignoring packet without payloadType, SSRC ${p.ssrc}")
             return@synchronized
         }
-        // Tag the stream with its source name; fall back to endpoint+SSRC if the source isn't known.
-        val tag = getSourceName(p.ssrc) ?: "$epId-${p.ssrc}"
 
-        val state = ssrcsStarted.computeIfAbsent(p.ssrc) { ssrc ->
-            createSsrcState(p.timestamp, payloadType).also {
-                logger.info("Starting SSRC $ssrc for endpoint $epId ")
-                handleEvent(createStart(tag, epId, payloadType))
+        var state = ssrcsStarted[p.ssrc]
+        if (state == null) {
+            // Tag the stream with its source name. If the SSRC doesn't resolve to a signaled source (media racing
+            // colibri signaling), drop the packet: such audio isn't routed to receivers either, and starting the
+            // stream with a placeholder tag would strand its media events once the name resolves. The tag is kept
+            // in the state, so it stays consistent between the stream's start event and its media events.
+            val tag = getSourceName(p.ssrc) ?: run {
+                logger.info("Ignoring packet for SSRC ${p.ssrc} with no known source")
+                return@synchronized
             }
+            state = createSsrcState(p.timestamp, payloadType, tag)
+            ssrcsStarted[p.ssrc] = state
+            logger.info("Starting SSRC ${p.ssrc} for endpoint $epId ")
+            handleEvent(createStart(tag, epId, payloadType))
         }
 
         if (payloadType.pt != state.payloadType.pt) {
             logger.info("SSRC ${p.ssrc} changed payload type from ${state.payloadType} to $payloadType.")
-            ssrcsStarted[p.ssrc] = createSsrcState(p.timestamp, payloadType)
-            handleEvent(createStart(tag, epId, payloadType))
+            // An SSRC's source name doesn't change, so the new state (announced by a new start event) keeps the tag.
+            state = createSsrcState(p.timestamp, payloadType, state.tag)
+            ssrcsStarted[p.ssrc] = state
+            handleEvent(createStart(state.tag, epId, payloadType))
         }
 
-        handleEvent(encodeMedia(p, state, tag))
+        handleEvent(encodeMedia(p, state))
     }
 
-    private fun createSsrcState(timestamp: Long, payloadType: PayloadType): SsrcState {
+    private fun createSsrcState(initialRtpTimestamp: Long, payloadType: PayloadType, tag: String): SsrcState {
         val now = Clock.systemUTC().instant()
         return SsrcState(
-            timestamp,
+            initialRtpTimestamp,
             (Duration.between(ref, now).toNanos() * payloadType.clockRate.toDouble() * 1e-9).toLong(),
-            payloadType
+            payloadType,
+            tag
         )
     }
 
@@ -107,12 +117,12 @@ class MediaJsonSerializer(
     )
 
     @OptIn(ExperimentalEncodingApi::class)
-    private fun encodeMedia(p: AudioRtpPacket, state: SsrcState, tag: String): Event {
+    private fun encodeMedia(p: AudioRtpPacket, state: SsrcState): Event {
         ++seq
         return MediaEvent(
             seq,
             media = Media(
-                tag,
+                state.tag,
                 state.getSequenceNumber(p.sequenceNumber),
                 state.getTimestamp(p.timestamp),
                 Base64.encode(p.buffer, p.payloadOffset, p.payloadOffset + p.payloadLength)
@@ -124,7 +134,9 @@ class MediaJsonSerializer(
         initialRtpTimestamp: Long,
         // Offset of this SSRC since the start time in RTP units
         startOffset: Long,
-        val payloadType: PayloadType
+        val payloadType: PayloadType,
+        /** The stream's mediajson tag, as announced in its start event. */
+        val tag: String
     ) {
         private val seqIndexTracker = RtpSequenceIndexTracker()
         private val timestampIndexTracker = RtpTimestampIndexTracker().apply { update(initialRtpTimestamp) }

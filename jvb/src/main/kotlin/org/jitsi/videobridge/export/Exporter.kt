@@ -178,15 +178,15 @@ internal class Exporter(
 
     /**
      * Whether to forward this packet to this exporter: it must be audio from a source we export. An empty [exports]
-     * list means "export all audio"; otherwise only audio from a source named in [exports] is wanted.
+     * list means "export all audio"; otherwise only audio from a source named in [exports] is wanted. Either way the
+     * SSRC must resolve to a signaled source: audio from an unknown (e.g. not-yet-signaled) SSRC isn't routed to
+     * receivers, so it isn't exported either.
      */
     override fun wants(packet: PacketInfo): Boolean {
         if (!isConnected()) return false
         val audioPacket = packet.packet as? AudioRtpPacket ?: return false
-        // Avoid resolving the source name in the common "export everything" case.
-        if (exports.isEmpty()) return true
-        val sourceName = getAudioSourceName(audioPacket.ssrc)
-        return sourceName != null && sourceName in exports
+        val sourceName = getAudioSourceName(audioPacket.ssrc) ?: return false
+        return exports.isEmpty() || sourceName in exports
     }
 
     /**
