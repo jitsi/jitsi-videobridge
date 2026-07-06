@@ -27,6 +27,7 @@ import org.jitsi.videobridge.colibri2.IqProcessingException
 import org.jitsi.xmpp.extensions.colibri2.Connect
 import org.jivesoftware.smack.packet.StanzaError
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 
 class ExporterWrapper internal constructor(
     parentLogger: Logger,
@@ -50,8 +51,12 @@ class ExporterWrapper internal constructor(
 
     private val exporterFactory: (Connect) -> Exporter = exporterFactory ?: ::createExporter
 
-    /** One running [Exporter] per requested connect, keyed by the connect's id. */
-    private val exporters = mutableMapOf<String, Entry>()
+    /**
+     * One running [Exporter] per requested connect, keyed by the connect's id. Mutated only on the colibri thread
+     * (via [applyConnects]/[stop]), but iterated on the debug thread by [debugState], so it must be concurrent to
+     * avoid a ConcurrentModificationException there.
+     */
+    private val exporters = ConcurrentHashMap<String, Entry>()
 
     /**
      * The running exporters exposed as [PotentialPacketHandler]s for the conference's send path. Each exporter is an
