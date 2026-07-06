@@ -1257,7 +1257,9 @@ public class Conference
         }
         for (PotentialPacketHandler exporterHandler : exporter.getPacketHandlers())
         {
-            if (exporterHandler.wants(packetInfo))
+            // Never export synthetic (bridge-generated) audio, e.g. don't feed translated audio back to the
+            // translator that produced it, or to a transcriber/recorder that exports all audio (empty exports list).
+            if (!syntheticSource && exporterHandler.wants(packetInfo))
             {
                 if (prevHandler != null)
                 {
