@@ -1377,6 +1377,21 @@ public class Conference
         // real source plus a synthetic translated one), so we can't assume a single source per endpoint. The lookup
         // is O(1) (indexed by SSRC) since this runs for every audio packet.
         AudioSourceDesc source = endpoint.getAudioSource(ssrc);
+        if (source == null)
+        {
+            // The per-SSRC index is refreshed just after the endpoint's audioSources list, so a level packet arriving
+            // during a source update can miss the index while the list already has it. Fall back to a scan so we
+            // still classify the source (its synthetic flag and name gate the decisions below); missing it would
+            // wrongly subject a synthetic or explicitly-subscribed source to loudest-only filtering.
+            for (AudioSourceDesc s : endpoint.getAudioSources())
+            {
+                if (s.getSsrc() == ssrc)
+                {
+                    source = s;
+                    break;
+                }
+            }
+        }
 
         // Synthetic sources (e.g. bridge-generated translated audio) don't participate in speech activity /
         // loudest-speaker selection, and must not be dropped by loudest-only filtering -- they're still forwarded
