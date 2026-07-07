@@ -180,9 +180,7 @@ class Colibri2ConferenceHandler(
 
             val ssrcRewriting = c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
             val privateAddresses = c2endpoint.hasCapability(Capability.CAP_PRIVATE_ADDRESS_CONNECTIVITY)
-            // TODO: replace the string literal with Capability.CAP_RTP_MID_DEMUX_SUPPORT once it is added to
-            // jitsi-xmpp-extensions and a release is depended on here.
-            val midDemux = ssrcRewriting && c2endpoint.hasCapability("rtp-mid-demux")
+            val midDemux = ssrcRewriting && c2endpoint.hasCapability(Capability.CAP_RTP_MID_DEMUX_SUPPORT)
             conference.createLocalEndpoint(
                 c2endpoint.id,
                 transport.iceControlling,
