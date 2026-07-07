@@ -30,13 +30,15 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
         AudioSourceDesc(1003L, "endpoint3", "source3")
     )
 
-    private val manager = AudioSubscriptionManager()
+    // The manager owns the authoritative set of known sources; register the standard ones up front (as the conference
+    // would via colibri) so subscriptions can resolve their names. Synthetic-source tests add more via onSourcesAdded.
+    private val manager = AudioSubscriptionManager().apply { onSourcesAdded(audioSourceDescs.toSet()) }
 
     init {
         context("Basic subscription management") {
             should("handle single endpoint subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 // Endpoint should want included sources
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // source1
@@ -45,11 +47,12 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("handle multiple endpoint subscriptions") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1"))
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source2", "source3"))
+                val subscription1 = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1"))
+                val subscription2 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source2", "source3"))
 
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint2", subscription2, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
+                manager.setEndpointAudioSubscription("endpoint2", subscription2)
 
                 // endpoint1 subscriptions
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // source1
@@ -63,18 +66,19 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("handle All subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.All
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = true)
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe true
                 manager.isEndpointAudioWanted("endpoint1", 1003L) shouldBe true
-                manager.isEndpointAudioWanted("endpoint1", 9999L) shouldBe true // unknown SSRC
+                // An SSRC that corresponds to no known source is not routed, even under "all".
+                manager.isEndpointAudioWanted("endpoint1", 9999L) shouldBe false
             }
 
             should("handle None subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.None
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false)
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe false
@@ -82,8 +86,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("handle Exclude subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.Exclude(listOf("source2"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = true, exclude = listOf("source2"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // source1 not excluded
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe false // source2 excluded
@@ -93,8 +97,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
         context("Subscribed local audio sources tracking") {
             should("track explicitly subscribed sources with Include subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source3"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source3"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isExplicitlySubscribed("source1") shouldBe true
                 manager.isExplicitlySubscribed("source3") shouldBe true
@@ -102,8 +106,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("not track sources for All subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.All
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = true)
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe false
@@ -111,8 +115,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("not track sources for None subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.None
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false)
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe false
@@ -120,8 +124,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("not track sources for Exclude subscription") {
-                val subscription = ReceiverAudioSubscriptionMessage.Exclude(listOf("source2"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = true, exclude = listOf("source2"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe false
@@ -129,11 +133,13 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("track sources from multiple endpoints with Include subscriptions") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source2", "source3"))
+                val subscription1 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                val subscription2 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source2", "source3"))
 
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint2", subscription2, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
+                manager.setEndpointAudioSubscription("endpoint2", subscription2)
 
                 manager.isExplicitlySubscribed("source1") shouldBe true
                 manager.isExplicitlySubscribed("source2") shouldBe true
@@ -141,11 +147,13 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("handle overlapping subscriptions correctly") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source3"))
+                val subscription1 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                val subscription2 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source3"))
 
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint2", subscription2, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
+                manager.setEndpointAudioSubscription("endpoint2", subscription2)
 
                 // source1 should be tracked (subscribed by both endpoints)
                 // source2 should be tracked (subscribed by endpoint1)
@@ -156,14 +164,16 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("update tracked sources when subscription changes") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
+                val subscription1 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
                 manager.isExplicitlySubscribed("source1") shouldBe true
                 manager.isExplicitlySubscribed("source2") shouldBe true
                 manager.isExplicitlySubscribed("source3") shouldBe false
 
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source2", "source3"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription2, audioSourceDescs)
+                val subscription2 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source2", "source3"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription2)
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe true
                 manager.isExplicitlySubscribed("source3") shouldBe true
@@ -172,11 +182,13 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
         context("Endpoint removal") {
             should("remove endpoint from subscribed sources tracking") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source3"))
+                val subscription1 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                val subscription2 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source3"))
 
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint2", subscription2, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
+                manager.setEndpointAudioSubscription("endpoint2", subscription2)
                 manager.isExplicitlySubscribed("source1") shouldBe true
                 manager.isExplicitlySubscribed("source2") shouldBe true
                 manager.isExplicitlySubscribed("source3") shouldBe true
@@ -201,8 +213,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("clean up empty source entries") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("source1"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
                 manager.isExplicitlySubscribed("source1") shouldBe true
                 manager.isExplicitlySubscribed("source2") shouldBe false
                 manager.isExplicitlySubscribed("source3") shouldBe false
@@ -214,11 +226,13 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("remove audio sources from subscribed sources when endpoint is removed") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2", "source3"))
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source2", "source3"))
+                val subscription1 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2", "source3"))
+                val subscription2 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source2", "source3"))
 
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint2", subscription2, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
+                manager.setEndpointAudioSubscription("endpoint2", subscription2)
                 manager.isExplicitlySubscribed("source1") shouldBe true
                 manager.isExplicitlySubscribed("source2") shouldBe true
                 manager.isExplicitlySubscribed("source3") shouldBe true
@@ -237,11 +251,13 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("notify remaining subscriptions about removed sources") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source3"))
+                val subscription1 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                val subscription2 =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source3"))
 
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint2", subscription2, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
+                manager.setEndpointAudioSubscription("endpoint2", subscription2)
 
                 // Both endpoints should initially want source1
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
@@ -261,8 +277,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
         context("Source lifecycle management") {
             should("handle source addition") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("source4", "source5"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source4", "source5"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 // Initially, these sources don't exist, so they're not wanted
                 manager.isEndpointAudioWanted("endpoint1", 1004L) shouldBe false
@@ -281,9 +297,22 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isEndpointAudioWanted("endpoint1", 1006L) shouldBe false // source6 not included
             }
 
+            should("resolve a subscription naming a source that was signaled before it") {
+                // Regression: a ReceiverAudioSubscription can arrive after a source is signaled via colibri but
+                // referencing it by name. The subscription must resolve against the conference's known sources, not
+                // a snapshot captured by the caller, otherwise the source is silently never forwarded.
+                val lateSource = AudioSourceDesc(1007L, "endpoint7", "source7")
+                manager.onSourcesAdded(setOf(lateSource))
+
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source7"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
+
+                manager.isEndpointAudioWanted("endpoint1", 1007L) shouldBe true
+            }
+
             should("handle source removal") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe true
 
@@ -298,8 +327,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("clean up subscribed sources when sources are removed") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source2"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source2"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
                 manager.isExplicitlySubscribed("source1") shouldBe true
                 manager.isExplicitlySubscribed("source2") shouldBe true
 
@@ -316,15 +345,15 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
         context("Complex scenarios") {
             should("handle multiple endpoints with mixed subscription types") {
-                val allSub = ReceiverAudioSubscriptionMessage.All
-                val noneSub = ReceiverAudioSubscriptionMessage.None
-                val includeSub = ReceiverAudioSubscriptionMessage.Include(listOf("source1", "source3"))
-                val excludeSub = ReceiverAudioSubscriptionMessage.Exclude(listOf("source2"))
+                val allSub = ReceiverAudioSubscriptionMessage(all = true)
+                val noneSub = ReceiverAudioSubscriptionMessage(all = false)
+                val includeSub = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "source3"))
+                val excludeSub = ReceiverAudioSubscriptionMessage(all = true, exclude = listOf("source2"))
 
-                manager.setEndpointAudioSubscription("endpoint-all", allSub, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint-none", noneSub, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint-include", includeSub, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint-exclude", excludeSub, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint-all", allSub)
+                manager.setEndpointAudioSubscription("endpoint-none", noneSub)
+                manager.setEndpointAudioSubscription("endpoint-include", includeSub)
+                manager.setEndpointAudioSubscription("endpoint-exclude", excludeSub)
 
                 // endpoint-all should want everything
                 manager.isEndpointAudioWanted("endpoint-all", 1001L) shouldBe true
@@ -355,8 +384,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             should("handle subscription changes across different types") {
                 manager.setEndpointAudioSubscription(
                     "endpoint1",
-                    ReceiverAudioSubscriptionMessage.All,
-                    audioSourceDescs
+                    ReceiverAudioSubscriptionMessage(all = true)
                 )
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
                 manager.isExplicitlySubscribed("source1") shouldBe false
@@ -365,8 +393,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
                 manager.setEndpointAudioSubscription(
                     "endpoint1",
-                    ReceiverAudioSubscriptionMessage.Include(listOf("source1")),
-                    audioSourceDescs
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1"))
                 )
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe false
@@ -376,8 +403,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
                 manager.setEndpointAudioSubscription(
                     "endpoint1",
-                    ReceiverAudioSubscriptionMessage.None,
-                    audioSourceDescs
+                    ReceiverAudioSubscriptionMessage(all = false)
                 )
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false
                 manager.isExplicitlySubscribed("source1") shouldBe false
@@ -386,8 +412,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
                 manager.setEndpointAudioSubscription(
                     "endpoint1",
-                    ReceiverAudioSubscriptionMessage.Exclude(listOf("source2")),
-                    audioSourceDescs
+                    ReceiverAudioSubscriptionMessage(all = true, exclude = listOf("source2"))
                 )
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe false
@@ -398,11 +423,11 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("maintain independent endpoint subscriptions") {
-                val subscription1 = ReceiverAudioSubscriptionMessage.Include(listOf("source1"))
-                val subscription2 = ReceiverAudioSubscriptionMessage.Include(listOf("source2"))
+                val subscription1 = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1"))
+                val subscription2 = ReceiverAudioSubscriptionMessage(all = false, include = listOf("source2"))
 
-                manager.setEndpointAudioSubscription("endpoint1", subscription1, audioSourceDescs)
-                manager.setEndpointAudioSubscription("endpoint2", subscription2, audioSourceDescs)
+                manager.setEndpointAudioSubscription("endpoint1", subscription1)
+                manager.setEndpointAudioSubscription("endpoint2", subscription2)
 
                 // Verify independent subscriptions
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
@@ -413,8 +438,7 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 // Update one subscription shouldn't affect the other
                 manager.setEndpointAudioSubscription(
                     "endpoint1",
-                    ReceiverAudioSubscriptionMessage.All,
-                    audioSourceDescs
+                    ReceiverAudioSubscriptionMessage(all = true)
                 )
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe true // now wants all
                 manager.isEndpointAudioWanted("endpoint2", 1001L) shouldBe false // unchanged
@@ -427,8 +451,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
 
         context("Edge cases") {
             should("handle empty include list") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(emptyList())
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = false, include = emptyList())
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe false
@@ -439,8 +463,8 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("handle empty exclude list") {
-                val subscription = ReceiverAudioSubscriptionMessage.Exclude(emptyList())
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription = ReceiverAudioSubscriptionMessage(all = true, exclude = emptyList())
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 // Nothing excluded means everything is wanted
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true
@@ -452,8 +476,9 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
             }
 
             should("handle subscription to non-existent sources") {
-                val subscription = ReceiverAudioSubscriptionMessage.Include(listOf("non-existent-source"))
-                manager.setEndpointAudioSubscription("endpoint1", subscription, audioSourceDescs)
+                val subscription =
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("non-existent-source"))
+                manager.setEndpointAudioSubscription("endpoint1", subscription)
 
                 manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe false
                 manager.isEndpointAudioWanted("endpoint1", 1002L) shouldBe false
@@ -464,6 +489,157 @@ class AudioSubscriptionManagerTest : ShouldSpec() {
                 manager.isExplicitlySubscribed("source1") shouldBe false
                 manager.isExplicitlySubscribed("source2") shouldBe false
                 manager.isExplicitlySubscribed("source3") shouldBe false
+            }
+        }
+
+        context("Synthetic sources") {
+            // ssrc 2001 / "syntheticSource" is synthetic; the regular audioSourceDescs (1001-1003) are not.
+            val syntheticSsrc = 2001L
+            val syntheticDesc = AudioSourceDesc(syntheticSsrc, "endpointS", "syntheticSource", synthetic = true)
+
+            should("not be wanted under an All subscription") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = true)
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // non-synthetic still wanted
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+
+            should("not be wanted by an endpoint with no subscription (default)") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+
+                // No subscription set for this endpoint: defaults to wanting everything except synthetic.
+                manager.isEndpointAudioWanted("no-subscription", 1001L) shouldBe true
+                manager.isEndpointAudioWanted("no-subscription", syntheticSsrc) shouldBe false
+            }
+
+            should("not be wanted under an Exclude subscription that doesn't name it") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = true, exclude = listOf("source2"))
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // non-synthetic, not excluded
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+
+            should("be wanted only when explicitly included by name") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("syntheticSource"))
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe true
+            }
+
+            should("be wanted under an All subscription that also includes it") {
+                // The motivating case: "all regular audio plus this synthetic source", which the old
+                // mode-based message couldn't express.
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = true, include = listOf("syntheticSource"))
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // regular audio via `all`
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe true // synthetic via `include`
+            }
+
+            should("not be wanted by an Include subscription that names a different source") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1"))
+                )
+
+                manager.isEndpointAudioWanted("endpoint1", 1001L) shouldBe true // explicitly included
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+
+            should("be resolvable by name only while known, and only when synthetic") {
+                manager.findSyntheticSource("syntheticSource") shouldBe null // not added yet
+                manager.findSyntheticSource("source1") shouldBe null // known but not synthetic
+
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.findSyntheticSource("syntheticSource") shouldBe syntheticDesc
+                manager.findSyntheticSource("source1") shouldBe null // still not synthetic
+
+                manager.removeSources(setOf(syntheticDesc))
+                manager.findSyntheticSource("syntheticSource") shouldBe null // gone after removal
+            }
+
+            should("not be routed once removed, even to an All subscriber (no leak as ordinary audio)") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = true)
+                )
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+
+                manager.removeSources(setOf(syntheticDesc))
+                // Once removed the SSRC corresponds to no known source, so it must not be routed -- in particular it
+                // must not revert to being delivered as ordinary audio under an "all" subscription. This guards
+                // against late synthetic packets (translator media arriving just after the source was unsubscribed)
+                // leaking to non-subscribers.
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+
+            should("not be routed before it is known, even to an All subscriber (early-packet leak)") {
+                // The mirror of the late case: media for a synthetic SSRC that arrives before colibri has signaled
+                // the source must not be forwarded as ordinary audio.
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = true)
+                )
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false // not yet known
+
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                // Now known and synthetic: still gated to explicit (Include) subscribers only, not "all".
+                manager.isEndpointAudioWanted("endpoint1", syntheticSsrc) shouldBe false
+            }
+        }
+
+        context("Debug state") {
+            val syntheticSsrc = 2001L
+            val syntheticDesc = AudioSourceDesc(syntheticSsrc, "endpointS", "syntheticSource", synthetic = true)
+
+            should("report known sources, subscriptions, and explicit subscribers") {
+                manager.onSourcesAdded(setOf(syntheticDesc))
+                manager.setEndpointAudioSubscription(
+                    "endpoint1",
+                    ReceiverAudioSubscriptionMessage(all = true, exclude = listOf("source2"))
+                )
+                manager.setEndpointAudioSubscription(
+                    "endpoint2",
+                    ReceiverAudioSubscriptionMessage(all = false, include = listOf("source1", "syntheticSource"))
+                )
+
+                val state = manager.debugState()
+
+                // known_sources lists every known source with its synthetic flag (regulars + the synthetic one).
+                val knownSsrcs = state.get("known_sources").map { it.get("ssrc").asLong() }.toSet()
+                knownSsrcs shouldBe setOf(1001L, 1002L, 1003L, syntheticSsrc)
+                val syntheticEntry = state.get("known_sources").single { it.get("ssrc").asLong() == syntheticSsrc }
+                syntheticEntry.get("synthetic").asBoolean() shouldBe true
+
+                // subscribed_local_sources reflects only Include subscriptions.
+                val subscribed = state.get("subscribed_local_sources")
+                subscribed.has("source1") shouldBe true
+                subscribed.has("syntheticSource") shouldBe true
+                subscribed.has("source2") shouldBe false // only excluded, not an explicit subscription
+
+                // Per-endpoint subscription state, including resolved SSRCs.
+                val ep1 = state.get("subscriptions").get("endpoint1")
+                ep1.get("all").asBoolean() shouldBe true
+                ep1.get("excluded_ssrcs").map { it.asLong() } shouldBe listOf(1002L)
+                val ep2 = state.get("subscriptions").get("endpoint2")
+                ep2.get("all").asBoolean() shouldBe false
+                ep2.get("included_ssrcs").map { it.asLong() }.toSet() shouldBe setOf(1001L, syntheticSsrc)
             }
         }
     }

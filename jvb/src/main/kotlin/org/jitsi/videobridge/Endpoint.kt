@@ -33,6 +33,7 @@ import org.jitsi.nlj.PacketOrigin
 import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtension
@@ -442,6 +443,7 @@ class Endpoint @JvmOverloads constructor(
             val addedDescs = newValue.filterNot { oldValue.contains(it) }.toSet()
             conference.addAudioSources(addedDescs)
             field = newValue
+            audioSourcesChanged(newValue)
         }
 
     private fun setupIceTransport() {
@@ -525,6 +527,10 @@ class Endpoint @JvmOverloads constructor(
         transceiver.addPayloadType(payloadType)
         bitrateController.addPayloadType(payloadType)
     }
+
+    /** The Opus payload type negotiated with this endpoint, or null if none. */
+    fun getOpusPayloadType(): PayloadType? = transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values
+        .firstOrNull { it.encoding == PayloadTypeEncoding.OPUS }
 
     override fun addRtpExtension(rtpExtension: RtpExtension) = transceiver.addRtpExtension(rtpExtension)
 
@@ -1247,7 +1253,7 @@ class Endpoint @JvmOverloads constructor(
          * for every packet and we want to avoid the switch. The conference audio level code must not block.
          */
         override fun audioLevelReceived(sourceSsrc: Long, level: Long): Boolean =
-            conference.levelChanged(this@Endpoint, level)
+            conference.levelChanged(this@Endpoint, sourceSsrc, level)
 
         /**
          * Forward bwe events from the Transceiver.

@@ -75,7 +75,7 @@ class Colibri2ConferenceHandler(
         for (e in conferenceModifyIQ.endpoints) {
             responseBuilder.addEndpoint(handleColibri2Endpoint(e, ignoreUnknownEndpoints))
         }
-        conferenceModifyIQ.connects?.let { conference.setConnects(it.getConnects()) }
+        conferenceModifyIQ.connects?.let { conference.applyConnects(it.getConnects()) }
         for (r in conferenceModifyIQ.relays) {
             if (!RelayConfig.config.enabled) {
                 throw IqProcessingException(Condition.feature_not_implemented, "Octo is disabled in configuration.")
@@ -293,14 +293,14 @@ class Colibri2ConferenceHandler(
             // Assume a message can only contain one source per media type.
             // If "sources" was signaled, but it didn't contain any video sources, clear the endpoint's video sources
             val newMediaSources = sources.mediaSources.filter { it.type == MediaType.VIDEO }.mapNotNull {
-                MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id)
+                MediaSourceFactory.createMediaSource(it.sources, it.ssrcGroups, c2endpoint.id, it.id, it.isSynthetic)
             }
             endpoint.mediaSources = newMediaSources.toTypedArray()
 
             val audioSources: ArrayList<AudioSourceDesc> = ArrayList()
             sources.mediaSources.filter { it.type == MediaType.AUDIO }.forEach {
                 it.sources.forEach { s ->
-                    audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id))
+                    audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id, it.isSynthetic))
                 }
             }
             endpoint.audioSources = audioSources
@@ -484,10 +484,10 @@ class Colibri2ConferenceHandler(
                             "Ignoring audio source ${m.id} in endpoint $id of a relay (no SSRCs): ${toXML()}"
                         )
                     } else {
-                        m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id)) }
+                        m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id, m.isSynthetic)) }
                     }
                 } else if (m.type == MediaType.VIDEO) {
-                    val desc = MediaSourceFactory.createMediaSource(m.sources, m.ssrcGroups, id, m.id)
+                    val desc = MediaSourceFactory.createMediaSource(m.sources, m.ssrcGroups, id, m.id, m.isSynthetic)
                     if (desc != null) {
                         videoSources.add(desc)
                     }

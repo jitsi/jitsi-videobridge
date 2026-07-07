@@ -23,19 +23,27 @@ import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
 import org.jitsi.mediajson.Event
+import org.jitsi.mediajson.InfoEvent
+import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
+import org.jitsi.mediajson.SourcesEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
+import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
+import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
 import java.time.Duration
 import java.util.concurrent.ScheduledFuture
@@ -51,10 +59,19 @@ internal class Exporter(
     private val httpHeaders: Map<String, String>,
     val logger: Logger,
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    /** Handles a translated-audio media event received back from the peer. */
+    private val handleMediaEvent: ((MediaEvent) -> Unit),
+    /** Resolves an audio SSRC to its source name, used to filter outbound audio by this connect's exports. */
+    private val getAudioSourceName: (Long) -> String?,
     private val pingEnabled: Boolean = false,
     private val pingIntervalMs: Int = 0,
-    private val pingTimeoutMs: Int = 0
-) {
+    private val pingTimeoutMs: Int = 0,
+    private val type: Connect.Types = Connect.Types.RECORDER,
+    /** Source names to export (send out), communicated to the peer via a [SourcesEvent]. */
+    @Volatile private var exports: List<String> = emptyList(),
+    /** Source names requested (to receive back), communicated to the peer via a [SourcesEvent]. */
+    @Volatile private var requests: List<String> = emptyList()
+) : PotentialPacketHandler {
     private val isShuttingDown = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
@@ -74,8 +91,10 @@ internal class Exporter(
     private val instanceWebSocketInternalErrors = AtomicLong(0)
     private val instanceStarts = AtomicLong(0)
     private val instanceTranscriptsReceived = AtomicLong(0)
+    private val instanceMediaEventsReceived = AtomicLong(0)
     private val instanceOtherMessagesReceived = AtomicLong(0)
     private val instanceParseFailures = AtomicLong(0)
+    private val instanceInfoReceived = AtomicLong(0)
 
     val queue: PacketInfoQueue by lazy {
         PacketInfoQueue(
@@ -121,6 +140,11 @@ internal class Exporter(
             serializer = initSerializer()
             cancelReconnect()
             startPing()
+            // Declare our exported/requested sources to the peer, if any, now that the connection is up.
+            if (exports.isNotEmpty() || requests.isNotEmpty()) {
+                sendSources()
+            }
+            sendInfo()
         }
 
         override fun onWebSocketError(cause: Throwable?) {
@@ -141,7 +165,7 @@ internal class Exporter(
 
     private var serializer: MediaJsonSerializer? = null
 
-    private fun initSerializer() = MediaJsonSerializer {
+    private fun initSerializer() = MediaJsonSerializer(getAudioSourceName) {
         val session = recorderWebSocket.session
         if (session != null) {
             session.sendText(it.toJson(), Callback.NOOP)
@@ -151,6 +175,38 @@ internal class Exporter(
     }
 
     fun isConnected() = recorderWebSocket.isConnected
+
+    /**
+     * Whether to forward this packet to this exporter: it must be audio from a source we export. An empty [exports]
+     * list means "export all audio"; otherwise only audio from a source named in [exports] is wanted. Either way the
+     * SSRC must resolve to a signaled source: audio from an unknown (e.g. not-yet-signaled) SSRC isn't routed to
+     * receivers, so it isn't exported either.
+     */
+    override fun wants(packet: PacketInfo): Boolean {
+        if (!isConnected()) return false
+        val audioPacket = packet.packet as? AudioRtpPacket ?: return false
+        val sourceName = getAudioSourceName(audioPacket.ssrc) ?: return false
+        return exports.isEmpty() || sourceName in exports
+    }
+
+    /**
+     * Apply an update to the connect with this exporter's URL. Only the exported/requested source names may change
+     * on a running exporter; changes to other parameters are rejected by [ExporterWrapper] before reaching here.
+     */
+    fun update(exports: List<String>, requests: List<String>) {
+        logger.info("Updating exports=$exports requests=$requests")
+        this.exports = exports
+        this.requests = requests
+        // If we're connected, propagate the change now; otherwise it will be sent when the connection opens.
+        sendSources()
+    }
+
+    /** Send the current exported/requested source names to the peer. No-op if not currently connected. */
+    private fun sendSources() {
+        val session = recorderWebSocket.session ?: return
+        logger.info("Sending sources: exports=$exports requests=$requests")
+        session.sendText(SourcesEvent(exports, requests).toJson(), Callback.NOOP)
+    }
 
     private fun handleIncomingMessage(message: String) {
         try {
@@ -175,6 +231,16 @@ internal class Exporter(
                         logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
                     }
                 }
+                is MediaEvent -> {
+                    mediaEventsReceivedCount.inc()
+                    instanceMediaEventsReceived.incrementAndGet()
+                    handleMediaEvent(event)
+                }
+                is InfoEvent -> {
+                    infoReceivedCount.inc()
+                    instanceInfoReceived.incrementAndGet()
+                    logger.info("Received InfoEvent: ${event.toJson()}")
+                }
                 else -> {
                     otherMessagesReceivedCount.inc()
                     instanceOtherMessagesReceived.incrementAndGet()
@@ -184,6 +250,24 @@ internal class Exporter(
             logger.warn("Failed to parse incoming websocket message: $message", e)
             parseFailuresCount.inc()
             instanceParseFailures.incrementAndGet()
+        }
+    }
+
+    /**
+     * Send an informational message describing this application to the peer, once the connection
+     * is up. Used for runtime observability (the peer logs what it received). No-op if disconnected.
+     */
+    private fun sendInfo() {
+        val session = recorderWebSocket.session ?: return
+        val info = InfoEvent()
+            .put("application", "jitsi-videobridge")
+            .put("version", JvbVersionService.instance.currentVersion.toString())
+        RelayConfig.config.region?.let { info.put("region", it) }
+        try {
+            logger.info("Sending info to transcriber: ${info.toJson()}")
+            session.sendText(info.toJson(), Callback.NOOP)
+        } catch (e: Exception) {
+            logger.warn("Failed to send info message", e)
         }
     }
 
@@ -253,7 +337,7 @@ internal class Exporter(
         return true
     }
 
-    fun send(packet: PacketInfo) {
+    override fun send(packet: PacketInfo) {
         if (recorderWebSocket.isConnected) {
             queue.add(packet)
         } else {
@@ -327,6 +411,9 @@ internal class Exporter(
 
     fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("url", url.toString())
+        put("type", type.toString().lowercase())
+        putArray("exports").apply { exports.forEach { add(it) } }
+        putArray("requests").apply { requests.forEach { add(it) } }
         put("is_connected", isConnected())
         put("is_shutting_down", isShuttingDown.get())
         put("reconnect_attempts", reconnectAttempts.get())
@@ -335,8 +422,10 @@ internal class Exporter(
         put("websocket_internal_errors", instanceWebSocketInternalErrors.get())
         put("starts", instanceStarts.get())
         put("transcripts_received", instanceTranscriptsReceived.get())
+        put("media_events_received", instanceMediaEventsReceived.get())
         put("other_messages_received", instanceOtherMessagesReceived.get())
         put("parse_failures", instanceParseFailures.get())
+        put("info_received", instanceInfoReceived.get())
         put("queue_size", queue.size())
         put("ping_enabled", pingEnabled)
         if (pingEnabled) {
@@ -377,6 +466,11 @@ internal class Exporter(
             "Number of transcription results received by Exporter"
         )
 
+        private val mediaEventsReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_media_events_received",
+            "Number of media (translated audio) events received by Exporter"
+        )
+
         private val otherMessagesReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_other_messages_received",
             "Number of non-transcription messages received by Exporter"
@@ -385,6 +479,11 @@ internal class Exporter(
         private val parseFailuresCount = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_parse_failures",
             "Number of messages that failed to parse"
+        )
+
+        private val infoReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_info_received",
+            "Number of info messages received by Exporter"
         )
 
         private val maxReconnectAttempts: Int? by optionalconfig {
@@ -403,11 +502,13 @@ internal class Exporter(
             "videobridge.exporter.stable-connection-threshold".from(JitsiConfig.newConfig)
         }
 
-        // 0, base, base * 2, max at 30 seconds
+        // 0, base, base * 2, max at 30 seconds. The min is computed in Double space and converted afterwards so that
+        // a large attempt count (where 2.0.pow overflows to Infinity) clamps to maxDelay instead of overflowing Long
+        // and producing a negative (immediate) delay.
         private fun getDelayMs(attempt: Int) = if (attempt == 1) {
-            0
+            0L
         } else {
-            min(baseDelay.toMillis() * 2.0.pow(attempt - 2).toLong(), maxDelay.toMillis())
+            min(baseDelay.toMillis() * 2.0.pow(attempt - 2), maxDelay.toMillis().toDouble()).toLong()
         }
     }
 }

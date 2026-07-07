@@ -17,68 +17,187 @@ package org.jitsi.videobridge.export
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
-import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.PotentialPacketHandler
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
-import org.jitsi.videobridge.util.ByteBufferPool
+import org.jitsi.videobridge.colibri2.IqProcessingException
 import org.jitsi.xmpp.extensions.colibri2.Connect
+import org.jivesoftware.smack.packet.StanzaError
+import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 
-class ExporterWrapper(
+class ExporterWrapper internal constructor(
     parentLogger: Logger,
-    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit)
-) : PotentialPacketHandler {
+    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+    /** Handles a translated-audio media event received back from a peer. */
+    private val handleMediaEvent: ((MediaEvent) -> Unit),
+    /** Resolves an audio SSRC to its source name, used to filter outbound audio by a connect's exports. */
+    private val getAudioSourceName: (Long) -> String?,
+    /** Creates (and starts) the [Exporter] for a connect. Overridable for testing; defaults to the real one. */
+    exporterFactory: ((Connect) -> Exporter)?
+) {
+    constructor(
+        parentLogger: Logger,
+        handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
+        handleMediaEvent: ((MediaEvent) -> Unit),
+        getAudioSourceName: (Long) -> String?
+    ) : this(parentLogger, handleTranscriptionResult, handleMediaEvent, getAudioSourceName, null)
+
     val logger = createChildLogger(parentLogger)
+
+    @Volatile
     var started = false
-    private var exporter: Exporter? = null
-    fun setConnects(connects: List<Connect>) {
-        when {
-            started && connects.isNotEmpty() -> throw FeatureNotImplementedException("Changing connects once enabled.")
-            connects.isEmpty() -> stop()
-            connects.size > 1 -> throw FeatureNotImplementedException("Multiple connects")
-            connects[0].video -> throw FeatureNotImplementedException("Video")
-            else -> start(connects[0])
+
+    /** Set once [stop] has run (the conference expired), so a racing [applyConnects] can't start a new exporter
+     * that nothing would ever stop. */
+    private var stopped = false
+
+    private val exporterFactory: (Connect) -> Exporter = exporterFactory ?: ::createExporter
+
+    /**
+     * One running [Exporter] per requested connect, keyed by the connect's id. Mutated only under the object lock
+     * ([applyConnects] runs on the conference's colibri queue or, for colibri-over-REST, a Jetty thread; [stop] on
+     * the conference-expiry thread), but iterated without it by [debugState] on the debug REST thread, so it must
+     * also be concurrent.
+     */
+    private val exporters = ConcurrentHashMap<String, Entry>()
+
+    /**
+     * The running exporters exposed as [PotentialPacketHandler]s for the conference's send path. Each exporter is an
+     * independent handler, so the conference's send loop clones a packet only when it actually goes to more than one
+     * handler (and not at all for an exporter that filters the packet out via its own [PotentialPacketHandler.wants]).
+     * Cached and recomputed only when the set of exporters changes, so it allocates nothing on the per-packet path.
+     */
+    @Volatile
+    private var packetHandlers: List<PotentialPacketHandler> = emptyList()
+
+    /** The current exporters as packet handlers, for the conference's send path. */
+    fun getPacketHandlers(): List<PotentialPacketHandler> = packetHandlers
+
+    /**
+     * Apply a delta of connects, using the connect's [Connect.id] as its identity. Connects not mentioned are left
+     * running unchanged. Each connect is one of:
+     *  - `expire=true`: stop and remove the exporter with that id (a no-op with a warning if it isn't running),
+     *  - `create=true`: start a new exporter; rejected if an exporter with that id is already running,
+     *  - neither: update the already-running exporter with that id; rejected if none is running (i.e. a connect for a
+     *    new id must set `create`). Only the exported/requested source names can change live; any other change is
+     *    rejected.
+     *
+     * Expires are applied before creates, so a single delta may both expire and re-create the same id (replacing a
+     * connect, e.g. to change its URL, in one request); any other repeated mention of an id is rejected.
+     *
+     * The whole delta is validated before anything is applied, so a rejected connect doesn't disturb running exporters.
+     */
+    @Synchronized
+    fun applyConnects(connects: List<Connect>) {
+        if (stopped) {
+            throw IqProcessingException(StanzaError.Condition.bad_request, "The conference's exporter is stopped")
         }
-    }
+        // Validate up front so a rejected connect doesn't disturb the already-running exporters.
+        connects.forEach { validate(it) }
 
-    private fun isConnected() = started && exporter?.isConnected() == true
-
-    /** Whether we want to accept a packet. */
-    override fun wants(packet: PacketInfo): Boolean {
-        if (!isConnected() || packet.packet !is AudioRtpPacket) return false
-        return true
-    }
-
-    /** Accept a packet, add it to the queue. */
-    override fun send(packet: PacketInfo) {
-        exporter?.send(packet) ?: run {
-            ByteBufferPool.returnBuffer(packet.packet.buffer)
+        // Pass 1: classify each connect and fail before mutating anything. Expires are collected first so that,
+        // regardless of the order within the delta, a create is checked against the map as it will be after the
+        // expires are applied.
+        val toExpire = mutableSetOf<String>()
+        connects.filter { it.expire }.forEach { connect ->
+            if (!toExpire.add(connect.id)) {
+                throw IqProcessingException(
+                    StanzaError.Condition.bad_request,
+                    "Duplicate expire for id=${connect.id}"
+                )
+            }
         }
+        val toCreate = mutableListOf<Connect>()
+        val toUpdate = mutableListOf<Pair<Connect, ConnectParams>>()
+        connects.filterNot { it.expire }.forEach { connect ->
+            val id = connect.id
+            if (toCreate.any { it.id == id } || toUpdate.any { it.first.id == id }) {
+                throw IqProcessingException(
+                    StanzaError.Condition.bad_request,
+                    "Multiple connects for id=$id"
+                )
+            }
+            if (connect.create) {
+                if (exporters.containsKey(id) && id !in toExpire) {
+                    throw IqProcessingException(
+                        StanzaError.Condition.bad_request,
+                        "Connect with create=true for an already-existing id=$id"
+                    )
+                }
+                toCreate += connect
+            } else {
+                if (id in toExpire) {
+                    throw IqProcessingException(
+                        StanzaError.Condition.bad_request,
+                        "Connect update for id=$id expired in the same request"
+                    )
+                }
+                val running = exporters[id] ?: throw IqProcessingException(
+                    StanzaError.Condition.bad_request,
+                    "Connect for unknown id=$id without create=true"
+                )
+                val params = ConnectParams(connect)
+                val unsupported = running.params.nonUpdatableChangesTo(params)
+                if (unsupported.isNotEmpty()) {
+                    throw FeatureNotImplementedException(
+                        "Updating connect ${unsupported.joinToString()} for id=$id"
+                    )
+                }
+                toUpdate += connect to params
+            }
+        }
+
+        // Pass 2: apply (expires before creates, so an expire+create of the same id replaces it).
+        toExpire.forEach { id ->
+            val removed = exporters.remove(id)
+            if (removed != null) {
+                logger.info("Stopping exporter id=$id")
+                removed.exporter.stop()
+            } else {
+                logger.warn("Received expire for unknown connect id=$id")
+            }
+        }
+        toCreate.forEach { connect ->
+            exporters[connect.id] = Entry(exporterFactory(connect), ConnectParams(connect))
+        }
+        toUpdate.forEach { (connect, params) ->
+            val existing = exporters.getValue(connect.id)
+            if (existing.params != params) {
+                logger.info("Updating exporter id=${connect.id}")
+                existing.exporter.update(params.exports, params.requests)
+                existing.params = params
+            }
+        }
+
+        started = exporters.isNotEmpty()
+        packetHandlers = exporters.values.map { it.exporter }
     }
 
+    @Synchronized
     fun stop() {
         if (started) {
             logger.info("Stopping.")
         }
+        stopped = true
         started = false
-        exporter?.stop()
-        exporter = null
+        exporters.values.forEach { it.exporter.stop() }
+        exporters.clear()
+        packetHandlers = emptyList()
     }
 
-    fun start(connect: Connect) {
+    private fun validate(connect: Connect) {
         if (connect.video) throw FeatureNotImplementedException("Video")
         if (connect.protocol != Connect.Protocols.MEDIAJSON) {
             throw FeatureNotImplementedException("Protocol ${connect.protocol}")
         }
+    }
 
+    private fun createExporter(connect: Connect): Exporter {
         logger.info("Starting with url=${connect.url}")
-        if (exporter != null) {
-            logger.warn("Exporter already exists, stopping previous one.")
-            stop()
-        }
         val httpHeaders = connect.getHttpHeaders().associate { header ->
             header.name to header.value
         }
@@ -90,24 +209,81 @@ class ExporterWrapper(
         val pingIntervalMs = ping?.interval ?: 10000
         val pingTimeoutMs = ping?.timeout ?: 3000
 
-        exporter = Exporter(
+        // The source names to export (send out) and request (receive back). Not yet acted upon.
+        val exports = connect.getExports()
+        val requests = connect.getRequests()
+
+        return Exporter(
             connect.url,
             httpHeaders,
             logger,
             handleTranscriptionResult,
+            handleMediaEvent,
+            getAudioSourceName,
             pingEnabled,
             pingIntervalMs,
-            pingTimeoutMs
+            pingTimeoutMs,
+            connect.type,
+            exports,
+            requests
         ).apply {
             start()
         }
-        started = true
     }
 
     fun debugState(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("started", started)
-        exporter?.let {
-            set<ObjectNode>("exporter", it.debugState())
+        val exportersArray = putArray("exporters")
+        // Tag each exporter's debug info with its connect id (the identity it is stored and signaled under) so debug
+        // entries can be correlated to a specific connect.
+        exporters.forEach { (id, entry) -> exportersArray.add(entry.exporter.debugState().put("tag", id)) }
+    }
+
+    /** A running exporter together with the connect parameters it was last (re)configured with. */
+    private class Entry(val exporter: Exporter, var params: ConnectParams)
+
+    /**
+     * The parameters of a [Connect] other than its id (which is its identity). Used to detect whether a re-signaled
+     * connect for an already-running id has changed and therefore needs to be passed to the exporter as an update.
+     * Source-name lists are normalized (sorted) so reordering alone isn't treated as a change.
+     */
+    private data class ConnectParams(
+        val url: URI,
+        val protocol: Connect.Protocols,
+        val type: Connect.Types,
+        val audio: Boolean,
+        val video: Boolean,
+        val headers: Map<String, String>,
+        val pingInterval: Int?,
+        val pingTimeout: Int?,
+        val exports: List<String>,
+        val requests: List<String>
+    ) {
+        constructor(connect: Connect) : this(
+            connect.url,
+            connect.protocol,
+            connect.type,
+            connect.audio,
+            connect.video,
+            connect.getHttpHeaders().associate { it.name to it.value },
+            connect.getPing()?.interval,
+            connect.getPing()?.timeout,
+            connect.getExports().sorted(),
+            connect.getRequests().sorted()
+        )
+
+        /**
+         * The names of the parameters that differ from [other] and cannot be applied to an already-running exporter.
+         * Everything except [exports]/[requests] is connection-level and requires a reconnect to change, so a change
+         * to any of them is reported here (and rejected). protocol/video aren't included: [validate] already
+         * constrains them.
+         */
+        fun nonUpdatableChangesTo(other: ConnectParams): List<String> = buildList {
+            if (url != other.url) add("url")
+            if (type != other.type) add("type")
+            if (audio != other.audio) add("audio")
+            if (headers != other.headers) add("headers")
+            if (pingInterval != other.pingInterval || pingTimeout != other.pingTimeout) add("ping")
         }
     }
 }

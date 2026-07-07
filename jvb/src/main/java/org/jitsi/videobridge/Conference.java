@@ -19,10 +19,13 @@ import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.mediajson.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
 import org.jitsi.utils.logging2.Logger;
@@ -197,9 +200,52 @@ public class Conference
     private final ExporterWrapper exporter;
 
     /**
+     * Source names for which an injected (translated) synthetic source has already been created, so we log its
+     * creation only once. Cleared when the source is removed, so a re-created source logs again.
+     */
+    private final Set<String> loggedInjectedSources = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Tags of received translated-media events that didn't match any synthetic source, so we warn about an
+     * unrecognized tag only once rather than on every packet. Bounded (an unknown tag is never removed via
+     * {@link #removeAudioSources}, since it corresponds to no known source): the worst case of eviction is warning
+     * again for a tag we saw long ago.
+     */
+    private final Set<String> loggedUnknownMediaTags =
+        Collections.synchronizedSet(LRUCache.lruSet(SYNTHETIC_SOURCE_LOG_CACHE_SIZE, true));
+
+    /**
+     * Names of synthetic sources that have been removed (unsubscribed) and not since re-added. Media for these can
+     * still arrive briefly -- the translator may have sent it before it saw the unsubscribe -- so it's an expected
+     * transient rather than an unrecognized tag, and is dropped without a warning. Bounded (an entry is removed only
+     * when a source with the same name is re-added, so uniquely-named sources would otherwise accumulate for the
+     * conference's lifetime): the worst case of eviction is warning once for late media of a long-removed source.
+     */
+    private final Set<String> removedSyntheticSources =
+        Collections.synchronizedSet(LRUCache.lruSet(SYNTHETIC_SOURCE_LOG_CACHE_SIZE, true));
+
+    /**
+     * The conference's negotiated Opus payload type, resolved lazily by {@link #getOpusPayloadType()} and cached
+     * (payload types are never rewritten, so it is consistent across all endpoints for the conference's lifetime).
+     */
+    private volatile PayloadType opusPayloadType = null;
+
+    /**
+     * Whether we have warned about translated media arriving before any Opus payload type is negotiated, so the
+     * warning is logged once rather than per media event.
+     */
+    private final AtomicBoolean loggedNoOpusPayloadType = new AtomicBoolean(false);
+
+    /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
      */
     private final static Pattern uuidTrimmer = Pattern.compile("(\\p{XDigit}{8})[\\p{XDigit}-]*");
+
+    /**
+     * The maximum size of the bounded sets that suppress repeated synthetic-source log messages
+     * ({@link #loggedUnknownMediaTags}, {@link #removedSyntheticSources}).
+     */
+    private static final int SYNTHETIC_SOURCE_LOG_CACHE_SIZE = 1000;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -232,10 +278,17 @@ public class Conference
         }
 
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
-        exporter = new ExporterWrapper(logger, j -> {
-            handleTranscriptionMessage(j);
-            return Unit.INSTANCE;
-        });
+        exporter = new ExporterWrapper(
+            logger,
+            j -> {
+                handleTranscriptionMessage(j);
+                return Unit.INSTANCE;
+            },
+            m -> {
+                handleMediaMessage(m);
+                return Unit.INSTANCE;
+            },
+            ssrc -> getAudioSourceName(ssrc));
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
@@ -1051,6 +1104,34 @@ public class Conference
         return endpointsBySsrc.get(ssrc);
     }
 
+    /**
+     * Resolves an audio SSRC to the name of the source it belongs to, or {@code null} if it is not known. Used by the
+     * exporter to filter outbound audio by a connect's exported source names.
+     */
+    @Nullable
+    private String getAudioSourceName(long ssrc)
+    {
+        AbstractEndpoint endpoint = getEndpointBySsrc(ssrc);
+        if (endpoint == null)
+        {
+            return null;
+        }
+        AudioSourceDesc source = endpoint.getAudioSource(ssrc);
+        return source != null ? source.getSourceName() : null;
+    }
+
+    /**
+     * Whether the packet belongs to a synthetic source (bridge-generated audio, e.g. translated audio). Such packets
+     * are exempt from echo-suppression in {@link #sendOut}: a synthetic source is delivered purely by audio
+     * subscription, including to its owner endpoint, on every bridge.
+     */
+    private boolean isSyntheticSource(PacketInfo packetInfo)
+    {
+        Packet packet = packetInfo.getPacket();
+        return packet instanceof RtpPacket
+                && audioSubscriptionManager.isSynthetic(((RtpPacket) packet).getSsrc());
+    }
+
     public void addEndpointSsrc(@NotNull AbstractEndpoint endpoint, long ssrc)
     {
         AbstractEndpoint oldEndpoint = endpointsBySsrc.put(ssrc, endpoint);
@@ -1058,19 +1139,6 @@ public class Conference
         {
             logger.warn("SSRC " + ssrc + " moved from ep " + oldEndpoint.getId() + " to ep " + endpoint.getId());
         }
-    }
-
-    /**
-     * Gets local audio SSRCs in the conference
-     * @return the list of audio SSRCs in the conference
-     */
-    public List<AudioSourceDesc> getAudioSourceDescs()
-    {
-        List<AudioSourceDesc> descs = new ArrayList<>();
-        for (Endpoint endpoint : getLocalEndpoints()) {
-            descs.addAll(endpoint.getAudioSources());
-        }
-        return descs;
     }
 
     /**
@@ -1094,11 +1162,21 @@ public class Conference
     public void addAudioSources(Set<AudioSourceDesc> audioSources)
     {
         audioSubscriptionManager.onSourcesAdded(audioSources);
+        audioSources.forEach(source -> removedSyntheticSources.remove(source.getSourceName()));
     }
 
     public void removeAudioSources(Set<AudioSourceDesc> audioSources)
     {
         audioSubscriptionManager.removeSources(audioSources);
+        audioSources.forEach(source ->
+        {
+            loggedInjectedSources.remove(source.getSourceName());
+            loggedUnknownMediaTags.remove(source.getSourceName());
+            if (source.getSynthetic())
+            {
+                removedSyntheticSources.add(source.getSourceName());
+            }
+        });
     }
 
     /**
@@ -1108,7 +1186,7 @@ public class Conference
      */
     public void setEndpointAudioSubscription(String endpointId, ReceiverAudioSubscriptionMessage subscription)
     {
-        audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription, getAudioSourceDescs());
+        audioSubscriptionManager.setEndpointAudioSubscription(endpointId, subscription);
     }
 
     /**
@@ -1171,9 +1249,14 @@ public class Conference
         // original packet (without cloning).
         PotentialPacketHandler prevHandler = null;
 
+        boolean syntheticSource = isSyntheticSource(packetInfo);
         for (Endpoint endpoint : endpointsCache)
         {
-            if (endpoint.getId().equals(sourceEndpointId))
+            // Skip echoing a packet back to its source endpoint -- except for synthetic sources, which are
+            // bridge-generated (not the endpoint's own live audio) and whose delivery, including to their owner, is
+            // governed entirely by audio subscriptions. This holds whether the synthetic audio was injected locally
+            // or received over a relay (where the relay attributes the packet to the owner endpoint).
+            if (!syntheticSource && endpoint.getId().equals(sourceEndpointId))
             {
                 continue;
             }
@@ -1198,13 +1281,18 @@ public class Conference
                 prevHandler = relay;
             }
         }
-        if (exporter.wants(packetInfo))
+        for (PotentialPacketHandler exporterHandler : exporter.getPacketHandlers())
         {
-            if (prevHandler != null)
+            // Never export synthetic (bridge-generated) audio, e.g. don't feed translated audio back to the
+            // translator that produced it, or to a transcriber/recorder that exports all audio (empty exports list).
+            if (!syntheticSource && exporterHandler.wants(packetInfo))
             {
-                prevHandler.send(packetInfo.clone());
+                if (prevHandler != null)
+                {
+                    prevHandler.send(packetInfo.clone());
+                }
+                prevHandler = exporterHandler;
             }
-            prevHandler = exporter;
         }
 
         if (prevHandler != null)
@@ -1218,9 +1306,9 @@ public class Conference
         }
     }
 
-    public void setConnects(List<Connect> exports)
+    public void applyConnects(List<Connect> connects)
     {
-        exporter.setConnects(exports);
+        exporter.applyConnects(connects);
     }
 
     public boolean hasRelays()
@@ -1306,12 +1394,41 @@ public class Conference
      * Process a new audio level received from an endpoint.
      *
      * @param endpoint the endpoint for which a new audio level was received
+     * @param ssrc the SSRC of the source for which the audio level was received
      * @param level the new audio level which was received
      * @return Whether the packet providing this audio level should be dropped, according
      * to the current audio filtering configuration.
      */
-    public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long level)
+    public boolean levelChanged(@NotNull AbstractEndpoint endpoint, long ssrc, long level)
     {
+        // Find the specific source this level belongs to. An endpoint may have more than one audio source (e.g. a
+        // real source plus a synthetic translated one), so we can't assume a single source per endpoint. The lookup
+        // is O(1) (indexed by SSRC) since this runs for every audio packet.
+        AudioSourceDesc source = endpoint.getAudioSource(ssrc);
+        if (source == null)
+        {
+            // The per-SSRC index is refreshed just after the endpoint's audioSources list, so a level packet arriving
+            // during a source update can miss the index while the list already has it. Fall back to a scan so we
+            // still classify the source (its synthetic flag and name gate the decisions below); missing it would
+            // wrongly subject a synthetic or explicitly-subscribed source to loudest-only filtering.
+            for (AudioSourceDesc s : endpoint.getAudioSources())
+            {
+                if (s.getSsrc() == ssrc)
+                {
+                    source = s;
+                    break;
+                }
+            }
+        }
+
+        // Synthetic sources (e.g. bridge-generated translated audio) don't participate in speech activity /
+        // loudest-speaker selection, and must not be dropped by loudest-only filtering -- they're still forwarded
+        // to relays and to endpoints that explicitly subscribe to them.
+        if (source != null && source.getSynthetic())
+        {
+            return false;
+        }
+
         SpeakerRanking ranking = speechActivity.levelChanged(endpoint, level);
         if (ranking == null || !routeLoudestOnly)
             return false;
@@ -1320,14 +1437,9 @@ public class Conference
         if (ranking.energyRanking < LoudestConfig.Companion.getNumLoudest())
             return false;
         // return false if the source is subscribed with an "Include" subscription by any other endpoint.
-        List<AudioSourceDesc> sources = endpoint.getAudioSources();
-        if (!sources.isEmpty())
+        if (source != null && audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
         {
-            AudioSourceDesc source = sources.get(0); // assume one source per endpoint
-            if (audioSubscriptionManager.isExplicitlySubscribed(source.getSourceName()))
-            {
-                return false;
-            }
+            return false;
         }
         VideobridgeMetrics.tossedPacketsEnergy.getHistogram().observe(ranking.energyScore);
         return true;
@@ -1406,6 +1518,7 @@ public class Conference
         if (mode != DebugStateMode.SHORT)
         {
             debugState.set("exporter", exporter.debugState());
+            debugState.set("audio_subscriptions", audioSubscriptionManager.debugState());
         }
 
         return debugState;
@@ -1456,6 +1569,121 @@ public class Conference
         {
             logger.warn("Failed to broadcast transcription message", e);
         }
+    }
+
+    /**
+     * Handles a translated-audio "media" event received from a translator over the export websocket. The event's
+     * tag names the synthetic source the translated audio belongs to; we build an Opus RTP packet on that source's
+     * SSRC and inject it into the conference, where the synthetic-source routing delivers it (only to endpoints that
+     * explicitly subscribed to that source, and on to relays).
+     */
+    private void handleMediaMessage(MediaEvent mediaEvent)
+    {
+        org.jitsi.mediajson.Media media = mediaEvent.getMedia();
+        String sourceName = media.getTag();
+
+        AudioSourceDesc source = findSyntheticAudioSource(sourceName);
+        if (source == null)
+        {
+            if (removedSyntheticSources.contains(sourceName))
+            {
+                // Expected transient: the translator sent this before it saw our unsubscribe of the source.
+                logger.debug(() -> "Dropping translated media for removed synthetic source: " + sourceName);
+            }
+            else if (loggedUnknownMediaTags.add(sourceName))
+            {
+                logger.warn("Received translated media for unknown synthetic source: " + sourceName);
+            }
+            return;
+        }
+
+        PayloadType opusPayloadType = getOpusPayloadType();
+        if (opusPayloadType == null)
+        {
+            if (loggedNoOpusPayloadType.compareAndSet(false, true))
+            {
+                logger.warn("Received translated media but no Opus payload type is negotiated; dropping.");
+            }
+            return;
+        }
+
+        if (loggedInjectedSources.add(sourceName))
+        {
+            logger.info("Creating injected synthetic source " + sourceName + " (ssrc " + source.getSsrc() + ")");
+        }
+
+        try
+        {
+            byte[] payload = java.util.Base64.getDecoder().decode(media.getPayload());
+            int headerSize = RtpHeader.FIXED_HEADER_SIZE_BYTES;
+            int offset = RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET;
+            // Use a pooled buffer with the standard head and tail room, like other packet-construction sites, so
+            // downstream stages (header extensions, the SRTP auth tag) don't need to reallocate and the buffer
+            // round-trips through the pool.
+            byte[] buffer = ByteBufferPool.getBuffer(
+                offset + headerSize + payload.length + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET);
+            // The pooled buffer isn't zeroed, and the setters below don't cover every header field (e.g. the
+            // padding/extension/CSRC-count and marker bits), so clear the header region first.
+            Arrays.fill(buffer, offset, offset + headerSize, (byte) 0);
+            System.arraycopy(payload, 0, buffer, offset + headerSize, payload.length);
+
+            AudioRtpPacket rtpPacket = new AudioRtpPacket(buffer, offset, headerSize + payload.length);
+            rtpPacket.setVersion(2);
+            rtpPacket.setPayloadType(opusPayloadType.getPt());
+            rtpPacket.setSequenceNumber(media.getChunk());
+            rtpPacket.setTimestamp(media.getTimestamp());
+            rtpPacket.setSsrc(source.getSsrc());
+
+            PacketInfo packetInfo = new PacketInfo(rtpPacket);
+            packetInfo.setPayloadType(opusPayloadType);
+            // Deliberately leave the endpoint ID unset: this is bridge-generated audio, not an endpoint's own live
+            // audio, so there is no self-echo to suppress. Delivery (including to the source's owner) is governed
+            // entirely by the audio subscriptions, so an endpoint can subscribe to a synthetic source of its own.
+
+            handleIncomingPacket(packetInfo);
+        }
+        catch (Exception e)
+        {
+            logger.warn("Failed to handle translated media for source " + sourceName, e);
+        }
+    }
+
+    /**
+     * Finds the synthetic audio source with the given name, or {@code null} if there is none.
+     */
+    @Nullable
+    private AudioSourceDesc findSyntheticAudioSource(String sourceName)
+    {
+        // Resolve via the subscription manager, which owns the authoritative set of sources under the same lock that
+        // guards the synthetic-SSRC set used at routing time. Scanning each endpoint's source field here instead
+        // would read state that is updated out of step with the manager (e.g. a local endpoint updates the manager
+        // before its field, a relayed endpoint after), so a just-added synthetic source could be missed.
+        return audioSubscriptionManager.findSyntheticSource(sourceName);
+    }
+
+    /**
+     * Returns the Opus payload type negotiated in this conference, or {@code null} if none is found. Payload types
+     * are never rewritten, so the Opus PT is consistent across all endpoints; the first one found is cached, since
+     * this runs per injected media event.
+     */
+    @Nullable
+    private PayloadType getOpusPayloadType()
+    {
+        PayloadType cached = opusPayloadType;
+        if (cached != null)
+        {
+            return cached;
+        }
+        for (Endpoint endpoint : getLocalEndpoints())
+        {
+            PayloadType payloadType = endpoint.getOpusPayloadType();
+            if (payloadType != null)
+            {
+                opusPayloadType = payloadType;
+                return payloadType;
+            }
+        }
+        return null;
     }
 
     /**
