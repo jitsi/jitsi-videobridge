@@ -33,10 +33,9 @@ class MidStamperTest : ShouldSpec() {
 
     private val midExtId = 10
     private val ssrcWithMid = 1234L
-    private val mid = "v3"
     private val streamInformationStore = StreamInformationStoreImpl()
 
-    private val midStamper = MidStamper(streamInformationStore) { ssrc ->
+    private fun midStamper(mid: String) = MidStamper(streamInformationStore) { ssrc ->
         if (ssrc == ssrcWithMid) mid else null
     }
 
@@ -57,16 +56,22 @@ class MidStamperTest : ShouldSpec() {
         context("when the mid extension is negotiated") {
             streamInformationStore.addRtpExtensionMapping(RtpExtension(midExtId.toByte(), RtpExtensionType.MID))
 
-            should("stamp the mid for an SSRC that has a mapping") {
-                midStamper.onOutput {
-                    val ext = it.packetAs<RtpPacket>().getHeaderExtension(midExtId)
-                    ext.shouldNotBeNull()
-                    SdesHeaderExtension.getTextValue(ext) shouldBe mid
+            // Mids of assorted lengths: single character, even and odd lengths (odd exercises the extension
+            // padding path), and the 16-byte maximum of a one-byte header extension.
+            listOf("0", "v3", "audio-mid-7", "0123456789abcdef").forEach { mid ->
+                should("stamp the mid \"$mid\" for an SSRC that has a mapping") {
+                    val midStamper = midStamper(mid)
+                    midStamper.onOutput {
+                        val ext = it.packetAs<RtpPacket>().getHeaderExtension(midExtId)
+                        ext.shouldNotBeNull()
+                        SdesHeaderExtension.getTextValue(ext) shouldBe mid
+                    }
+                    midStamper.processPacket(packetInfo(ssrcWithMid))
                 }
-                midStamper.processPacket(packetInfo(ssrcWithMid))
             }
 
             should("not stamp an SSRC that has no mapping") {
+                val midStamper = midStamper("v3")
                 midStamper.onOutput {
                     it.packetAs<RtpPacket>().getHeaderExtension(midExtId) shouldBe null
                 }
@@ -76,6 +81,7 @@ class MidStamperTest : ShouldSpec() {
 
         context("when the mid extension is not negotiated") {
             should("not stamp anything") {
+                val midStamper = midStamper("v3")
                 midStamper.onOutput {
                     it.packetAs<RtpPacket>().getHeaderExtension(midExtId) shouldBe null
                 }
