@@ -24,6 +24,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.message.AudioSourcesMap
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import java.util.Random
@@ -32,7 +33,7 @@ class SsrcCacheTest : ShouldSpec() {
     private val limit = 50
     private val ep = Ep()
     private val logger: Logger = LoggerImpl(javaClass.name)
-    private val audioSsrcCache = AudioSsrcCache(limit, ep, logger)
+    private val audioSsrcCache = AudioSsrcCache(limit, ep, false, logger)
 
     private val seed = System.currentTimeMillis()
     private val random = Random(seed)
@@ -60,6 +61,43 @@ class SsrcCacheTest : ShouldSpec() {
         }
 
         checker.size() shouldBeLessThanOrEqual limit
+
+        should("assign a stable mid per slot when mid demux is enabled") {
+            val midEp = Ep()
+            val cache = AudioSsrcCache(2, midEp, midDemux = true, logger)
+
+            cache.rewriteRtp(PacketGenerator(1001L, random).nextPacket())
+            cache.rewriteRtp(PacketGenerator(1002L, random).nextPacket())
+            // The pool (size 2) is now full; a third source remaps the least-recently-used slot.
+            cache.rewriteRtp(PacketGenerator(1003L, random).nextPacket())
+
+            val msgs = midEp.sentMessages.filterIsInstance<AudioSourcesMap>()
+            msgs.size shouldBe 3
+            val first = msgs[0].mappedSources.single()
+            val second = msgs[1].mappedSources.single()
+            val third = msgs[2].mappedSources.single()
+
+            first.mid shouldBe "a0"
+            second.mid shouldBe "a1"
+            // The remap reuses the evicted slot, so it keeps that slot's mid and send SSRC.
+            third.mid shouldBe "a0"
+            third.ssrc shouldBe first.ssrc
+
+            cache.getMidBySsrc(first.ssrc) shouldBe "a0"
+            cache.getMidBySsrc(second.ssrc) shouldBe "a1"
+        }
+
+        should("not assign mids when mid demux is disabled") {
+            val plainEp = Ep()
+            val cache = AudioSsrcCache(2, plainEp, midDemux = false, logger)
+
+            cache.rewriteRtp(PacketGenerator(2001L, random).nextPacket())
+
+            val mapping = plainEp.sentMessages.filterIsInstance<AudioSourcesMap>()
+                .flatMap { it.mappedSources }.single()
+            mapping.mid shouldBe null
+            cache.getMidBySsrc(mapping.ssrc) shouldBe null
+        }
     }
 }
 
@@ -75,6 +113,8 @@ private class Ep : SsrcRewriter {
         return AudioSourceDesc(ssrc, "anon-$ssrc", "anon-$ssrc-a0")
     }
 
+    val sentMessages = mutableListOf<BridgeChannelMessage>()
+
     override fun getNextSendSsrc(): Long {
         synchronized(this) {
             return nextSendSsrc++
@@ -82,6 +122,7 @@ private class Ep : SsrcRewriter {
     }
 
     override fun sendMessage(msg: BridgeChannelMessage) {
+        sentMessages.add(msg)
     }
 }
 

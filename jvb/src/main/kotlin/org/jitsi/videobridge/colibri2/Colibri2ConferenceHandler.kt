@@ -180,10 +180,12 @@ class Colibri2ConferenceHandler(
 
             val ssrcRewriting = c2endpoint.hasCapability(Capability.CAP_SSRC_REWRITING_SUPPORT)
             val privateAddresses = c2endpoint.hasCapability(Capability.CAP_PRIVATE_ADDRESS_CONNECTIVITY)
+            val midDemux = ssrcRewriting && c2endpoint.hasCapability(Capability.CAP_RTP_MID_DEMUX_SUPPORT)
             conference.createLocalEndpoint(
                 c2endpoint.id,
                 transport.iceControlling,
                 ssrcRewriting,
+                midDemux,
                 c2endpoint.mucRole == MUCRole.visitor,
                 privateAddresses
             ).apply {

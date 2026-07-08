@@ -42,6 +42,7 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Align common fields from different source types.
@@ -201,7 +202,7 @@ class SendSsrc(val ssrc: Long) {
  * Associates primary and secondary send SSRCs.
  * Primary constructor preserves state of the existing send SSRCs.
  */
-class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc) {
+class SendSource(val props: SourceDesc, val send1: SendSsrc, val send2: SendSsrc, val mid: String? = null) {
 
     /**
      * If false, do not send on this SSRC until a packet with start=true arrives.
@@ -275,9 +276,29 @@ interface SsrcRewriter {
  * SSRCs are remapped. RTP packets have their header fields rewritten so the stream appears
  * to be a continuation of an already advertised SSRC.
  */
-abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: Logger, label: String) {
+abstract class SsrcCache(
+    val size: Int,
+    val ep: SsrcRewriter,
+    /** Whether to assign and stamp a mid per slot for mid-based demuxing on the client. */
+    val midDemux: Boolean,
+    val parentLogger: Logger,
+    label: String
+) {
 
     private val logger = createChildLogger(parentLogger).apply { addContext("type", label) }
+
+    /** The prefix used for the mids assigned to slots of this cache (e.g. "a" for audio, "v" for video). */
+    protected abstract val midPrefix: String
+
+    /**
+     * Maps a (send-side) SSRC to the mid of the slot it belongs to. Populated when [midDemux] is enabled. Both the
+     * primary and RTX send SSRCs of a slot map to the same mid. Read from the sender pipeline thread (lock-free) while
+     * written under the [sendSources] lock, hence the concurrent map.
+     */
+    private val sendSsrcToMid = ConcurrentHashMap<Long, String>()
+
+    /** The next index to use when assigning a mid to a newly-created slot. */
+    private var nextMidIndex = 0
 
     /**
      * All remote SSRCs that have been seen.
@@ -338,7 +359,9 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             }
             if (sendSources.size == size) {
                 val eldest = sendSources.eldest()
-                sendSource = SendSource(props, eldest.value.send1, eldest.value.send2)
+                /* Reuse the eldest slot's send SSRCs *and* its mid: the mid is bound to the slot (i.e. to the send
+                   SSRCs), not to the source, so it stays stable across remaps. */
+                sendSource = SendSource(props, eldest.value.send1, eldest.value.send2, eldest.value.mid)
                 logger.debug { "Remapping SSRC: ${props.ssrc1}->$sendSource. ${eldest.key}->inactive" }
                 /* Request new deltas on next sent packet */
                 receivedSsrcs[props.ssrc1]?.hasDeltas = false
@@ -349,15 +372,27 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
             } else {
                 val ssrc1 = ep.getNextSendSsrc()
                 val ssrc2 = ep.getNextSendSsrc()
-                sendSource = SendSource(props, ssrc1, ssrc2)
+                val mid = if (midDemux) "$midPrefix${nextMidIndex++}" else null
+                sendSource = SendSource(props, SendSsrc(ssrc1), SendSsrc(ssrc2), mid)
                 logger.debug { "Added send SSRC: ${props.ssrc1}->$sendSource" }
             }
             sendSources[ssrc] = sendSource
+            /* Bind both the primary and RTX send SSRCs to the slot's mid so the stamper can resolve either. */
+            sendSource.mid?.let { mid ->
+                sendSsrcToMid[sendSource.send1.ssrc] = mid
+                sendSsrcToMid[sendSource.send2.ssrc] = mid
+            }
             remappings?.add(sendSource)
         }
 
         return sendSource
     }
+
+    /**
+     * Returns the mid assigned to the slot whose (send-side) SSRC is [ssrc], or null if [ssrc] is not a slot SSRC of
+     * this cache or mid demux is disabled.
+     */
+    fun getMidBySsrc(ssrc: Long): String? = sendSsrcToMid[ssrc]
 
     /**
      * Remove all send sources owned by [owner]. Does not signal anything to the client, as only additions need to be
@@ -531,11 +566,13 @@ abstract class SsrcCache(val size: Int, val ep: SsrcRewriter, val parentLogger: 
 /**
  * SSRC Cache for audio.
  */
-class AudioSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
-    SsrcCache(size, ep, parentLogger, MediaType.AUDIO.toString()) {
+class AudioSsrcCache(size: Int, ep: SsrcRewriter, midDemux: Boolean, parentLogger: Logger) :
+    SsrcCache(size, ep, midDemux, parentLogger, MediaType.AUDIO.toString()) {
 
     /* Switching occurs on received packets */
     override val allowCreateOnPacket = true
+
+    override val midPrefix = "a"
 
     /**
      * {@inheritDoc}
@@ -555,7 +592,7 @@ class AudioSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
     override fun notifyMappings(sources: List<SendSource>) {
         sources.map {
             val props = it.props
-            AudioSourceMapping(props.name, props.owner, it.send1.ssrc)
+            AudioSourceMapping(props.name, props.owner, it.send1.ssrc, it.mid)
         }.also {
             ep.sendMessage(AudioSourcesMap(it))
         }
@@ -565,11 +602,13 @@ class AudioSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
 /**
  * SSRC Cache for video.
  */
-class VideoSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
-    SsrcCache(size, ep, parentLogger, MediaType.VIDEO.toString()) {
+class VideoSsrcCache(size: Int, ep: SsrcRewriter, midDemux: Boolean, parentLogger: Logger) :
+    SsrcCache(size, ep, midDemux, parentLogger, MediaType.VIDEO.toString()) {
 
     /* Switching triggered by activate() method only  */
     override val allowCreateOnPacket = false
+
+    override val midPrefix = "v"
 
     /**
      * {@inheritDoc}
@@ -582,7 +621,7 @@ class VideoSsrcCache(size: Int, ep: SsrcRewriter, parentLogger: Logger) :
     override fun notifyMappings(sources: List<SendSource>) {
         sources.map {
             val props = it.props
-            VideoSourceMapping(props.name, props.owner, it.send1.ssrc, it.send2.ssrc, props.videoType)
+            VideoSourceMapping(props.name, props.owner, it.send1.ssrc, it.send2.ssrc, props.videoType, it.mid)
         }.also {
             ep.sendMessage(VideoSourcesMap(it))
         }

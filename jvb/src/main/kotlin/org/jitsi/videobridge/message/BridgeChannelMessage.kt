@@ -338,7 +338,10 @@ data class VideoSourceMapping(
     /** The RTX SSRC of the source being mapped. */
     val rtx: Long,
     /** The video type of the source being mapped. */
-    val videoType: VideoType
+    val videoType: VideoType,
+    /** The mid the bridge stamps on this source's packets, when mid-based demuxing is enabled. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    val mid: String? = null
 )
 
 /**
@@ -363,6 +366,9 @@ data class AudioSourceMapping(
     val owner: String?,
     /** The SSRC of the source being mapped. */
     val ssrc: Long,
+    /** The mid the bridge stamps on this source's packets, when mid-based demuxing is enabled. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    val mid: String? = null
 )
 
 /**
