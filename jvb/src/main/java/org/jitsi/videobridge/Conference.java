@@ -160,7 +160,6 @@ public class Conference
 
     private final Tracer tracer = GlobalOTel.INSTANCE.getSdk().getTracer("org.jitsi.videobridge");
 
-
     /**
      * The time when this {@link Conference} was created.
      */
