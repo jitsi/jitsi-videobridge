@@ -315,7 +315,7 @@ public class Conference
                                         SpanContext.createFromRemoteParent(
                                                 traceParent.getTraceId(),
                                                 traceParent.getParentId(),
-                                                TraceFlags.getSampled(),
+                                                TraceFlags.fromHex(traceParent.getTraceFlags(), 0),
                                                 TraceState.getDefault()
                                         )
                                 )
