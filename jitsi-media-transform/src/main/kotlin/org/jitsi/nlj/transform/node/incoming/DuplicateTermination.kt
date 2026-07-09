@@ -20,7 +20,6 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.LRUCache
-import java.util.TreeMap
 
 /**
  * A node which drops packets with SSRC and sequence number pairs identical to ones
@@ -30,7 +29,10 @@ import java.util.TreeMap
  * will occur is after the [RtxHandler], since duplicate packets are sent over RTX for probing.)
  */
 class DuplicateTermination() : TransformerNode("Duplicate termination") {
-    private val replayContexts: MutableMap<Long, MutableSet<Int>> = TreeMap()
+    /**
+     * Per-SSRC replay context, keyed on the RTP SSRC. Bounded with an LRU to limit the number of SSRCs tracked.
+     */
+    private val replayContexts: MutableMap<Long, MutableSet<Int>> = LRUCache(MAX_SSRCS, true)
     private var numDuplicatePacketsDropped = 0
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
@@ -56,4 +58,9 @@ class DuplicateTermination() : TransformerNode("Duplicate termination") {
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
+
+    companion object {
+        /** The maximum number of SSRCs to track replay contexts for. */
+        const val MAX_SSRCS = 64
+    }
 }

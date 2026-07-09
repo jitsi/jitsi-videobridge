@@ -22,6 +22,7 @@ import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.isOlderThan
 import org.jitsi.rtp.util.numPacketsTo
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
@@ -42,7 +43,16 @@ class RetransmissionRequester(
     private val clock: Clock = Clock.systemUTC()
 ) {
     private val logger = createChildLogger(parentLogger)
-    private val streamPacketRequesters: MutableMap<Long, StreamPacketRequester> = HashMap()
+
+    /**
+     * Per-SSRC requesters, keyed on the RTP SSRC. Bounded with an LRU to limit the number of SSRCs tracked; evicted
+     * requesters are stopped to cancel their scheduled tasks. Access is synchronized on the map.
+     */
+    private val streamPacketRequesters: MutableMap<Long, StreamPacketRequester> =
+        object : LRUCache<Long, StreamPacketRequester>(MAX_SSRCS, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, StreamPacketRequester>): Boolean =
+                super.removeEldestEntry(eldest).also { if (it) eldest.value.stop() }
+        }
 
     fun packetReceived(ssrc: Long, seqNum: Int) {
         val streamPacketRequester = synchronized(streamPacketRequesters) {
@@ -238,5 +248,8 @@ class RetransmissionRequester(
     companion object {
         private const val MAX_REQUESTS = 10
         private val REQUEST_INTERVAL = Duration.ofMillis(150)
+
+        /** The maximum number of SSRCs to track retransmission requesters for. */
+        const val MAX_SSRCS = 64
     }
 }

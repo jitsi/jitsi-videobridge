@@ -23,13 +23,14 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacketBuilder
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.MediaType
 import org.jitsi.utils.ms
 import org.jitsi.utils.times
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 
 /**
@@ -71,7 +72,11 @@ class RtcpRrGenerator(
 ) : RtcpListener {
     var running: Boolean = true
 
-    private val senderInfos: MutableMap<Long, SenderInfo> = ConcurrentHashMap()
+    /**
+     * Per-SSRC sender info, keyed on the RTCP sender SSRC. Bounded with an LRU to limit the number of SSRCs tracked.
+     */
+    private val senderInfos: MutableMap<Long, SenderInfo> =
+        Collections.synchronizedMap(LRUCache(MAX_SSRCS, true))
 
     init {
         doWork()
@@ -140,5 +145,8 @@ class RtcpRrGenerator(
          * The interval at which RRs and REMBs will be sent.
          */
         val reportingInterval = 500.ms
+
+        /** The maximum number of SSRCs to track sender info for. */
+        const val MAX_SSRCS = 64
     }
 }
