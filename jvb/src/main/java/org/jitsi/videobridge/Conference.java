@@ -52,6 +52,7 @@ import org.jivesoftware.smack.packet.*;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jxmpp.jid.*;
+import org.jitsi.tracing.TracingGlobal;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -158,7 +159,7 @@ public class Conference
      */
     private final Logger logger;
 
-    private final Tracer tracer = GlobalOTel.INSTANCE.getSdk().getTracer("org.jitsi.videobridge");
+    private final Tracer tracer = TracingGlobal.Companion.getSdk().getTracer("org.jitsi.videobridge");
 
     /**
      * The time when this {@link Conference} was created.
