@@ -322,7 +322,7 @@ public class Conference
                         );
                     }
                     Span span = tracer.spanBuilder("colibri.request")
-                            .setAttribute("meetingId", request.getRequest().getMeetingId())
+                            .setAttribute("conference.id", request.getRequest().getMeetingId())
                             .setAttribute("create", request.getRequest().getCreate())
                             .setAttribute("expire", request.getRequest().getExpire())
                             .setParent(traceContext)
