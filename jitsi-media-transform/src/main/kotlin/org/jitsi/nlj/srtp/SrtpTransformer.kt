@@ -26,10 +26,10 @@ import org.jitsi.srtp.SrtcpCryptoContext
 import org.jitsi.srtp.SrtpContextFactory
 import org.jitsi.srtp.SrtpCryptoContext
 import org.jitsi.srtp.SrtpErrorStatus
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.logging2.cwarn
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Implements the methods common to all 4 transformer implementation (encrypt/decrypt for SRTP/SRTCP)
@@ -41,9 +41,13 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
     protected val logger = createChildLogger(parentLogger)
 
     /**
-     * All the known SSRC's corresponding SrtpCryptoContexts
+     * All the known SSRC's corresponding SrtpCryptoContexts. Bounded with an LRU to limit the number of SSRCs tracked;
+     * evicted contexts are simply dropped (their native cipher resources are freed by a [java.lang.ref.Cleaner], and
+     * the contexts hold no other state that needs explicit cleanup). All access is guarded by synchronizing on the map.
+     * Note that eviction resets the ROC and replay state for an SSRC, so the cap must be high enough that
+     * legitimately-active SSRCs are never evicted.
      */
-    private val contexts: MutableMap<Long, CryptoContextType> = ConcurrentHashMap()
+    private val contexts: MutableMap<Long, CryptoContextType> = LRUCache(MAX_SSRCS, true)
 
     /**
      * The number of SSRCs for which a crypto context is currently cached.
@@ -123,6 +127,11 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
      * The SSRC and index (sequence number) identifying the context to use for a packet.
      */
     protected data class SsrcAndIndex(val ssrc: Long, val index: Long)
+
+    companion object {
+        /** The maximum number of SSRCs to keep crypto contexts for. */
+        const val MAX_SSRCS = 1024
+    }
 }
 
 /**
