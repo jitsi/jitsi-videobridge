@@ -42,6 +42,9 @@
     <Bug pattern="BC_IMPOSSIBLE_INSTANCEOF"/>
     <!-- False positives with Kotlin inlines -->
     <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    <!-- False positives for the synthetic bridge methods Kotlin generates on anonymous
+         subclasses of generic collections (e.g. an anonymous LRUCache overriding removeEldestEntry). -->
+    <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS"/>
 
     <!-- False positives for an unknown reason -->
     <Bug pattern="BC_BAD_CAST_TO_ABSTRACT_COLLECTION"/>
