@@ -45,6 +45,12 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
      */
     private val contexts: MutableMap<Long, CryptoContextType> = ConcurrentHashMap()
 
+    /**
+     * The number of SSRCs for which a crypto context is currently cached.
+     */
+    val numCachedContexts: Int
+        get() = synchronized(contexts) { contexts.size }
+
     fun close() {
         synchronized(contexts) {
             contextFactory.close()
@@ -52,20 +58,11 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
     }
 
     /**
-     * Gets the context for a specific SSRC and index.
+     * Whether a context that is derived on demand (because none was cached for the SSRC yet) should only be added to
+     * [contexts] after the first transform operation using it succeeds. This is used for decryption, so that we do not
+     * retain a context for an SSRC whose packets never successfully authenticate.
      */
-    protected fun getContext(ssrc: Long, index: Long): CryptoContextType? {
-        synchronized(contexts) {
-            contexts[ssrc]?.let { return it }
-
-            val derivedContext = deriveContext(ssrc, index) ?: run {
-                logger.warn("Failed to derive context for $ssrc $index")
-                return null
-            }
-            contexts[ssrc] = derivedContext
-            return derivedContext
-        }
-    }
+    protected open val cacheContextOnlyOnSuccessfulTransform: Boolean = false
 
     /**
      * Derives a new context for a specific SSRC and index.
@@ -73,23 +70,59 @@ abstract class AbstractSrtpTransformer<CryptoContextType : BaseSrtpCryptoContext
     protected abstract fun deriveContext(ssrc: Long, index: Long): CryptoContextType?
 
     /**
-     * Gets the context to use for a specific packet.
+     * Gets the SSRC and index (sequence number) to use for a specific packet, or null if it can not be handled.
      */
-    protected abstract fun getContext(packetInfo: PacketInfo): CryptoContextType?
+    protected abstract fun getSsrcAndIndex(packetInfo: PacketInfo): SsrcAndIndex?
 
     /**
-     * Does the actual transformation of a packet, with a specific context.
+     * Does the actual transformation of a packet, with a specific context. [isNewContext] indicates that the context was
+     * just derived and is not (yet) cached, which a transformer may use to force a full transform (e.g. to bypass the
+     * "skip decryption" optimization) so that the returned status reliably reflects whether the context is valid.
      */
-    protected abstract fun transform(packetInfo: PacketInfo, context: CryptoContextType): SrtpErrorStatus
+    protected abstract fun transform(
+        packetInfo: PacketInfo,
+        context: CryptoContextType,
+        isNewContext: Boolean
+    ): SrtpErrorStatus
 
     /**
      * Transforms a packet, returns [SrtpErrorStatus.OK] on success or another [SrtpErrorStatus] on failure.
      */
     fun transform(packetInfo: PacketInfo): SrtpErrorStatus {
-        val context = getContext(packetInfo) ?: return SrtpErrorStatus.FAIL
+        val ssrcAndIndex = getSsrcAndIndex(packetInfo) ?: return SrtpErrorStatus.FAIL
+        val ssrc = ssrcAndIndex.ssrc
 
-        return transform(packetInfo, context)
+        // Look up (or derive) the context under the lock. We must synchronize even the lookup because the map is not
+        // necessarily thread-safe (and an access-order map is structurally modified on read). The lock is only held
+        // for the lookup/derivation, not for the transform itself.
+        var isNewContext = false
+        val context = synchronized(contexts) {
+            contexts[ssrc] ?: run {
+                val derivedContext = deriveContext(ssrc, ssrcAndIndex.index) ?: run {
+                    logger.warn("Failed to derive context for $ssrc ${ssrcAndIndex.index}")
+                    return SrtpErrorStatus.FAIL
+                }
+                isNewContext = true
+                if (!cacheContextOnlyOnSuccessfulTransform) {
+                    contexts[ssrc] = derivedContext
+                }
+                derivedContext
+            }
+        }
+
+        val status = transform(packetInfo, context, isNewContext)
+        if (isNewContext && cacheContextOnlyOnSuccessfulTransform && status == SrtpErrorStatus.OK) {
+            synchronized(contexts) {
+                contexts.putIfAbsent(ssrc, context)
+            }
+        }
+        return status
     }
+
+    /**
+     * The SSRC and index (sequence number) identifying the context to use for a packet.
+     */
+    protected data class SsrcAndIndex(val ssrc: Long, val index: Long)
 }
 
 /**
@@ -103,12 +136,12 @@ abstract class SrtpTransformer(
     override fun deriveContext(ssrc: Long, index: Long): SrtpCryptoContext? =
         contextFactory.deriveContext(ssrc.toInt(), 0) ?: null
 
-    override fun getContext(packetInfo: PacketInfo): SrtpCryptoContext? {
+    override fun getSsrcAndIndex(packetInfo: PacketInfo): SsrcAndIndex? {
         val rtpPacket: RtpPacket = packetInfo.packet as? RtpPacket ?: run {
             logger.cwarn { "Can not handle non-RTP packet: ${packetInfo.packet.javaClass}" }
             return null
         }
-        return getContext(rtpPacket.ssrc, rtpPacket.sequenceNumber.toLong())
+        return SsrcAndIndex(rtpPacket.ssrc, rtpPacket.sequenceNumber.toLong())
     }
 }
 
@@ -123,12 +156,12 @@ abstract class SrtcpTransformer(
     override fun deriveContext(ssrc: Long, index: Long): SrtcpCryptoContext? =
         contextFactory.deriveControlContext(ssrc.toInt()) ?: null
 
-    override fun getContext(packetInfo: PacketInfo): SrtcpCryptoContext? {
+    override fun getSsrcAndIndex(packetInfo: PacketInfo): SsrcAndIndex? {
         // Contrary to RTP packets, RTCP packets do not get parsed before they are
         // decrypted. So (if this is a decrypting transformer) we are working with
         // an UnparsedPacket here and need to read the SSRC manually.
         val senderSsrc = RtcpHeader.getSenderSsrc(packetInfo.packet.getBuffer(), packetInfo.packet.getOffset())
-        return getContext(senderSsrc, 0)
+        return SsrcAndIndex(senderSsrc, 0)
     }
 }
 
@@ -140,7 +173,14 @@ class SrtcpDecryptTransformer(
     parentLogger: Logger
 ) : SrtcpTransformer(contextFactory, parentLogger) {
 
-    override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): SrtpErrorStatus {
+    // Only cache a derived context once it has successfully authenticated a packet.
+    override val cacheContextOnlyOnSuccessfulTransform = true
+
+    override fun transform(
+        packetInfo: PacketInfo,
+        context: SrtcpCryptoContext,
+        isNewContext: Boolean
+    ): SrtpErrorStatus {
         return context.reverseTransformPacket(packetInfo.packet).apply {
             packetInfo.resetPayloadVerification()
         }
@@ -156,7 +196,11 @@ class SrtcpEncryptTransformer(
     parentLogger: Logger
 ) : SrtcpTransformer(contextFactory, parentLogger) {
 
-    override fun transform(packetInfo: PacketInfo, context: SrtcpCryptoContext): SrtpErrorStatus {
+    override fun transform(
+        packetInfo: PacketInfo,
+        context: SrtcpCryptoContext,
+        isNewContext: Boolean
+    ): SrtpErrorStatus {
         return context.transformPacket(packetInfo.packet).apply {
             // We convert the encrypted RTCP packet to an UnparsedPacket because
             // we don't want any of the RTCP fields trying to parse the data
@@ -181,13 +225,18 @@ class SrtpDecryptTransformer(
     var earlyDiscardedPacketsSinceLastSuccess = 0
     private val alwaysProcess = maxConsecutivePacketsDiscardedEarly <= 0
 
-    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): SrtpErrorStatus {
+    // Only cache a derived context once it has successfully authenticated a packet.
+    override val cacheContextOnlyOnSuccessfulTransform = true
+
+    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext, isNewContext: Boolean): SrtpErrorStatus {
         // We want to avoid authenticating and decrypting packets that we are going to discarded (e.g. silence). We
         // can not just discard them without passing them to the SRTP stack, because this will eventually break the ROC.
         // Here we bypass the SRTP stack for packets marked to be discarded, but make sure that we haven't dropped too
-        // many consecutive packets.
+        // many consecutive packets. We never bypass for a newly-derived context: it must actually decrypt (and thus
+        // authenticate) a packet before it is cached, so the returned status must reflect whether the context is valid.
         if (packetInfo.shouldDiscard) {
-            return if (alwaysProcess ||
+            return if (isNewContext ||
+                alwaysProcess ||
                 earlyDiscardedPacketsSinceLastSuccess++ > maxConsecutivePacketsDiscardedEarly
             ) {
                 doTransform(packetInfo, context)
@@ -217,7 +266,7 @@ class SrtpEncryptTransformer(
     parentLogger: Logger
 ) : SrtpTransformer(contextFactory, parentLogger) {
 
-    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext): SrtpErrorStatus {
+    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext, isNewContext: Boolean): SrtpErrorStatus {
         return context.transformPacket(packetInfo.packetAs()).apply {
             packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
             packetInfo.resetPayloadVerification()
