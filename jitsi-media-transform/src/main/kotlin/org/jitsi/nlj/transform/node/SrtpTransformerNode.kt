@@ -136,6 +136,7 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
             addNumber("num_srtp_replay_fail", numSrtpReplayFail)
             addNumber("num_srtp_replay_old", numSrtpReplayOld)
             addNumber("num_srtp_invalid_packet", numSrtpInvalidPacket)
+            addNumber("num_cached_contexts", transformer?.numCachedContexts ?: 0)
         }
     }
 
@@ -146,6 +147,7 @@ abstract class SrtpTransformerNode(name: String) : MultipleOutputTransformerNode
         put("num_srtp_replay_fail", numSrtpReplayFail)
         put("num_srtp_replay_old", numSrtpReplayOld)
         put("num_srtp_invalid_packet", numSrtpInvalidPacket)
+        put("num_cached_contexts", transformer?.numCachedContexts ?: 0)
     }
 
     override fun stop() {

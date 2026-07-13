@@ -26,6 +26,7 @@ import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.srtp_samples.SrtpSample
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.test_utils.matchers.ByteArrayBuffer.haveSameContentAs
+import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.srtp.SrtpErrorStatus
 
 internal class SrtpDecryptTest : ShouldSpec() {
@@ -62,5 +63,58 @@ internal class SrtpDecryptTest : ShouldSpec() {
                 decryptedPacket should haveSameContentAs(SrtpSample.expectedDecryptedRtpPacket)
             }
         }
+
+        // Note: we don't test that the context map is bounded by its LRU cap (AbstractSrtpTransformer.MAX_SSRCS),
+        // because contexts are only cached once they authenticate a packet, so driving the map to eviction would
+        // require generating authenticating packets for that many distinct SSRCs, which the single-key sample can't do.
+        context("receiving RTP packets that fail to authenticate") {
+            val decryptTransformer = srtpTransformers.srtpDecryptTransformer
+
+            should("not cache a context for an SSRC that never authenticates") {
+                repeat(5) {
+                    val packetInfo = PacketInfo(corruptAuthTag(SrtpSample.incomingEncryptedRtpPacket.clone()))
+                    decryptTransformer.transform(packetInfo) shouldNotBe SrtpErrorStatus.OK
+                }
+                decryptTransformer.numCachedContexts shouldBe 0
+            }
+
+            should("cache a context once a packet authenticates") {
+                // A failed packet leaves no state behind.
+                val failed = PacketInfo(corruptAuthTag(SrtpSample.incomingEncryptedRtpPacket.clone()))
+                decryptTransformer.transform(failed) shouldNotBe SrtpErrorStatus.OK
+                decryptTransformer.numCachedContexts shouldBe 0
+
+                // The first successful decryption for the SSRC caches the context.
+                val succeeded = PacketInfo(SrtpSample.incomingEncryptedRtpPacket.clone())
+                decryptTransformer.transform(succeeded) shouldBe SrtpErrorStatus.OK
+                decryptTransformer.numCachedContexts shouldBe 1
+            }
+        }
+
+        context("receiving SRTCP packets that fail to authenticate") {
+            val decryptTransformer = srtpTransformers.srtcpDecryptTransformer
+
+            should("not cache a context for an SSRC that never authenticates") {
+                repeat(5) {
+                    val packet = SrtpSample.incomingEncryptedRtcpPacket.clone()
+                    packet.buffer[packet.offset + packet.length - 1]++
+                    decryptTransformer.transform(PacketInfo(packet)) shouldNotBe SrtpErrorStatus.OK
+                }
+                decryptTransformer.numCachedContexts shouldBe 0
+            }
+
+            should("cache a context once a packet authenticates") {
+                decryptTransformer.transform(PacketInfo(SrtpSample.incomingEncryptedRtcpPacket.clone())) shouldBe
+                    SrtpErrorStatus.OK
+                decryptTransformer.numCachedContexts shouldBe 1
+            }
+        }
+    }
+
+    /**
+     * Corrupts the authentication tag (the last byte) of an encrypted RTP packet so that it will fail to authenticate.
+     */
+    private fun corruptAuthTag(packet: RtpPacket): RtpPacket = packet.apply {
+        buffer[offset + length - 1]++
     }
 }
