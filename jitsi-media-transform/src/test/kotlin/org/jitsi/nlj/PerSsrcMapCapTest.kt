@@ -40,7 +40,8 @@ import java.time.Instant
  */
 class PerSsrcMapCapTest : ShouldSpec() {
     init {
-        val n = 1000
+        // More than any of the caps, so the maps are driven to eviction.
+        val n = 2000
 
         context("IncomingStatisticsTracker") {
             val store = StreamInformationStoreImpl().apply {

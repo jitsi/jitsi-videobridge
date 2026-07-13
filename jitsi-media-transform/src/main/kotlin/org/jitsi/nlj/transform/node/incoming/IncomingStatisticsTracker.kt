@@ -104,7 +104,7 @@ class IncomingStatisticsTracker(
 
     companion object {
         /** The maximum number of SSRCs to track stats for. */
-        const val MAX_SSRCS = 64
+        const val MAX_SSRCS = 1024
     }
 }
 

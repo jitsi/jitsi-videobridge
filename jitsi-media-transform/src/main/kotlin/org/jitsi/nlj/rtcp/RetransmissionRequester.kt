@@ -250,6 +250,6 @@ class RetransmissionRequester(
         private val REQUEST_INTERVAL = Duration.ofMillis(150)
 
         /** The maximum number of SSRCs to track retransmission requesters for. */
-        const val MAX_SSRCS = 64
+        const val MAX_SSRCS = 1024
     }
 }

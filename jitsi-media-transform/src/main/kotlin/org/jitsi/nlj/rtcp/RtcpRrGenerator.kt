@@ -147,6 +147,6 @@ class RtcpRrGenerator(
         val reportingInterval = 500.ms
 
         /** The maximum number of SSRCs to track sender info for. */
-        const val MAX_SSRCS = 64
+        const val MAX_SSRCS = 1024
     }
 }

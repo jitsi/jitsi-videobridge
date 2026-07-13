@@ -297,7 +297,7 @@ class AudioRedHandler(
         val config = Config()
 
         /** The maximum number of SSRCs to track RED handlers for. */
-        const val MAX_SSRCS = 64
+        const val MAX_SSRCS = 1024
     }
 }
 

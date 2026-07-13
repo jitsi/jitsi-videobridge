@@ -61,6 +61,6 @@ class DuplicateTermination() : TransformerNode("Duplicate termination") {
 
     companion object {
         /** The maximum number of SSRCs to track replay contexts for. */
-        const val MAX_SSRCS = 64
+        const val MAX_SSRCS = 1024
     }
 }

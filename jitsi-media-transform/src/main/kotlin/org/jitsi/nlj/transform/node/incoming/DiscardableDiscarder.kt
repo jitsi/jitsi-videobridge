@@ -49,6 +49,6 @@ class DiscardableDiscarder(name: String, val keepHistory: Boolean) : Transformer
 
     companion object {
         /** The maximum number of SSRCs to track rewriters for. */
-        const val MAX_SSRCS = 64
+        const val MAX_SSRCS = 1024
     }
 }
