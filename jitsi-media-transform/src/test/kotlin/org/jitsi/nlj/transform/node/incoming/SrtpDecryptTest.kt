@@ -64,6 +64,9 @@ internal class SrtpDecryptTest : ShouldSpec() {
             }
         }
 
+        // Note: we don't test that the context map is bounded by its LRU cap (AbstractSrtpTransformer.MAX_SSRCS),
+        // because contexts are only cached once they authenticate a packet, so driving the map to eviction would
+        // require generating authenticating packets for that many distinct SSRCs, which the single-key sample can't do.
         context("receiving RTP packets that fail to authenticate") {
             val decryptTransformer = srtpTransformers.srtpDecryptTransformer
 
