@@ -34,6 +34,7 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.AudioLevelHeaderExtension
 import org.jitsi.rtp.util.RtpUtils.Companion.applySequenceNumberDelta
 import org.jitsi.rtp.util.RtpUtils.Companion.getTimestampDiffAsInt
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 
@@ -48,7 +49,15 @@ class AudioRedHandler(
     var audioLevelExtId: Int? = null
     var redPayloadType: Int? = null
 
-    private val ssrcRedHandlers: MutableMap<Long, SsrcRedHandler> = HashMap()
+    /**
+     * Per-SSRC RED handlers, keyed on the RTP SSRC. Bounded with an LRU to limit the number of SSRCs tracked; evicted
+     * handlers are stopped to release their cached buffers.
+     */
+    private val ssrcRedHandlers: MutableMap<Long, SsrcRedHandler> =
+        object : LRUCache<Long, SsrcRedHandler>(MAX_SSRCS, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, SsrcRedHandler>): Boolean =
+                super.removeEldestEntry(eldest).also { if (it) eldest.value.stop() }
+        }
 
     init {
         streamInformationStore.onRtpPayloadTypesChanged { payloadTypes ->
@@ -286,6 +295,9 @@ class AudioRedHandler(
 
     companion object {
         val config = Config()
+
+        /** The maximum number of SSRCs to track RED handlers for. */
+        const val MAX_SSRCS = 1024
     }
 }
 

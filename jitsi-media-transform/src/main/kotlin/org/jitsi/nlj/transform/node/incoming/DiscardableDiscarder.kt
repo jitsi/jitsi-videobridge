@@ -19,14 +19,19 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.ResumableStreamRewriter
 import org.jitsi.nlj.transform.node.TransformerNode
 import org.jitsi.rtp.rtp.RtpPacket
-import java.util.concurrent.ConcurrentHashMap
+import org.jitsi.utils.LRUCache
+import java.util.Collections
 
 /**
  * Discards RTP packets which have shouldDiscard set to true, masking their loss
  * in the RTP sequence numbers of RTP packets.
  */
 class DiscardableDiscarder(name: String, val keepHistory: Boolean) : TransformerNode(name) {
-    val rewriters: MutableMap<Long, ResumableStreamRewriter> = ConcurrentHashMap()
+    /**
+     * Per-SSRC rewriters, keyed on the RTP SSRC. Bounded with an LRU to limit the number of SSRCs tracked.
+     */
+    val rewriters: MutableMap<Long, ResumableStreamRewriter> =
+        Collections.synchronizedMap(LRUCache(MAX_SSRCS, true))
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val packet = packetInfo.packet as? RtpPacket ?: return packetInfo
@@ -41,4 +46,9 @@ class DiscardableDiscarder(name: String, val keepHistory: Boolean) : Transformer
     }
 
     override fun trace(f: () -> Unit) = f.invoke()
+
+    companion object {
+        /** The maximum number of SSRCs to track rewriters for. */
+        const val MAX_SSRCS = 1024
+    }
 }

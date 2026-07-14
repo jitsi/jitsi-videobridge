@@ -29,10 +29,11 @@ import org.jitsi.rtp.util.isNewerThan
 import org.jitsi.rtp.util.isNextAfter
 import org.jitsi.rtp.util.numPacketsTo
 import org.jitsi.rtp.util.rolledOverTo
+import org.jitsi.utils.LRUCache
 import org.jitsi.utils.MediaType
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
 
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
@@ -40,7 +41,12 @@ import java.util.concurrent.ConcurrentHashMap
 class IncomingStatisticsTracker(
     private val streamInformationStore: ReadOnlyStreamInformationStore
 ) : ObserverNode("Incoming statistics tracker") {
-    private val ssrcStats: MutableMap<Long, IncomingSsrcStats> = ConcurrentHashMap()
+    /**
+     * Per-SSRC stats, keyed on the RTP SSRC. Bounded with an LRU to limit the number of SSRCs tracked for a single
+     * stream.
+     */
+    private val ssrcStats: MutableMap<Long, IncomingSsrcStats> =
+        Collections.synchronizedMap(LRUCache(MAX_SSRCS, true))
 
     override fun observe(packetInfo: PacketInfo) {
         val rtpPacket = packetInfo.packetAs<RtpPacket>()
@@ -83,14 +89,23 @@ class IncomingStatisticsTracker(
      * generation. Other code should use [getSnapshot].
      */
     fun getSnapshotOfActiveSsrcs() = IncomingStatisticsSnapshot(
-        ssrcStats.mapNotNull { (ssrc, stats) ->
-            stats.getSnapshotIfActive()?.let { Pair(ssrc, it) }
-        }.toMap()
+        synchronized(ssrcStats) {
+            ssrcStats.mapNotNull { (ssrc, stats) ->
+                stats.getSnapshotIfActive()?.let { Pair(ssrc, it) }
+            }.toMap()
+        }
     )
 
     fun getSnapshot() = IncomingStatisticsSnapshot(
-        ssrcStats.map { (ssrc, stats) -> Pair(ssrc, stats.getSnapshot()) }.toMap()
+        synchronized(ssrcStats) {
+            ssrcStats.map { (ssrc, stats) -> Pair(ssrc, stats.getSnapshot()) }.toMap()
+        }
     )
+
+    companion object {
+        /** The maximum number of SSRCs to track stats for. */
+        const val MAX_SSRCS = 1024
+    }
 }
 
 class IncomingStatisticsSnapshot(
