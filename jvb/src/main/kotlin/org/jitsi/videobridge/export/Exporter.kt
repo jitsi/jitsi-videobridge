@@ -63,6 +63,8 @@ internal class Exporter(
     private val handleMediaEvent: ((MediaEvent) -> Unit),
     /** Resolves an audio SSRC to its source name, used to filter outbound audio by this connect's exports. */
     private val getAudioSourceName: (Long) -> String?,
+    /** Resolves an audio SSRC to whether diarization is requested for its endpoint (colibri2 `diarize` attribute). */
+    private val getDiarize: (Long) -> Boolean,
     private val pingEnabled: Boolean = false,
     private val pingIntervalMs: Int = 0,
     private val pingTimeoutMs: Int = 0,
@@ -165,7 +167,7 @@ internal class Exporter(
 
     private var serializer: MediaJsonSerializer? = null
 
-    private fun initSerializer() = MediaJsonSerializer(getAudioSourceName) {
+    private fun initSerializer() = MediaJsonSerializer(getAudioSourceName, getDiarize) {
         val session = recorderWebSocket.session
         if (session != null) {
             session.sendText(it.toJson(), Callback.NOOP)

@@ -43,6 +43,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 class MediaJsonSerializer(
     /** Resolves an audio SSRC to its source name, which is used as the media-json tag. */
     private val getSourceName: (Long) -> String?,
+    /** Resolves an audio SSRC to whether diarization is requested for its endpoint (colibri2 `diarize` attribute). */
+    private val getDiarize: (Long) -> Boolean,
     /** Encoded mediajson events are sent to this function */
     private val handleEvent: (Event) -> Unit
 ) {
@@ -78,7 +80,7 @@ class MediaJsonSerializer(
             state = createSsrcState(p.timestamp, payloadType, tag)
             ssrcsStarted[p.ssrc] = state
             logger.info("Starting SSRC ${p.ssrc} for endpoint $epId ")
-            handleEvent(createStart(tag, epId, payloadType))
+            handleEvent(createStart(tag, epId, payloadType, p.ssrc))
         }
 
         if (payloadType.pt != state.payloadType.pt) {
@@ -86,7 +88,7 @@ class MediaJsonSerializer(
             // An SSRC's source name doesn't change, so the new state (announced by a new start event) keeps the tag.
             state = createSsrcState(p.timestamp, payloadType, state.tag)
             ssrcsStarted[p.ssrc] = state
-            handleEvent(createStart(state.tag, epId, payloadType))
+            handleEvent(createStart(state.tag, epId, payloadType, p.ssrc))
         }
 
         handleEvent(encodeMedia(p, state))
@@ -102,7 +104,7 @@ class MediaJsonSerializer(
         )
     }
 
-    private fun createStart(tag: String, epId: String, payloadType: PayloadType) = StartEvent(
+    private fun createStart(tag: String, epId: String, payloadType: PayloadType, ssrc: Long) = StartEvent(
         ++seq,
         Start(
             tag,
@@ -112,7 +114,10 @@ class MediaJsonSerializer(
                 (payloadType as? AudioPayloadType)?.channels ?: 1,
                 payloadType.parameters
             ),
-            CustomParameters(endpointId = epId)
+            CustomParameters(endpointId = epId),
+            // Only set the flag when diarization is on; when off, leave it null so the field is omitted from the wire
+            // format (jackson drops nulls) and the transcriber proxy falls back to its global config.
+            diarize = if (getDiarize(ssrc)) true else null
         )
     )
 

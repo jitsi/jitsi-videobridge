@@ -36,6 +36,8 @@ class ExporterWrapper internal constructor(
     private val handleMediaEvent: ((MediaEvent) -> Unit),
     /** Resolves an audio SSRC to its source name, used to filter outbound audio by a connect's exports. */
     private val getAudioSourceName: (Long) -> String?,
+    /** Resolves an audio SSRC to whether diarization is requested for its endpoint (colibri2 `diarize` attribute). */
+    private val getDiarize: (Long) -> Boolean,
     /** Creates (and starts) the [Exporter] for a connect. Overridable for testing; defaults to the real one. */
     exporterFactory: ((Connect) -> Exporter)?
 ) {
@@ -43,8 +45,9 @@ class ExporterWrapper internal constructor(
         parentLogger: Logger,
         handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
         handleMediaEvent: ((MediaEvent) -> Unit),
-        getAudioSourceName: (Long) -> String?
-    ) : this(parentLogger, handleTranscriptionResult, handleMediaEvent, getAudioSourceName, null)
+        getAudioSourceName: (Long) -> String?,
+        getDiarize: (Long) -> Boolean
+    ) : this(parentLogger, handleTranscriptionResult, handleMediaEvent, getAudioSourceName, getDiarize, null)
 
     val logger = createChildLogger(parentLogger)
 
@@ -220,6 +223,7 @@ class ExporterWrapper internal constructor(
             handleTranscriptionResult,
             handleMediaEvent,
             getAudioSourceName,
+            getDiarize,
             pingEnabled,
             pingIntervalMs,
             pingTimeoutMs,

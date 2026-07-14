@@ -288,7 +288,8 @@ public class Conference
                 handleMediaMessage(m);
                 return Unit.INSTANCE;
             },
-            ssrc -> getAudioSourceName(ssrc));
+            ssrc -> getAudioSourceName(ssrc),
+            ssrc -> getDiarize(ssrc));
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
@@ -763,6 +764,7 @@ public class Conference
      * transport will be initialized to serve as a controlling ICE agent;
      * otherwise, {@code false}
      * @param doSsrcRewriting whether this endpoint signaled SSRC rewriting support.
+     * @param diarize whether diarization is requested for this endpoint's audio (colibri2 {@code diarize} attribute).
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      */
     @NotNull
@@ -772,7 +774,8 @@ public class Conference
             boolean doSsrcRewriting,
             boolean doMidDemux,
             boolean visitor,
-            boolean privateAddresses)
+            boolean privateAddresses,
+            boolean diarize)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -781,7 +784,7 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses);
+                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
         videobridge.localEndpointCreated(visitor);
 
         endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
@@ -1118,6 +1121,17 @@ public class Conference
         }
         AudioSourceDesc source = endpoint.getAudioSource(ssrc);
         return source != null ? source.getSourceName() : null;
+    }
+
+    /**
+     * Resolves an audio SSRC to whether diarization is requested for its owning endpoint (the colibri2 {@code diarize}
+     * attribute), defaulting to {@code false} if the SSRC's endpoint is not known. Used by the exporter to set the
+     * {@code diarize} flag on the transcriber start event per source.
+     */
+    private boolean getDiarize(long ssrc)
+    {
+        AbstractEndpoint endpoint = getEndpointBySsrc(ssrc);
+        return endpoint != null && endpoint.getDiarize();
     }
 
     /**

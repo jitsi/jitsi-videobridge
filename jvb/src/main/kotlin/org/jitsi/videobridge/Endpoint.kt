@@ -127,6 +127,10 @@ class Endpoint @JvmOverloads constructor(
      */
     override val visitor: Boolean,
     supportsPrivateAddresses: Boolean,
+    /**
+     * Whether diarization is requested for this endpoint's audio, as signaled via the colibri2 `diarize` attribute.
+     */
+    override val diarize: Boolean,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -1066,6 +1070,7 @@ class Endpoint @JvmOverloads constructor(
         put("accept_audio", acceptAudio)
         put("accept_video", acceptVideo)
         put("visitor", visitor)
+        put("diarize", diarize)
         set<ObjectNode>("message_transport", messageTransport.debugState)
         if (doSsrcRewriting) {
             set<ObjectNode>("audio_ssrcs", audioSsrcs.getDebugState())
