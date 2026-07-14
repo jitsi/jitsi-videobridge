@@ -89,7 +89,7 @@ class MediaJsonSerializer(
             handleEvent(createStart(state.tag, epId, payloadType))
         }
 
-        handleEvent(encodeMedia(p, state))
+        handleEvent(encodeMedia(p, state, packetInfo.audioLevel, packetInfo.vad))
     }
 
     private fun createSsrcState(initialRtpTimestamp: Long, payloadType: PayloadType, tag: String): SsrcState {
@@ -117,7 +117,7 @@ class MediaJsonSerializer(
     )
 
     @OptIn(ExperimentalEncodingApi::class)
-    private fun encodeMedia(p: AudioRtpPacket, state: SsrcState): Event {
+    private fun encodeMedia(p: AudioRtpPacket, state: SsrcState, audioLevel: Int?, vad: Boolean?): Event {
         ++seq
         return MediaEvent(
             seq,
@@ -125,7 +125,9 @@ class MediaJsonSerializer(
                 state.tag,
                 state.getSequenceNumber(p.sequenceNumber),
                 state.getTimestamp(p.timestamp),
-                Base64.encode(p.buffer, p.payloadOffset, p.payloadOffset + p.payloadLength)
+                Base64.encode(p.buffer, p.payloadOffset, p.payloadOffset + p.payloadLength),
+                audioLevel,
+                vad
             )
         )
     }

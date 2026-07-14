@@ -70,9 +70,16 @@ class AudioLevelReader(
                     stats.audioLevel()
 
                     val level = AudioLevelHeaderExtension.getAudioLevel(ext)
+                    val vad = AudioLevelHeaderExtension.getVad(ext)
                     val silence = level == MUTED_LEVEL
 
-                    if (!silence) stats.nonSilence(AudioLevelHeaderExtension.getVad(ext))
+                    // Preserve the sender-reported level and VAD flag on the PacketInfo so downstream consumers (e.g.
+                    // the mediajson Exporter) can forward them without re-parsing the header extension (they don't have
+                    // the extension ID mapping).
+                    packetInfo.audioLevel = level
+                    packetInfo.vad = vad
+
+                    if (!silence) stats.nonSilence(vad)
                     if (silence && discardSilence && forwardedSilencePackets > forwardedSilencePacketsLimit) {
                         packetInfo.shouldDiscard = true
                         stats.discardedSilence()

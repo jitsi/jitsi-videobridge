@@ -154,6 +154,19 @@ open class PacketInfo @JvmOverloads constructor(
     var payloadType: PayloadType? = null
 
     /**
+     * The RFC 6464 audio level (0-127, i.e. -dBov: 0 is loudest, 127 is silence) reported by the sender in the
+     * ssrc-audio-level RTP header extension, or null if the packet had no such extension. Populated on the incoming
+     * path by [org.jitsi.nlj.transform.node.incoming.AudioLevelReader].
+     */
+    var audioLevel: Int? = null
+
+    /**
+     * The RFC 6464 Voice Activity Detection flag reported by the sender in the ssrc-audio-level RTP header extension,
+     * or null if the packet had no such extension. Populated alongside [audioLevel].
+     */
+    var vad: Boolean? = null
+
+    /**
      * The payload verification string for the packet, or 'null' if payload verification is disabled. Calculating the
      * it is expensive, thus we only do it when the flag is enabled.
      */
@@ -198,6 +211,8 @@ open class PacketInfo @JvmOverloads constructor(
         clone.shouldDiscard = shouldDiscard
         clone.endpointId = endpointId
         clone.payloadType = payloadType
+        clone.audioLevel = audioLevel
+        clone.vad = vad
         clone.layeringChanged = layeringChanged
         clone.payloadVerification = payloadVerification
         clone.probingInfo = probingInfo
