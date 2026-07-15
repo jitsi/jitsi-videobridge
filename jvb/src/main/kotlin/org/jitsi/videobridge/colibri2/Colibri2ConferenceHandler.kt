@@ -187,7 +187,8 @@ class Colibri2ConferenceHandler(
                 ssrcRewriting,
                 midDemux,
                 c2endpoint.mucRole == MUCRole.visitor,
-                privateAddresses
+                privateAddresses,
+                c2endpoint.diarize == true
             ).apply {
                 c2endpoint.statsId?.let {
                     statsId = it

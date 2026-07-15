@@ -176,6 +176,14 @@ abstract class AbstractEndpoint protected constructor(
     abstract val visitor: Boolean
 
     /**
+     * Whether diarization is requested for this endpoint's audio, as signaled via the colibri2 `diarize` attribute.
+     * Propagated to the transcriber via the mediajson start event. Defaults to false for endpoint types that don't
+     * signal it (e.g. relayed endpoints).
+     */
+    open val diarize: Boolean
+        get() = false
+
+    /**
      * Gets the description of the video [MediaSourceDesc] that this endpoint has advertised, or `null` if
      * it hasn't advertised any video sources.
      */
