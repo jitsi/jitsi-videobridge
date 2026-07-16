@@ -288,6 +288,10 @@ public class Conference
                 handleMediaMessage(m);
                 return Unit.INSTANCE;
             },
+            (sourceName, sending, timestamp) -> {
+                handleSyntheticSourceSendingChange(sourceName, sending, timestamp);
+                return Unit.INSTANCE;
+            },
             ssrc -> getAudioSourceName(ssrc),
             ssrc -> getDiarize(ssrc));
         this.id = Objects.requireNonNull(id, "id");
@@ -1645,7 +1649,10 @@ public class Conference
             rtpPacket.setVersion(2);
             rtpPacket.setPayloadType(opusPayloadType.getPt());
             rtpPacket.setSequenceNumber(media.getChunk());
-            rtpPacket.setTimestamp(media.getTimestamp());
+            // The translator sends a monotonic, unwrapped timestamp, but the RTP timestamp is a 32-bit wrapping
+            // field. setTimestamp() truncates to 32 bits on the wire, but caches the raw Long, so mask here to keep
+            // the packet's cached timestamp consistent with its bytes (and with the sending-change notification).
+            rtpPacket.setTimestamp(media.getTimestamp() & 0xFFFFFFFFL);
             rtpPacket.setSsrc(source.getSsrc());
 
             PacketInfo packetInfo = new PacketInfo(rtpPacket);
@@ -1659,6 +1666,48 @@ public class Conference
         catch (Exception e)
         {
             logger.warn("Failed to handle translated media for source " + sourceName, e);
+        }
+    }
+
+    /**
+     * Handles a synthetic source's sending-state change, derived from the {@code start}/{@code stop} mediajson events
+     * a translator sends to bracket a "talk" of translated audio. Resolves the named synthetic source (dropping the
+     * change if it isn't a known synthetic source, like {@link #handleMediaMessage}) and broadcasts a
+     * {@link SyntheticSourceSendingChangeEvent} to the conference's clients (and relays).
+     *
+     * @param sourceName the synthetic source whose sending state changed
+     * @param sending    true if the source started sending, false if it stopped
+     * @param timestamp  the RTP timestamp (media clock) at which the change takes effect, on the same timeline as the
+     *                   source's media; the low 32 bits are used (RTP timestamps are 32-bit and wrap)
+     */
+    private void handleSyntheticSourceSendingChange(String sourceName, boolean sending, long timestamp)
+    {
+        AudioSourceDesc source = findSyntheticAudioSource(sourceName);
+        if (source == null)
+        {
+            if (removedSyntheticSources.contains(sourceName))
+            {
+                // Expected transient: the translator sent this before it saw our unsubscribe of the source.
+                logger.debug(() -> "Dropping sending-change for removed synthetic source: " + sourceName);
+            }
+            else if (loggedUnknownMediaTags.add(sourceName))
+            {
+                logger.warn("Received sending-change for unknown synthetic source: " + sourceName);
+            }
+            return;
+        }
+
+        try
+        {
+            // The translator sends a monotonic, unwrapped timestamp; the RTP timestamp is 32-bit and wraps, and the
+            // client (lib-jitsi-meet) validates 0..0xFFFFFFFF, so send the low 32 bits. This also matches the
+            // wrapped timestamp the client sees on this source's injected media.
+            long rtpTimestamp = timestamp & 0xFFFFFFFFL;
+            broadcastMessage(new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp), true);
+        }
+        catch (Exception e)
+        {
+            logger.warn("Failed to broadcast synthetic source sending change for " + sourceName, e);
         }
     }
 

@@ -29,6 +29,8 @@ import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
 import org.jitsi.mediajson.SessionEndEvent
 import org.jitsi.mediajson.SourcesEvent
+import org.jitsi.mediajson.StartEvent
+import org.jitsi.mediajson.StopEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
@@ -61,6 +63,11 @@ internal class Exporter(
     private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
     /** Handles a translated-audio media event received back from the peer. */
     private val handleMediaEvent: ((MediaEvent) -> Unit),
+    /**
+     * Handles a synthetic source's sending-state change, derived from the `start`/`stop` mediajson events the peer
+     * sends to bracket a "talk": (sourceName, sending, RTP timestamp).
+     */
+    private val handleSendingChange: ((String, Boolean, Long) -> Unit),
     /** Resolves an audio SSRC to its source name, used to filter outbound audio by this connect's exports. */
     private val getAudioSourceName: (Long) -> String?,
     /** Resolves an audio SSRC to whether diarization is requested for its endpoint (colibri2 `diarize` attribute). */
@@ -94,6 +101,7 @@ internal class Exporter(
     private val instanceStarts = AtomicLong(0)
     private val instanceTranscriptsReceived = AtomicLong(0)
     private val instanceMediaEventsReceived = AtomicLong(0)
+    private val instanceSendingChangesReceived = AtomicLong(0)
     private val instanceOtherMessagesReceived = AtomicLong(0)
     private val instanceParseFailures = AtomicLong(0)
     private val instanceInfoReceived = AtomicLong(0)
@@ -210,7 +218,8 @@ internal class Exporter(
         session.sendText(SourcesEvent(exports, requests).toJson(), Callback.NOOP)
     }
 
-    private fun handleIncomingMessage(message: String) {
+    /** Internal (rather than private) so [ExporterTest] can drive the event dispatch without opening a socket. */
+    internal fun handleIncomingMessage(message: String) {
         try {
             val event = Event.parse(message)
             logger.debug { "Received message from websocket: ${event.toJson()}" }
@@ -237,6 +246,33 @@ internal class Exporter(
                     mediaEventsReceivedCount.inc()
                     instanceMediaEventsReceived.incrementAndGet()
                     handleMediaEvent(event)
+                }
+                is StartEvent -> {
+                    // A `start` with a talk timestamp brackets the beginning of a "talk" (translated audio); one
+                    // without is a plain stream-start announcement (the bridge->peer direction), which the bridge
+                    // does not act on when received.
+                    val timestamp = event.start.timestamp
+                    if (timestamp != null) {
+                        sendingChangesReceivedCount.inc()
+                        instanceSendingChangesReceived.incrementAndGet()
+                        handleSendingChange(event.start.tag, true, timestamp)
+                    } else {
+                        otherMessagesReceivedCount.inc()
+                        instanceOtherMessagesReceived.incrementAndGet()
+                    }
+                }
+                is StopEvent -> {
+                    // A `stop` with a talk timestamp brackets the end of a "talk"; a plain stop without one is a
+                    // stream-end the bridge does not act on when received.
+                    val timestamp = event.stop.timestamp
+                    if (timestamp != null) {
+                        sendingChangesReceivedCount.inc()
+                        instanceSendingChangesReceived.incrementAndGet()
+                        handleSendingChange(event.stop.tag, false, timestamp)
+                    } else {
+                        otherMessagesReceivedCount.inc()
+                        instanceOtherMessagesReceived.incrementAndGet()
+                    }
                 }
                 is InfoEvent -> {
                     infoReceivedCount.inc()
@@ -425,6 +461,7 @@ internal class Exporter(
         put("starts", instanceStarts.get())
         put("transcripts_received", instanceTranscriptsReceived.get())
         put("media_events_received", instanceMediaEventsReceived.get())
+        put("sending_changes_received", instanceSendingChangesReceived.get())
         put("other_messages_received", instanceOtherMessagesReceived.get())
         put("parse_failures", instanceParseFailures.get())
         put("info_received", instanceInfoReceived.get())
@@ -471,6 +508,11 @@ internal class Exporter(
         private val mediaEventsReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_media_events_received",
             "Number of media (translated audio) events received by Exporter"
+        )
+
+        private val sendingChangesReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
+            "exporter_sending_changes_received",
+            "Number of synthetic-source sending-change (start/stop) events received by Exporter"
         )
 
         private val otherMessagesReceivedCount = VideobridgeMetricsContainer.instance.registerCounter(
