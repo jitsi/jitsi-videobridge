@@ -15,12 +15,9 @@
  */
 package org.jitsi.videobridge;
 
-import io.opentelemetry.context.Context;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanContext;
-import io.opentelemetry.api.trace.TraceFlags;
-import io.opentelemetry.api.trace.TraceState;
+import io.opentelemetry.context.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.mediajson.*;
@@ -31,6 +28,7 @@ import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.tracing.*;
 import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
@@ -45,14 +43,12 @@ import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jitsi.xmpp.extensions.TraceParent;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jxmpp.jid.*;
-import org.jitsi.tracing.TracingGlobal;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -306,28 +302,13 @@ public class Conference
         colibriQueue = new ColibriQueue(
                 request ->
                 {
-                    TraceParent traceParent = request.getRequest().getExtension(TraceParent.class);
-                    Context traceContext = Context.root();
-                    if (traceParent != null)
-                    {
-                        traceContext = traceContext.with(
-                                Span.wrap(
-                                        SpanContext.createFromRemoteParent(
-                                                traceParent.getTraceId(),
-                                                traceParent.getParentId(),
-                                                TraceFlags.fromHex(traceParent.getTraceFlags(), 0),
-                                                TraceState.getDefault()
-                                        )
-                                )
-                        );
-                    }
                     Span span = tracer.spanBuilder("colibri.request")
                             .setAttribute("conference.id", request.getRequest().getMeetingId())
                             .setAttribute("create", request.getRequest().getCreate())
                             .setAttribute("expire", request.getRequest().getExpire())
-                            .setParent(traceContext)
+                            .setParent(TracingUtil.remoteContextFromIq(request.getRequest()))
                             .startSpan();
-                    try
+                    try (Scope s = span.makeCurrent())
                     {
                         logger.info( () -> {
                             String reqStr = request.getRequest().toXML().toString();
