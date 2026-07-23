@@ -15,8 +15,7 @@
  */
 package org.jitsi.videobridge;
 
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
@@ -352,6 +351,7 @@ public class Conference
                     catch (Throwable e)
                     {
                         logger.warn("Failed to handle colibri request: ", e);
+                        span.setStatus(StatusCode.ERROR, e.getMessage());
                         request.getCallback().invoke(
                                 createError(
                                         request.getRequest(),
