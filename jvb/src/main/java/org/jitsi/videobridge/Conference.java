@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import io.opentelemetry.api.trace.*;
+import io.opentelemetry.context.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.mediajson.*;
@@ -25,6 +27,7 @@ import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.tracing.*;
 import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
@@ -150,6 +153,8 @@ public class Conference
      * information.
      */
     private final Logger logger;
+
+    private final Tracer tracer = TracingGlobal.Companion.getSdk().getTracer("org.jitsi.videobridge");
 
     /**
      * The time when this {@link Conference} was created.
@@ -300,7 +305,13 @@ public class Conference
         colibriQueue = new ColibriQueue(
                 request ->
                 {
-                    try
+                    Span span = tracer.spanBuilder("colibri.request")
+                            .setAttribute("conference.id", request.getRequest().getMeetingId())
+                            .setAttribute("create", request.getRequest().getCreate())
+                            .setAttribute("expire", request.getRequest().getExpire())
+                            .setParent(TracingUtil.remoteContextFromIq(request.getRequest()))
+                            .startSpan();
+                    try (Scope s = span.makeCurrent())
                     {
                         logger.info( () -> {
                             String reqStr = request.getRequest().toXML().toString();
@@ -344,11 +355,16 @@ public class Conference
                     catch (Throwable e)
                     {
                         logger.warn("Failed to handle colibri request: ", e);
+                        span.setStatus(StatusCode.ERROR, e.getMessage());
                         request.getCallback().invoke(
                                 createError(
                                         request.getRequest(),
                                         StanzaError.Condition.internal_server_error,
                                         e.getMessage()));
+                    }
+                    finally
+                    {
+                        span.end();
                     }
                     return true;
                 }

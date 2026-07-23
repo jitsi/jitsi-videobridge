@@ -123,6 +123,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jicoco-tracing</artifactId>
+                <version>${jicoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jicoco-test-kotlin</artifactId>
                 <version>${jicoco.version}</version>
             </dependency>
@@ -144,7 +149,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-116-gc47d314</version>
+                <version>1.0-117-g60c0446</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
