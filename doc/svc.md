@@ -103,7 +103,7 @@ sequence numbers 4-8 belong to non-routed packets.  The status of the
 unreceived packet 5 can be determined because packet 4 will not have its
 "end of frame" flag set.
 
-## Scenario C: packet loss 2 (target TL1)
+## Scenario D: packet loss 2 (target TL1)
 
 Sender sends: TL0 (1, 2, 3), TL2 (4, 5), TL1 (6, 7), TL2 (8), TL0 (9, 10, 11)
 
