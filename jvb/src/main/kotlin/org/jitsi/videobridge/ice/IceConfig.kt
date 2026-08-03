@@ -70,6 +70,15 @@ class IceConfig private constructor() {
         "videobridge.ice.advertise-private-candidates".from(JitsiConfig.newConfig)
     )
 
+    /**
+     * Whether in-place ICE restarts are enabled: when an endpoint sends new remote ICE credentials for an
+     * already-established transport, apply them to the existing ice4j Agent and re-run connectivity checks,
+     * instead of ignoring the update.
+     */
+    val restartEnabled: Boolean by config(
+        "videobridge.ice.restart.enabled".from(JitsiConfig.newConfig)
+    )
+
     companion object {
         @JvmField
         val config = IceConfig()

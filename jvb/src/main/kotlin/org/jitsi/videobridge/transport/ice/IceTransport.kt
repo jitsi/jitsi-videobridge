@@ -167,7 +167,18 @@ class IceTransport @JvmOverloads constructor(
             return
         }
         if (iceAgent.state.isEstablished) {
-            logger.cdebug { "Connection already established" }
+            // If the remote peer rotated its ICE credentials (new remote ufrag) while our Agent is established,
+            // this is a peer-initiated in-place ICE restart. Apply the new remote credentials to the existing
+            // Agent and re-run checks, rather than ignoring the update.
+            val newUfrag = transportPacketExtension.ufrag
+            val newPassword = transportPacketExtension.password
+            if (IceConfig.config.restartEnabled &&
+                newUfrag != null && newPassword != null && newUfrag != iceStream.remoteUfrag
+            ) {
+                restartIce(transportPacketExtension)
+            } else {
+                logger.cdebug { "Connection already established" }
+            }
             return
         }
         logger.cdebug { "Starting ICE connectivity establishment" }
@@ -218,6 +229,32 @@ class IceTransport @JvmOverloads constructor(
         } else {
             logger.cdebug { "Not starting ICE, no ufrag and pwd yet. ${transportPacketExtension.toXML()}" }
         }
+    }
+
+    /**
+     * Performs an in-place ICE restart: the remote peer rotated its ICE credentials while our local credentials
+     * and the ice4j [Agent] stay the same. Apply the new remote ufrag/password (and any signalled candidates —
+     * normally none, as clients rely on peer-reflexive discovery) and ask ice4j to re-run connectivity checks on
+     * the existing Agent. The currently selected pair keeps being used for sending until a new pair is nominated
+     * (make-before-break), so media is not interrupted.
+     */
+    private fun restartIce(transportPacketExtension: IceUdpTransportPacketExtension) {
+        logger.info(
+            "Performing in-place ICE restart, new remote ufrag=${transportPacketExtension.ufrag} " +
+                "(old=${iceStream.remoteUfrag})"
+        )
+
+        iceStream.remoteUfrag = transportPacketExtension.ufrag
+        iceStream.remotePassword = transportPacketExtension.password
+
+        // Add any signalled remote candidates to the (to-be-rebuilt) check list before restarting. Pass
+        // iceAgentIsRunning=false so they are added as fresh remote candidates; restartIce() below rebuilds the
+        // check list and moves the Agent back to RUNNING. New peer-reflexive addresses (e.g. after a real
+        // network change) are discovered from the incoming checks as usual.
+        val remoteCandidates = transportPacketExtension.getChildExtensionsOfType(CandidatePacketExtension::class.java)
+        addRemoteCandidates(remoteCandidates, iceAgentIsRunning = false)
+
+        iceAgent.restartIce()
     }
 
     fun startReadingData() {
