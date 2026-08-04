@@ -280,20 +280,38 @@ public class Conference
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
         exporter = new ExporterWrapper(
             logger,
-            j -> {
-                handleTranscriptionMessage(j);
-                return Unit.INSTANCE;
-            },
-            m -> {
-                handleMediaMessage(m);
-                return Unit.INSTANCE;
-            },
-            (sourceName, sending, timestamp) -> {
-                handleSyntheticSourceSendingChange(sourceName, sending, timestamp);
-                return Unit.INSTANCE;
-            },
-            ssrc -> getAudioSourceName(ssrc),
-            ssrc -> getDiarize(ssrc));
+            new ExporterEventHandler()
+            {
+                @Override
+                public void handleTranscriptionResult(TranscriptionResultEvent event)
+                {
+                    handleTranscriptionMessage(event);
+                }
+
+                @Override
+                public void handleMediaEvent(MediaEvent event)
+                {
+                    handleMediaMessage(event);
+                }
+
+                @Override
+                public void handleSendingChange(String sourceName, boolean sending, long timestamp)
+                {
+                    handleSyntheticSourceSendingChange(sourceName, sending, timestamp);
+                }
+
+                @Override
+                public String getAudioSourceName(long ssrc)
+                {
+                    return Conference.this.getAudioSourceName(ssrc);
+                }
+
+                @Override
+                public boolean getDiarize(long ssrc)
+                {
+                    return Conference.this.getDiarize(ssrc);
+                }
+            });
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
