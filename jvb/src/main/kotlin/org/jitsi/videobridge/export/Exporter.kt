@@ -60,18 +60,8 @@ internal class Exporter(
     private val url: URI,
     private val httpHeaders: Map<String, String>,
     val logger: Logger,
-    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
-    /** Handles a translated-audio media event received back from the peer. */
-    private val handleMediaEvent: ((MediaEvent) -> Unit),
-    /**
-     * Handles a synthetic source's sending-state change, derived from the `start`/`stop` mediajson events the peer
-     * sends to bracket a "talk": (sourceName, sending, RTP timestamp).
-     */
-    private val handleSendingChange: ((String, Boolean, Long) -> Unit),
-    /** Resolves an audio SSRC to its source name, used to filter outbound audio by this connect's exports. */
-    private val getAudioSourceName: (Long) -> String?,
-    /** Resolves an audio SSRC to whether diarization is requested for its endpoint (colibri2 `diarize` attribute). */
-    private val getDiarize: (Long) -> Boolean,
+    /** The conference-side sinks and SSRC lookups this exporter calls back into. */
+    private val eventHandler: ExporterEventHandler,
     private val pingEnabled: Boolean = false,
     private val pingIntervalMs: Int = 0,
     private val pingTimeoutMs: Int = 0,
@@ -175,7 +165,7 @@ internal class Exporter(
 
     private var serializer: MediaJsonSerializer? = null
 
-    private fun initSerializer() = MediaJsonSerializer(getAudioSourceName, getDiarize) {
+    private fun initSerializer() = MediaJsonSerializer(eventHandler::getAudioSourceName, eventHandler::getDiarize) {
         val session = recorderWebSocket.session
         if (session != null) {
             session.sendText(it.toJson(), Callback.NOOP)
@@ -195,7 +185,7 @@ internal class Exporter(
     override fun wants(packet: PacketInfo): Boolean {
         if (!isConnected()) return false
         val audioPacket = packet.packet as? AudioRtpPacket ?: return false
-        val sourceName = getAudioSourceName(audioPacket.ssrc) ?: return false
+        val sourceName = eventHandler.getAudioSourceName(audioPacket.ssrc) ?: return false
         return exports.isEmpty() || sourceName in exports
     }
 
@@ -228,7 +218,7 @@ internal class Exporter(
                 is TranscriptionResultEvent -> {
                     transcriptsReceivedCount.inc()
                     instanceTranscriptsReceived.incrementAndGet()
-                    handleTranscriptionResult(event)
+                    eventHandler.handleTranscriptionResult(event)
                 }
                 is PongEvent -> {
                     val expectedId = lastPingSentId.get()
@@ -245,7 +235,7 @@ internal class Exporter(
                 is MediaEvent -> {
                     mediaEventsReceivedCount.inc()
                     instanceMediaEventsReceived.incrementAndGet()
-                    handleMediaEvent(event)
+                    eventHandler.handleMediaEvent(event)
                 }
                 is StartEvent -> {
                     // A `start` with a talk timestamp brackets the beginning of a "talk" (translated audio); one
@@ -255,7 +245,7 @@ internal class Exporter(
                     if (timestamp != null) {
                         sendingChangesReceivedCount.inc()
                         instanceSendingChangesReceived.incrementAndGet()
-                        handleSendingChange(event.start.tag, true, timestamp)
+                        eventHandler.handleSendingChange(event.start.tag, true, timestamp)
                     } else {
                         otherMessagesReceivedCount.inc()
                         instanceOtherMessagesReceived.incrementAndGet()
@@ -268,7 +258,7 @@ internal class Exporter(
                     if (timestamp != null) {
                         sendingChangesReceivedCount.inc()
                         instanceSendingChangesReceived.incrementAndGet()
-                        handleSendingChange(event.stop.tag, false, timestamp)
+                        eventHandler.handleSendingChange(event.stop.tag, false, timestamp)
                     } else {
                         otherMessagesReceivedCount.inc()
                         instanceOtherMessagesReceived.incrementAndGet()

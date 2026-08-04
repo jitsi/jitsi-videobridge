@@ -17,6 +17,8 @@ package org.jitsi.videobridge.export
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import org.jitsi.mediajson.MediaEvent
+import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.utils.logging2.LoggerImpl
 import java.net.URI
 
@@ -35,11 +37,15 @@ class ExporterTest : ShouldSpec() {
             URI("ws://localhost:1/"),
             emptyMap(),
             LoggerImpl(javaClass.name),
-            { }, // handleTranscriptionResult
-            { }, // handleMediaEvent
-            { name, sending, timestamp -> changes.add(Change(name, sending, timestamp)) },
-            { null }, // getAudioSourceName
-            { false } // getDiarize
+            object : ExporterEventHandler {
+                override fun handleTranscriptionResult(event: TranscriptionResultEvent) {}
+                override fun handleMediaEvent(event: MediaEvent) {}
+                override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {
+                    changes.add(Change(sourceName, sending, timestamp))
+                }
+                override fun getAudioSourceName(ssrc: Long): String? = null
+                override fun getDiarize(ssrc: Long): Boolean = false
+            }
         )
         return exporter to changes
     }
