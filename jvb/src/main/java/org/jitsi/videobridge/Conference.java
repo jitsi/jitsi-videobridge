@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import io.opentelemetry.api.trace.*;
+import io.opentelemetry.context.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.mediajson.*;
@@ -25,6 +27,7 @@ import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.tracing.*;
 import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.dsi.*;
 import org.jitsi.utils.logging.*;
@@ -39,6 +42,7 @@ import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.extensions.TraceParent;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -150,6 +154,42 @@ public class Conference
      * information.
      */
     private final Logger logger;
+
+    private final Tracer tracer = TracingGlobal.Companion.getSdk().getTracer("org.jitsi.videobridge");
+
+    /**
+     * Extracts a remote {@link Span} from the {@code traceparent} extension of an IQ, if present.
+     * Inlined from jicoco-tracing's {@code TracingUtil}, which was removed because it pulled in
+     * a Smack dependency that isn't available on Maven Central.
+     */
+    private static @Nullable Span remoteSpanFromIq(IQ iq)
+    {
+        TraceParent extension = iq.getExtension(TraceParent.class);
+        if (extension == null)
+        {
+            return null;
+        }
+        return Span.wrap(SpanContext.createFromRemoteParent(
+                extension.getTraceId(),
+                extension.getParentId(),
+                TraceFlags.fromHex(extension.getTraceFlags(), 0),
+                TraceState.getDefault()));
+    }
+
+    /**
+     * Extracts a remote {@link Context} from the {@code traceparent} extension of an IQ, if present,
+     * or the root context otherwise.
+     */
+    private static Context remoteContextFromIq(IQ iq)
+    {
+        Context root = Context.root();
+        Span span = remoteSpanFromIq(iq);
+        if (span == null)
+        {
+            return root;
+        }
+        return root.with(span);
+    }
 
     /**
      * The time when this {@link Conference} was created.
@@ -285,7 +325,13 @@ public class Conference
         colibriQueue = new ColibriQueue(
                 request ->
                 {
-                    try
+                    Span span = tracer.spanBuilder("colibri.request")
+                            .setAttribute("conference.id", request.getRequest().getMeetingId())
+                            .setAttribute("create", request.getRequest().getCreate())
+                            .setAttribute("expire", request.getRequest().getExpire())
+                            .setParent(remoteContextFromIq(request.getRequest()))
+                            .startSpan();
+                    try (Scope s = span.makeCurrent())
                     {
                         logger.info( () -> {
                             String reqStr = request.getRequest().toXML().toString();
@@ -329,11 +375,16 @@ public class Conference
                     catch (Throwable e)
                     {
                         logger.warn("Failed to handle colibri request: ", e);
+                        span.setStatus(StatusCode.ERROR, e.getMessage());
                         request.getCallback().invoke(
                                 createError(
                                         request.getRequest(),
                                         StanzaError.Condition.internal_server_error,
                                         e.getMessage()));
+                    }
+                    finally
+                    {
+                        span.end();
                     }
                     return true;
                 }

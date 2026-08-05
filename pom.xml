@@ -29,7 +29,7 @@
         <junit.version>5.13.4</junit.version>
         <junit.platform.version>1.13.4</junit.platform.version>
         <jitsi.utils.version>1.0-150-g4ab9a3b</jitsi.utils.version>
-        <jicoco.version>1.1-176-ge8384e2</jicoco.version>
+        <jicoco.version>1.1-178-ga09ed33</jicoco.version>
         <mockk.version>1.14.5</mockk.version>
         <ktlint-maven-plugin.version>3.2.0</ktlint-maven-plugin.version>
         <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
@@ -123,6 +123,11 @@
             </dependency>
             <dependency>
                 <groupId>${project.groupId}</groupId>
+                <artifactId>jicoco-tracing</artifactId>
+                <version>${jicoco.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>jicoco-test-kotlin</artifactId>
                 <version>${jicoco.version}</version>
             </dependency>
@@ -144,7 +149,7 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>jitsi-xmpp-extensions</artifactId>
-                <version>1.0-116-gc47d314</version>
+                <version>1.0-117-g60c0446</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
