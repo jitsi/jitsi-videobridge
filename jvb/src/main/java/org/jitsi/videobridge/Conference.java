@@ -42,6 +42,7 @@ import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.relay.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.extensions.TraceParent;
 import org.jitsi.xmpp.extensions.colibri2.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -155,6 +156,40 @@ public class Conference
     private final Logger logger;
 
     private final Tracer tracer = TracingGlobal.Companion.getSdk().getTracer("org.jitsi.videobridge");
+
+    /**
+     * Extracts a remote {@link Span} from the {@code traceparent} extension of an IQ, if present.
+     * Inlined from jicoco-tracing's {@code TracingUtil}, which was removed because it pulled in
+     * a Smack dependency that isn't available on Maven Central.
+     */
+    private static @Nullable Span remoteSpanFromIq(IQ iq)
+    {
+        TraceParent extension = iq.getExtension(TraceParent.class);
+        if (extension == null)
+        {
+            return null;
+        }
+        return Span.wrap(SpanContext.createFromRemoteParent(
+                extension.getTraceId(),
+                extension.getParentId(),
+                TraceFlags.fromHex(extension.getTraceFlags(), 0),
+                TraceState.getDefault()));
+    }
+
+    /**
+     * Extracts a remote {@link Context} from the {@code traceparent} extension of an IQ, if present,
+     * or the root context otherwise.
+     */
+    private static Context remoteContextFromIq(IQ iq)
+    {
+        Context root = Context.root();
+        Span span = remoteSpanFromIq(iq);
+        if (span == null)
+        {
+            return root;
+        }
+        return root.with(span);
+    }
 
     /**
      * The time when this {@link Conference} was created.
@@ -305,7 +340,7 @@ public class Conference
                             .setAttribute("conference.id", request.getRequest().getMeetingId())
                             .setAttribute("create", request.getRequest().getCreate())
                             .setAttribute("expire", request.getRequest().getExpire())
-                            .setParent(TracingUtil.remoteContextFromIq(request.getRequest()))
+                            .setParent(remoteContextFromIq(request.getRequest()))
                             .startSpan();
                     try (Scope s = span.makeCurrent())
                     {
