@@ -731,10 +731,10 @@ class Endpoint @JvmOverloads constructor(
      * @return {@code true} iff the password matches.
      */
     fun acceptWebSocket(password: String): Boolean {
-        if (iceTransport.icePassword != password) {
+        if (iceTransport.webSocketPassword != password) {
             logger.warn(
                 "Incoming web socket request with an invalid password. " +
-                    "Expected: ${iceTransport.icePassword} received $password"
+                    "Expected: ${iceTransport.webSocketPassword} received $password"
             )
             return false
         }
@@ -794,7 +794,7 @@ class Endpoint @JvmOverloads constructor(
             colibriWebsocketService.getColibriWebSocketUrls(
                 conference.id,
                 id,
-                iceTransport.icePassword
+                iceTransport.webSocketPassword
             ).forEach { wsUrl ->
                 val wsPacketExtension = WebSocketPacketExtension(wsUrl)
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)

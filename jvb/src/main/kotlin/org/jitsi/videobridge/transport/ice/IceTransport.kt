@@ -155,8 +155,16 @@ class IceTransport @JvmOverloads constructor(
         })
     }
     private val packetStats = PacketStats()
-    val icePassword: String
-        get() = iceAgent.localPassword
+
+    /**
+     * The password used to authenticate the colibri WebSocket for this transport.
+     *
+     * This happens to be the local ICE password, but the two are separate concerns: the peer is handed a
+     * WebSocket URL containing this password once (when its transport is described) and re-dials that same URL
+     * whenever the WebSocket reconnects, so this value must stay fixed for the lifetime of the transport. Hence
+     * it is pinned here rather than read from the [Agent] on each access.
+     */
+    val webSocketPassword: String = iceAgent.localPassword
 
     /**
      * Tell this [IceTransport] to start ICE connectivity establishment.
