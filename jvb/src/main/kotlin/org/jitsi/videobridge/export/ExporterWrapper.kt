@@ -17,8 +17,6 @@ package org.jitsi.videobridge.export
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import org.jitsi.mediajson.MediaEvent
-import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.PotentialPacketHandler
@@ -31,23 +29,19 @@ import java.util.concurrent.ConcurrentHashMap
 
 class ExporterWrapper internal constructor(
     parentLogger: Logger,
-    private val handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
-    /** Handles a translated-audio media event received back from a peer. */
-    private val handleMediaEvent: ((MediaEvent) -> Unit),
-    /** Resolves an audio SSRC to its source name, used to filter outbound audio by a connect's exports. */
-    private val getAudioSourceName: (Long) -> String?,
-    /** Resolves an audio SSRC to whether diarization is requested for its endpoint (colibri2 `diarize` attribute). */
-    private val getDiarize: (Long) -> Boolean,
+    /** The conference-side sinks and SSRC lookups each [Exporter] calls back into. */
+    private val eventHandler: ExporterEventHandler,
     /** Creates (and starts) the [Exporter] for a connect. Overridable for testing; defaults to the real one. */
     exporterFactory: ((Connect) -> Exporter)?
 ) {
     constructor(
         parentLogger: Logger,
-        handleTranscriptionResult: ((TranscriptionResultEvent) -> Unit),
-        handleMediaEvent: ((MediaEvent) -> Unit),
-        getAudioSourceName: (Long) -> String?,
-        getDiarize: (Long) -> Boolean
-    ) : this(parentLogger, handleTranscriptionResult, handleMediaEvent, getAudioSourceName, getDiarize, null)
+        eventHandler: ExporterEventHandler
+    ) : this(
+        parentLogger,
+        eventHandler,
+        null
+    )
 
     val logger = createChildLogger(parentLogger)
 
@@ -220,10 +214,7 @@ class ExporterWrapper internal constructor(
             connect.url,
             httpHeaders,
             logger,
-            handleTranscriptionResult,
-            handleMediaEvent,
-            getAudioSourceName,
-            getDiarize,
+            eventHandler,
             pingEnabled,
             pingIntervalMs,
             pingTimeoutMs,

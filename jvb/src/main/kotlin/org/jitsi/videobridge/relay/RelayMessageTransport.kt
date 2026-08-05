@@ -36,6 +36,7 @@ import org.jitsi.videobridge.message.EndpointMessage
 import org.jitsi.videobridge.message.EndpointStats
 import org.jitsi.videobridge.message.ServerHelloMessage
 import org.jitsi.videobridge.message.SourceVideoTypeMessage
+import org.jitsi.videobridge.message.SyntheticSourceSendingChangeEvent
 import org.jitsi.videobridge.message.VideoTypeMessage
 import org.jitsi.videobridge.metrics.VideobridgeMetrics
 import org.jitsi.videobridge.websocket.ColibriWebSocket
@@ -492,6 +493,18 @@ class RelayMessageTransport(
         val conference = relay.conference
         if (conference.isExpired) {
             logger.warn("Unable to send EndpointConnectionStatusMessage, conference is expired")
+            return null
+        }
+        conference.sendMessageFromRelay(message, true, relay.meshId)
+        return null
+    }
+
+    override fun syntheticSourceSendingChange(message: SyntheticSourceSendingChangeEvent): BridgeChannelMessage? {
+        // The synthetic source's audio is forwarded across relays, so its sending-change notification is too:
+        // forward to local endpoints and on to other-mesh relays, like endpointConnectionStatus above.
+        val conference = relay.conference
+        if (conference.isExpired) {
+            logger.warn("Unable to send SyntheticSourceSendingChangeEvent, conference is expired")
             return null
         }
         conference.sendMessageFromRelay(message, true, relay.meshId)

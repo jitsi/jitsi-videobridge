@@ -189,6 +189,31 @@ class BridgeChannelMessageTest : ShouldSpec() {
             parsed.previousSpeakers shouldBe listOf("p1", "p2")
         }
 
+        context("serializing and parsing SyntheticSourceSendingChangeEvent") {
+            val message = SyntheticSourceSendingChangeEvent("55555555-a0.hi", true, 384000)
+
+            context("the wire format (matches lib-jitsi-meet BridgeChannel validation)") {
+                val parsed = jacksonObjectMapper().readTree(message.toJson())
+                parsed.shouldBeInstanceOf<ObjectNode>()
+                parsed.get("colibriClass").asText() shouldBe "SyntheticSourceSendingChangeEvent"
+                // Flat fields (not nested under "changes"): the client reads obj.sourceName/sending/timestamp.
+                parsed.get("sourceName").asText() shouldBe "55555555-a0.hi"
+                // A real JSON boolean (the client checks typeof === 'boolean').
+                parsed.get("sending").isBoolean shouldBe true
+                parsed.get("sending").asBoolean() shouldBe true
+                // A natural JSON number in the uint32 RTP range (the client checks Number.isInteger and <= 0xFFFFFFFF).
+                parsed.get("timestamp").isNumber shouldBe true
+                parsed.get("timestamp").asLong() shouldBe 384000
+            }
+            context("round-trip") {
+                val parsed = parse(message.toJson())
+                parsed.shouldBeInstanceOf<SyntheticSourceSendingChangeEvent>()
+                parsed.sourceName shouldBe "55555555-a0.hi"
+                parsed.sending shouldBe true
+                parsed.timestamp shouldBe 384000
+            }
+        }
+
         context("serializing and parsing ServerHello") {
             context("without a version") {
                 val parsed = parse(ServerHelloMessage().toJson())

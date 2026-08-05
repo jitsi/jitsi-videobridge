@@ -318,18 +318,7 @@ public class Conference
         }
 
         logger = new LoggerImpl(Conference.class.getName(), new LogContext(context));
-        exporter = new ExporterWrapper(
-            logger,
-            j -> {
-                handleTranscriptionMessage(j);
-                return Unit.INSTANCE;
-            },
-            m -> {
-                handleMediaMessage(m);
-                return Unit.INSTANCE;
-            },
-            ssrc -> getAudioSourceName(ssrc),
-            ssrc -> getDiarize(ssrc));
+        exporter = new ExporterWrapper(logger, new ExporterEventHandlerImpl());
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
@@ -1159,33 +1148,6 @@ public class Conference
     }
 
     /**
-     * Resolves an audio SSRC to the name of the source it belongs to, or {@code null} if it is not known. Used by the
-     * exporter to filter outbound audio by a connect's exported source names.
-     */
-    @Nullable
-    private String getAudioSourceName(long ssrc)
-    {
-        AbstractEndpoint endpoint = getEndpointBySsrc(ssrc);
-        if (endpoint == null)
-        {
-            return null;
-        }
-        AudioSourceDesc source = endpoint.getAudioSource(ssrc);
-        return source != null ? source.getSourceName() : null;
-    }
-
-    /**
-     * Resolves an audio SSRC to whether diarization is requested for its owning endpoint (the colibri2 {@code diarize}
-     * attribute), defaulting to {@code false} if the SSRC's endpoint is not known. Used by the exporter to set the
-     * {@code diarize} flag on the transcriber start event per source.
-     */
-    private boolean getDiarize(long ssrc)
-    {
-        AbstractEndpoint endpoint = getEndpointBySsrc(ssrc);
-        return endpoint != null && endpoint.getDiarize();
-    }
-
-    /**
      * Whether the packet belongs to a synthetic source (bridge-generated audio, e.g. translated audio). Such packets
      * are exempt from echo-suppression in {@link #sendOut}: a synthetic source is delivered purely by audio
      * subscription, including to its owner endpoint, on every bridge.
@@ -1616,100 +1578,187 @@ public class Conference
     }
 
     /**
-     * Handles transcription messages received from the websocket.
-     *
-     * @param transcriptionMessage the transcription message as JsonNode
+     * The conference's implementation of the {@link ExporterEventHandler} callbacks the {@link ExporterWrapper}
+     * invokes: sinks for the events a peer sends back over an export websocket, plus the SSRC lookups used to
+     * filter and annotate exported audio. A non-static inner class, so the callbacks reach the conference's state
+     * directly.
      */
-    private void handleTranscriptionMessage(TranscriptionResultEvent transcriptionMessage)
+    private class ExporterEventHandlerImpl implements ExporterEventHandler
     {
-        try
+        /**
+         * Handles a transcription result received from the websocket.
+         *
+         * @param event the transcription result
+         */
+        @Override
+        public void handleTranscriptionResult(TranscriptionResultEvent event)
         {
-            EndpointMessage endpointMessage = new EndpointMessage("");
-            endpointMessage.put("msgPayload", transcriptionMessage);
-            endpointMessage.put("from", "transcriber");
-
-            broadcastMessage(endpointMessage, true);
-        }
-        catch (Exception e)
-        {
-            logger.warn("Failed to broadcast transcription message", e);
-        }
-    }
-
-    /**
-     * Handles a translated-audio "media" event received from a translator over the export websocket. The event's
-     * tag names the synthetic source the translated audio belongs to; we build an Opus RTP packet on that source's
-     * SSRC and inject it into the conference, where the synthetic-source routing delivers it (only to endpoints that
-     * explicitly subscribed to that source, and on to relays).
-     */
-    private void handleMediaMessage(MediaEvent mediaEvent)
-    {
-        org.jitsi.mediajson.Media media = mediaEvent.getMedia();
-        String sourceName = media.getTag();
-
-        AudioSourceDesc source = findSyntheticAudioSource(sourceName);
-        if (source == null)
-        {
-            if (removedSyntheticSources.contains(sourceName))
+            try
             {
-                // Expected transient: the translator sent this before it saw our unsubscribe of the source.
-                logger.debug(() -> "Dropping translated media for removed synthetic source: " + sourceName);
+                EndpointMessage endpointMessage = new EndpointMessage("");
+                endpointMessage.put("msgPayload", event);
+                endpointMessage.put("from", "transcriber");
+
+                broadcastMessage(endpointMessage, true);
             }
-            else if (loggedUnknownMediaTags.add(sourceName))
+            catch (Exception e)
             {
-                logger.warn("Received translated media for unknown synthetic source: " + sourceName);
+                logger.warn("Failed to broadcast transcription message", e);
             }
-            return;
         }
 
-        PayloadType opusPayloadType = getOpusPayloadType();
-        if (opusPayloadType == null)
+        /**
+         * Handles a translated-audio "media" event received from a translator over the export websocket. The event's
+         * tag names the synthetic source the translated audio belongs to; we build an Opus RTP packet on that
+         * source's SSRC and inject it into the conference, where the synthetic-source routing delivers it (only to
+         * endpoints that explicitly subscribed to that source, and on to relays).
+         */
+        @Override
+        public void handleMediaEvent(MediaEvent mediaEvent)
         {
-            if (loggedNoOpusPayloadType.compareAndSet(false, true))
+            org.jitsi.mediajson.Media media = mediaEvent.getMedia();
+            String sourceName = media.getTag();
+
+            AudioSourceDesc source = findSyntheticAudioSource(sourceName);
+            if (source == null)
             {
-                logger.warn("Received translated media but no Opus payload type is negotiated; dropping.");
+                if (removedSyntheticSources.contains(sourceName))
+                {
+                    // Expected transient: the translator sent this before it saw our unsubscribe of the source.
+                    logger.debug(() -> "Dropping translated media for removed synthetic source: " + sourceName);
+                }
+                else if (loggedUnknownMediaTags.add(sourceName))
+                {
+                    logger.warn("Received translated media for unknown synthetic source: " + sourceName);
+                }
+                return;
             }
-            return;
+
+            PayloadType opusPayloadType = getOpusPayloadType();
+            if (opusPayloadType == null)
+            {
+                if (loggedNoOpusPayloadType.compareAndSet(false, true))
+                {
+                    logger.warn("Received translated media but no Opus payload type is negotiated; dropping.");
+                }
+                return;
+            }
+
+            if (loggedInjectedSources.add(sourceName))
+            {
+                logger.info("Creating injected synthetic source " + sourceName + " (ssrc " + source.getSsrc() + ")");
+            }
+
+            try
+            {
+                byte[] payload = java.util.Base64.getDecoder().decode(media.getPayload());
+                int headerSize = RtpHeader.FIXED_HEADER_SIZE_BYTES;
+                int offset = RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET;
+                // Use a pooled buffer with the standard head and tail room, like other packet-construction sites, so
+                // downstream stages (header extensions, the SRTP auth tag) don't need to reallocate and the buffer
+                // round-trips through the pool.
+                byte[] buffer = ByteBufferPool.getBuffer(
+                    offset + headerSize + payload.length + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET);
+                // The pooled buffer isn't zeroed, and the setters below don't cover every header field (e.g. the
+                // padding/extension/CSRC-count and marker bits), so clear the header region first.
+                Arrays.fill(buffer, offset, offset + headerSize, (byte) 0);
+                System.arraycopy(payload, 0, buffer, offset + headerSize, payload.length);
+
+                AudioRtpPacket rtpPacket = new AudioRtpPacket(buffer, offset, headerSize + payload.length);
+                rtpPacket.setVersion(2);
+                rtpPacket.setPayloadType(opusPayloadType.getPt());
+                rtpPacket.setSequenceNumber(media.getChunk());
+                // The translator sends a monotonic, unwrapped timestamp, but the RTP timestamp is a 32-bit wrapping
+                // field. setTimestamp() truncates to 32 bits on the wire, but caches the raw Long, so mask here to
+                // keep the packet's cached timestamp consistent with its bytes (and the sending-change notification).
+                rtpPacket.setTimestamp(media.getTimestamp() & 0xFFFFFFFFL);
+                rtpPacket.setSsrc(source.getSsrc());
+
+                PacketInfo packetInfo = new PacketInfo(rtpPacket);
+                packetInfo.setPayloadType(opusPayloadType);
+                // Deliberately leave the endpoint ID unset: this is bridge-generated audio, not an endpoint's own
+                // live audio, so there is no self-echo to suppress. Delivery (including to the source's owner) is
+                // governed entirely by the audio subscriptions, so an endpoint can subscribe to its own synthetic
+                // source.
+
+                handleIncomingPacket(packetInfo);
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to handle translated media for source " + sourceName, e);
+            }
         }
 
-        if (loggedInjectedSources.add(sourceName))
+        /**
+         * Handles a synthetic source's sending-state change, derived from the {@code start}/{@code stop} mediajson
+         * events a translator sends to bracket a "talk" of translated audio. Resolves the named synthetic source
+         * (dropping the change if it isn't a known synthetic source, like {@link #handleMediaEvent}) and broadcasts
+         * a {@link SyntheticSourceSendingChangeEvent} to the conference's clients (and relays).
+         *
+         * @param sourceName the synthetic source whose sending state changed
+         * @param sending    true if the source started sending, false if it stopped
+         * @param timestamp  the RTP timestamp (media clock) at which the change takes effect, on the same timeline as
+         *                   the source's media; the low 32 bits are used (RTP timestamps are 32-bit and wrap)
+         */
+        @Override
+        public void handleSendingChange(String sourceName, boolean sending, long timestamp)
         {
-            logger.info("Creating injected synthetic source " + sourceName + " (ssrc " + source.getSsrc() + ")");
+            AudioSourceDesc source = findSyntheticAudioSource(sourceName);
+            if (source == null)
+            {
+                if (removedSyntheticSources.contains(sourceName))
+                {
+                    // Expected transient: the translator sent this before it saw our unsubscribe of the source.
+                    logger.debug(() -> "Dropping sending-change for removed synthetic source: " + sourceName);
+                }
+                else if (loggedUnknownMediaTags.add(sourceName))
+                {
+                    logger.warn("Received sending-change for unknown synthetic source: " + sourceName);
+                }
+                return;
+            }
+
+            try
+            {
+                // The translator sends a monotonic, unwrapped timestamp; the RTP timestamp is 32-bit and wraps, and
+                // the client (lib-jitsi-meet) validates 0..0xFFFFFFFF, so send the low 32 bits. This also matches the
+                // wrapped timestamp the client sees on this source's injected media.
+                long rtpTimestamp = timestamp & 0xFFFFFFFFL;
+                broadcastMessage(new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp), true);
+            }
+            catch (Exception e)
+            {
+                logger.warn("Failed to broadcast synthetic source sending change for " + sourceName, e);
+            }
         }
 
-        try
+        /**
+         * Resolves an audio SSRC to the name of the source it belongs to, or {@code null} if it is not known. Used to
+         * filter outbound audio by a connect's exported source names.
+         */
+        @Override
+        @Nullable
+        public String getAudioSourceName(long ssrc)
         {
-            byte[] payload = java.util.Base64.getDecoder().decode(media.getPayload());
-            int headerSize = RtpHeader.FIXED_HEADER_SIZE_BYTES;
-            int offset = RtpPacket.BYTES_TO_LEAVE_AT_START_OF_PACKET;
-            // Use a pooled buffer with the standard head and tail room, like other packet-construction sites, so
-            // downstream stages (header extensions, the SRTP auth tag) don't need to reallocate and the buffer
-            // round-trips through the pool.
-            byte[] buffer = ByteBufferPool.getBuffer(
-                offset + headerSize + payload.length + Packet.BYTES_TO_LEAVE_AT_END_OF_PACKET);
-            // The pooled buffer isn't zeroed, and the setters below don't cover every header field (e.g. the
-            // padding/extension/CSRC-count and marker bits), so clear the header region first.
-            Arrays.fill(buffer, offset, offset + headerSize, (byte) 0);
-            System.arraycopy(payload, 0, buffer, offset + headerSize, payload.length);
-
-            AudioRtpPacket rtpPacket = new AudioRtpPacket(buffer, offset, headerSize + payload.length);
-            rtpPacket.setVersion(2);
-            rtpPacket.setPayloadType(opusPayloadType.getPt());
-            rtpPacket.setSequenceNumber(media.getChunk());
-            rtpPacket.setTimestamp(media.getTimestamp());
-            rtpPacket.setSsrc(source.getSsrc());
-
-            PacketInfo packetInfo = new PacketInfo(rtpPacket);
-            packetInfo.setPayloadType(opusPayloadType);
-            // Deliberately leave the endpoint ID unset: this is bridge-generated audio, not an endpoint's own live
-            // audio, so there is no self-echo to suppress. Delivery (including to the source's owner) is governed
-            // entirely by the audio subscriptions, so an endpoint can subscribe to a synthetic source of its own.
-
-            handleIncomingPacket(packetInfo);
+            AbstractEndpoint endpoint = getEndpointBySsrc(ssrc);
+            if (endpoint == null)
+            {
+                return null;
+            }
+            AudioSourceDesc source = endpoint.getAudioSource(ssrc);
+            return source != null ? source.getSourceName() : null;
         }
-        catch (Exception e)
+
+        /**
+         * Resolves an audio SSRC to whether diarization is requested for its owning endpoint (the colibri2
+         * {@code diarize} attribute), defaulting to {@code false} if the SSRC's endpoint is not known. Used to set
+         * the {@code diarize} flag on the transcriber start event per source.
+         */
+        @Override
+        public boolean getDiarize(long ssrc)
         {
-            logger.warn("Failed to handle translated media for source " + sourceName, e);
+            AbstractEndpoint endpoint = getEndpointBySsrc(ssrc);
+            return endpoint != null && endpoint.getDiarize();
         }
     }
 

@@ -22,6 +22,8 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.jitsi.mediajson.MediaEvent
+import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.colibri2.FeatureNotImplementedException
 import org.jitsi.videobridge.colibri2.IqProcessingException
@@ -31,10 +33,19 @@ import java.net.URI
 class ExporterWrapperTest : ShouldSpec() {
     private val logger = LoggerImpl(javaClass.name)
 
+    /** A no-op event handler; these tests exercise connect bookkeeping, not the exporter's callbacks. */
+    private val eventHandler = object : ExporterEventHandler {
+        override fun handleTranscriptionResult(event: TranscriptionResultEvent) {}
+        override fun handleMediaEvent(event: MediaEvent) {}
+        override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {}
+        override fun getAudioSourceName(ssrc: Long): String? = null
+        override fun getDiarize(ssrc: Long): Boolean = false
+    }
+
     /** Records the mock [Exporter] created for each connect id, so tests can verify calls against them. */
     private inner class Fixture {
         val exporters = mutableMapOf<String, Exporter>()
-        val wrapper = ExporterWrapper(logger, { }, { }, { null }, { false }) { connect ->
+        val wrapper = ExporterWrapper(logger, eventHandler) { connect ->
             mockk<Exporter>(relaxed = true).also { exporters[connect.id] = it }
         }
         operator fun get(id: String): Exporter = exporters.getValue(id)
