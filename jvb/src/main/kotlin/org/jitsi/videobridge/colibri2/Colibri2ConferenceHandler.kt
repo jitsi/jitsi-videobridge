@@ -257,7 +257,22 @@ class Colibri2ConferenceHandler(
         }
 
         c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
-        if (c2endpoint.create) {
+
+        // An explicit ICE restart request. Handled after setTransportInfo, so any credentials included in this
+        // same request still belong to (and are applied to) the pre-restart Agent. The restart rotates our own
+        // ICE credentials, so the endpoint has to be told the new ones — its connectivity checks are addressed
+        // to them — even though this is not a create.
+        val iceRestarted = if (c2endpoint.transport?.iceRestart == true) {
+            endpoint.requestIceRestart().also {
+                if (!it) {
+                    logger.warn("Rejected an ICE restart request for endpoint ${c2endpoint.id}.")
+                }
+            }
+        } else {
+            false
+        }
+
+        if (c2endpoint.create || iceRestarted) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(endpoint.describeTransport())
             if (c2endpoint.transport?.sctp != null) {

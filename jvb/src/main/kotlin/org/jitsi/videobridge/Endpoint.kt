@@ -786,6 +786,18 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.startConnectivityEstablishment(transportInfo)
     }
 
+    /**
+     * Handles an explicit ICE restart request from this endpoint (colibri2 `<transport ice-restart="true"/>`).
+     *
+     * Creates a new ice4j Agent with freshly rotated local credentials alongside the established one, which
+     * keeps carrying media until the new one connects (make-before-break).
+     *
+     * @return true if a restart was started, in which case the caller must signal our new transport (returned
+     * by [describeTransport], which then describes the pending Agent) back to the endpoint. False if the
+     * request was rejected, in which case nothing changed.
+     */
+    fun requestIceRestart(): Boolean = iceTransport.requestIceRestart()
+
     fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
