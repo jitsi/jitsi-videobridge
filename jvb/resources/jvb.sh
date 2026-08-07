@@ -16,7 +16,32 @@ if [ -f $videobridge_rc  ]; then
         source $videobridge_rc
 fi
 
-if [ -z "$VIDEOBRIDGE_MAX_MEMORY" ]; then VIDEOBRIDGE_MAX_MEMORY=3072m; fi
-if [ -z "$VIDEOBRIDGE_GC_TYPE" ]; then VIDEOBRIDGE_GC_TYPE=G1GC; fi
+# Dynamically set max memory if not already defined
+if [ -z "$VIDEOBRIDGE_MAX_MEMORY" ]; then
+    TOTAL_MEM=$(free -m 2>/dev/null | awk '/Mem:/ {print $2}')
 
-exec java -Xmx$VIDEOBRIDGE_MAX_MEMORY $VIDEOBRIDGE_DEBUG_OPTIONS -XX:+Use$VIDEOBRIDGE_GC_TYPE -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp -Djdk.tls.ephemeralDHKeySize=2048 $LOGGING_CONFIG_PARAM $JAVA_SYS_PROPS -cp $cp $mainClass $@
+    if [ -n "$TOTAL_MEM" ]; then
+        # Use 75% of total memory to avoid OOM on small setups
+        VIDEOBRIDGE_MAX_MEMORY=$(($TOTAL_MEM * 75 / 100))m
+    else
+        # Fallback value
+        VIDEOBRIDGE_MAX_MEMORY=1024m
+    fi
+fi
+if [ -z "$VIDEOBRIDGE_GC_TYPE" ]; then 
+   VIDEOBRIDGE_GC_TYPE=G1GC; 
+fi
+
+
+echo "Max memory that will be used: $VIDEOBRIDGE_MAX_MEMORY"
+
+exec java -Xmx$VIDEOBRIDGE_MAX_MEMORY \
+    $VIDEOBRIDGE_DEBUG_OPTIONS \
+    -XX:+Use$VIDEOBRIDGE_GC_TYPE \
+    -XX:+HeapDumpOnOutOfMemoryError \
+    -XX:HeapDumpPath=/tmp \
+    -Djdk.tls.ephemeralDHKeySize=2048 \
+    $LOGGING_CONFIG_PARAM \
+    $JAVA_SYS_PROPS \
+    -cp $cp \
+    $mainClass "$@"
