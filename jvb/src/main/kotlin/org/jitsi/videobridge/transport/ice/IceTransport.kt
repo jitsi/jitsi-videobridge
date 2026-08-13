@@ -412,6 +412,17 @@ class IceTransport @JvmOverloads constructor(
         val newBundle: AgentBundle
         val generation: Int
         synchronized(restartLock) {
+            // A repeated request for a restart that has not started its checks yet (the peer has not answered
+            // with its own credentials) is answered with the bundle we already have. Clients do fire duplicate
+            // network-change events, and rolling a new generation here would free a bundle the peer may already
+            // be checking against, discard its progress and restart the timeout.
+            pendingBundle?.let { pending ->
+                if (!pending.checksStarted.get()) {
+                    logger.info("An ICE restart is already pending and has not started checks: $pending.")
+                    return IceRestartResult.STARTED
+                }
+            }
+
             // Create the new Agent before touching any state, so that a failure leaves the restart in flight
             // (if there is one) alone rather than freeing a bundle the peer may already be checking against.
             generation = restartGeneration + 1
