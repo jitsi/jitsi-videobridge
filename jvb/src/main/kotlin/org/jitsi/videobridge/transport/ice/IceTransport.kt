@@ -465,6 +465,7 @@ class IceTransport @JvmOverloads constructor(
             // A newer restart supersedes one that has not connected yet.
             pendingBundle?.let { superseded ->
                 logger.info("Superseding an in-flight ICE restart: $superseded")
+                iceRestartsSuperseded.inc()
                 TaskPools.IO_POOL.submit { superseded.free() }
             }
             restartTimeoutTask?.cancel(false)
@@ -996,6 +997,16 @@ class IceTransport @JvmOverloads constructor(
         val iceRestartsSucceeded = VideobridgeMetricsContainer.instance.registerCounter(
             "ice_restarts_succeeded",
             "Number of ICE restarts whose new Agent connected and was cut over to."
+        )
+
+        /**
+         * The total number of ICE restarts superseded by a newer one before they connected. Together with
+         * [iceRestartsSucceeded] and [iceRestartsFailed] this accounts for every restart in
+         * [iceRestartsStarted], except the ones still in flight.
+         */
+        val iceRestartsSuperseded = VideobridgeMetricsContainer.instance.registerCounter(
+            "ice_restarts_superseded",
+            "Number of ICE restarts superseded by a newer restart before they connected."
         )
 
         /**
