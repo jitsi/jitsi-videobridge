@@ -55,6 +55,7 @@ import java.net.Inet6Address
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.LongAdder
@@ -174,6 +175,29 @@ class IceTransport @JvmOverloads constructor(
     private var pendingBundle: AgentBundle? = null
 
     /**
+     * The [AgentBundle] we cut over from, for as long as its transition window lasts. Held here, and not only
+     * by the task that frees it, so that [stop] can free it right away instead of leaving an Agent alive after
+     * the transport is gone.
+     *
+     * Guarded by [restartLock].
+     */
+    private var retiringBundle: AgentBundle? = null
+
+    /**
+     * The task that abandons [pendingBundle] if it does not connect in time, if one is scheduled.
+     *
+     * Guarded by [restartLock].
+     */
+    private var restartTimeoutTask: ScheduledFuture<*>? = null
+
+    /**
+     * The task that frees [retiringBundle] when its transition window elapses, if one is scheduled.
+     *
+     * Guarded by [restartLock].
+     */
+    private var transitionWindowTask: ScheduledFuture<*>? = null
+
+    /**
      * The ICE generation of the most recent restart we started. The bridge owns this counter: each accepted
      * restart request gets the next value, it is advertised on the transport we return (as `ice-generation`),
      * and the peer echoes it on the transport-info carrying its own new credentials. That lets us match the
@@ -267,7 +291,12 @@ class IceTransport @JvmOverloads constructor(
             })
         }
 
+        private val freed = AtomicBoolean(false)
+
         fun free() {
+            if (!freed.compareAndSet(false, true)) {
+                return
+            }
             agent.removeStateChangeListener(stateChangeListener)
             stream.removePairStateChangeListener(pairChangeListener)
             agent.free()
@@ -438,6 +467,8 @@ class IceTransport @JvmOverloads constructor(
                 logger.info("Superseding an in-flight ICE restart: $superseded")
                 TaskPools.IO_POOL.submit { superseded.free() }
             }
+            restartTimeoutTask?.cancel(false)
+            restartTimeoutTask = null
 
             restartGeneration = generation
             pendingBundle = newBundle
@@ -451,11 +482,19 @@ class IceTransport @JvmOverloads constructor(
         iceRestartsStarted.inc()
 
         val timeout = IceConfig.config.restartTimeout
-        TaskPools.SCHEDULED_POOL.schedule(
+        val timeoutTask = TaskPools.SCHEDULED_POOL.schedule(
             { abandonPendingRestart(newBundle, "it did not connect within $timeout") },
             timeout.toMillis(),
             TimeUnit.MILLISECONDS
         )
+        synchronized(restartLock) {
+            // Unless the restart is already over, in which case there is nothing left to abandon.
+            if (pendingBundle === newBundle) {
+                restartTimeoutTask = timeoutTask
+            } else {
+                timeoutTask.cancel(false)
+            }
+        }
 
         return IceRestartResult.STARTED
     }
@@ -537,6 +576,8 @@ class IceTransport @JvmOverloads constructor(
      * already in flight.
      */
     private fun cutOver(newBundle: AgentBundle) {
+        val transitionWindow = IceConfig.config.restartTransitionWindow
+        val keepOldBundle = !transitionWindow.isZero && !transitionWindow.isNegative
         val oldBundle = synchronized(restartLock) {
             if (pendingBundle !== newBundle) {
                 // Superseded or abandoned while it was connecting.
@@ -545,10 +586,20 @@ class IceTransport @JvmOverloads constructor(
             val old = currentBundle
             currentBundle = newBundle
             pendingBundle = null
+            restartTimeoutTask?.cancel(false)
+            restartTimeoutTask = null
+
+            // A bundle still retiring from an earlier cutover has been superseded twice over by now. Free it
+            // rather than let two old Agents linger.
+            retiringBundle?.let { previous ->
+                transitionWindowTask?.cancel(false)
+                transitionWindowTask = null
+                TaskPools.IO_POOL.submit { previous.free() }
+            }
+            retiringBundle = if (keepOldBundle) old else null
             old
         }
 
-        val transitionWindow = IceConfig.config.restartTransitionWindow
         val elapsedMs = Duration.between(newBundle.createdAt, clock.instant()).toMillis()
         logger.info(
             "ICE restart (generation=${newBundle.generation}) connected after ${elapsedMs}ms, cutting over " +
@@ -563,22 +614,37 @@ class IceTransport @JvmOverloads constructor(
             TaskPools.IO_POOL.submit { startReadingData(newBundle) }
         }
 
-        if (transitionWindow.isZero || transitionWindow.isNegative) {
+        if (!keepOldBundle) {
             TaskPools.IO_POOL.submit { oldBundle.free() }
-        } else {
-            TaskPools.SCHEDULED_POOL.schedule(
-                {
-                    logger.info(
-                        "ICE restart (generation=${newBundle.generation}) transition window elapsed, freeing " +
-                            "the old Agent with local ufrag ${oldBundle.agent.localUfrag}."
-                    )
-                    // Not inline: SCHEDULED_POOL is a single thread shared by the whole bridge, and
-                    // Agent.free() shuts down the StunStack, closes sockets and joins threads.
-                    TaskPools.IO_POOL.submit { oldBundle.free() }
-                },
-                transitionWindow.toMillis(),
-                TimeUnit.MILLISECONDS
-            )
+            return
+        }
+
+        val freeTask = TaskPools.SCHEDULED_POOL.schedule(
+            {
+                logger.info(
+                    "ICE restart (generation=${newBundle.generation}) transition window elapsed, freeing " +
+                        "the old Agent with local ufrag ${oldBundle.agent.localUfrag}."
+                )
+                synchronized(restartLock) {
+                    if (retiringBundle === oldBundle) {
+                        retiringBundle = null
+                        transitionWindowTask = null
+                    }
+                }
+                // Not inline: SCHEDULED_POOL is a single thread shared by the whole bridge, and
+                // Agent.free() shuts down the StunStack, closes sockets and joins threads.
+                TaskPools.IO_POOL.submit { oldBundle.free() }
+            },
+            transitionWindow.toMillis(),
+            TimeUnit.MILLISECONDS
+        )
+        synchronized(restartLock) {
+            // Unless the bundle is already gone, in which case there is nothing left to free.
+            if (retiringBundle === oldBundle) {
+                transitionWindowTask = freeTask
+            } else {
+                freeTask.cancel(false)
+            }
         }
     }
 
@@ -593,6 +659,8 @@ class IceTransport @JvmOverloads constructor(
                 return
             }
             pendingBundle = null
+            restartTimeoutTask?.cancel(false)
+            restartTimeoutTask = null
         }
         val elapsedMs = Duration.between(bundle.createdAt, clock.instant()).toMillis()
         logger.warn(
@@ -668,10 +736,18 @@ class IceTransport @JvmOverloads constructor(
         if (running.compareAndSet(true, false)) {
             logger.info("Stopping")
             val bundles = synchronized(restartLock) {
+                restartTimeoutTask?.cancel(false)
+                restartTimeoutTask = null
+                transitionWindowTask?.cancel(false)
+                transitionWindowTask = null
                 buildList {
                     add(currentBundle)
                     pendingBundle?.let { add(it) }
+                    // A bundle inside its transition window would otherwise outlive the transport, until the
+                    // task that frees it fires.
+                    retiringBundle?.let { add(it) }
                     pendingBundle = null
+                    retiringBundle = null
                 }
             }
             bundles.forEach { it.free() }
