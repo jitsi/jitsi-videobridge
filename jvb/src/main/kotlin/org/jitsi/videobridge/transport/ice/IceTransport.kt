@@ -427,6 +427,16 @@ class IceTransport @JvmOverloads constructor(
             iceRestartsRejected.inc()
             return IceRestartResult.UNAVAILABLE
         }
+        val timeout = IceConfig.config.restartTimeout
+        if (timeout.isZero || timeout.isNegative) {
+            // The restart would be abandoned before the peer could even answer, and the peer would be left
+            // holding credentials of an Agent we had already freed. Treat it the same as being disabled.
+            logger.warn(
+                "Can not restart ICE: videobridge.ice.restart.timeout is not positive ($timeout)."
+            )
+            iceRestartsRejected.inc()
+            return IceRestartResult.UNAVAILABLE
+        }
         if (!currentBundle.agent.state.isEstablished) {
             // There is no established connectivity to preserve, so there is nothing for a make-before-break
             // restart to do. The initial Agent is still gathering/checking and the peer should keep using it.
@@ -482,7 +492,6 @@ class IceTransport @JvmOverloads constructor(
         )
         iceRestartsStarted.inc()
 
-        val timeout = IceConfig.config.restartTimeout
         val timeoutTask = TaskPools.SCHEDULED_POOL.schedule(
             { abandonPendingRestart(newBundle, "it did not connect within $timeout") },
             timeout.toMillis(),

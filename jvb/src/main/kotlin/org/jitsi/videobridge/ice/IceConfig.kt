@@ -91,7 +91,8 @@ class IceConfig private constructor() {
 
     /**
      * How long to wait for the new [org.ice4j.ice.Agent] of an ICE restart to connect before giving up on the
-     * restart and keeping the existing Agent.
+     * restart and keeping the existing Agent. A value that is not positive disables ICE restarts: the new Agent
+     * would be freed before the endpoint could answer it.
      */
     val restartTimeout: Duration by config(
         "videobridge.ice.restart.timeout".from(JitsiConfig.newConfig)
