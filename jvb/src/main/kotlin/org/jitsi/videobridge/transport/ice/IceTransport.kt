@@ -98,9 +98,24 @@ class IceTransport @JvmOverloads constructor(
      */
     private val advertisePrivateAddresses: Boolean,
     parentLogger: Logger,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    /**
+     * Creates the ice4j [Agent]s of this transport, with their candidate harvesters configured. Only replaced
+     * in tests, which have no use for real Agents (they bind ports and start threads).
+     */
+    agentFactory: ((Logger) -> Agent)? = null
 ) {
     private val logger = createChildLogger(parentLogger)
+
+    private val agentFactory: (Logger) -> Agent = agentFactory ?: { agentLogger ->
+        Agent(IceConfig.config.ufragPrefix, agentLogger).apply {
+            if (useUniquePort) {
+                setUseDynamicPorts(true)
+            } else {
+                appendHarvesters(this)
+            }
+        }
+    }
 
     /**
      * The handler which will be invoked when data is received.
@@ -228,12 +243,7 @@ class IceTransport @JvmOverloads constructor(
     private fun createAgentBundle(generation: Int): AgentBundle? {
         var agent: Agent? = null
         return try {
-            val newAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
-                if (useUniquePort) {
-                    setUseDynamicPorts(true)
-                } else {
-                    appendHarvesters(this)
-                }
+            val newAgent = agentFactory(logger).apply {
                 isControlling = this@IceTransport.controlling
                 performConsentFreshness = true
                 nominationStrategy = IceConfig.config.nominationStrategy
