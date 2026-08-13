@@ -572,7 +572,9 @@ class IceTransport @JvmOverloads constructor(
                         "ICE restart (generation=${newBundle.generation}) transition window elapsed, freeing " +
                             "the old Agent with local ufrag ${oldBundle.agent.localUfrag}."
                     )
-                    oldBundle.free()
+                    // Not inline: SCHEDULED_POOL is a single thread shared by the whole bridge, and
+                    // Agent.free() shuts down the StunStack, closes sockets and joins threads.
+                    TaskPools.IO_POOL.submit { oldBundle.free() }
                 },
                 transitionWindow.toMillis(),
                 TimeUnit.MILLISECONDS
