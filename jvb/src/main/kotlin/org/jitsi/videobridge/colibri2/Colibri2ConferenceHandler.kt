@@ -315,10 +315,16 @@ class Colibri2ConferenceHandler(
             null
         }
 
-        // A transport is signaled back for a restart that started (the new Agent's rotated credentials) and for
-        // one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection it
-        // has). Only IceRestartResult.UNAVAILABLE signals nothing: an answer with no <transport> is how the
-        // endpoint learns that this bridge will not restart ICE and that it needs a full re-invite instead.
+        // How the refusal of a restart is signaled: with the *absence* of a <transport> in the
+        // conference-modified for this endpoint. There is no explicit "refused" flag, and the request is not
+        // failed with an error, because an error would fail the whole conference-modify and take every other
+        // endpoint's updates with it. Jicofo pairs a request it sent with the answer it gets back: a
+        // <transport> means the restart happened and is relayed to the endpoint, no <transport> means it did
+        // not and jicofo falls back to a re-invite.
+        //
+        // So a transport is signaled back for a restart that started (the new Agent's rotated credentials) and
+        // for one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection
+        // it has, with no re-invite). Only IceRestartResult.UNAVAILABLE signals nothing.
         if (c2endpoint.create || iceRestartResult == IceRestartResult.STARTED ||
             iceRestartResult == IceRestartResult.KEEP_EXISTING
         ) {
