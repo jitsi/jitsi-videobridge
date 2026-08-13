@@ -239,10 +239,23 @@ class IceTransport @JvmOverloads constructor(
             return
         }
 
-        // While an ICE restart is in flight every transport update for this endpoint belongs to that restart:
-        // it is the peer answering with the new credentials that our new Agent needs in order to address its
-        // own connectivity checks. Route it to the pending bundle instead of the established one.
-        pendingBundle?.let { pending ->
+        // An update tagged with an `ice-generation` is the peer answering an ICE restart with the new
+        // credentials that our new Agent needs in order to address its own connectivity checks. Route it to the
+        // pending bundle instead of the established one.
+        //
+        // Only a tagged update: the peer stamps the generation on the restart answer and on nothing else, so an
+        // untagged update arriving while a restart is in flight is an ordinary transport update (a trickled
+        // candidate, or an old one still on the wire) and belongs to the established bundle. Applying such an
+        // update to the pending bundle would give it the peer's *old* password, whose checks the peer rejects.
+        //
+        // Note that the peer's own trickled candidates never reach the pending bundle this way, and the
+        // candidates of a tagged update never reach the established one. Neither matters for the bridge: it
+        // signals no candidates of its own that the peer must answer, and it discovers the peer's address
+        // peer-reflexively from the peer's incoming checks.
+        val pending = pendingBundle
+        if (pending != null &&
+            transportPacketExtension.iceGeneration != IceUdpTransportPacketExtension.GENERATION_UNSPECIFIED
+        ) {
             applyRemoteCredentialsToPendingRestart(pending, transportPacketExtension)
             return
         }
@@ -381,32 +394,25 @@ class IceTransport @JvmOverloads constructor(
     }
 
     /**
-     * Handles a transport update that arrived while an ICE restart is pending. This is step two of a restart:
-     * the peer has applied the transport we returned from [requestIceRestart] and is now signalling its own
-     * new ICE credentials, tagged with the `ice-generation` we advertised. Apply them to the pending Agent and
-     * start its connectivity checks, which is the first moment we can — the checks we send as the controlling
-     * agent are authenticated with the peer's password.
+     * Handles a generation-tagged transport update that arrived while an ICE restart is pending. This is step
+     * two of a restart: the peer has applied the transport we returned from [requestIceRestart] and is now
+     * signalling its own new ICE credentials, tagged with the `ice-generation` we advertised. Apply them to the
+     * pending Agent and start its connectivity checks, which is the first moment we can — the checks we send as
+     * the controlling agent are authenticated with the peer's password.
      */
     private fun applyRemoteCredentialsToPendingRestart(
         pending: AgentBundle,
         transportPacketExtension: IceUdpTransportPacketExtension
     ) {
         val generation = transportPacketExtension.iceGeneration
-        if (generation != IceUdpTransportPacketExtension.GENERATION_UNSPECIFIED &&
-            generation != pending.generation
-        ) {
-            logger.warn(
+        if (generation != pending.generation) {
+            // The peer answered a round we have since moved on from. This is the normal outcome of a superseded
+            // restart, not a rejected request, so it is not counted as one.
+            logger.info(
                 "Ignoring remote credentials for ICE generation $generation, the pending ICE restart is " +
                     "generation ${pending.generation}."
             )
-            iceRestartsRejected.inc()
             return
-        }
-        if (generation == IceUdpTransportPacketExtension.GENERATION_UNSPECIFIED) {
-            logger.info(
-                "Remote credentials arrived with no ice-generation while ICE restart generation " +
-                    "${pending.generation} is pending; assuming they belong to it."
-            )
         }
 
         val ufrag = transportPacketExtension.ufrag
@@ -419,16 +425,11 @@ class IceTransport @JvmOverloads constructor(
             return
         }
 
-        if (!pending.checksStarted.compareAndSet(false, true)) {
-            logger.info(
-                "Already started connectivity checks for ICE restart generation ${pending.generation}, " +
-                    "ignoring a repeated transport update (remote ufrag=$ufrag)."
-            )
-            return
-        }
-
-        // Re-check under the lock: the restart may have been superseded or abandoned since we read it.
+        // Apply the credentials and claim the round in one step under the lock. Claiming it any earlier would
+        // let an update that turns out to be unusable consume the restart, leaving the peer's real credentials
+        // to be dropped as a repeat and the round to burn its full timeout.
         synchronized(restartLock) {
+            // Re-check under the lock: the restart may have been superseded or abandoned since we read it.
             if (pendingBundle !== pending) {
                 logger.info(
                     "ICE restart generation ${pending.generation} is no longer pending, dropping the " +
@@ -438,6 +439,13 @@ class IceTransport @JvmOverloads constructor(
             }
             pending.stream.remoteUfrag = ufrag
             pending.stream.remotePassword = password
+            if (!pending.checksStarted.compareAndSet(false, true)) {
+                logger.info(
+                    "Already started connectivity checks for ICE restart generation ${pending.generation}, " +
+                        "ignoring a repeated transport update (remote ufrag=$ufrag)."
+                )
+                return
+            }
         }
 
         // Add any signalled remote candidates. Normally there are none: clients do not signal candidates to the
@@ -829,12 +837,11 @@ class IceTransport @JvmOverloads constructor(
 
         /**
          * The total number of ICE restart requests rejected before a new Agent was created: the feature is
-         * disabled, the transport was not established (or not running), or the peer's credentials arrived
-         * tagged with a generation that does not match the pending restart.
+         * disabled, or the transport is not running.
          */
         val iceRestartsRejected = VideobridgeMetricsContainer.instance.registerCounter(
             "ice_restarts_rejected",
-            "Number of ICE restart requests rejected (disabled, not established, or a stale generation)."
+            "Number of ICE restart requests rejected (the feature is disabled, or the transport is stopped)."
         )
 
         /**
