@@ -793,14 +793,20 @@ class IceTransport @JvmOverloads constructor(
         // built from the *peer's* view of our ufrag/password). Describing the old ones would send the peer
         // checking against an Agent we are about to retire. With no restart in flight this is the established
         // bundle, so the initial allocation path is unchanged.
-        val bundle = pendingBundle ?: currentBundle
+        val pending = pendingBundle
+        val bundle = pending ?: currentBundle
         with(pe) {
             password = bundle.agent.localPassword
             ufrag = bundle.agent.localUfrag
-            if (bundle.generation != IceUdpTransportPacketExtension.GENERATION_UNSPECIFIED) {
+            if (bundle === pending) {
                 // Stamp the generation of the restart round these credentials belong to. The peer echoes it
                 // back on the transport-info carrying its own new credentials, which is how we match its
                 // answer to this bundle and discard answers from a round we have since moved on from.
+                //
+                // Only for a pending bundle: the generation marks a transport the peer must restart against,
+                // and describing the established bundle (which keeps the generation it connected with) means
+                // the opposite — use what is already there. The peer rejects a generation that is not newer
+                // than the last one it saw, so stamping one here would have it drop the transport.
                 iceGeneration = bundle.generation
             }
             bundle.component.localCandidates?.forEach { cand ->
