@@ -59,6 +59,27 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.LongAdder
 
+/**
+ * The outcome of an ICE restart request, which decides what the caller signals back to the peer.
+ */
+enum class IceRestartResult {
+    /** A new Agent was created. Signal its transport, so the peer moves its checks to it. */
+    STARTED,
+
+    /**
+     * No new Agent was created, but the established one is still usable. Signal its transport unchanged: the
+     * peer keeps the connection it has, instead of escalating to a full re-invite over a transport that is
+     * merely still connecting.
+     */
+    KEEP_EXISTING,
+
+    /**
+     * This bridge can not restart ICE. Signal no transport at all, which is how the peer learns to fall back to
+     * a full re-invite.
+     */
+    UNAVAILABLE
+}
+
 class IceTransport @JvmOverloads constructor(
     id: String,
     /**
@@ -332,33 +353,35 @@ class IceTransport @JvmOverloads constructor(
      * (make-before-break); we only [cutOver] once the new Agent connects, and keep the old one alive for
      * [IceConfig.restartTransitionWindow] after that so old-generation checks still in flight are answered.
      *
-     * @return true if a restart was started, in which case the caller must signal our new transport (rotated
-     * credentials plus the new `ice-generation`) back to the peer. False if the request was rejected, in which
-     * case nothing changed and the established Agent keeps running.
+     * @return [IceRestartResult.STARTED] if a restart was started, in which case the caller must signal our new
+     * transport (rotated credentials plus the new `ice-generation`) back to the peer.
+     * [IceRestartResult.KEEP_EXISTING] if no restart was started but the established transport is still usable,
+     * in which case the caller must signal that transport unchanged. [IceRestartResult.UNAVAILABLE] if this
+     * bridge can not restart ICE at all, in which case the caller must signal no transport so that the peer
+     * falls back to a full re-invite.
      */
-    fun requestIceRestart(): Boolean {
+    fun requestIceRestart(): IceRestartResult {
         if (!running.get()) {
-            logger.warn("Rejecting ICE restart request: the transport is not running.")
+            logger.warn("Can not restart ICE: the transport is not running.")
             iceRestartsRejected.inc()
-            return false
+            return IceRestartResult.UNAVAILABLE
         }
         if (!IceConfig.config.restartEnabled) {
             logger.warn(
-                "Rejecting ICE restart request: ICE restarts are disabled " +
-                    "(videobridge.ice.restart.enabled=false)."
+                "Can not restart ICE: ICE restarts are disabled (videobridge.ice.restart.enabled=false)."
             )
             iceRestartsRejected.inc()
-            return false
+            return IceRestartResult.UNAVAILABLE
         }
         if (!currentBundle.agent.state.isEstablished) {
             // There is no established connectivity to preserve, so there is nothing for a make-before-break
             // restart to do. The initial Agent is still gathering/checking and the peer should keep using it.
             logger.warn(
-                "Rejecting ICE restart request: the transport is not established yet " +
-                    "(state=${currentBundle.agent.state})."
+                "Not restarting ICE: the transport is not established yet " +
+                    "(state=${currentBundle.agent.state}). Keeping the existing Agent."
             )
             iceRestartsRejected.inc()
-            return false
+            return IceRestartResult.KEEP_EXISTING
         }
 
         val newBundle: AgentBundle
@@ -390,7 +413,7 @@ class IceTransport @JvmOverloads constructor(
             TimeUnit.MILLISECONDS
         )
 
-        return true
+        return IceRestartResult.STARTED
     }
 
     /**
@@ -836,12 +859,13 @@ class IceTransport @JvmOverloads constructor(
         )
 
         /**
-         * The total number of ICE restart requests rejected before a new Agent was created: the feature is
-         * disabled, or the transport is not running.
+         * The total number of ICE restart requests for which no new Agent was created: the feature is
+         * disabled, the transport is not running, or it is not established yet.
          */
         val iceRestartsRejected = VideobridgeMetricsContainer.instance.registerCounter(
             "ice_restarts_rejected",
-            "Number of ICE restart requests rejected (the feature is disabled, or the transport is stopped)."
+            "Number of ICE restart requests for which no new Agent was created (the feature is disabled, or " +
+                "the transport is stopped or not established)."
         )
 
         /**

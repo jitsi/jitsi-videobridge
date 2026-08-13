@@ -31,6 +31,7 @@ import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.sctp.SctpConfig
+import org.jitsi.videobridge.transport.ice.IceRestartResult
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
@@ -262,17 +263,23 @@ class Colibri2ConferenceHandler(
         // same request still belong to (and are applied to) the pre-restart Agent. The restart rotates our own
         // ICE credentials, so the endpoint has to be told the new ones — its connectivity checks are addressed
         // to them — even though this is not a create.
-        val iceRestarted = if (c2endpoint.transport?.iceRestart == true) {
+        val iceRestartResult = if (c2endpoint.transport?.iceRestart == true) {
             endpoint.requestIceRestart().also {
-                if (!it) {
-                    logger.warn("Rejected an ICE restart request for endpoint ${c2endpoint.id}.")
+                if (it != IceRestartResult.STARTED) {
+                    logger.warn("Did not restart ICE for endpoint ${c2endpoint.id}: $it.")
                 }
             }
         } else {
-            false
+            null
         }
 
-        if (c2endpoint.create || iceRestarted) {
+        // A transport is signaled back for a restart that started (the new Agent's rotated credentials) and for
+        // one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection it
+        // has). Only IceRestartResult.UNAVAILABLE signals nothing: an answer with no <transport> is how the
+        // endpoint learns that this bridge will not restart ICE and that it needs a full re-invite instead.
+        if (c2endpoint.create || iceRestartResult == IceRestartResult.STARTED ||
+            iceRestartResult == IceRestartResult.KEEP_EXISTING
+        ) {
             val transBuilder = Transport.getBuilder()
             transBuilder.setIceUdpExtension(endpoint.describeTransport())
             if (c2endpoint.transport?.sctp != null) {

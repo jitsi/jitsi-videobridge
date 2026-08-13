@@ -85,6 +85,7 @@ import org.jitsi.videobridge.relay.RelayedEndpoint
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
+import org.jitsi.videobridge.transport.ice.IceRestartResult
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
@@ -797,11 +798,12 @@ class Endpoint @JvmOverloads constructor(
      * Creates a new ice4j Agent with freshly rotated local credentials alongside the established one, which
      * keeps carrying media until the new one connects (make-before-break).
      *
-     * @return true if a restart was started, in which case the caller must signal our new transport (returned
-     * by [describeTransport], which then describes the pending Agent) back to the endpoint. False if the
-     * request was rejected, in which case nothing changed.
+     * @return what the caller must signal back to the endpoint: our new transport (returned by
+     * [describeTransport], which then describes the pending Agent) for [IceRestartResult.STARTED], the
+     * unchanged established transport for [IceRestartResult.KEEP_EXISTING], or no transport at all for
+     * [IceRestartResult.UNAVAILABLE].
      */
-    fun requestIceRestart(): Boolean = iceTransport.requestIceRestart()
+    fun requestIceRestart(): IceRestartResult = iceTransport.requestIceRestart()
 
     fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
