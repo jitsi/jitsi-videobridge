@@ -173,18 +173,6 @@ class IceTransport @JvmOverloads constructor(
     }
 
     /**
-     * The password used to authenticate the colibri WebSocket for this transport.
-     *
-     * This is deliberately pinned to the *initial* Agent's password and is NOT rotated by an ICE restart:
-     * the client is handed a WebSocket URL containing this password once (when its transport is described)
-     * and re-dials that same URL when the WebSocket reconnects — which is precisely what happens on the
-     * network change that triggers a restart. Rotating it would invalidate the URL the client already holds.
-     * The ICE-level password (advertised in [describe] and used for connectivity checks) does rotate; these
-     * are separate concerns that happened to share a field before ICE restarts existed.
-     */
-    val webSocketPassword: String = currentBundle.agent.localPassword
-
-    /**
      * An ice4j [Agent] together with the single stream and component we create on it and the listeners we
      * attach to them. An [IceTransport] has exactly one of these normally, and briefly two while an ICE
      * restart is in flight: the established one (which keeps sending) and the new one (which is running
