@@ -259,40 +259,6 @@ class Colibri2ConferenceHandler(
 
         c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
 
-        // An explicit ICE restart request. Handled after setTransportInfo, so any credentials included in this
-        // same request still belong to (and are applied to) the pre-restart Agent. The restart rotates our own
-        // ICE credentials, so the endpoint has to be told the new ones — its connectivity checks are addressed
-        // to them — even though this is not a create.
-        val iceRestartResult = if (c2endpoint.transport?.iceRestart == true) {
-            endpoint.requestIceRestart().also {
-                if (it != IceRestartResult.STARTED) {
-                    logger.warn("Did not restart ICE for endpoint ${c2endpoint.id}: $it.")
-                }
-            }
-        } else {
-            null
-        }
-
-        // A transport is signaled back for a restart that started (the new Agent's rotated credentials) and for
-        // one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection it
-        // has). Only IceRestartResult.UNAVAILABLE signals nothing: an answer with no <transport> is how the
-        // endpoint learns that this bridge will not restart ICE and that it needs a full re-invite instead.
-        if (c2endpoint.create || iceRestartResult == IceRestartResult.STARTED ||
-            iceRestartResult == IceRestartResult.KEEP_EXISTING
-        ) {
-            val transBuilder = Transport.getBuilder()
-            transBuilder.setIceUdpExtension(endpoint.describeTransport())
-            if (c2endpoint.transport?.sctp != null) {
-                transBuilder.setSctp(
-                    Sctp.Builder()
-                        .setPort(DcSctpTransport.DEFAULT_SCTP_PORT)
-                        .setRole(Sctp.Role.SERVER)
-                        .build()
-                )
-            }
-            respBuilder.setTransport(transBuilder.build())
-        }
-
         c2endpoint.sources?.let { sources ->
             if (endpoint.visitor && sources.mediaSources.isNotEmpty()) {
                 throw IqProcessingException(
@@ -329,6 +295,44 @@ class Colibri2ConferenceHandler(
 
         c2endpoint.forceMute?.let {
             endpoint.updateForceMute(it.audio, it.video)
+        }
+
+        // An explicit ICE restart request. Handled after setTransportInfo, so any credentials included in this
+        // same request still belong to (and are applied to) the pre-restart Agent. The restart rotates our own
+        // ICE credentials, so the endpoint has to be told the new ones — its connectivity checks are addressed
+        // to them — even though this is not a create.
+        //
+        // Handled last, once nothing else in this request can throw: a restart is armed as a side effect (it
+        // rotates the credentials we advertise and starts the timeout), so failing the request after arming it
+        // would leave the bridge waiting out that timeout for an answer the endpoint was never asked for.
+        val iceRestartResult = if (c2endpoint.transport?.iceRestart == true) {
+            endpoint.requestIceRestart().also {
+                if (it != IceRestartResult.STARTED) {
+                    logger.warn("Did not restart ICE for endpoint ${c2endpoint.id}: $it.")
+                }
+            }
+        } else {
+            null
+        }
+
+        // A transport is signaled back for a restart that started (the new Agent's rotated credentials) and for
+        // one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection it
+        // has). Only IceRestartResult.UNAVAILABLE signals nothing: an answer with no <transport> is how the
+        // endpoint learns that this bridge will not restart ICE and that it needs a full re-invite instead.
+        if (c2endpoint.create || iceRestartResult == IceRestartResult.STARTED ||
+            iceRestartResult == IceRestartResult.KEEP_EXISTING
+        ) {
+            val transBuilder = Transport.getBuilder()
+            transBuilder.setIceUdpExtension(endpoint.describeTransport())
+            if (c2endpoint.transport?.sctp != null) {
+                transBuilder.setSctp(
+                    Sctp.Builder()
+                        .setPort(DcSctpTransport.DEFAULT_SCTP_PORT)
+                        .setRole(Sctp.Role.SERVER)
+                        .build()
+                )
+            }
+            respBuilder.setTransport(transBuilder.build())
         }
 
         return respBuilder.build()
