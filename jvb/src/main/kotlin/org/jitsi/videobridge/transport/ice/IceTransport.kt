@@ -189,8 +189,40 @@ class IceTransport @JvmOverloads constructor(
     private var restartGeneration = 0
 
     init {
-        currentBundle = AgentBundle(IceUdpTransportPacketExtension.GENERATION_UNSPECIFIED)
+        currentBundle = createAgentBundle(IceUdpTransportPacketExtension.GENERATION_UNSPECIFIED)
+            ?: throw IllegalStateException("Failed to create the initial ICE Agent")
         logger.addContext("local_ufrag", currentBundle.agent.localUfrag)
+    }
+
+    /**
+     * Creates an [Agent] with its stream and component, and wraps them in an [AgentBundle].
+     *
+     * @return the new bundle, or null if ice4j failed to create it (creating a component harvests candidates
+     * and can fail to bind). Anything that was already created is freed, so a failure leaks neither an Agent
+     * nor its ufrag in the single port harvester.
+     */
+    private fun createAgentBundle(generation: Int): AgentBundle? {
+        var agent: Agent? = null
+        return try {
+            val newAgent = Agent(IceConfig.config.ufragPrefix, logger).apply {
+                if (useUniquePort) {
+                    setUseDynamicPorts(true)
+                } else {
+                    appendHarvesters(this)
+                }
+                isControlling = this@IceTransport.controlling
+                performConsentFreshness = true
+                nominationStrategy = IceConfig.config.nominationStrategy
+            }
+            agent = newAgent
+            val stream = newAgent.createMediaStream("stream")
+            val component = newAgent.createComponent(stream, IceConfig.config.keepAliveStrategy, false)
+            AgentBundle(generation, newAgent, stream, component)
+        } catch (t: Throwable) {
+            logger.error("Failed to create an ICE Agent (generation=$generation).", t)
+            agent?.free()
+            null
+        }
     }
 
     /**
@@ -199,10 +231,17 @@ class IceTransport @JvmOverloads constructor(
      * restart is in flight: the established one (which keeps sending) and the new one (which is running
      * connectivity checks with freshly rotated local credentials).
      *
+     * Created by [createAgentBundle], which is also where a failure to create the ice4j objects is handled.
+     *
      * @param generation the `ice-generation` of the restart round that created this bundle, or
      * [IceUdpTransportPacketExtension.GENERATION_UNSPECIFIED] for the initial bundle.
      */
-    private inner class AgentBundle(val generation: Int) {
+    private inner class AgentBundle(
+        val generation: Int,
+        val agent: Agent,
+        val stream: IceMediaStream,
+        val component: Component
+    ) {
         private val stateChangeListener = PropertyChangeListener { ev -> iceStateChanged(this@AgentBundle, ev) }
         private val pairChangeListener = PropertyChangeListener { ev -> iceStreamPairChanged(this@AgentBundle, ev) }
 
@@ -215,24 +254,10 @@ class IceTransport @JvmOverloads constructor(
          */
         val checksStarted = AtomicBoolean(false)
 
-        val agent: Agent = Agent(IceConfig.config.ufragPrefix, logger).apply {
-            if (useUniquePort) {
-                setUseDynamicPorts(true)
-            } else {
-                appendHarvesters(this)
-            }
-            isControlling = this@IceTransport.controlling
-            performConsentFreshness = true
-            nominationStrategy = IceConfig.config.nominationStrategy
-            addStateChangeListener(stateChangeListener)
-        }
-
-        val stream: IceMediaStream = agent.createMediaStream("stream").apply {
-            addPairChangeListener(pairChangeListener)
-        }
-
-        val component: Component = agent.createComponent(stream, IceConfig.config.keepAliveStrategy, false).apply {
-            setBufferCallback(object : BufferHandler {
+        init {
+            agent.addStateChangeListener(stateChangeListener)
+            stream.addPairChangeListener(pairChangeListener)
+            component.setBufferCallback(object : BufferHandler {
                 override fun handleBuffer(buffer: Buffer) {
                     incomingDataHandler?.dataReceived(buffer) ?: run {
                         packetStats.numIncomingPacketsDroppedNoHandler.increment()
@@ -387,15 +412,23 @@ class IceTransport @JvmOverloads constructor(
         val newBundle: AgentBundle
         val generation: Int
         synchronized(restartLock) {
+            // Create the new Agent before touching any state, so that a failure leaves the restart in flight
+            // (if there is one) alone rather than freeing a bundle the peer may already be checking against.
+            generation = restartGeneration + 1
+            newBundle = createAgentBundle(generation) ?: run {
+                // The established Agent is untouched and still carrying media, so keep using it.
+                logger.warn("Not restarting ICE: failed to create the new Agent. Keeping the existing one.")
+                iceRestartsRejected.inc()
+                return IceRestartResult.KEEP_EXISTING
+            }
+
             // A newer restart supersedes one that has not connected yet.
             pendingBundle?.let { superseded ->
                 logger.info("Superseding an in-flight ICE restart: $superseded")
-                pendingBundle = null
                 TaskPools.IO_POOL.submit { superseded.free() }
             }
 
-            generation = ++restartGeneration
-            newBundle = AgentBundle(generation)
+            restartGeneration = generation
             pendingBundle = newBundle
         }
 
