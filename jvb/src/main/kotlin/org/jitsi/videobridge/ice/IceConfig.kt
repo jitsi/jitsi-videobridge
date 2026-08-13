@@ -82,8 +82,9 @@ class IceConfig private constructor() {
 
     /**
      * How long the old [org.ice4j.ice.Agent] is kept alive after an ICE restart has cut over to the new one.
-     * Both Agents accept incoming connectivity checks during this window, so checks still in flight from the
-     * old generation are answered rather than dropped.
+     * Both Agents keep their sockets during this window, and ice4j routes each packet by the address it came
+     * from, so the endpoint's old-generation checks — which come from its old address — are answered by the old
+     * Agent rather than dropped.
      */
     val restartTransitionWindow: Duration by config(
         "videobridge.ice.restart.transition-window".from(JitsiConfig.newConfig)

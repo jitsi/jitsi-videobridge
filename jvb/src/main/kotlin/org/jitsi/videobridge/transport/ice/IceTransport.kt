@@ -407,6 +407,14 @@ class IceTransport @JvmOverloads constructor(
      * (make-before-break); we only [cutOver] once the new Agent connects, and keep the old one alive for
      * [IceConfig.restartTransitionWindow] after that so old-generation checks still in flight are answered.
      *
+     * This assumes the peer's address changes, which is what a restart is for: ice4j's single port harvester
+     * demultiplexes on the remote address (see [cutOver]), so the new Agent is only reached by checks from an
+     * address the old Agent's socket is not already bound to. Checks from an unchanged address are delivered to
+     * the old Agent instead, which drops them because their local ufrag is not its own, and the new Agent —
+     * which has no signalled remote candidates and discovers the peer peer-reflexively — never connects. The
+     * restart is then abandoned and the established Agent is kept, which is the same outcome as any other
+     * failed restart.
+     *
      * @return [IceRestartResult.STARTED] if a restart was started, in which case the caller must signal our new
      * transport (rotated credentials plus the new `ice-generation`) back to the peer.
      * [IceRestartResult.KEEP_EXISTING] if no restart was started but the established transport is still usable,
@@ -580,10 +588,15 @@ class IceTransport @JvmOverloads constructor(
 
     /**
      * Switches [currentBundle] over to [newBundle], which has just connected, and schedules the old bundle to be
-     * freed after [IceConfig.restartTransitionWindow]. Both bundles accept incoming connectivity checks during
-     * that window (they have different local ufrags, so ice4j's single-port demultiplexing routes each
-     * generation's checks to the right Agent), which is what keeps the handover from dropping checks that were
-     * already in flight.
+     * freed after [IceConfig.restartTransitionWindow].
+     *
+     * Both bundles keep their sockets during that window, and both keep accepting whatever arrives on them:
+     * connectivity checks, and media. What routes a packet to one or the other is the peer's address, not the
+     * local ufrag it carries — ice4j's single port harvester looks the remote address up in its socket map
+     * first and only parses the ufrag for an address it has never seen (`AbstractUdpListener`). So the window
+     * is useful because the peer's old-generation checks come *from the old address*, which is still mapped to
+     * the old Agent's socket, and are answered there rather than dropped. See [requestIceRestart] for what this
+     * demultiplexing means for the new Agent.
      */
     private fun cutOver(newBundle: AgentBundle) {
         val transitionWindow = IceConfig.config.restartTransitionWindow
