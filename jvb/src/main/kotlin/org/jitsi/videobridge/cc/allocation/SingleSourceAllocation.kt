@@ -62,15 +62,33 @@ internal class SingleSourceAllocation(
      */
     var targetIdx = -1
 
+    /**
+     * The bandwidth (in bps) which was available to this source the last time [improve] was called, or `null` if
+     * [improve] was never called. The latter means the allocation loop never got as far as this source, because a
+     * higher priority source had not reached its preferred layer. Note that this is negative when the allocator has
+     * oversent, so it can not use a negative sentinel for "never called". Only used for logging.
+     */
+    private var lastAvailableBps: Long? = null
+
+    /** Whether oversending was allowed the last time [improve] was called. Only used for logging. */
+    private var lastAllowedOversending = false
+
     init {
         if (timeSeriesLogger.isTraceEnabled) {
             val ratesTimeSeriesPoint = diagnosticContext.makeTimeSeriesPoint("layers_considered")
                 .addField("remote_endpoint_id", endpointId)
-            for ((l, bitrate) in layers.layers) {
-                ratesTimeSeriesPoint.addField(
-                    "${l.indexString()}_${l.height}p_${l.frameRate}fps_bps",
-                    bitrate
-                )
+            for (layerSnapshot in layers.layers) {
+                val l = layerSnapshot.layer
+                val prefix = "${l.indexString()}_${l.height}p_${l.frameRate}fps"
+                ratesTimeSeriesPoint.addField("${prefix}_bps", layerSnapshot.bitrate)
+                // Which fields are present must not vary with the data, so that the series can be consumed
+                // mechanically. The measured bitrate is the only exception: with useVlaTargetBitrate disabled it is
+                // by configuration always equal to the bitrate above, so it is never added.
+                if (config.useVlaTargetBitrate) {
+                    ratesTimeSeriesPoint.addField("${prefix}_measured_bps", layerSnapshot.measuredBitrate)
+                }
+                // -1 means the sender does not signal a target bitrate for the layer in the VLA extension.
+                ratesTimeSeriesPoint.addField("${prefix}_vla_bps", layerSnapshot.vlaTargetBitrate ?: -1)
             }
             timeSeriesLogger.trace(ratesTimeSeriesPoint)
         }
@@ -92,6 +110,8 @@ internal class SingleSourceAllocation(
     fun improve(remainingBps: Long, allowOversending: Boolean): Long {
         val initialTargetBitrate = targetBitrate
         val maxBps = remainingBps + initialTargetBitrate
+        lastAvailableBps = maxBps
+        lastAllowedOversending = allowOversending
         if (layers.isEmpty()) {
             return 0
         }
@@ -148,6 +168,65 @@ internal class SingleSourceAllocation(
      */
     val isSuspended: Boolean
         get() = targetIdx == -1 && layers.isNotEmpty() && layers[0].bitrate > 0
+
+    /**
+     * The layer which had to fit in the available bandwidth in order for this source not to be suspended: the first
+     * layer, which is the one [improve] tries while the source has no target layer.
+     */
+    private val requiredLayer: LayerSnapshot?
+        get() = layers.firstOrNull()
+
+    /**
+     * The cheapest of the layers which could have kept this source from being suspended, i.e. of [rescuingLayers].
+     * This is normally [requiredLayer], but the layers are not guaranteed to be ordered by bitrate (notably with VP9),
+     * and when oversending it is the cheapest layer which decides whether the source can be rescued.
+     */
+    private val cheapestLayer: LayerSnapshot?
+        get() = rescuingLayers.minByOrNull { it.bitrate }
+
+    /**
+     * The layers which the last [improve] call could have selected while the source had no target layer. That is just
+     * the first one, unless oversending was allowed, in which case the oversend loop scans everything up to and
+     * including [Layers.oversendIndex] (but no further).
+     */
+    private val rescuingLayers: List<LayerSnapshot>
+        get() = layers.take(
+            if (lastAllowedOversending && layers.oversendIndex >= 0) layers.oversendIndex + 1 else 1
+        )
+
+    /**
+     * A summary of why this source ended up suspended, for logging. Only meaningful once the allocation algorithm has
+     * completed, and only for a source which is actually suspended (i.e. [isSuspended] is true) -- for any other source
+     * the fields describe an allocation which did succeed. All bitrates are in bps:
+     *
+     * "required" is the layer which had to fit in the available bandwidth, i.e. what the allocator thought the source
+     * needed; "cheapest" is only present when a different layer could have rescued the source more cheaply; "ideal" is
+     * the bitrate of the layer we'd have forwarded with unlimited bandwidth, and is omitted when that is the required
+     * layer; "oversend" describes the layer we'd have used when oversending (capped by
+     * videobridge.cc.max-oversend-bitrate) -- its bitrate, or "required" when it is the required layer, or "notAllowed"
+     * when this source was not the one source which is allowed to oversend -- and is absent when the source has no
+     * oversend layer at all; "available" is the bandwidth which was left for the source when it was last considered,
+     * and is negative if the allocator had already oversent. The bitrates of the layers which are not called out here
+     * are only available in the "layers_considered" time series.
+     */
+    fun suspendedSummary(): String = buildString {
+        append(mediaSource.sourceName)
+        append("[type=${mediaSource.videoType}")
+        append(" onStage=$onStage")
+        append(" required=${requiredLayer?.summary()}")
+        cheapestLayer?.let { if (it !== requiredLayer) append(" cheapest=${it.summary()}") }
+        if (idealBitrate != requiredLayer?.bitrate) append(" ideal=$idealBitrate")
+        layers.oversendLayer?.let {
+            val oversend = when {
+                !lastAllowedOversending -> "notAllowed"
+                it === requiredLayer -> "required"
+                else -> it.bitrate.toString()
+            }
+            append(" oversend=$oversend")
+        }
+        append(" available=${lastAvailableBps ?: "none(never considered)"}")
+        append(" constraints=$constraints]")
+    }
 
     /**
      * Gets the target bitrate (in bps) for this endpoint allocation, i.e. the bitrate of the currently chosen layer.
@@ -268,13 +347,17 @@ internal class SingleSourceAllocation(
             return Layers.noLayers
         }
         val layers = source.rtpLayers.map {
+            val measuredBitrate = it.getBitrate(nowMs).bps
+            val vlaTargetBitrate = it.targetBitrate?.bps
             LayerSnapshot(
                 it,
                 if (config.useVlaTargetBitrate) {
-                    it.targetBitrate?.bps ?: it.getBitrate(nowMs).bps
+                    vlaTargetBitrate ?: measuredBitrate
                 } else {
-                    it.getBitrate(nowMs).bps
-                }
+                    measuredBitrate
+                },
+                measuredBitrate,
+                vlaTargetBitrate
             )
         }
 

@@ -241,12 +241,13 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         if (sourceBitrateAllocations.isEmpty()) {
             return BandwidthAllocation(emptySet())
         }
-        var remainingBandwidth = if (allocationSettings.assumedBandwidthBps >= 0) {
+        val initialBandwidth = if (allocationSettings.assumedBandwidthBps >= 0) {
             logger.warn("Allocating with assumed bandwidth ${allocationSettings.assumedBandwidthBps.bps}.")
             allocationSettings.assumedBandwidthBps
         } else {
             availableBandwidth
         }
+        var remainingBandwidth = initialBandwidth
         var oldRemainingBandwidth: Long = -1
         var oversending = false
         while (oldRemainingBandwidth != remainingBandwidth) {
@@ -273,11 +274,23 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
         }
 
         // The sources which are in lastN, and are sending video, but were suspended due to bwe.
-        val suspendedIds = sourceBitrateAllocations
-            .filter { it.isSuspended }
-            .map { it.mediaSource.sourceName }.toList()
+        val suspendedSources = sourceBitrateAllocations.filter { it.isSuspended }
+        val suspendedIds = suspendedSources.map { it.mediaSource.sourceName }.toList()
         if (suspendedIds.isNotEmpty()) {
-            logger.info("Sources suspended due to insufficient bandwidth (bwe=$availableBandwidth bps): $suspendedIds")
+            logger.info {
+                // The bandwidth we started with is not the BWE if the receiver signaled an assumed bandwidth, so log
+                // it separately when the two differ.
+                val budget = if (initialBandwidth != availableBandwidth) "budget=$initialBandwidth bps, " else ""
+                val maxOversend = BitrateControllerConfig.config.maxOversendBitrate
+                val sources = suspendedSources.mapIndexed { i, source ->
+                    // Only summarize the first few sources in full. They are in order of priority, so these are the
+                    // ones whose suspension is most likely to be of interest. Name the rest without any detail, to
+                    // bound the size of the message when many sources are suspended at once.
+                    if (i < MAX_SOURCES_SUMMARIZED) source.suspendedSummary() else source.mediaSource.sourceName
+                }
+                "Sources suspended due to insufficient bandwidth (bwe=$availableBandwidth bps, $budget" +
+                    "remaining=$remainingBandwidth bps, maxOversend=$maxOversend): " + sources.joinToString()
+            }
         }
         val allocations = mutableSetOf<SingleAllocation>()
         var targetBps: Long = 0
@@ -358,6 +371,9 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
 
     companion object {
         private val timeSeriesLogger = TimeSeriesLogger.getTimeSeriesLogger(BandwidthAllocator::class.java)
+
+        /** The number of suspended sources for which we log the full details of the failed allocation. */
+        private const val MAX_SOURCES_SUMMARIZED = 3
     }
 
     interface EventHandler {
