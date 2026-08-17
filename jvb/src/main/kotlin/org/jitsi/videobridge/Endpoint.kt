@@ -85,11 +85,13 @@ import org.jitsi.videobridge.relay.RelayedEndpoint
 import org.jitsi.videobridge.rest.root.debug.EndpointDebugFeatures
 import org.jitsi.videobridge.stats.PacketTransitStats
 import org.jitsi.videobridge.transport.dtls.DtlsTransport
+import org.jitsi.videobridge.transport.ice.IceRestartResult
 import org.jitsi.videobridge.transport.ice.IceTransport
 import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
 import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
+import org.jitsi.videobridge.websocket.generateColibriWebSocketPassword
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
@@ -169,6 +171,13 @@ class Endpoint @JvmOverloads constructor(
             node(it)
         }
     }
+
+    /**
+     * The password which authenticates the colibri WebSocket of this endpoint. It is independent of ICE and
+     * stays the same for the lifetime of the endpoint, because the client re-dials the URL which contains it
+     * each time the WebSocket reconnects. See [generateColibriWebSocketPassword].
+     */
+    private val webSocketPassword = generateColibriWebSocketPassword()
 
     /* TODO: do we ever want to support useUniquePort for an Endpoint? */
     private val iceTransport = IceTransport(id, iceControlling, false, supportsPrivateAddresses, logger)
@@ -731,11 +740,8 @@ class Endpoint @JvmOverloads constructor(
      * @return {@code true} iff the password matches.
      */
     fun acceptWebSocket(password: String): Boolean {
-        if (iceTransport.icePassword != password) {
-            logger.warn(
-                "Incoming web socket request with an invalid password. " +
-                    "Expected: ${iceTransport.icePassword} received $password"
-            )
+        if (webSocketPassword != password) {
+            logger.warn("Incoming web socket request with an invalid password.")
             return false
         }
         return true
@@ -786,6 +792,19 @@ class Endpoint @JvmOverloads constructor(
         iceTransport.startConnectivityEstablishment(transportInfo)
     }
 
+    /**
+     * Handles an explicit ICE restart request from this endpoint (colibri2 `<transport ice-restart="true"/>`).
+     *
+     * Creates a new ice4j Agent with freshly rotated local credentials alongside the established one, which
+     * keeps carrying media until the new one connects (make-before-break).
+     *
+     * @return what the caller must signal back to the endpoint: our new transport (returned by
+     * [describeTransport], which then describes the pending Agent) for [IceRestartResult.STARTED], the
+     * unchanged established transport for [IceRestartResult.KEEP_EXISTING], or no transport at all for
+     * [IceRestartResult.UNAVAILABLE].
+     */
+    fun requestIceRestart(): IceRestartResult = iceTransport.requestIceRestart()
+
     fun describeTransport(): IceUdpTransportPacketExtension {
         val iceUdpTransportPacketExtension = IceUdpTransportPacketExtension()
         iceTransport.describe(iceUdpTransportPacketExtension)
@@ -794,7 +813,7 @@ class Endpoint @JvmOverloads constructor(
             colibriWebsocketService.getColibriWebSocketUrls(
                 conference.id,
                 id,
-                iceTransport.icePassword
+                webSocketPassword
             ).forEach { wsUrl ->
                 val wsPacketExtension = WebSocketPacketExtension(wsUrl)
                 iceUdpTransportPacketExtension.addChildExtension(wsPacketExtension)

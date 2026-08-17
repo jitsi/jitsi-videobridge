@@ -31,6 +31,7 @@ import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayConfig
 import org.jitsi.videobridge.sctp.SctpConfig
+import org.jitsi.videobridge.transport.ice.IceRestartResult
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.videobridge.xmpp.MediaSourceFactory
@@ -257,19 +258,6 @@ class Colibri2ConferenceHandler(
         }
 
         c2endpoint.transport?.iceUdpTransport?.let { endpoint.setTransportInfo(it) }
-        if (c2endpoint.create) {
-            val transBuilder = Transport.getBuilder()
-            transBuilder.setIceUdpExtension(endpoint.describeTransport())
-            if (c2endpoint.transport?.sctp != null) {
-                transBuilder.setSctp(
-                    Sctp.Builder()
-                        .setPort(DcSctpTransport.DEFAULT_SCTP_PORT)
-                        .setRole(Sctp.Role.SERVER)
-                        .build()
-                )
-            }
-            respBuilder.setTransport(transBuilder.build())
-        }
 
         c2endpoint.sources?.let { sources ->
             if (endpoint.visitor && sources.mediaSources.isNotEmpty()) {
@@ -307,6 +295,50 @@ class Colibri2ConferenceHandler(
 
         c2endpoint.forceMute?.let {
             endpoint.updateForceMute(it.audio, it.video)
+        }
+
+        // An explicit ICE restart request. Handled after setTransportInfo, so any credentials included in this
+        // same request still belong to (and are applied to) the pre-restart Agent. The restart rotates our own
+        // ICE credentials, so the endpoint has to be told the new ones — its connectivity checks are addressed
+        // to them — even though this is not a create.
+        //
+        // Handled last, once nothing else in this request can throw: a restart is armed as a side effect (it
+        // rotates the credentials we advertise and starts the timeout), so failing the request after arming it
+        // would leave the bridge waiting out that timeout for an answer the endpoint was never asked for.
+        val iceRestartResult = if (c2endpoint.transport?.iceRestart == true) {
+            endpoint.requestIceRestart().also {
+                if (it != IceRestartResult.STARTED) {
+                    logger.warn("Did not restart ICE for endpoint ${c2endpoint.id}: $it.")
+                }
+            }
+        } else {
+            null
+        }
+
+        // How the refusal of a restart is signaled: with the *absence* of a <transport> in the
+        // conference-modified for this endpoint. There is no explicit "refused" flag, and the request is not
+        // failed with an error, because an error would fail the whole conference-modify and take every other
+        // endpoint's updates with it. Jicofo pairs a request it sent with the answer it gets back: a
+        // <transport> means the restart happened and is relayed to the endpoint, no <transport> means it did
+        // not and jicofo falls back to a re-invite.
+        //
+        // So a transport is signaled back for a restart that started (the new Agent's rotated credentials) and
+        // for one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection
+        // it has, with no re-invite). Only IceRestartResult.UNAVAILABLE signals nothing.
+        if (c2endpoint.create || iceRestartResult == IceRestartResult.STARTED ||
+            iceRestartResult == IceRestartResult.KEEP_EXISTING
+        ) {
+            val transBuilder = Transport.getBuilder()
+            transBuilder.setIceUdpExtension(endpoint.describeTransport())
+            if (c2endpoint.transport?.sctp != null) {
+                transBuilder.setSctp(
+                    Sctp.Builder()
+                        .setPort(DcSctpTransport.DEFAULT_SCTP_PORT)
+                        .setRole(Sctp.Role.SERVER)
+                        .build()
+                )
+            }
+            respBuilder.setTransport(transBuilder.build())
         }
 
         return respBuilder.build()

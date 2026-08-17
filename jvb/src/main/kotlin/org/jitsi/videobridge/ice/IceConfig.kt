@@ -22,6 +22,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.metaconfig.optionalconfig
+import java.time.Duration
 
 class IceConfig private constructor() {
     /**
@@ -68,6 +69,34 @@ class IceConfig private constructor() {
      */
     val advertisePrivateCandidates: Boolean by config(
         "videobridge.ice.advertise-private-candidates".from(JitsiConfig.newConfig)
+    )
+
+    /**
+     * Whether ICE restarts are enabled: when an endpoint explicitly requests one (colibri2
+     * `<transport ice-restart="true"/>`), create a second [org.ice4j.ice.Agent] with rotated local credentials
+     * and run it alongside the established one, instead of rejecting the request.
+     */
+    val restartEnabled: Boolean by config(
+        "videobridge.ice.restart.enabled".from(JitsiConfig.newConfig)
+    )
+
+    /**
+     * How long the old [org.ice4j.ice.Agent] is kept alive after an ICE restart has cut over to the new one.
+     * Both Agents keep their sockets during this window, and ice4j routes each packet by the address it came
+     * from, so the endpoint's old-generation checks — which come from its old address — are answered by the old
+     * Agent rather than dropped.
+     */
+    val restartTransitionWindow: Duration by config(
+        "videobridge.ice.restart.transition-window".from(JitsiConfig.newConfig)
+    )
+
+    /**
+     * How long to wait for the new [org.ice4j.ice.Agent] of an ICE restart to connect before giving up on the
+     * restart and keeping the existing Agent. A value that is not positive disables ICE restarts: the new Agent
+     * would be freed before the endpoint could answer it.
+     */
+    val restartTimeout: Duration by config(
+        "videobridge.ice.restart.timeout".from(JitsiConfig.newConfig)
     )
 
     companion object {

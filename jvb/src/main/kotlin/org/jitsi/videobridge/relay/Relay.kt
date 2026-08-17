@@ -97,6 +97,7 @@ import org.jitsi.videobridge.util.ByteBufferPool
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.util.looksLikeDtls
 import org.jitsi.videobridge.websocket.colibriWebSocketServiceSupplier
+import org.jitsi.videobridge.websocket.generateColibriWebSocketPassword
 import org.jitsi.xmpp.extensions.colibri.WebSocketPacketExtension
 import org.jitsi.xmpp.extensions.colibri2.Sctp
 import org.jitsi.xmpp.extensions.jingle.DtlsFingerprintPacketExtension
@@ -200,6 +201,13 @@ class Relay @JvmOverloads constructor(
             node(it)
         }
     }
+
+    /**
+     * The password which authenticates the colibri WebSocket of this relay. It is independent of ICE and stays
+     * the same for the lifetime of the relay, because the peer re-dials the URL which contains it each time the
+     * WebSocket reconnects. See [generateColibriWebSocketPassword].
+     */
+    private val webSocketPassword = generateColibriWebSocketPassword()
 
     private val iceTransport = IceTransport(
         id = id,
@@ -540,7 +548,7 @@ class Relay @JvmOverloads constructor(
                     val urls = colibriWebsocketService.getColibriRelayWebSocketUrls(
                         conference.id,
                         id,
-                        iceTransport.icePassword
+                        webSocketPassword
                     )
                     if (urls.isEmpty()) {
                         logger.warn("No colibri relay URLs configured")
@@ -872,11 +880,8 @@ class Relay @JvmOverloads constructor(
      * @return {@code true} iff the password matches.
      */
     fun acceptWebSocket(password: String): Boolean {
-        if (iceTransport.icePassword != password) {
-            logger.warn(
-                "Incoming web socket request with an invalid password. " +
-                    "Expected: ${iceTransport.icePassword} received $password"
-            )
+        if (webSocketPassword != password) {
+            logger.warn("Incoming web socket request with an invalid password.")
             return false
         }
         return true
