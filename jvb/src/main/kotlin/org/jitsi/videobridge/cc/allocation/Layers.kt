@@ -20,7 +20,35 @@ import org.jitsi.nlj.RtpLayerDesc
 /**
  * Saves the bitrate of a specific [RtpLayerDesc] at a specific point in time.
  */
-data class LayerSnapshot(val layer: RtpLayerDesc, val bitrate: Long)
+data class LayerSnapshot(
+    val layer: RtpLayerDesc,
+    /**
+     * The bitrate (in bps) to use for allocation. Depending on the `use-vla-target-bitrate` config this is either
+     * [measuredBitrate] or [vlaTargetBitrate].
+     */
+    val bitrate: Long,
+    /** The bitrate (in bps) measured for the layer (and its dependencies). */
+    val measuredBitrate: Long = bitrate,
+    /**
+     * The target bitrate (in bps) signaled by the sender in the VLA RTP header extension, or `null` if the sender
+     * doesn't signal VLA.
+     */
+    val vlaTargetBitrate: Long? = null
+) {
+    /**
+     * A short description of the layer and its bitrate, for logging. The bitrate which was not used for allocation is
+     * only mentioned when it differs from the one which was, so in the default configuration (measured bitrates, no
+     * VLA signaled by the sender) this is just the measured bitrate.
+     */
+    fun summary(): String = buildString {
+        append("${layer.indexString()}/${layer.height}p/${layer.frameRate}fps=$bitrate")
+        val other = listOfNotNull(
+            if (measuredBitrate != bitrate) "measured=$measuredBitrate" else null,
+            vlaTargetBitrate?.takeIf { it != bitrate }?.let { "vla=$it" }
+        )
+        if (other.isNotEmpty()) append(other.joinToString(prefix = "(", postfix = ")"))
+    }
+}
 
 /**
  * An immutable representation of the layers to be considered when allocating bandwidth for an endpoint. The order is
