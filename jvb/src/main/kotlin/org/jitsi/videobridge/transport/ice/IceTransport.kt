@@ -462,7 +462,7 @@ class IceTransport @JvmOverloads constructor(
                 "Not restarting ICE: the transport is not established yet " +
                     "(state=${currentBundle.agent.state}). Keeping the existing Agent."
             )
-            iceRestartsRejected.inc()
+            iceRestartsNotEstablished.inc()
             return IceRestartResult.KEEP_EXISTING
         }
 
@@ -484,10 +484,12 @@ class IceTransport @JvmOverloads constructor(
             // (if there is one) alone rather than freeing a bundle the peer may already be checking against.
             generation = restartGeneration + 1
             newBundle = createAgentBundle(generation) ?: run {
-                // The established Agent is untouched and still carrying media, so keep using it.
-                logger.warn("Not restarting ICE: failed to create the new Agent. Keeping the existing one.")
-                iceRestartsRejected.inc()
-                return IceRestartResult.KEEP_EXISTING
+                // A resource problem (no port to bind, most likely), so this bridge can not restart ICE at all
+                // right now. Escalate rather than keep the endpoint on a transport it just told us it can no
+                // longer reach: the established Agent still works, but its path is probably already dead.
+                logger.error("Can not restart ICE: failed to create the new Agent.")
+                iceRestartsAgentCreationFailed.inc()
+                return IceRestartResult.UNAVAILABLE
             }
 
             // A newer restart supersedes one that has not connected yet.
@@ -1023,13 +1025,34 @@ class IceTransport @JvmOverloads constructor(
         )
 
         /**
-         * The total number of ICE restart requests for which no new Agent was created: the feature is
-         * disabled, the transport is not running, or it is not established yet.
+         * The total number of ICE restart requests this bridge could not honour at all: the feature is
+         * disabled, its timeout is misconfigured, or the transport is stopped. The endpoint is told to fall
+         * back to a full re-invite.
          */
         val iceRestartsRejected = VideobridgeMetricsContainer.instance.registerCounter(
             "ice_restarts_rejected",
-            "Number of ICE restart requests for which no new Agent was created (the feature is disabled, or " +
-                "the transport is stopped or not established)."
+            "Number of ICE restart requests rejected because this bridge does not do ICE restarts (the " +
+                "feature is disabled or misconfigured, or the transport is stopped)."
+        )
+
+        /**
+         * The total number of ICE restart requests for a transport that had not connected yet, for which the
+         * existing Agent was kept. Ordinary traffic: the endpoint keeps a session that is still being
+         * negotiated, and nothing is lost.
+         */
+        val iceRestartsNotEstablished = VideobridgeMetricsContainer.instance.registerCounter(
+            "ice_restarts_not_established",
+            "Number of ICE restart requests for a transport that was not established yet, for which the " +
+                "existing Agent was kept."
+        )
+
+        /**
+         * The total number of ICE restarts that could not create their new Agent, which means ice4j could not
+         * harvest or bind. Unlike the other two this indicates a problem with the bridge itself.
+         */
+        val iceRestartsAgentCreationFailed = VideobridgeMetricsContainer.instance.registerCounter(
+            "ice_restarts_agent_creation_failed",
+            "Number of ICE restarts that failed because a new ICE Agent could not be created."
         )
 
         /**

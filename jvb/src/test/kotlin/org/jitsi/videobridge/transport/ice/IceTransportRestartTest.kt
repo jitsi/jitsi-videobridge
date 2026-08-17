@@ -229,9 +229,10 @@ class IceTransportRestartTest : ShouldSpec({
         }
 
         context("When the new Agent can not be created") {
-            should("keep the existing one") {
+            should("report that a restart is unavailable") {
+                // A resource problem, so the endpoint is told to fall back to a full re-invite.
                 agents.failNext = true
-                transport.requestIceRestart() shouldBe IceRestartResult.KEEP_EXISTING
+                transport.requestIceRestart() shouldBe IceRestartResult.UNAVAILABLE
                 transport.describe().ufrag shouldBe initial.ufrag
             }
             should("leave a later restart working") {
