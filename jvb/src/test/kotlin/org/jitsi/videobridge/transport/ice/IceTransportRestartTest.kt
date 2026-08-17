@@ -27,8 +27,10 @@ import org.ice4j.ice.IceMediaStream
 import org.ice4j.ice.IceProcessingState
 import org.ice4j.ice.KeepAliveStrategy
 import org.jitsi.config.withNewConfig
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
@@ -40,6 +42,11 @@ import java.beans.PropertyChangeListener
  */
 class IceTransportRestartTest : ShouldSpec({
     isolationMode = IsolationMode.InstancePerLeaf
+
+    // The restart timeout and the transition window are scheduled on TaskPools.SCHEDULED_POOL.
+    val scheduler = FakeScheduledExecutorService()
+    TaskPools.SCHEDULED_POOL = scheduler
+    afterSpec { TaskPools.resetScheduledPool() }
 
     val agents = FakeAgents()
     fun createTransport() = IceTransport(
@@ -53,6 +60,14 @@ class IceTransportRestartTest : ShouldSpec({
 
     context("Before ICE is established") {
         val transport = createTransport()
+        should("apply an ordinary transport update to the initial Agent") {
+            // The main negotiation path, which the restart routing sits in front of.
+            transport.startConnectivityEstablishment(remoteTransport(generation = null))
+
+            agents.created[0].remoteUfrag shouldBe "remote-ufrag"
+            agents.created[0].remotePassword shouldBe "remote-pwd"
+            agents.created[0].startCalls shouldBe 1
+        }
         should("keep the existing Agent instead of restarting") {
             transport.requestIceRestart() shouldBe IceRestartResult.KEEP_EXISTING
             agents.created.size shouldBe 1
@@ -193,7 +208,7 @@ class IceTransportRestartTest : ShouldSpec({
                 transport.describe().ufrag shouldBe initial.ufrag
                 awaitTrue { agents.created[1].freed }
             }
-            should("not restart the transport's own failure handling") {
+            should("not trigger the transport's own failure handling") {
                 var failed = false
                 transport.eventHandler = object : IceTransport.EventHandler {
                     override fun connected() {}
@@ -207,6 +222,47 @@ class IceTransportRestartTest : ShouldSpec({
                 agents.created[1].fireState(IceProcessingState.FAILED)
 
                 failed shouldBe false
+            }
+        }
+
+        context("The scheduled tasks") {
+            should("free the old Agent when the transition window elapses") {
+                transport.requestIceRestart()
+                agents.created[1].fireState(IceProcessingState.COMPLETED)
+                initial.freed shouldBe false
+
+                // Advances the fake clock to the task's deadline and runs it.
+                scheduler.runOne()
+
+                awaitTrue { initial.freed }
+            }
+            should("abandon the restart when the timeout elapses") {
+                transport.requestIceRestart()
+
+                scheduler.runOne()
+
+                awaitTrue { agents.created[1].freed }
+                transport.hasFailed() shouldBe false
+                transport.describe().ufrag shouldBe initial.ufrag
+            }
+            should("not abandon a restart that has already cut over") {
+                transport.requestIceRestart()
+                agents.created[1].fireState(IceProcessingState.COMPLETED)
+
+                // Runs the transition window task. The timeout task was cancelled by the cutover, so it is
+                // dropped rather than run, and does not free the Agent we just cut over to.
+                scheduler.runOne()
+
+                awaitTrue { initial.freed }
+                agents.created[1].freed shouldBe false
+                transport.describe().ufrag shouldBe agents.created[1].ufrag
+            }
+            should("be cancelled by stop()") {
+                transport.requestIceRestart()
+                agents.created[1].fireState(IceProcessingState.COMPLETED)
+                transport.stop()
+
+                scheduler.numPendingJobs() shouldBe 0
             }
         }
 
@@ -308,7 +364,11 @@ private class FakeAgent(index: Int) {
     val password = "password-$index"
 
     var state: IceProcessingState = IceProcessingState.WAITING
+
+    /** Written on the IO pool (that is where Agents are freed) and read from the test thread. */
+    @Volatile
     var freed = false
+
     var startCalls = 0
     var remoteUfrag: String? = null
     var remotePassword: String? = null
