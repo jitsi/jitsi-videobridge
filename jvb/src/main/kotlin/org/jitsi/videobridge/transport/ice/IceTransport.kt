@@ -559,9 +559,12 @@ class IceTransport @JvmOverloads constructor(
             return
         }
 
-        // Apply the credentials and claim the round in one step under the lock. Claiming it any earlier would
-        // let an update that turns out to be unusable consume the restart, leaving the peer's real credentials
-        // to be dropped as a repeat and the round to burn its full timeout.
+        // Claim the round before applying anything. Everything that can make an update unusable has been
+        // checked by now (the credentials are present, they carry our generation, and the restart is still
+        // pending), so claiming here can not burn the round on an update we then reject. Applying first would
+        // instead let a repeated update overwrite the credentials of an Agent whose checks are already running:
+        // ice4j reads them live off the stream to sign its checks and to validate the peer's
+        // (ConnectivityCheckServer.getRemoteKey).
         synchronized(restartLock) {
             // Re-check under the lock: the restart may have been superseded or abandoned since we read it.
             if (pendingBundle !== pending) {
@@ -571,8 +574,6 @@ class IceTransport @JvmOverloads constructor(
                 )
                 return
             }
-            pending.stream.remoteUfrag = ufrag
-            pending.stream.remotePassword = password
             if (!pending.checksStarted.compareAndSet(false, true)) {
                 logger.info(
                     "Already started connectivity checks for ICE restart generation ${pending.generation}, " +
@@ -580,6 +581,8 @@ class IceTransport @JvmOverloads constructor(
                 )
                 return
             }
+            pending.stream.remoteUfrag = ufrag
+            pending.stream.remotePassword = password
         }
 
         // Add any signalled remote candidates. Normally there are none: clients do not signal candidates to the

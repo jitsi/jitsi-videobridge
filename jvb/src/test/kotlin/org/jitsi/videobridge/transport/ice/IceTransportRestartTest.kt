@@ -144,6 +144,18 @@ class IceTransportRestartTest : ShouldSpec({
 
                 agents.created[1].startCalls shouldBe 1
             }
+            should("not be replaced once the checks are running") {
+                // ice4j reads the remote credentials off the stream every time it signs a check or validates
+                // one, so a repeated update must not touch them.
+                transport.requestIceRestart()
+                transport.startConnectivityEstablishment(remoteTransport(generation = 1))
+                transport.startConnectivityEstablishment(
+                    remoteTransport(generation = 1, remoteUfrag = "other-ufrag", remotePassword = "other-pwd")
+                )
+
+                agents.created[1].remoteUfrag shouldBe "remote-ufrag"
+                agents.created[1].remotePassword shouldBe "remote-pwd"
+            }
         }
 
         context("When the new Agent connects") {
@@ -256,9 +268,13 @@ class IceTransportRestartTest : ShouldSpec({
 
 private fun IceTransport.describe() = IceUdpTransportPacketExtension().also { describe(it) }
 
-private fun remoteTransport(generation: Int?) = IceUdpTransportPacketExtension().apply {
-    ufrag = "remote-ufrag"
-    password = "remote-pwd"
+private fun remoteTransport(
+    generation: Int?,
+    remoteUfrag: String = "remote-ufrag",
+    remotePassword: String = "remote-pwd"
+) = IceUdpTransportPacketExtension().apply {
+    ufrag = remoteUfrag
+    password = remotePassword
     generation?.let { iceGeneration = it }
 }
 
