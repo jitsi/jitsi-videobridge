@@ -165,6 +165,11 @@ class TransportFeedbackAdapter(
         return null
     }
 
+    /** Cumulative count of feedback reports that could not be matched against the send-time
+     *  history (see [TransportCcEngine.StatisticsSnapshot.unmatchedFeedback]). */
+    var totalUnmatchedReports: Long = 0
+        private set
+
     fun processTransportFeedback(feedback: RtcpFbTccPacket, feedbackReceiveTime: Instant): TransportPacketsFeedback? {
         if (feedback.GetPacketStatusCount() == 0) {
             logger.info { "Empty transport feedback packet received" }
@@ -225,6 +230,7 @@ class TransportFeedbackAdapter(
             packetResultVector.add(result)
         }
 
+        totalUnmatchedReports += failedLookups
         if (failedLookups > 0) {
             logger.info(
                 "Failed to lookup send time for $failedLookups packet${if (failedLookups > 1) "s" else ""}. " +
@@ -287,6 +293,7 @@ class TransportFeedbackAdapter(
             packetResultVector.add(result)
         }
 
+        totalUnmatchedReports += failedLookups
         if (failedLookups > 0) {
             logger.warn {
                 "Failed to lookup send time for $failedLookups packets. " +
@@ -410,6 +417,7 @@ class TransportFeedbackAdapter(
             history.size,
             currentOffset,
             lastTransportFeedbackBaseTime,
+            totalUnmatchedReports,
         )
     }
 
@@ -421,7 +429,8 @@ class TransportFeedbackAdapter(
         val lastAckSeqNum: Long,
         val historySize: Int,
         val currentOffset: Instant,
-        val lastTransportFeedbackBaseTime: Instant
+        val lastTransportFeedbackBaseTime: Instant,
+        val totalUnmatchedReports: Long
     ) {
         fun toJson(): ObjectNode {
             return JsonNodeFactory.instance.objectNode().apply {
@@ -433,6 +442,7 @@ class TransportFeedbackAdapter(
                 put("history_size", historySize)
                 put("current_offset", currentOffset.toEpochMilliOrInf().toString())
                 put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf().toString())
+                put("total_unmatched_reports", totalUnmatchedReports)
             }
         }
     }

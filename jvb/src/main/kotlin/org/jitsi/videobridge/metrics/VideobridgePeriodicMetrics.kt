@@ -84,6 +84,11 @@ object VideobridgePeriodicMetrics {
         "current_endpoints",
         "Number of current endpoints (local and relayed)."
     )
+    val tccUnmatchedFeedback = metricsContainer.registerLongGauge(
+        "tcc_unmatched_feedback",
+        "Total transport-cc feedback reports that could not be matched to the send-time history. " +
+            "A sustained flood of these is the marker of a feedback-starvation saturation lock."
+    )
     val endpointsWithHighOutgoingLoss = metricsContainer.registerLongGauge(
         "endpoints_with_high_outgoing_loss",
         "Number of endpoints that have high outgoing loss (>10%)."
@@ -194,6 +199,7 @@ object VideobridgePeriodicMetrics {
         // enableOnstageVideoSuspend is false)
         var numOversending = 0L
         var endpointsWithHighOutgoingLoss = 0L
+        var tccUnmatchedFeedback = 0L
         var numLocalActiveEndpoints = 0L
         var endpointsWithSuspendedSources = 0L
 
@@ -247,8 +253,9 @@ object VideobridgePeriodicMetrics {
                 if (endpoint.hasSuspendedSources()) {
                     endpointsWithSuspendedSources++
                 }
-                val (endpointConnectionStats, rtpReceiverStats, _, outgoingStats) =
+                val (endpointConnectionStats, rtpReceiverStats, _, outgoingStats, tccEngineStats) =
                     endpoint.transceiver.getTransceiverStats()
+                tccUnmatchedFeedback += tccEngineStats.unmatchedFeedback
                 val incomingStats = rtpReceiverStats.incomingStats
                 val incomingPacketStreamStats = rtpReceiverStats.packetStreamStats
                 bitrateDownloadBps += incomingPacketStreamStats.getBitrateBps()
@@ -327,6 +334,7 @@ object VideobridgePeriodicMetrics {
         VideobridgePeriodicMetrics.loss.set(overallLoss)
         VideobridgePeriodicMetrics.endpoints.set(endpoints)
         VideobridgePeriodicMetrics.endpointsWithHighOutgoingLoss.set(endpointsWithHighOutgoingLoss)
+        VideobridgePeriodicMetrics.tccUnmatchedFeedback.set(tccUnmatchedFeedback)
         VideobridgePeriodicMetrics.endpointsWithSpuriousRemb.set(endpointsWithSpuriousRemb().toLong())
         VideobridgePeriodicMetrics.activeEndpoints.set(numLocalActiveEndpoints)
         VideobridgePeriodicMetrics.incomingBitrate.set(bitrateDownloadBps.toLong())
