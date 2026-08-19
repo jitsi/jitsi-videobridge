@@ -139,6 +139,7 @@ object VideobridgeStatisticsShim {
             put("outgoing_loss", VideobridgePeriodicMetrics.outgoingLoss.get())
             put("overall_loss", VideobridgePeriodicMetrics.loss.get())
             put("endpoints_with_high_outgoing_loss", VideobridgePeriodicMetrics.endpointsWithHighOutgoingLoss.get())
+            put("tcc_unmatched_feedback", VideobridgePeriodicMetrics.tccUnmatchedFeedback.get())
             put("local_active_endpoints", VideobridgePeriodicMetrics.activeEndpoints.get())
             put(BITRATE_DOWNLOAD, VideobridgePeriodicMetrics.incomingBitrate.get() / 1000)
             put(BITRATE_UPLOAD, VideobridgePeriodicMetrics.outgoingBitrate.get() / 1000)

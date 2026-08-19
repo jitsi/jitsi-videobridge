@@ -69,6 +69,12 @@ abstract class TransportCcEngine : RtcpListener {
 
     abstract class StatisticsSnapshot {
         abstract fun toJson(): ObjectNode
+
+        /** Cumulative count of transport-cc feedback reports that could not be matched against
+         *  the send-time history.  A sustained flood of these means the estimator has lost both
+         *  its loss and delay signals (unmatched reports are dropped entirely) and is the
+         *  earliest observable marker of a feedback-starvation saturation lock. */
+        open val unmatchedFeedback: Long get() = 0
     }
 
     interface BandwidthListener {
