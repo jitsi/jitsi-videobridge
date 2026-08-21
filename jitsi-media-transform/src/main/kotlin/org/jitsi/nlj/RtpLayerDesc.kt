@@ -66,10 +66,65 @@ abstract class RtpLayerDesc(
     protected var bitrateTracker = BitrateCalculator.createBitrateTracker()
 
     /**
-     * A second [BitrateTracker] with a longer window, for sources whose bitrate is bursty. See
-     * [BitrateCalculator.createSmoothedBitrateTracker].
+     * A second [BitrateTracker] with a longer window, for sources whose bitrate is bursty. It is only created once
+     * [enableSmoothedBitrate] is called, because it costs memory per layer and an update per packet per layer, and
+     * only screen sharing sources use it. See [BitrateCalculator.createSmoothedBitrateTracker].
+     *
+     * Volatile because it is enabled from the threads which run bandwidth allocation (one per receiver, so possibly
+     * several at once), but read and updated from the thread which reads packets.
      */
-    protected var smoothedBitrateTracker = BitrateCalculator.createSmoothedBitrateTracker()
+    @Volatile
+    private var smoothedBitrateTracker: BitrateTracker? = null
+
+    /**
+     * The [clock] time at which [smoothedBitrateTracker] was created. Only meaningful while the tracker is non-null.
+     * Writes to it are made visible by the subsequent volatile write to [smoothedBitrateTracker].
+     */
+    private var smoothedBitrateTrackerCreatedMs: Long = -1
+
+    /**
+     * Start tracking a smoothed bitrate for this layer. Idempotent. Until the tracker created here has a full window
+     * of history, [getSmoothedBitrate] falls back to [getBitrate], so that a source is not priced at close to zero
+     * while the longer window fills up.
+     */
+    fun enableSmoothedBitrate(nowMs: Long) {
+        if (smoothedBitrateTracker == null) {
+            synchronized(this) {
+                if (smoothedBitrateTracker == null) {
+                    smoothedBitrateTrackerCreatedMs = nowMs
+                    smoothedBitrateTracker = BitrateCalculator.createSmoothedBitrateTracker()
+                }
+            }
+        }
+    }
+
+    /**
+     * Stop tracking a smoothed bitrate for this layer, dropping the tracker and its history. Called when the source
+     * stops being bursty (e.g. a screen share reverting to camera), so that the layer stops paying for the tracker,
+     * and so that a later re-enable does not price the source from the previous mode's traffic.
+     */
+    fun disableSmoothedBitrate() {
+        if (smoothedBitrateTracker != null) {
+            synchronized(this) {
+                smoothedBitrateTracker = null
+            }
+        }
+    }
+
+    /**
+     * The rate of this layer alone, either over the estimator-matched window or over the longer window used for
+     * bursty sources. The smoothed rate falls back to the other one while it is not being tracked, and while its
+     * tracker does not yet have a full window of history (since it always divides by the full window, a young tracker
+     * would under-report the rate, in the extreme pricing the source at zero at the moment it is enabled).
+     */
+    protected fun layerRate(nowMs: Long, smoothed: Boolean): Bandwidth {
+        val smoothedTracker = if (smoothed) smoothedBitrateTracker else null
+        return if (smoothedTracker != null && nowMs - smoothedBitrateTrackerCreatedMs >= smoothedWindowMs) {
+            smoothedTracker.getRateOverFullWindow(nowMs)
+        } else {
+            bitrateTracker.getRate(nowMs)
+        }
+    }
 
     var targetBitrate: Bandwidth? = null
 
@@ -88,16 +143,21 @@ abstract class RtpLayerDesc(
     /**
      * Inherit a [BitrateTracker] object
      */
-    internal fun inheritStatistics(tracker: BitrateTracker, smoothedTracker: BitrateTracker) {
+    internal fun inheritStatistics(tracker: BitrateTracker) {
         bitrateTracker = tracker
-        smoothedBitrateTracker = smoothedTracker
     }
 
     /**
      * Inherit another layer description's [BitrateTracker] object.
      */
     internal open fun inheritFrom(other: RtpLayerDesc) {
-        inheritStatistics(other.bitrateTracker, other.smoothedBitrateTracker)
+        inheritStatistics(other.bitrateTracker)
+        // Only take the other layer's smoothed tracker if it has one: layer arrays are replaced whenever the
+        // scalability structure is re-signaled, and dropping an established tracker would restart its window.
+        other.smoothedBitrateTracker?.let {
+            smoothedBitrateTrackerCreatedMs = other.smoothedBitrateTrackerCreatedMs
+            smoothedBitrateTracker = it
+        }
         targetBitrate = other.targetBitrate
     }
 
@@ -111,7 +171,7 @@ abstract class RtpLayerDesc(
         val wasInactive = hasZeroBitrate(nowMs)
         // Update rate stats (this should run after padding termination).
         bitrateTracker.update(packetSize, nowMs)
-        smoothedBitrateTracker.update(packetSize, nowMs)
+        smoothedBitrateTracker?.update(packetSize, nowMs)
         return wasInactive && packetSize.bits > 0L
     }
 
@@ -141,6 +201,7 @@ abstract class RtpLayerDesc(
         put("height", height)
         put("index", index)
         put("bitrate_bps", getBitrate(System.currentTimeMillis()).bps)
+        put("smoothed_bitrate_bps", getSmoothedBitrate(System.currentTimeMillis()).bps)
         put("target_bitrate", targetBitrate?.bps ?: 0)
         put("indexString", indexString())
     }
@@ -148,6 +209,9 @@ abstract class RtpLayerDesc(
     abstract fun indexString(): String
 
     companion object {
+        /** The length of the smoothed trackers' window, cached (it is fixed by configuration). */
+        private val smoothedWindowMs: Long by lazy { BitrateCalculator.smoothedWindowSize.toMillis() }
+
         /**
          * The index value that is used to represent that forwarding is suspended.
          */

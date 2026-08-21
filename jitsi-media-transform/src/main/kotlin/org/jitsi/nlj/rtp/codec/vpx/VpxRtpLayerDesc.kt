@@ -150,11 +150,7 @@ constructor(
         if (rates.containsKey(index)) {
             return rates
         }
-        rates[index] = if (smoothed) {
-            smoothedBitrateTracker.getRateOverFullWindow(nowMs)
-        } else {
-            bitrateTracker.getRate(nowMs)
-        }
+        rates[index] = layerRate(nowMs, smoothed)
 
         dependencyLayers.forEach { it.calcBitrate(nowMs, smoothed, rates) }
 

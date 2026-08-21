@@ -72,8 +72,7 @@ class MediaSourceDescTest : ShouldSpec() {
                         (i == source.rtpEncodings.size - 1 && j == e.layers.size - 1)
                     ) {
                         /* Encode the layer ID into the rate, so it's unambiguous which layers are getting summed. */
-                        val tracker = FakeBitrateTracker(1L shl (i * source.rtpEncodings.size + j))
-                        l.inheritStatistics(tracker, tracker)
+                        l.inheritStatistics(FakeBitrateTracker(1L shl (i * source.rtpEncodings.size + j)))
                     }
                 }
             }

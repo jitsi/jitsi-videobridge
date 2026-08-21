@@ -245,12 +245,16 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
 
         var totalTargetBps = 0.0
         var totalIdealBps = 0.0
+        var totalTargetSmoothedBps = 0.0
+        var totalIdealSmoothedBps = 0.0
         var totalTargetVlaBps = 0.0
         var totalIdealVlaBps = 0.0
 
         allocation.allocations.forEach {
             it.targetLayer?.getBitrate(nowMs)?.let { bitrate -> totalTargetBps += bitrate.bps }
             it.idealLayer?.getBitrate(nowMs)?.let { bitrate -> totalIdealBps += bitrate.bps }
+            it.targetLayer?.getSmoothedBitrate(nowMs)?.let { bitrate -> totalTargetSmoothedBps += bitrate.bps }
+            it.idealLayer?.getSmoothedBitrate(nowMs)?.let { bitrate -> totalIdealSmoothedBps += bitrate.bps }
             it.targetLayer?.targetBitrate?.let { bitrate -> totalTargetVlaBps += bitrate.bps }
             it.idealLayer?.targetBitrate?.let { bitrate -> totalIdealVlaBps += bitrate.bps }
             trace(
@@ -260,8 +264,10 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
                     .addField("target_idx", it.targetLayer?.index ?: -1)
                     .addField("ideal_idx", it.idealLayer?.index ?: -1)
                     .addField("target_bps_measured", it.targetLayer?.getBitrate(nowMs)?.bps ?: -1)
+                    .addField("target_bps_smoothed", it.targetLayer?.getSmoothedBitrate(nowMs)?.bps ?: -1)
                     .addField("target_bps_vla", it.targetLayer?.targetBitrate?.bps ?: -1)
                     .addField("ideal_bps_measured", it.idealLayer?.getBitrate(nowMs)?.bps ?: -1)
+                    .addField("ideal_bps_smoothed", it.idealLayer?.getSmoothedBitrate(nowMs)?.bps ?: -1)
                     .addField("ideal_bps_vla", it.idealLayer?.targetBitrate?.bps ?: -1)
             )
         }
@@ -271,6 +277,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
                 .makeTimeSeriesPoint("allocation", nowMs)
                 .addField("total_target_measured_bps", totalTargetBps)
                 .addField("total_ideal_measured_bps", totalIdealBps)
+                .addField("total_target_smoothed_bps", totalTargetSmoothedBps)
+                .addField("total_ideal_smoothed_bps", totalIdealSmoothedBps)
                 .addField("total_target_vla_bps", totalTargetVlaBps)
                 .addField("total_ideal_vla_bps", totalIdealVlaBps)
         )

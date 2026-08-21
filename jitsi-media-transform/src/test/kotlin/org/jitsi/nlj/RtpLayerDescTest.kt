@@ -16,8 +16,10 @@
 package org.jitsi.nlj
 
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
+import org.jitsi.nlj.util.bytes
 
 class RtpLayerDescTest : FunSpec({
 
@@ -89,5 +91,62 @@ class RtpLayerDescTest : FunSpec({
         vp9Layers[6].layerId shouldBe 16
         vp9Layers[7].layerId shouldBe 17
         vp9Layers[8].layerId shouldBe 18
+    }
+
+    test("Smoothed bitrate is not tracked until enabled") {
+        val layer = VpxRtpLayerDesc(0, 0, -1, 180, 30.0)
+        layer.updateBitrate(1000.bytes, 0)
+
+        // Fall back to the bitrate over the estimator-matched window.
+        layer.getSmoothedBitrate(100) shouldBe layer.getBitrate(100)
+    }
+
+    test("Smoothed bitrate falls back until its tracker has a full window of history") {
+        val layer = VpxRtpLayerDesc(0, 0, -1, 180, 30.0)
+        layer.enableSmoothedBitrate(0)
+        layer.updateBitrate(1000.bytes, 0)
+
+        layer.getSmoothedBitrate(100) shouldBe layer.getBitrate(100)
+    }
+
+    test("Smoothed bitrate is lower than the short-window rate once its window has filled") {
+        val layer = VpxRtpLayerDesc(0, 0, -1, 180, 30.0)
+        layer.enableSmoothedBitrate(0)
+        val nowMs = 6000L // Past the smoothed window (5s by default).
+        layer.updateBitrate(1000.bytes, nowMs)
+
+        layer.getSmoothedBitrate(nowMs + 100) shouldBeLessThan layer.getBitrate(nowMs + 100)
+    }
+
+    test("Enabling the smoothed bitrate twice does not discard the data collected so far") {
+        val layer = VpxRtpLayerDesc(0, 0, -1, 180, 30.0)
+        layer.enableSmoothedBitrate(0)
+        val nowMs = 6000L
+        layer.updateBitrate(1000.bytes, nowMs)
+        val before = layer.getSmoothedBitrate(nowMs + 100)
+
+        layer.enableSmoothedBitrate(nowMs + 100)
+        layer.getSmoothedBitrate(nowMs + 100) shouldBe before
+    }
+
+    test("Disabling the smoothed bitrate reverts to the short-window rate") {
+        val layer = VpxRtpLayerDesc(0, 0, -1, 180, 30.0)
+        layer.enableSmoothedBitrate(0)
+        val nowMs = 6000L
+        layer.updateBitrate(1000.bytes, nowMs)
+
+        layer.disableSmoothedBitrate()
+        layer.getSmoothedBitrate(nowMs + 100) shouldBe layer.getBitrate(nowMs + 100)
+    }
+
+    test("A layer inheriting from another keeps an established smoothed tracker") {
+        val old = VpxRtpLayerDesc(0, 0, -1, 180, 30.0)
+        old.enableSmoothedBitrate(0)
+        val nowMs = 6000L
+        old.updateBitrate(1000.bytes, nowMs)
+
+        val new = VpxRtpLayerDesc(0, 0, -1, 180, 30.0)
+        new.inheritFrom(old)
+        new.getSmoothedBitrate(nowMs + 100) shouldBe old.getSmoothedBitrate(nowMs + 100)
     }
 })
