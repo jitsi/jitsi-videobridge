@@ -65,6 +65,12 @@ abstract class RtpLayerDesc(
      */
     protected var bitrateTracker = BitrateCalculator.createBitrateTracker()
 
+    /**
+     * A second [BitrateTracker] with a longer window, for sources whose bitrate is bursty. See
+     * [BitrateCalculator.createSmoothedBitrateTracker].
+     */
+    protected var smoothedBitrateTracker = BitrateCalculator.createSmoothedBitrateTracker()
+
     var targetBitrate: Bandwidth? = null
 
     /**
@@ -82,15 +88,16 @@ abstract class RtpLayerDesc(
     /**
      * Inherit a [BitrateTracker] object
      */
-    internal fun inheritStatistics(tracker: BitrateTracker) {
+    internal fun inheritStatistics(tracker: BitrateTracker, smoothedTracker: BitrateTracker) {
         bitrateTracker = tracker
+        smoothedBitrateTracker = smoothedTracker
     }
 
     /**
      * Inherit another layer description's [BitrateTracker] object.
      */
     internal open fun inheritFrom(other: RtpLayerDesc) {
-        inheritStatistics(other.bitrateTracker)
+        inheritStatistics(other.bitrateTracker, other.smoothedBitrateTracker)
         targetBitrate = other.targetBitrate
     }
 
@@ -104,6 +111,7 @@ abstract class RtpLayerDesc(
         val wasInactive = hasZeroBitrate(nowMs)
         // Update rate stats (this should run after padding termination).
         bitrateTracker.update(packetSize, nowMs)
+        smoothedBitrateTracker.update(packetSize, nowMs)
         return wasInactive && packetSize.bits > 0L
     }
 
@@ -114,6 +122,12 @@ abstract class RtpLayerDesc(
      * @return the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.
      */
     abstract fun getBitrate(nowMs: Long): Bandwidth
+
+    /**
+     * Like [getBitrate], but measured over the longer window of [smoothedBitrateTracker]. Used for sources whose
+     * bitrate is bursty, where the instantaneous rate over-states the bandwidth the source needs.
+     */
+    abstract fun getSmoothedBitrate(nowMs: Long): Bandwidth
 
     /**
      * Recursively checks this layer and its dependencies to see if the bitrate is zero.

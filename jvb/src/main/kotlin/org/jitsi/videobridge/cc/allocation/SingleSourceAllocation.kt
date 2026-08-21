@@ -361,24 +361,24 @@ internal class SingleSourceAllocation(
         if (constraints.maxHeight == 0 || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
+        // Screen sharing is bursty: while the screen is static the encoder accumulates rate control credit (about a
+        // second's worth) and then spends it on a single frame, so the bitrate measured over the short window is not
+        // representative of the bandwidth the source needs. Allocate for it using the longer window instead.
+        val isBursty = source.videoType.isScreenshare()
         val layers = source.rtpLayers.map {
             val measuredBitrate = it.getBitrate(nowMs).bps
             val vlaTargetBitrate = it.targetBitrate?.bps
-            LayerSnapshot(
-                it,
-                if (config.useVlaTargetBitrate) {
-                    vlaTargetBitrate ?: measuredBitrate
-                } else {
-                    measuredBitrate
-                },
-                measuredBitrate,
-                vlaTargetBitrate
-            )
+            val allocationBitrate = when {
+                config.useVlaTargetBitrate && vlaTargetBitrate != null -> vlaTargetBitrate
+                isBursty -> it.getSmoothedBitrate(nowMs).bps
+                else -> measuredBitrate
+            }
+            LayerSnapshot(it, allocationBitrate, measuredBitrate, vlaTargetBitrate)
         }
 
-        return when (source.videoType) {
-            VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
-            VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(
+        return when {
+            source.videoType == VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
+            source.videoType.isScreenshare() -> selectLayersForScreensharing(
                 layers,
                 constraints,
                 onStage,

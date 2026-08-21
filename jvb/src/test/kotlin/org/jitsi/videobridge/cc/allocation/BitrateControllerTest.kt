@@ -1636,6 +1636,7 @@ class MockRtpLayerDesc(
     override val index = getIndex(eid, sid, tid)
 
     override fun getBitrate(nowMs: Long): Bandwidth = bitrate
+    override fun getSmoothedBitrate(nowMs: Long): Bandwidth = bitrate
     override fun hasZeroBitrate(nowMs: Long): Boolean = bitrate == 0.bps
     override fun indexString() = indexString(index)
 }

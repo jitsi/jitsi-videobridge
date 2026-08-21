@@ -23,11 +23,15 @@ import org.jitsi.nlj.RtpLayerDesc
 data class LayerSnapshot(
     val layer: RtpLayerDesc,
     /**
-     * The bitrate (in bps) to use for allocation. Depending on the `use-vla-target-bitrate` config this is either
-     * [measuredBitrate] or [vlaTargetBitrate].
+     * The bitrate (in bps) to use for allocation: [vlaTargetBitrate] when `use-vla-target-bitrate` is enabled and the
+     * sender signals one; otherwise the smoothed measured bitrate for screen sharing (bursty) sources, and
+     * [measuredBitrate] for everything else.
      */
     val bitrate: Long,
-    /** The bitrate (in bps) measured for the layer (and its dependencies). */
+    /**
+     * The bitrate (in bps) measured for the layer (and its dependencies) over the short window, i.e. the one which
+     * matches the bandwidth estimator's. Note that this is not necessarily the bitrate used for allocation.
+     */
     val measuredBitrate: Long = bitrate,
     /**
      * The target bitrate (in bps) signaled by the sender in the VLA RTP header extension, or `null` if the sender

@@ -129,7 +129,9 @@ constructor(
      * @param nowMs
      * @return the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.
      */
-    override fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs).values.sum()
+    override fun getBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs, smoothed = false).values.sum()
+
+    override fun getSmoothedBitrate(nowMs: Long): Bandwidth = calcBitrate(nowMs, smoothed = true).values.sum()
 
     /**
      * Recursively adds the bitrate (in bps) of this [RtpLayerDesc] and
@@ -140,16 +142,20 @@ constructor(
      *
      * @param nowMs
      */
-    private fun calcBitrate(nowMs: Long, rates: MutableMap<Int, Bandwidth> = HashMap()): MutableMap<Int, Bandwidth> {
+    private fun calcBitrate(
+        nowMs: Long,
+        smoothed: Boolean,
+        rates: MutableMap<Int, Bandwidth> = HashMap()
+    ): MutableMap<Int, Bandwidth> {
         if (rates.containsKey(index)) {
             return rates
         }
-        rates[index] = bitrateTracker.getRate(nowMs)
+        rates[index] = if (smoothed) smoothedBitrateTracker.getRate(nowMs) else bitrateTracker.getRate(nowMs)
 
-        dependencyLayers.forEach { it.calcBitrate(nowMs, rates) }
+        dependencyLayers.forEach { it.calcBitrate(nowMs, smoothed, rates) }
 
         if (useSoftDependencies) {
-            softDependencyLayers.forEach { it.calcBitrate(nowMs, rates) }
+            softDependencyLayers.forEach { it.calcBitrate(nowMs, smoothed, rates) }
         }
 
         return rates
