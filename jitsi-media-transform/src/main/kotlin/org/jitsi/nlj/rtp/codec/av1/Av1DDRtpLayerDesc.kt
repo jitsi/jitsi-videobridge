@@ -64,7 +64,7 @@ class Av1DDRtpLayerDesc(
 
     override fun getBitrate(nowMs: Long) = bitrateTracker.getRate(nowMs)
 
-    override fun getSmoothedBitrate(nowMs: Long) = smoothedBitrateTracker.getRate(nowMs)
+    override fun getSmoothedBitrate(nowMs: Long) = smoothedBitrateTracker.getRateOverFullWindow(nowMs)
 
     override fun hasZeroBitrate(nowMs: Long) = bitrateTracker.getAccumulatedSize(nowMs).bits == 0L
 
