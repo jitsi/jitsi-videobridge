@@ -280,13 +280,17 @@ internal class SingleSourceAllocation(
     /**
      * Selects from a list of layers the ones which should be considered when allocating bandwidth, as well as the
      * "preferred" and "oversend" layers. Logic specific to screensharing: we prioritize resolution over framerate,
-     * prioritize the highest layer over other endpoints (by setting the highest layer as "preferred"), and allow
-     * oversending up to the highest resolution (with low frame rate).
+     * prioritize the full resolution (at the frame rate which is cheapest to send it at) over other endpoints by
+     * setting it as "preferred", and allow oversending up to the full resolution (with low frame rate). Above the
+     * preferred layer the screenshare's frame rate competes with the other sources, which may reduce (though not
+     * disable) their quality as it improves.
      */
     private fun selectLayersForScreensharing(
         layers: List<LayerSnapshot>,
         constraints: VideoConstraints,
-        onStage: Boolean
+        onStage: Boolean,
+        /** Whether the sender has asked for the share's frame rate to be prioritized. */
+        highFps: Boolean
     ): Layers {
         var activeLayers = layers.filter { it.bitrate > 0 }
         // No active layers usually happens when the source has just been signaled and we haven't received
@@ -313,17 +317,28 @@ internal class SingleSourceAllocation(
             }
         }
 
-        val oversendIdx = if (onStage && config.allowOversendOnStage) {
-            val maxHeight = selectedLayers.maxOfOrNull { it.layer.height } ?: return Layers.noLayers
-            // Of all layers with the highest resolution select the one with lowest bitrate. In case of VP9 the layers
-            // are not necessarily ordered by bitrate.
-            val lowestBitrateLayer = selectedLayers.filter { it.layer.height == maxHeight }.minByOrNull { it.bitrate }
-                ?: return Layers.noLayers
-            selectedLayers.indexOf(lowestBitrateLayer)
+        // A source always has at least one layer here (selectLayers returns early otherwise), and the branches above
+        // never leave selectedLayers empty, so the maxima below exist.
+        val maxHeight = selectedLayers.maxOf { it.layer.height }
+        val maxHeightIndices = selectedLayers.indices.filter { selectedLayers[it].layer.height == maxHeight }
+        // Of all layers with the highest resolution, the one with the lowest bitrate. In case of VP9 the layers are
+        // not necessarily ordered by bitrate.
+        val cheapestMaxHeightIdx = maxHeightIndices.minBy { selectedLayers[it].bitrate }
+        // Since we prioritize resolution over frame rate, "preferred" is the full resolution at the frame rate which
+        // is cheapest to send it at. Anything above that improves frame rate only, and competes with the other
+        // sources on equal terms rather than blocking them entirely. There are two exceptions, for which we keep the
+        // highest layer as "preferred" (as we previously did for all screen sharing):
+        //  - High frame rate screen sharing, where the sender has explicitly asked for frame rate to be prioritized.
+        //  - The structure used with VP9 (multiple encodings with the same resolution and unknown frame rate), where
+        //    the layers above the cheapest one improve quality rather than frame rate, and quality is exactly what
+        //    this policy exists to protect.
+        val preferredIdx = if (highFps || maxHeightIndices.any { selectedLayers[it].layer.frameRate < 0 }) {
+            selectedLayers.size - 1
         } else {
-            -1
+            cheapestMaxHeightIdx
         }
-        return Layers(selectedLayers, selectedLayers.size - 1, oversendIdx)
+        val oversendIdx = if (onStage && config.allowOversendOnStage) cheapestMaxHeightIdx else -1
+        return Layers(selectedLayers, preferredIdx, oversendIdx)
     }
 
     /**
@@ -363,7 +378,12 @@ internal class SingleSourceAllocation(
 
         return when (source.videoType) {
             VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
-            VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(layers, constraints, onStage)
+            VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(
+                layers,
+                constraints,
+                onStage,
+                highFps = source.videoType == VideoType.DESKTOP_HIGH_FPS
+            )
             else -> Layers.noLayers
         }
     }

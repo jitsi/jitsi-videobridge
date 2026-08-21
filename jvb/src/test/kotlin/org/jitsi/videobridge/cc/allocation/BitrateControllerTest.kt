@@ -385,8 +385,10 @@ class BitrateControllerTest : ShouldSpec() {
         // TODO: the allocations for bwe=-1 are wrong.
         bc.allocationHistory.removeIf { it.bwe < 0.bps }
 
+        // Note that the thumbnails are enabled once the screenshare has reached full resolution at its cheapest
+        // frame rate (720p/7.5 at 660 kbps; the first thumbnail fits alongside it at bwe=710 kbps), and from then
+        // on the screenshare's frame rate competes with them.
         bc.allocationHistory.shouldMatchInOrder(
-            // We expect to be oversending when screensharing is used.
             Event(
                 0.kbps,
                 BandwidthAllocation(
@@ -419,37 +421,14 @@ class BitrateControllerTest : ShouldSpec() {
                         SingleAllocation(b, targetLayer = noVideo),
                         SingleAllocation(c, targetLayer = noVideo),
                         SingleAllocation(d, targetLayer = noVideo)
-                    ),
-                    oversending = false
-                )
-            ),
-            Event(
-                1320.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation(a, targetLayer = hd15),
-                        SingleAllocation(b, targetLayer = noVideo),
-                        SingleAllocation(c, targetLayer = noVideo),
-                        SingleAllocation(d, targetLayer = noVideo)
                     )
                 )
             ),
             Event(
-                2000.kbps,
+                710.kbps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation(a, targetLayer = hd30),
-                        SingleAllocation(b, targetLayer = noVideo),
-                        SingleAllocation(c, targetLayer = noVideo),
-                        SingleAllocation(d, targetLayer = noVideo)
-                    )
-                )
-            ),
-            Event(
-                2050.kbps,
-                BandwidthAllocation(
-                    setOf(
-                        SingleAllocation(a, targetLayer = hd30),
+                        SingleAllocation(a, targetLayer = hd7_5),
                         SingleAllocation(b, targetLayer = ld7_5),
                         SingleAllocation(c, targetLayer = noVideo),
                         SingleAllocation(d, targetLayer = noVideo)
@@ -457,10 +436,10 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                2100.kbps,
+                760.kbps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation(a, targetLayer = hd30),
+                        SingleAllocation(a, targetLayer = hd7_5),
                         SingleAllocation(b, targetLayer = ld7_5),
                         SingleAllocation(c, targetLayer = ld7_5),
                         SingleAllocation(d, targetLayer = noVideo)
@@ -468,10 +447,10 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                2150.kbps,
+                810.kbps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation(a, targetLayer = hd30),
+                        SingleAllocation(a, targetLayer = hd7_5),
                         SingleAllocation(b, targetLayer = ld7_5),
                         SingleAllocation(c, targetLayer = ld7_5),
                         SingleAllocation(d, targetLayer = ld7_5)
@@ -479,10 +458,10 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                2200.kbps,
+                860.kbps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation(a, targetLayer = hd30),
+                        SingleAllocation(a, targetLayer = hd7_5),
                         SingleAllocation(b, targetLayer = ld15),
                         SingleAllocation(c, targetLayer = ld7_5),
                         SingleAllocation(d, targetLayer = ld7_5)
@@ -490,13 +469,134 @@ class BitrateControllerTest : ShouldSpec() {
                 )
             ),
             Event(
-                2250.kbps,
+                910.kbps,
                 BandwidthAllocation(
                     setOf(
-                        SingleAllocation(a, targetLayer = hd30),
+                        SingleAllocation(a, targetLayer = hd7_5),
                         SingleAllocation(b, targetLayer = ld15),
                         SingleAllocation(c, targetLayer = ld15),
                         SingleAllocation(d, targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                960.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd7_5),
+                        SingleAllocation(b, targetLayer = ld15),
+                        SingleAllocation(c, targetLayer = ld15),
+                        SingleAllocation(d, targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                1010.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd7_5),
+                        SingleAllocation(b, targetLayer = ld30),
+                        SingleAllocation(c, targetLayer = ld15),
+                        SingleAllocation(d, targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                1060.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd7_5),
+                        SingleAllocation(b, targetLayer = ld30),
+                        SingleAllocation(c, targetLayer = ld30),
+                        SingleAllocation(d, targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                1120.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd7_5),
+                        SingleAllocation(b, targetLayer = ld30),
+                        SingleAllocation(c, targetLayer = ld30),
+                        SingleAllocation(d, targetLayer = ld30)
+                    )
+                )
+            ),
+            Event(
+                1470.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd15),
+                        SingleAllocation(b, targetLayer = ld7_5),
+                        SingleAllocation(c, targetLayer = ld7_5),
+                        SingleAllocation(d, targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                1520.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd15),
+                        SingleAllocation(b, targetLayer = ld15),
+                        SingleAllocation(c, targetLayer = ld7_5),
+                        SingleAllocation(d, targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                1570.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd15),
+                        SingleAllocation(b, targetLayer = ld15),
+                        SingleAllocation(c, targetLayer = ld15),
+                        SingleAllocation(d, targetLayer = ld7_5)
+                    )
+                )
+            ),
+            Event(
+                1620.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd15),
+                        SingleAllocation(b, targetLayer = ld15),
+                        SingleAllocation(c, targetLayer = ld15),
+                        SingleAllocation(d, targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                1670.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd15),
+                        SingleAllocation(b, targetLayer = ld30),
+                        SingleAllocation(c, targetLayer = ld15),
+                        SingleAllocation(d, targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                1720.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd15),
+                        SingleAllocation(b, targetLayer = ld30),
+                        SingleAllocation(c, targetLayer = ld30),
+                        SingleAllocation(d, targetLayer = ld15)
+                    )
+                )
+            ),
+            Event(
+                1780.kbps,
+                BandwidthAllocation(
+                    setOf(
+                        SingleAllocation(a, targetLayer = hd15),
+                        SingleAllocation(b, targetLayer = ld30),
+                        SingleAllocation(c, targetLayer = ld30),
+                        SingleAllocation(d, targetLayer = ld30)
                     )
                 )
             ),
