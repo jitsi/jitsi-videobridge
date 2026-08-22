@@ -184,6 +184,13 @@ abstract class AbstractEndpoint protected constructor(
         get() = false
 
     /**
+     * Whether this is a synthetic endpoint: a bridge-side entity that owns synthetic (injected) sources, e.g. a
+     * voice agent, and has no media transport of its own. Defaults to false for endpoint types that don't signal it.
+     */
+    open val synthetic: Boolean
+        get() = false
+
+    /**
      * Gets the description of the video [MediaSourceDesc] that this endpoint has advertised, or `null` if
      * it hasn't advertised any video sources.
      */
