@@ -53,6 +53,12 @@ import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
 import org.jivesoftware.smackx.muc.MUCRole
 
+/**
+ * The colibri2 endpoint capability marking a synthetic endpoint: a bridge-side entity that owns synthetic (injected)
+ * sources, e.g. a voice agent, and has no media transport. TODO: move to [Capability] in jitsi-xmpp-extensions.
+ */
+const val CAP_SYNTHETIC_ENDPOINT = "synthetic-endpoint"
+
 class Colibri2ConferenceHandler(
     private val conference: Conference,
     parentLogger: Logger
@@ -171,10 +177,14 @@ class Colibri2ConferenceHandler(
             if (conference.getLocalEndpoint(c2endpoint.id) != null) {
                 throw IqProcessingException(Condition.conflict, "Endpoint with ID ${c2endpoint.id} already exists")
             }
-            val transport = c2endpoint.transport ?: throw IqProcessingException(
-                Condition.bad_request,
-                "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
-            )
+            val synthetic = c2endpoint.hasCapability(CAP_SYNTHETIC_ENDPOINT)
+            val transport = c2endpoint.transport
+            if (transport == null && !synthetic) {
+                throw IqProcessingException(
+                    Condition.bad_request,
+                    "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
+                )
+            }
             if (!c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)) {
                 throw IqProcessingException(Condition.bad_request, "Source name support is mandatory.")
             }
@@ -184,17 +194,18 @@ class Colibri2ConferenceHandler(
             val midDemux = ssrcRewriting && c2endpoint.hasCapability(Capability.CAP_RTP_MID_DEMUX_SUPPORT)
             conference.createLocalEndpoint(
                 c2endpoint.id,
-                transport.iceControlling,
+                transport?.iceControlling ?: false,
                 ssrcRewriting,
                 midDemux,
                 c2endpoint.mucRole == MUCRole.visitor,
                 privateAddresses,
-                c2endpoint.diarize == true
+                c2endpoint.diarize == true,
+                synthetic
             ).apply {
                 c2endpoint.statsId?.let {
                     statsId = it
                 }
-                transport.sctp?.let { sctp ->
+                transport?.sctp?.let { sctp ->
                     if (!SctpConfig.config.enabled) {
                         throw IqProcessingException(
                             Condition.feature_not_implemented,
@@ -325,7 +336,9 @@ class Colibri2ConferenceHandler(
         // So a transport is signaled back for a restart that started (the new Agent's rotated credentials) and
         // for one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection
         // it has, with no re-invite). Only IceRestartResult.UNAVAILABLE signals nothing.
-        if (c2endpoint.create || iceRestartResult == IceRestartResult.STARTED ||
+        // A synthetic endpoint (e.g. a voice agent) has no media transport, so don't describe one back for it;
+        // real creates always carry a transport, and ICE restarts only happen on real endpoints.
+        if ((c2endpoint.create && c2endpoint.transport != null) || iceRestartResult == IceRestartResult.STARTED ||
             iceRestartResult == IceRestartResult.KEEP_EXISTING
         ) {
             val transBuilder = Transport.getBuilder()
