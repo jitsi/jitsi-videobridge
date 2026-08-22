@@ -133,6 +133,11 @@ class Endpoint @JvmOverloads constructor(
      * Whether diarization is requested for this endpoint's audio, as signaled via the colibri2 `diarize` attribute.
      */
     override val diarize: Boolean,
+    /**
+     * Whether this is a synthetic endpoint: a bridge-side entity that owns synthetic (injected) sources, e.g. a
+     * voice agent, and has no media transport of its own.
+     */
+    override val synthetic: Boolean = false,
     private val clock: Clock = Clock.systemUTC()
 ) : AbstractEndpoint(conference, id, parentLogger),
     PotentialPacketHandler,
@@ -938,6 +943,13 @@ class Endpoint @JvmOverloads constructor(
      * To find out whether the endpoint should be expired, we check the activity timestamps from the transceiver.
      */
     override fun shouldExpire(): Boolean {
+        if (synthetic) {
+            // A synthetic endpoint has no transport, so the ICE/activity checks below don't apply. It is expired
+            // explicitly via colibri; as a backstop against lost signaling, allow expiry once no non-synthetic
+            // local endpoints remain, so a synthetic endpoint alone doesn't keep the conference alive.
+            return Duration.between(creationTime, clock.instant()) > epTimeout &&
+                conference.localEndpoints.none { it !== this && !it.synthetic }
+        }
         if (iceTransport.hasFailed()) {
             logger.warn("Allowing to expire because ICE failed.")
             return true

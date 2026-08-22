@@ -815,7 +815,8 @@ public class Conference
             boolean doMidDemux,
             boolean visitor,
             boolean privateAddresses,
-            boolean diarize)
+            boolean diarize,
+            boolean synthetic)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -824,7 +825,8 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
+                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize,
+                synthetic);
         videobridge.localEndpointCreated(visitor);
 
         endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
