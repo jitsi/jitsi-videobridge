@@ -895,7 +895,10 @@ class Endpoint @JvmOverloads constructor(
                 }
             }
         }
-        logger.error { "No properties found for SSRC $ssrc." }
+        logger.warn {
+            "No properties found for SSRC $ssrc in endpoint=$id, conference=${conference.id}. " +
+                "This may occur temporarily due to signaling delays or stream lifecycle timing."
+        }
         return null
     }
 
@@ -910,7 +913,10 @@ class Endpoint @JvmOverloads constructor(
                 else -> emptyList()
             }.find { it.ssrc == ssrc }
         }
-        logger.error { "No properties found for SSRC $ssrc." }
+        logger.warn {
+            "No properties found for SSRC $ssrc in endpoint=$id, conference=${conference.id}. " +
+                "This may occur temporarily due to signaling delays or stream lifecycle timing."
+        }
         return null
     }
 
