@@ -115,7 +115,21 @@ class DtlsStack(
      */
     private val datagramTransport: DatagramTransport = DatagramTransportImpl(logger)
 
-    fun actAsServer() {
+    /**
+     * Set the role to server, unless it already is one.
+     *
+     * The role is re-applied whenever the peer signals its `setup` attribute again, which it does on every
+     * transport update and not only when something about DTLS changed. Building a new [DtlsRole] each time would
+     * replace the one that has already negotiated the connection with one that never will, so repeating the role
+     * we already have is a no-op.
+     *
+     * @return true if the role changed.
+     */
+    fun actAsServer(): Boolean {
+        if (role is DtlsServer) {
+            return false
+        }
+        warnIfRoleChangesAfterStart("server")
         role = DtlsServer(
             datagramTransport,
             certificateInfo,
@@ -126,9 +140,15 @@ class DtlsStack(
             logger
         )
         roleSet.countDown()
+        return true
     }
 
-    fun actAsClient() {
+    /** Set the role to client, unless it already is one. See [actAsServer]. */
+    fun actAsClient(): Boolean {
+        if (role is DtlsClient) {
+            return false
+        }
+        warnIfRoleChangesAfterStart("client")
         role = DtlsClient(
             datagramTransport,
             certificateInfo,
@@ -139,6 +159,18 @@ class DtlsStack(
             logger
         )
         roleSet.countDown()
+        return true
+    }
+
+    /**
+     * The stack has been started with the role it has now, so replacing that role leaves it with one that was
+     * never started while [dtlsTransport] keeps running the old one. Nothing in the stack does this today, and
+     * the peer is not supposed to change its `setup` after the handshake, so log loudly if it happens.
+     */
+    private fun warnIfRoleChangesAfterStart(newRole: String) {
+        if (dtlsTransport != null) {
+            logger.warn("Changing the DTLS role to $newRole after the stack was started with ${role?.javaClass}.")
+        }
     }
 
     /**
