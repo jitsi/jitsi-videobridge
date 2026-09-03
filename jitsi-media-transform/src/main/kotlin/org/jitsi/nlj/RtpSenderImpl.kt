@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
+import org.jitsi.nlj.rtcp.KeyframeCost
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -273,6 +274,10 @@ class RtpSenderImpl(
 
     override fun requestKeyframe(requesterID: String?, mediaSsrc: Long?) {
         keyframeRequester.requestKeyframe(requesterID, mediaSsrc)
+    }
+
+    override fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?) {
+        keyframeRequester.setKeyframeCostSupplier(supplier)
     }
 
     override fun addLossListener(lossListener: LossListener) {

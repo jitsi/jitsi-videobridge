@@ -23,6 +23,10 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.findRtpLayerDescs
+import org.jitsi.nlj.findRtpSource
+import org.jitsi.nlj.findRtpSourceByPrimary
+import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorEngine
@@ -40,6 +44,7 @@ import org.jitsi.utils.secs
 import org.jitsi.utils.stats.RateTracker
 import java.time.Clock
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * When deciding what can be forwarded, we want to know the bitrate of a stream so we can fill the receiver's
@@ -54,12 +59,19 @@ class VideoBitrateCalculator(
 ) : BitrateCalculator("Video bitrate calculator", activePacketRateThreshold) {
     private val logger = createChildLogger(parentLogger)
     private var mediaSourceDescs: Array<MediaSourceDesc> = arrayOf()
+    private val keyframeSizes = ConcurrentHashMap<Long, KeyframeSizeTracker>()
 
     override fun observe(packetInfo: PacketInfo) {
         super.observe(packetInfo)
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         val now = clock.millis()
+        if (videoRtpPacket is ParsedVideoPacket) {
+            mediaSourceDescs.findRtpSource(videoRtpPacket)?.let {
+                keyframeSizes.computeIfAbsent(it.primarySSRC) { KeyframeSizeTracker() }
+                    .observe(videoRtpPacket.timestamp, videoRtpPacket.length, videoRtpPacket.isKeyframe)
+            }
+        }
         val layerDescs = mediaSourceDescs.findRtpLayerDescs(videoRtpPacket)
 
         if (layerDescs.isEmpty()) {
@@ -85,7 +97,52 @@ class VideoBitrateCalculator(
         }
     }
 
+    /**
+     * The measured cost of a keyframe for the source whose primary SSRC is [ssrc], or null if no keyframe has been
+     * observed for it yet.
+     */
+    fun getKeyframeCost(ssrc: Long): KeyframeCost? {
+        val keyframeBits = keyframeSizes[ssrc]?.meanKeyframeBits ?: return null
+        if (keyframeBits <= 0.0) {
+            return null
+        }
+        val source = mediaSourceDescs.findRtpSourceByPrimary(ssrc) ?: return null
+        return KeyframeCost(keyframeBits, source.getBitrate(clock.millis(), Int.MAX_VALUE).bps.toDouble())
+    }
+
     override fun trace(f: () -> Unit) = f.invoke()
+}
+
+/**
+ * Tracks the mean size of a keyframe for one media source. A keyframe covers every spatial layer the sender emits
+ * at a single RTP timestamp, so bytes are accumulated per timestamp and folded in when the timestamp advances.
+ */
+private class KeyframeSizeTracker {
+    private var currentTimestamp: Long = -1
+    private var currentBytes: Int = 0
+
+    @Volatile
+    var meanKeyframeBits: Double = 0.0
+        private set
+
+    @Synchronized
+    fun observe(timestamp: Long, bytes: Int, isKeyframe: Boolean) {
+        if (timestamp != currentTimestamp) {
+            if (currentBytes > 0) {
+                val bits = currentBytes * 8.0
+                meanKeyframeBits = if (meanKeyframeBits <= 0.0) bits else meanKeyframeBits * (1 - ALPHA) + bits * ALPHA
+                currentBytes = 0
+            }
+            currentTimestamp = timestamp
+        }
+        if (isKeyframe) {
+            currentBytes += bytes
+        }
+    }
+
+    companion object {
+        private const val ALPHA = 0.25
+    }
 }
 
 open class BitrateCalculator(

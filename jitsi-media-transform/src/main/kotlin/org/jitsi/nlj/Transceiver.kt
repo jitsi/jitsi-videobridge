@@ -113,6 +113,12 @@ class Transceiver(
      */
     fun isReceivingVideo(): Boolean = rtpReceiver.isReceivingVideo()
 
+    /**
+     * The keyframe requester lives in the sender pipeline but needs to know what a keyframe costs on this
+     * endpoint's incoming video, which only the receiver measures.
+     */
+    private fun wireKeyframeCostSupplier() = rtpSender.setKeyframeCostSupplier(rtpReceiver::getKeyframeCost)
+
     val rtpSender: RtpSender = RtpSenderImpl(
         id,
         rtcpEventNotifier,
@@ -160,6 +166,8 @@ class Transceiver(
 
         endpointConnectionStats.addListener(rtpSender)
         endpointConnectionStats.addListener(rtpReceiver)
+
+        wireKeyframeCostSupplier()
     }
 
     /**

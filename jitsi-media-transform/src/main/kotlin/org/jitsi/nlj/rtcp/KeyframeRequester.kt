@@ -84,6 +84,12 @@ class KeyframeRequester @JvmOverloads constructor(
     // Number of calls to requestKeyframe ignored due to throttling
     private var numApiRequestsDropped: Int = 0
 
+    // Number of requests dropped by each limiter, to show which one is binding.
+    private var numRequestsDroppedPerReceiverLimit: Int = 0
+    private var numRequestsDroppedSourceWideLimit: Int = 0
+
+    private var keyframeCostSupplier: ((Long) -> KeyframeCost?)? = null
+
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val pliOrFirPacket = packetInfo.getPliOrFirPacket() ?: return packetInfo
 
@@ -131,25 +137,27 @@ class KeyframeRequester @JvmOverloads constructor(
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
-        if (requesterID == null) {
-            /* This request is either triggered by a dominant speaker switch, or possibly came over a proxy connection.
-             *  Always allow it. */
-            return true
-        }
         synchronized(keyframeLimiterSyncRoot) {
-            val perReceiverLimiter = perReceiverKeyframeLimiter.computeIfAbsent(requesterID) { mutableMapOf() }
-                .computeIfAbsent(mediaSsrc) {
-                    RateLimit(
-                        defaultMinInterval = minInterval,
-                        maxRequests = maxRequests,
-                        interval = maxRequestInterval
-                    )
+            /* A null requesterID is a dominant speaker switch, or a request relayed from another bridge (relayed
+             * RTCP carries no endpoint id). There is no receiver to attribute it to, so skip only the per-receiver
+             * limit; the source-wide limit still applies, since it is what protects the sender's encoder and this
+             * is the only bridge that sees every requester for the source. */
+            if (requesterID != null) {
+                val perReceiverLimiter = perReceiverKeyframeLimiter.computeIfAbsent(requesterID) { mutableMapOf() }
+                    .computeIfAbsent(mediaSsrc) {
+                        RateLimit(
+                            defaultMinInterval = minInterval,
+                            maxRequests = maxRequests,
+                            interval = maxRequestInterval
+                        )
+                    }
+                if (!perReceiverLimiter.accept(now, waitInterval)) {
+                    numRequestsDroppedPerReceiverLimit++
+                    logger.cdebug {
+                        "Ignoring keyframe request for $mediaSsrc from $requesterID, per-receiver rate limited"
+                    }
+                    return false
                 }
-            if (!perReceiverLimiter.accept(now, waitInterval)) {
-                logger.cdebug {
-                    "Ignoring keyframe request for $mediaSsrc from $requesterID, per-receiver rate limited"
-                }
-                return false
             }
 
             val perSourceLimiter = perSourceKeyframeLimiter.computeIfAbsent(mediaSsrc) {
@@ -160,7 +168,8 @@ class KeyframeRequester @JvmOverloads constructor(
                 )
             }
 
-            if (!perSourceLimiter.accept(now, waitInterval)) {
+            if (!perSourceLimiter.accept(now, sourceWideInterval(mediaSsrc))) {
+                numRequestsDroppedSourceWideLimit++
                 logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, per-source rate limited" }
                 return false
             }
@@ -168,6 +177,32 @@ class KeyframeRequester @JvmOverloads constructor(
             logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
             return true
         }
+    }
+
+    /**
+     * The minimum interval to enforce between keyframe requests for [mediaSsrc]. With keyframe budget limiting
+     * disabled this is the configured source-wide floor; otherwise it is the interval at which the measured cost of
+     * a keyframe stays within [budgetBitrateFraction] of the source's current bitrate.
+     */
+    private fun sourceWideInterval(mediaSsrc: Long): Duration {
+        /* waitInterval is derived from the per-receiver min-interval and the RTT, so it is never longer than the
+         * per-receiver interval. Take the larger of the two so that source-wide-min-interval is actually enforced. */
+        val floor = maxOf(waitInterval, sourceWideMinInterval)
+        if (!budgetEnabled) {
+            return floor
+        }
+        val cost = keyframeCostSupplier?.invoke(mediaSsrc) ?: return floor
+        val budgetBps = cost.sourceBitrateBps * budgetBitrateFraction
+        if (budgetBps <= 0.0 || cost.keyframeBits <= 0.0) {
+            return floor
+        }
+        val interval = durationOfDoubleSeconds(cost.keyframeBits / budgetBps)
+        return interval.coerceIn(floor, maxOf(floor, budgetMaxInterval))
+    }
+
+    /** Set the source of measured keyframe costs used by [sourceWideInterval]. */
+    fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?) {
+        keyframeCostSupplier = supplier
     }
 
     fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null) {
@@ -230,6 +265,8 @@ class KeyframeRequester @JvmOverloads constructor(
             addNumber("num_plis_dropped", numPlisDropped)
             addNumber("num_plis_generated", numPlisGenerated)
             addNumber("num_plis_forwarded", numPlisForwarded)
+            addNumber("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
+            addNumber("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
         }
     }
 
@@ -242,6 +279,8 @@ class KeyframeRequester @JvmOverloads constructor(
         put("num_plis_dropped", numPlisDropped)
         put("num_plis_generated", numPlisGenerated)
         put("num_plis_forwarded", numPlisForwarded)
+        put("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
+        put("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
     }
 
     fun onRttUpdate(newRtt: Double) {
@@ -269,8 +308,27 @@ class KeyframeRequester @JvmOverloads constructor(
         private val sourceWideMaxRequestInterval: Duration by config {
             "jmt.keyframe.source-wide-max-request-interval".from(JitsiConfig.newConfig)
         }
+
+        private val budgetEnabled: Boolean by config {
+            "jmt.keyframe.budget.enabled".from(JitsiConfig.newConfig)
+        }
+        private val budgetBitrateFraction: Double by config {
+            "jmt.keyframe.budget.max-bitrate-fraction".from(JitsiConfig.newConfig)
+        }
+        private val budgetMaxInterval: Duration by config {
+            "jmt.keyframe.budget.max-interval".from(JitsiConfig.newConfig)
+        }
     }
 }
+
+/**
+ * The measured cost of requesting a keyframe from a media source: the mean size of one keyframe across all of the
+ * source's spatial layers, and the bitrate the source is currently sending.
+ */
+data class KeyframeCost(
+    val keyframeBits: Double,
+    val sourceBitrateBps: Double
+)
 
 private fun PacketInfo.getPliOrFirPacket(): RtcpFbPacket? {
     return when (val pkt = packet) {
