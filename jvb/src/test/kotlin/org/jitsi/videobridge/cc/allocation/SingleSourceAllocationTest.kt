@@ -204,9 +204,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                             clock
                         )
 
-                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
-                    // endpoints.
-                    allocation.preferredLayer shouldBe hd30
+                    // For screensharing the "preferred" layer is the full resolution at its cheapest frame rate: the
+                    // resolution is prioritized over other sources, but additional frame rate is not.
+                    allocation.preferredLayer shouldBe hd7point5
                     allocation.oversendLayer shouldBe hd7point5
                     allocation.layers.map { it.layer } shouldBe
                         listOf(ld7point5, ld15, ld30, sd7point5, sd15, sd30, hd7point5, hd15, hd30)
@@ -222,10 +222,39 @@ class SingleSourceAllocationTest : ShouldSpec() {
                             clock
                         )
 
-                    allocation.preferredLayer shouldBe sd30
+                    allocation.preferredLayer shouldBe sd7point5
                     allocation.oversendLayer shouldBe sd7point5
                     allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30, sd7point5, sd15, sd30)
                 }
+            }
+            context("High fps screensharing") {
+                // The sender explicitly asked for frame rate to be prioritized, so the highest layer stays
+                // "preferred" (while oversend still uses the cheapest layer at the full resolution).
+                val mediaSource = MediaSourceDesc(
+                    arrayOf(
+                        RtpEncodingDesc(1L, arrayOf(ld7point5, ld15, ld30)),
+                        RtpEncodingDesc(1L, arrayOf(sd7point5, sd15, sd30)),
+                        RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))
+                    ),
+                    sourceName = SOURCE_NAME,
+                    owner = OWNER,
+                    videoType = VideoType.DESKTOP_HIGH_FPS
+                )
+
+                val allocation =
+                    SingleSourceAllocation(
+                        "A",
+                        mediaSource,
+                        VideoConstraints(720),
+                        true,
+                        diagnosticContext,
+                        clock
+                    )
+
+                allocation.preferredLayer shouldBe hd30
+                allocation.oversendLayer shouldBe hd7point5
+                allocation.layers.map { it.layer } shouldBe
+                    listOf(ld7point5, ld15, ld30, sd7point5, sd15, sd30, hd7point5, hd15, hd30)
             }
             context("The high layers are inactive (send-side bwe restrictions)") {
                 // Override layers with bitrate=0. Simulate only up to 360p/30 being active.
@@ -253,9 +282,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                         clock
                     )
 
-                // For screensharing the "preferred" layer should be the highest -- always prioritized over other
-                // endpoints.
-                allocation.preferredLayer shouldBe sd30
+                // For screensharing the "preferred" layer is the full resolution at its cheapest frame rate: the
+                // resolution is prioritized over other sources, but additional frame rate is not.
+                allocation.preferredLayer shouldBe sd7point5
                 allocation.oversendLayer shouldBe sd7point5
                 allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30, sd7point5, sd15, sd30)
             }
@@ -289,9 +318,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                             clock
                         )
 
-                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
-                    // endpoints.
-                    allocation.preferredLayer shouldBe hd30
+                    // For screensharing the "preferred" layer is the full resolution at its cheapest frame rate: the
+                    // resolution is prioritized over other sources, but additional frame rate is not.
+                    allocation.preferredLayer shouldBe hd7point5
                     allocation.oversendLayer shouldBe hd7point5
                     allocation.layers.map { it.layer } shouldBe listOf(hd7point5, hd15, hd30)
                 }
@@ -306,10 +335,10 @@ class SingleSourceAllocationTest : ShouldSpec() {
                             clock
                         )
 
-                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
-                    // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
-                    // lowest available resolution (which is high).
-                    allocation.preferredLayer shouldBe hd30
+                    // Since no layers satisfy the resolution constraints, we consider layers from the lowest
+                    // available resolution (which is high). The "preferred" layer is that resolution at its cheapest
+                    // frame rate.
+                    allocation.preferredLayer shouldBe hd7point5
                     allocation.oversendLayer shouldBe hd7point5
                     allocation.layers.map { it.layer } shouldBe listOf(hd7point5, hd15, hd30)
                 }
@@ -341,14 +370,15 @@ class SingleSourceAllocationTest : ShouldSpec() {
                             clock
                         )
 
+                    // With VP9's multiple-encodings structure the layers above the cheapest improve quality (not
+                    // frame rate), so the highest stays "preferred". Oversend still uses the cheapest.
                     allocation.preferredLayer shouldBe l3
                     allocation.oversendLayer shouldBe l1
                     allocation.layers.map { it.layer } shouldBe listOf(l1, l2, l3)
                 }
                 context("With 180p constraints") {
-                    // For screensharing the "preferred" layer should be the highest -- always prioritized over other
-                    // endpoints. Since no layers satisfy the resolution constraints, we consider layers from the
-                    // lowest available resolution (which is high). If we are off-stage we only consider the first of
+                    // Since no layers satisfy the resolution constraints, we consider layers from the lowest
+                    // available resolution (which is high). If we are off-stage we only consider the first of
                     // these layers.
                     context("On stage") {
                         val allocation = SingleSourceAllocation(
@@ -360,6 +390,8 @@ class SingleSourceAllocationTest : ShouldSpec() {
                             clock
                         )
 
+                        // With VP9's multiple-encodings structure the layers above the cheapest improve quality
+                        // (not frame rate), so the highest stays "preferred". Oversend still uses the cheapest.
                         allocation.preferredLayer shouldBe l3
                         allocation.oversendLayer shouldBe l1
                         allocation.layers.map { it.layer } shouldBe listOf(l1, l2, l3)
