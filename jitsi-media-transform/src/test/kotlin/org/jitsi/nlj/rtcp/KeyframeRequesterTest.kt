@@ -24,6 +24,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
@@ -149,6 +150,70 @@ class KeyframeRequesterTest : ShouldSpec() {
                 should("not send anything") {
                     sentKeyframeRequests.shouldBeEmpty()
                 }
+            }
+        }
+
+        context("requesting a keyframe with no requester id") {
+            context("repeatedly") {
+                repeat(4) { keyframeRequester.requestKeyframe(null, 123L) }
+                should("still be limited by the source-wide limit") {
+                    sentKeyframeRequests shouldHaveSize 1
+                }
+            }
+            context("from more than one requester for the same source") {
+                keyframeRequester.requestKeyframe("ep1", 123L)
+                keyframeRequester.requestKeyframe(null, 123L)
+                should("share the source-wide limit with attributed requests") {
+                    sentKeyframeRequests shouldHaveSize 1
+                }
+            }
+            context("after the source-wide interval has expired") {
+                keyframeRequester.requestKeyframe(null, 123L)
+                clock.elapse(500.ms)
+                keyframeRequester.requestKeyframe(null, 123L)
+                should("be allowed again") {
+                    sentKeyframeRequests shouldHaveSize 2
+                }
+            }
+        }
+
+        context("with keyframe budget limiting enabled") {
+            withNewConfig("jmt.keyframe.budget.enabled=true") {
+                // A 60 KB keyframe against a 1.2 Mbps source: 480000 / (0.15 * 1200000) = 2.67s between requests.
+                keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000.0, 1_200_000.0) }
+                keyframeRequester.requestKeyframe("ep1", 123L)
+                context("before the derived interval has expired") {
+                    clock.elapse(2.secs)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("not send a second request") {
+                        sentKeyframeRequests shouldHaveSize 1
+                    }
+                }
+                context("after the derived interval has expired") {
+                    clock.elapse(3.secs)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("send a second request") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                }
+                context("when the source bitrate is high enough to absorb the keyframe") {
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000.0, 20_000_000.0) }
+                    clock.elapse(500.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("fall back to the configured source-wide floor") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                }
+            }
+        }
+
+        context("with keyframe budget limiting disabled") {
+            keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000.0, 1_200_000.0) }
+            keyframeRequester.requestKeyframe("ep1", 123L)
+            clock.elapse(500.ms)
+            keyframeRequester.requestKeyframe("ep2", 123L)
+            should("use the configured source-wide floor and ignore the cost") {
+                sentKeyframeRequests shouldHaveSize 2
             }
         }
     }
