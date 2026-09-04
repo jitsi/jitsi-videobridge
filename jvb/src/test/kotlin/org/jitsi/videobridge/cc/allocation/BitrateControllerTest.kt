@@ -158,6 +158,46 @@ class BitrateControllerTest : ShouldSpec() {
                         verifyStageView()
                     }
                 }
+                context("and the on-stage screenshare does not fit in the available bandwidth") {
+                    // A screenshare with a single expensive layer, i.e. with nothing cheaper for the allocator to
+                    // fall back to. This is what low frame rate screensharing looks like, because the sender only
+                    // activates its highest resolution encoding.
+                    val screenshare = TestEndpoint(
+                        "S",
+                        arrayOf(
+                            MediaSourceDesc(
+                                arrayOf(
+                                    RtpEncodingDesc(
+                                        100L,
+                                        arrayOf(
+                                            MockRtpLayerDesc(
+                                                tid = 0,
+                                                eid = 0,
+                                                height = 1080,
+                                                frameRate = 5.0,
+                                                bitrate = 2000.kbps
+                                            )
+                                        )
+                                    )
+                                ),
+                                sourceName = "S-v0",
+                                owner = "S",
+                                videoType = VideoType.DESKTOP
+                            )
+                        )
+                    )
+                    val bc = BitrateControllerWrapper(listOf(screenshare, b, c), clock = clock)
+                    bc.setStageView("S-v0")
+
+                    // Not enough for the screenshare even with the oversend allowance, though plenty for thumbnails.
+                    bc.bwe = 300.kbps
+
+                    // Nothing is forwarded: bandwidth is reserved for the on-stage source until it reaches its
+                    // "preferred" layer, even when it can not be forwarded at all. This is deliberate, to prevent
+                    // flapping while the estimate ramps up (thumbnails would be enabled here only to be disabled
+                    // when the estimate improves enough for the on-stage source to claim the whole budget).
+                    bc.allocationHistory.last().event.forwardedSources shouldBe emptySet()
+                }
                 context("When LastN=0") {
                     // LastN=0 is used when the client goes in "audio-only" mode.
                     bc.setEndpointOrdering(a, b, c, d)
