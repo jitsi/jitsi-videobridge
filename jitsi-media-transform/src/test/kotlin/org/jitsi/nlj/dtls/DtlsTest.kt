@@ -112,5 +112,15 @@ class DtlsTest : ShouldSpec() {
 
         serverReceivedData.get(5, TimeUnit.SECONDS) shouldBe clientToServerMessage
         clientReceivedData.get(5, TimeUnit.SECONDS) shouldBe serverToClientMessage
+
+        // The peer re-signals its setup attribute with transport updates long after the handshake, so the role is
+        // re-applied then. It must not replace the role that negotiated this connection.
+        val serverRole = dtlsServer.role
+        dtlsServer.actAsServer() shouldBe false
+        (dtlsServer.role === serverRole) shouldBe true
+
+        val clientRole = dtlsClient.role
+        dtlsClient.actAsClient() shouldBe false
+        (dtlsClient.role === clientRole) shouldBe true
     }
 }

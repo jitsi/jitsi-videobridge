@@ -142,18 +142,25 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         }
     }
 
+    /**
+     * Applies the peer's `setup` attribute. This is called for every transport update that carries a fingerprint,
+     * including the ones that have nothing to do with DTLS (an ICE restart, a trickled candidate), so re-applying
+     * the role we already have does nothing and is not logged.
+     */
     fun setSetupAttribute(setupAttr: String?) {
         if (setupAttr.isNullOrEmpty()) {
             return
         }
         when (setupAttr.lowercase()) {
             "active" -> {
-                logger.info("The remote side is acting as DTLS client, we'll act as server")
-                dtlsStack.actAsServer()
+                if (dtlsStack.actAsServer()) {
+                    logger.info("The remote side is acting as DTLS client, we'll act as server")
+                }
             }
             "passive" -> {
-                logger.info("The remote side is acting as DTLS server, we'll act as client")
-                dtlsStack.actAsClient()
+                if (dtlsStack.actAsClient()) {
+                    logger.info("The remote side is acting as DTLS server, we'll act as client")
+                }
             }
             else -> {
                 logger.error(
