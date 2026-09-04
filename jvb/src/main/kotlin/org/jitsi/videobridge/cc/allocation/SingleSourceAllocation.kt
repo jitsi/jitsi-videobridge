@@ -80,13 +80,11 @@ internal class SingleSourceAllocation(
             for (layerSnapshot in layers.layers) {
                 val l = layerSnapshot.layer
                 val prefix = "${l.indexString()}_${l.height}p_${l.frameRate}fps"
-                ratesTimeSeriesPoint.addField("${prefix}_bps", layerSnapshot.bitrate)
                 // Which fields are present must not vary with the data, so that the series can be consumed
-                // mechanically. The measured bitrate is the only exception: with useVlaTargetBitrate disabled it is
-                // by configuration always equal to the bitrate above, so it is never added.
-                if (config.useVlaTargetBitrate) {
-                    ratesTimeSeriesPoint.addField("${prefix}_measured_bps", layerSnapshot.measuredBitrate)
-                }
+                // mechanically. Note that the bitrate used for allocation is one of the other two, depending on the
+                // configuration and on whether the source is bursty.
+                ratesTimeSeriesPoint.addField("${prefix}_bps", layerSnapshot.bitrate)
+                ratesTimeSeriesPoint.addField("${prefix}_measured_bps", layerSnapshot.measuredBitrate)
                 // -1 means the sender does not signal a target bitrate for the layer in the VLA extension.
                 ratesTimeSeriesPoint.addField("${prefix}_vla_bps", layerSnapshot.vlaTargetBitrate ?: -1)
             }
@@ -361,24 +359,31 @@ internal class SingleSourceAllocation(
         if (constraints.maxHeight == 0 || !source.hasRtpLayers()) {
             return Layers.noLayers
         }
+        // Screen sharing is bursty: while the screen is static the encoder accumulates rate control credit (about a
+        // second's worth) and then spends it on a single frame, so the bitrate measured over the short window is not
+        // representative of the bandwidth the source needs. Allocate for it using the longer window instead.
+        val isBursty = source.videoType.isScreenshare()
         val layers = source.rtpLayers.map {
+            if (isBursty) {
+                // Only bursty sources need the extra tracker, so it is not created until we ask for it.
+                it.enableSmoothedBitrate(nowMs)
+            } else {
+                // And when a source stops being bursty, drop the tracker so its layers stop paying for it.
+                it.disableSmoothedBitrate()
+            }
             val measuredBitrate = it.getBitrate(nowMs).bps
             val vlaTargetBitrate = it.targetBitrate?.bps
-            LayerSnapshot(
-                it,
-                if (config.useVlaTargetBitrate) {
-                    vlaTargetBitrate ?: measuredBitrate
-                } else {
-                    measuredBitrate
-                },
-                measuredBitrate,
-                vlaTargetBitrate
-            )
+            val allocationBitrate = when {
+                config.useVlaTargetBitrate && vlaTargetBitrate != null -> vlaTargetBitrate
+                isBursty -> it.getSmoothedBitrate(nowMs).bps
+                else -> measuredBitrate
+            }
+            LayerSnapshot(it, allocationBitrate, measuredBitrate, vlaTargetBitrate)
         }
 
-        return when (source.videoType) {
-            VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
-            VideoType.DESKTOP, VideoType.DESKTOP_HIGH_FPS -> selectLayersForScreensharing(
+        return when {
+            source.videoType == VideoType.CAMERA -> selectLayersForCamera(layers, constraints)
+            source.videoType.isScreenshare() -> selectLayersForScreensharing(
                 layers,
                 constraints,
                 onStage,

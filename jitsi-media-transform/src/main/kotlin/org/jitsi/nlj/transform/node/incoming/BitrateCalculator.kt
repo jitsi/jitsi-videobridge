@@ -17,6 +17,8 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.from
 import org.jitsi.metaconfig.optionalconfig
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
@@ -178,7 +180,30 @@ open class BitrateCalculator(
         val bucketSize
             get() = _bucketSize ?: defaultBucketSize()
 
+        /**
+         * The size of the window over which to calculate average rates for sources whose bitrate is bursty, i.e.
+         * screen sharing. See [createSmoothedBitrateTracker].
+         */
+        val smoothedWindowSize: Duration by config(
+            "jmt.rtp.bitrate-calculator.smoothed-window-size".from(JitsiConfig.newConfig)
+        )
+
+        /** The size of the buckets to use with [smoothedWindowSize]. This must divide it evenly. */
+        val smoothedBucketSize: Duration by config(
+            "jmt.rtp.bitrate-calculator.smoothed-bucket-size".from(JitsiConfig.newConfig)
+        )
+
         fun createBitrateTracker() = BitrateTracker(windowSize, bucketSize)
+
+        /**
+         * Creates a tracker with a longer window than [createBitrateTracker], for use with sources whose bitrate is
+         * bursty. A screen sharing encoder is allowed to accumulate about a second of its target bitrate while the
+         * screen is static and then spend it on a single frame, and libwebrtc's screen sharing rate control tolerates
+         * intervals of up to 2.75 seconds between frames, so a rate measured over [windowSize] (which matches the
+         * bandwidth estimator's window) is not representative of the bandwidth such a source actually needs.
+         */
+        fun createSmoothedBitrateTracker() = BitrateTracker(smoothedWindowSize, smoothedBucketSize)
+
         fun createRateTracker() = RateTracker(windowSize, bucketSize)
     }
 }

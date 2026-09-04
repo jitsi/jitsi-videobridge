@@ -62,7 +62,9 @@ class Av1DDRtpLayerDesc(
     override val layerId = dt
     override val index = getIndex(eid, dt)
 
-    override fun getBitrate(nowMs: Long) = bitrateTracker.getRate(nowMs)
+    override fun getBitrate(nowMs: Long) = layerRate(nowMs, smoothed = false)
+
+    override fun getSmoothedBitrate(nowMs: Long) = layerRate(nowMs, smoothed = true)
 
     override fun hasZeroBitrate(nowMs: Long) = bitrateTracker.getAccumulatedSize(nowMs).bits == 0L
 

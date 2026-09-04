@@ -28,4 +28,10 @@ enum class VideoType {
     NONE;
 
     fun isEnabled() = this != NONE && this != DISABLED
+
+    /**
+     * Whether this is a screen sharing type. Note that among other things screen sharing sources have bursty bitrates,
+     * because the encoder may leave long gaps between frames while the content is static.
+     */
+    fun isScreenshare() = this == DESKTOP || this == DESKTOP_HIGH_FPS
 }

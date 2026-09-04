@@ -32,6 +32,16 @@ open class BitrateTracker @JvmOverloads constructor(
 
     @JvmOverloads
     open fun getRateBps(nowMs: Long = clock.millis()): Long = tracker.getRate(nowMs)
+
+    /**
+     * The rate over the full window, that is without the ramp-up which [getRate] applies while the window has not yet
+     * filled up. When a stream has had no packets for a whole window the tracker restarts, and [getRate] then divides
+     * by the time since it resumed rather than by the window; for a bursty stream that turns the first frame after an
+     * idle period into a rate many times the one the stream actually sustains. This under-states the rate of a stream
+     * which has genuinely just started, which is the safer direction when deciding whether it can be forwarded.
+     */
+    fun getRateOverFullWindow(nowMs: Long = clock.millis()): Bandwidth = getAccumulatedSize(nowMs).per(windowSize)
+
     val rate: Bandwidth
         get() = getRate()
     fun update(dataSize: DataSize, now: Long = clock.millis()) = tracker.update(dataSize.bits, now)

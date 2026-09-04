@@ -248,6 +248,13 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
             availableBandwidth
         }
         var remainingBandwidth = initialBandwidth
+        // Only one source is allowed to oversend: the first on-stage source which actually has an oversend layer.
+        // We can not use the index in the loop below to identify it, because sources with disabled constraints are
+        // skipped; and we require an oversend layer so that when there is more than one on-stage source (e.g. a
+        // camera and a screenshare) the slot is not wasted on one which can not use it.
+        val oversendingIndex = sourceBitrateAllocations.indexOfFirst {
+            !it.constraints.isDisabled() && it.isOnStage() && it.layers.oversendIndex >= 0
+        }
         var oldRemainingBandwidth: Long = -1
         var oversending = false
         while (oldRemainingBandwidth != remainingBandwidth) {
@@ -259,7 +266,7 @@ internal class BandwidthAllocator<T : MediaSourceContainer>(
                 }
 
                 // In stage view improve greedily until preferred, in tile view go step-by-step.
-                remainingBandwidth -= sourceBitrateAllocation.improve(remainingBandwidth, i == 0)
+                remainingBandwidth -= sourceBitrateAllocation.improve(remainingBandwidth, i == oversendingIndex)
                 if (remainingBandwidth < 0) {
                     oversending = true
                 }
