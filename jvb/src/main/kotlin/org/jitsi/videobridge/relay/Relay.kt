@@ -635,7 +635,8 @@ class Relay @JvmOverloads constructor(
                 packetInfo.endpointId = ep.id
             }
         }
-        // TODO do we need to set endpointId for RTCP packets?  Otherwise handle them?
+        /* RTCP packets are left without an endpointId. Keyframe requests relayed from another bridge can not be
+         * attributed to a single receiver, so the KeyframeRequester applies only the source-wide rate limit to them. */
         conference.handleIncomingPacket(packetInfo)
     }
 

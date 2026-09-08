@@ -149,8 +149,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun isReceivingAudio() = audioBitrateCalculator.active
     override fun isReceivingVideo() = videoBitrateCalculator.active
-
-    override fun getKeyframeCost(ssrc: Long) = videoBitrateCalculator.getKeyframeCost(ssrc)
     override fun addLossListener(lossListener: LossListener) {
         tccGenerator.addLossListener(lossListener)
     }
