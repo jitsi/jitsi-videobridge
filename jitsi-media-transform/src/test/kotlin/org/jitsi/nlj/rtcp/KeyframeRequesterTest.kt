@@ -120,8 +120,8 @@ class KeyframeRequesterTest : ShouldSpec() {
                             }
                         }
                     }
-                    context("after the wait interval has expired") {
-                        clock.elapse(1.secs)
+                    context("after the wait and source-wide intervals have expired") {
+                        clock.elapse(3.secs)
                         keyframeRequester.requestKeyframe("ep1", 123L)
                         should("result in a sent PLI request") {
                             sentKeyframeRequests shouldHaveSize 1
@@ -168,7 +168,7 @@ class KeyframeRequesterTest : ShouldSpec() {
             }
             context("after the source-wide interval has expired") {
                 keyframeRequester.requestKeyframe(null, 123L)
-                clock.elapse(500.ms)
+                clock.elapse(3.secs)
                 keyframeRequester.requestKeyframe(null, 123L)
                 should("be allowed again") {
                     sentKeyframeRequests shouldHaveSize 2
@@ -177,9 +177,9 @@ class KeyframeRequesterTest : ShouldSpec() {
         }
 
         context("requests dropped by the source-wide limit") {
-            // ep1 opens the source-wide limit's 500ms min-interval. ep2 arrives just after and, like a receiver
-            // waiting for a keyframe, keeps re-requesting as often as its own 200ms min-interval allows, using up
-            // its 3 requests per 10s before the source-wide limit reopens.
+            // ep1 opens the source-wide limit's 2s min-interval. ep2 arrives just after and, like a receiver waiting
+            // for a keyframe, keeps re-requesting as often as its own 200ms min-interval allows, using up its 3
+            // requests per 10s long before the source-wide limit reopens.
             keyframeRequester.requestKeyframe("ep1", 123L)
             repeat(3) {
                 keyframeRequester.requestKeyframe("ep2", 123L)
@@ -189,7 +189,7 @@ class KeyframeRequesterTest : ShouldSpec() {
                 sentKeyframeRequests shouldHaveSize 1
             }
             context("and the source-wide limit reopens") {
-                // 600ms after ep1's request.
+                clock.elapse(2.secs)
                 keyframeRequester.requestKeyframe("ep2", 123L)
                 should("not count against the requester's per-receiver limit") {
                     sentKeyframeRequests shouldHaveSize 2
@@ -206,7 +206,7 @@ class KeyframeRequesterTest : ShouldSpec() {
                 sentKeyframeRequests shouldHaveSize 1
             }
             context("when another receiver requests once the source-wide interval has expired") {
-                clock.elapse(400.ms)
+                clock.elapse(3.secs)
                 keyframeRequester.requestKeyframe("ep2", 123L)
                 should("not have counted against the source-wide limit") {
                     sentKeyframeRequests shouldHaveSize 2
