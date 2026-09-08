@@ -140,8 +140,8 @@ class KeyframeRequester @JvmOverloads constructor(
              * RTCP carries no endpoint id). There is no receiver to attribute it to, so skip only the per-receiver
              * limit; the source-wide limit still applies, since it is what protects the sender's encoder and this
              * is the only bridge that sees every requester for the source. */
-            if (requesterID != null) {
-                val perReceiverLimiter = perReceiverKeyframeLimiter.computeIfAbsent(requesterID) { mutableMapOf() }
+            val perReceiverLimiter = requesterID?.let { requester ->
+                perReceiverKeyframeLimiter.computeIfAbsent(requester) { mutableMapOf() }
                     .computeIfAbsent(mediaSsrc) {
                         RateLimit(
                             defaultMinInterval = minInterval,
@@ -149,13 +149,13 @@ class KeyframeRequester @JvmOverloads constructor(
                             interval = maxRequestInterval
                         )
                     }
-                if (!perReceiverLimiter.accept(now, waitInterval)) {
-                    numRequestsDroppedPerReceiverLimit++
-                    logger.cdebug {
-                        "Ignoring keyframe request for $mediaSsrc from $requesterID, per-receiver rate limited"
-                    }
-                    return false
+            }
+            if (perReceiverLimiter != null && !perReceiverLimiter.wouldAccept(now, waitInterval)) {
+                numRequestsDroppedPerReceiverLimit++
+                logger.cdebug {
+                    "Ignoring keyframe request for $mediaSsrc from $requesterID, per-receiver rate limited"
                 }
+                return false
             }
 
             val perSourceLimiter = perSourceKeyframeLimiter.computeIfAbsent(mediaSsrc) {
@@ -165,12 +165,18 @@ class KeyframeRequester @JvmOverloads constructor(
                     interval = sourceWideMaxRequestInterval
                 )
             }
-
-            if (!perSourceLimiter.accept(now, sourceWideInterval())) {
+            if (!perSourceLimiter.wouldAccept(now, sourceWideInterval())) {
                 numRequestsDroppedSourceWideLimit++
                 logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, per-source rate limited" }
                 return false
             }
+
+            /* Both limits accept, so record the request with both only now. A receiver waiting for a keyframe
+             * re-requests on every packet, so if requests dropped by the source-wide limit counted against its
+             * per-receiver limit it would exhaust that limit while the source-wide one is closed, and then be unable
+             * to request again for max-request-interval after the source-wide limit reopens. */
+            perReceiverLimiter?.record(now)
+            perSourceLimiter.record(now)
 
             logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
             return true
