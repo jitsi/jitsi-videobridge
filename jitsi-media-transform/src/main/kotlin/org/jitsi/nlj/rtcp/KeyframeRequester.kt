@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.rtcp
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.Event
@@ -39,6 +41,7 @@ import org.jitsi.utils.min
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -87,6 +90,40 @@ class KeyframeRequester @JvmOverloads constructor(
     // Number of requests dropped by each limiter, to show which one is binding.
     private var numRequestsDroppedPerReceiverLimit: Int = 0
     private var numRequestsDroppedSourceWideLimit: Int = 0
+
+    @Volatile
+    private var keyframeCostSupplier: ((Long) -> KeyframeCost?)? = null
+
+    /**
+     * For each source a request has been sent for, the source-wide limit computed when the most recent request was
+     * sent, which applies to the next one. Only populated when keyframe budget limiting is enabled.
+     */
+    private val lastSourceWideLimits = ConcurrentHashMap<Long, SourceWideLimit>()
+
+    // Keyframe budget stats: how often the budget, rather than the configured source-wide interval, governed a
+    // request, and what it cost.
+
+    /** Requests sent while the interval applied was the configured floor. */
+    private var numRequestsSentAtFloor: Int = 0
+
+    /** Requests sent while the interval applied had been lengthened by the budget. */
+    private var numRequestsSentBudgetLengthened: Int = 0
+
+    /** Sum over sent requests of the interval applied minus the floor. */
+    private var totalBudgetExtensionMs: Long = 0
+
+    /** Requests dropped by the source-wide limit which the floor alone would have accepted. */
+    private var numRequestsDroppedByBudget: Int = 0
+
+    /**
+     * For each source, the time of the first request dropped by the budget since the last request was sent, so
+     * that when the next request is sent the time a receiver waited because of the budget can be counted.
+     */
+    private val budgetWaitStarts = mutableMapOf<Long, Instant>()
+
+    /** The number of times a receiver waited for a request the budget had delayed, and the total time waited. */
+    private var numBudgetWaits: Int = 0
+    private var totalBudgetWaitMs: Long = 0
 
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val pliOrFirPacket = packetInfo.getPliOrFirPacket() ?: return packetInfo
@@ -137,6 +174,7 @@ class KeyframeRequester @JvmOverloads constructor(
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
+        val floor = maxOf(waitInterval, sourceWideMinInterval)
         synchronized(keyframeLimiterSyncRoot) {
             /* A null requesterID is a dominant speaker switch, or a request relayed from another bridge (relayed
              * RTCP carries no endpoint id). There is no receiver to attribute it to, so skip only the per-receiver
@@ -167,8 +205,16 @@ class KeyframeRequester @JvmOverloads constructor(
                     interval = sourceWideMaxRequestInterval
                 )
             }
-            if (!perSourceLimiter.wouldAccept(now, sourceWideInterval())) {
+            /* The source-wide interval is the floor, lengthened by the keyframe budget as computed when the previous
+             * request for this source was sent. The floor is applied here rather than when the budget is computed, so
+             * that a change to it between requests takes effect at once. */
+            val interval = lastSourceWideLimits[mediaSsrc]?.budgetInterval?.let { maxOf(it, floor) } ?: floor
+            if (!perSourceLimiter.wouldAccept(now, interval)) {
                 numRequestsDroppedSourceWideLimit++
+                if (interval > floor && perSourceLimiter.wouldAccept(now, floor)) {
+                    numRequestsDroppedByBudget++
+                    budgetWaitStarts.putIfAbsent(mediaSsrc, now)
+                }
                 logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, per-source rate limited" }
                 return false
             }
@@ -180,17 +226,50 @@ class KeyframeRequester @JvmOverloads constructor(
             perReceiverLimiter?.record(now)
             perSourceLimiter.record(now)
 
-            logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
-            return true
+            if (interval > floor) {
+                numRequestsSentBudgetLengthened++
+                totalBudgetExtensionMs += (interval - floor).toMillis()
+            } else {
+                numRequestsSentAtFloor++
+            }
+            budgetWaitStarts.remove(mediaSsrc)?.let { waitStart ->
+                numBudgetWaits++
+                totalBudgetWaitMs += Duration.between(waitStart, now).toMillis()
+            }
         }
+
+        /* Compute the limit to apply to the next request for this source now, once per request sent, so that the
+         * cost lookup is off the per-packet request path. Outside the lock, since it calls into the receive
+         * pipeline's measurements. */
+        if (KeyframeBudgetConfig.enabled) {
+            lastSourceWideLimits[mediaSsrc] = sourceWideLimit(mediaSsrc)
+        }
+
+        logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
+        return true
     }
 
     /**
-     * The minimum interval to enforce between keyframe requests for a source, from any receiver. [waitInterval] is
-     * derived from the per-receiver min-interval and the RTT, so it is never longer than the per-receiver interval;
-     * take the larger of the two so that source-wide-min-interval is actually enforced.
+     * The interval the keyframe budget calls for between keyframe requests for [mediaSsrc], from any receiver: with a
+     * measured keyframe cost available for the source, the interval at which keyframes requested at that rate cost
+     * [KeyframeBudgetConfig.maxBitrateFraction] of the source's current bitrate, capped at
+     * [KeyframeBudgetConfig.maxInterval]. The configured floor is applied when the limit is checked, so the interval
+     * actually enforced is never shorter than the floor, and never longer than max-interval unless the floor itself
+     * is.
      */
-    private fun sourceWideInterval(): Duration = maxOf(waitInterval, sourceWideMinInterval)
+    private fun sourceWideLimit(mediaSsrc: Long): SourceWideLimit {
+        val cost = keyframeCostSupplier?.invoke(mediaSsrc)
+        val impliedInterval = cost?.intervalAt(KeyframeBudgetConfig.maxBitrateFraction)
+        return SourceWideLimit(impliedInterval?.coerceAtMost(KeyframeBudgetConfig.maxInterval), cost, impliedInterval)
+    }
+
+    /**
+     * Set the source of measured keyframe costs used by [sourceWideLimit] when keyframe budget limiting is enabled.
+     * The supplier is called with the SSRC a keyframe was requested for.
+     */
+    fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?) {
+        keyframeCostSupplier = supplier
+    }
 
     fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null) {
         val ssrc = mediaSsrc ?: streamInformationStore.primaryMediaSsrcs.firstOrNull() ?: run {
@@ -255,6 +334,16 @@ class KeyframeRequester @JvmOverloads constructor(
         addNumber("num_plis_forwarded", numPlisForwarded)
         addNumber("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
         addNumber("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
+        addBoolean("keyframe_budget_enabled", KeyframeBudgetConfig.enabled)
+        addNumber("num_requests_sent_at_floor", numRequestsSentAtFloor)
+        addNumber("num_requests_sent_budget_lengthened", numRequestsSentBudgetLengthened)
+        addNumber("total_budget_extension_ms", totalBudgetExtensionMs)
+        addNumber("num_requests_dropped_by_budget", numRequestsDroppedByBudget)
+        addNumber("num_budget_waits", numBudgetWaits)
+        addNumber("total_budget_wait_ms", totalBudgetWaitMs)
+        lastSourceWideLimits.forEach { (ssrc, limit) ->
+            addJson("source_wide_limit_$ssrc", limit.toJson())
+        }
     }
 
     override fun statsJson() = super.statsJson().apply {
@@ -268,6 +357,13 @@ class KeyframeRequester @JvmOverloads constructor(
         put("num_plis_forwarded", numPlisForwarded)
         put("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
         put("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
+        put("keyframe_budget_enabled", KeyframeBudgetConfig.enabled)
+        put("num_requests_sent_at_floor", numRequestsSentAtFloor)
+        put("num_requests_sent_budget_lengthened", numRequestsSentBudgetLengthened)
+        put("total_budget_extension_ms", totalBudgetExtensionMs)
+        put("num_requests_dropped_by_budget", numRequestsDroppedByBudget)
+        put("num_budget_waits", numBudgetWaits)
+        put("total_budget_wait_ms", totalBudgetWaitMs)
     }
 
     fun onRttUpdate(newRtt: Double) {
@@ -294,6 +390,22 @@ class KeyframeRequester @JvmOverloads constructor(
         }
         private val sourceWideMaxRequestInterval: Duration by config {
             "jmt.keyframe.source-wide-max-request-interval".from(JitsiConfig.newConfig)
+        }
+    }
+}
+
+/**
+ * What the keyframe budget calls for on the next request for one source: the interval it calls for, if a cost was
+ * available, after the cap but before the floor; the keyframe cost it was derived from; and the interval that cost
+ * implied before the cap.
+ */
+private class SourceWideLimit(val budgetInterval: Duration?, val cost: KeyframeCost?, val impliedInterval: Duration?) {
+    fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        budgetInterval?.let { put("budget_interval_ms", it.toMillis()) }
+        impliedInterval?.let { put("implied_interval_ms", it.toMillis()) }
+        cost?.let {
+            set<ObjectNode>("keyframe_cost", it.toJson())
+            budgetInterval?.let { interval -> put("keyframe_fraction_at_interval", it.keyframeFractionAt(interval)) }
         }
     }
 }
