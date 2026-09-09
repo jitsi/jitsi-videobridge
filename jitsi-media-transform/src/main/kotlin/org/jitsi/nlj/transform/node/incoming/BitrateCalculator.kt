@@ -25,6 +25,10 @@ import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.findRtpLayerDescs
+import org.jitsi.nlj.findRtpSource
+import org.jitsi.nlj.rtcp.KeyframeBudgetConfig
+import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorConfig
 import org.jitsi.nlj.rtp.bandwidthestimation.BandwidthEstimatorEngine
@@ -34,6 +38,8 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.ObserverNode
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.BitrateTracker
+import org.jitsi.nlj.util.bits
+import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.bytes
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -42,6 +48,7 @@ import org.jitsi.utils.secs
 import org.jitsi.utils.stats.RateTracker
 import java.time.Clock
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * When deciding what can be forwarded, we want to know the bitrate of a stream so we can fill the receiver's
@@ -52,20 +59,44 @@ import java.time.Duration
 class VideoBitrateCalculator(
     parentLogger: Logger,
     // Screen sharing static content can result in very low packet/bit rates, hence the low threshold.
-    activePacketRateThreshold: Int = 1
-) : BitrateCalculator("Video bitrate calculator", activePacketRateThreshold) {
+    activePacketRateThreshold: Int = 1,
+    clock: Clock = Clock.systemUTC()
+) : BitrateCalculator("Video bitrate calculator", activePacketRateThreshold, clock) {
     private val logger = createChildLogger(parentLogger)
+
+    @Volatile
     private var mediaSourceDescs: Array<MediaSourceDesc> = arrayOf()
+
+    /**
+     * The keyframe cost tracker for each RTP stream of the media sources, keyed by primary SSRC. Only populated
+     * when keyframe budget limiting is enabled, since that is its only consumer.
+     */
+    private val keyframeCosts = ConcurrentHashMap<Long, KeyframeCostTracker>()
 
     override fun observe(packetInfo: PacketInfo) {
         super.observe(packetInfo)
 
         val videoRtpPacket: VideoRtpPacket = packetInfo.packet as VideoRtpPacket
         val now = clock.millis()
+
+        /* Before the layer lookup: the tracker only needs the stream's own properties, and a packet with no known
+         * layer, as when an encoding's structure has not been seen yet, is still part of the stream's bitrate. So is a
+         * packet of a codec which is not parsed, though no keyframe can be recognized on it. The map is empty unless
+         * keyframe budget limiting is enabled, so this costs the disabled path one emptiness check. */
+        if (keyframeCosts.isNotEmpty()) {
+            keyframeCosts[videoRtpPacket.ssrc]?.observe(
+                videoRtpPacket.timestamp,
+                videoRtpPacket.length,
+                (videoRtpPacket as? ParsedVideoPacket)?.isKeyframe ?: false,
+                now
+            )
+        }
+
         val layerDescs = mediaSourceDescs.findRtpLayerDescs(videoRtpPacket)
 
         if (layerDescs.isEmpty()) {
             logger.warn("No layer found for packet $videoRtpPacket")
+            return
         }
 
         layerDescs.forEach {
@@ -78,10 +109,65 @@ class VideoBitrateCalculator(
         }
     }
 
+    /**
+     * The measured cost of a keyframe for the source which has [ssrc] as one of its SSRCs: the mean size of one
+     * keyframe, summed over the encodings the sender is currently sending, and the total bitrate of those encodings.
+     * Both are measured from the same packets, per SSRC, so they cover the same streams whatever the codec's layer
+     * structure. An encoding is included only once it has been observed long enough for its bitrate to be meaningful
+     * and a keyframe has been observed on it, so that both sides of the ratio cover the same encodings. Returns null
+     * if keyframe budget limiting is disabled, the source is unknown, or no encoding qualifies.
+     */
+    fun getKeyframeCost(ssrc: Long): KeyframeCost? {
+        if (!KeyframeBudgetConfig.enabled) {
+            return null
+        }
+        val source = mediaSourceDescs.findRtpSource(ssrc) ?: return null
+        val now = clock.millis()
+        var keyframeBits = 0L
+        var sourceBitrate = 0.bps
+        var keyframeBitrate = 0.bps
+        source.rtpEncodings.forEach { encoding ->
+            keyframeCosts[encoding.primarySSRC]?.let { tracker ->
+                val meanKeyframeSize = tracker.getMeanKeyframeSize(now)
+                val encodingBitrate = tracker.getStreamBitrate(now)
+                /* An encoding which is not currently being sent has no bitrate and generates no keyframes. */
+                if (meanKeyframeSize != null && tracker.isWarm(now) && encodingBitrate.bps > 0) {
+                    keyframeBits += meanKeyframeSize.bits
+                    sourceBitrate += encodingBitrate
+                    keyframeBitrate += tracker.getKeyframeBitrate(now)
+                }
+            }
+        }
+        if (keyframeBits <= 0L) {
+            return null
+        }
+        return KeyframeCost(keyframeBits.bits, sourceBitrate, keyframeBitrate)
+    }
+
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addBoolean("keyframe_budget_enabled", KeyframeBudgetConfig.enabled)
+        val now = clock.millis()
+        keyframeCosts.forEach { (ssrc, tracker) ->
+            addJson("keyframe_tracker_$ssrc", tracker.debugState(now))
+        }
+        mediaSourceDescs.forEach { source ->
+            getKeyframeCost(source.primarySSRC)?.let { cost ->
+                addJson("keyframe_cost_${source.primarySSRC}", cost.toJson())
+            }
+        }
+    }
+
     override fun handleEvent(event: Event) {
         when (event) {
             is SetMediaSourcesEvent -> {
                 mediaSourceDescs = event.mediaSourceDescs.copyOf()
+                val ssrcs: Set<Long> = mediaSourceDescs.flatMap { source ->
+                    source.rtpEncodings.map { it.primarySSRC }
+                }.toSet()
+                keyframeCosts.keys.retainAll(ssrcs)
+                if (KeyframeBudgetConfig.enabled) {
+                    ssrcs.forEach { keyframeCosts.computeIfAbsent(it) { KeyframeCostTracker() } }
+                }
                 logger.cdebug { "Video bitrate calculator got media sources:\n${mediaSourceDescs.joinToString()}" }
             }
         }
