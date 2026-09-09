@@ -25,6 +25,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.RtpSenderImpl
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.KeyframeCost
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
@@ -113,6 +114,9 @@ class RelayEndpointSender(
     }
 
     fun sendPacket(packetInfo: PacketInfo) = rtpSender.processPacket(packetInfo)
+
+    /** Set the source of measured keyframe costs used to bound the keyframe requests this sender forwards. */
+    fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?) = rtpSender.setKeyframeCostSupplier(supplier)
 
     fun setFeature(feature: Features, enabled: Boolean) {
         rtpSender.setFeature(feature, enabled)
