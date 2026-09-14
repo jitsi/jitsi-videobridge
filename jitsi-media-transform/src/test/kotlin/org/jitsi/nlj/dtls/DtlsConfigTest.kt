@@ -66,6 +66,16 @@ class DtlsConfigTest : ShouldSpec() {
                 }
             }
         }
+        context("MTU") {
+            context("By default") {
+                DtlsConfig.config.mtu shouldBe 1200
+            }
+            context("Too small") {
+                withNewConfig("jmt.dtls.mtu = 100") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+            }
+        }
         context("DTLS 1.3 enabled") {
             context("By default") {
                 DtlsConfig.config.dtls13Enabled shouldBe true
