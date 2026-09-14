@@ -24,6 +24,7 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
+import org.bouncycastle.operator.NoSignatureContentSigner
 import org.bouncycastle.operator.bc.BcDefaultDigestProvider
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.bouncycastle.tls.AlertDescription
@@ -94,7 +95,8 @@ class DtlsUtils {
         }
 
         /**
-         * Generate an x509 certificate valid from 1 day ago until 7 days from now.
+         * Generate an x509 certificate valid from 1 day ago until 7 days from now, either self-signed or unsigned
+         * (RFC 9925) depending on the configuration.
          *
          * TODO: make the algorithm dynamic (passed in) to support older dtls versions/clients
          */
@@ -112,7 +114,12 @@ class DtlsUtils {
                 subject,
                 keyPair.public
             )
-            val signer = JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
+            val signer = if (DtlsConfig.config.useAlgUnsigned) {
+                // RFC 9925: an "unsigned" certificate, with the id-alg-unsigned algorithm and an empty signature.
+                NoSignatureContentSigner()
+            } else {
+                JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
+            }
 
             return certBuilder.build(signer).toASN1Structure()
         }

@@ -20,6 +20,7 @@ import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSClientProtocol
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
+import org.bouncycastle.tls.ProtocolVersion
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
@@ -37,6 +38,12 @@ class DtlsClient(
     private val logger = createChildLogger(parentLogger)
 
     private val tlsClient: TlsClientImpl = TlsClientImpl(certificateInfo, verifyAndValidateRemoteCertificate, logger)
+
+    override val negotiatedProtocolVersion: ProtocolVersion?
+        get() = tlsClient.negotiatedProtocolVersion
+
+    override val negotiatedGroup: Int?
+        get() = tlsClient.negotiatedGroup
 
     override fun start(): DTLSTransport = connect()
 
