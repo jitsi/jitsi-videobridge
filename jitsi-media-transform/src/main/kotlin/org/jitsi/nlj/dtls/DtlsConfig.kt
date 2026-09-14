@@ -39,6 +39,18 @@ class DtlsConfig private constructor() {
     }
 
     /**
+     * The assumed path MTU (including IP and UDP headers), used to size outgoing DTLS datagrams.
+     */
+    val mtu: Int by config {
+        "jmt.dtls.mtu".from(JitsiConfig.newConfig).transformedBy {
+            if (it < 576 || it > 65535) {
+                throw ConfigException.UnableToRetrieve.ConditionNotMet("mtu must be between 576 and 65535")
+            }
+            it
+        }
+    }
+
+    /**
      * Whether DTLS 1.3 is offered (as a client) and accepted (as a server). DTLS 1.2 is always supported.
      */
     val dtls13Enabled: Boolean by config {

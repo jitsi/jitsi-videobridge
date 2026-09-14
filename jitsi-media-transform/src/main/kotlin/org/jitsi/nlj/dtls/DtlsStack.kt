@@ -295,6 +295,11 @@ class DtlsStack(
     companion object {
         private const val QUEUE_SIZE = 50
 
+        /** IP/UDP overhead constants, as in [org.bouncycastle.tls.UDPTransport]. */
+        private const val MIN_IP_OVERHEAD = 20
+        private const val MAX_IP_OVERHEAD = MIN_IP_OVERHEAD + 64
+        private const val UDP_OVERHEAD = 8
+
         /**
          * Because generating the certificateInfo can be expensive, we generate a single
          * one to be used everywhere which expires in 24 hours (when we'll generate
@@ -342,14 +347,16 @@ class DtlsStack(
         }
 
         /**
-         * Receive limit computation copied from [org.bouncycastle.tls.UDPTransport]
+         * Receive limit computation copied from [org.bouncycastle.tls.UDPTransport]. We are prepared to receive
+         * anything up to a full Ethernet-sized datagram, whatever we assume about the path MTU for sending.
          */
-        override fun getReceiveLimit(): Int = 1500 - 20 - 8
+        override fun getReceiveLimit(): Int = 1500 - MIN_IP_OVERHEAD - UDP_OVERHEAD
 
         /**
-         * Send limit computation copied from [org.bouncycastle.tls.UDPTransport]
+         * Send limit computation copied from [org.bouncycastle.tls.UDPTransport], based on the configured MTU.
+         * Handshake flights are fragmented to fit; a datagram larger than the path MTU is silently dropped.
          */
-        override fun getSendLimit(): Int = 1500 - 84 - 8
+        override fun getSendLimit(): Int = DtlsConfig.config.mtu - MAX_IP_OVERHEAD - UDP_OVERHEAD
 
         override fun close() {}
     }
