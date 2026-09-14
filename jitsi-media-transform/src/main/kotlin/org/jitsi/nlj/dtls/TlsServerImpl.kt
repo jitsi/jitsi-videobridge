@@ -23,11 +23,13 @@ import org.bouncycastle.tls.ClientCertificateType
 import org.bouncycastle.tls.DefaultTlsServer
 import org.bouncycastle.tls.ExporterLabel
 import org.bouncycastle.tls.HashAlgorithm
+import org.bouncycastle.tls.NamedGroup
 import org.bouncycastle.tls.ProtocolVersion
 import org.bouncycastle.tls.SignatureAlgorithm
 import org.bouncycastle.tls.SignatureAndHashAlgorithm
 import org.bouncycastle.tls.TlsCredentialedDecryptor
 import org.bouncycastle.tls.TlsCredentialedSigner
+import org.bouncycastle.tls.TlsCredentials
 import org.bouncycastle.tls.TlsSRTPUtils
 import org.bouncycastle.tls.TlsSession
 import org.bouncycastle.tls.TlsUtils
@@ -67,6 +69,19 @@ class TlsServerImpl(
 
     var chosenSrtpProtectionProfile: Int = 0
 
+    /**
+     * The DTLS protocol version negotiated with the client. Only set after a handshake has completed.
+     */
+    var negotiatedProtocolVersion: ProtocolVersion? = null
+        private set
+
+    /**
+     * The key exchange group ([NamedGroup]) negotiated with the client. Only set after a (D)TLS 1.3 handshake has
+     * completed (it is not recorded for DTLS 1.2).
+     */
+    var negotiatedGroup: Int? = null
+        private set
+
     override fun getSessionToResume(sessionID: ByteArray?): TlsSession? {
         return session
         // TODO: do we need to map multiple sessions (per sessionID?)
@@ -96,12 +111,42 @@ class TlsServerImpl(
 
     override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
 
+    /**
+     * The key exchange groups we support, in order of preference: the post-quantum hybrid (if enabled) first.
+     * Only used for DTLS 1.3 key_share selection; for DTLS 1.2 the base class picks a curve from the client's list.
+     */
+    override fun getSupportedGroups(): IntArray {
+        val groups = super.getSupportedGroups()
+        return if (DtlsConfig.config.offerPostQuantumKeyExchange) {
+            intArrayOf(NamedGroup.X25519MLKEM768) + groups
+        } else {
+            groups
+        }
+    }
+
+    /**
+     * Select the key exchange group by our preference order rather than the client's, so that the post-quantum
+     * hybrid is used whenever the client supports it, wherever the client happens to list it.
+     */
+    override fun preferLocalSupportedGroups(): Boolean = DtlsConfig.config.offerPostQuantumKeyExchange
+
     override fun getRSAEncryptionCredentials(): TlsCredentialedDecryptor {
         return BcDefaultTlsCredentialedDecryptor(
             (context.crypto as BcTlsCrypto),
-            certificateInfo.certificate,
+            certificateInfo.certificateFor(context),
             PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded)
         )
+    }
+
+    /**
+     * In (D)TLS 1.3 there is no key exchange algorithm to select the credentials by (the base implementation
+     * throws for the NULL key exchange), and the server always authenticates with a signature. We only have an
+     * ECDSA certificate, so always use it.
+     */
+    override fun getCredentials(): TlsCredentials = if (TlsUtils.isTLSv13(context)) {
+        getECDSASignerCredentials()
+    } else {
+        super.getCredentials()
     }
 
     override fun getECDSASignerCredentials(): TlsCredentialedSigner {
@@ -109,7 +154,7 @@ class TlsServerImpl(
             TlsCryptoParameters(context),
             (context.crypto as BcTlsCrypto),
             PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
-            certificateInfo.certificate,
+            certificateInfo.certificateFor(context),
             SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa)
         )
     }
@@ -117,14 +162,25 @@ class TlsServerImpl(
     override fun getCertificateRequest(): CertificateRequest {
         val signatureAlgorithms = Vector<SignatureAndHashAlgorithm>(1)
         signatureAlgorithms.add(SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.ecdsa))
-        return CertificateRequest(shortArrayOf(ClientCertificateType.ecdsa_sign), signatureAlgorithms, null)
+        return if (TlsUtils.isTLSv13(context)) {
+            // RFC 8446 4.3.2: the certificate_request_context is empty during the handshake.
+            CertificateRequest(TlsUtils.EMPTY_BYTES, signatureAlgorithms, null, null)
+        } else {
+            CertificateRequest(shortArrayOf(ClientCertificateType.ecdsa_sign), signatureAlgorithms, null)
+        }
     }
 
     override fun getHandshakeTimeoutMillis(): Int = DtlsConfig.config.handshakeTimeout.toMillis().toInt()
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
-        logger.cinfo { "Negotiated DTLS version ${context.securityParameters.negotiatedVersion}" }
+        negotiatedProtocolVersion = context.securityParameters.negotiatedVersion
+        // Only recorded for (D)TLS 1.3 key shares; -1 otherwise.
+        negotiatedGroup = context.securityParameters.negotiatedGroup.takeIf { it >= 0 }
+        logger.cinfo {
+            "Negotiated DTLS version $negotiatedProtocolVersion" +
+                (negotiatedGroup?.let { ", key exchange group ${NamedGroup.getText(it)}" } ?: "")
+        }
         context.resumableSession?.let { newSession ->
             val newSessionIdHex = ByteBuffer.wrap(newSession.sessionID).toHex()
 
@@ -139,7 +195,9 @@ class TlsServerImpl(
         }
         val srtpProfileInformation =
             SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
-        if (!context.securityParameters.isExtendedMasterSecret) {
+        // (D)TLS 1.3 always uses the exporter master secret; the fallback below only applies to (D)TLS 1.2
+        // sessions negotiated without extended_master_secret.
+        if (!TlsUtils.isTLSv13(context) && !context.securityParameters.isExtendedMasterSecret) {
             context.session?.exportSessionParameters()?.masterSecret?.let {
                 srtpKeyingMaterial = DtlsUtils.exportKeyingMaterial(
                     context,
@@ -168,5 +226,5 @@ class TlsServerImpl(
     override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) =
         logger.notifyAlertReceived(alertLevel, alertDescription)
 
-    override fun getSupportedVersions(): Array<ProtocolVersion> = arrayOf(ProtocolVersion.DTLSv12)
+    override fun getSupportedVersions(): Array<ProtocolVersion> = DtlsConfig.config.supportedVersions
 }

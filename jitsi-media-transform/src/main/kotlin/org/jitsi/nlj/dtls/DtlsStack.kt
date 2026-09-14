@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.DTLSTransport
 import org.bouncycastle.tls.DatagramTransport
+import org.bouncycastle.tls.NamedGroup
+import org.bouncycastle.tls.ProtocolVersion
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.util.BufferPool
 import org.jitsi.utils.concurrent.ArrayBlockingQueueWithShutdown
@@ -99,6 +101,19 @@ class DtlsStack(
      */
     var role: DtlsRole? = null
         private set
+
+    /**
+     * The DTLS protocol version that was negotiated, or null if the handshake has not completed.
+     */
+    val negotiatedProtocolVersion: ProtocolVersion?
+        get() = role?.negotiatedProtocolVersion
+
+    /**
+     * The key exchange group ([NamedGroup]) that was negotiated, or null if the handshake has not completed or was
+     * not a DTLS 1.3 handshake (the group is not recorded for DTLS 1.2).
+     */
+    val negotiatedGroup: Int?
+        get() = role?.negotiatedGroup
 
     /**
      * A buffer we'll use to receive data from [dtlsTransport].
@@ -272,6 +287,8 @@ class DtlsStack(
         put("localFingerprintHashFunction", certificateInfo.localFingerprint)
         put("remoteFingerprints", remoteFingerprints.map { (hash, fp) -> "$hash: $fp" }.joinToString())
         put("role", (role?.javaClass ?: "null").toString())
+        put("negotiated_protocol_version", negotiatedProtocolVersion?.toString() ?: "null")
+        put("negotiated_group", negotiatedGroup?.let { NamedGroup.getText(it) } ?: "null")
         put("num_packet_drops_queue_full", numPacketDropsQueueFull)
     }
 

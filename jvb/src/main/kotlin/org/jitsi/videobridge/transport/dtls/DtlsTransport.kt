@@ -18,6 +18,7 @@ package org.jitsi.videobridge.transport.dtls
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.bouncycastle.tls.NamedGroup
 import org.ice4j.util.Buffer
 import org.jitsi.nlj.dtls.DtlsClient
 import org.jitsi.nlj.dtls.DtlsServer
@@ -225,6 +226,8 @@ class DtlsTransport(parentLogger: Logger, id: String) {
     fun getDebugState(): ObjectNode = stats.toJson().apply {
         put("running", running.get())
         put("role", dtlsStack.role?.javaClass?.simpleName ?: "null")
+        put("negotiated_protocol_version", dtlsStack.negotiatedProtocolVersion?.toString() ?: "null")
+        put("negotiated_group", dtlsStack.negotiatedGroup?.let { NamedGroup.getText(it) } ?: "null")
         put("is_connected", isConnected)
     }
 
