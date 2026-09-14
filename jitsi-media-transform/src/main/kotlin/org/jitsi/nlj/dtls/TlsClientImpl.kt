@@ -22,6 +22,7 @@ import org.bouncycastle.tls.DefaultTlsClient
 import org.bouncycastle.tls.ExporterLabel
 import org.bouncycastle.tls.ExtensionType
 import org.bouncycastle.tls.HashAlgorithm
+import org.bouncycastle.tls.NamedGroup
 import org.bouncycastle.tls.ProtocolVersion
 import org.bouncycastle.tls.SignatureAlgorithm
 import org.bouncycastle.tls.SignatureAndHashAlgorithm
@@ -44,6 +45,7 @@ import org.jitsi.utils.logging2.cinfo
 import org.jitsi.utils.logging2.createChildLogger
 import java.nio.ByteBuffer
 import java.util.Hashtable
+import java.util.Vector
 
 /**
  * Implementation of [DefaultTlsClient].
@@ -71,6 +73,19 @@ class TlsClientImpl(
 
     var chosenSrtpProtectionProfile: Int = 0
 
+    /**
+     * The DTLS protocol version negotiated with the server. Only set after a handshake has completed.
+     */
+    var negotiatedProtocolVersion: ProtocolVersion? = null
+        private set
+
+    /**
+     * The key exchange group ([NamedGroup]) negotiated with the server. Only set after a (D)TLS 1.3 handshake has
+     * completed (it is not recorded for DTLS 1.2).
+     */
+    var negotiatedGroup: Int? = null
+        private set
+
     override fun getSessionToResume(): TlsSession? = session
 
     override fun getAuthentication(): TlsAuthentication {
@@ -82,7 +97,7 @@ class TlsClientImpl(
                         TlsCryptoParameters(context),
                         (context.crypto as BcTlsCrypto),
                         PrivateKeyFactory.createKey(certificateInfo.keyPair.private.encoded),
-                        certificateInfo.certificate,
+                        certificateInfo.certificateFor(context, certificateRequest.certificateRequestContext),
                         if (TlsUtils.isSignatureAlgorithmsExtensionAllowed(context.serverVersion)) {
                             SignatureAndHashAlgorithm(
                                 HashAlgorithm.sha256,
@@ -129,11 +144,48 @@ class TlsClientImpl(
 
     override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
 
+    /**
+     * Offer the post-quantum hybrid group first, if enabled. It can only be negotiated with DTLS 1.3; a DTLS 1.2
+     * server will just ignore it and pick one of the classical groups that follow.
+     */
+    override fun getSupportedGroups(namedGroupRoles: Vector<*>?): Vector<Int> {
+        @Suppress("UNCHECKED_CAST")
+        val groups = super.getSupportedGroups(namedGroupRoles) as Vector<Int>
+        if (DtlsConfig.config.offerPostQuantumKeyExchange) {
+            groups.insertElementAt(NamedGroup.X25519MLKEM768, 0)
+        }
+        return groups
+    }
+
+    /**
+     * The groups to include a key_share for in the initial ClientHello. Include the post-quantum hybrid group (if
+     * offered) as well as X25519, so that a DTLS 1.3 server which doesn't support the hybrid can still complete
+     * the handshake without a HelloRetryRequest round trip.
+     */
+    override fun getEarlyKeyShareGroups(): Vector<Int>? {
+        @Suppress("UNCHECKED_CAST")
+        val default = super.getEarlyKeyShareGroups() as Vector<Int>? ?: return null
+        return if (DtlsConfig.config.offerPostQuantumKeyExchange) {
+            Vector<Int>().apply {
+                add(NamedGroup.X25519MLKEM768)
+                default.filterTo(this) { it != NamedGroup.X25519MLKEM768 }
+            }
+        } else {
+            default
+        }
+    }
+
     override fun getHandshakeTimeoutMillis(): Int = DtlsConfig.config.handshakeTimeout.toMillis().toInt()
 
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
-        logger.cinfo { "Negotiated DTLS version ${context.securityParameters.negotiatedVersion}" }
+        negotiatedProtocolVersion = context.securityParameters.negotiatedVersion
+        // Only recorded for (D)TLS 1.3 key shares; -1 otherwise.
+        negotiatedGroup = context.securityParameters.negotiatedGroup.takeIf { it >= 0 }
+        logger.cinfo {
+            "Negotiated DTLS version $negotiatedProtocolVersion" +
+                (negotiatedGroup?.let { ", key exchange group ${NamedGroup.getText(it)}" } ?: "")
+        }
         context.resumableSession?.let { newSession ->
 
             session?.let { existingSession ->
@@ -160,7 +212,7 @@ class TlsClientImpl(
         )
     }
 
-    override fun getSupportedVersions(): Array<ProtocolVersion> = arrayOf(ProtocolVersion.DTLSv12)
+    override fun getSupportedVersions(): Array<ProtocolVersion> = DtlsConfig.config.supportedVersions
 
     override fun notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) =
         logger.notifyAlertRaised(alertLevel, alertDescription, message, cause)

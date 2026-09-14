@@ -15,6 +15,9 @@
  */
 package org.jitsi.nlj.dtls
 
+import org.bouncycastle.tls.Certificate
+import org.bouncycastle.tls.TlsContext
+import org.bouncycastle.tls.TlsUtils
 import java.security.KeyPair
 
 /**
@@ -31,4 +34,17 @@ data class CertificateInfo(
     val localFingerprintHashFunction: String,
     val localFingerprint: String,
     val creationTimestampMs: Long
-)
+) {
+    /**
+     * The [certificate] in the form required by the (D)TLS version negotiated in [context]. A (D)TLS 1.3 Certificate
+     * message carries a certificate_request_context (RFC 8446 4.4.2): empty for a server, and for a client the one
+     * from the CertificateRequest ([certificateRequestContext]). It is absent in (D)TLS 1.2, and BouncyCastle
+     * refuses to encode a certificate whose form doesn't match the negotiated version.
+     */
+    fun certificateFor(context: TlsContext, certificateRequestContext: ByteArray? = null): Certificate =
+        if (TlsUtils.isTLSv13(context)) {
+            Certificate(certificateRequestContext ?: TlsUtils.EMPTY_BYTES, certificate.certificateEntryList)
+        } else {
+            certificate
+        }
+}

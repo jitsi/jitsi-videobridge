@@ -17,6 +17,7 @@
 package org.jitsi.nlj.dtls
 
 import org.bouncycastle.tls.DTLSTransport
+import org.bouncycastle.tls.ProtocolVersion
 
 interface DtlsRole {
     /**
@@ -29,4 +30,15 @@ interface DtlsRole {
      * 'accept' and wait for an incoming connection.
      */
     fun start(): DTLSTransport
+
+    /**
+     * The DTLS protocol version that was negotiated, or null if the handshake has not completed.
+     */
+    val negotiatedProtocolVersion: ProtocolVersion?
+
+    /**
+     * The key exchange group ([org.bouncycastle.tls.NamedGroup]) that was negotiated, or null if the handshake has
+     * not completed or was not a DTLS 1.3 handshake (the group is not recorded for DTLS 1.2).
+     */
+    val negotiatedGroup: Int?
 }
