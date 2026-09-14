@@ -21,7 +21,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import org.bouncycastle.tls.NamedGroup
 import org.bouncycastle.tls.ProtocolVersion
-import org.jitsi.config.setNewConfig
+import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.transform.node.PcapWriter
@@ -125,19 +125,6 @@ class DtlsTest : ShouldSpec() {
         return Pair(dtlsServer, dtlsClient)
     }
 
-    /**
-     * Like the standard test helper for overriding the config, but resets the config even if [block] throws, so a
-     * failure doesn't leak the config into other tests.
-     */
-    private inline fun withConfig(config: String, block: () -> Unit) {
-        setNewConfig(config, loadDefaults = true)
-        try {
-            block()
-        } finally {
-            setNewConfig("", loadDefaults = true)
-        }
-    }
-
     init {
         context("With the default configuration") {
             val (dtlsServer, dtlsClient) = handshakeAndExchangeData()
@@ -166,7 +153,7 @@ class DtlsTest : ShouldSpec() {
         }
 
         context("With DTLS 1.3 disabled") {
-            withConfig("jmt.dtls.enable-dtls13 = false") {
+            withNewConfig("jmt.dtls.enable-dtls13 = false") {
                 val (dtlsServer, dtlsClient) = handshakeAndExchangeData()
 
                 should("negotiate DTLS 1.2") {
@@ -177,7 +164,7 @@ class DtlsTest : ShouldSpec() {
         }
 
         context("With the post-quantum key exchange disabled") {
-            withConfig("jmt.dtls.enable-post-quantum-key-exchange = false") {
+            withNewConfig("jmt.dtls.enable-post-quantum-key-exchange = false") {
                 val (dtlsServer, dtlsClient) = handshakeAndExchangeData()
 
                 should("negotiate DTLS 1.3 with X25519") {

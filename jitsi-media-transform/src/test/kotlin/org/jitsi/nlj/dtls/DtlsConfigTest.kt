@@ -66,11 +66,50 @@ class DtlsConfigTest : ShouldSpec() {
                 }
             }
         }
+        context("MTU") {
+            context("By default") {
+                DtlsConfig.config.mtu shouldBe 1200
+            }
+            context("Too small") {
+                withNewConfig("jmt.dtls.mtu = 100") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+                withNewConfig("jmt.dtls.mtu = 575") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+            }
+            context("Too large") {
+                withNewConfig("jmt.dtls.mtu = 65536") {
+                    shouldThrow<ConfigException> { DtlsConfig.config.mtu }
+                }
+            }
+            context("At the limits") {
+                withNewConfig("jmt.dtls.mtu = 576") {
+                    DtlsConfig.config.mtu shouldBe 576
+                }
+                withNewConfig("jmt.dtls.mtu = 65535") {
+                    DtlsConfig.config.mtu shouldBe 65535
+                }
+            }
+        }
         context("DTLS 1.3 enabled") {
             context("By default") {
                 DtlsConfig.config.dtls13Enabled shouldBe true
+                DtlsConfig.config.dtls13Offered shouldBe true
                 DtlsConfig.config.supportedVersions.toList() shouldBe
                     listOf(ProtocolVersion.DTLSv13, ProtocolVersion.DTLSv12)
+            }
+            context("Without any DTLS 1.3 cipher suite") {
+                // E.g. a cipher-suites list carried over from before DTLS 1.3 support.
+                withNewConfig(
+                    "jmt.dtls.cipher-suites = [ TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, " +
+                        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 ]"
+                ) {
+                    DtlsConfig.config.dtls13Enabled shouldBe true
+                    DtlsConfig.config.dtls13Offered shouldBe false
+                    DtlsConfig.config.supportedVersions.toList() shouldBe listOf(ProtocolVersion.DTLSv12)
+                    DtlsConfig.config.offerPostQuantumKeyExchange shouldBe false
+                }
             }
             context("When disabled") {
                 withNewConfig("jmt.dtls.enable-dtls13 = false") {

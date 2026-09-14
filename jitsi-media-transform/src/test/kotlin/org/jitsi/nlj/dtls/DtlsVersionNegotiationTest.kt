@@ -16,6 +16,7 @@
 
 package org.jitsi.nlj.dtls
 
+import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -49,11 +50,14 @@ import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.srtp.SrtpConfig
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import java.io.IOException
 import java.util.Hashtable
 import java.util.Vector
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
 import kotlin.concurrent.thread
 
@@ -64,6 +68,9 @@ import kotlin.concurrent.thread
  * - Falls back to DTLS 1.2 when the remote endpoint only supports DTLS 1.2.
  * - Falls back to a classical key exchange (X25519) when the remote endpoint supports DTLS 1.3 but not the
  *   X25519MLKEM768 hybrid.
+ *
+ * Also verifies that the stack rejects the peer's certificate when it does not match the signaled fingerprint, in
+ * both roles and with both DTLS versions (DTLS 1.3 routes the certificates through different code than DTLS 1.2).
  *
  * The remote endpoint is a plain BouncyCastle DTLS peer (whose default supported groups do not include the hybrid),
  * standing in for e.g. a browser. It can't be another [DtlsStack], because the DTLS versions and groups are
@@ -108,11 +115,19 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
             }
         }
 
-        val serverThread = thread { stack.start() }
-        val peerResult = peer.connect()
-        serverThread.join(10_000)
+        val peerFuture = CompletableFuture<HandshakeResult>()
+        val clientThread = thread {
+            try {
+                peerFuture.complete(peer.connect())
+            } catch (t: Throwable) {
+                peerFuture.completeExceptionally(t)
+            }
+        }
+        stack.start()
+        clientThread.join(10_000)
 
-        return Pair(stackResult.get(5, TimeUnit.SECONDS), peerResult)
+        peer.oversizedDatagrams.get() shouldBe 0
+        return Pair(stackResult.get(5, TimeUnit.SECONDS), peerFuture.get(5, TimeUnit.SECONDS))
     }
 
     /**
@@ -152,7 +167,42 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
         stack.start()
         serverThread.join(10_000)
 
+        peer.oversizedDatagrams.get() shouldBe 0
         return Pair(stackResult.get(5, TimeUnit.SECONDS), peerFuture.get(5, TimeUnit.SECONDS))
+    }
+
+    /**
+     * Runs a handshake between a [DtlsStack] (as server if [asServer], else as client) which has a wrong fingerprint
+     * for the BouncyCastle peer, and asserts that the stack aborts the handshake without ever completing it.
+     */
+    private fun assertRejected(asServer: Boolean, peerVersions: Array<ProtocolVersion>) {
+        val stack = DtlsStack(logger).apply { if (asServer) actAsServer() else actAsClient() }
+        val peer = BcPeer(stack, peerVersions)
+        stack.remoteFingerprints = mapOf("sha-256" to listOf(List(32) { "00" }.joinToString(":")))
+
+        val completed = AtomicBoolean()
+        stack.eventHandler = object : DtlsStack.EventHandler {
+            override fun handshakeComplete(
+                chosenSrtpProtectionProfile: Int,
+                tlsRole: TlsRole,
+                keyingMaterial: ByteArray
+            ) {
+                completed.set(true)
+            }
+        }
+
+        val peerThread = thread {
+            try {
+                if (asServer) peer.connect() else peer.accept()
+            } catch (t: Throwable) {
+                // Expected: the stack aborted the handshake, or the peer was closed below.
+            }
+        }
+        shouldThrowAny { stack.start() }
+        peer.close()
+        peerThread.join(10_000)
+
+        completed.get() shouldBe false
     }
 
     private fun assertNegotiated(
@@ -197,16 +247,55 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
                 assertNegotiated(stackAsClient(dtls13), ProtocolVersion.DTLSv13, NamedGroup.x25519)
             }
         }
+        context("A peer whose certificate doesn't match the signaled fingerprint") {
+            should("be rejected by a DTLS 1.3 server") {
+                assertRejected(asServer = true, peerVersions = dtls13)
+            }
+            should("be rejected by a DTLS 1.3 client") {
+                assertRejected(asServer = false, peerVersions = dtls13)
+            }
+            should("be rejected by a DTLS 1.2 server") {
+                assertRejected(asServer = true, peerVersions = dtls12Only)
+            }
+            should("be rejected by a DTLS 1.2 client") {
+                assertRejected(asServer = false, peerVersions = dtls12Only)
+            }
+        }
     }
 
     /**
      * A plain BouncyCastle DTLS-SRTP peer supporting [versions] (and BouncyCastle's default key exchange groups,
      * which do not include the post-quantum hybrid), wired directly to a [DtlsStack]. It uses its own certificate,
      * and the stack is told the peer's fingerprint (the peer itself verifies nothing, this is a test).
+     *
+     * The "network" between the two has the configured MTU: datagrams which would not fit in it are counted in
+     * [oversizedDatagrams] (the handshake flights, in particular the ones carrying a post-quantum key share, must
+     * be fragmented to fit).
      */
     private class BcPeer(private val stack: DtlsStack, private val versions: Array<ProtocolVersion>) {
         private val certificateInfo = DtlsUtils.generateCertificateInfo()
         private val incoming = LinkedBlockingQueue<ByteArray>()
+
+        /** The largest UDP payload that fits in the configured MTU with IPv4 and UDP headers. */
+        private val maxPayload = DtlsConfig.config.mtu - 20 - 8
+
+        /** The number of datagrams, in either direction, which would not have fit in the configured MTU. */
+        val oversizedDatagrams = AtomicInteger()
+
+        @Volatile
+        private var closed = false
+
+        /** Makes the peer's pending and future receives fail, so that a handshake it is still waiting on aborts. */
+        fun close() {
+            closed = true
+            incoming.add(ByteArray(0))
+        }
+
+        private fun checkSize(len: Int) {
+            if (len > maxPayload) {
+                oversizedDatagrams.incrementAndGet()
+            }
+        }
 
         init {
             stack.remoteFingerprints = mapOf(
@@ -214,6 +303,7 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
             )
             stack.outgoingDataHandler = object : DtlsStack.OutgoingDataHandler {
                 override fun sendData(data: ByteArray, off: Int, len: Int) {
+                    checkSize(len)
                     incoming.add(data.copyOfRange(off, off + len))
                 }
             }
@@ -222,14 +312,20 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
         /** The peer's end of the "network": receives what the stack sent, and feeds what it sends into the stack. */
         private val transport = object : DatagramTransport {
             override fun getReceiveLimit(): Int = 1500 - 20 - 8
-            override fun getSendLimit(): Int = 1500 - 84 - 8
+            override fun getSendLimit(): Int = DtlsConfig.config.mtu - 84 - 8
             override fun receive(buf: ByteArray, off: Int, len: Int, waitMillis: Int): Int {
                 val data = incoming.poll(waitMillis.toLong(), TimeUnit.MILLISECONDS) ?: return -1
+                if (closed) {
+                    throw IOException("closed")
+                }
                 val length = minOf(len, data.size)
                 System.arraycopy(data, 0, buf, off, length)
                 return length
             }
-            override fun send(buf: ByteArray, off: Int, len: Int) = stack.processIncomingProtocolData(buf, off, len)
+            override fun send(buf: ByteArray, off: Int, len: Int) {
+                checkSize(len)
+                stack.processIncomingProtocolData(buf, off, len)
+            }
             override fun close() {}
         }
 
@@ -262,6 +358,9 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
             var result: HandshakeResult? = null
             val client = object : DefaultTlsClient(BC_TLS_CRYPTO) {
                 private var chosenProfile = 0
+
+                // Fail rather than retransmit forever if the stack side aborts the handshake.
+                override fun getHandshakeTimeoutMillis(): Int = 10_000
                 override fun getSupportedVersions(): Array<ProtocolVersion> = versions
                 override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
                 override fun getClientExtensions(): Hashtable<*, *> {
@@ -294,6 +393,9 @@ class DtlsVersionNegotiationTest : ShouldSpec() {
             var result: HandshakeResult? = null
             val server = object : DefaultTlsServer(BC_TLS_CRYPTO) {
                 private var chosenProfile = 0
+
+                // Fail rather than retransmit forever if the stack side aborts the handshake.
+                override fun getHandshakeTimeoutMillis(): Int = 10_000
                 override fun getSupportedVersions(): Array<ProtocolVersion> = versions
                 override fun getCipherSuites() = DtlsConfig.config.cipherSuites.toIntArray()
                 override fun getECDSASignerCredentials(): TlsCredentialedSigner = signerCredentials(context)

@@ -65,6 +65,21 @@ class DtlsStack(
      */
     private val certificateInfo = DtlsStack.certificateInfo
 
+    /**
+     * The configured MTU, read once so that an invalid value fails when the stack is created rather than inside
+     * BouncyCastle's send path during the handshake.
+     */
+    private val mtu = DtlsConfig.config.mtu
+
+    init {
+        if (DtlsConfig.config.dtls13Enabled && !DtlsConfig.config.dtls13Offered) {
+            logger.warn(
+                "DTLS 1.3 is enabled but jmt.dtls.cipher-suites contains no (D)TLS 1.3 cipher suite, so only " +
+                    "DTLS 1.2 will be negotiated."
+            )
+        }
+    }
+
     val localFingerprintHashFunction: String
         get() = certificateInfo.localFingerprintHashFunction
 
@@ -295,6 +310,11 @@ class DtlsStack(
     companion object {
         private const val QUEUE_SIZE = 50
 
+        /** IP/UDP overhead constants, as in [org.bouncycastle.tls.UDPTransport]. */
+        private const val MIN_IP_OVERHEAD = 20
+        private const val MAX_IP_OVERHEAD = MIN_IP_OVERHEAD + 64
+        private const val UDP_OVERHEAD = 8
+
         /**
          * Because generating the certificateInfo can be expensive, we generate a single
          * one to be used everywhere which expires in 24 hours (when we'll generate
@@ -342,14 +362,18 @@ class DtlsStack(
         }
 
         /**
-         * Receive limit computation copied from [org.bouncycastle.tls.UDPTransport]
+         * Receive limit computation copied from [org.bouncycastle.tls.UDPTransport]. We are prepared to receive
+         * anything up to a full Ethernet-sized datagram, whatever we assume about the path MTU for sending.
          */
-        override fun getReceiveLimit(): Int = 1500 - 20 - 8
+        override fun getReceiveLimit(): Int = 1500 - MIN_IP_OVERHEAD - UDP_OVERHEAD
 
         /**
-         * Send limit computation copied from [org.bouncycastle.tls.UDPTransport]
+         * Send limit computed as in [org.bouncycastle.tls.UDPTransport], but from the configured MTU rather than
+         * the interface MTU. BouncyCastle fragments handshake flights to fit it (application data records are
+         * bounded separately). A datagram larger than the path MTU is lost, dropped if DF is set or fragmented and
+         * then likely dropped, which stalls the handshake until it is retransmitted.
          */
-        override fun getSendLimit(): Int = 1500 - 84 - 8
+        override fun getSendLimit(): Int = mtu - MAX_IP_OVERHEAD - UDP_OVERHEAD
 
         override fun close() {}
     }

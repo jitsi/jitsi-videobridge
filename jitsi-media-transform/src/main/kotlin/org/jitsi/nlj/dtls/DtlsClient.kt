@@ -61,7 +61,7 @@ class DtlsClient(
         } catch (e: Exception) {
             // A handshake timeout is logged by the caller, which handles it.
             if (e !is TlsTimeoutException) {
-                logger.cerror { "Error during DTLS connection: $e" }
+                logger.cerror { "Error during DTLS connection: $e" + (e.cause?.let { " (caused by $it)" } ?: "") }
             }
             throw e
         }

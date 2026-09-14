@@ -775,7 +775,7 @@ class IceTransport @JvmOverloads constructor(
                 packetStats.numPacketsSent.increment()
             } catch (e: IOException) {
                 logger.error("Error sending packet", e)
-                throw RuntimeException()
+                throw RuntimeException("Error sending packet", e)
             }
         } else {
             packetStats.numOutgoingPacketsDroppedStopped.increment()

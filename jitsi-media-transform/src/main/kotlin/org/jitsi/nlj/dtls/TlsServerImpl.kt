@@ -17,6 +17,7 @@
 package org.jitsi.nlj.dtls
 
 import org.bouncycastle.crypto.util.PrivateKeyFactory
+import org.bouncycastle.tls.AlertDescription
 import org.bouncycastle.tls.Certificate
 import org.bouncycastle.tls.CertificateRequest
 import org.bouncycastle.tls.ClientCertificateType
@@ -30,6 +31,7 @@ import org.bouncycastle.tls.SignatureAndHashAlgorithm
 import org.bouncycastle.tls.TlsCredentialedDecryptor
 import org.bouncycastle.tls.TlsCredentialedSigner
 import org.bouncycastle.tls.TlsCredentials
+import org.bouncycastle.tls.TlsFatalAlert
 import org.bouncycastle.tls.TlsSRTPUtils
 import org.bouncycastle.tls.TlsSession
 import org.bouncycastle.tls.TlsUtils
@@ -70,15 +72,18 @@ class TlsServerImpl(
     var chosenSrtpProtectionProfile: Int = 0
 
     /**
-     * The DTLS protocol version negotiated with the client. Only set after a handshake has completed.
+     * The DTLS protocol version negotiated with the client. Only set after a handshake has completed. Volatile
+     * because it is written on the handshake thread and read for the debug state.
      */
+    @Volatile
     var negotiatedProtocolVersion: ProtocolVersion? = null
         private set
 
     /**
      * The key exchange group ([NamedGroup]) negotiated with the client. Only set after a (D)TLS 1.3 handshake has
-     * completed (it is not recorded for DTLS 1.2).
+     * completed (BouncyCastle does not record it for DTLS 1.2, where it is -1).
      */
+    @Volatile
     var negotiatedGroup: Int? = null
         private set
 
@@ -126,7 +131,9 @@ class TlsServerImpl(
 
     /**
      * Select the key exchange group by our preference order rather than the client's, so that the post-quantum
-     * hybrid is used whenever the client supports it, wherever the client happens to list it.
+     * hybrid is used whenever the client supports it, wherever the client happens to list it. This costs a
+     * HelloRetryRequest round trip when the client lists the hybrid without sending a key share for it; browsers
+     * that offer it do send the share.
      */
     override fun preferLocalSupportedGroups(): Boolean = DtlsConfig.config.offerPostQuantumKeyExchange
 
@@ -171,7 +178,6 @@ class TlsServerImpl(
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
         negotiatedProtocolVersion = context.securityParameters.negotiatedVersion
-        // Only recorded for (D)TLS 1.3 key shares; -1 otherwise.
         negotiatedGroup = context.securityParameters.negotiatedGroup.takeIf { it >= 0 }
         logger.cinfo {
             "Negotiated DTLS version $negotiatedProtocolVersion" +
@@ -194,15 +200,15 @@ class TlsServerImpl(
         // (D)TLS 1.3 always uses the exporter master secret; the fallback below only applies to (D)TLS 1.2
         // sessions negotiated without extended_master_secret.
         if (!TlsUtils.isTLSv13(context) && !context.securityParameters.isExtendedMasterSecret) {
-            context.session?.exportSessionParameters()?.masterSecret?.let {
-                srtpKeyingMaterial = DtlsUtils.exportKeyingMaterial(
-                    context,
-                    ExporterLabel.dtls_srtp,
-                    null,
-                    2 * (srtpProfileInformation.cipherKeyLength + srtpProfileInformation.cipherSaltLength),
-                    it
-                )
-            }
+            val masterSecret = context.session?.exportSessionParameters()?.masterSecret
+                ?: throw TlsFatalAlert(AlertDescription.internal_error, "No master secret to derive the SRTP keys")
+            srtpKeyingMaterial = DtlsUtils.exportKeyingMaterial(
+                context,
+                ExporterLabel.dtls_srtp,
+                null,
+                2 * (srtpProfileInformation.cipherKeyLength + srtpProfileInformation.cipherSaltLength),
+                masterSecret
+            )
         } else {
             srtpKeyingMaterial = context.exportKeyingMaterial(
                 ExporterLabel.dtls_srtp,

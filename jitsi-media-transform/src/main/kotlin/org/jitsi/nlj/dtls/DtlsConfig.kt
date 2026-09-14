@@ -18,6 +18,7 @@ package org.jitsi.nlj.dtls
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.tls.CipherSuite
 import org.bouncycastle.tls.ProtocolVersion
+import org.bouncycastle.tls.TlsUtils
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.config
@@ -39,6 +40,18 @@ class DtlsConfig private constructor() {
     }
 
     /**
+     * The assumed path MTU (including IP and UDP headers), used to size outgoing DTLS datagrams.
+     */
+    val mtu: Int by config {
+        "jmt.dtls.mtu".from(JitsiConfig.newConfig).transformedBy {
+            if (it < 576 || it > 65535) {
+                throw ConfigException.UnableToRetrieve.ConditionNotMet("mtu must be between 576 and 65535")
+            }
+            it
+        }
+    }
+
+    /**
      * Whether DTLS 1.3 is offered (as a client) and accepted (as a server). DTLS 1.2 is always supported.
      */
     val dtls13Enabled: Boolean by config {
@@ -46,10 +59,20 @@ class DtlsConfig private constructor() {
     }
 
     /**
+     * Whether DTLS 1.3 is actually offered/accepted: it requires [dtls13Enabled] and at least one (D)TLS 1.3 cipher
+     * suite in [cipherSuites]. BouncyCastle selects the protocol version before the cipher suite and does not fall
+     * back to DTLS 1.2 when no suite is valid for the selected version, so offering DTLS 1.3 without a 1.3 suite
+     * would fail every handshake with a 1.3-capable peer.
+     */
+    val dtls13Offered: Boolean
+        get() = dtls13Enabled &&
+            cipherSuites.any { TlsUtils.isValidVersionForCipherSuite(it, ProtocolVersion.DTLSv13) }
+
+    /**
      * The DTLS protocol versions to offer/accept, in decreasing order of preference.
      */
     val supportedVersions: Array<ProtocolVersion>
-        get() = if (dtls13Enabled) {
+        get() = if (dtls13Offered) {
             ProtocolVersion.DTLSv13.downTo(ProtocolVersion.DTLSv12)
         } else {
             ProtocolVersion.DTLSv12.only()
@@ -67,7 +90,7 @@ class DtlsConfig private constructor() {
      * DTLS 1.3, so there is no point offering it when DTLS 1.3 is disabled.
      */
     val offerPostQuantumKeyExchange: Boolean
-        get() = dtls13Enabled && postQuantumKeyExchangeEnabled
+        get() = dtls13Offered && postQuantumKeyExchangeEnabled
 
     val localFingerprintHashFunction: String by config {
         "jmt.dtls.local-fingerprint-hash-function".from(JitsiConfig.newConfig).transformedBy {

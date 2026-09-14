@@ -74,15 +74,18 @@ class TlsClientImpl(
     var chosenSrtpProtectionProfile: Int = 0
 
     /**
-     * The DTLS protocol version negotiated with the server. Only set after a handshake has completed.
+     * The DTLS protocol version negotiated with the server. Only set after a handshake has completed. Volatile
+     * because it is written on the handshake thread and read for the debug state.
      */
+    @Volatile
     var negotiatedProtocolVersion: ProtocolVersion? = null
         private set
 
     /**
      * The key exchange group ([NamedGroup]) negotiated with the server. Only set after a (D)TLS 1.3 handshake has
-     * completed (it is not recorded for DTLS 1.2).
+     * completed (BouncyCastle does not record it for DTLS 1.2, where it is -1).
      */
+    @Volatile
     var negotiatedGroup: Int? = null
         private set
 
@@ -159,8 +162,10 @@ class TlsClientImpl(
 
     /**
      * The groups to include a key_share for in the initial ClientHello. Include the post-quantum hybrid group (if
-     * offered) as well as X25519, so that a DTLS 1.3 server which doesn't support the hybrid can still complete
-     * the handshake without a HelloRetryRequest round trip.
+     * offered) as well as the base class's default share (X25519), so that a DTLS 1.3 server which doesn't support
+     * the hybrid can still complete the handshake without a HelloRetryRequest round trip. The hybrid goes first
+     * because RFC 8446 section 4.2.8 requires the key shares in supported_groups order, and [getSupportedGroups]
+     * lists it first.
      */
     override fun getEarlyKeyShareGroups(): Vector<Int>? {
         @Suppress("UNCHECKED_CAST")
@@ -180,7 +185,6 @@ class TlsClientImpl(
     override fun notifyHandshakeComplete() {
         super.notifyHandshakeComplete()
         negotiatedProtocolVersion = context.securityParameters.negotiatedVersion
-        // Only recorded for (D)TLS 1.3 key shares; -1 otherwise.
         negotiatedGroup = context.securityParameters.negotiatedGroup.takeIf { it >= 0 }
         logger.cinfo {
             "Negotiated DTLS version $negotiatedProtocolVersion" +
