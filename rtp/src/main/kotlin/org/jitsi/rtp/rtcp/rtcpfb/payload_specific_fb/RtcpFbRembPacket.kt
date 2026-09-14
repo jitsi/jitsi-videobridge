@@ -72,9 +72,7 @@ class RtcpFbRembPacket(
         }.toList()
     }
 
-    override fun clone(): RtcpFbRembPacket {
-        return RtcpFbRembPacket(cloneBuffer(0), 0, length)
-    }
+    override fun clone(): RtcpFbRembPacket = RtcpFbRembPacket(cloneBuffer(0), 0, length)
 
     companion object {
         const val FMT = 15

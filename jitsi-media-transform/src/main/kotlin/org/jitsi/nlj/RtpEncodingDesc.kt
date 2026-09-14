@@ -150,10 +150,8 @@ constructor(
     /**
      * {@inheritDoc}
      */
-    override fun toString(): String {
-        return "primary_ssrc=$primarySSRC,secondary_ssrcs=$secondarySsrcs," +
-            "layers=\n    ${layers.joinToString(separator = "\n    ")}"
-    }
+    override fun toString(): String = "primary_ssrc=$primarySSRC,secondary_ssrcs=$secondarySsrcs," +
+        "layers=\n    ${layers.joinToString(separator = "\n    ")}"
 
     /**
      * Gets a boolean indicating whether the SSRC specified in the
@@ -161,12 +159,10 @@ constructor(
      *
      * @param ssrc the SSRC to match.
      */
-    fun hasSsrc(ssrc: Long): Boolean {
-        return if (primarySSRC == ssrc) {
-            true
-        } else {
-            secondarySsrcs.containsKey(ssrc)
-        }
+    fun hasSsrc(ssrc: Long): Boolean = if (primarySSRC == ssrc) {
+        true
+    } else {
+        secondarySsrcs.containsKey(ssrc)
     }
 
     /**
@@ -187,9 +183,7 @@ constructor(
     }
 }
 
-fun VideoRtpPacket.getEncodingIds(): Collection<Long> {
-    return this.layerIds.map { RtpEncodingDesc.calcEncodingId(ssrc, it) }
-}
+fun VideoRtpPacket.getEncodingIds(): Collection<Long> = this.layerIds.map { RtpEncodingDesc.calcEncodingId(ssrc, it) }
 
 /**
  * Get the "nominal" height of a set of layers - if they all indicate the same spatial layer and same height.

@@ -123,11 +123,9 @@ class BitrateControllerConfig private constructor() {
     )
 
     /** The default initial ignore BWE period if not set in jvb.conf, based on the BWE algorithm in use.*/
-    private fun defaultInitialIgnoreBwePeriod(): Duration {
-        return when (BandwidthEstimatorConfig.engine) {
-            BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultInitialIgnoreBwePeriod
-            BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultInitialIgnoreBwePeriod
-        }
+    private fun defaultInitialIgnoreBwePeriod(): Duration = when (BandwidthEstimatorConfig.engine) {
+        BandwidthEstimatorEngine.GoogleCc -> GoogleCcEstimator.defaultInitialIgnoreBwePeriod
+        BandwidthEstimatorEngine.GoogleCc2 -> GoogCcTransportCcEngine.defaultInitialIgnoreBwePeriod
     }
 
     /**

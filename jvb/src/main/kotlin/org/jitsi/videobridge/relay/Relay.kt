@@ -578,6 +578,7 @@ class Relay @JvmOverloads constructor(
                 }
                 senders.values.forEach { s -> s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled) }
             }
+
             EndpointDebugFeatures.SCTP_PCAP_DUMP ->
                 if (enabled) {
                     toggleablePcapWriter.enable()
@@ -587,11 +588,9 @@ class Relay @JvmOverloads constructor(
         }
     }
 
-    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
-        return when (feature) {
-            EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
-            EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
-        }
+    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean = when (feature) {
+        EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
+        EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
     }
 
     /**
@@ -896,11 +895,18 @@ class Relay @JvmOverloads constructor(
         ssrcs.add(packet.senderSsrc)
         when (packet) {
             is CompoundRtcpPacket -> packet.packets.forEach { ssrcs.addAll(getRtcpSsrcs(it)) }
-            is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc) // TODO: support multiple FIRs in a packet
+
+            is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc)
+
+            // TODO: support multiple FIRs in a packet
             is RtcpFbPacket -> ssrcs.add(packet.mediaSourceSsrc)
+
             is RtcpSrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
+
             is RtcpRrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
+
             is RtcpSdesPacket -> packet.sdesChunks.forEach { ssrcs.add(it.ssrc) }
+
             is RtcpByePacket -> ssrcs.addAll(packet.ssrcs)
         }
         return ssrcs
@@ -962,6 +968,7 @@ class Relay @JvmOverloads constructor(
                 // performing the same check twice.
                 true
             }
+
             else -> {
                 logger.warn("Ignoring an unknown packet type:" + packet.packet.javaClass.simpleName)
                 false

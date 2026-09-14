@@ -19,7 +19,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import java.time.Duration
 
-/** Base type for network controller,
+/* Base type for network controller,
  * based on WebRTC api/transport/network_control.h in
  * WebRTC tag branch-heads/7204 (Chromium 138).
  */

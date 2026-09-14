@@ -103,6 +103,7 @@ class KeyframeRequester @JvmOverloads constructor(
                 if (forward) numPlisForwarded++
                 if (!canSend) numPlisDropped++
             }
+
             is RtcpFbFirPacket -> {
                 sourceSsrc = pliOrFirPacket.mediaSenderSsrc
                 canSend = canSendKeyframeRequest(packetInfo.endpointId, sourceSsrc, now)
@@ -117,6 +118,7 @@ class KeyframeRequester @JvmOverloads constructor(
                 }
                 if (!canSend) numFirsDropped++
             }
+
             // This is not possible, but the compiler doesn't know it.
             else -> throw IllegalStateException("Packet is neither PLI nor FIR")
         }
@@ -211,6 +213,7 @@ class KeyframeRequester @JvmOverloads constructor(
                 numPlisGenerated++
                 RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build()
             }
+
             streamInformationStore.supportsFir -> {
                 numFirsGenerated++
                 RtcpFbFirPacketBuilder(
@@ -218,6 +221,7 @@ class KeyframeRequester @JvmOverloads constructor(
                     firCommandSeqNum = firCommandSequenceNumber.incrementAndGet()
                 ).build()
             }
+
             else -> {
                 logger.warn("Can not send neither PLI nor FIR")
                 return
@@ -239,20 +243,18 @@ class KeyframeRequester @JvmOverloads constructor(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("wait_interval_ms", waitInterval.toMillis())
-            addNumber("num_api_requests", numApiRequests)
-            addNumber("num_api_requests_dropped", numApiRequestsDropped)
-            addNumber("num_firs_dropped", numFirsDropped)
-            addNumber("num_firs_generated", numFirsGenerated)
-            addNumber("num_firs_forwarded", numFirsForwarded)
-            addNumber("num_plis_dropped", numPlisDropped)
-            addNumber("num_plis_generated", numPlisGenerated)
-            addNumber("num_plis_forwarded", numPlisForwarded)
-            addNumber("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
-            addNumber("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("wait_interval_ms", waitInterval.toMillis())
+        addNumber("num_api_requests", numApiRequests)
+        addNumber("num_api_requests_dropped", numApiRequestsDropped)
+        addNumber("num_firs_dropped", numFirsDropped)
+        addNumber("num_firs_generated", numFirsGenerated)
+        addNumber("num_firs_forwarded", numFirsForwarded)
+        addNumber("num_plis_dropped", numPlisDropped)
+        addNumber("num_plis_generated", numPlisGenerated)
+        addNumber("num_plis_forwarded", numPlisForwarded)
+        addNumber("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
+        addNumber("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
     }
 
     override fun statsJson() = super.statsJson().apply {
@@ -296,13 +298,13 @@ class KeyframeRequester @JvmOverloads constructor(
     }
 }
 
-private fun PacketInfo.getPliOrFirPacket(): RtcpFbPacket? {
-    return when (val pkt = packet) {
-        // We intentionally ignore compound RTCP packets in order to avoid unnecessary parsing. We can do this because:
-        // 1. Compound packets coming from remote endpoint are terminated in RtcpTermination
-        // 2. Whenever a PLI or FIR is generated in our code, it is not part of a compound packet.
-        is RtcpFbFirPacket -> pkt
-        is RtcpFbPliPacket -> pkt
-        else -> null
-    }
+private fun PacketInfo.getPliOrFirPacket(): RtcpFbPacket? = when (val pkt = packet) {
+    // We intentionally ignore compound RTCP packets in order to avoid unnecessary parsing. We can do this because:
+    // 1. Compound packets coming from remote endpoint are terminated in RtcpTermination
+    // 2. Whenever a PLI or FIR is generated in our code, it is not part of a compound packet.
+    is RtcpFbFirPacket -> pkt
+
+    is RtcpFbPliPacket -> pkt
+
+    else -> null
 }

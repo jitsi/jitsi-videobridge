@@ -81,9 +81,8 @@ class RelayedEndpoint(
                 override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
                     relay.rtcpPacketReceived(packet, receivedTime, id)
                 }
-                override fun rtcpPacketSent(packet: RtcpPacket) {
+                override fun rtcpPacketSent(packet: RtcpPacket): Unit =
                     throw IllegalStateException("got rtcpPacketSent callback from a receiver")
-                }
             },
             external = true
         )
@@ -121,9 +120,7 @@ class RelayedEndpoint(
         handleEvent(SetLocalSsrcEvent(MediaType.VIDEO, conference.localVideoSsrc))
     }
 
-    override fun receivesSsrc(ssrc: Long): Boolean {
-        return streamInformationStore.receiveSsrcs.contains(ssrc)
-    }
+    override fun receivesSsrc(ssrc: Long): Boolean = streamInformationStore.receiveSsrcs.contains(ssrc)
 
     override val ssrcs
         get() = HashSet(streamInformationStore.receiveSsrcs)

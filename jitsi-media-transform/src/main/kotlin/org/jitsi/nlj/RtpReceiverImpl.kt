@@ -272,15 +272,13 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
     }
 
-    private fun handleIncomingPacket(packet: PacketInfo): Boolean {
-        return if (running) {
-            packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
-            processPacket(packet)
-            true
-        } else {
-            BufferPool.returnBuffer(packet.packet.buffer)
-            false
-        }
+    private fun handleIncomingPacket(packet: PacketInfo): Boolean = if (running) {
+        packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
+        processPacket(packet)
+        true
+    } else {
+        BufferPool.returnBuffer(packet.packet.buffer)
+        false
     }
 
     override fun doProcessPacket(packetInfo: PacketInfo) = inputTreeRoot.processPacket(packetInfo)
@@ -334,10 +332,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
     }
 
-    override fun isFeatureEnabled(feature: Features): Boolean {
-        return when (feature) {
-            Features.TRANSCEIVER_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
-        }
+    override fun isFeatureEnabled(feature: Features): Boolean = when (feature) {
+        Features.TRANSCEIVER_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
     }
 
     override fun stop() {

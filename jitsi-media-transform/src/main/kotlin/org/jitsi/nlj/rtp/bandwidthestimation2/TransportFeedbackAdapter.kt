@@ -315,9 +315,8 @@ class TransportFeedbackAdapter(
         val ssrc: Long,
         val rtpSequenceNumber: Int
     ) : Comparable<SsrcAndRtpSequenceNumber> {
-        override fun compareTo(other: SsrcAndRtpSequenceNumber): Int {
-            return compareValuesBy(this, other, { it.ssrc }, { it.rtpSequenceNumber })
-        }
+        override fun compareTo(other: SsrcAndRtpSequenceNumber): Int =
+            compareValuesBy(this, other, { it.ssrc }, { it.rtpSequenceNumber })
     }
 
     private fun toTransportFeedback(
@@ -407,19 +406,17 @@ class TransportFeedbackAdapter(
     private val history = TreeMap<Long, PacketFeedback>()
 
     /** Jitsi local */
-    fun getStatisitics(): StatisticsSnapshot {
-        return StatisticsSnapshot(
-            inFlight.inFlightData,
-            pendingUntrackedSize,
-            lastSendTime,
-            lastUntrackedSendTime,
-            lastAckSeqNum,
-            history.size,
-            currentOffset,
-            lastTransportFeedbackBaseTime,
-            totalUnmatchedReports,
-        )
-    }
+    fun getStatisitics(): StatisticsSnapshot = StatisticsSnapshot(
+        inFlight.inFlightData,
+        pendingUntrackedSize,
+        lastSendTime,
+        lastUntrackedSendTime,
+        lastAckSeqNum,
+        history.size,
+        currentOffset,
+        lastTransportFeedbackBaseTime,
+        totalUnmatchedReports,
+    )
 
     class StatisticsSnapshot(
         val inFlight: DataSize,
@@ -432,30 +429,26 @@ class TransportFeedbackAdapter(
         val lastTransportFeedbackBaseTime: Instant,
         val totalUnmatchedReports: Long
     ) {
-        fun toJson(): ObjectNode {
-            return JsonNodeFactory.instance.objectNode().apply {
-                put("in_flight_bytes", inFlight.bytes)
-                put("pending_untracked_size", pendingUntrackedSize.bytes)
-                put("last_send_time", lastSendTime.toEpochMilliOrInf().toString())
-                put("last_untracked_send_time", lastUntrackedSendTime.toEpochMilliOrInf().toString())
-                put("last_ack_seq_num", lastAckSeqNum)
-                put("history_size", historySize)
-                put("current_offset", currentOffset.toEpochMilliOrInf().toString())
-                put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf().toString())
-                put("total_unmatched_reports", totalUnmatchedReports)
-            }
+        fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+            put("in_flight_bytes", inFlight.bytes)
+            put("pending_untracked_size", pendingUntrackedSize.bytes)
+            put("last_send_time", lastSendTime.toEpochMilliOrInf().toString())
+            put("last_untracked_send_time", lastUntrackedSendTime.toEpochMilliOrInf().toString())
+            put("last_ack_seq_num", lastAckSeqNum)
+            put("history_size", historySize)
+            put("current_offset", currentOffset.toEpochMilliOrInf().toString())
+            put("last_transport_feedback_base_time", lastTransportFeedbackBaseTime.toEpochMilliOrInf().toString())
+            put("total_unmatched_reports", totalUnmatchedReports)
         }
     }
 }
 
-private fun Instant.toEpochMilliOrInf(): Number {
-    return try {
-        this.toEpochMilli()
-    } catch (e: ArithmeticException) {
-        if (this < Instant.EPOCH) {
-            Double.NEGATIVE_INFINITY
-        } else {
-            Double.POSITIVE_INFINITY
-        }
+private fun Instant.toEpochMilliOrInf(): Number = try {
+    this.toEpochMilli()
+} catch (e: ArithmeticException) {
+    if (this < Instant.EPOCH) {
+        Double.NEGATIVE_INFINITY
+    } else {
+        Double.POSITIVE_INFINITY
     }
 }

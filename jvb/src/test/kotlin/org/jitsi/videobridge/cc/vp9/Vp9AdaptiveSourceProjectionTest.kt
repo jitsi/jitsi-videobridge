@@ -135,7 +135,7 @@ class Vp9AdaptiveSourceProjectionTest {
             if (packet.temporalLayerIndex <= targetTid &&
                 (
                     packet.encodingId == targetEid ||
-                        packet.isKeyframe && packet.encodingId < targetEid
+                        (packet.isKeyframe && packet.encodingId < targetEid)
                     ) &&
                 (
                     packet.spatialLayerIndex == targetSid ||
@@ -874,7 +874,7 @@ class Vp9AdaptiveSourceProjectionTest {
             val packet = packetInfo.packetAs<Vp9Packet>()
             val accepted = context.accept(packetInfo, simulcastTargetIndex)
             Assert.assertTrue(packet.spatialLayerIndex == 0)
-            if (packet.encodingId == 1 || packet.isKeyframe && packet.encodingId < 1) {
+            if (packet.encodingId == 1 || (packet.isKeyframe && packet.encodingId < 1)) {
                 Assert.assertTrue(accepted)
                 context.rewriteRtp(packetInfo)
             } else {
@@ -1436,8 +1436,11 @@ class Vp9AdaptiveSourceProjectionTest {
         override fun nextPacket(): PacketInfo {
             val tid = when (tidCycle % 4) {
                 0 -> 0
+
                 2 -> 1
+
                 1, 3 -> 2
+
                 else -> {
                     assert(false) // Math is broken
                     -1
@@ -1680,8 +1683,11 @@ class Vp9AdaptiveSourceProjectionTest {
         override fun nextPacket(): PacketInfo {
             val tid = when (tidCycle % 4) {
                 0 -> 0
+
                 2 -> 1
+
                 1, 3 -> 2
+
                 else -> {
                     assert(false) // Math is broken
                     -1

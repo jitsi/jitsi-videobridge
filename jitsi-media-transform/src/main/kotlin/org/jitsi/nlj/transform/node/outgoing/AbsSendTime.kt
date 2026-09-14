@@ -47,10 +47,8 @@ class AbsSendTime(
         return packetInfo
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addString("abs_send_time_ext_id", extensionId.toString())
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addString("abs_send_time_ext_id", extensionId.toString())
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

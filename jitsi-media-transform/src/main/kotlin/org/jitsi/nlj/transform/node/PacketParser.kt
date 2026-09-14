@@ -27,15 +27,13 @@ open class PacketParser(
 ) : TransformerNode(name) {
     private val logger = createChildLogger(parentLogger)
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        return try {
-            packetInfo.packet = action(packetInfo.packet)
-            packetInfo.resetPayloadVerification()
-            packetInfo
-        } catch (e: Exception) {
-            logger.warn("Error parsing packet: $e")
-            null
-        }
+    override fun transform(packetInfo: PacketInfo): PacketInfo? = try {
+        packetInfo.packet = action(packetInfo.packet)
+        packetInfo.resetPayloadVerification()
+        packetInfo
+    } catch (e: Exception) {
+        logger.warn("Error parsing packet: $e")
+        null
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

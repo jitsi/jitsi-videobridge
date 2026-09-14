@@ -33,9 +33,7 @@ typealias Chunk = Int
  * future updates easier.
  */
 class LastChunk {
-    fun Empty(): Boolean {
-        return size_ == 0
-    }
+    fun Empty(): Boolean = size_ == 0
 
     fun Clear() {
         size_ = 0
@@ -98,12 +96,10 @@ class LastChunk {
     }
 
     // // Encode all stored delta_sizes into single chunk, pad with 0s if needed.
-    fun EncodeLast(): Chunk {
-        return when {
-            all_same_ -> EncodeRunLength()
-            size_ <= kMaxTwoBitCapacity -> EncodeTwoBit(size_)
-            else -> EncodeOneBit()
-        }
+    fun EncodeLast(): Chunk = when {
+        all_same_ -> EncodeRunLength()
+        size_ <= kMaxTwoBitCapacity -> EncodeTwoBit(size_)
+        else -> EncodeOneBit()
     }
 
     // Decode up to |max_size| delta sizes from |chunk|.

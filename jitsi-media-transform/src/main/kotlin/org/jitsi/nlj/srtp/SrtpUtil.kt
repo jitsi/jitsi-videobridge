@@ -32,32 +32,36 @@ class SrtpUtil {
             SrtpConfig.factoryClass?.let { Aes.setFactoryClassName(it) }
         }
 
-        fun getSrtpProtectionProfileFromName(profileName: String): Int {
-            return when (profileName) {
-                "SRTP_AES128_CM_HMAC_SHA1_80" -> {
-                    SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80
-                }
-                "SRTP_AES128_CM_HMAC_SHA1_32" -> {
-                    SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32
-                }
-                "SRTP_NULL_HMAC_SHA1_32" -> {
-                    SRTPProtectionProfile.SRTP_NULL_HMAC_SHA1_32
-                }
-                "SRTP_NULL_HMAC_SHA1_80" -> {
-                    SRTPProtectionProfile.SRTP_NULL_HMAC_SHA1_80
-                }
-                "SRTP_AEAD_AES_128_GCM" -> {
-                    SRTPProtectionProfile.SRTP_AEAD_AES_128_GCM
-                }
-                "SRTP_AEAD_AES_256_GCM" -> {
-                    SRTPProtectionProfile.SRTP_AEAD_AES_256_GCM
-                }
-                else -> throw IllegalArgumentException("Unsupported SRTP protection profile: $profileName")
+        fun getSrtpProtectionProfileFromName(profileName: String): Int = when (profileName) {
+            "SRTP_AES128_CM_HMAC_SHA1_80" -> {
+                SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80
             }
+
+            "SRTP_AES128_CM_HMAC_SHA1_32" -> {
+                SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32
+            }
+
+            "SRTP_NULL_HMAC_SHA1_32" -> {
+                SRTPProtectionProfile.SRTP_NULL_HMAC_SHA1_32
+            }
+
+            "SRTP_NULL_HMAC_SHA1_80" -> {
+                SRTPProtectionProfile.SRTP_NULL_HMAC_SHA1_80
+            }
+
+            "SRTP_AEAD_AES_128_GCM" -> {
+                SRTPProtectionProfile.SRTP_AEAD_AES_128_GCM
+            }
+
+            "SRTP_AEAD_AES_256_GCM" -> {
+                SRTPProtectionProfile.SRTP_AEAD_AES_256_GCM
+            }
+
+            else -> throw IllegalArgumentException("Unsupported SRTP protection profile: $profileName")
         }
 
-        fun getSrtpProfileInformationFromSrtpProtectionProfile(srtpProtectionProfile: Int): SrtpProfileInformation {
-            return when (srtpProtectionProfile) {
+        fun getSrtpProfileInformationFromSrtpProtectionProfile(srtpProtectionProfile: Int): SrtpProfileInformation =
+            when (srtpProtectionProfile) {
                 SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32 -> {
                     SrtpProfileInformation(
                         cipherKeyLength = 128 / 8,
@@ -69,6 +73,7 @@ class SrtpUtil {
                         rtpAuthTagLength = 32 / 8
                     )
                 }
+
                 SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80 -> {
                     SrtpProfileInformation(
                         cipherKeyLength = 128 / 8,
@@ -80,6 +85,7 @@ class SrtpUtil {
                         rtpAuthTagLength = 80 / 8
                     )
                 }
+
                 SRTPProtectionProfile.SRTP_NULL_HMAC_SHA1_32 -> {
                     SrtpProfileInformation(
                         cipherKeyLength = 0,
@@ -91,6 +97,7 @@ class SrtpUtil {
                         rtpAuthTagLength = 32 / 8
                     )
                 }
+
                 SRTPProtectionProfile.SRTP_NULL_HMAC_SHA1_80 -> {
                     SrtpProfileInformation(
                         cipherKeyLength = 0,
@@ -102,6 +109,7 @@ class SrtpUtil {
                         rtpAuthTagLength = 80 / 8
                     )
                 }
+
                 SRTPProtectionProfile.SRTP_AEAD_AES_128_GCM -> {
                     SrtpProfileInformation(
                         cipherKeyLength = 128 / 8,
@@ -113,6 +121,7 @@ class SrtpUtil {
                         rtpAuthTagLength = 128 / 8
                     )
                 }
+
                 SRTPProtectionProfile.SRTP_AEAD_AES_256_GCM -> {
                     SrtpProfileInformation(
                         cipherKeyLength = 256 / 8,
@@ -124,9 +133,9 @@ class SrtpUtil {
                         rtpAuthTagLength = 128 / 8
                     )
                 }
+
                 else -> throw IllegalArgumentException("Unsupported SRTP protection profile: $srtpProtectionProfile")
             }
-        }
 
         fun initializeTransformer(
             srtpProfileInformation: SrtpProfileInformation,
@@ -208,6 +217,7 @@ class SrtpUtil {
                     forwardSrtpContextFactory = clientSrtpContextFactory
                     reverseSrtpContextFactory = serverSrtpContextFactory
                 }
+
                 TlsRole.SERVER -> {
                     forwardSrtpContextFactory = serverSrtpContextFactory
                     reverseSrtpContextFactory = clientSrtpContextFactory

@@ -107,6 +107,7 @@ class GoogCcTransportCcEngine(
                     }
                 }
             }
+
             is RtcpFbRembPacket -> {
                 /* Ignore REMB packets - if we're supposed to be receiving them they'll be handled by [RembHandler],
                  * and if we're not we're getting mysterious spurious REMB messages which we want to ignore.
@@ -119,10 +120,12 @@ class GoogCcTransportCcEngine(
                 processUpdate(update)
                  */
             }
+
             is RtcpSrPacket -> {
                 val time = receivedTime ?: clock.instant()
                 onReport(time, rtcpPacket.reportBlocks)
             }
+
             is RtcpRrPacket -> {
                 val time = receivedTime ?: clock.instant()
                 onReport(time, rtcpPacket.reportBlocks)
@@ -359,12 +362,10 @@ class GoogCcTransportCcEngine(
     ) : TransportCcEngine.StatisticsSnapshot() {
         override val unmatchedFeedback: Long get() = transportAdapterState.totalUnmatchedReports
 
-        override fun toJson(): ObjectNode {
-            return JsonNodeFactory.instance.objectNode().apply {
-                put("name", GoogCcTransportCcEngine::class.java.simpleName)
-                set<ObjectNode>("transport_adapter", transportAdapterState.toJson())
-                set<ObjectNode>("network_controller", networkControllerState.toJson())
-            }
+        override fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+            put("name", GoogCcTransportCcEngine::class.java.simpleName)
+            set<ObjectNode>("transport_adapter", transportAdapterState.toJson())
+            set<ObjectNode>("network_controller", networkControllerState.toJson())
         }
     }
 }

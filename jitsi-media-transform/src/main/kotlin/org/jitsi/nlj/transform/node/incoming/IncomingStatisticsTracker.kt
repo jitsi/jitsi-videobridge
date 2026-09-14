@@ -67,12 +67,10 @@ class IncomingStatisticsTracker(
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            val stats = getSnapshot()
-            stats.ssrcStats.forEach { (ssrc, streamStats) ->
-                addJson(ssrc.toString(), streamStats.toJson())
-            }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        val stats = getSnapshot()
+        stats.ssrcStats.forEach { (ssrc, streamStats) ->
+            addJson(ssrc.toString(), streamStats.toJson())
         }
     }
 
@@ -139,6 +137,7 @@ class IncomingSsrcStats(
     // acceptable for RRs?
     private var statsLock = Any()
     // Start variables protected by statsLock
+
     /**
      * This will be initialized to the first sequence number we process
      */
@@ -231,7 +230,7 @@ class IncomingSsrcStats(
 
     fun getSnapshot(): Snapshot = synchronized(statsLock) { createSnapshot() }
 
-    /**
+    /*
      * Resets this [IncomingSsrcStats]'s tracking variables such that:
      * 1) A new base sequence number (the given [newBaseSeqNum]) will be used to start new loss calculations.
      * 2) Any lost packet counters will be reset

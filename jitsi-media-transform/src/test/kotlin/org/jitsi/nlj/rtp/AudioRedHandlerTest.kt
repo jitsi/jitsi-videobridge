@@ -182,7 +182,9 @@ class AudioRedHandlerTest : ShouldSpec() {
     private val redPackets = List(7) { i ->
         when (i) {
             0 -> RedAudioRtpPacket.builder.build(redPt, audioPackets[0].clone(), emptyList())
+
             1 -> RedAudioRtpPacket.builder.build(redPt, audioPackets[1].clone(), listOf(audioPackets[0]))
+
             else -> RedAudioRtpPacket.builder.build(
                 redPt,
                 audioPackets[i].clone(),
@@ -207,11 +209,13 @@ class AudioRedHandlerTest : ShouldSpec() {
             val parsedRedundancy = it.removeRedAndGetRedundancyPackets()
             when (it.sequenceNumber) {
                 0 -> parsedRedundancy.size shouldBe 0
+
                 1 -> {
                     parsedRedundancy.size shouldBe 1
                     parsedRedundancy[0].sequenceNumber shouldBe 0
                     parsedRedundancy[0].getPacketId() shouldBe 0
                 }
+
                 2, 3 -> {
                     parsedRedundancy.size shouldBe 2
                     parsedRedundancy[0].sequenceNumber shouldBe it.sequenceNumber - 2
@@ -219,6 +223,7 @@ class AudioRedHandlerTest : ShouldSpec() {
                     parsedRedundancy[1].sequenceNumber shouldBe it.sequenceNumber - 1
                     parsedRedundancy[1].getPacketId() shouldBe it.sequenceNumber - 1
                 }
+
                 5 -> {
                     if (packet4WasAvailable) {
                         parsedRedundancy.size shouldBe 2
@@ -231,6 +236,7 @@ class AudioRedHandlerTest : ShouldSpec() {
                         parsedRedundancy.size shouldBe 0
                     }
                 }
+
                 6 -> {
                     if (packet4WasAvailable) {
                         parsedRedundancy.size shouldBe 2

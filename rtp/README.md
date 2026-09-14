@@ -2,30 +2,20 @@
 Jitsi RTP contains classes for parsing and creating RTP and RTCP packets.
 
 # Code style
-We use ktlint for linting and autoformatting. The ktlint command-line utility
-can be installed by running:
+We use [ktlint](https://pinterest.github.io/ktlint/) for linting and autoformatting. It runs as part of
+`mvn verify` (the build fails on style violations), and the version used is pinned by `ktlint.version` in the
+root `pom.xml`, so no separate installation is needed.
+
+To run only the check, or to autoformat, run these in this module's directory:
 ```
-curl -sSLO https://github.com/pinterest/ktlint/releases/download/0.34.2/ktlint && chmod a+x ktlint && sudo mv ktlint /usr/local/bin/
+mvn exec:exec@ktlint-check
+mvn exec:exec@ktlint-format
 ```
 
-Or, on macOS with Homebrew:
+If you also want the `ktlint` command-line tool (for editor integration or a git hook), install a version matching
+`ktlint.version`, e.g. on macOS with Homebrew:
 ```
 brew install ktlint
 ```
-
-To perform the checks simply run `ktlint`.
-
-You can install a pre-commit or pre-push git hook by running this in the git
-repository directory:
-```
-ktlint --install-git-pre-commit-hook
-```
-
-You can automatically update Intellij IDEA's formatting rules to to be
-compatible with ktlint. However, note that version 0.34.2 of ktlint will
-override any Java code style settings.
-```
-ktlint --apply-to-idea-project
-```
-
-Autoformatting can be run by calling `mvn antrun:run@ktlint-format`.
+It can then be run directly with `ktlint` (or `ktlint -F` to autoformat), install a pre-commit hook with
+`ktlint installGitPreCommitHook`, and configure IntelliJ IDEA with `ktlint applyToIDEAProject`.

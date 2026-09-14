@@ -202,17 +202,13 @@ class MediaSourceDesc
  */
 fun Array<MediaSourceDesc>.copy() = Array(this.size) { i -> this[i].copy() }
 
-fun Array<MediaSourceDesc>.findRtpLayerDescs(packet: VideoRtpPacket): Collection<RtpLayerDesc> {
-    return this.flatMap { it.findRtpLayerDescs(packet) }
+fun Array<MediaSourceDesc>.findRtpLayerDescs(packet: VideoRtpPacket): Collection<RtpLayerDesc> = this.flatMap {
+    it.findRtpLayerDescs(packet)
 }
 
-fun Array<MediaSourceDesc>.findRtpSourceByPrimary(ssrc: Long): MediaSourceDesc? {
-    return this.find { it.matches(ssrc) }
-}
+fun Array<MediaSourceDesc>.findRtpSourceByPrimary(ssrc: Long): MediaSourceDesc? = this.find { it.matches(ssrc) }
 
-fun Array<MediaSourceDesc>.findRtpSource(ssrc: Long): MediaSourceDesc? {
-    return this.find { it.hasSsrc(ssrc) }
-}
+fun Array<MediaSourceDesc>.findRtpSource(ssrc: Long): MediaSourceDesc? = this.find { it.hasSsrc(ssrc) }
 
 fun Array<MediaSourceDesc>.findRtpSource(packet: RtpPacket): MediaSourceDesc? = findRtpSource(packet.ssrc)
 

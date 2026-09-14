@@ -58,6 +58,7 @@ class TccSeqNumTagger(
 
                     currTccSeqNum++
                 }
+
                 else -> Unit
             }
         }
@@ -65,10 +66,8 @@ class TccSeqNumTagger(
         return packetInfo
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addString("tcc_ext_id", tccExtensionId.toString())
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addString("tcc_ext_id", tccExtensionId.toString())
     }
 
     override fun stop() {

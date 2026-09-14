@@ -142,23 +142,18 @@ val Long.mbps: Bandwidth
 /**
  * Create a [Bandwidth] from a [DataSize] over a given time
  */
-fun DataSize.per(duration: Duration): Bandwidth {
-    return Bandwidth((this.bits * 1_000_000) / duration.toRoundedMicros())
-}
+fun DataSize.per(duration: Duration): Bandwidth = Bandwidth((this.bits * 1_000_000) / duration.toRoundedMicros())
 
 /**
  * Create a [Duration] from a [DataSize] per [Bandwidth]
  */
-operator fun DataSize.div(bandwidth: Bandwidth): Duration {
-    return Duration.ofNanos(round((this.bits.toDouble() / bandwidth.bps * 1e9)).toLong())
-}
+operator fun DataSize.div(bandwidth: Bandwidth): Duration =
+    Duration.ofNanos(round((this.bits.toDouble() / bandwidth.bps * 1e9)).toLong())
 
 /**
  * create a [DataSize] from a [Bandwidth] times [Duration]
  */
-operator fun Bandwidth.times(duration: Duration): DataSize {
-    return round(bps * duration.toDouble()).toLong().bits
-}
+operator fun Bandwidth.times(duration: Duration): DataSize = round(bps * duration.toDouble()).toLong().bits
 
 /**
  * Returns the sum of all elements in the collection.
@@ -168,22 +163,16 @@ fun Iterable<Bandwidth>.sum(): Bandwidth = reduce(Bandwidth::plus)
 /**
  * Returns the maximum of two [Bandwidth]s
  */
-fun max(a: Bandwidth, b: Bandwidth): Bandwidth {
-    return if (a >= b) a else b
-}
+fun max(a: Bandwidth, b: Bandwidth): Bandwidth = if (a >= b) a else b
 
 /**
  * Returns the minimum of two [Bandwidth]s
  */
-fun min(a: Bandwidth, b: Bandwidth): Bandwidth {
-    return if (a <= b) a else b
-}
+fun min(a: Bandwidth, b: Bandwidth): Bandwidth = if (a <= b) a else b
 
 /**
  * Ensures that this value is not greater than the specified [maximumValue].
  *
  * @return this value if it's less than or equal to the [maximumValue] or the [maximumValue] otherwise.
  */
-public fun Bandwidth.coerceAtMost(maximumValue: Bandwidth): Bandwidth {
-    return if (this > maximumValue) maximumValue else this
-}
+public fun Bandwidth.coerceAtMost(maximumValue: Bandwidth): Bandwidth = if (this > maximumValue) maximumValue else this

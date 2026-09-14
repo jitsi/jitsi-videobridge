@@ -78,12 +78,13 @@ class AudioSubscriptionManager() {
             audioSubscription.updateSubscription(subscription, knownSources.toList())
         }
 
-    /**
+    /*
      * Checks if audio from a given SSRC is wanted by a specific endpoint.
      * @param endpointId the ID of the endpoint
      * @param ssrc the SSRC to check
      * @return true if the audio is wanted, false otherwise
      */
+
     /** Whether the given SSRC belongs to a (currently-known) synthetic source. */
     fun isSynthetic(ssrc: Long): Boolean = ssrcSynthetic[ssrc] == true
 
@@ -118,9 +119,7 @@ class AudioSubscriptionManager() {
      * @param sourceName the name of the audio source
      * @return true if the source is explicitly subscribed, false otherwise
      */
-    fun isExplicitlySubscribed(sourceName: String?): Boolean {
-        return subscribedLocalAudioSources.containsKey(sourceName)
-    }
+    fun isExplicitlySubscribed(sourceName: String?): Boolean = subscribedLocalAudioSources.containsKey(sourceName)
 
     /**
      * Updates the subscribed local audio sources for a specific endpoint based on their subscription.

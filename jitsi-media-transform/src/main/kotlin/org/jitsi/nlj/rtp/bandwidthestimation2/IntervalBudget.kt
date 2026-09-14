@@ -60,9 +60,7 @@ class IntervalBudget(
         bytesRemaining = max(bytesRemaining - bytes, -maxBytesInBudget)
     }
 
-    fun bytesRemaining(): Long {
-        return max(0, bytesRemaining)
-    }
+    fun bytesRemaining(): Long = max(0, bytesRemaining)
 
     fun budgetRatio(): Double {
         if (maxBytesInBudget == 0L) {

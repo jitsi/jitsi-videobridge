@@ -377,6 +377,7 @@ class IceTransport @JvmOverloads constructor(
                     // candidates were ignored:
                     // iceAgentStateIsRunning && candidates.isEmpty().
                 }
+
                 else -> bundle.component.updateRemoteCandidates()
             }
         } else if (remoteCandidateCount != 0) {
@@ -939,6 +940,7 @@ class IceTransport @JvmOverloads constructor(
                     iceSucceeded.inc()
                 }
             }
+
             transition.failed() -> {
                 if (isPending) {
                     // Only the restart failed. The established Agent is untouched, so keep using it rather
@@ -1141,10 +1143,8 @@ private data class IceProcessingStateTransition(
     // free prior to being started, so we handle that case separately below.
     fun completed(): Boolean = newState == IceProcessingState.COMPLETED
 
-    fun failed(): Boolean {
-        return newState == IceProcessingState.FAILED ||
-            (oldState == IceProcessingState.RUNNING && newState == IceProcessingState.TERMINATED)
-    }
+    fun failed(): Boolean = newState == IceProcessingState.FAILED ||
+        (oldState == IceProcessingState.RUNNING && newState == IceProcessingState.TERMINATED)
 }
 
 private fun IceMediaStream.remoteUfragAndPasswordKnown(): Boolean = remoteUfrag != null && remotePassword != null

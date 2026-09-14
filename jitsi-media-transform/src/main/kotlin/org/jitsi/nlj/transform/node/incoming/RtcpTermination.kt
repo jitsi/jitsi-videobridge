@@ -72,22 +72,26 @@ class RtcpTermination(
                     }
                     forwardedRtcp = rtcpPacket
                 }
+
                 is RtcpSdesPacket, is RtcpRrPacket, is RtcpFbNackPacket,
                 is RtcpByePacket, is RtcpFbTccPacket, is RtcpFbRembPacket -> {
                     // Supported, but no special handling here (any special handling will be in
                     // notifyRtcpReceived below
                 }
+
                 is RtcpXrPacket -> {
                     // Unsupported, but we get them when chrome does screenshare and the
                     // message below clouds up the logs.  They are still tracked as part
                     // of the packetReceiveCount
                 }
+
                 is UnsupportedRtcpFbPacket -> {
                     logger.cinfo {
                         "TODO: not yet handling RTCP packet of type ${rtcpPacket.packetType} fmt " +
                             "${rtcpPacket.reportCount} ${rtcpPacket.javaClass}"
                     }
                 }
+
                 else -> {
                     logger.cinfo {
                         "TODO: not yet handling RTCP packet of type ${rtcpPacket.packetType} " +
@@ -125,13 +129,11 @@ class RtcpTermination(
         }
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            packetReceiveCounts.forEach { (type, count) ->
-                addNumber("num_${type}_rx", count)
-            }
-            addNumber("num_failed_to_forward", numFailedToForward)
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        packetReceiveCounts.forEach { (type, count) ->
+            addNumber("num_${type}_rx", count)
         }
+        addNumber("num_failed_to_forward", numFailedToForward)
     }
 
     override fun statsJson() = super.statsJson().apply {

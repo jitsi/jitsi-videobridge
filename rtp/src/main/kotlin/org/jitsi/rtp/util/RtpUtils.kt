@@ -136,14 +136,12 @@ class RtpUtils {
         fun millisToNtpTimestamp(timestampMs: Long): Long = TimeUtils.toNtpTime(timestampMs)
 
         @JvmStatic
-        fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Int): Long {
-            return ((rtpTimestamp / (ticksPerSecond.toDouble())) * 1000).toLong()
-        }
+        fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Int): Long =
+            ((rtpTimestamp / (ticksPerSecond.toDouble())) * 1000).toLong()
 
         @JvmStatic
-        fun convertRtpTimestampToInstant(rtpTimestamp: Int, ticksPerSecond: Int): Instant {
-            return Instant.EPOCH.plus(Duration.ofSeconds(rtpTimestamp.toLong()).dividedBy(ticksPerSecond.toLong()))
-        }
+        fun convertRtpTimestampToInstant(rtpTimestamp: Int, ticksPerSecond: Int): Instant =
+            Instant.EPOCH.plus(Duration.ofSeconds(rtpTimestamp.toLong()).dividedBy(ticksPerSecond.toLong()))
     }
 }
 

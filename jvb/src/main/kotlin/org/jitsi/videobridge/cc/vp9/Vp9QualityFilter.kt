@@ -317,9 +317,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             incomingEncoding > currentEncoding && currentEncoding < internalTargetEncoding ->
                 // It looks like upscaling is possible
                 true
+
             incomingEncoding < currentEncoding && currentEncoding > internalTargetEncoding ->
                 // It looks like downscaling is possible.
                 true
+
             else ->
                 false
         }
@@ -402,6 +404,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                     }
                     true
                 }
+
                 incomingEncoding <= internalTargetEncoding &&
                     internalTargetEncoding < currentEncoding -> {
                     // downscale case
@@ -412,6 +415,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                     }
                     true
                 }
+
                 else -> {
                     false
                 }

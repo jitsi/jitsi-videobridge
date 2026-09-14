@@ -42,11 +42,12 @@ mvn install
 # Run checkstyle (Java formatting)
 mvn checkstyle:check
 
-# Run ktlint (Kotlin formatting, must be run inside a submodule directory, e.g. ./jvb/)
-mvn ktlint:check
+# Run ktlint (Kotlin formatting, must be run inside a submodule directory, e.g. ./jvb/; sibling modules must be
+# resolvable, so run "mvn install -DskipTests" from the root first if they are not)
+mvn exec:exec@ktlint-check
 
 # Auto-format Kotlin code (must be run inside a submodule directory, e.g. ./jvb/)
-mvn ktlint:format
+mvn exec:exec@ktlint-format
 ```
 
 ## Project Structure
@@ -113,7 +114,7 @@ Uses Typesafe Config (HOCON format):
 ### Kotlin Code
 - Follows ktlint conventions (standard Kotlin style)
 - **Line Length**: Maximum 120 characters
-- Use ktlint Maven plugin for linting and formatting
+- ktlint runs from Maven via exec-maven-plugin (version pinned by `ktlint.version` in the root pom); `mvn verify` runs the check
 
 ### Testing
 - Uses JUnit 5 for new tests (JUnit 4 vintage engine for legacy tests)

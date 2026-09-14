@@ -95,17 +95,25 @@ class PayloadTypeUtil {
 
             return when (encoding) {
                 VP8 -> Vp8PayloadType(id, parameters, rtcpFeedbackSet)
+
                 VP9 -> Vp9PayloadType(id, parameters, rtcpFeedbackSet)
+
                 AV1 -> Av1PayloadType(id, parameters, rtcpFeedbackSet)
+
                 H264 -> H264PayloadType(id, parameters, rtcpFeedbackSet)
+
                 RTX -> RtxPayloadType(id, parameters)
+
                 OPUS -> OpusPayloadType(id, clockRate, channels, parameters)
+
                 TELEPHONE_EVENT -> TelephoneEventPayloadType(id, clockRate, channels, parameters)
+
                 RED -> when (mediaType) {
                     AUDIO -> AudioRedPayloadType(id, clockRate, channels, parameters)
                     VIDEO -> VideoRedPayloadType(id, clockRate, parameters, rtcpFeedbackSet)
                     else -> null
                 }
+
                 OTHER -> when (mediaType) {
                     AUDIO -> OtherAudioPayloadType(id, ext.name, clockRate, channels, parameters)
                     VIDEO -> OtherVideoPayloadType(id, ext.name, clockRate, parameters)

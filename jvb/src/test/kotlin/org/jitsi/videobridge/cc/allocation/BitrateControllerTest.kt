@@ -1586,33 +1586,29 @@ class TestEndpoint(
     override val mediaSources: Array<MediaSourceDesc> = emptyArray()
 ) : MediaSourceContainer
 
-fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> {
-    return MutableList(ids.size) { i ->
-        TestEndpoint(
-            ids[i],
-            arrayOf(
-                createSourceDesc(
-                    3 * i + 1,
-                    3 * i + 2,
-                    3 * i + 3,
-                    ids[i] + "-v0",
-                    ids[i]
-                )
+fun createEndpoints(vararg ids: String): MutableList<TestEndpoint> = MutableList(ids.size) { i ->
+    TestEndpoint(
+        ids[i],
+        arrayOf(
+            createSourceDesc(
+                3 * i + 1,
+                3 * i + 2,
+                3 * i + 3,
+                ids[i] + "-v0",
+                ids[i]
             )
         )
-    }
+    )
 }
 
-fun createSources(vararg ids: String): MutableList<MediaSourceDesc> {
-    return MutableList(ids.size) { i ->
-        createSourceDesc(
-            3 * i + 1,
-            3 * i + 2,
-            3 * i + 3,
-            ids[i],
-            ids[i]
-        )
-    }
+fun createSources(vararg ids: String): MutableList<MediaSourceDesc> = MutableList(ids.size) { i ->
+    createSourceDesc(
+        3 * i + 1,
+        3 * i + 2,
+        3 * i + 3,
+        ids[i],
+        ids[i]
+    )
 }
 
 fun createSourceDesc(ssrc1: Int, ssrc2: Int, ssrc3: Int, sourceName: String, owner: String): MediaSourceDesc =

@@ -56,8 +56,7 @@ abstract class FixedRateSender(
 
     var running = false
 
-    var rate: Bandwidth by Delegates.observable(0.bps) {
-            _, _, _ ->
+    var rate: Bandwidth by Delegates.observable(0.bps) { _, _, _ ->
         nextPacket?.cancel(false)
         schedulePacket(false)
     }
@@ -70,6 +69,7 @@ abstract class FixedRateSender(
         } else {
             val packetDelayTime = when (lastSendTime) {
                 NEVER -> Duration.ZERO
+
                 else -> {
                     var delayTime = (nextPacketSize() atRate rate)
                     if (!justSent) {

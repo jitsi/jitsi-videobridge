@@ -68,7 +68,7 @@ open class JitterStats {
             val delta = Duration.between(previousPacketSentTimestamp, previousPacketReceivedTimestamp) -
                 Duration.between(currentPacketSentTimestamp, currentPacketReceivedTimestamp)
 
-            /**
+            /*
              * The interarrival jitter SHOULD be calculated continuously as each
              * data packet i is received from source SSRC_n, using this
              * difference D for that packet and the previous packet i-1 in order

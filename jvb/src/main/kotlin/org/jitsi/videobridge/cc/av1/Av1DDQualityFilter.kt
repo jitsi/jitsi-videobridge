@@ -286,9 +286,11 @@ internal class Av1DDQualityFilter(
             incomingEncoding > currentEncoding && currentEncoding < internalTargetEncoding ->
                 // It looks like upscaling is possible
                 true
+
             incomingEncoding < currentEncoding && currentEncoding > internalTargetEncoding ->
                 // It looks like downscaling is possible.
                 true
+
             else ->
                 false
         }
@@ -336,8 +338,10 @@ internal class Av1DDQualityFilter(
 
         val indexIfSwitched = when {
             incomingEncoding == externalTargetEncoding -> externalTargetIndex
+
             incomingEncoding == internalTargetEncoding && internalTargetDt != -1 ->
                 getIndex(currentEncoding, internalTargetDt)
+
             else -> frameInfo.dtisPresent.maxOrNull()!!
         }
         val dtIfSwitched = getDtFromIndex(indexIfSwitched)
@@ -387,6 +391,7 @@ internal class Av1DDQualityFilter(
                     }
                     acceptIfSwitched
                 }
+
                 incomingEncoding <= internalTargetEncoding &&
                     internalTargetEncoding < currentEncoding -> {
                     // downscale case
@@ -399,6 +404,7 @@ internal class Av1DDQualityFilter(
                     }
                     acceptIfSwitched
                 }
+
                 else -> {
                     false
                 }

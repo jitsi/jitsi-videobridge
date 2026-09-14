@@ -136,11 +136,9 @@ class RtcpTerminationTest : ShouldSpec() {
     }
 
     // Create a compound RTCP packet with another arbitrary RTCP packet alongside the SR
-    private fun createCompoundRtcp(srPacket: RtcpSrPacket): CompoundRtcpPacket {
-        return CompoundRtcpPacket(
-            nackPacket.buffer + srPacket.buffer,
-            srPacket.offset,
-            srPacket.length + nackPacket.length
-        )
-    }
+    private fun createCompoundRtcp(srPacket: RtcpSrPacket): CompoundRtcpPacket = CompoundRtcpPacket(
+        nackPacket.buffer + srPacket.buffer,
+        srPacket.offset,
+        srPacket.length + nackPacket.length
+    )
 }

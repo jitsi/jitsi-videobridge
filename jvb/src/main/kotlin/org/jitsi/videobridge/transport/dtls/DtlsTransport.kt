@@ -157,11 +157,13 @@ class DtlsTransport(parentLogger: Logger, id: String) {
                     logger.info("The remote side is acting as DTLS client, we'll act as server")
                 }
             }
+
             "passive" -> {
                 if (dtlsStack.actAsClient()) {
                     logger.info("The remote side is acting as DTLS server, we'll act as client")
                 }
             }
+
             else -> {
                 logger.error(
                     "The remote side sent an unrecognized DTLS setup value: " +

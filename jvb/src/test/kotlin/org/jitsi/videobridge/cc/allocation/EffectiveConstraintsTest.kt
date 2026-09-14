@@ -22,14 +22,13 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.VideoType
 
-fun testSource(endpointId: String, sourceName: String, videoType: VideoType = VideoType.CAMERA): MediaSourceDesc {
-    return MediaSourceDesc(
+fun testSource(endpointId: String, sourceName: String, videoType: VideoType = VideoType.CAMERA): MediaSourceDesc =
+    MediaSourceDesc(
         emptyArray(),
         endpointId,
         sourceName,
         videoType
     )
-}
 
 @Suppress("NAME_SHADOWING")
 class EffectiveConstraintsTest : ShouldSpec() {

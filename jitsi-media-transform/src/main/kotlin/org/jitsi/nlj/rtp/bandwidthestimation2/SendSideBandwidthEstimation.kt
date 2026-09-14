@@ -87,9 +87,7 @@ class LinkCapacityTracker {
         lastLinkCapcityUpdate = atTime
     }
 
-    fun estimate(): Bandwidth {
-        return capacityEstimateBps.bps
-    }
+    fun estimate(): Bandwidth = capacityEstimateBps.bps
 }
 
 class RttBasedBackoff {
@@ -109,9 +107,7 @@ class RttBasedBackoff {
         lastPropagationRtt = propagationRtt
     }
 
-    fun isRttAboveLimit(): Boolean {
-        return correctedRtt() > rttLimit
-    }
+    fun isRttAboveLimit(): Boolean = correctedRtt() > rttLimit
 
     private fun correctedRtt(): Duration {
         // Avoid timeout when no packets are being sent.
@@ -447,9 +443,7 @@ class SendSideBandwidthEstimation(
         lossBasedBandwidthEstimatorV2.setMinMaxBitrate(minBitrateConfigured, maxBitrateConfigured)
     }
 
-    fun getMinBitrate(): Int {
-        return minBitrateConfigured.bps.toInt()
-    }
+    fun getMinBitrate(): Int = minBitrateConfigured.bps.toInt()
 
     fun setAcknowledgedRate(acknowledgedRate: Bandwidth?, atTime: Instant) {
         this.acknowledgedRate = acknowledgedRate
@@ -473,10 +467,8 @@ class SendSideBandwidthEstimation(
         updateEstimate(report.feedbackTime)
     }
 
-    private fun isInStartPhase(atTime: Instant): Boolean {
-        return firstReportTime.isInfinite() ||
-            Duration.between(firstReportTime, atTime) <= kStartPhase
-    }
+    private fun isInStartPhase(atTime: Instant): Boolean = firstReportTime.isInfinite() ||
+        Duration.between(firstReportTime, atTime) <= kStartPhase
 
     private fun updateUmaStatsPacketsLost(atTime: Instant, packetsLost: Int) {
         val bitrateKbps = ((currentTarget.bps + 500) / 1000).kbps

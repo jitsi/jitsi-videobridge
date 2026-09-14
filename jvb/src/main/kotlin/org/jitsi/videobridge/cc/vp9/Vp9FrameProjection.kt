@@ -29,7 +29,7 @@ import java.time.Instant
  * are thread-safe.
  */
 class Vp9FrameProjection
-/**
+/*
  * Ctor.
  *
  * @param vp9Frame The [Vp9Frame] that's projected.
@@ -118,9 +118,7 @@ internal constructor(
         created = null
     )
 
-    fun rewriteSeqNo(seq: Int): Int {
-        return applySequenceNumberDelta(seq, sequenceNumberDelta)
-    }
+    fun rewriteSeqNo(seq: Int): Int = applySequenceNumberDelta(seq, sequenceNumberDelta)
 
     /**
      * Rewrites an RTP packet.

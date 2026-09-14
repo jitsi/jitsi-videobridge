@@ -158,6 +158,7 @@ class AudioRedHandler(
                         stats.redundancyPacketAdded()
                     }
                 }
+
                 RedDistance.TWO -> {
                     getPacketToProtect(
                         applySequenceNumberDelta(seq, -1),
@@ -234,8 +235,10 @@ class AudioRedHandler(
             // Whether we need to strip the RED encapsulation
             val strip = when (redPayloadType) {
                 null -> true
+
                 else -> when (config.policy) {
                     RedPolicy.STRIP -> true
+
                     // RedPolicy.PROTECT_DOMINANT -> !isDominant
                     RedPolicy.NOOP, RedPolicy.PROTECT_ALL -> false
                 }

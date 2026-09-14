@@ -135,13 +135,9 @@ open class BitrateEstimator {
         return Pair(bitrateSample, isSmallSample)
     }
 
-    open fun bitrate(): Bandwidth? {
-        return if (bitrateEstimateKbps < 0.0f) null else bitrateEstimateKbps.kbps
-    }
+    open fun bitrate(): Bandwidth? = if (bitrateEstimateKbps < 0.0f) null else bitrateEstimateKbps.kbps
 
-    fun peekRate(): Bandwidth? {
-        return if (currentWindowMs > 0) sum.bytes.per(currentWindowMs.ms) else null
-    }
+    fun peekRate(): Bandwidth? = if (currentWindowMs > 0) sum.bytes.per(currentWindowMs.ms) else null
 
     open fun expectFastRateChange() {
         // By setting the bitrate-estimate variance to a higher value we allow the

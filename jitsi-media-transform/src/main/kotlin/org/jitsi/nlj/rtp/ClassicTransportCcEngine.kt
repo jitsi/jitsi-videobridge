@@ -140,6 +140,7 @@ class ClassicTransportCcEngine(
                         }
                     }
                 }
+
                 is ReceivedPacketReport -> {
                     currArrivalTimestamp += packetReport.deltaDuration
 
@@ -226,17 +227,15 @@ class ClassicTransportCcEngine(
         }
     }
 
-    override fun getStatistics(): StatisticsSnapshot {
-        return StatisticsSnapshot(
-            numPacketsReported.sum(),
-            numPacketsReportedLost.sum(),
-            numDuplicateReports.sum(),
-            numPacketsReportedAfterLost.sum(),
-            numPacketsUnreported.sum(),
-            numMissingPacketReports.sum(),
-            bandwidthEstimator.getStats()
-        )
-    }
+    override fun getStatistics(): StatisticsSnapshot = StatisticsSnapshot(
+        numPacketsReported.sum(),
+        numPacketsReportedLost.sum(),
+        numDuplicateReports.sum(),
+        numPacketsReportedAfterLost.sum(),
+        numPacketsUnreported.sum(),
+        numMissingPacketReports.sum(),
+        bandwidthEstimator.getStats()
+    )
 
     override fun addBandwidthListener(listener: BandwidthListener) = bandwidthEstimator.addListener(listener)
 
@@ -284,17 +283,15 @@ class ClassicTransportCcEngine(
         val numMissingPacketReports: Long,
         val bandwidthEstimatorStats: BandwidthEstimator.StatisticsSnapshot
     ) : TransportCcEngine.StatisticsSnapshot() {
-        override fun toJson(): ObjectNode {
-            return JsonNodeFactory.instance.objectNode().also {
-                it.put("name", ClassicTransportCcEngine::class.java.simpleName)
-                it.put("numPacketsReported", numPacketsReported)
-                it.put("numPacketsReportedLost", numPacketsReportedLost)
-                it.put("numDuplicateReports", numDuplicateReports)
-                it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
-                it.put("numPacketsUnreported", numPacketsUnreported)
-                it.put("numMissingPacketReports", numMissingPacketReports)
-                it.set<ObjectNode>("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
-            }
+        override fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().also {
+            it.put("name", ClassicTransportCcEngine::class.java.simpleName)
+            it.put("numPacketsReported", numPacketsReported)
+            it.put("numPacketsReportedLost", numPacketsReportedLost)
+            it.put("numDuplicateReports", numDuplicateReports)
+            it.put("numPacketsReportedAfterLost", numPacketsReportedAfterLost)
+            it.put("numPacketsUnreported", numPacketsUnreported)
+            it.put("numMissingPacketReports", numMissingPacketReports)
+            it.set<ObjectNode>("bandwidth_estimator_stats", bandwidthEstimatorStats.toJson())
         }
     }
 

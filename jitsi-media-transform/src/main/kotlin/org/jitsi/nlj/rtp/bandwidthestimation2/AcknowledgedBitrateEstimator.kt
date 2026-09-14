@@ -57,6 +57,6 @@ class AcknowledgedBitrateEstimator(
     }
 }
 
-private fun List<PacketResult>.isSortedByReceiveTime(): Boolean {
-    return this.asSequence().zipWithNext { a, b -> a.receiveTime <= b.receiveTime }.all { it }
-}
+private fun List<PacketResult>.isSortedByReceiveTime(): Boolean = this.asSequence().zipWithNext { a, b ->
+    a.receiveTime <= b.receiveTime
+}.all { it }

@@ -91,14 +91,12 @@ class EndpointConnectionStats(
         endpointConnectionStatsListeners.remove(listener)
     }
 
-    fun getSnapshot(): Snapshot {
-        return synchronized(lock) {
-            Snapshot(
-                rtt = rtt,
-                incomingLossStats = incomingLossTracker.getSnapshot(),
-                outgoingLossStats = outgoingLossTracker.getSnapshot()
-            )
-        }
+    fun getSnapshot(): Snapshot = synchronized(lock) {
+        Snapshot(
+            rtt = rtt,
+            incomingLossStats = incomingLossTracker.getSnapshot(),
+            outgoingLossStats = outgoingLossTracker.getSnapshot()
+        )
     }
 
     override fun rtcpPacketReceived(packet: RtcpPacket, receivedTime: Instant?) {
@@ -107,6 +105,7 @@ class EndpointConnectionStats(
                 logger.cdebug { "Received SR packet with ${packet.reportBlocks.size} report blocks" }
                 packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedTime, reportBlock) }
             }
+
             is RtcpRrPacket -> {
                 logger.cdebug { "Received RR packet with ${packet.reportBlocks.size} report blocks" }
                 packet.reportBlocks.forEach { reportBlock -> processReportBlock(receivedTime, reportBlock) }

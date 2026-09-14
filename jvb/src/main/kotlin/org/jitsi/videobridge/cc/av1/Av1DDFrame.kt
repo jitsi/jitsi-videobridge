@@ -260,9 +260,7 @@ class Av1DDFrame internal constructor(
      * belongs to the same RTP stream as the frame that this instance refers to,
      * false otherwise.
      */
-    fun matchesSSRC(av1Frame: Av1DDFrame): Boolean {
-        return ssrc == av1Frame.ssrc
-    }
+    fun matchesSSRC(av1Frame: Av1DDFrame): Boolean = ssrc == av1Frame.ssrc
 
     /**
      * Checks whether the specified RTP packet is part of this frame.
@@ -271,10 +269,8 @@ class Av1DDFrame internal constructor(
      * @return true if the specified RTP packet is part of this frame, false
      * otherwise.
      */
-    fun matchesFrame(pkt: Av1DDPacket): Boolean {
-        return ssrc == pkt.ssrc && timestamp == pkt.timestamp &&
-            frameNumber == pkt.frameNumber
-    }
+    fun matchesFrame(pkt: Av1DDPacket): Boolean = ssrc == pkt.ssrc && timestamp == pkt.timestamp &&
+        frameNumber == pkt.frameNumber
 
     fun validateConsistency(pkt: Av1DDPacket) {
         if (frameInfo == null) {
@@ -295,10 +291,8 @@ class Av1DDFrame internal constructor(
             }
         )
     }
-    fun isImmediatelyAfter(otherFrame: Av1DDFrame): Boolean {
-        return frameNumber ==
-            applySequenceNumberDelta(otherFrame.frameNumber, 1)
-    }
+    fun isImmediatelyAfter(otherFrame: Av1DDFrame): Boolean = frameNumber ==
+        applySequenceNumberDelta(otherFrame.frameNumber, 1)
 
     override fun toString() = buildString {
         append("$ssrc, ")

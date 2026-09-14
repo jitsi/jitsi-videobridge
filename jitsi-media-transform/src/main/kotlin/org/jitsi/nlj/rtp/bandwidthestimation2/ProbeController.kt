@@ -288,8 +288,10 @@ class ProbeController(
         when (newState) {
             State.kInit ->
                 state = State.kInit
+
             State.kWaitingForProbingResult ->
                 state = State.kWaitingForProbingResult
+
             State.kProbingComplete -> {
                 state = State.kProbingComplete
                 minBitrateToProbeFurther = Bandwidth.INFINITY
@@ -554,9 +556,11 @@ class ProbeController(
                 logger.info { "Not sending probe in bandwidth limited state. $bandwidthLimitedCause" }
                 return mutableListOf()
             }
+
             BandwidthLimitedCause.kLossLimitedBweIncreasing ->
                 maxProbeBitrate =
                     min(maxProbeBitrate, estimatedBitrate * config.lossLimitedProbeScale)
+
             BandwidthLimitedCause.kDelayBasedLimited ->
                 Unit
         }

@@ -154,9 +154,7 @@ class RtcpFbTccPacketBuilder(
         return true
     }
 
-    fun BaseTime(): Instant {
-        return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
-    }
+    fun BaseTime(): Instant = Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
 
     private fun AddDeltaSize(deltaSize: DeltaSize): Boolean {
         if (num_seq_no_ == kMaxReportedPackets) {
@@ -223,6 +221,7 @@ class RtcpFbTccPacketBuilder(
             if (it is ReceivedPacketReport) {
                 when (it.deltaTicks) {
                     in 0..0xFF -> buf[currOffset++] = it.deltaTicks.toByte()
+
                     else -> {
                         buf.putShort(currOffset, it.deltaTicks)
                         currOffset += 2
@@ -353,18 +352,21 @@ class RtcpFbTccPacket(
                 }
                 when (delta_size) {
                     0 -> packets_.add(UnreceivedPacketReport(seq_no.value))
+
                     1 -> {
                         val delta = buffer[index]
                         packets_.add(ReceivedPacketReport(seq_no.value, delta.toPositiveShort()))
                         last_timestamp_ += delta.toInt() * kDeltaScaleFactor
                         index += delta_size
                     }
+
                     2 -> {
                         val delta = buffer.getShortAsInt(index)
                         packets_.add(ReceivedPacketReport(seq_no.value, delta.toShort()))
                         last_timestamp_ += delta * kDeltaScaleFactor
                         index += delta_size
                     }
+
                     3 -> {
                         throw Exception("Warning: invalid delta size for seq_no $seq_no")
                     }
@@ -429,13 +431,9 @@ class RtcpFbTccPacket(
 
     val feedbackSeqNum: Int = getFeedbackPacketCount(buffer, offset)
 
-    fun GetPacketStatusCount(): Int {
-        return num_seq_no_
-    }
+    fun GetPacketStatusCount(): Int = num_seq_no_
 
-    fun BaseTime(): Instant {
-        return Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
-    }
+    fun BaseTime(): Instant = Instant.EPOCH + base_time_ticks_ * kBaseScaleFactor
 
     fun GetBaseDelta(prev_timestamp: Instant): Duration {
         var delta = Duration.between(prev_timestamp, BaseTime())

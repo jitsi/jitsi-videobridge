@@ -16,7 +16,7 @@
 
 package org.jitsi.nlj.util
 
-/**
+/*
  * Index tracker inspired by the RFC3711 RTP sequence number index tracker.
  */
 
@@ -118,6 +118,7 @@ sealed class IndexTracker<T> {
                 // Seq num was from the previous roc value
                 roc - 1
             }
+
             rollsOver(highestSeqNumReceived, seqNum) -> {
                 // We've rolled over, so update the roc in place if updateRoc
                 // is set, otherwise return the right value (our current roc
@@ -128,6 +129,7 @@ sealed class IndexTracker<T> {
                     roc + 1
                 }
             }
+
             else -> roc
         }
 
@@ -149,7 +151,5 @@ sealed class IndexTracker<T> {
         getIndex(seq, true)
     }
 
-    fun debugState(): String {
-        return "{roc=$roc, highestSeqNumReceived=$highestSeqNumReceived}"
-    }
+    fun debugState(): String = "{roc=$roc, highestSeqNumReceived=$highestSeqNumReceived}"
 }

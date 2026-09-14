@@ -412,8 +412,7 @@ class Av1DDAdaptiveSourceProjectionTest {
                  */
                 val extFrameNum = frameNumsIndexTracker.update(packet.frameNumber)
                 frameNumsDropped.add(extFrameNum)
-            } else if (expectAccept(frameInfo)
-            ) {
+            } else if (expectAccept(frameInfo)) {
                 Assert.assertTrue(accepted)
 
                 context.rewriteRtp(packetInfo)

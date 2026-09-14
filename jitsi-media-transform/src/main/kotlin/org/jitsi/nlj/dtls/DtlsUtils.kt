@@ -82,15 +82,13 @@ class DtlsUtils {
          * A helper which finds an SRTP protection profile present in both
          * [ours] and [theirs].  Throws [DtlsException] if no common profile is found.
          */
-        fun chooseSrtpProtectionProfile(ours: Iterable<Int>, theirs: Iterable<Int>): Int {
-            return try {
-                ours.first(theirs::contains)
-            } catch (e: NoSuchElementException) {
-                throw DtlsException(
-                    "No common SRTP protection profile found.  Ours: ${ours.joinToString()} " +
-                        "Theirs: ${theirs.joinToString()}"
-                )
-            }
+        fun chooseSrtpProtectionProfile(ours: Iterable<Int>, theirs: Iterable<Int>): Int = try {
+            ours.first(theirs::contains)
+        } catch (e: NoSuchElementException) {
+            throw DtlsException(
+                "No common SRTP protection profile found.  Ours: ${ours.joinToString()} " +
+                    "Theirs: ${theirs.joinToString()}"
+            )
         }
 
         /**
@@ -181,7 +179,7 @@ class DtlsUtils {
             certificate: Certificate,
             remoteFingerprints: Map<String, List<String>>
         ) {
-            /** RFC 8122:
+            /* RFC 8122:
              *    An endpoint MUST select the set of fingerprints that use its most
              *    preferred hash function (out of those offered by the peer) and verify
              *    that each certificate used matches one fingerprint out of that set.
@@ -295,6 +293,7 @@ class DtlsUtils {
 inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, message: String?, cause: Throwable?) {
     when (alertDescription) {
         AlertDescription.close_notify -> cdebug { "close_notify raised, connection closing" }
+
         else -> {
             val stack = with(StringBuffer()) {
                 val e = Exception()
@@ -315,6 +314,7 @@ inline fun Logger.notifyAlertRaised(alertLevel: Short, alertDescription: Short, 
 inline fun Logger.notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
     when (alertDescription) {
         AlertDescription.close_notify -> cinfo { "close_notify received, connection closing" }
+
         else -> cerror {
             "Alert received: level=$alertLevel, description=$alertDescription " +
                 "(${AlertDescription.getName(alertDescription)})"

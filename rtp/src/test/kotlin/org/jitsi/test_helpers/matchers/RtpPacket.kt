@@ -23,13 +23,9 @@ import org.jitsi.rtp.rtp.RtpHeader
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.ByteArrayBuffer
 
-fun RtpPacket.getPayload(): ByteArrayBuffer {
-    return UnparsedPacket(buffer, payloadOffset, payloadLength)
-}
+fun RtpPacket.getPayload(): ByteArrayBuffer = UnparsedPacket(buffer, payloadOffset, payloadLength)
 
-fun RtpPacket.getFixedHeaderAsBAB(): ByteArrayBuffer {
-    return UnparsedPacket(buffer, offset, RtpHeader.FIXED_HEADER_SIZE_BYTES)
-}
+fun RtpPacket.getFixedHeaderAsBAB(): ByteArrayBuffer = UnparsedPacket(buffer, offset, RtpHeader.FIXED_HEADER_SIZE_BYTES)
 
 fun haveSamePayload(expected: RtpPacket) = object : Matcher<RtpPacket> {
     override fun test(value: RtpPacket): MatcherResult {

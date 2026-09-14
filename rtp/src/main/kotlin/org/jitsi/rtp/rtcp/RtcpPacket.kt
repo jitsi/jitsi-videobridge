@@ -82,11 +82,17 @@ abstract class RtcpPacket(
             }
             return when (packetType) {
                 RtcpByePacket.PT -> RtcpByePacket(buf, offset, packetLengthBytes)
+
                 RtcpRrPacket.PT -> RtcpRrPacket(buf, offset, packetLengthBytes)
+
                 RtcpSrPacket.PT -> RtcpSrPacket(buf, offset, packetLengthBytes)
+
                 RtcpSdesPacket.PT -> RtcpSdesPacket(buf, offset, packetLengthBytes)
+
                 in RtcpFbPacket.PACKET_TYPES -> RtcpFbPacket.parse(buf, offset, packetLengthBytes)
+
                 RtcpXrPacket.PT -> RtcpXrPacket(buf, offset, packetLengthBytes)
+
                 else -> {
                     return when (packetType) {
                         in RTCP_PACKET_TYPE_RANGE -> UnsupportedRtcpPacket(buf, offset, packetLengthBytes)

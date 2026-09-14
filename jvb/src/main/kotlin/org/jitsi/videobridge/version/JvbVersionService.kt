@@ -55,10 +55,8 @@ class JvbVersionService : VersionService {
     }
 }
 
-private fun Matcher.groupOrNull(groupId: Int): String? {
-    return try {
-        group(groupId)
-    } catch (t: Throwable) {
-        null
-    }
+private fun Matcher.groupOrNull(groupId: Int): String? = try {
+    group(groupId)
+} catch (t: Throwable) {
+    null
 }

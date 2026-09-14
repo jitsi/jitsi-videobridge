@@ -105,13 +105,10 @@ private class Ep : SsrcRewriter {
 
     private var nextSendSsrc = 1L
 
-    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? {
-        return null
-    }
+    override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? = null
 
-    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
-        return AudioSourceDesc(ssrc, "anon-$ssrc", "anon-$ssrc-a0")
-    }
+    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? =
+        AudioSourceDesc(ssrc, "anon-$ssrc", "anon-$ssrc-a0")
 
     val sentMessages = mutableListOf<BridgeChannelMessage>()
 

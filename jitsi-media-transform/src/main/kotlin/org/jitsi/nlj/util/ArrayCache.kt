@@ -88,12 +88,15 @@ open class ArrayCache<T>(
                 head = 0
                 head
             }
+
             diff <= -size -> {
                 // The item is too old
                 numOldInserts++
                 return false
             }
+
             diff < 0 -> position(diff)
+
             else -> {
                 head = position(diff)
                 head
@@ -124,6 +127,7 @@ open class ArrayCache<T>(
             synchronize -> synchronized(syncRoot) {
                 doGet(index, shouldCloneItem)
             }
+
             else -> doGet(index, shouldCloneItem)
         }
 
@@ -156,14 +160,12 @@ open class ArrayCache<T>(
     /**
      * Checks whether the cache contains an item with a given index.
      */
-    fun containsIndex(index: Long): Boolean {
-        return if (synchronize) {
-            synchronized(syncRoot) {
-                doContains(index)
-            }
-        } else {
+    fun containsIndex(index: Long): Boolean = if (synchronize) {
+        synchronized(syncRoot) {
             doContains(index)
         }
+    } else {
+        doContains(index)
     }
 
     private fun doContains(index: Long): Boolean {
@@ -269,8 +271,7 @@ open class ArrayCache<T>(
         var index: Long = -1,
         var timeAdded: Long = -1
     ) {
-        fun clone(shouldCloneItem: Boolean): Container {
-            return Container(item?.let { if (shouldCloneItem) cloneItem(it) else it }, index, timeAdded)
-        }
+        fun clone(shouldCloneItem: Boolean): Container =
+            Container(item?.let { if (shouldCloneItem) cloneItem(it) else it }, index, timeAdded)
     }
 }

@@ -55,19 +55,15 @@ class PacketLossNode(val config: PacketLossConfig) : FilterNode("PacketLossNode(
 
     override fun trace(f: () -> Unit) { }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("configured_uniform_rate", config.uniformRate)
-            addNumber("configured_burst_size", config.burstSize)
-            addNumber("configured_burst_interval", config.burstInterval)
-            addRatio("actual_drop_rate", "num_discarded_packets", "num_input_packets")
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("configured_uniform_rate", config.uniformRate)
+        addNumber("configured_burst_size", config.burstSize)
+        addNumber("configured_burst_interval", config.burstInterval)
+        addRatio("actual_drop_rate", "num_discarded_packets", "num_input_packets")
     }
 
-    override fun getNodeStatsToAggregate(): NodeStatsBlock {
-        return super.getNodeStatsToAggregate().apply {
-            addRatio("actual_drop_rate", "num_discarded_packets", "num_input_packets")
-        }
+    override fun getNodeStatsToAggregate(): NodeStatsBlock = super.getNodeStatsToAggregate().apply {
+        addRatio("actual_drop_rate", "num_discarded_packets", "num_input_packets")
     }
 }
 

@@ -126,9 +126,7 @@ class Vp9Picture(packet: Vp9Packet, index: Long) {
      * argument is part of the VP9 picture that is represented by this
      * [Vp9Picture] instance, false otherwise.
      */
-    private fun matchesSSRC(pkt: VideoRtpPacket): Boolean {
-        return ssrc == pkt.ssrc
-    }
+    private fun matchesSSRC(pkt: VideoRtpPacket): Boolean = ssrc == pkt.ssrc
 
     /**
      * Checks whether the specified RTP packet is part of this frame.
@@ -137,9 +135,7 @@ class Vp9Picture(packet: Vp9Packet, index: Long) {
      * @return true if the specified RTP packet is part of this frame, false
      * otherwise.
      */
-    fun matchesPicture(pkt: Vp9Packet): Boolean {
-        return matchesSSRC(pkt) && timestamp == pkt.timestamp
-    }
+    fun matchesPicture(pkt: Vp9Packet): Boolean = matchesSSRC(pkt) && timestamp == pkt.timestamp
 
     /**
      * Validates that the specified RTP packet consistently matches all the
@@ -197,10 +193,8 @@ class Vp9Picture(packet: Vp9Packet, index: Long) {
      * Check whether this picture is immediately after another one, according
      * to their extended picture IDs.
      */
-    fun isImmediatelyAfter(otherPicture: Vp9Picture): Boolean {
-        return pictureId ==
-            applyExtendedPictureIdDelta(otherPicture.pictureId, 1)
-    }
+    fun isImmediatelyAfter(otherPicture: Vp9Picture): Boolean = pictureId ==
+        applyExtendedPictureIdDelta(otherPicture.pictureId, 1)
 }
 
 /**

@@ -37,14 +37,10 @@ class Vp9PictureMap(
 
     /** Find a picture in the picture map, based on a packet.  */
     @Synchronized
-    fun findPicture(packet: Vp9Packet): Vp9Picture? {
-        return pictureHistory[packet.pictureId]
-    }
+    fun findPicture(packet: Vp9Packet): Vp9Picture? = pictureHistory[packet.pictureId]
 
     /** Get the current size of the map.  */
-    fun size(): Int {
-        return pictureHistory.numCached
-    }
+    fun size(): Int = pictureHistory.numCached
 
     /** Check whether this is a large jump from previous state, so the map should be reset.  */
     private fun isLargeJump(packet: Vp9Packet): Boolean {
@@ -123,35 +119,23 @@ class Vp9PictureMap(
     }
 
     @Synchronized
-    fun nextFrame(frame: Vp9Frame): Vp9Frame? {
-        return pictureHistory.findAfter(frame) { true }
-    }
+    fun nextFrame(frame: Vp9Frame): Vp9Frame? = pictureHistory.findAfter(frame) { true }
 
     @Synchronized
-    fun nextFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
-        return pictureHistory.findAfter(frame, pred)
-    }
+    fun nextFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? = pictureHistory.findAfter(frame, pred)
 
     @Synchronized
-    fun prevFrame(frame: Vp9Frame): Vp9Frame? {
-        return pictureHistory.findBefore(frame) { true }
-    }
+    fun prevFrame(frame: Vp9Frame): Vp9Frame? = pictureHistory.findBefore(frame) { true }
 
     @Synchronized
-    fun prevFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? {
-        return pictureHistory.findBefore(frame, pred)
-    }
+    fun prevFrameWith(frame: Vp9Frame, pred: (Vp9Frame) -> Boolean): Vp9Frame? = pictureHistory.findBefore(frame, pred)
 
-    fun findPrevAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
-        return prevFrameWith(frame) { it.isAccepted }
-    }
+    fun findPrevAcceptedFrame(frame: Vp9Frame): Vp9Frame? = prevFrameWith(frame) { it.isAccepted }
 
-    fun findNextAcceptedFrame(frame: Vp9Frame): Vp9Frame? {
-        return nextFrameWith(frame) { it.isAccepted }
-    }
+    fun findNextAcceptedFrame(frame: Vp9Frame): Vp9Frame? = nextFrameWith(frame) { it.isAccepted }
 
-    fun findNextBaseTl0(frame: Vp9Frame): Vp9Frame? {
-        return nextFrameWith(frame) { it.spatialLayer <= 0 && it.temporalLayer <= 0 }
+    fun findNextBaseTl0(frame: Vp9Frame): Vp9Frame? = nextFrameWith(frame) {
+        it.spatialLayer <= 0 && it.temporalLayer <= 0
     }
 
     companion object {

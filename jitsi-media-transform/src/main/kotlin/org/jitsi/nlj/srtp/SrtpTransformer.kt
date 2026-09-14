@@ -189,10 +189,8 @@ class SrtcpDecryptTransformer(
         packetInfo: PacketInfo,
         context: SrtcpCryptoContext,
         isNewContext: Boolean
-    ): SrtpErrorStatus {
-        return context.reverseTransformPacket(packetInfo.packet).apply {
-            packetInfo.resetPayloadVerification()
-        }
+    ): SrtpErrorStatus = context.reverseTransformPacket(packetInfo.packet).apply {
+        packetInfo.resetPayloadVerification()
     }
 }
 
@@ -209,17 +207,15 @@ class SrtcpEncryptTransformer(
         packetInfo: PacketInfo,
         context: SrtcpCryptoContext,
         isNewContext: Boolean
-    ): SrtpErrorStatus {
-        return context.transformPacket(packetInfo.packet).apply {
-            // We convert the encrypted RTCP packet to an UnparsedPacket because
-            // we don't want any of the RTCP fields trying to parse the data
-            // (since it's now encrypted)
-            // TODO: better way we can do this?  it's not typically a problem
-            // in the pipeline's usage, but it's a bit of a landmine since by
-            // accessing the packet it can try and parse the fields.
-            packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
-            packetInfo.resetPayloadVerification()
-        }
+    ): SrtpErrorStatus = context.transformPacket(packetInfo.packet).apply {
+        // We convert the encrypted RTCP packet to an UnparsedPacket because
+        // we don't want any of the RTCP fields trying to parse the data
+        // (since it's now encrypted)
+        // TODO: better way we can do this?  it's not typically a problem
+        // in the pipeline's usage, but it's a bit of a landmine since by
+        // accessing the packet it can try and parse the fields.
+        packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
+        packetInfo.resetPayloadVerification()
     }
 }
 
@@ -275,12 +271,11 @@ class SrtpEncryptTransformer(
     parentLogger: Logger
 ) : SrtpTransformer(contextFactory, parentLogger) {
 
-    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext, isNewContext: Boolean): SrtpErrorStatus {
-        return context.transformPacket(packetInfo.packetAs()).apply {
+    override fun transform(packetInfo: PacketInfo, context: SrtpCryptoContext, isNewContext: Boolean): SrtpErrorStatus =
+        context.transformPacket(packetInfo.packetAs()).apply {
             packetInfo.packet = packetInfo.packet.toOtherType(::UnparsedPacket)
             packetInfo.resetPayloadVerification()
         }
-    }
 }
 
 /**

@@ -109,14 +109,19 @@ class NodeStatsBlock(val name: String) {
             when {
                 existingValue == null && (value is Long || value is Double) ->
                     stats[name] = value
+
                 existingValue is Long && value is Long ->
                     stats[name] = existingValue + value
+
                 existingValue is Double && value is Double ->
                     stats[name] = existingValue + value
+
                 existingValue is Long && value is Double ->
                     stats[name] = existingValue + value
+
                 existingValue is Double && value is Long ->
                     stats[name] = existingValue + value
+
                 else -> stats[name] = value
             }
         }
@@ -136,26 +141,25 @@ class NodeStatsBlock(val name: String) {
         else -> null
     }
 
-    fun prettyPrint(indentLevel: Int = 0): String {
-        return with(StringBuffer()) {
-            appendLnIndent(indentLevel, name)
-            stats.forEach { (statName, statValue) ->
-                when (statValue) {
-                    is NodeStatsBlock -> {
-                        appendLine(statValue.prettyPrint(indentLevel + 2))
-                    }
-                    else -> {
-                        // statValue is Any, so we know it's non-null
-                        appendLnIndent(indentLevel + 2, "$statName: $statValue")
-                    }
+    fun prettyPrint(indentLevel: Int = 0): String = with(StringBuffer()) {
+        appendLnIndent(indentLevel, name)
+        stats.forEach { (statName, statValue) ->
+            when (statValue) {
+                is NodeStatsBlock -> {
+                    appendLine(statValue.prettyPrint(indentLevel + 2))
+                }
+
+                else -> {
+                    // statValue is Any, so we know it's non-null
+                    appendLnIndent(indentLevel + 2, "$statName: $statValue")
                 }
             }
-            compoundStats.forEach { (statName, function) ->
-                val statValue = function.invoke(this@NodeStatsBlock)
-                appendLnIndent(indentLevel + 2, "$statName: $statValue")
-            }
-            toString()
         }
+        compoundStats.forEach { (statName, function) ->
+            val statValue = function.invoke(this@NodeStatsBlock)
+            appendLnIndent(indentLevel + 2, "$statName: $statValue")
+        }
+        toString()
     }
 
     /**

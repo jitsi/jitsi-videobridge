@@ -53,12 +53,14 @@ class RtpParser(
                 logger.info("Dropping audio packet due to parse failure: ${e.message}")
                 return null
             }
+
             MediaType.VIDEO -> try {
                 packet.toOtherType(::VideoRtpPacket)
             } catch (e: Exception) {
                 logger.info("Dropping video packet due to parse failure: ${e.message}")
                 return null
             }
+
             else -> {
                 logger.info("Dropping packet with unrecognized media type: '${payloadType.mediaType}'")
                 return null

@@ -35,9 +35,7 @@ class PacketDelayStats(thresholds: List<Long> = defaultThresholds) : DelayStats(
 
     fun addUnknown() = numPacketsWithoutTimestamps.increment()
 
-    override fun toJson(format: Format): ObjectNode {
-        return super.toJson(format).apply {
-            put("packets_without_timestamps", numPacketsWithoutTimestamps.sum())
-        }
+    override fun toJson(format: Format): ObjectNode = super.toJson(format).apply {
+        put("packets_without_timestamps", numPacketsWithoutTimestamps.sum())
     }
 }

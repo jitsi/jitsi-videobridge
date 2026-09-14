@@ -81,6 +81,7 @@ abstract class RtcpFbPacket(
                         else -> UnsupportedRtcpFbPacket(buf, offset, length)
                     }
                 }
+
                 PayloadSpecificRtcpFbPacket.PT -> {
                     when (fmt) {
                         RtcpFbFirPacket.FMT -> RtcpFbFirPacket(buf, offset, length)
@@ -89,6 +90,7 @@ abstract class RtcpFbPacket(
                         else -> UnsupportedRtcpFbPacket(buf, offset, length)
                     }
                 }
+
                 else -> throw Exception("Unrecognized RTCPFB payload type: ${packetType.toString(16)}")
             }
         }

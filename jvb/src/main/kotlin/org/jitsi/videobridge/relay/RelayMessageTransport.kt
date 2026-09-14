@@ -323,12 +323,10 @@ class RelayMessageTransport(
         }
     }
 
-    private fun createServerHello(): ServerHelloMessage {
-        return if (VersionConfig.config.announceVersion()) {
-            ServerHelloMessage(relay.conference.videobridge.version.toString())
-        } else {
-            ServerHelloMessage()
-        }
+    private fun createServerHello(): ServerHelloMessage = if (VersionConfig.config.announceVersion()) {
+        ServerHelloMessage(relay.conference.videobridge.version.toString())
+    } else {
+        ServerHelloMessage()
     }
 
     /**

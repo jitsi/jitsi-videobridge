@@ -68,9 +68,7 @@ class SsrcAssociationStore {
      * processed during which we return true for an SSRC which will later be denoted
      * as a secondary ssrc.
      */
-    fun isPrimarySsrc(ssrc: Long): Boolean {
-        return !ssrcAssociationsBySecondarySsrc.containsKey(ssrc)
-    }
+    fun isPrimarySsrc(ssrc: Long): Boolean = !ssrcAssociationsBySecondarySsrc.containsKey(ssrc)
 
     fun onAssociation(handler: (SsrcAssociation) -> Unit) {
         synchronized(lock) {

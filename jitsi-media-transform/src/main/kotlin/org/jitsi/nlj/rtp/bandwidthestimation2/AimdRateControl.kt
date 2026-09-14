@@ -128,10 +128,8 @@ class AimdRateControl(private val sendSide: Boolean = false) {
         return false
     }
 
-    fun initialTimeToReduceFurther(atTime: Instant): Boolean {
-        return validEstimate() &&
-            timeToReduceFurther(atTime, latestEstimate() / 2 - 1.bps)
-    }
+    fun initialTimeToReduceFurther(atTime: Instant): Boolean = validEstimate() &&
+        timeToReduceFurther(atTime, latestEstimate() / 2 - 1.bps)
 
     fun latestEstimate() = currentBitrate
 
@@ -262,6 +260,7 @@ class AimdRateControl(private val sendSide: Boolean = false) {
                 }
                 timeLastBitrateChange = atTime
             }
+
             RateControlState.kRcDecrease -> {
                 var decreasedBitrate = Bandwidth.INFINITY
 
@@ -338,10 +337,12 @@ class AimdRateControl(private val sendSide: Boolean = false) {
                     timeLastBitrateChange = atTime
                     rateControlState = RateControlState.kRcIncrease
                 }
+
             BandwidthUsage.kBwOverusing ->
                 if (rateControlState != RateControlState.kRcDecrease) {
                     rateControlState = RateControlState.kRcDecrease
                 }
+
             BandwidthUsage.kBwUnderusing ->
                 rateControlState = RateControlState.kRcHold
         }

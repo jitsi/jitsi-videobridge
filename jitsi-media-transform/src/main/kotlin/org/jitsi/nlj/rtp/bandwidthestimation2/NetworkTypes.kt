@@ -31,7 +31,7 @@ import org.jitsi.utils.toDoubleMillis
 import java.time.Duration
 import java.time.Instant
 
-/** Common network types used for bandwidth estimation,
+/* Common network types used for bandwidth estimation,
  * based on WebRTC api/transport/network_types.{h,cc} in
  * WebRTC tag branch-heads/7204 (Chromium 138).
  */
@@ -190,21 +190,13 @@ class TransportPacketsFeedback {
     /** Arrival times for messages without send times information */
     val sendlessArrivalTimes = ArrayList<Instant>()
 
-    fun receivedWithSendInfo(): List<PacketResult> {
-        return packetFeedbacks.filter { it.isReceived() }
-    }
+    fun receivedWithSendInfo(): List<PacketResult> = packetFeedbacks.filter { it.isReceived() }
 
-    fun lostWithSendInfo(): List<PacketResult> {
-        return packetFeedbacks.filterNot { it.isReceived() }
-    }
+    fun lostWithSendInfo(): List<PacketResult> = packetFeedbacks.filterNot { it.isReceived() }
 
-    fun packetsWithFeedback(): List<PacketResult> {
-        return packetFeedbacks
-    }
+    fun packetsWithFeedback(): List<PacketResult> = packetFeedbacks
 
-    fun sortedByReceiveTime(): List<PacketResult> {
-        return receivedWithSendInfo().sortedBy { it.receiveTime }
-    }
+    fun sortedByReceiveTime(): List<PacketResult> = receivedWithSendInfo().sortedBy { it.receiveTime }
 }
 
 // Network estimation
@@ -219,10 +211,8 @@ class NetworkEstimate {
     var lossRateRatio = 0.0f
 
     /* Jitsi local */
-    override fun toString(): String {
-        return "atTime $atTime: " +
-            "bandwidth $bandwidth, rtt $roundTripTime, bwePeriod $bwePeriod, lossRateRatio $lossRateRatio"
-    }
+    override fun toString(): String = "atTime $atTime: " +
+        "bandwidth $bandwidth, rtt $roundTripTime, bwePeriod $bwePeriod, lossRateRatio $lossRateRatio"
 }
 
 class PacerConfig {
@@ -239,10 +229,8 @@ class PacerConfig {
     fun padRate() = padWindow.per(timeWindow)
 
     /* Jitsi Local */
-    override fun toString(): String {
-        return "Data rate ${dataRate()} ($dataWindow per $timeWindow), " +
-            "pad rate ${padRate()} ($padWindow per $timeWindow)"
-    }
+    override fun toString(): String = "Data rate ${dataRate()} ($dataWindow per $timeWindow), " +
+        "pad rate ${padRate()} ($padWindow per $timeWindow)"
 }
 
 data class ProbeClusterConfig(
@@ -258,10 +246,8 @@ data class ProbeClusterConfig(
     var id: Int = 0
 ) {
     /* Jitsi local */
-    override fun toString(): String {
-        return "atTime $atTime: ID=$id: DataRate $targetDataRate Duration $targetDuration " +
-            "ProbeDelta $minProbeDelta ProbeCount $targetProbeCount"
-    }
+    override fun toString(): String = "atTime $atTime: ID=$id: DataRate $targetDataRate Duration $targetDuration " +
+        "ProbeDelta $minProbeDelta ProbeCount $targetProbeCount"
 }
 
 class TargetTransferRate {
@@ -274,10 +260,8 @@ class TargetTransferRate {
     var cwndReduceRatio = 0.0
 
     /* Jitsi local */
-    override fun toString(): String {
-        return "atTime $atTime: networkEstimate {$networkEstimate}, " +
-            "targetRate $targetRate, stableTargetRate $stableTargetRate, cwndReduceRatio $cwndReduceRatio"
-    }
+    override fun toString(): String = "atTime $atTime: networkEstimate {$networkEstimate}, " +
+        "targetRate $targetRate, stableTargetRate $stableTargetRate, cwndReduceRatio $cwndReduceRatio"
 }
 
 // Contains updates of network controller comand state. Using nullables to
@@ -290,9 +274,8 @@ open class NetworkControlUpdate(
     open val targetRate: TargetTransferRate? = null
 ) {
     /* Jitsi local */
-    fun isEmpty(): Boolean {
-        return congestionWindow == null && pacerConfig == null && probeClusterConfigs.isEmpty() && targetRate == null
-    }
+    fun isEmpty(): Boolean =
+        congestionWindow == null && pacerConfig == null && probeClusterConfigs.isEmpty() && targetRate == null
 
     fun isNotEmpty() = !isEmpty()
 

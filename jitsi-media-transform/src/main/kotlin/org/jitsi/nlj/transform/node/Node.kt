@@ -396,11 +396,9 @@ abstract class TransformerNode(name: String) : StatsKeepingNode(name) {
         }
     }
 
-    final override fun packetDiscarded(packetInfo: PacketInfo) {
-        throw Exception(
-            "No subclass of TransformerNode should call packetDiscarded, return null from 'transform' instead"
-        )
-    }
+    final override fun packetDiscarded(packetInfo: PacketInfo): Unit = throw Exception(
+        "No subclass of TransformerNode should call packetDiscarded, return null from 'transform' instead"
+    )
 }
 
 /** A [TransformerNode] which gets its transformation function dynamically. */
@@ -434,12 +432,10 @@ abstract class ModifierNode(name: String) : NeverDiscardNode(name) {
 abstract class FilterNode(name: String) : TransformerNode(name) {
     protected abstract fun accept(packetInfo: PacketInfo): Boolean
 
-    override fun transform(packetInfo: PacketInfo): PacketInfo? {
-        return if (accept(packetInfo)) {
-            packetInfo
-        } else {
-            null
-        }
+    override fun transform(packetInfo: PacketInfo): PacketInfo? = if (accept(packetInfo)) {
+        packetInfo
+    } else {
+        null
     }
 }
 
@@ -448,9 +444,7 @@ abstract class PredicateFilterNode(
     name: String,
     val predicate: PacketInfoPredicate
 ) : FilterNode(name) {
-    override fun accept(packetInfo: PacketInfo): Boolean {
-        return predicate.test(packetInfo)
-    }
+    override fun accept(packetInfo: PacketInfo): Boolean = predicate.test(packetInfo)
 }
 
 /**

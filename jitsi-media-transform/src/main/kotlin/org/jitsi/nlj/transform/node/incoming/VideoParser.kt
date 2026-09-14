@@ -85,6 +85,7 @@ class VideoParser(
                     videoCodecParser = parser
                     vp8Packet
                 }
+
                 payloadType is Vp9PayloadType -> {
                     val (vp9Packet, parser) = parseNormalPayload<Vp9Parser>(packetInfo, ::Vp9Packet) { source ->
                         Vp9Parser(source, logger)
@@ -92,6 +93,7 @@ class VideoParser(
                     videoCodecParser = parser
                     vp9Packet
                 }
+
                 av1DDExtId != null && packet.getHeaderExtension(av1DDExtId) != null -> {
                     videoCodecParser = checkParserType<Av1DDParser>(packetInfo) { source ->
                         Av1DDParser(source, logger, diagnosticContext)
@@ -104,6 +106,7 @@ class VideoParser(
 
                     av1DDPacket
                 }
+
                 else -> {
                     val curParser = videoCodecParsers[packet.ssrc]
                     if (curParser != null) {

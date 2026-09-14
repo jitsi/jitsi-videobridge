@@ -17,7 +17,7 @@
 @file:Suppress("ktlint:standard:property-naming")
 
 package org.jitsi.nlj.rtp.bandwidthestimation2
-/**
+/*
  * Unit tests for AlrDetector.
  *
  * Based on WebRTC modules/congestion_controller/goog_cc/alr_detector_unittest.cc in

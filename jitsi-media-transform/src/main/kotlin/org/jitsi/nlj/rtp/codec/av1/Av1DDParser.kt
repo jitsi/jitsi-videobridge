@@ -104,7 +104,7 @@ class Av1DDParser(
         val history = ddStateHistory[av1Packet.ssrc]
 
         if (history == null) {
-            /** Probably getting spammed with SSRCs? */
+            /* Probably getting spammed with SSRCs? */
             logger.warn("History for ${av1Packet.ssrc} disappeared between createFrom and parse!")
             return
         }

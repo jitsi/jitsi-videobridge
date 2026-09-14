@@ -103,6 +103,7 @@ class RetransmissionRequester(
                         logger.cdebug { "$ssrc packet $seqNum was received, currently missing ${getMissingSeqNums()}" }
                         // By definition we've already received highestReceivedSeqNum, so nothing needs to be done.
                     }
+
                     seqNum isOlderThan highestReceivedSeqNum -> {
                         logger.cdebug { "$ssrc packet $seqNum was received, currently missing ${getMissingSeqNums()}" }
                         // An older packet, possibly already requested
@@ -112,9 +113,11 @@ class RetransmissionRequester(
                             updateWorkDueTime(NO_REQUEST_DUE)
                         }
                     }
+
                     seqNum isNextAfter highestReceivedSeqNum -> {
                         highestReceivedSeqNum = seqNum
                     }
+
                     highestReceivedSeqNum numPacketsTo seqNum < maxMissingSeqNums -> {
                         logger.cdebug {
                             "$ssrc missing packet detected! Just received " +
@@ -127,6 +130,7 @@ class RetransmissionRequester(
                         }
                         highestReceivedSeqNum = seqNum
                     }
+
                     else -> { // diff > maxMissingSeqNums
                         logger.cwarn {
                             "$ssrc large jump in sequence numbers detected (highest received was " +
@@ -164,6 +168,7 @@ class RetransmissionRequester(
                         logger.cdebug { "$ssrc no more work to do, cancelling job handle" }
                         currentTaskHandle?.cancel(false)
                     }
+
                     else -> {
                         // TODO(brian): only re-schedule if the change is larger than X ms?
                         // The work is now due either sooner or later than we previously thought, so

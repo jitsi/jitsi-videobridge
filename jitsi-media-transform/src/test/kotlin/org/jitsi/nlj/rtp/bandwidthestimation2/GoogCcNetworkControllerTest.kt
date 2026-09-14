@@ -49,12 +49,10 @@ private fun createRouteChange(
     startRate: Bandwidth? = null,
     minRate: Bandwidth? = null,
     maxRate: Bandwidth? = null
-): NetworkRouteChange {
-    return NetworkRouteChange(
-        atTime = time,
-        constraints = TargetRateConstraints(minDataRate = minRate, maxDataRate = maxRate, startingRate = startRate)
-    )
-}
+): NetworkRouteChange = NetworkRouteChange(
+    atTime = time,
+    constraints = TargetRateConstraints(minDataRate = minRate, maxDataRate = maxRate, startingRate = startRate)
+)
 
 private fun createPacketResult(
     arrivalTime: Instant,

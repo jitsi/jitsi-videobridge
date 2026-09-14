@@ -97,9 +97,7 @@ sealed class BridgeChannelMessage {
 
         @JvmStatic
         @Throws(JsonProcessingException::class, JsonMappingException::class)
-        fun parse(string: String): BridgeChannelMessage {
-            return mapper.readValue(string)
-        }
+        fun parse(string: String): BridgeChannelMessage = mapper.readValue(string)
         const val TYPE_PROPERTY_NAME = "colibriClass"
     }
 }

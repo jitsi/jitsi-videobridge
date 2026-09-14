@@ -61,11 +61,9 @@ class GoogCcNetworkController(
     private val logger = config.parentLogger.createChildLogger(javaClass.name)
     private val diagnosticContext = config.diagnosticContext
 
-    override fun onNetworkAvailability(msg: NetworkAvailability): NetworkControlUpdate {
-        return NetworkControlUpdate(
-            probeClusterConfigs = probeController.onNetworkAvailability(msg)
-        )
-    }
+    override fun onNetworkAvailability(msg: NetworkAvailability): NetworkControlUpdate = NetworkControlUpdate(
+        probeClusterConfigs = probeController.onNetworkAvailability(msg)
+    )
 
     override fun onNetworkRouteChange(msg: NetworkRouteChange): NetworkControlUpdate {
         if (safeResetOnRouteChange) {
@@ -616,28 +614,26 @@ class GoogCcNetworkController(
         /* Additions to the fields from goog_cc_printer */
         val inAlr: Boolean
     ) {
-        fun toJson(): ObjectNode {
-            return JsonNodeFactory.instance.objectNode().apply {
-                put("time", time.toEpochMilli())
-                put("rtt", rtt.toDouble())
-                put("target", target.bps)
-                put("stable_target", stableTarget.bps)
-                put("pacing", pacing?.bps?.toDouble() ?: Double.NaN)
-                put("padding", padding?.bps?.toDouble() ?: Double.NaN)
-                put("window", window.bytes)
-                put("rate_control_state", rateControlState.name)
-                put("stable_estimate", stableEstimate?.bps?.toDouble() ?: Double.NaN)
-                put("trendline", trendline)
-                put("trendline_modified_offset", trendlineModifiedOffset)
-                put("trendline_modified_threshold", trendlineOffsetThreshold)
-                put("acknowledged_rate", acknowledgedRate?.bps?.toDouble() ?: Double.NaN)
-                put("loss_ratio", lossRatio)
-                put("send_side_target", sendSideTarget.bps)
-                put("last_loss_based_state", lossBasedState.name)
-                put("data_window", dataWindow?.bytes ?: Double.NaN)
-                put("pushback_target", pushbackTarget.bps)
-                put("in_alr", inAlr)
-            }
+        fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+            put("time", time.toEpochMilli())
+            put("rtt", rtt.toDouble())
+            put("target", target.bps)
+            put("stable_target", stableTarget.bps)
+            put("pacing", pacing?.bps?.toDouble() ?: Double.NaN)
+            put("padding", padding?.bps?.toDouble() ?: Double.NaN)
+            put("window", window.bytes)
+            put("rate_control_state", rateControlState.name)
+            put("stable_estimate", stableEstimate?.bps?.toDouble() ?: Double.NaN)
+            put("trendline", trendline)
+            put("trendline_modified_offset", trendlineModifiedOffset)
+            put("trendline_modified_threshold", trendlineOffsetThreshold)
+            put("acknowledged_rate", acknowledgedRate?.bps?.toDouble() ?: Double.NaN)
+            put("loss_ratio", lossRatio)
+            put("send_side_target", sendSideTarget.bps)
+            put("last_loss_based_state", lossBasedState.name)
+            put("data_window", dataWindow?.bytes ?: Double.NaN)
+            put("pushback_target", pushbackTarget.bps)
+            put("in_alr", inAlr)
         }
 
         fun addToTimeSeriesPoint(point: DiagnosticContext.TimeSeriesPoint) {
@@ -784,12 +780,15 @@ class GoogCcNetworkController(
                 LossBasedState.kDecreasing ->
                     // Probes may not be sent in this state.
                     BandwidthLimitedCause.kLossLimitedBwe
+
                 LossBasedState.kIncreaseUsingPadding ->
                     // Probes may not be sent in this state.
                     BandwidthLimitedCause.kLossLimitedBwe
+
                 LossBasedState.kIncreasing ->
                     // Probes may be sent in this state.
                     BandwidthLimitedCause.kLossLimitedBweIncreasing
+
                 LossBasedState.kDelayBasedEstimate ->
                     BandwidthLimitedCause.kDelayBasedLimited
             }

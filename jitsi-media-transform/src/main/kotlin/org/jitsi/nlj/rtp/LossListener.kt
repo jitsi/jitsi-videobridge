@@ -38,12 +38,10 @@ class LossTracker : LossListener {
     }
 
     @Synchronized
-    fun getSnapshot(): Snapshot {
-        return Snapshot(
-            lostPackets.getAccumulatedCount(),
-            receivedPackets.getAccumulatedCount()
-        )
-    }
+    fun getSnapshot(): Snapshot = Snapshot(
+        lostPackets.getAccumulatedCount(),
+        receivedPackets.getAccumulatedCount()
+    )
 
     data class Snapshot(
         val packetsLost: Long,

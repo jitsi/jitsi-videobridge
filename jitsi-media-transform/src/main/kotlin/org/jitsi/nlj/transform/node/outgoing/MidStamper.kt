@@ -64,11 +64,9 @@ class MidStamper(
         return packetInfo
     }
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addString("mid_ext_id", extensionId.toString())
-            addNumber("num_stamped", numStamped)
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addString("mid_ext_id", extensionId.toString())
+        addNumber("num_stamped", numStamped)
     }
 
     override fun trace(f: () -> Unit) = f.invoke()

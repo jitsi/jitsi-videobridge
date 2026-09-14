@@ -343,7 +343,9 @@ class Endpoint @JvmOverloads constructor(
                     }
                 }
             }
+
             is AudioRtpPacket -> if (doSsrcRewriting) audioSsrcs.rewriteRtp(packet)
+
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
                 bitrateController.transformRtcp(packet)
@@ -360,9 +362,8 @@ class Endpoint @JvmOverloads constructor(
 
     private val bandwidthProbing = BandwidthProbing(
         object : BandwidthProbing.ProbingDataSender {
-            override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int {
-                return transceiver.sendProbing(mediaSsrcs, numBytes)
-            }
+            override fun sendProbing(mediaSsrcs: Collection<Long>, numBytes: Int): Int =
+                transceiver.sendProbing(mediaSsrcs, numBytes)
         },
         { bitrateController.getStatusSnapshot() }
     ).apply {
@@ -571,6 +572,7 @@ class Endpoint @JvmOverloads constructor(
     fun setFeature(feature: EndpointDebugFeatures, enabled: Boolean) {
         when (feature) {
             EndpointDebugFeatures.PCAP_DUMP -> transceiver.setFeature(Features.TRANSCEIVER_PCAP_DUMP, enabled)
+
             EndpointDebugFeatures.SCTP_PCAP_DUMP ->
                 if (enabled) {
                     toggleablePcapWriter.enable()
@@ -580,11 +582,9 @@ class Endpoint @JvmOverloads constructor(
         }
     }
 
-    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean {
-        return when (feature) {
-            EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
-            EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
-        }
+    fun isFeatureEnabled(feature: EndpointDebugFeatures): Boolean = when (feature) {
+        EndpointDebugFeatures.PCAP_DUMP -> transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP)
+        EndpointDebugFeatures.SCTP_PCAP_DUMP -> toggleablePcapWriter.isEnabled()
     }
     override val isSendingAudio: Boolean
         get() =
@@ -995,12 +995,15 @@ class Endpoint @JvmOverloads constructor(
 
         return when (val packet = packetInfo.packet) {
             is VideoRtpPacket -> acceptVideo && bitrateController.accept(packetInfo)
+
             is AudioRtpPacket -> acceptAudio && conference.isEndpointAudioWanted(id, packet.ssrc)
+
             is RtcpSrPacket -> {
                 // TODO: For SRs we're only interested in the ntp/rtp timestamp
                 //  association, so we could only accept srs from the main ssrc
                 bitrateController.accept(packet)
             }
+
             is RtcpFbPliPacket, is RtcpFbFirPacket -> {
                 // We assume that we are only given PLIs/FIRs destined for this
                 // endpoint. This is because Conference has to find the target
@@ -1008,6 +1011,7 @@ class Endpoint @JvmOverloads constructor(
                 // performing the same check twice.
                 true
             }
+
             else -> {
                 logger.warn("Ignoring an unknown packet type:" + packet.javaClass.simpleName)
                 false

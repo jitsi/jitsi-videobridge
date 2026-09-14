@@ -34,15 +34,13 @@ open class Av1DependencyDescriptorStatelessSubset(
 
     val newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
 ) {
-    open fun clone(): Av1DependencyDescriptorStatelessSubset {
-        return Av1DependencyDescriptorStatelessSubset(
-            startOfFrame = startOfFrame,
-            endOfFrame = endOfFrame,
-            frameDependencyTemplateId = frameDependencyTemplateId,
-            frameNumber = frameNumber,
-            newTemplateDependencyStructure = newTemplateDependencyStructure?.clone()
-        )
-    }
+    open fun clone(): Av1DependencyDescriptorStatelessSubset = Av1DependencyDescriptorStatelessSubset(
+        startOfFrame = startOfFrame,
+        endOfFrame = endOfFrame,
+        frameDependencyTemplateId = frameDependencyTemplateId,
+        frameNumber = frameNumber,
+        newTemplateDependencyStructure = newTemplateDependencyStructure?.clone()
+    )
 }
 
 /**
@@ -361,18 +359,16 @@ class Av1TemplateDependencyStructure(
             return length
         }
 
-    fun clone(): Av1TemplateDependencyStructure {
-        return Av1TemplateDependencyStructure(
-            templateIdOffset,
-            // These objects are not mutable so it's safe to copy them by reference
-            templateInfo,
-            decodeTargetProtectedBy,
-            decodeTargetLayers,
-            maxRenderResolutions,
-            maxSpatialId,
-            maxTemporalId
-        )
-    }
+    fun clone(): Av1TemplateDependencyStructure = Av1TemplateDependencyStructure(
+        templateIdOffset,
+        // These objects are not mutable so it's safe to copy them by reference
+        templateInfo,
+        decodeTargetProtectedBy,
+        decodeTargetLayers,
+        maxRenderResolutions,
+        maxSpatialId,
+        maxTemporalId
+    )
 
     fun write(writer: BitWriter) {
         writer.writeBits(6, templateIdOffset)
@@ -397,12 +393,15 @@ class Av1TemplateDependencyStructure(
                 templateInfo[templateNum].spatialId == templateInfo[templateNum - 1].spatialId &&
                     templateInfo[templateNum].temporalId == templateInfo[templateNum - 1].temporalId ->
                     0
+
                 templateInfo[templateNum].spatialId == templateInfo[templateNum - 1].spatialId &&
                     templateInfo[templateNum].temporalId == templateInfo[templateNum - 1].temporalId + 1 ->
                     1
+
                 templateInfo[templateNum].spatialId == templateInfo[templateNum - 1].spatialId + 1 &&
                     templateInfo[templateNum].temporalId == 0 ->
                     2
+
                 else ->
                     throw IllegalStateException(
                         "Template $templateNum with spatial and temporal IDs " +
@@ -752,10 +751,8 @@ class Av1DependencyDescriptorReader(
         }
     }
 
-    private fun readFrameDtis(): List<DTI> {
-        return List(templateDependencyStructure!!.decodeTargetCount) {
-            DTI.fromInt(reader.bits(2))
-        }
+    private fun readFrameDtis(): List<DTI> = List(templateDependencyStructure!!.decodeTargetCount) {
+        DTI.fromInt(reader.bits(2))
     }
 
     private fun readTemplateFdiffs() {
@@ -772,14 +769,12 @@ class Av1DependencyDescriptorReader(
         }
     }
 
-    private fun readFrameFdiffs(): List<Int> {
-        return buildList {
-            var nextFdiffSize = reader.bits(2)
-            while (nextFdiffSize != 0) {
-                val fdiffMinus1 = reader.bits(4 * nextFdiffSize)
-                add(fdiffMinus1 + 1)
-                nextFdiffSize = reader.bits(2)
-            }
+    private fun readFrameFdiffs(): List<Int> = buildList {
+        var nextFdiffSize = reader.bits(2)
+        while (nextFdiffSize != 0) {
+            val fdiffMinus1 = reader.bits(4 * nextFdiffSize)
+            add(fdiffMinus1 + 1)
+            nextFdiffSize = reader.bits(2)
         }
     }
 
@@ -798,10 +793,8 @@ class Av1DependencyDescriptorReader(
         }
     }
 
-    private fun readFrameChains(): List<Int> {
-        return List(templateDependencyStructure!!.chainCount) {
-            reader.bits(8)
-        }
+    private fun readFrameChains(): List<Int> = List(templateDependencyStructure!!.chainCount) {
+        reader.bits(8)
     }
 
     private fun readDecodeTargetLayers() {
@@ -862,9 +855,8 @@ open class FrameInfo(
         return result
     }
 
-    override fun toString(): String {
-        return "spatialId=$spatialId, temporalId=$temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
-    }
+    override fun toString(): String =
+        "spatialId=$spatialId, temporalId=$temporalId, dti=$dti, fdiff=$fdiff, chains=$chains"
 
     fun toJson(): String {
         val mapper = ObjectMapper()
@@ -901,24 +893,20 @@ class DecodeTargetLayer(
     val spatialId: Int,
     val temporalId: Int
 ) {
-    override fun toString(): String {
-        return JsonNodeFactory.instance.objectNode().apply {
-            put("spatialId", spatialId)
-            put("temporalId", temporalId)
-        }.toString()
-    }
+    override fun toString(): String = JsonNodeFactory.instance.objectNode().apply {
+        put("spatialId", spatialId)
+        put("temporalId", temporalId)
+    }.toString()
 }
 
 data class Resolution(
     val width: Int,
     val height: Int
 ) {
-    override fun toString(): String {
-        return JsonNodeFactory.instance.objectNode().apply {
-            put("width", width)
-            put("height", height)
-        }.toString()
-    }
+    override fun toString(): String = JsonNodeFactory.instance.objectNode().apply {
+        put("width", width)
+        put("height", height)
+    }.toString()
 }
 
 /** Decode target indication */
@@ -933,19 +921,15 @@ enum class DTI(val dti: Int) {
         fun fromInt(type: Int) = map[type] ?: throw java.lang.IllegalArgumentException("Bad DTI $type")
     }
 
-    fun toShortString(): String {
-        return when (this) {
-            NOT_PRESENT -> "N"
-            DISCARDABLE -> "D"
-            SWITCH -> "S"
-            REQUIRED -> "R"
-        }
+    fun toShortString(): String = when (this) {
+        NOT_PRESENT -> "N"
+        DISCARDABLE -> "D"
+        SWITCH -> "S"
+        REQUIRED -> "R"
     }
 }
 
-fun List<DTI>.toShortString(): String {
-    return joinToString(separator = "") { it.toShortString() }
-}
+fun List<DTI>.toShortString(): String = joinToString(separator = "") { it.toShortString() }
 
 class Av1DependencyException(msg: String) : RuntimeException(msg)
 

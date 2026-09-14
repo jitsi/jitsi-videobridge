@@ -31,12 +31,10 @@ fun Byte.getBit(bitPos: Int): Int {
  * Unfortunately we can't do this as an in-place modifier because
  * we can't modify the Byte via 'this' in an extension function.
  */
-fun Byte.putBit(bitPos: Int, isSet: Boolean): Byte {
-    return if (isSet) {
-        (this.toInt() or (0b10000000 ushr bitPos)).toByte()
-    } else {
-        (this.toInt() and (0b10000000 ushr bitPos).inv()).toByte()
-    }
+fun Byte.putBit(bitPos: Int, isSet: Boolean): Byte = if (isSet) {
+    (this.toInt() or (0b10000000 ushr bitPos)).toByte()
+} else {
+    (this.toInt() and (0b10000000 ushr bitPos).inv()).toByte()
 }
 
 /**
@@ -45,12 +43,10 @@ fun Byte.putBit(bitPos: Int, isSet: Boolean): Byte {
  * Unfortunately we can't do this as an in-place modifier because
  * we can't modify the Byte via 'this' in an extension function.
  */
-fun Byte.putBitWithMask(mask: Byte, isSet: Boolean): Byte {
-    return if (isSet) {
-        (this.toInt() or mask.toInt()).toByte()
-    } else {
-        (this.toInt() and mask.toInt().inv()).toByte()
-    }
+fun Byte.putBitWithMask(mask: Byte, isSet: Boolean): Byte = if (isSet) {
+    (this.toInt() or mask.toInt()).toByte()
+} else {
+    (this.toInt() and mask.toInt().inv()).toByte()
 }
 
 /**

@@ -163,6 +163,7 @@ abstract class SdesItem(
             val type = SdesItemType.fromInt(typeValue)
             return when (type) {
                 SdesItemType.EMPTY -> EmptySdesItem
+
                 else -> {
                     val length = getLength(buf, offset)
                     return when (type) {
@@ -184,9 +185,7 @@ class UnknownSdesItem(
     private val dataField = copyData(buf, offset, length)
     override val sizeBytes: Int = SDES_ITEM_HEADER_SIZE + dataField.size
 
-    override fun toString(): String {
-        return "Unknown SDES type($sdesTypeValue) data = ${dataField.toHex()}"
-    }
+    override fun toString(): String = "Unknown SDES type($sdesTypeValue) data = ${dataField.toHex()}"
 }
 
 object EmptySdesItem : SdesItem(SdesItemType.EMPTY) {

@@ -60,9 +60,7 @@ class PipelineBuilder {
      */
     fun simpleNode(name: String, packetHandler: (PacketInfo) -> PacketInfo?) {
         val node = object : TransformerNode(name) {
-            override fun transform(packetInfo: PacketInfo): PacketInfo? {
-                return packetHandler.invoke(packetInfo)
-            }
+            override fun transform(packetInfo: PacketInfo): PacketInfo? = packetHandler.invoke(packetInfo)
 
             override val aggregationKey = this.name
             override fun trace(f: () -> Unit) = f.invoke()

@@ -117,9 +117,8 @@ constructor(
     /**
      * {@inheritDoc}
      */
-    override fun toString(): String {
-        return "subjective_quality=$index,temporal_id=$tid,spatial_id=$sid,height=$height,frameRate=$frameRate"
-    }
+    override fun toString(): String =
+        "subjective_quality=$index,temporal_id=$tid,spatial_id=$sid,height=$height,frameRate=$frameRate"
 
     /**
      * Gets the cumulative bitrate (in bps) of this [RtpLayerDesc] and its dependencies.

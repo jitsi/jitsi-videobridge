@@ -25,9 +25,7 @@ const val kWindowMs = 500L
 const val kBitrateKbps = 100
 const val kCanBuildUpUnderuse = true
 const val kCanNotBuildUpUnderuse = false
-fun timeToBytes(bitrateKbps: Int, timeMs: Long): Long {
-    return bitrateKbps.toLong() * timeMs / 8
-}
+fun timeToBytes(bitrateKbps: Int, timeMs: Long): Long = bitrateKbps.toLong() * timeMs / 8
 
 /** Unit tests for IntervalBudget,
  * based on WebRTC modules/pacing/interval_budget_unittest.cc in

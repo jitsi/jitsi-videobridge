@@ -153,11 +153,13 @@ open class JvbLoadManager<T : JvbLoadMeasurement> @JvmOverloads constructor(
                     reducer,
                     videobridge
                 )
+
                 CPU_USAGE_MEASUREMENT -> CpuUsageLoadManager(
                     CpuMeasurement.loadThreshold,
                     CpuMeasurement.recoverThreshold,
                     reducer
                 )
+
                 else -> throw IllegalArgumentException(
                     "Invalid configuration for load measurement type: $loadMeasurement"
                 )

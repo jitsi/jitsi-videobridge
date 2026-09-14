@@ -216,6 +216,7 @@ class XmppConnection : IQListener {
             IQ.Type.get, IQ.Type.set -> handleIqRequest(iq, mucClient)?.also {
                 logger.cdebug { "SENT: ${it.toXML()}" }
             }
+
             else -> null
         }
     }
@@ -230,6 +231,7 @@ class XmppConnection : IQListener {
             is Version -> measureDelay(versionDelayStats, { iq.toXML() }) {
                 handler.versionIqReceived(iq)
             }
+
             is ConferenceModifyIQ -> {
                 // Colibri IQs are handled async.
                 handler.colibriRequestReceived(
@@ -240,9 +242,11 @@ class XmppConnection : IQListener {
                 )
                 null
             }
+
             is HealthCheckIQ -> measureDelay(healthDelayStats, { iq.toXML() }) {
                 handler.healthCheckIqReceived(iq)
             }
+
             else -> createError(
                 iq,
                 StanzaError.Condition.service_unavailable,

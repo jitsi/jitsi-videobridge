@@ -64,9 +64,7 @@ class VideoQualityLayerLookup(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    override fun getNodeStats(): NodeStatsBlock {
-        return super.getNodeStats().apply {
-            addNumber("num_packets_dropped_no_encoding", numPacketsDroppedNoEncoding.get())
-        }
+    override fun getNodeStats(): NodeStatsBlock = super.getNodeStats().apply {
+        addNumber("num_packets_dropped_no_encoding", numPacketsDroppedNoEncoding.get())
     }
 }

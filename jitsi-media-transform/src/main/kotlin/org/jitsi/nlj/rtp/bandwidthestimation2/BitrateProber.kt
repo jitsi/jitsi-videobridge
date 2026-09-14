@@ -247,6 +247,7 @@ class BitrateProber(
             ProbingState.kDisabled, ProbingState.kActive -> {
                 return false
             }
+
             ProbingState.kInactive -> {
                 if (config.allowStartProbingImmediately) {
                     return true

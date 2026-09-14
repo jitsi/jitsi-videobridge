@@ -220,6 +220,7 @@ internal class Exporter(
                     instanceTranscriptsReceived.incrementAndGet()
                     eventHandler.handleTranscriptionResult(event)
                 }
+
                 is PongEvent -> {
                     val expectedId = lastPingSentId.get()
                     if (event.id == expectedId) {
@@ -232,11 +233,13 @@ internal class Exporter(
                         logger.warn("Received pong with id=${event.id}, expected id=$expectedId")
                     }
                 }
+
                 is MediaEvent -> {
                     mediaEventsReceivedCount.inc()
                     instanceMediaEventsReceived.incrementAndGet()
                     eventHandler.handleMediaEvent(event)
                 }
+
                 is StartEvent -> {
                     // A `start` with a talk timestamp brackets the beginning of a "talk" (translated audio); one
                     // without is a plain stream-start announcement (the bridge->peer direction), which the bridge
@@ -251,6 +254,7 @@ internal class Exporter(
                         instanceOtherMessagesReceived.incrementAndGet()
                     }
                 }
+
                 is StopEvent -> {
                     // A `stop` with a talk timestamp brackets the end of a "talk"; a plain stop without one is a
                     // stream-end the bridge does not act on when received.
@@ -264,11 +268,13 @@ internal class Exporter(
                         instanceOtherMessagesReceived.incrementAndGet()
                     }
                 }
+
                 is InfoEvent -> {
                     infoReceivedCount.inc()
                     instanceInfoReceived.incrementAndGet()
                     logger.info("Received InfoEvent: ${event.toJson()}")
                 }
+
                 else -> {
                     otherMessagesReceivedCount.inc()
                     instanceOtherMessagesReceived.incrementAndGet()

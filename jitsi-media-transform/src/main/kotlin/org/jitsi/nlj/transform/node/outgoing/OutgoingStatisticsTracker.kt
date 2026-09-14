@@ -51,6 +51,7 @@ class OutgoingStatisticsTracker(
 
         when (rtpPacket) {
             is AudioRtpPacket -> numAudioPackets++
+
             is VideoRtpPacket -> {
                 numVideoPackets++
 
@@ -88,27 +89,23 @@ class OutgoingStatisticsTracker(
 
     override fun trace(f: () -> Unit) = f.invoke()
 
-    fun getSnapshot(): OutgoingStatisticsSnapshot {
-        return OutgoingStatisticsSnapshot(
-            ssrcStats.map { (ssrc, stats) ->
-                Pair(ssrc, stats.getSnapshot())
-            }.toMap()
-        ).also {
-            if (timeseriesLogger.isTraceEnabled) {
-                val point = diagnosticContext.makeTimeSeriesPoint("sent_video_stream_stats")
-                    .addField("bitrate_bps", videoBitrate.rate.bps)
-                videoBitratesByOrigin.forEach { (origin, tracker) ->
-                    point.addField("video_${origin}_bitrate", tracker.rate.bps)
-                }
-
-                timeseriesLogger.trace(point)
+    fun getSnapshot(): OutgoingStatisticsSnapshot = OutgoingStatisticsSnapshot(
+        ssrcStats.map { (ssrc, stats) ->
+            Pair(ssrc, stats.getSnapshot())
+        }.toMap()
+    ).also {
+        if (timeseriesLogger.isTraceEnabled) {
+            val point = diagnosticContext.makeTimeSeriesPoint("sent_video_stream_stats")
+                .addField("bitrate_bps", videoBitrate.rate.bps)
+            videoBitratesByOrigin.forEach { (origin, tracker) ->
+                point.addField("video_${origin}_bitrate", tracker.rate.bps)
             }
+
+            timeseriesLogger.trace(point)
         }
     }
 
-    fun getSsrcSnapshot(ssrc: Long): OutgoingSsrcStats.Snapshot? {
-        return ssrcStats[ssrc]?.getSnapshot()
-    }
+    fun getSsrcSnapshot(ssrc: Long): OutgoingSsrcStats.Snapshot? = ssrcStats[ssrc]?.getSnapshot()
 
     companion object {
         private val timeseriesLogger = TimeSeriesLogger.getTimeSeriesLogger(OutgoingStatisticsTracker::class.java)

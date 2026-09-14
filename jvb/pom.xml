@@ -18,6 +18,8 @@
     <assembly.skipAssembly>false</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.MainKt</exec.mainClass>
     <slf4j.version>2.0.16</slf4j.version>
+    <exec-maven-plugin.version>3.6.3</exec-maven-plugin.version>
+    <ktlint.version>1.8.0</ktlint.version>
   </properties>
 
   <profiles>
@@ -350,10 +352,11 @@
           </execution>
         </executions>
       </plugin>
+      <!-- ktlint: check runs in the verify phase; auto-format with "mvn exec:exec@ktlint-format" -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>3.5.1</version>
+        <version>${exec-maven-plugin.version}</version>
         <executions>
           <execution>
             <id>exec-exec</id>
@@ -379,7 +382,57 @@
               <mainClass>${exec.mainClass}</mainClass>
             </configuration>
           </execution>
+          <execution>
+            <id>ktlint-check</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>java</executable>
+              <includePluginDependencies>true</includePluginDependencies>
+              <arguments>
+                <argument>-classpath</argument>
+                <classpath>
+                  <dependency>com.pinterest.ktlint:ktlint-cli</dependency>
+                </classpath>
+                <argument>com.pinterest.ktlint.Main</argument>
+                <argument>--relative</argument>
+                <argument>src/main/kotlin/**/*.kt</argument>
+                <argument>src/test/kotlin/**/*.kt</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>ktlint-format</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>java</executable>
+              <includePluginDependencies>true</includePluginDependencies>
+              <arguments>
+                <argument>-classpath</argument>
+                <classpath>
+                  <dependency>com.pinterest.ktlint:ktlint-cli</dependency>
+                </classpath>
+                <argument>com.pinterest.ktlint.Main</argument>
+                <argument>--format</argument>
+                <argument>--relative</argument>
+                <argument>src/main/kotlin/**/*.kt</argument>
+                <argument>src/test/kotlin/**/*.kt</argument>
+              </arguments>
+            </configuration>
+          </execution>
         </executions>
+        <dependencies>
+          <dependency>
+            <groupId>com.pinterest.ktlint</groupId>
+            <artifactId>ktlint-cli</artifactId>
+            <version>${ktlint.version}</version>
+            <classifier>all</classifier>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.eclipse.jetty.ee10</groupId>
@@ -489,27 +542,6 @@
             <version>${spotbugs.version}</version>
           </dependency>
         </dependencies>
-      </plugin>
-      <plugin>
-        <groupId>com.github.gantsign.maven</groupId>
-        <artifactId>ktlint-maven-plugin</artifactId>
-        <version>${ktlint-maven-plugin.version}</version>
-        <configuration>
-          <sourceRoots>
-            <sourceRoot>${project.basedir}/src/main/kotlin</sourceRoot>
-          </sourceRoots>
-          <testSourceRoots>
-            <testSourceRoot>${project.basedir}/src/test/kotlin</testSourceRoot>
-          </testSourceRoots>
-        </configuration>
-        <executions>
-          <execution>
-            <id>check</id>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <!-- Instructs the plugin to add the current package version in the jar manifest
