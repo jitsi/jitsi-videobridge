@@ -22,8 +22,10 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.PayloadType
@@ -36,8 +38,11 @@ import org.jitsi.nlj.util.ExtmapAllowMixedChangedHandler
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpExtensionHandler
 import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
+import org.jitsi.nlj.util.bits
+import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
@@ -213,5 +218,180 @@ class KeyframeRequesterTest : ShouldSpec() {
                 }
             }
         }
+
+        context("with keyframe budget limiting enabled") {
+            withNewConfig("jmt.keyframe.budget.enabled=true") {
+                // The budget is computed when a request is sent and applies to the next request for the source, so
+                // each case sets its cost before the first request.
+                context("with a 60 KB keyframe on a 1.2 Mbps source") {
+                    // 480000 / (0.15 * 1200000) = 2.67s between requests, longer than the 2s source-wide floor.
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 1_200_000.bps) }
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    should("expose the derived interval and the cost in the node stats") {
+                        val stats = keyframeRequester.getNodeStats().toJson()
+                        stats["keyframe_budget_enabled"].asBoolean() shouldBe true
+                        val limit = stats["source_wide_limit_123"]
+                        limit["budget_interval_ms"].asLong() shouldBe 2666L
+                        limit["implied_interval_ms"].asLong() shouldBe 2666L
+                        limit["keyframe_cost"]["keyframe_bits"].asLong() shouldBe 480_000L
+                        limit["keyframe_cost"]["source_bitrate_bps"].asLong() shouldBe 1_200_000L
+                        // 480000 bits per 2.666s is 180 kbps, 15% of 1.2 Mbps.
+                        limit["keyframe_fraction_at_interval"].asDouble() shouldBe (0.15 plusOrMinus 0.001)
+                    }
+                    context("before the derived interval has expired") {
+                        clock.elapse(2500.ms)
+                        keyframeRequester.requestKeyframe("ep2", 123L)
+                        should("not send a second request") {
+                            sentKeyframeRequests shouldHaveSize 1
+                        }
+                    }
+                    context("after the derived interval has expired") {
+                        clock.elapse(3.secs)
+                        keyframeRequester.requestKeyframe("ep2", 123L)
+                        should("send a second request") {
+                            sentKeyframeRequests shouldHaveSize 2
+                        }
+                    }
+                }
+                context("when the source bitrate is high enough to absorb the keyframe") {
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 20_000_000.bps) }
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    clock.elapse(2100.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("fall back to the configured source-wide floor") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                }
+                context("when the source is sending very little") {
+                    // 480000 / (0.15 * 100000) = 32s, which is capped at max-interval (4s).
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 100_000.bps) }
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    clock.elapse(3900.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("not send a second request before max-interval") {
+                        sentKeyframeRequests shouldHaveSize 1
+                    }
+                    clock.elapse(200.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("send a second request after max-interval") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                }
+                context("the cost supplier") {
+                    var calls = 0
+                    keyframeRequester.setKeyframeCostSupplier {
+                        calls++
+                        KeyframeCost(480_000L.bits, 1_200_000.bps)
+                    }
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    // Dropped, once inside the floor and once inside the derived interval.
+                    clock.elapse(1.secs)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    clock.elapse(1500.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    // Sent.
+                    clock.elapse(1.secs)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("only be consulted when a request is sent") {
+                        sentKeyframeRequests shouldHaveSize 2
+                        calls shouldBe 2
+                    }
+                    should("account for what the budget did in the node stats") {
+                        val stats = keyframeRequester.getNodeStats().toJson()
+                        // The first request had no limit computed yet, so it went at the floor; the second was
+                        // governed by the 2.67s budget interval, 666ms longer than the 2s floor.
+                        stats["num_requests_sent_at_floor"].asInt() shouldBe 1
+                        stats["num_requests_sent_budget_lengthened"].asInt() shouldBe 1
+                        stats["total_budget_extension_ms"].asLong() shouldBe 666L
+                        // Of the two drops, only the one at 2.5s would have been accepted at the floor.
+                        stats["num_requests_dropped_source_wide_limit"].asInt() shouldBe 2
+                        stats["num_requests_dropped_by_budget"].asInt() shouldBe 1
+                        // That receiver then waited from 2.5s until the request sent at 3.5s.
+                        stats["num_budget_waits"].asInt() shouldBe 1
+                        stats["total_budget_wait_ms"].asLong() shouldBe 1000L
+                    }
+                }
+                context("with the budget not binding") {
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 20_000_000.bps) }
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    clock.elapse(1.secs)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    clock.elapse(1500.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("attribute nothing to the budget in the node stats") {
+                        sentKeyframeRequests shouldHaveSize 2
+                        val stats = keyframeRequester.getNodeStats().toJson()
+                        stats["num_requests_sent_at_floor"].asInt() shouldBe 2
+                        stats["num_requests_sent_budget_lengthened"].asInt() shouldBe 0
+                        stats["total_budget_extension_ms"].asLong() shouldBe 0L
+                        stats["num_requests_dropped_source_wide_limit"].asInt() shouldBe 1
+                        stats["num_requests_dropped_by_budget"].asInt() shouldBe 0
+                        stats["num_budget_waits"].asInt() shouldBe 0
+                    }
+                }
+                context("when no cost has been measured for the source") {
+                    keyframeRequester.setKeyframeCostSupplier { null }
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    clock.elapse(2100.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("use the configured source-wide floor") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                }
+                context("distinguishing bridge-generated requests from forwarded PLIs in the budget stats") {
+                    // 2.67s derived interval, as above.
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 1_200_000.bps) }
+                    // A bridge-generated (API) request opens the source-wide limit.
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    context("when a forwarded PLI is dropped by the budget") {
+                        clock.elapse(2100.ms)
+                        sendPli(keyframeRequester, "ep2", 123L)
+                        should("count against the base counters but not the api ones") {
+                            val stats = keyframeRequester.getNodeStats().toJson()
+                            stats["num_requests_dropped_by_budget"].asInt() shouldBe 1
+                            stats["num_requests_dropped_by_budget_api"].asInt() shouldBe 0
+                        }
+                        context("and a bridge-generated request for the same source is also dropped") {
+                            clock.elapse(200.ms)
+                            keyframeRequester.requestKeyframe("ep3", 123L)
+                            should("count against both the base and the api dropped counters") {
+                                val stats = keyframeRequester.getNodeStats().toJson()
+                                stats["num_requests_dropped_by_budget"].asInt() shouldBe 2
+                                stats["num_requests_dropped_by_budget_api"].asInt() shouldBe 1
+                            }
+                            context("once the derived interval elapses and a request is finally sent") {
+                                // 2100 + 200 + 400 = 2700ms since the first request, past the 2666ms interval.
+                                clock.elapse(400.ms)
+                                keyframeRequester.requestKeyframe("ep4", 123L)
+                                should("resolve every waiting requester, attributing each by its own origin") {
+                                    val stats = keyframeRequester.getNodeStats().toJson()
+                                    // ep2 (forwarded) and ep3 (api) were both waiting; one sent request, from ep4,
+                                    // resolves both of their waits, not just the one which happened to trigger it.
+                                    stats["num_budget_waits"].asInt() shouldBe 2
+                                    stats["num_budget_waits_api"].asInt() shouldBe 1
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        context("with keyframe budget limiting disabled") {
+            keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 1_200_000.bps) }
+            keyframeRequester.requestKeyframe("ep1", 123L)
+            clock.elapse(2100.ms)
+            keyframeRequester.requestKeyframe("ep2", 123L)
+            should("use the configured source-wide floor and ignore the cost") {
+                sentKeyframeRequests shouldHaveSize 2
+            }
+        }
     }
+}
+
+/** Sends a PLI for [mediaSsrc] from [endpointId] through [keyframeRequester], as if forwarded from a receiver. */
+private fun sendPli(keyframeRequester: KeyframeRequester, endpointId: String, mediaSsrc: Long) {
+    val packetInfo = PacketInfo(RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build())
+    packetInfo.endpointId = endpointId
+    keyframeRequester.processPacket(packetInfo)
 }

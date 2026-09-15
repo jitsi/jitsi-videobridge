@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.KeyframeCost
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
@@ -160,7 +161,18 @@ class Transceiver(
 
         endpointConnectionStats.addListener(rtpSender)
         endpointConnectionStats.addListener(rtpReceiver)
+
+        setKeyframeCostSupplier(rtpReceiver::getKeyframeCost)
     }
+
+    /**
+     * Set the source of measured keyframe costs used to bound the rate of the keyframe requests this transceiver
+     * sends. The keyframe requester is in the sender pipeline, but what a keyframe costs is only observable where
+     * the source is received. By default that is this transceiver's own receiver, which is right when one
+     * transceiver both receives a source and requests keyframes from it. An owner which receives its sources
+     * elsewhere, as a relay does, replaces it.
+     */
+    fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?) = rtpSender.setKeyframeCostSupplier(supplier)
 
     /**
      * Handle an incoming [PacketInfo] (that is, a packet received by the endpoint
@@ -347,7 +359,8 @@ class Transceiver(
         rtpReceiver.getStats(),
         rtpSender.getStreamStats(),
         rtpSender.getPacketStreamStats(),
-        rtpSender.getTransportCcEngineStats()
+        rtpSender.getTransportCcEngineStats(),
+        rtpSender.getKeyframeBudgetStats()
     )
 
     fun addEndpointConnectionStatsListener(listener: EndpointConnectionStats.EndpointConnectionStatsListener) =

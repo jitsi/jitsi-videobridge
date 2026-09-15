@@ -27,6 +27,7 @@ import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.copy
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.KeyframeCost
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.RtpExtension
@@ -135,6 +136,9 @@ class RelayedEndpoint(
         relay.transceiver.requestKeyFrame(requesterID, mediaSsrc)
 
     override fun requestKeyframe() = relay.transceiver.requestKeyFrame(null, mediaSource?.primarySSRC)
+
+    /** The measured cost of a keyframe for this endpoint's video source with primary SSRC [ssrc], if observed. */
+    fun getKeyframeCost(ssrc: Long): KeyframeCost? = rtpReceiver.getKeyframeCost(ssrc)
 
     override val isSendingAudio
         get() = rtpReceiver.isReceivingAudio()

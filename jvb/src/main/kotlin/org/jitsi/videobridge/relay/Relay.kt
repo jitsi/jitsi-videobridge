@@ -32,6 +32,7 @@ import org.jitsi.nlj.Transceiver
 import org.jitsi.nlj.TransceiverEventHandler
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.rtcp.KeyframeCost
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.rtp.AudioRtpPacket
@@ -285,7 +286,15 @@ class Relay @JvmOverloads constructor(
             external = true
         )
         addRtpExtensionToRetain(RtpExtensionType.VLA)
+        setKeyframeCostSupplier(this@Relay::getKeyframeCost)
     }
+
+    /**
+     * The measured cost of a keyframe for the relayed source with [ssrc]. Relayed media is received by each
+     * [RelayedEndpoint]'s own receiver, not by [transceiver] or the [RelayEndpointSender]s, so the keyframe costs
+     * which bound the keyframe requests they send have to come from there.
+     */
+    private fun getKeyframeCost(ssrc: Long): KeyframeCost? = getEndpointBySsrc(ssrc)?.getKeyframeCost(ssrc)
 
     /**
      * The instance which manages the Colibri messaging (over web sockets).
@@ -800,6 +809,7 @@ class Relay @JvmOverloads constructor(
             rtpExtensions.forEach { rtpExtension -> s.addRtpExtension(rtpExtension) }
             s.setExtmapAllowMixed(extmapAllowMixed)
             s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP))
+            s.setKeyframeCostSupplier(::getKeyframeCost)
 
             senders[endpointId] = s
 
@@ -1041,6 +1051,21 @@ class Relay @JvmOverloads constructor(
             it.mediaType == MediaType.VIDEO
         }.sumOf { it.durationActive }
         VideobridgeMetrics.totalVideoStreamMillisecondsReceived.add(durationActiveVideo.toMillis())
+
+        // Only the relay's own transceiver (bridge-originated requests); each RelayEndpointSender has its own
+        // KeyframeRequester for PLIs forwarded from local receivers, which is not aggregated here, matching the
+        // rest of this method's scope.
+        val keyframeBudgetStats = transceiverStats.keyframeRequesterStats
+        VideobridgeMetrics.keyframeRequestsDroppedByBudget.addAndGet(
+            keyframeBudgetStats.numRequestsDroppedByBudget.toLong()
+        )
+        VideobridgeMetrics.keyframeRequestsDroppedByBudgetApi.addAndGet(
+            keyframeBudgetStats.numRequestsDroppedByBudgetApi.toLong()
+        )
+        VideobridgeMetrics.keyframeBudgetWaits.addAndGet(keyframeBudgetStats.numBudgetWaits.toLong())
+        VideobridgeMetrics.keyframeBudgetWaitsApi.addAndGet(keyframeBudgetStats.numBudgetWaitsApi.toLong())
+        VideobridgeMetrics.keyframeBudgetWaitMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMs)
+        VideobridgeMetrics.keyframeBudgetWaitApiMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMsApi)
 
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring a relay with ICE connected, but not DTLS.")

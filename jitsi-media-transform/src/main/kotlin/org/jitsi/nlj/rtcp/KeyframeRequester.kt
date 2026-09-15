@@ -16,6 +16,8 @@
 
 package org.jitsi.nlj.rtcp
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.nlj.Event
@@ -39,6 +41,7 @@ import org.jitsi.utils.min
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -88,6 +91,60 @@ class KeyframeRequester @JvmOverloads constructor(
     private var numRequestsDroppedPerReceiverLimit: Int = 0
     private var numRequestsDroppedSourceWideLimit: Int = 0
 
+    @Volatile
+    private var keyframeCostSupplier: ((Long) -> KeyframeCost?)? = null
+
+    /**
+     * For each source a request has been sent for, the source-wide limit computed when the most recent request was
+     * sent, which applies to the next one. Only populated when keyframe budget limiting is enabled.
+     */
+    private val lastSourceWideLimits = ConcurrentHashMap<Long, SourceWideLimit>()
+
+    // Keyframe budget stats: how often the budget, rather than the configured source-wide interval, governed a
+    // request, and what it cost.
+
+    /** Requests sent while the interval applied was the configured floor. */
+    private var numRequestsSentAtFloor: Int = 0
+
+    /** Requests sent while the interval applied had been lengthened by the budget. */
+    private var numRequestsSentBudgetLengthened: Int = 0
+
+    /** Sum over sent requests of the interval applied minus the floor. */
+    private var totalBudgetExtensionMs: Long = 0
+
+    /** Requests dropped by the source-wide limit which the floor alone would have accepted. */
+    private var numRequestsDroppedByBudget: Int = 0
+
+    /**
+     * For each source, and each distinct requester dropped by the budget since the last request was sent for that
+     * source, when that requester was first dropped. Keyed by requester rather than just source, so that when
+     * several receivers are waiting on the same source concurrently, sending one request that satisfies all of them
+     * counts every one of their waits, not just the first. A `null` key holds unattributed requesters (dominant
+     * speaker switches, or requests relayed from another bridge) as one entry, since there is nothing to tell them
+     * apart by.
+     */
+    private val budgetWaitStarts = mutableMapOf<Long, MutableMap<String?, PendingBudgetWait>>()
+
+    /** The number of times a receiver waited for a request the budget had delayed, and the total time waited. */
+    private var numBudgetWaits: Int = 0
+    private var totalBudgetWaitMs: Long = 0
+
+    /** The longest a receiver has waited for a request the budget had delayed. */
+    private var maxBudgetWaitMs: Long = 0
+
+    // The same counters as above, restricted to requests this bridge generated itself (a layer switch needing a
+    // keyframe, or a dominant-speaker switch) rather than a PLI/FIR forwarded from a receiver's own decoder. Since a
+    // bridge-generated request is what unblocks a stalled layer switch, this shows whether the budget's delay is
+    // landing on that case specifically, as opposed to redundant re-requests from receivers already waiting.
+
+    private var numRequestsSentAtFloorApi: Int = 0
+    private var numRequestsSentBudgetLengthenedApi: Int = 0
+    private var totalBudgetExtensionMsApi: Long = 0
+    private var numRequestsDroppedByBudgetApi: Int = 0
+    private var numBudgetWaitsApi: Int = 0
+    private var totalBudgetWaitMsApi: Long = 0
+    private var maxBudgetWaitMsApi: Long = 0
+
     override fun transform(packetInfo: PacketInfo): PacketInfo? {
         val pliOrFirPacket = packetInfo.getPliOrFirPacket() ?: return packetInfo
 
@@ -132,11 +189,19 @@ class KeyframeRequester @JvmOverloads constructor(
 
     /**
      * Returns 'true' when at least one method is supported, AND this requester hasn't sent a request very recently.
+     * [apiTriggered] is whether this is a request the bridge generated itself, as opposed to one forwarded from a
+     * receiver's own PLI/FIR; it is only used to attribute the budget stats below.
      */
-    private fun canSendKeyframeRequest(requesterID: String?, mediaSsrc: Long, now: Instant): Boolean {
+    private fun canSendKeyframeRequest(
+        requesterID: String?,
+        mediaSsrc: Long,
+        now: Instant,
+        apiTriggered: Boolean = false
+    ): Boolean {
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
+        val floor = maxOf(waitInterval, sourceWideMinInterval)
         synchronized(keyframeLimiterSyncRoot) {
             /* A null requesterID is a dominant speaker switch, or a request relayed from another bridge (relayed
              * RTCP carries no endpoint id). There is no receiver to attribute it to, so skip only the per-receiver
@@ -167,8 +232,18 @@ class KeyframeRequester @JvmOverloads constructor(
                     interval = sourceWideMaxRequestInterval
                 )
             }
-            if (!perSourceLimiter.wouldAccept(now, sourceWideInterval())) {
+            /* The source-wide interval is the floor, lengthened by the keyframe budget as computed when the previous
+             * request for this source was sent. The floor is applied here rather than when the budget is computed, so
+             * that a change to it between requests takes effect at once. */
+            val interval = lastSourceWideLimits[mediaSsrc]?.budgetInterval?.let { maxOf(it, floor) } ?: floor
+            if (!perSourceLimiter.wouldAccept(now, interval)) {
                 numRequestsDroppedSourceWideLimit++
+                if (interval > floor && perSourceLimiter.wouldAccept(now, floor)) {
+                    numRequestsDroppedByBudget++
+                    if (apiTriggered) numRequestsDroppedByBudgetApi++
+                    budgetWaitStarts.computeIfAbsent(mediaSsrc) { mutableMapOf() }
+                        .putIfAbsent(requesterID, PendingBudgetWait(now, apiTriggered))
+                }
                 logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, per-source rate limited" }
                 return false
             }
@@ -180,17 +255,63 @@ class KeyframeRequester @JvmOverloads constructor(
             perReceiverLimiter?.record(now)
             perSourceLimiter.record(now)
 
-            logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
-            return true
+            if (interval > floor) {
+                numRequestsSentBudgetLengthened++
+                if (apiTriggered) numRequestsSentBudgetLengthenedApi++
+                val extensionMs = (interval - floor).toMillis()
+                totalBudgetExtensionMs += extensionMs
+                if (apiTriggered) totalBudgetExtensionMsApi += extensionMs
+            } else {
+                numRequestsSentAtFloor++
+                if (apiTriggered) numRequestsSentAtFloorApi++
+            }
+            /* This one request satisfies every receiver waiting on this source, not just the one which triggered it,
+             * so every requester recorded as waiting is resolved here, each with its own wait time. */
+            budgetWaitStarts.remove(mediaSsrc)?.values?.forEach { wait ->
+                val waitMs = Duration.between(wait.since, now).toMillis()
+                numBudgetWaits++
+                totalBudgetWaitMs += waitMs
+                maxBudgetWaitMs = maxOf(maxBudgetWaitMs, waitMs)
+                if (wait.apiTriggered) {
+                    numBudgetWaitsApi++
+                    totalBudgetWaitMsApi += waitMs
+                    maxBudgetWaitMsApi = maxOf(maxBudgetWaitMsApi, waitMs)
+                }
+            }
         }
+
+        /* Compute the limit to apply to the next request for this source now, once per request sent, so that the
+         * cost lookup is off the per-packet request path. Outside the lock, since it calls into the receive
+         * pipeline's measurements. */
+        if (KeyframeBudgetConfig.enabled) {
+            lastSourceWideLimits[mediaSsrc] = sourceWideLimit(mediaSsrc)
+        }
+
+        logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
+        return true
     }
 
     /**
-     * The minimum interval to enforce between keyframe requests for a source, from any receiver. [waitInterval] is
-     * derived from the per-receiver min-interval and the RTT, so it is never longer than the per-receiver interval;
-     * take the larger of the two so that source-wide-min-interval is actually enforced.
+     * The interval the keyframe budget calls for between keyframe requests for [mediaSsrc], from any receiver: with a
+     * measured keyframe cost available for the source, the interval at which keyframes requested at that rate cost
+     * [KeyframeBudgetConfig.maxBitrateFraction] of the source's current bitrate, capped at
+     * [KeyframeBudgetConfig.maxInterval]. The configured floor is applied when the limit is checked, so the interval
+     * actually enforced is never shorter than the floor, and never longer than max-interval unless the floor itself
+     * is.
      */
-    private fun sourceWideInterval(): Duration = maxOf(waitInterval, sourceWideMinInterval)
+    private fun sourceWideLimit(mediaSsrc: Long): SourceWideLimit {
+        val cost = keyframeCostSupplier?.invoke(mediaSsrc)
+        val impliedInterval = cost?.intervalAt(KeyframeBudgetConfig.maxBitrateFraction)
+        return SourceWideLimit(impliedInterval?.coerceAtMost(KeyframeBudgetConfig.maxInterval), cost, impliedInterval)
+    }
+
+    /**
+     * Set the source of measured keyframe costs used by [sourceWideLimit] when keyframe budget limiting is enabled.
+     * The supplier is called with the SSRC a keyframe was requested for.
+     */
+    fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?) {
+        keyframeCostSupplier = supplier
+    }
 
     fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null) {
         val ssrc = mediaSsrc ?: streamInformationStore.primaryMediaSsrcs.firstOrNull() ?: run {
@@ -199,7 +320,7 @@ class KeyframeRequester @JvmOverloads constructor(
             return
         }
         numApiRequests++
-        if (!canSendKeyframeRequest(requesterID, ssrc, clock.instant())) {
+        if (!canSendKeyframeRequest(requesterID, ssrc, clock.instant(), apiTriggered = true)) {
             numApiRequestsDropped++
             return
         }
@@ -255,6 +376,31 @@ class KeyframeRequester @JvmOverloads constructor(
         addNumber("num_plis_forwarded", numPlisForwarded)
         addNumber("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
         addNumber("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
+        addBoolean("keyframe_budget_enabled", KeyframeBudgetConfig.enabled)
+        addNumber("num_requests_sent_at_floor", numRequestsSentAtFloor)
+        addNumber("num_requests_sent_budget_lengthened", numRequestsSentBudgetLengthened)
+        addNumber("total_budget_extension_ms", totalBudgetExtensionMs)
+        addNumber("num_requests_dropped_by_budget", numRequestsDroppedByBudget)
+        addNumber("num_budget_waits", numBudgetWaits)
+        addNumber("total_budget_wait_ms", totalBudgetWaitMs)
+        addNumber("max_budget_wait_ms", maxBudgetWaitMs)
+        addNumber("num_requests_sent_at_floor_api", numRequestsSentAtFloorApi)
+        addNumber("num_requests_sent_budget_lengthened_api", numRequestsSentBudgetLengthenedApi)
+        addNumber("total_budget_extension_ms_api", totalBudgetExtensionMsApi)
+        addNumber("num_requests_dropped_by_budget_api", numRequestsDroppedByBudgetApi)
+        addNumber("num_budget_waits_api", numBudgetWaitsApi)
+        addNumber("total_budget_wait_ms_api", totalBudgetWaitMsApi)
+        addNumber("max_budget_wait_ms_api", maxBudgetWaitMsApi)
+        lastSourceWideLimits.forEach { (ssrc, limit) ->
+            addJson("source_wide_limit_$ssrc", limit.toJson())
+        }
+        /* budgetWaitStarts is a plain map, mutated only under keyframeLimiterSyncRoot; snapshot the sizes under the
+         * same lock rather than iterating it directly here, so a debug dump racing a request can not see it
+         * mid-mutation. */
+        val waiterCounts = synchronized(keyframeLimiterSyncRoot) { budgetWaitStarts.mapValues { it.value.size } }
+        waiterCounts.forEach { (ssrc, count) ->
+            addNumber("budget_waiters_$ssrc", count)
+        }
     }
 
     override fun statsJson() = super.statsJson().apply {
@@ -268,7 +414,32 @@ class KeyframeRequester @JvmOverloads constructor(
         put("num_plis_forwarded", numPlisForwarded)
         put("num_requests_dropped_per_receiver_limit", numRequestsDroppedPerReceiverLimit)
         put("num_requests_dropped_source_wide_limit", numRequestsDroppedSourceWideLimit)
+        put("keyframe_budget_enabled", KeyframeBudgetConfig.enabled)
+        put("num_requests_sent_at_floor", numRequestsSentAtFloor)
+        put("num_requests_sent_budget_lengthened", numRequestsSentBudgetLengthened)
+        put("total_budget_extension_ms", totalBudgetExtensionMs)
+        put("num_requests_dropped_by_budget", numRequestsDroppedByBudget)
+        put("num_budget_waits", numBudgetWaits)
+        put("total_budget_wait_ms", totalBudgetWaitMs)
+        put("max_budget_wait_ms", maxBudgetWaitMs)
+        put("num_requests_dropped_by_budget_api", numRequestsDroppedByBudgetApi)
+        put("num_budget_waits_api", numBudgetWaitsApi)
+        put("total_budget_wait_ms_api", totalBudgetWaitMsApi)
+        put("max_budget_wait_ms_api", maxBudgetWaitMsApi)
     }
+
+    /**
+     * A snapshot of this requester's cumulative keyframe budget counters, for aggregation into bridge-wide metrics.
+     * Only the counters needed there are included; the rest remain available via [getNodeStats].
+     */
+    fun getKeyframeBudgetStats() = KeyframeRequesterStats(
+        numRequestsDroppedByBudget = numRequestsDroppedByBudget,
+        numRequestsDroppedByBudgetApi = numRequestsDroppedByBudgetApi,
+        numBudgetWaits = numBudgetWaits,
+        numBudgetWaitsApi = numBudgetWaitsApi,
+        totalBudgetWaitMs = totalBudgetWaitMs,
+        totalBudgetWaitMsApi = totalBudgetWaitMsApi
+    )
 
     fun onRttUpdate(newRtt: Double) {
         // avg(rtt) + stddev(rtt) would be more accurate than rtt + 10.
@@ -294,6 +465,39 @@ class KeyframeRequester @JvmOverloads constructor(
         }
         private val sourceWideMaxRequestInterval: Duration by config {
             "jmt.keyframe.source-wide-max-request-interval".from(JitsiConfig.newConfig)
+        }
+    }
+}
+
+/** When a requester was first dropped by the budget, and whether that request was bridge-generated. */
+private data class PendingBudgetWait(val since: Instant, val apiTriggered: Boolean)
+
+/**
+ * A snapshot of [KeyframeRequester]'s cumulative keyframe budget counters, for aggregation into bridge-wide metrics.
+ * The `Api` counters are the subset of each which came from a request the bridge generated itself (a layer switch
+ * needing a keyframe, or a dominant-speaker switch) rather than one forwarded from a receiver's own PLI/FIR.
+ */
+data class KeyframeRequesterStats(
+    val numRequestsDroppedByBudget: Int,
+    val numRequestsDroppedByBudgetApi: Int,
+    val numBudgetWaits: Int,
+    val numBudgetWaitsApi: Int,
+    val totalBudgetWaitMs: Long,
+    val totalBudgetWaitMsApi: Long
+)
+
+/**
+ * What the keyframe budget calls for on the next request for one source: the interval it calls for, if a cost was
+ * available, after the cap but before the floor; the keyframe cost it was derived from; and the interval that cost
+ * implied before the cap.
+ */
+private class SourceWideLimit(val budgetInterval: Duration?, val cost: KeyframeCost?, val impliedInterval: Duration?) {
+    fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        budgetInterval?.let { put("budget_interval_ms", it.toMillis()) }
+        impliedInterval?.let { put("implied_interval_ms", it.toMillis()) }
+        cost?.let {
+            set<ObjectNode>("keyframe_cost", it.toJson())
+            budgetInterval?.let { interval -> put("keyframe_fraction_at_interval", it.keyframeFractionAt(interval)) }
         }
     }
 }
