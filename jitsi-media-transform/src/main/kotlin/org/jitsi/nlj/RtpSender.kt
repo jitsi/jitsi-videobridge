@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtcp.KeyframeRequesterStats
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.TransportCcEngine
@@ -48,6 +49,9 @@ abstract class RtpSender :
 
     /** Set the source of measured keyframe costs used to bound the rate of keyframe requests. */
     abstract fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?)
+
+    /** The keyframe requester's cumulative keyframe budget counters, for aggregation into bridge-wide metrics. */
+    abstract fun getKeyframeBudgetStats(): KeyframeRequesterStats
 
     abstract fun addLossListener(lossListener: LossListener)
     abstract fun setFeature(feature: Features, enabled: Boolean)

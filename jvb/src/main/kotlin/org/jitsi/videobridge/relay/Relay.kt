@@ -1052,6 +1052,21 @@ class Relay @JvmOverloads constructor(
         }.sumOf { it.durationActive }
         VideobridgeMetrics.totalVideoStreamMillisecondsReceived.add(durationActiveVideo.toMillis())
 
+        // Only the relay's own transceiver (bridge-originated requests); each RelayEndpointSender has its own
+        // KeyframeRequester for PLIs forwarded from local receivers, which is not aggregated here, matching the
+        // rest of this method's scope.
+        val keyframeBudgetStats = transceiverStats.keyframeRequesterStats
+        VideobridgeMetrics.keyframeRequestsDroppedByBudget.addAndGet(
+            keyframeBudgetStats.numRequestsDroppedByBudget.toLong()
+        )
+        VideobridgeMetrics.keyframeRequestsDroppedByBudgetApi.addAndGet(
+            keyframeBudgetStats.numRequestsDroppedByBudgetApi.toLong()
+        )
+        VideobridgeMetrics.keyframeBudgetWaits.addAndGet(keyframeBudgetStats.numBudgetWaits.toLong())
+        VideobridgeMetrics.keyframeBudgetWaitsApi.addAndGet(keyframeBudgetStats.numBudgetWaitsApi.toLong())
+        VideobridgeMetrics.keyframeBudgetWaitMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMs)
+        VideobridgeMetrics.keyframeBudgetWaitApiMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMsApi)
+
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring a relay with ICE connected, but not DTLS.")
             VideobridgeMetrics.relaysDtlsFailed.inc()

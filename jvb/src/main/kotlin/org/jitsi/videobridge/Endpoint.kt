@@ -1077,6 +1077,18 @@ class Endpoint @JvmOverloads constructor(
         }.sumOf { it.durationActive }
         VideobridgeMetrics.totalVideoStreamMillisecondsReceived.add(durationActiveVideo.toMillis())
 
+        val keyframeBudgetStats = transceiverStats.keyframeRequesterStats
+        VideobridgeMetrics.keyframeRequestsDroppedByBudget.addAndGet(
+            keyframeBudgetStats.numRequestsDroppedByBudget.toLong()
+        )
+        VideobridgeMetrics.keyframeRequestsDroppedByBudgetApi.addAndGet(
+            keyframeBudgetStats.numRequestsDroppedByBudgetApi.toLong()
+        )
+        VideobridgeMetrics.keyframeBudgetWaits.addAndGet(keyframeBudgetStats.numBudgetWaits.toLong())
+        VideobridgeMetrics.keyframeBudgetWaitsApi.addAndGet(keyframeBudgetStats.numBudgetWaitsApi.toLong())
+        VideobridgeMetrics.keyframeBudgetWaitMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMs)
+        VideobridgeMetrics.keyframeBudgetWaitApiMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMsApi)
+
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring an endpoint with ICE connected, but not DTLS.")
             VideobridgeMetrics.endpointsDtlsFailed.inc()
