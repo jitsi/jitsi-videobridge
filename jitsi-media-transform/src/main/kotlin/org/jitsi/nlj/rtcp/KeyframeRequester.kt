@@ -394,8 +394,12 @@ class KeyframeRequester @JvmOverloads constructor(
         lastSourceWideLimits.forEach { (ssrc, limit) ->
             addJson("source_wide_limit_$ssrc", limit.toJson())
         }
-        budgetWaitStarts.forEach { (ssrc, waiters) ->
-            addNumber("budget_waiters_$ssrc", waiters.size)
+        /* budgetWaitStarts is a plain map, mutated only under keyframeLimiterSyncRoot; snapshot the sizes under the
+         * same lock rather than iterating it directly here, so a debug dump racing a request can not see it
+         * mid-mutation. */
+        val waiterCounts = synchronized(keyframeLimiterSyncRoot) { budgetWaitStarts.mapValues { it.value.size } }
+        waiterCounts.forEach { (ssrc, count) ->
+            addNumber("budget_waiters_$ssrc", count)
         }
     }
 

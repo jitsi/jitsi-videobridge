@@ -1065,7 +1065,7 @@ class Relay @JvmOverloads constructor(
         VideobridgeMetrics.keyframeBudgetWaits.addAndGet(keyframeBudgetStats.numBudgetWaits.toLong())
         VideobridgeMetrics.keyframeBudgetWaitsApi.addAndGet(keyframeBudgetStats.numBudgetWaitsApi.toLong())
         VideobridgeMetrics.keyframeBudgetWaitMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMs)
-        VideobridgeMetrics.keyframeBudgetWaitMillisecondsTotalApi.addAndGet(keyframeBudgetStats.totalBudgetWaitMsApi)
+        VideobridgeMetrics.keyframeBudgetWaitApiMillisecondsTotal.addAndGet(keyframeBudgetStats.totalBudgetWaitMsApi)
 
         if (iceTransport.isConnected() && !dtlsTransport.isConnected) {
             logger.info("Expiring a relay with ICE connected, but not DTLS.")

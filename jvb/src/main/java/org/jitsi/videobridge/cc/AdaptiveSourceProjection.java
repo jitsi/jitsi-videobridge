@@ -133,20 +133,20 @@ public class AdaptiveSourceProjection
     private final Runnable keyframeRequester;
 
     /**
-     * When the context most recently started needing a keyframe to make progress on a layer switch, or -1 if it
-     * does not currently need one. Read and written without synchronization: {@link #accept(PacketInfo)} already
-     * tolerates benign races on {@link #targetIndex} in the same way, and this is debug/metrics instrumentation
-     * rather than state the projection's correctness depends on.
+     * When the context most recently started needing a keyframe while not suspended, or -1 if it does not
+     * currently need one. Read and written without synchronization: {@link #accept(PacketInfo)} already tolerates
+     * benign races on {@link #targetIndex} in the same way, and this is debug/metrics instrumentation rather than
+     * state the projection's correctness depends on.
      */
     private volatile long needsKeyframeSinceMs = -1;
 
-    /** The total time spent needing a keyframe for a layer switch, summed over every completed wait. */
+    /** The total time spent needing a keyframe while not suspended, summed over every completed wait. */
     private volatile long totalNeedsKeyframeWaitMs = 0;
 
-    /** The longest a single wait for a keyframe needed for a layer switch has taken. */
+    /** The longest a single such wait has taken. */
     private volatile long maxNeedsKeyframeWaitMs = 0;
 
-    /** The number of times a wait for a keyframe needed for a layer switch has completed. */
+    /** The number of times such a wait has completed. */
     private volatile int numNeedsKeyframeWaitsCompleted = 0;
 
     /**
@@ -187,10 +187,13 @@ public class AdaptiveSourceProjection
         // sufficient to only check for needing a key frame if the packet wasn't
         // accepted. But this wouldn't be enough, as we may be accepting packets
         // of low-quality, while we wish to switch to high-quality.
-        boolean needsKeyframeNow = contextCopy.needsKeyframe();
+        // Gate the same way as the request below: a suspended target is not being forwarded at all, so there is no
+        // stale layer being sent for a keyframe to fix, and contextCopy.needsKeyframe() is not a reliable signal
+        // while suspended (the generic context forces it true for the whole suspension, to be ready to request one
+        // the moment it is unsuspended).
+        boolean needsKeyframeNow = contextCopy.needsKeyframe() && targetIndexCopy > RtpLayerDesc.SUSPENDED_INDEX;
         updateNeedsKeyframeWaitStats(needsKeyframeNow);
-        if (needsKeyframeNow
-            && targetIndexCopy > RtpLayerDesc.SUSPENDED_INDEX)
+        if (needsKeyframeNow)
         {
             keyframeRequester.run();
         }
@@ -199,11 +202,13 @@ public class AdaptiveSourceProjection
     }
 
     /**
-     * Times how long the context needs a keyframe to make progress on a layer switch for, which is how long the
-     * projection keeps forwarding a stale layer instead of the one the bridge actually wants to send. This is
-     * independent of what governs how quickly a keyframe request for it is actually sent, so it measures the effect
-     * on a receiver regardless of the cause: the per-receiver keyframe request limit, the source-wide one, or (see
-     * {@code jmt.keyframe.budget}) the keyframe budget lengthening it.
+     * Times how long the context needs a keyframe while not suspended for, which is how long the projection keeps
+     * forwarding a stale or absent layer instead of the one the bridge actually wants to send. This covers the
+     * initial keyframe every projection needs before it can start forwarding, resuming after a suspension, and a
+     * mid-stream layer switch alike; it does not distinguish between them. It is independent of what governs how
+     * quickly a keyframe request for it is actually sent, so it measures the effect on a receiver regardless of the
+     * cause: the per-receiver keyframe request limit, the source-wide one, or (see {@code jmt.keyframe.budget}) the
+     * keyframe budget lengthening it.
      */
     private void updateNeedsKeyframeWaitStats(boolean needsKeyframeNow)
     {
@@ -212,7 +217,6 @@ public class AdaptiveSourceProjection
             if (needsKeyframeSinceMs < 0)
             {
                 needsKeyframeSinceMs = System.currentTimeMillis();
-                VideobridgeMetrics.layerSwitchKeyframeWaitsInProgress.inc();
             }
         }
         else if (needsKeyframeSinceMs >= 0)
@@ -222,9 +226,8 @@ public class AdaptiveSourceProjection
             totalNeedsKeyframeWaitMs += waitMs;
             maxNeedsKeyframeWaitMs = Math.max(maxNeedsKeyframeWaitMs, waitMs);
             numNeedsKeyframeWaitsCompleted++;
-            VideobridgeMetrics.layerSwitchKeyframeWaitsInProgress.decAndGet();
-            VideobridgeMetrics.layerSwitchKeyframeWaitsCompleted.inc();
-            VideobridgeMetrics.layerSwitchKeyframeWaitMillisecondsTotal.addAndGet(waitMs);
+            VideobridgeMetrics.keyframeWaitsCompleted.inc();
+            VideobridgeMetrics.keyframeWaitMillisecondsTotal.addAndGet(waitMs);
         }
     }
 
