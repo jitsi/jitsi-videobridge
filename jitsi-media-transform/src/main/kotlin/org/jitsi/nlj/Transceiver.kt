@@ -359,7 +359,8 @@ class Transceiver(
         rtpReceiver.getStats(),
         rtpSender.getStreamStats(),
         rtpSender.getPacketStreamStats(),
-        rtpSender.getTransportCcEngineStats()
+        rtpSender.getTransportCcEngineStats(),
+        rtpSender.getKeyframeBudgetStats()
     )
 
     fun addEndpointConnectionStatsListener(listener: EndpointConnectionStats.EndpointConnectionStatsListener) =

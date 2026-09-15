@@ -27,6 +27,7 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.videobridge.cc.av1.*;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi.videobridge.cc.vp9.*;
+import org.jitsi.videobridge.metrics.VideobridgeMetrics;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -132,6 +133,23 @@ public class AdaptiveSourceProjection
     private final Runnable keyframeRequester;
 
     /**
+     * When the context most recently started needing a keyframe to make progress on a layer switch, or -1 if it
+     * does not currently need one. Read and written without synchronization: {@link #accept(PacketInfo)} already
+     * tolerates benign races on {@link #targetIndex} in the same way, and this is debug/metrics instrumentation
+     * rather than state the projection's correctness depends on.
+     */
+    private volatile long needsKeyframeSinceMs = -1;
+
+    /** The total time spent needing a keyframe for a layer switch, summed over every completed wait. */
+    private volatile long totalNeedsKeyframeWaitMs = 0;
+
+    /** The longest a single wait for a keyframe needed for a layer switch has taken. */
+    private volatile long maxNeedsKeyframeWaitMs = 0;
+
+    /** The number of times a wait for a keyframe needed for a layer switch has completed. */
+    private volatile int numNeedsKeyframeWaitsCompleted = 0;
+
+    /**
      * Determines whether an RTP packet needs to be accepted or not.
      *
      * @param packetInfo packet info for the video RTP packet to determine
@@ -169,13 +187,45 @@ public class AdaptiveSourceProjection
         // sufficient to only check for needing a key frame if the packet wasn't
         // accepted. But this wouldn't be enough, as we may be accepting packets
         // of low-quality, while we wish to switch to high-quality.
-        if (contextCopy.needsKeyframe()
+        boolean needsKeyframeNow = contextCopy.needsKeyframe();
+        updateNeedsKeyframeWaitStats(needsKeyframeNow);
+        if (needsKeyframeNow
             && targetIndexCopy > RtpLayerDesc.SUSPENDED_INDEX)
         {
             keyframeRequester.run();
         }
 
         return accept;
+    }
+
+    /**
+     * Times how long the context needs a keyframe to make progress on a layer switch for, which is how long the
+     * projection keeps forwarding a stale layer instead of the one the bridge actually wants to send. This is
+     * independent of what governs how quickly a keyframe request for it is actually sent, so it measures the effect
+     * on a receiver regardless of the cause: the per-receiver keyframe request limit, the source-wide one, or (see
+     * {@code jmt.keyframe.budget}) the keyframe budget lengthening it.
+     */
+    private void updateNeedsKeyframeWaitStats(boolean needsKeyframeNow)
+    {
+        if (needsKeyframeNow)
+        {
+            if (needsKeyframeSinceMs < 0)
+            {
+                needsKeyframeSinceMs = System.currentTimeMillis();
+                VideobridgeMetrics.layerSwitchKeyframeWaitsInProgress.inc();
+            }
+        }
+        else if (needsKeyframeSinceMs >= 0)
+        {
+            long waitMs = System.currentTimeMillis() - needsKeyframeSinceMs;
+            needsKeyframeSinceMs = -1;
+            totalNeedsKeyframeWaitMs += waitMs;
+            maxNeedsKeyframeWaitMs = Math.max(maxNeedsKeyframeWaitMs, waitMs);
+            numNeedsKeyframeWaitsCompleted++;
+            VideobridgeMetrics.layerSwitchKeyframeWaitsInProgress.decAndGet();
+            VideobridgeMetrics.layerSwitchKeyframeWaitsCompleted.inc();
+            VideobridgeMetrics.layerSwitchKeyframeWaitMillisecondsTotal.addAndGet(waitMs);
+        }
     }
 
     /**
@@ -401,6 +451,13 @@ public class AdaptiveSourceProjection
         }
         debugState.put("needsKeyframe", contextCopy == null ? "N/A" : Boolean.toString(contextCopy.needsKeyframe()));
         debugState.put("targetIndex", targetIndex);
+        long needsKeyframeSinceMsCopy = needsKeyframeSinceMs;
+        long currentNeedsKeyframeWaitMs =
+            needsKeyframeSinceMsCopy < 0 ? 0 : System.currentTimeMillis() - needsKeyframeSinceMsCopy;
+        debugState.put("needsKeyframeWaitMs", currentNeedsKeyframeWaitMs);
+        debugState.put("totalNeedsKeyframeWaitMs", totalNeedsKeyframeWaitMs);
+        debugState.put("maxNeedsKeyframeWaitMs", maxNeedsKeyframeWaitMs);
+        debugState.put("numNeedsKeyframeWaitsCompleted", numNeedsKeyframeWaitsCompleted);
 
         return debugState;
     }

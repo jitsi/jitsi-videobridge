@@ -42,6 +42,7 @@ import org.jitsi.nlj.util.bits
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
@@ -337,6 +338,42 @@ class KeyframeRequesterTest : ShouldSpec() {
                         sentKeyframeRequests shouldHaveSize 2
                     }
                 }
+                context("distinguishing bridge-generated requests from forwarded PLIs in the budget stats") {
+                    // 2.67s derived interval, as above.
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 1_200_000.bps) }
+                    // A bridge-generated (API) request opens the source-wide limit.
+                    keyframeRequester.requestKeyframe("ep1", 123L)
+                    context("when a forwarded PLI is dropped by the budget") {
+                        clock.elapse(2100.ms)
+                        sendPli(keyframeRequester, "ep2", 123L)
+                        should("count against the base counters but not the api ones") {
+                            val stats = keyframeRequester.getNodeStats().toJson()
+                            stats["num_requests_dropped_by_budget"].asInt() shouldBe 1
+                            stats["num_requests_dropped_by_budget_api"].asInt() shouldBe 0
+                        }
+                        context("and a bridge-generated request for the same source is also dropped") {
+                            clock.elapse(200.ms)
+                            keyframeRequester.requestKeyframe("ep3", 123L)
+                            should("count against both the base and the api dropped counters") {
+                                val stats = keyframeRequester.getNodeStats().toJson()
+                                stats["num_requests_dropped_by_budget"].asInt() shouldBe 2
+                                stats["num_requests_dropped_by_budget_api"].asInt() shouldBe 1
+                            }
+                            context("once the derived interval elapses and a request is finally sent") {
+                                // 2100 + 200 + 400 = 2700ms since the first request, past the 2666ms interval.
+                                clock.elapse(400.ms)
+                                keyframeRequester.requestKeyframe("ep4", 123L)
+                                should("resolve every waiting requester, attributing each by its own origin") {
+                                    val stats = keyframeRequester.getNodeStats().toJson()
+                                    // ep2 (forwarded) and ep3 (api) were both waiting; one sent request, from ep4,
+                                    // resolves both of their waits, not just the one which happened to trigger it.
+                                    stats["num_budget_waits"].asInt() shouldBe 2
+                                    stats["num_budget_waits_api"].asInt() shouldBe 1
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -350,4 +387,11 @@ class KeyframeRequesterTest : ShouldSpec() {
             }
         }
     }
+}
+
+/** Sends a PLI for [mediaSsrc] from [endpointId] through [keyframeRequester], as if forwarded from a receiver. */
+private fun sendPli(keyframeRequester: KeyframeRequester, endpointId: String, mediaSsrc: Long) {
+    val packetInfo = PacketInfo(RtcpFbPliPacketBuilder(mediaSourceSsrc = mediaSsrc).build())
+    packetInfo.endpointId = endpointId
+    keyframeRequester.processPacket(packetInfo)
 }

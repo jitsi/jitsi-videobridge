@@ -18,6 +18,7 @@ package org.jitsi.nlj.stats
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.jitsi.nlj.rtcp.KeyframeRequesterStats
 import org.jitsi.nlj.rtp.TransportCcEngine
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsSnapshot
 import org.jitsi.nlj.transform.node.incoming.VideoParser
@@ -28,7 +29,8 @@ data class TransceiverStats(
     val rtpReceiverStats: RtpReceiverStats,
     val outgoingStats: OutgoingStatisticsSnapshot,
     val outgoingPacketStreamStats: PacketStreamStats.Snapshot,
-    val tccEngineStats: TransportCcEngine.StatisticsSnapshot
+    val tccEngineStats: TransportCcEngine.StatisticsSnapshot,
+    val keyframeRequesterStats: KeyframeRequesterStats
 ) {
     fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("endpoint_connection_stats", endpointConnectionStats.toJson())

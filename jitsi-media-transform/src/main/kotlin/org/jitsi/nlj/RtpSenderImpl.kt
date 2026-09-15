@@ -280,6 +280,8 @@ class RtpSenderImpl(
         keyframeRequester.setKeyframeCostSupplier(supplier)
     }
 
+    override fun getKeyframeBudgetStats() = keyframeRequester.getKeyframeBudgetStats()
+
     override fun addLossListener(lossListener: LossListener) {
         transportCcEngine.addLossListener(lossListener)
     }
