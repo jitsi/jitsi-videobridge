@@ -11,4 +11,4 @@ FOR %%F IN (lib/*.jar) DO (
   SET cp=!cp!;lib/%%F%
 )
 
-java -Djava.util.logging.config.file=lib/logging.properties -Djdk.tls.ephemeralDHKeySize=2048 -cp %cp% %mainClass% %*
+java --enable-native-access=ALL-UNNAMED -Djava.util.logging.config.file=lib/logging.properties -Djdk.tls.ephemeralDHKeySize=2048 -cp %cp% %mainClass% %*
