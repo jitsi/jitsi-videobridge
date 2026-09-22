@@ -37,6 +37,7 @@ import org.jitsi.nlj.format.PayloadTypeEncoding
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtension
+import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.srtp.TlsRole
@@ -49,6 +50,7 @@ import org.jitsi.nlj.util.LocalSsrcAssociation
 import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.RemoteSsrcAssociation
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.unsigned.toPositiveInt
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
@@ -545,6 +547,14 @@ class Endpoint @JvmOverloads constructor(
     /** The Opus payload type negotiated with this endpoint, or null if none. */
     fun getOpusPayloadType(): PayloadType? = transceiver.readOnlyStreamInformationStore.rtpPayloadTypes.values
         .firstOrNull { it.encoding == PayloadTypeEncoding.OPUS }
+
+    /**
+     * The ID negotiated with this endpoint for the ssrc-audio-level RTP header extension (RFC 6464), or null if it
+     * is not negotiated. The bridge assumes extension IDs are uniform across a conference, so the conference uses any
+     * endpoint's mapping when it writes the extension onto bridge-generated (synthetic-source) audio.
+     */
+    fun getAudioLevelExtensionId(): Int? = transceiver.readOnlyStreamInformationStore.rtpExtensions
+        .firstOrNull { it.type == RtpExtensionType.SSRC_AUDIO_LEVEL }?.id?.toPositiveInt()
 
     override fun addRtpExtension(rtpExtension: RtpExtension) = transceiver.addRtpExtension(rtpExtension)
 

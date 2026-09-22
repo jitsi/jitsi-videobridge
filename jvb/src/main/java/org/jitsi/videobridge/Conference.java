@@ -27,6 +27,7 @@ import org.jitsi.rtp.Packet;
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.*;
 import org.jitsi.rtp.rtp.*;
+import org.jitsi.rtp.rtp.header_extensions.*;
 import org.jitsi.tracing.*;
 import org.jitsi.utils.LRUCache;
 import org.jitsi.utils.dsi.*;
@@ -275,6 +276,25 @@ public class Conference
      * warning is logged once rather than per media event.
      */
     private final AtomicBoolean loggedNoOpusPayloadType = new AtomicBoolean(false);
+
+    /**
+     * The conference's negotiated ID for the ssrc-audio-level RTP header extension (RFC 6464), resolved lazily by
+     * {@link #getAudioLevelExtensionId()} and cached like {@link #opusPayloadType}: the bridge forwards header
+     * extensions with the sender's IDs unchanged, so it already relies on them being uniform across a conference.
+     */
+    private volatile Integer audioLevelExtensionId = null;
+
+    /**
+     * Whether we have warned about injected media carrying an audio level while no ssrc-audio-level extension is
+     * negotiated, so the warning is logged once rather than per media event.
+     */
+    private final AtomicBoolean loggedNoAudioLevelExtension = new AtomicBoolean(false);
+
+    /**
+     * Whether we have warned about an injected audio level outside the RFC 6464 range (a producer bug we clamp
+     * around), so the warning is logged once rather than per media event.
+     */
+    private final AtomicBoolean loggedAudioLevelOutOfRange = new AtomicBoolean(false);
 
     /**
      * A regex pattern to trim UUIDs to just their first 8 hex characters.
@@ -1674,6 +1694,15 @@ public class Conference
                 rtpPacket.setTimestamp(media.getTimestamp() & 0xFFFFFFFFL);
                 rtpPacket.setSsrc(source.getSsrc());
 
+                // Optional RFC 6464 audio level, so clients can show a level indicator for the synthetic source.
+                // The producer computes it from the PCM it encoded (the bridge never decodes the Opus). Absent in
+                // media from producers that predate the field, in which case the packet has no extension, as before.
+                Integer audioLevel = media.getAudioLevel();
+                if (audioLevel != null)
+                {
+                    addAudioLevelExtension(rtpPacket, audioLevel, Boolean.TRUE.equals(media.getVad()));
+                }
+
                 PacketInfo packetInfo = new PacketInfo(rtpPacket);
                 packetInfo.setPayloadType(opusPayloadType);
                 // Deliberately leave the endpoint ID unset: this is bridge-generated audio, not an endpoint's own
@@ -1798,6 +1827,69 @@ public class Conference
             }
         }
         return null;
+    }
+
+    /**
+     * Resolve the conference's ID for the ssrc-audio-level header extension (RFC 6464) from any local endpoint that
+     * has negotiated it, or {@code null} if none has. Cached once found, like {@link #getOpusPayloadType()}.
+     */
+    private Integer getAudioLevelExtensionId()
+    {
+        Integer cached = audioLevelExtensionId;
+        if (cached != null)
+        {
+            return cached;
+        }
+        for (Endpoint endpoint : getLocalEndpoints())
+        {
+            Integer extId = endpoint.getAudioLevelExtensionId();
+            if (extId != null)
+            {
+                audioLevelExtensionId = extId;
+                return extId;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Write an RFC 6464 audio level onto a bridge-generated (synthetic-source) audio packet, using the conference's
+     * negotiated ssrc-audio-level extension ID. The extension is encoded into the packet bytes right away, so the
+     * per-destination clones made in {@link #sendOut} carry it. A no-op (warned once) when the extension is not
+     * negotiated, and a bridge-generated level never feeds speech activity: injected packets enter via
+     * {@link #handleIncomingPacket}, not an endpoint's receive pipeline, and {@link #levelChanged} exempts
+     * synthetic sources anyway. One asymmetry to be aware of: a synthetic source forwarded over a relay does pass
+     * the far bridge's receive pipeline, whose AudioLevelReader (with the default {@code discard-silence}) drops a
+     * sustained run of level-127 packets, while the local path delivers them. So a producer should not report 127
+     * on frames it wants heard (it should simply not send silence, as the translator does).
+     *
+     * @param rtpPacket the packet to add the extension to; must not already carry one.
+     * @param level the level in -dBov, 0 (full scale) to 127 (silence); out-of-range values are clamped.
+     * @param vad the voice-activity flag.
+     */
+    private void addAudioLevelExtension(RtpPacket rtpPacket, int level, boolean vad)
+    {
+        Integer extId = getAudioLevelExtensionId();
+        if (extId == null)
+        {
+            if (loggedNoAudioLevelExtension.compareAndSet(false, true))
+            {
+                logger.warn("Injected media carries an audio level but no ssrc-audio-level extension is negotiated; "
+                    + "not adding it.");
+            }
+            return;
+        }
+
+        int clampedLevel = Math.max(0, Math.min(AudioLevelHeaderExtension.MUTED_LEVEL, level));
+        if (clampedLevel != level && loggedAudioLevelOutOfRange.compareAndSet(false, true))
+        {
+            logger.warn("Injected media audio level " + level + " is outside 0.."
+                + AudioLevelHeaderExtension.MUTED_LEVEL + "; clamping (reported once).");
+        }
+        RtpPacket.HeaderExtension ext
+            = rtpPacket.addHeaderExtension(extId, AudioLevelHeaderExtension.DATA_SIZE_BYTES);
+        AudioLevelHeaderExtension.setAudioLevel(ext, clampedLevel, vad);
+        rtpPacket.encodeHeaderExtensions();
     }
 
     /**

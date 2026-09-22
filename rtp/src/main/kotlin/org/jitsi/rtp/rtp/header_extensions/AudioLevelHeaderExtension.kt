@@ -33,6 +33,25 @@ import kotlin.experimental.and
 class AudioLevelHeaderExtension {
     companion object {
         private const val AUDIO_LEVEL_MASK = 0x7F.toByte()
+        private const val VAD_MASK = 0x80
+
+        /** The RFC 6464 extension carries one byte: the V (VAD) bit and a 7-bit level. */
+        const val DATA_SIZE_BYTES = 1
+
+        /** The level of digital silence: -127 dBov, the quietest value the 7-bit field can express. */
+        const val MUTED_LEVEL = 127
+
+        /**
+         * Write an RFC 6464 audio level into [ext] (an extension of [DATA_SIZE_BYTES] bytes, e.g. one just added
+         * with [RtpPacket.addHeaderExtension]). [level] is in -dBov, 0 (full scale) to 127 (silence); [vad] is the
+         * voice-activity flag (the V bit).
+         */
+        @JvmStatic
+        fun setAudioLevel(ext: RtpPacket.HeaderExtension, level: Int, vad: Boolean) {
+            require(level in 0..MUTED_LEVEL) { "Audio level $level out of range 0..$MUTED_LEVEL" }
+            require(ext.dataLengthBytes >= DATA_SIZE_BYTES) { "Audio level extension needs $DATA_SIZE_BYTES byte" }
+            ext.buffer[ext.dataOffset] = ((if (vad) VAD_MASK else 0) or level).toByte()
+        }
 
         fun getAudioLevel(ext: RtpPacket.HeaderExtension): Int = getAudioLevel(ext.buffer, ext.dataOffset)
 
