@@ -50,7 +50,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>33.4.0-jre</version>
+      <version>33.5.0-jre</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -200,7 +200,8 @@
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
-      <version>0.9.11</version>
+      <version>0.10.2</version>
+      <scope>test</scope>
     </dependency>
     <!-- runtime -->
     <dependency>
@@ -366,6 +367,7 @@
             <configuration>
               <executable>java</executable>
               <arguments>
+                <argument>--enable-native-access=ALL-UNNAMED</argument>
                 <argument>-classpath</argument>
                 <classpath/>
                 <argument>-Djava.util.logging.config.file=${project.basedir}/lib/logging.properties</argument>

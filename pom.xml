@@ -40,7 +40,7 @@
         <spotbugs.version>4.9.4</spotbugs.version>
         <spotbugs-maven-plugin.version>4.9.4.2</spotbugs-maven-plugin.version>
         <jackson.version>2.21.5</jackson.version>
-        <jacoco.version>0.8.13</jacoco.version>
+        <jacoco.version>0.8.14</jacoco.version>
         <bouncycastle.version>1.83</bouncycastle.version>
         <jersey.version>3.1.11</jersey.version>
         <prometheus.version>0.16.0</prometheus.version>
