@@ -17,14 +17,19 @@
 package org.jitsi.videobridge.cc.av1
 
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import jakarta.xml.bind.DatatypeConverter
+import org.jitsi.nlj.RtpLayerDesc.Companion.getEidFromIndex
 import org.jitsi.nlj.rtp.codec.av1.Av1DDRtpLayerDesc
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
+import org.jitsi.videobridge.cc.EncodingLiveness
 import org.jitsi.videobridge.cc.EncodingSwitchPolicy
+import org.jitsi.videobridge.cc.liveEncodings
 import java.time.Instant
 
 internal class Av1DDQualityFilterTest : ShouldSpec() {
@@ -531,7 +536,9 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
 
-                /* Switch to spatial layer 2.  Need a keyframe. */
+                /* Switch to spatial layer 2.  Need a keyframe. The keyframe group's spatial layer 0 keyframe is
+                 * not part of the target decode target and is not taken; its spatial layer 2 keyframe completes
+                 * the switch. */
                 val targetIndex2 = Av1DDRtpLayerDesc.getIndex(0, 3 * 2 + 2)
                 var sawKeyframe = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
@@ -572,11 +579,12 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val generator = MultiEncodingSimulcastGenerator(av1FrameMaps)
                 val targetIndex = Av1DDRtpLayerDesc.getIndex(2, 2)
 
+                /* The first keyframe group is walked up to encoding 2; later groups' lower keyframes are not taken. */
                 testGenerator(generator, filter, targetIndex) { f, result ->
-                    result.accept shouldBe (f.ssrc == 2L || f.isKeyframe)
+                    result.accept shouldBe (f.ssrc == 2L || (f.isKeyframe && f.frameNumber == 0))
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe shouldBe false
+                        filter.needsKeyframe shouldBe (f.isKeyframe && f.frameNumber == 0 && f.ssrc < 2L)
                     }
                 }
             }
@@ -603,10 +611,10 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val targetIndex = Av1DDRtpLayerDesc.getIndex(1, 2)
 
                 testGenerator(generator, filter, targetIndex) { f, result ->
-                    result.accept shouldBe (f.ssrc == 1L || (f.isKeyframe && f.ssrc == 0L))
+                    result.accept shouldBe (f.ssrc == 1L || (f.isKeyframe && f.ssrc == 0L && f.frameNumber == 0))
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe shouldBe false
+                        filter.needsKeyframe shouldBe (f.isKeyframe && f.frameNumber == 0 && f.ssrc < 1L)
                     }
                 }
             }
@@ -618,10 +626,11 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val targetIndex = Av1DDRtpLayerDesc.getIndex(2, 0)
 
                 testGenerator(generator, filter, targetIndex) { f, result ->
-                    result.accept shouldBe ((f.ssrc == 2L || f.isKeyframe) && f.frameInfo!!.temporalId == 0)
+                    result.accept shouldBe
+                        ((f.ssrc == 2L || (f.isKeyframe && f.frameNumber == 0)) && f.frameInfo!!.temporalId == 0)
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe shouldBe false
+                        filter.needsKeyframe shouldBe (f.isKeyframe && f.frameNumber == 0 && f.ssrc < 2L)
                     }
                 }
             }
@@ -642,38 +651,275 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     }
                 }
 
-                /* Switch to encoding 2.  Need a keyframe. */
+                /* Switch to encoding 2.  Need a keyframe. The keyframe group which completes the switch is walked
+                 * up encoding by encoding; later groups' lower keyframes are not taken. */
                 val targetIndex2 = Av1DDRtpLayerDesc.getIndex(2, 2)
                 var sawKeyframe = false
+                var reachedTarget = false
                 testGenerator(generator, filter, targetIndex2, numFrames = 1200) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
                     result.accept shouldBe if (!sawKeyframe) {
                         (f.ssrc == 0L)
                     } else {
-                        (f.ssrc == 2L || f.isKeyframe)
+                        (f.ssrc == 2L || (f.isKeyframe && !reachedTarget))
                     }
+                    if (f.isKeyframe && f.ssrc == 2L) reachedTarget = true
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                        filter.needsKeyframe shouldBe (!reachedTarget)
                     }
                 }
 
                 /* Switch to encoding 1.  Need a keyframe. */
                 val targetIndex3 = Av1DDRtpLayerDesc.getIndex(1, 2)
                 sawKeyframe = false
+                reachedTarget = false
                 testGenerator(generator, filter, targetIndex3) { f, result ->
                     if (f.isKeyframe) sawKeyframe = true
                     result.accept shouldBe if (!sawKeyframe) {
                         // We don't send discardable frames for the DT while there's a pending encoding downswitch
                         (f.ssrc == 2L && f.frameInfo!!.temporalId != 2)
                     } else {
-                        (f.ssrc == 1L || (f.ssrc == 0L && f.isKeyframe))
+                        // The group's keyframe on encoding 0 is not taken: encoding 1 is being sent and its
+                        // keyframe is coming.
+                        (f.ssrc == 1L)
                     }
+                    if (f.isKeyframe && f.ssrc == 1L) reachedTarget = true
                     if (result.accept) {
                         result.mark shouldBe true
-                        filter.needsKeyframe shouldBe (!sawKeyframe)
+                        filter.needsKeyframe shouldBe (!reachedTarget)
                     }
                 }
+            }
+        }
+        context("A multi-encoding simulcast stream whose sender generates keyframes per encoding") {
+            val enc0 = Av1DDRtpLayerDesc.getIndex(0, 2)
+            val enc1 = Av1DDRtpLayerDesc.getIndex(1, 2)
+            val enc2 = Av1DDRtpLayerDesc.getIndex(2, 2)
+
+            /** Runs the initial keyframe group and 100 pictures more, leaving the filter forwarding [targetIndex]. */
+            fun start(generator: PerEncodingKeyframeGenerator, filter: Av1DDQualityFilter, targetIndex: Int) {
+                val targetEncoding = getEidFromIndex(targetIndex).toLong()
+                testGenerator(generator, filter, targetIndex, numFrames = 300) { f, result ->
+                    result.accept shouldBe (f.ssrc == targetEncoding || (f.isKeyframe && f.ssrc < targetEncoding))
+                }
+                filter.needsKeyframe shouldBe false
+            }
+
+            should("not be demoted by a keyframe on a lower encoding") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                generator.requestKeyframe(0)
+                var sawKeyframe = false
+                testGenerator(generator, filter, enc1, numFrames = 300) { f, result ->
+                    if (f.isKeyframe) sawKeyframe = true
+                    result.accept shouldBe (f.ssrc == 1L)
+                    filter.needsKeyframe shouldBe false
+                }
+                sawKeyframe shouldBe true
+            }
+
+            should("take a keyframe on the encoding being forwarded while a switch down is pending") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                /* Until the encoding 0 keyframe arrives, only the non-discardable frames of encoding 1 are
+                 * forwarded. */
+                testGenerator(generator, filter, enc0, numFrames = 300) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId != 2)
+                }
+                filter.needsKeyframe shouldBe true
+
+                /* A keyframe on encoding 1 alone is what we're forwarding, so it must be taken, or its successors
+                 * would be undecodable. It doesn't satisfy the need for an encoding 0 keyframe. */
+                generator.requestKeyframe(1)
+                var sawKeyframe = false
+                testGenerator(generator, filter, enc0, numFrames = 300) { f, result ->
+                    if (f.isKeyframe) {
+                        sawKeyframe = true
+                        f.ssrc shouldBe 1L
+                    }
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId != 2)
+                }
+                sawKeyframe shouldBe true
+                filter.needsKeyframe shouldBe true
+
+                generator.requestKeyframe(0)
+                testGenerator(generator, filter, enc0, numFrames = 300) { f, result ->
+                    result.accept shouldBe (f.ssrc == 0L)
+                }
+                filter.needsKeyframe shouldBe false
+            }
+
+            should("complete a switch up on a keyframe for the target encoding alone") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc0)
+
+                testGenerator(generator, filter, enc2, numFrames = 300) { f, result ->
+                    result.accept shouldBe (f.ssrc == 0L)
+                }
+                filter.needsKeyframe shouldBe true
+
+                generator.requestKeyframe(2)
+                var sawKeyframe = false
+                testGenerator(generator, filter, enc2, numFrames = 300) { f, result ->
+                    if (f.isKeyframe) {
+                        sawKeyframe = true
+                        f.ssrc shouldBe 2L
+                    }
+                    result.accept shouldBe if (sawKeyframe) (f.ssrc == 2L) else (f.ssrc == 0L)
+                }
+                sawKeyframe shouldBe true
+                filter.needsKeyframe shouldBe false
+            }
+
+            should("not request a keyframe when the target encoding is not being sent") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                generator.stopEncoding(2)
+                val liveness = liveEncodings { it != 2 }
+                testGenerator(generator, filter, enc2, numFrames = 300, liveness = liveness) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L)
+                    filter.needsKeyframe shouldBe false
+                }
+            }
+
+            should("stop needing a keyframe when the target encoding stops before answering") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                /* The target moves up to encoding 2 while it is being sent: we ask for its keyframe. */
+                testGenerator(generator, filter, enc2, numFrames = 30) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L)
+                }
+                filter.needsKeyframe shouldBe true
+
+                /* The sender turns encoding 2 off before answering. Encoding 1, which we're forwarding, is now the
+                 * best at or below the target that is being sent, so a keyframe would change nothing: stop asking. */
+                generator.stopEncoding(2)
+                val liveness = liveEncodings { it != 2 }
+                testGenerator(generator, filter, enc2, numFrames = 300, liveness = liveness) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L)
+                }
+                filter.needsKeyframe shouldBe false
+            }
+
+            should("keep the decode target being forwarded on a refresh keyframe while a switch down is pending") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+                /* Narrow to the base temporal layer of encoding 1, which needs no keyframe. */
+                val enc1Tl0 = Av1DDRtpLayerDesc.getIndex(1, 0)
+                testGenerator(generator, filter, enc1Tl0, numFrames = 30) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId == 0)
+                }
+                filter.needsKeyframe shouldBe false
+
+                /* A switch down to encoding 0 is pending when a keyframe on encoding 1 alone arrives. It is taken,
+                 * as a refresh of what we're forwarding, but at the decode target we're forwarding, not the top. */
+                testGenerator(generator, filter, enc0, numFrames = 30) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId == 0)
+                }
+                generator.requestKeyframe(1)
+                var sawKeyframe = false
+                testGenerator(generator, filter, enc0, numFrames = 300) { f, result ->
+                    if (f.isKeyframe) {
+                        sawKeyframe = true
+                        f.ssrc shouldBe 1L
+                    }
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId == 0)
+                }
+                sawKeyframe shouldBe true
+                filter.needsKeyframe shouldBe true
+            }
+
+            should("take a refresh keyframe of the encoding being forwarded whose structure lost the target") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                /* The sender shrinks encoding 1 to a single layer: its keyframe has no decode target 2, which we
+                 * are forwarding. It must still be taken, at what it has, or its successors would be undecodable.
+                 * The allocator, which sees the new layers before the filter does, moves the target to the one
+                 * decode target the encoding has left. */
+                generator.shrinkToSingleLayer(1)
+                var sawKeyframe = false
+                testGenerator(generator, filter, Av1DDRtpLayerDesc.getIndex(1, 0), numFrames = 300) { f, result ->
+                    if (f.isKeyframe) {
+                        sawKeyframe = true
+                        f.ssrc shouldBe 1L
+                    }
+                    result.accept shouldBe (f.ssrc == 1L)
+                }
+                sawKeyframe shouldBe true
+                filter.needsKeyframe shouldBe false
+            }
+
+            should("forward a refresh keyframe at an active decode target while a switch down is pending") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                /* A switch down to encoding 0 is pending. The sender deactivates decode target 2 of encoding 1,
+                 * which we are forwarding, and sends a keyframe of it: taken at the highest active decode target. */
+                testGenerator(generator, filter, enc0, numFrames = 30) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId != 2)
+                }
+                generator.setActiveDecodeTargets(1, 0b011)
+                generator.requestKeyframe(1)
+                var sawKeyframe = false
+                var accepted = 0
+                testGenerator(generator, filter, enc0, numFrames = 300) { f, result ->
+                    if (f.isKeyframe) {
+                        sawKeyframe = true
+                        f.ssrc shouldBe 1L
+                        result.accept shouldBe true
+                    }
+                    if (result.accept) {
+                        accepted++
+                        f.ssrc shouldBe 1L
+                        f.frameInfo!!.temporalId shouldBeLessThan 2
+                    }
+                }
+                sawKeyframe shouldBe true
+                accepted shouldBeGreaterThan 1
+                filter.needsKeyframe shouldBe true
+            }
+
+            should("take a lower keyframe when the encoding being forwarded has stopped") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                generator.stopEncoding(1)
+                val liveness = liveEncodings { it != 1 }
+                testGenerator(generator, filter, enc1, numFrames = 300, liveness = liveness) { _, result ->
+                    result.accept shouldBe false
+                }
+                filter.needsKeyframe shouldBe true
+
+                generator.requestKeyframe(0)
+                testGenerator(generator, filter, enc1, numFrames = 300, liveness = liveness) { f, result ->
+                    result.accept shouldBe (f.ssrc == 0L)
+                }
+                /* Encoding 0 is the best that is being sent, so nothing more to ask for. */
+                filter.needsKeyframe shouldBe false
             }
         }
     }
@@ -683,6 +929,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
         filter: Av1DDQualityFilter,
         targetIndex: Int,
         numFrames: Int = Int.MAX_VALUE,
+        liveness: EncodingLiveness = EncodingSwitchPolicy.ALL_LIVE,
         evaluator: (Av1DDFrame, Av1DDQualityFilter.AcceptResult) -> Unit
     ) {
         var lastTs = -1L
@@ -703,7 +950,7 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 externalTargetIndex = targetIndex,
                 incomingEncoding = f.ssrc.toInt(),
                 receivedTime = Instant.ofEpochMilli(ms),
-                liveness = EncodingSwitchPolicy.ALL_LIVE
+                liveness = liveness
             )
             f.isAccepted = result.accept
             evaluator(f, result)
@@ -893,6 +1140,107 @@ private class MultiEncodingSimulcastGenerator(val av1FrameMaps: HashMap<Long, Av
         init {
             val dd = DatatypeConverter.parseHexBinary("800001800214eaa860414d141020842701df010d")
             structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+        }
+    }
+}
+
+/**
+ * Generate a multi-encoding simulcast series of AV1 frames from a sender which generates keyframes only when asked,
+ * and only on the encoding asked for. Every encoding starts with a keyframe.
+ */
+private class PerEncodingKeyframeGenerator(val av1FrameMaps: HashMap<Long, Av1DDFrameMap>) : FrameGenerator() {
+    private var pictureCount = 0
+    private var encoding = 0
+    private val keyframeRequested = BooleanArray(NUM_ENCODINGS) { true }
+    private val stopped = BooleanArray(NUM_ENCODINGS)
+    private val activeDecodeTargets = arrayOfNulls<Int>(NUM_ENCODINGS)
+    private val structures = Array(NUM_ENCODINGS) { structure }
+
+    /** Makes the next frame of encoding [enc] a keyframe. */
+    fun requestKeyframe(enc: Int) {
+        keyframeRequested[enc] = true
+    }
+
+    /** Marks the frames of encoding [enc] with the active decode targets [mask], or none marked if null. */
+    fun setActiveDecodeTargets(enc: Int, mask: Int?) {
+        activeDecodeTargets[enc] = mask
+    }
+
+    /** Makes encoding [enc] send a single layer, with one decode target, from its next keyframe on. */
+    fun shrinkToSingleLayer(enc: Int) {
+        structures[enc] = singleLayerStructure
+        keyframeRequested[enc] = true
+    }
+
+    /** Stops generating frames of encoding [enc]. */
+    fun stopEncoding(enc: Int) {
+        stopped[enc] = true
+    }
+
+    override fun hasNext(): Boolean = pictureCount < TOTAL_PICTURES
+
+    override fun next(): Av1DDFrame {
+        while (stopped[encoding]) {
+            advance()
+        }
+        val keyframePicture = keyframeRequested[encoding]
+        keyframeRequested[encoding] = false
+        val structure = structures[encoding]
+        val tCycle = pictureCount % normalTemplates.size
+        val templateId = when {
+            keyframePicture -> KEYFRAME_TEMPLATE
+            structure === singleLayerStructure -> SINGLE_LAYER_TEMPLATE
+            else -> normalTemplates[tCycle]
+        }
+
+        val f = Av1DDFrame(
+            ssrc = encoding.toLong(),
+            timestamp = pictureCount * 3000L,
+            earliestKnownSequenceNumber = pictureCount,
+            latestKnownSequenceNumber = pictureCount,
+            seenStartOfFrame = true,
+            seenEndOfFrame = true,
+            seenMarker = true,
+            frameInfo = structure.templateInfo[templateId],
+            // Will be less than 0xffff
+            frameNumber = pictureCount,
+            index = pictureCount.toLong(),
+            templateId = templateId,
+            structure = structure,
+            activeDecodeTargets = activeDecodeTargets[encoding],
+            isKeyframe = keyframePicture,
+            rawDependencyDescriptor = null
+        )
+        av1FrameMaps.getOrPut(f.ssrc) { Av1DDFrameMap(Av1DDQualityFilterTest.logger) }.insertFrame(f)
+        advance()
+        return f
+    }
+
+    private fun advance() {
+        encoding++
+        if (encoding == NUM_ENCODINGS) {
+            encoding = 0
+            pictureCount++
+        }
+    }
+
+    companion object {
+        private const val TOTAL_PICTURES = 10000
+        private const val NUM_ENCODINGS = 3
+        private const val KEYFRAME_TEMPLATE = 0
+        private const val SINGLE_LAYER_TEMPLATE = 1
+        private val normalTemplates = arrayOf(1, 3, 2, 4)
+
+        private val structure: Av1TemplateDependencyStructure
+
+        /** A structure with one decode target, as [SingleLayerFrameGenerator] sends. */
+        private val singleLayerStructure: Av1TemplateDependencyStructure
+
+        init {
+            val dd = DatatypeConverter.parseHexBinary("800001800214eaa860414d141020842701df010d")
+            structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+            val single = DatatypeConverter.parseHexBinary("80000180003a410180ef808680")
+            singleLayerStructure = Av1DependencyDescriptorReader(single, 0, single.size).parse(null).structure
         }
     }
 }

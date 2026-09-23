@@ -603,13 +603,16 @@ class Av1DDAdaptiveSourceProjectionContext(
         )
     }
 
-    override fun needsKeyframe(): Boolean {
-        if (av1QualityFilter.needsKeyframe) {
-            return true
-        }
+    override fun needsKeyframe(): Boolean = av1QualityFilter.needsKeyframe || needsKeyframeToStart()
 
-        return lastAv1FrameProjection.av1Frame == null
-    }
+    override fun shouldRequestKeyframe(): Boolean =
+        av1QualityFilter.shouldRequestKeyframe || (needsKeyframeToStart() && av1QualityFilter.mayRequestKeyframe)
+
+    /**
+     * Whether a keyframe is needed for a reason of this context's own, not the quality filter's: nothing has been
+     * sent yet.
+     */
+    private fun needsKeyframeToStart(): Boolean = lastAv1FrameProjection.av1Frame == null
 
     override fun rewriteRtp(packetInfo: PacketInfo) {
         if (packetInfo.packet !is Av1DDPacket) {
