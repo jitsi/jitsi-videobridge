@@ -27,6 +27,12 @@ import org.jitsi.videobridge.cc.EncodingSwitchPolicy.switchPossible
 class EncodingSwitchPolicyTest : ShouldSpec() {
     private fun live(vararg eids: Int) = liveEncodings { it in eids }
 
+    /** Encodings [eids] are live, but only just resumed, as when the whole source has. */
+    private fun resumed(vararg eids: Int) = object : EncodingLiveness {
+        override fun isLive(eid: Int) = eid in eids
+        override fun hasOutlasted(eid: Int, otherEid: Int) = false
+    }
+
     init {
         context("accepting a keyframe") {
             context("while nothing is forwarded") {
@@ -130,11 +136,20 @@ class EncodingSwitchPolicyTest : ShouldSpec() {
                 switchPossible(1, 0, 2, ALL_LIVE) shouldBe false
                 switchPossible(1, 2, 1, ALL_LIVE) shouldBe false
                 switchPossible(1, 2, 0, ALL_LIVE) shouldBe false
+                switchPossible(0, 2, 1, ALL_LIVE) shouldBe false
                 switchPossible(1, 1, 1, ALL_LIVE) shouldBe false
             }
-            should("when the current encoding has stopped being sent") {
+            should("when the current encoding has stopped being sent while a lower one kept flowing") {
                 switchPossible(1, 0, 1, live(0)) shouldBe true
-                switchPossible(1, 2, 1, live(0, 2)) shouldBe true
+                switchPossible(1, 0, 2, live(0)) shouldBe true
+            }
+            should("not when only encodings above the target are flowing, since nothing reachable can be requested") {
+                switchPossible(1, 2, 1, live(0, 2)) shouldBe false
+                switchPossible(0, 2, 0, live(2)) shouldBe false
+            }
+            should("not on the frames after the whole source resumes, until the current one has had time to") {
+                switchPossible(1, 0, 1, resumed(0)) shouldBe false
+                switchPossible(2, 0, 2, resumed(0, 1)) shouldBe false
             }
             should("not for a frame whose encoding is unknown") {
                 switchPossible(1, SUSPENDED_ENCODING_ID, 2, live(0)) shouldBe false

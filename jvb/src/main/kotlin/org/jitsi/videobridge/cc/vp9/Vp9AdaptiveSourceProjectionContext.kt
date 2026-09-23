@@ -548,13 +548,16 @@ class Vp9AdaptiveSourceProjectionContext(
         )
     }
 
-    override fun needsKeyframe(): Boolean {
-        if (vp9QualityFilter.needsKeyframe) {
-            return true
-        }
+    override fun needsKeyframe(): Boolean = vp9QualityFilter.needsKeyframe || needsKeyframeToStart()
 
-        return lastVp9FrameProjection.vp9Frame == null
-    }
+    override fun shouldRequestKeyframe(): Boolean =
+        vp9QualityFilter.shouldRequestKeyframe || (needsKeyframeToStart() && vp9QualityFilter.mayRequestKeyframe)
+
+    /**
+     * Whether a keyframe is needed for a reason of this context's own, not the quality filter's: nothing has been
+     * sent yet.
+     */
+    private fun needsKeyframeToStart(): Boolean = lastVp9FrameProjection.vp9Frame == null
 
     @Throws(RewriteException::class)
     override fun rewriteRtp(packetInfo: PacketInfo) {

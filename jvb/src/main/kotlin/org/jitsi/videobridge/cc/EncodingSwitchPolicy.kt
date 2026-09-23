@@ -102,16 +102,25 @@ object EncodingSwitchPolicy {
 
     /**
      * Whether a non-keyframe on encoding [incoming], arriving while [current] is forwarded and [target] is wanted,
-     * shows that a switch is possible, and a keyframe should be requested for it: the frame is from an encoding in
-     * the target's direction, or the current encoding has stopped being sent and anything arriving is better than
-     * the frozen picture the receiver has.
+     * shows that a switch is possible. If so, a keyframe should be requested for it. It does in two cases:
+     * - The frame is from an encoding which would be a step toward the target. That is, it is above the current
+     *   encoding but not above the target, or below the current encoding when the target is.
+     * - The current encoding has stopped being sent, while [incoming], an encoding the receiver may be sent, kept
+     *   being sent. Anything the receiver can be sent is better than the frozen picture it has. (Frames of an
+     *   encoding above the target say nothing about what it can be sent.) When a whole source resumes after a stall,
+     *   every encoding's first frames find the others not live. That is not the same thing. So the incoming encoding
+     *   must have outlasted the current encoding. That is, it kept being sent since before the current encoding's
+     *   last packet, or for as long as the current encoding may go without a packet. That holds regardless of how
+     *   staggered the resume is.
+     *
+     * The liveness checks come last, since this runs for every frame of another encoding and they cost lookups.
      */
     @JvmStatic
     fun switchPossible(current: Int, incoming: Int, target: Int, liveness: EncodingLiveness): Boolean = when {
         incoming == SUSPENDED_ENCODING_ID -> false
-        !liveness.isLive(current) -> true
-        incoming > current && current < target -> true
+        incoming > current && incoming <= target -> true
         incoming < current && current > target -> true
+        incoming <= target && !liveness.isLive(current) && liveness.hasOutlasted(incoming, current) -> true
         else -> false
     }
 }
