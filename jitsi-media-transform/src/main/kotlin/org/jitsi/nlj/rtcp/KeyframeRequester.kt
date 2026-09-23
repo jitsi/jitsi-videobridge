@@ -149,12 +149,11 @@ class KeyframeRequester @JvmOverloads constructor(
         val pliOrFirPacket = packetInfo.getPliOrFirPacket() ?: return packetInfo
 
         val now = clock.instant()
-        val sourceSsrc: Long
+        val sourceSsrc: Long = pliOrFirPacket.targetMediaSsrc
         val canSend: Boolean
         val forward: Boolean
         when (pliOrFirPacket) {
             is RtcpFbPliPacket -> {
-                sourceSsrc = pliOrFirPacket.mediaSourceSsrc
                 canSend = canSendKeyframeRequest(packetInfo.endpointId, sourceSsrc, now)
                 forward = canSend && streamInformationStore.supportsPli
                 if (forward) numPlisForwarded++
@@ -162,15 +161,15 @@ class KeyframeRequester @JvmOverloads constructor(
             }
 
             is RtcpFbFirPacket -> {
-                sourceSsrc = pliOrFirPacket.mediaSenderSsrc
                 canSend = canSendKeyframeRequest(packetInfo.endpointId, sourceSsrc, now)
                 // When both are supported, we favor generating a PLI rather than forwarding a FIR
                 forward = canSend && streamInformationStore.supportsFir && !streamInformationStore.supportsPli
                 if (forward) {
                     // When we forward a FIR we need to update the seq num.
                     pliOrFirPacket.seqNum = firCommandSequenceNumber.incrementAndGet()
-                    // We manage the seq num space, so we should use the same SSRC
-                    localSsrc?.let { pliOrFirPacket.mediaSenderSsrc = it }
+                    // We manage the seq num space, so the FIR must come from our SSRC. (This is the packet
+                    // sender's SSRC in the header; the target in the FCI stays the encoding the FIR is for.)
+                    localSsrc?.let { pliOrFirPacket.senderSsrc = it }
                     numFirsForwarded++
                 }
                 if (!canSend) numFirsDropped++

@@ -68,6 +68,15 @@ internal class PacketHandler(
     private val adaptiveSourceProjectionMap: MutableMap<Long, AdaptiveSourceProjection> = ConcurrentHashMap()
 
     /**
+     * The same projections by the secondary SSRCs of their sources' encodings, such as RTX, which a receiver's
+     * keyframe request may name. Kept apart so that each projection appears in the main map once per encoding.
+     * Like the main map, never pruned. A request may name an SSRC of a source which has since been signaled again
+     * under other SSRCs. Its stale projection then redirects the request to an SSRC the sender no longer uses, and
+     * the sender ignores it.
+     */
+    private val projectionsBySecondarySsrc: MutableMap<Long, AdaptiveSourceProjection> = ConcurrentHashMap()
+
+    /**
      * @return true if the packet was transformed successfully, false otherwise.
      */
     fun transformRtp(
@@ -170,14 +179,39 @@ internal class PacketHandler(
      * its source. A source signaled again is a new object, which may have encodings the old object did not.
      */
     private fun route(projection: AdaptiveSourceProjection, source: MediaSourceDesc) {
-        source.rtpEncodings.forEach {
-            if (adaptiveSourceProjectionMap[it.primarySSRC] !== projection) {
-                adaptiveSourceProjectionMap[it.primarySSRC] = projection
+        source.rtpEncodings.forEach { encoding ->
+            if (adaptiveSourceProjectionMap[encoding.primarySSRC] !== projection) {
+                adaptiveSourceProjectionMap[encoding.primarySSRC] = projection
+            }
+            encoding.ssrcs.forEach { ssrc ->
+                if (ssrc != encoding.primarySSRC && projectionsBySecondarySsrc[ssrc] !== projection) {
+                    projectionsBySecondarySsrc[ssrc] = projection
+                }
             }
         }
     }
 
     fun timeSinceFirstMedia(): Duration = firstMedia?.let { Duration.between(it, clock.instant()) } ?: Duration.ZERO
+
+    /**
+     * The SSRC a keyframe request (PLI or FIR) from this receiver, naming [sourceSsrc], should be sent to the source's
+     * sender with. A receiver sees every encoding of a source rewritten onto the source's primary SSRC, which is that
+     * of the lowest encoding, so its requests name that SSRC whatever encoding it is actually being sent. A sender
+     * which generates keyframes only on the requested encoding would then never refresh the encoding the receiver is
+     * decoding. So the request is redirected to the encoding the receiver's projection would itself request from,
+     * see [AdaptiveSourceProjection.getKeyframeRequestSsrc]: the encoding it is receiving or switching to.
+     *
+     * Returns [sourceSsrc] unchanged when the source is not known to this instance. Returns null when the source is
+     * suspended for this receiver. It is not receiving the source at all, so a request from it is stale. The
+     * projection will request a keyframe itself when the source is resumed. [sourceSsrc] may be any SSRC of the
+     * source's encodings, primary or secondary; the SSRC returned is a primary SSRC.
+     */
+    fun retargetKeyframeRequest(sourceSsrc: Long): Long? {
+        val projection = adaptiveSourceProjectionMap[sourceSsrc]
+            ?: projectionsBySecondarySsrc[sourceSsrc]
+            ?: return sourceSsrc
+        return projection.keyframeRequestSsrcUnlessSuspended
+    }
 
     fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("num_dropped_packets_unknown_ssrc", numDroppedPacketsUnknownSsrc.toInt())

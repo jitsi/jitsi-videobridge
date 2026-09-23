@@ -93,9 +93,10 @@ public class AdaptiveSourceProjection
     private AdaptiveSourceProjectionContext context;
 
     /**
-     * The target quality index for this source projection.
+     * The target quality index for this source projection. Written by the allocator and read on the packet path,
+     * and now also on the RTCP path when a receiver's own keyframe request is redirected, so it is volatile.
      */
-    private int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
+    private volatile int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
 
     /**
      * The map for persistent states.
@@ -141,6 +142,14 @@ public class AdaptiveSourceProjection
     public void setSource(@NotNull MediaSourceDesc source)
     {
         this.source = source;
+    }
+
+    /**
+     * Gets the target index value for this source projection.
+     */
+    public int getTargetIndex()
+    {
+        return targetIndex;
     }
 
     /**
@@ -271,6 +280,22 @@ public class AdaptiveSourceProjection
     public long getKeyframeRequestSsrc()
     {
         return keyframeRequestSsrc(getKeyframeRequestEncoding(targetIndex));
+    }
+
+    /**
+     * The SSRC to request a keyframe from so that this projection can reach its target, as
+     * {@link #getKeyframeRequestSsrc()}, or null if the source is suspended for the receiver. The target is read once.
+     * Otherwise an allocation which changes it in the meantime could turn a request for a suspended source into a
+     * request for the primary SSRC.
+     */
+    public @Nullable Long getKeyframeRequestSsrcUnlessSuspended()
+    {
+        int targetIndexCopy = targetIndex;
+        if (targetIndexCopy == RtpLayerDesc.SUSPENDED_INDEX)
+        {
+            return null;
+        }
+        return keyframeRequestSsrc(getKeyframeRequestEncoding(targetIndexCopy));
     }
 
     /** The SSRC to request a keyframe from for {@code encoding}, or the primary SSRC if there is none live. */

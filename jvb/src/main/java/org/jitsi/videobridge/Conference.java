@@ -757,23 +757,6 @@ public class Conference
     }
 
     /**
-     * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with a specific SSRC.
-     *
-     * @param receiveSSRC the SSRC of an RTP stream received by this
-     * <tt>Conference</tt> whose sending <tt>Endpoint</tt> is to be found
-     * @return <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
-     * stream with the specified <tt>ssrc</tt>; otherwise, <tt>null</tt>
-     */
-    AbstractEndpoint findEndpointByReceiveSSRC(long receiveSSRC)
-    {
-        return getEndpoints().stream()
-                .filter(ep -> ep.receivesSsrc(receiveSSRC))
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
      * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
      * has a specific identifier/ID.
      *
@@ -1371,33 +1354,21 @@ public class Conference
         }
         else if (packet instanceof RtcpFbPliPacket || packet instanceof RtcpFbFirPacket)
         {
-            AbstractEndpoint targetEndpoint = null;
-            boolean rewriter = false;
-
-            long mediaSsrc = (packet instanceof RtcpFbPliPacket)
-                ? ((RtcpFbPliPacket) packet).getMediaSourceSsrc()
-                : ((RtcpFbFirPacket) packet).getMediaSenderSsrc();
-
-            /* If we are rewriting SSRCs to this endpoint, we must ask
-            it to convert back the SSRC to the media sender's SSRC. */
             String endpointId = packetInfo.getEndpointId();
-            if (endpointId != null)
+            AbstractEndpoint requester = endpointId == null ? null : getEndpoint(endpointId);
+            if (requester instanceof Endpoint)
             {
-                AbstractEndpoint ep = getEndpoint(endpointId);
-                if (ep instanceof Endpoint && ((Endpoint) ep).doesSsrcRewriting())
+                /* A local receiver's request: it names the SSRC the receiver was sent, possibly rewritten, and
+                 normally the source's primary SSRC, which every encoding is rewritten to, or its RTX SSRC. The
+                 receiver translates it to the sender's SSRC of the encoding it is actually being sent, or tells us
+                 to drop it. */
+                if (!((Endpoint) requester).translateKeyframeRequest((RtcpFbPacket) packet))
                 {
-                    rewriter = true;
-                    String owner = ((Endpoint) ep).unmapRtcpFbSsrc((RtcpFbPacket) packet);
-                    if (owner != null)
-                        targetEndpoint = getEndpoint(owner);
+                    return;
                 }
             }
-
-            if (!rewriter)
-            {
-                // XXX we could make this faster with a map
-                targetEndpoint = findEndpointByReceiveSSRC(mediaSsrc);
-            }
+            long mediaSsrc = ((RtcpFbPacket) packet).getTargetMediaSsrc();
+            AbstractEndpoint targetEndpoint = getEndpointBySsrc(mediaSsrc);
 
             PotentialPacketHandler pph = null;
             if (targetEndpoint instanceof Endpoint)

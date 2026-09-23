@@ -152,6 +152,9 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     fun transformRtcp(rtcpSrPacket: RtcpSrPacket): Boolean = packetHandler.transformRtcp(rtcpSrPacket)
     fun transformRtp(packetInfo: PacketInfo): Boolean = packetHandler.transformRtp(packetInfo)
 
+    /** See [PacketHandler.retargetKeyframeRequest]. */
+    fun retargetKeyframeRequest(sourceSsrc: Long): Long? = packetHandler.retargetKeyframeRequest(sourceSsrc)
+
     fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("bitrate_allocator", bandwidthAllocator.debugState)
         set<ObjectNode>("packet_handler", packetHandler.debugState(mode))

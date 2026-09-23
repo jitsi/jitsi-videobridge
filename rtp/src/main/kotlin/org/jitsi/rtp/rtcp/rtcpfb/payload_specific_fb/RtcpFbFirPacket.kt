@@ -69,6 +69,13 @@ class RtcpFbFirPacket(
         get() = getMediaSenderSsrc(buffer, offset)
         set(value) = setMediaSenderSsrc(buffer, offset, value)
 
+    /** A FIR's target is the media sender SSRC in its FCI, not the header's media source SSRC, which is 0. */
+    override var targetMediaSsrc: Long
+        get() = mediaSenderSsrc
+        set(value) {
+            mediaSenderSsrc = value
+        }
+
     var seqNum: Int
         get() = getSeqNum(buffer, offset)
         set(value) = setSeqNum(buffer, offset, value)

@@ -906,10 +906,8 @@ class Relay @JvmOverloads constructor(
         when (packet) {
             is CompoundRtcpPacket -> packet.packets.forEach { ssrcs.addAll(getRtcpSsrcs(it)) }
 
-            is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc)
-
             // TODO: support multiple FIRs in a packet
-            is RtcpFbPacket -> ssrcs.add(packet.mediaSourceSsrc)
+            is RtcpFbPacket -> ssrcs.add(packet.targetMediaSsrc)
 
             is RtcpSrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
 

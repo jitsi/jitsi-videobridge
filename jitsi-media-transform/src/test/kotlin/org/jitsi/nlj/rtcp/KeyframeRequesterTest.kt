@@ -28,6 +28,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
 import org.jitsi.nlj.resources.node.onOutput
@@ -41,8 +42,10 @@ import org.jitsi.nlj.util.RtpPayloadTypesChangedHandler
 import org.jitsi.nlj.util.bits
 import org.jitsi.nlj.util.bps
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacket
+import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbFirPacketBuilder
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.payload_specific_fb.RtcpFbPliPacketBuilder
+import org.jitsi.utils.MediaType
 import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
@@ -145,6 +148,19 @@ class KeyframeRequesterTest : ShouldSpec() {
                     val packet = sentKeyframeRequests.last().packet
                     packet.shouldBeInstanceOf<RtcpFbFirPacket>()
                     packet.mediaSenderSsrc shouldBe 123L
+                }
+                context("and a receiver's FIR is forwarded") {
+                    sentKeyframeRequests.clear()
+                    clock.elapse(3.secs)
+                    keyframeRequester.handleEvent(SetLocalSsrcEvent(MediaType.VIDEO, 999L))
+                    sendFir(keyframeRequester, "ep2", 456L)
+                    should("keep the FIR's target and send it from the local SSRC") {
+                        sentKeyframeRequests shouldHaveSize 1
+                        val packet = sentKeyframeRequests.last().packet
+                        packet.shouldBeInstanceOf<RtcpFbFirPacket>()
+                        packet.mediaSenderSsrc shouldBe 456L
+                        packet.senderSsrc shouldBe 999L
+                    }
                 }
             }
             context("when neither PLI nor FIR is supported") {
@@ -387,6 +403,13 @@ class KeyframeRequesterTest : ShouldSpec() {
             }
         }
     }
+}
+
+/** Sends a FIR for [mediaSsrc] from [endpointId] through [keyframeRequester], as if forwarded from a receiver. */
+private fun sendFir(keyframeRequester: KeyframeRequester, endpointId: String, mediaSsrc: Long) {
+    val packetInfo = PacketInfo(RtcpFbFirPacketBuilder(mediaSenderSsrc = mediaSsrc, firCommandSeqNum = 7).build())
+    packetInfo.endpointId = endpointId
+    keyframeRequester.processPacket(packetInfo)
 }
 
 /** Sends a PLI for [mediaSsrc] from [endpointId] through [keyframeRequester], as if forwarded from a receiver. */
