@@ -30,6 +30,7 @@ import org.jitsi.rtp.rtp.header_extensions.DTI
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.cc.EncodingLiveness
 import java.time.Duration
 import java.time.Instant
 
@@ -102,7 +103,8 @@ internal class Av1DDQualityFilter(
         frame: Av1DDFrame,
         incomingEncoding: Int,
         externalTargetIndex: Int,
-        receivedTime: Instant?
+        receivedTime: Instant?,
+        @Suppress("UNUSED_PARAMETER") liveness: EncodingLiveness
     ): AcceptResult {
         val prevIndex = currentIndex
         val accept = doAcceptFrame(frame, incomingEncoding, externalTargetIndex, receivedTime)

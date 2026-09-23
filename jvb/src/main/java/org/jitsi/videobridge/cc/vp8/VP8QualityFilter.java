@@ -20,9 +20,9 @@ import org.jetbrains.annotations.*;
 import org.jetbrains.annotations.Nullable;
 import org.jitsi.nlj.*;
 import org.jitsi.utils.logging2.*;
+import org.jitsi.videobridge.cc.*;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import java.lang.SuppressWarnings;
 import java.time.*;
 
@@ -42,27 +42,19 @@ class VP8QualityFilter
     private final Logger logger;
 
     /**
-     * The default maximum frequency at which the media engine
-     * generates key frame.
-     */
-    private static final Duration MIN_KEY_FRAME_WAIT = Duration.ofMillis(300);
-
-    /**
      * The HD, SD, LD and suspended spatial/quality layer IDs.
      */
     private static final int SUSPENDED_ENCODING_ID = -1;
 
     /**
-     * Holds the arrival time of the most recent keyframe group.
-     * Reading/writing of this field is synchronized on this instance.
+     * Paces keyframe requests around the arrival of keyframe groups. Used under this instance's lock.
      */
-    private @Nullable Instant mostRecentKeyframeGroupArrivalTime = null;
+    private final KeyframeRequestPacer pacer = new KeyframeRequestPacer();
 
     /**
-     * A boolean flag that indicates whether a simulcast switch is pending. This
-     * condition is equivalent to:
-     *
-     * internalSpatialLayerIdTarget != externalSpatialLayerIdTarget.
+     * Whether a keyframe is needed to reach the target encoding: a switch is
+     * pending, and the encoding being forwarded is not yet the highest encoding
+     * being sent at or below the target. See {@link #needsKeyframe()}.
      *
      * Reading/writing of this field is synchronized on this instance.
      */
@@ -72,7 +64,7 @@ class VP8QualityFilter
      * The encoding id that this instance tries to achieve. Upon
      * receipt of a packet, we check whether externalSpatialLayerIdTarget
      * (that's specified as an argument to the
-     * {@link #acceptFrame(VP8Frame, int, int, Instant)} method) is set to something
+     * {@link #acceptFrame(VP8Frame, int, int, Instant, EncodingLiveness)} method) is set to something
      * different, in which case we set {@link #needsKeyframe} equal to true and
      * update.
      */
@@ -91,12 +83,32 @@ class VP8QualityFilter
     }
 
     /**
-     * @return true if a the target encoding id has changed and a
-     * keyframe hasn't been received yet, false otherwise.
+     * @return true if a keyframe is needed: the target encoding has changed, and the keyframe which would complete
+     * the switch hasn't been received yet. Read on the thread which has just called {@link #acceptFrame}, as is
+     * {@link #shouldRequestKeyframe()}, so neither takes the lock it does.
      */
     boolean needsKeyframe()
     {
         return needsKeyframe;
+    }
+
+    /**
+     * @return true if a keyframe should be requested now: a keyframe is needed, and no keyframe has arrived within
+     * {@link KeyframeRequestPacer#MIN_KEY_FRAME_WAIT}. Within that time, the keyframe being waited for may still be
+     * on its way.
+     */
+    boolean shouldRequestKeyframe()
+    {
+        return pacer.shouldRequest(needsKeyframe);
+    }
+
+    /**
+     * @return whether a keyframe may be requested now, for a need which is not this filter's own: no keyframe group
+     * is still arriving. See {@link #shouldRequestKeyframe()} for the filter's own need.
+     */
+    boolean mayRequestKeyframe()
+    {
+        return pacer.mayRequest();
     }
 
     /**
@@ -111,12 +123,14 @@ class VP8QualityFilter
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
      * @param receivedTime the current time
+     * @param liveness which encodings the sender is currently sending.
      * @return true to accept the VP8 frame, otherwise false.
      */
     synchronized boolean acceptFrame(
         @NotNull VP8Frame frame,
         int incomingEncoding,
-        int externalTargetIndex, Instant receivedTime)
+        int externalTargetIndex, Instant receivedTime,
+        @NotNull EncodingLiveness liveness)
     {
         // We make local copies of the externalTemporalLayerIdTarget and the
         // externalEncodingTarget (as they may be updated by some other
@@ -126,14 +140,19 @@ class VP8QualityFilter
         int externalEncodingIdTarget
             = RtpLayerDesc.getEidFromIndex(externalTargetIndex);
 
+        pacer.onFrame(receivedTime);
+
         if (externalEncodingIdTarget != internalEncodingIdTarget)
         {
             // The externalEncodingIdTarget has changed since accept last
-            // run; perhaps we should request a keyframe.
+            // run; perhaps we should request a keyframe. Not if the encoding we're forwarding is the best encoding
+            // at or below the new target that is actually being sent. A request would only refresh it, and when the
+            // sender turns the target encoding on, it sends a keyframe on its own.
             internalEncodingIdTarget = externalEncodingIdTarget;
             if (externalEncodingIdTarget > SUSPENDED_ENCODING_ID)
             {
-                needsKeyframe = true;
+                needsKeyframe = EncodingSwitchPolicy.needsKeyframeAfter(
+                    currentEncodingId, externalEncodingIdTarget, liveness);
             }
         }
 
@@ -159,21 +178,30 @@ class VP8QualityFilter
         {
             logger.debug(() -> "Quality filter got keyframe for stream "
                     + frame.getSsrc());
-            return acceptKeyframe(incomingEncoding, receivedTime);
+            return acceptKeyframe(incomingEncoding, receivedTime, liveness);
         }
         else if (currentEncodingId > SUSPENDED_ENCODING_ID)
         {
-            if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding))
+            if (pacer.isOutOfSwitchingPhase(receivedTime)
+                && EncodingSwitchPolicy.switchPossible(
+                    currentEncodingId, incomingEncoding, internalEncodingIdTarget, liveness))
             {
-                // XXX(george) i've noticed some "rogue" base layer keyframes
-                // that trigger this. what happens is the client sends a base
-                // layer key frame, the bridge switches to that layer because
-                // for all it knows it may be the only keyframe sent by the
-                // client engine. then the bridge notices that packets from the
-                // higher quality streams are flowing and execution ends-up
-                // here. it is a mystery why the engine is "leaking" base layer
-                // key frames
+                // Frames are being sent on an encoding in the target's direction, or the encoding we're forwarding
+                // has stopped. No keyframe has arrived for a while, so (re-)request a keyframe. This is how a switch
+                // completes when the keyframe which would have completed it never arrived. That happens when the
+                // sender generates keyframes on one encoding at a time and the keyframe which arrived was for another
+                // encoding.
                 needsKeyframe = true;
+            }
+            else if (needsKeyframe
+                && currentEncodingId != internalEncodingIdTarget
+                && !EncodingSwitchPolicy.needsKeyframeAfter(currentEncodingId, internalEncodingIdTarget, liveness))
+            {
+                // The keyframe we were waiting for, to switch encodings, would no longer change anything. The sender
+                // turned the target encoding off, so the encoding we're forwarding has become the best encoding at or
+                // below the target that is being sent. Stop asking, or the request would only refresh what the
+                // receiver already has.
+                needsKeyframe = false;
             }
 
             if (incomingEncoding != currentEncodingId)
@@ -217,58 +245,6 @@ class VP8QualityFilter
     }
 
     /**
-     * Returns a boolean that indicates whether we are in layer switching phase
-     * or not.
-     *
-     * @param receivedTime the time the latest frame was received
-     * @return false if we're in layer switching phase, true otherwise.
-     */
-    private synchronized boolean isOutOfSwitchingPhase(@Nullable Instant receivedTime)
-    {
-        if (receivedTime == null)
-        {
-            return false;
-        }
-        if (mostRecentKeyframeGroupArrivalTime == null)
-        {
-            return true;
-        }
-
-        Duration delta = Duration.between(mostRecentKeyframeGroupArrivalTime, receivedTime);
-        return delta.compareTo(MIN_KEY_FRAME_WAIT) > 0;
-    }
-
-    /**
-     * @return true if it looks like we can re-scale (see implementation of
-     * method for specific details).
-     */
-    private synchronized boolean isPossibleToSwitch(int encodingId)
-    {
-        if (encodingId == -1)
-        {
-            // We failed to resolve the spatial/quality layer of the packet.
-            return false;
-        }
-
-        if (encodingId > currentEncodingId
-            && currentEncodingId < internalEncodingIdTarget)
-        {
-            // It looks like upscaling is possible.
-            return true;
-        }
-        else if (encodingId < currentEncodingId
-            && currentEncodingId > internalEncodingIdTarget)
-        {
-            // It looks like downscaling is possible.
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    /**
      * Determines whether to accept or drop a VP8 keyframe. This method updates
      * the spatial layer id.
      *
@@ -277,10 +253,11 @@ class VP8QualityFilter
      * method at a time.
      *
      * @param receivedTime the time the frame was received
+     * @param liveness which encodings the sender is currently sending.
      * @return true to accept the VP8 keyframe, otherwise false.
      */
     private synchronized boolean acceptKeyframe(
-        int encodingIdOfKeyframe, @Nullable Instant receivedTime)
+        int encodingIdOfKeyframe, @Nullable Instant receivedTime, @NotNull EncodingLiveness liveness)
     {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
@@ -296,69 +273,24 @@ class VP8QualityFilter
         logger.debug(() -> "Received a keyframe of encoding: "
                     + encodingIdOfKeyframe);
 
+        // Whether or not we take it, hold off requesting another keyframe for a bit. A sender which generates
+        // keyframes on every encoding at once may still be sending the rest of the group.
+        pacer.onKeyframe(receivedTime);
 
-        // The keyframe request has been fulfilled at this point, regardless of
-        // whether we'll be able to achieve the internalEncodingIdTarget.
-        needsKeyframe = false;
-
-        if (isOutOfSwitchingPhase(receivedTime))
+        boolean accept = EncodingSwitchPolicy.acceptKeyframe(
+            currentEncodingId, encodingIdOfKeyframe, internalEncodingIdTarget, liveness);
+        if (accept)
         {
-            // During the switching phase we always project the first
-            // keyframe because it may very well be the only one that we
-            // receive (i.e. the endpoint is sending low quality only). Then
-            // we try to approach the target.
-
-            mostRecentKeyframeGroupArrivalTime = receivedTime;
-
-            logger.debug(() -> "First keyframe in this kf group " +
-                "currentEncodingId: " + encodingIdOfKeyframe +
-                ". Target is " + internalEncodingIdTarget);
-
-            if (encodingIdOfKeyframe <= internalEncodingIdTarget)
-            {
-                // If the target is 180p and the first keyframe of a group of
-                // keyframes is a 720p keyframe we don't project it. If we
-                // receive a 720p keyframe, we know that there MUST be a 180p
-                // keyframe shortly after.
-                currentEncodingId = encodingIdOfKeyframe;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            logger.debug(() -> "Switching to encoding " + encodingIdOfKeyframe
+                + " from " + currentEncodingId + ". The target is " + internalEncodingIdTarget);
+            currentEncodingId = encodingIdOfKeyframe;
+            // We keep needing a keyframe until we have reached the target, or the highest encoding below it which is
+            // actually being sent. A keyframe on some other encoding, whether a keyframe we took as a step toward the
+            // target or a keyframe we dropped, doesn't fulfill the request.
+            needsKeyframe = EncodingSwitchPolicy.needsKeyframeAfter(
+                currentEncodingId, internalEncodingIdTarget, liveness);
         }
-        else
-        {
-            // We're within the 300ms window since the reception of the
-            // first key frame of a key frame group, let's check whether an
-            // upscale/downscale is possible.
-
-            if (currentEncodingId <= encodingIdOfKeyframe
-                && encodingIdOfKeyframe <= internalEncodingIdTarget)
-            {
-                // upscale or current quality case
-                currentEncodingId = encodingIdOfKeyframe;
-                logger.debug(() -> "Upscaling to encoding "
-                    + encodingIdOfKeyframe
-                    + ". The target is " + internalEncodingIdTarget);
-                return true;
-            }
-            else if (encodingIdOfKeyframe <= internalEncodingIdTarget
-                && internalEncodingIdTarget < currentEncodingId)
-            {
-                // downscale case
-                currentEncodingId = encodingIdOfKeyframe;
-                logger.debug(() -> " Downscaling to encoding "
-                    + encodingIdOfKeyframe + ". The target is + "
-                    + internalEncodingIdTarget);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
+        return accept;
     }
 
     /**
@@ -373,9 +305,7 @@ class VP8QualityFilter
     public ObjectNode getDebugState()
     {
         ObjectNode debugState = JsonNodeFactory.instance.objectNode();
-        debugState.put(
-                "mostRecentKeyframeGroupArrivalTimeMs",
-            mostRecentKeyframeGroupArrivalTime != null ? mostRecentKeyframeGroupArrivalTime.toEpochMilli() : -1L);
+        debugState.put("mostRecentKeyframeGroupArrivalTimeMs", pacer.getMostRecentKeyframeGroupArrivalTimeMs());
         debugState.put("needsKeyframe", needsKeyframe);
         debugState.put(
                 "internalEncodingIdTarget",

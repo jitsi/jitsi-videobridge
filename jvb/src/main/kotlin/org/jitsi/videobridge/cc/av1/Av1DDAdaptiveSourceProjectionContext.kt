@@ -34,6 +34,7 @@ import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
+import org.jitsi.videobridge.cc.EncodingLiveness
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
 import java.time.Duration
@@ -78,7 +79,7 @@ class Av1DDAdaptiveSourceProjectionContext(
      */
     private var lastFrameNumberIndexResumption = -1L
 
-    override fun accept(packetInfo: PacketInfo, targetIndex: Int): Boolean {
+    override fun accept(packetInfo: PacketInfo, targetIndex: Int, liveness: EncodingLiveness): Boolean {
         val packet = packetInfo.packet
 
         if (packet !is Av1DDPacket) {
@@ -107,7 +108,7 @@ class Av1DDAdaptiveSourceProjectionContext(
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = av1QualityFilter
-                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime, liveness)
             frame.isAccepted = acceptResult.accept && frameIsProjectable(frame)
             if (frame.isAccepted) {
                 val projection: Av1DDFrameProjection

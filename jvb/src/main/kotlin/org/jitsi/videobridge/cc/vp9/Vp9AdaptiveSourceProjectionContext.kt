@@ -36,6 +36,7 @@ import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.videobridge.cc.AdaptiveSourceProjectionContext
+import org.jitsi.videobridge.cc.EncodingLiveness
 import org.jitsi.videobridge.cc.RewriteException
 import org.jitsi.videobridge.cc.RtpState
 import java.time.Duration
@@ -79,7 +80,7 @@ class Vp9AdaptiveSourceProjectionContext(
     private var lastPicIdIndexResumption = -1L
 
     @Synchronized
-    override fun accept(packetInfo: PacketInfo, targetIndex: Int): Boolean {
+    override fun accept(packetInfo: PacketInfo, targetIndex: Int, liveness: EncodingLiveness): Boolean {
         val packet = packetInfo.packet
         if (packet !is Vp9Packet) {
             logger.warn("Packet is not Vp9 packet")
@@ -107,7 +108,7 @@ class Vp9AdaptiveSourceProjectionContext(
             }
             val receivedTime = packetInfo.receivedTime
             val acceptResult = vp9QualityFilter
-                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime)
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime, liveness)
             frame.isAccepted = acceptResult.accept && frameIsProjectable(frame)
             if (frame.isAccepted) {
                 val projection: Vp9FrameProjection

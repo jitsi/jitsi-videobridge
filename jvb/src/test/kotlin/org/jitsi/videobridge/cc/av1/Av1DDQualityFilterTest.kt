@@ -24,6 +24,7 @@ import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
+import org.jitsi.videobridge.cc.EncodingSwitchPolicy
 import java.time.Instant
 
 internal class Av1DDQualityFilterTest : ShouldSpec() {
@@ -701,7 +702,8 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 frame = f,
                 externalTargetIndex = targetIndex,
                 incomingEncoding = f.ssrc.toInt(),
-                receivedTime = Instant.ofEpochMilli(ms)
+                receivedTime = Instant.ofEpochMilli(ms),
+                liveness = EncodingSwitchPolicy.ALL_LIVE
             )
             f.isAccepted = result.accept
             evaluator(f, result)

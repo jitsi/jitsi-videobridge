@@ -81,8 +81,10 @@ class AdaptiveSourceProjectionTest : ShouldSpec() {
                 projection.setSource(replacement)
                 should("judge liveness by the new object") {
                     projection.getKeyframeRequestSsrc() shouldBe 1L
+                    projection.liveness.isLive(2) shouldBe false
                     replacement.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
                     projection.getKeyframeRequestSsrc() shouldBe 3L
+                    projection.liveness.isLive(2) shouldBe true
                 }
             }
             context("when the whole source has gone silent") {

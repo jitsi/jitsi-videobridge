@@ -73,6 +73,40 @@ public class AdaptiveSourceProjection
      */
     private volatile MediaSourceDesc source;
 
+    /**
+     * Which encodings of the source are being sent, judged as of the source's most recent packet, see
+     * {@link #getKeyframeRequestEncoding(int)}. For the packet being processed, that is the packet itself, which the
+     * receive pipeline recorded before it got here. The source and the time are taken once per packet, see
+     * {@link SourceLiveness#snapshot}, since the context may ask several times per packet. It is only used on the
+     * thread which processes the source's packets.
+     */
+    private final SourceLiveness liveness = new SourceLiveness();
+
+    class SourceLiveness implements EncodingLiveness
+    {
+        private MediaSourceDesc sourceCopy;
+        private long nowMs;
+
+        /** Takes the source as it is now, and the time as of which its encodings' liveness is judged. */
+        void snapshot(MediaSourceDesc source)
+        {
+            sourceCopy = source;
+            nowMs = source.getLastPacketReceivedMs();
+        }
+
+        @Override
+        public boolean isLive(int eid)
+        {
+            return sourceCopy.isEncodingLive(eid, nowMs);
+        }
+
+        @Override
+        public boolean hasOutlasted(int eid, int otherEid)
+        {
+            return sourceCopy.hasEncodingOutlasted(eid, otherEid, nowMs);
+        }
+    }
+
     private final DiagnosticContext diagnosticContext;
 
     /**
@@ -142,6 +176,15 @@ public class AdaptiveSourceProjection
     public void setSource(@NotNull MediaSourceDesc source)
     {
         this.source = source;
+    }
+
+    /**
+     * The encoding liveness this projection gives its context. Exposed for tests.
+     */
+    SourceLiveness getLiveness()
+    {
+        liveness.snapshot(source);
+        return liveness;
     }
 
     /**
@@ -216,7 +259,9 @@ public class AdaptiveSourceProjection
         }
 
         int targetIndexCopy = targetIndex;
-        boolean accept = contextCopy.accept(packetInfo, targetIndexCopy);
+        MediaSourceDesc sourceCopy = source;
+        liveness.snapshot(sourceCopy);
+        boolean accept = contextCopy.accept(packetInfo, targetIndexCopy, liveness);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
@@ -229,9 +274,15 @@ public class AdaptiveSourceProjection
         // stale layer being sent for a keyframe to fix, and contextCopy.needsKeyframe() is not a reliable signal
         // while suspended (the generic context forces it true for the whole suspension, to be ready to request one
         // the moment it is unsuspended).
-        boolean needsKeyframeNow = contextCopy.needsKeyframe() && targetIndexCopy > RtpLayerDesc.SUSPENDED_INDEX;
-        updateNeedsKeyframeWaitStats(needsKeyframeNow);
-        if (needsKeyframeNow)
+        boolean notSuspended = targetIndexCopy > RtpLayerDesc.SUSPENDED_INDEX;
+        // The wait lasts as long as the context needs a keyframe, whichever way it paces its requests for a keyframe.
+        updateNeedsKeyframeWaitStats(contextCopy.needsKeyframe() && notSuspended);
+        // The context paces its requests around keyframe groups: a sender which generates keyframes on every
+        // encoding at once may still be sending the keyframe being waited for. With one encoding, whatever keyframes
+        // a request yields arrive together, so there is nothing to hold off for: the need is requested at once, as
+        // it was before requests were paced.
+        boolean paced = sourceCopy.getRtpEncodings().length > 1;
+        if (notSuspended && (paced ? contextCopy.shouldRequestKeyframe() : contextCopy.needsKeyframe()))
         {
             RtpEncodingDesc encoding = getKeyframeRequestEncoding(targetIndexCopy);
             if (encoding == null)

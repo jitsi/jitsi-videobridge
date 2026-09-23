@@ -136,7 +136,7 @@ class GenericAdaptiveSourceProjectionContext
      */
     @Override
     public synchronized boolean
-    accept(@NotNull PacketInfo packetInfo, int targetIndex)
+    accept(@NotNull PacketInfo packetInfo, int targetIndex, @NotNull EncodingLiveness liveness)
     {
         VideoRtpPacket rtpPacket = packetInfo.packetAs();
         if (targetIndex == RtpLayerDesc.SUSPENDED_INDEX)

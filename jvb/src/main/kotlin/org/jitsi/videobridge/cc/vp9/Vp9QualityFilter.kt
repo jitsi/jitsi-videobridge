@@ -28,6 +28,7 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.cc.EncodingLiveness
 import java.time.Duration
 import java.time.Instant
 
@@ -102,7 +103,8 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         frame: Vp9Frame,
         incomingEncoding: Int,
         externalTargetIndex: Int,
-        receivedTime: Instant?
+        receivedTime: Instant?,
+        @Suppress("UNUSED_PARAMETER") liveness: EncodingLiveness
     ): AcceptResult {
         val prevIndex = currentIndex
         val accept = doAcceptFrame(frame, incomingEncoding, externalTargetIndex, receivedTime)

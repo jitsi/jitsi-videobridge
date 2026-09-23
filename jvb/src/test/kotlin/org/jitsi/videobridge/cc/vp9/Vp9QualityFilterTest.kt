@@ -21,6 +21,7 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.getClassForLogging
+import org.jitsi.videobridge.cc.EncodingSwitchPolicy
 import java.time.Instant
 
 internal class Vp9QualityFilterTest : ShouldSpec() {
@@ -423,7 +424,8 @@ internal class Vp9QualityFilterTest : ShouldSpec() {
                 frame = f,
                 incomingEncoding = f.ssrc.toInt(),
                 externalTargetIndex = targetIndex,
-                receivedTime = Instant.ofEpochMilli(ms)
+                receivedTime = Instant.ofEpochMilli(ms),
+                liveness = EncodingSwitchPolicy.ALL_LIVE
             )
             evaluator(f, result)
             frames++
