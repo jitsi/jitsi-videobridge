@@ -155,18 +155,25 @@ internal class PacketHandler(
             val adaptiveSourceProjection = AdaptiveSourceProjection(
                 diagnosticContext,
                 source,
-                {
-                    eventEmitter.fireEvent { keyframeNeeded(endpointID, source.primarySSRC) }
-                },
+                { ssrc -> eventEmitter.fireEvent { keyframeNeeded(endpointID, ssrc) } },
                 logger
             )
             logger.debug { "new source projection for $source" }
 
-            // Route all encodings to the specified bitrate controller.
-            source.rtpEncodings.forEach {
-                adaptiveSourceProjectionMap[it.primarySSRC] = adaptiveSourceProjection
-            }
+            route(adaptiveSourceProjection, source)
             return adaptiveSourceProjection
+        }
+    }
+
+    /**
+     * Routes the packets of every encoding of [source] to [projection]. Done again whenever the projection is given
+     * its source. A source signaled again is a new object, which may have encodings the old object did not.
+     */
+    private fun route(projection: AdaptiveSourceProjection, source: MediaSourceDesc) {
+        source.rtpEncodings.forEach {
+            if (adaptiveSourceProjectionMap[it.primarySSRC] !== projection) {
+                adaptiveSourceProjectionMap[it.primarySSRC] = projection
+            }
         }
     }
 
@@ -196,7 +203,15 @@ internal class PacketHandler(
 
                 // Review this.
                 val adaptiveSourceProjection = lookupOrCreateAdaptiveSourceProjection(it)
-                adaptiveSourceProjection?.setTargetIndex(sourceTargetIdx)
+                adaptiveSourceProjection?.apply {
+                    // The source object may have been replaced by re-signaling since the projection was created,
+                    // which the allocation reports as a change even when the target layer is the same.
+                    it.mediaSource?.let { source ->
+                        setSource(source)
+                        route(this, source)
+                    }
+                    setTargetIndex(sourceTargetIdx)
+                }
             }
         }
     }

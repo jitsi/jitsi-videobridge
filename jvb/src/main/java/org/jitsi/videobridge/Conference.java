@@ -531,7 +531,7 @@ public class Conference
      *
      * @param requesterID the id of the endpoint requesting a keyframe
      * @param endpointID the id of the endpoint to request a keyframe from.
-     * @param mediaSsrc the primary SSRC of the source for which to request a keyframe
+     * @param mediaSsrc the SSRC of the encoding of the source for which to request a keyframe
      */
     public void requestKeyframe(String requesterID, String endpointID, long mediaSsrc)
     {

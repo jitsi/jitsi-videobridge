@@ -37,15 +37,17 @@ class BandwidthAllocation @JvmOverloads constructor(
         allocations.filter { it.isForwarded() }.mapNotNull { it.mediaSource?.sourceName }.toSet()
 
     /**
-     * Whether the two allocations have the same endpoints and same layers.
+     * Whether the two allocations have the same endpoints and the same layers, of the same source objects. A source
+     * which was removed and signaled again is a new object. The state the receive pipeline keeps on it, such as
+     * which encodings are being sent, is read through the object the allocation carries, so a new object is a
+     * change even when the layers chosen are the same.
      */
     fun isTheSameAs(other: BandwidthAllocation) = allocations.size == other.allocations.size &&
         oversending == other.oversending &&
         allocations.all { allocation ->
             other.allocations.any { otherAllocation ->
                 allocation.endpointId == otherAllocation.endpointId &&
-                    allocation.mediaSource?.primarySSRC == otherAllocation.mediaSource?.primarySSRC &&
-                    allocation.mediaSource?.videoType == otherAllocation.mediaSource?.videoType &&
+                    allocation.mediaSource === otherAllocation.mediaSource &&
                     allocation.targetLayer?.index == otherAllocation.targetLayer?.index
             }
         }

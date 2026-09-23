@@ -30,6 +30,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging.TimeSeriesLogger
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
+import org.jitsi.videobridge.cc.AdaptiveSourceProjection
 import org.jitsi.videobridge.cc.config.BitrateControllerConfig.Companion.config
 import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
@@ -290,6 +291,11 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             oldEffectiveConstraints: EffectiveConstraintsMap,
             newEffectiveConstraints: EffectiveConstraintsMap,
         )
+
+        /**
+         * A projection needs a keyframe to reach its target. [ssrc] is the SSRC of the encoding of the source
+         * (owned by [endpointId]) to request it from, see [AdaptiveSourceProjection.getKeyframeRequestSsrc].
+         */
         fun keyframeNeeded(endpointId: String?, ssrc: Long)
 
         /**
