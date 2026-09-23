@@ -21,6 +21,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
 import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
@@ -276,8 +277,16 @@ class RtpSenderImpl(
         keyframeRequester.requestKeyframe(requesterID, mediaSsrc)
     }
 
+    override fun requestKeyframeForSource(requesterID: String?, sourceSsrc: Long?) {
+        keyframeRequester.requestKeyframeForSource(requesterID, sourceSsrc)
+    }
+
     override fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?) {
         keyframeRequester.setKeyframeCostSupplier(supplier)
+    }
+
+    override fun setKeyframeModeDetector(detector: KeyframeModeDetector) {
+        keyframeRequester.setKeyframeModeDetector(detector)
     }
 
     override fun getKeyframeBudgetStats() = keyframeRequester.getKeyframeBudgetStats()

@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.srtp.SrtpTransformers
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -56,6 +57,12 @@ abstract class RtpReceiver :
 
     /** The measured cost of a keyframe for the video source with primary SSRC [ssrc], if one has been observed. */
     abstract fun getKeyframeCost(ssrc: Long): KeyframeCost?
+
+    /**
+     * Sets the [KeyframeModeDetector], which learns how each source's sender answers keyframe requests. This
+     * receiver tells it about the keyframes it receives.
+     */
+    abstract fun setKeyframeModeDetector(detector: KeyframeModeDetector)
 
     abstract fun addLossListener(lossListener: LossListener)
 

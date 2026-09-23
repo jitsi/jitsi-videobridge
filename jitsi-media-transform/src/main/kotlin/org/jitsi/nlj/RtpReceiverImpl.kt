@@ -21,6 +21,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.nlj.rtcp.CompoundRtcpParser
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
 import org.jitsi.nlj.rtcp.RembHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
@@ -153,6 +154,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun isReceivingVideo() = videoBitrateCalculator.active
 
     override fun getKeyframeCost(ssrc: Long) = videoBitrateCalculator.getKeyframeCost(ssrc)
+
+    override fun setKeyframeModeDetector(detector: KeyframeModeDetector) {
+        encodingLivenessNode.setKeyframeModeDetector(detector)
+        videoBitrateCalculator.setKeyframeModeDetector(detector)
+    }
 
     override fun addLossListener(lossListener: LossListener) {
         tccGenerator.addLossListener(lossListener)

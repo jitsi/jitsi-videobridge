@@ -25,8 +25,10 @@ import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.SetMediaSourcesEvent
 import org.jitsi.nlj.resources.logging.StdoutLogger
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
 import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
+import org.jitsi.utils.ms
 import org.jitsi.utils.secs
 import org.jitsi.utils.time.FakeClock
 
@@ -79,6 +81,28 @@ class EncodingLivenessNodeTest : ShouldSpec() {
                     clock.elapse(2.secs)
                     source.isEncodingLive(0, clock.millis()) shouldBe false
                 }
+            }
+        }
+
+        context("keyframe mode detection") {
+            val detector = KeyframeModeDetector(StdoutLogger()).also { it.setMediaSources(arrayOf(source)) }
+            node.setKeyframeModeDetector(detector)
+            send(lowSsrc, 1000)
+            send(highSsrc, 1000)
+            detector.onKeyframeRequested(highSsrc, clock.millis())
+            clock.elapse(100.ms)
+            // A keyframe spanning several packets on the requested encoding only, while the other keeps sending.
+            repeat(3) { send(highSsrc, 4000, isKeyframe = true) }
+            clock.elapse(100.ms)
+            send(lowSsrc, 4000)
+            clock.elapse(2.secs)
+            should("tell the detector about the keyframe once, as an answer on the requested encoding alone") {
+                // A packet after the deadline closes the observation, as on the media path.
+                send(lowSsrc, 6000)
+                val stats = detector.debugState()["source_$lowSsrc"]
+                stats["num_per_encoding"].asInt() shouldBe 1
+                stats["num_clustered"].asInt() shouldBe 0
+                stats["num_discarded"].asInt() shouldBe 0
             }
         }
     }

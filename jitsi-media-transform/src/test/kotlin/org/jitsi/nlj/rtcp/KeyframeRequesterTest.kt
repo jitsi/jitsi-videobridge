@@ -27,7 +27,10 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.config.withNewConfig
 import org.jitsi.nlj.DebugStateMode
+import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpEncodingDesc
+import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.SetLocalSsrcEvent
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.resources.logging.StdoutLogger
@@ -35,6 +38,7 @@ import org.jitsi.nlj.resources.node.onOutput
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.nlj.rtp.codec.vpx.VpxRtpLayerDesc
 import org.jitsi.nlj.util.ExtmapAllowMixedChangedHandler
 import org.jitsi.nlj.util.ReadOnlyStreamInformationStore
 import org.jitsi.nlj.util.RtpExtensionHandler
@@ -173,6 +177,154 @@ class KeyframeRequesterTest : ShouldSpec() {
             }
         }
 
+        context("with a keyframe mode detector") {
+            // 123 and 456 are two encodings of one source, whose sender's mode the detector knows.
+            val source = MediaSourceDesc(
+                arrayOf(
+                    RtpEncodingDesc(123L, arrayOf<RtpLayerDesc>(VpxRtpLayerDesc(0, 0, -1, 180, 30.0))),
+                    RtpEncodingDesc(456L, arrayOf<RtpLayerDesc>(VpxRtpLayerDesc(1, 0, -1, 720, 30.0)))
+                ),
+                "owner",
+                "name"
+            )
+            source.rtpEncodings[1].addSecondarySsrc(4560L, SsrcAssociationType.RTX)
+            val detector = KeyframeModeDetector(logger).also { it.setMediaSources(arrayOf(source)) }
+            keyframeRequester.setKeyframeModeDetector(detector)
+            source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+
+            context("whose mode is not known") {
+                keyframeRequester.requestKeyframe("ep1", 456L)
+                clock.elapse(500.ms)
+                keyframeRequester.requestKeyframe("ep2", 123L)
+                should("limit requests for the source's encodings together") {
+                    sentKeyframeRequests shouldHaveSize 1
+                }
+                context("after a request recorded against one encoding only, as in the per-encoding mode") {
+                    // A limit for 123 alone which has just accepted a request, as a per-encoding sender's would have.
+                    withNewConfig("jmt.keyframe.sender-mode=per-encoding") {
+                        val perEncoding = KeyframeModeDetector(logger).also { it.setMediaSources(arrayOf(source)) }
+                        keyframeRequester.setKeyframeModeDetector(perEncoding)
+                        clock.elapse(3.secs)
+                        keyframeRequester.requestKeyframe("ep3", 123L)
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                    keyframeRequester.setKeyframeModeDetector(detector)
+                    clock.elapse(500.ms)
+                    keyframeRequester.requestKeyframe("ep4", 456L)
+                    should("count that request against a request for another encoding once the modes are shared") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                }
+                context("after a receiver's three requests for one encoding, limited per encoding") {
+                    withNewConfig("jmt.keyframe.sender-mode=per-encoding") {
+                        val perEncoding = KeyframeModeDetector(logger).also { it.setMediaSources(arrayOf(source)) }
+                        keyframeRequester.setKeyframeModeDetector(perEncoding)
+                        repeat(3) {
+                            clock.elapse(2100.ms)
+                            keyframeRequester.requestKeyframe("ep3", 123L)
+                        }
+                        sentKeyframeRequests shouldHaveSize 4
+                    }
+                    keyframeRequester.setKeyframeModeDetector(detector)
+                    clock.elapse(2100.ms)
+                    keyframeRequester.requestKeyframe("ep3", 456L)
+                    should("hold that receiver to its limit for the source, whichever encoding it names") {
+                        sentKeyframeRequests shouldHaveSize 4
+                    }
+                }
+                should("tell the detector of the request sent") {
+                    detector.debugState()["source_123"]["pending"].asBoolean() shouldBe true
+                }
+                context("when a receiver's PLI is forwarded") {
+                    clock.elapse(3.secs)
+                    // The earlier request's observation is past its deadline; a packet closes it, as on the media path.
+                    detector.onPacketObserved(clock.millis())
+                    detector.debugState()["source_123"]["pending"].asBoolean() shouldBe false
+                    source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                    sendPli(keyframeRequester, "ep3", 456L)
+                    should("forward it") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                    should("tell the detector of it too") {
+                        detector.debugState()["source_123"]["pending"].asBoolean() shouldBe true
+                    }
+                }
+                context("when a receiver's FIR naming an encoding's RTX SSRC is answered with a PLI") {
+                    clock.elapse(3.secs)
+                    source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                    sendFir(keyframeRequester, "ep3", 4560L)
+                    should("request a keyframe of the encoding by its primary SSRC") {
+                        sentKeyframeRequests shouldHaveSize 2
+                        (sentKeyframeRequests.last().packet as RtcpFbPliPacket).mediaSourceSsrc shouldBe 456L
+                    }
+                }
+                context("when a receiver's FIR naming an encoding's RTX SSRC is forwarded") {
+                    streamInformationStore.supportsPli = false
+                    clock.elapse(3.secs)
+                    source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                    sendFir(keyframeRequester, "ep3", 4560L)
+                    streamInformationStore.supportsPli = true
+                    should("forward it naming the encoding's primary SSRC in its FCI") {
+                        sentKeyframeRequests shouldHaveSize 2
+                        (sentKeyframeRequests.last().packet as RtcpFbFirPacket).mediaSenderSsrc shouldBe 456L
+                    }
+                }
+                context("when a receiver's PLI naming an encoding's RTX SSRC is forwarded") {
+                    clock.elapse(3.secs)
+                    source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                    sendPli(keyframeRequester, "ep3", 4560L)
+                    should("forward it naming the encoding's primary SSRC") {
+                        sentKeyframeRequests shouldHaveSize 2
+                        (sentKeyframeRequests.last().packet as RtcpFbPliPacket).mediaSourceSsrc shouldBe 456L
+                    }
+                }
+                context("when requesting without an SSRC") {
+                    sentKeyframeRequests.clear()
+                    clock.elapse(3.secs)
+                    keyframeRequester.requestKeyframe(null)
+                    should("request the primary SSRC only") {
+                        sentKeyframeRequests.map { (it.packet as RtcpFbPliPacket).mediaSourceSsrc } shouldBe
+                            listOf(123L)
+                    }
+                }
+            }
+            context("whose mode is per-encoding") {
+                withNewConfig("jmt.keyframe.sender-mode=per-encoding") {
+                    val perEncoding = KeyframeModeDetector(logger).also { it.setMediaSources(arrayOf(source)) }
+                    keyframeRequester.setKeyframeModeDetector(perEncoding)
+                    keyframeRequester.requestKeyframe("ep1", 456L)
+                    clock.elapse(500.ms)
+                    keyframeRequester.requestKeyframe("ep2", 123L)
+                    should("limit requests for the source's encodings separately") {
+                        sentKeyframeRequests shouldHaveSize 2
+                    }
+                    context("when requesting without an SSRC") {
+                        sentKeyframeRequests.clear()
+                        clock.elapse(3.secs)
+                        source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                        keyframeRequester.requestKeyframe(null)
+                        should("request every encoding being sent") {
+                            sentKeyframeRequests.map { (it.packet as RtcpFbPliPacket).mediaSourceSsrc } shouldBe
+                                listOf(123L, 456L)
+                        }
+                    }
+                    context("when requesting for a source by its primary SSRC") {
+                        sentKeyframeRequests.clear()
+                        clock.elapse(3.secs)
+                        source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                        keyframeRequester.requestKeyframeForSource(null, 123L)
+                        should("request every encoding being sent") {
+                            sentKeyframeRequests.map { (it.packet as RtcpFbPliPacket).mediaSourceSsrc } shouldBe
+                                listOf(123L, 456L)
+                        }
+                        should("not have the detector observe the set") {
+                            perEncoding.debugState()["open_observations"].asInt() shouldBe 0
+                        }
+                    }
+                }
+            }
+        }
+
         context("requesting a keyframe with no requester id") {
             context("repeatedly") {
                 repeat(4) { keyframeRequester.requestKeyframe(null, 123L) }
@@ -267,6 +419,51 @@ class KeyframeRequesterTest : ShouldSpec() {
                         should("send a second request") {
                             sentKeyframeRequests shouldHaveSize 2
                         }
+                    }
+                }
+                context("with a detector which learns that the sender generates keyframes per encoding") {
+                    val source = MediaSourceDesc(
+                        arrayOf(
+                            RtpEncodingDesc(123L, arrayOf<RtpLayerDesc>(VpxRtpLayerDesc(0, 0, -1, 180, 30.0))),
+                            RtpEncodingDesc(456L, arrayOf<RtpLayerDesc>(VpxRtpLayerDesc(1, 0, -1, 720, 30.0)))
+                        ),
+                        "owner",
+                        "name"
+                    )
+                    val detector = KeyframeModeDetector(logger).also { it.setMediaSources(arrayOf(source)) }
+                    keyframeRequester.setKeyframeModeDetector(detector)
+                    // A media packet on every encoding: the detector is told first, as on the media path.
+                    fun sending() {
+                        detector.onPacketObserved(clock.millis())
+                        source.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                    }
+                    // A cost which calls for 2.67s between requests, computed for the whole source while the mode
+                    // is unknown.
+                    keyframeRequester.setKeyframeCostSupplier { KeyframeCost(480_000L.bits, 1_200_000.bps) }
+                    // Three requests, each answered on the requested encoding alone while the other keeps sending,
+                    // which the media path closes after the response window: the sender generates keyframes per
+                    // encoding.
+                    repeat(3) { i ->
+                        val ssrc = if (i % 2 == 0) 123L else 456L
+                        sending()
+                        keyframeRequester.requestKeyframe("ep$i", ssrc)
+                        clock.elapse(100.ms)
+                        detector.onKeyframeObserved(ssrc, clock.millis())
+                        clock.elapse(400.ms)
+                        sending()
+                        clock.elapse((KeyframeModeDetector.RESPONSE_WINDOW_MS - 500 + 1).ms)
+                        sending()
+                        if (i < 2) clock.elapse((3000 - KeyframeModeDetector.RESPONSE_WINDOW_MS - 1).ms)
+                    }
+                    sentKeyframeRequests shouldHaveSize 3
+                    detector.getMode(123L) shouldBe SenderKeyframeMode.PER_ENCODING
+                    // 2.1s after the third request: past the 2s floor, inside the 2.67s computed for the whole
+                    // source.
+                    clock.elapse((2100 - KeyframeModeDetector.RESPONSE_WINDOW_MS - 1).ms)
+                    sending()
+                    keyframeRequester.requestKeyframe("ep2", 456L)
+                    should("not apply the interval computed for the whole source to the encoding alone") {
+                        sentKeyframeRequests shouldHaveSize 4
                     }
                 }
                 context("when the source bitrate is high enough to absorb the keyframe") {

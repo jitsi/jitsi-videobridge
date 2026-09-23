@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
 import org.jitsi.nlj.rtcp.KeyframeRequesterStats
 import org.jitsi.nlj.rtp.LossListener
 import org.jitsi.nlj.rtp.RtpExtensionType
@@ -47,8 +48,17 @@ abstract class RtpSender :
     abstract fun getTransportCcEngineStats(): TransportCcEngine.StatisticsSnapshot
     abstract fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null)
 
+    /** Requests a keyframe meant for every receiver of the source with [sourceSsrc], or the first video source. */
+    abstract fun requestKeyframeForSource(requesterID: String?, sourceSsrc: Long?)
+
     /** Set the source of measured keyframe costs used to bound the rate of keyframe requests. */
     abstract fun setKeyframeCostSupplier(supplier: (Long) -> KeyframeCost?)
+
+    /**
+     * Sets the [KeyframeModeDetector], which learns how each source's sender answers keyframe requests. This
+     * sender tells it about the requests it sends.
+     */
+    abstract fun setKeyframeModeDetector(detector: KeyframeModeDetector)
 
     /** The keyframe requester's cumulative keyframe budget counters, for aggregation into bridge-wide metrics. */
     abstract fun getKeyframeBudgetStats(): KeyframeRequesterStats

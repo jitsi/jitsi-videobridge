@@ -25,7 +25,9 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
+import org.jitsi.nlj.EncodingLivenessConfig
 import org.jitsi.nlj.dtls.DtlsConfig
+import org.jitsi.nlj.rtcp.KeyframeModeConfig
 import org.jitsi.rest.JettyBundleActivatorConfig
 import org.jitsi.rest.createServer
 import org.jitsi.rest.enableCors
@@ -99,6 +101,17 @@ fun main() {
         logger.error("Dtls configuration error: $ce")
         // According to https://freedesktop.org/software/systemd/man/systemd.exec…html#Process%20Exit%20Code
         // 78 means "configuration error"
+        exitProcess(78)
+    }
+
+    // Likewise for settings which are otherwise first read on the media path, where an error would be far more
+    // damaging than a refusal to start.
+    try {
+        KeyframeModeConfig.senderMode
+        EncodingLivenessConfig.cameraTimeout
+        EncodingLivenessConfig.desktopTimeout
+    } catch (e: Exception) {
+        logger.error("Keyframe or encoding liveness configuration error: $e")
         exitProcess(78)
     }
 

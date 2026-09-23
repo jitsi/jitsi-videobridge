@@ -59,7 +59,8 @@ class KeyframeRequester @JvmOverloads constructor(
 ) : TransformerNode("Keyframe Requester") {
     private val logger = createChildLogger(parentLogger)
 
-    // Map the tuple of requester and SSRC to a rate limiter
+    // Map the tuple of requester and source (by its primary SSRC) to a rate limiter. Per source, whichever encoding
+    // a request names: the receiver does not choose the encoding, the bridge's retargeting does.
     private val perReceiverKeyframeLimiter = mutableMapOf<String, MutableMap<Long, RateLimit>>()
     private val perSourceKeyframeLimiter = mutableMapOf<Long, RateLimit>()
     private val keyframeLimiterSyncRoot = Any()
@@ -81,10 +82,11 @@ class KeyframeRequester @JvmOverloads constructor(
     private var numPlisGenerated: Int = 0
     private var numFirsGenerated: Int = 0
 
-    // Number of calls to requestKeyframe
+    // Number of calls to requestKeyframe or requestKeyframeForSource. A call for a source may send a request to each
+    // of several encodings; the budget counters below count those requests one by one, this counts the call once.
     private var numApiRequests: Int = 0
 
-    // Number of calls to requestKeyframe ignored due to throttling
+    // Number of calls to requestKeyframe or requestKeyframeForSource of which no request was sent due to throttling
     private var numApiRequestsDropped: Int = 0
 
     // Number of requests dropped by each limiter, to show which one is binding.
@@ -93,6 +95,14 @@ class KeyframeRequester @JvmOverloads constructor(
 
     @Volatile
     private var keyframeCostSupplier: ((Long) -> KeyframeCost?)? = null
+
+    /**
+     * Knows how the sender of each source answers a request for one of its encodings, which decides whether the
+     * source-wide limit is shared by the source's encodings or kept per encoding. Null until set; until then every
+     * request is limited by the SSRC it names, and no detector is told about anything.
+     */
+    @Volatile
+    private var keyframeModeDetector: KeyframeModeDetector? = null
 
     /**
      * For each source a request has been sent for, the source-wide limit computed when the most recent request was
@@ -116,12 +126,15 @@ class KeyframeRequester @JvmOverloads constructor(
     private var numRequestsDroppedByBudget: Int = 0
 
     /**
-     * For each source, and each distinct requester dropped by the budget since the last request was sent for that
-     * source, when that requester was first dropped. Keyed by requester rather than just source, so that when
-     * several receivers are waiting on the same source concurrently, sending one request that satisfies all of them
-     * counts every one of their waits, not just the first. A `null` key holds unattributed requesters (dominant
-     * speaker switches, or requests relayed from another bridge) as one entry, since there is nothing to tell them
-     * apart by.
+     * For each source-wide limit, keyed like [perSourceKeyframeLimiter], and each distinct requester dropped by the
+     * budget since the last request was sent against that limit, when that requester was first dropped. Keyed by
+     * requester rather than just limit, so that when several receivers are waiting on the same limit concurrently,
+     * sending one request that satisfies all of them counts every one of their waits, not just the first. A `null`
+     * key holds unattributed requesters (dominant speaker switches, or requests relayed from another bridge) as one
+     * entry, since there is nothing to tell them apart by. A wait is resolved by the next request sent against the
+     * limit it was recorded under. If the sender's keyframe mode changes in between, that may be later than the
+     * request which actually satisfied the receiver, or not at all, so the wait statistics are approximate across a
+     * mode change.
      */
     private val budgetWaitStarts = mutableMapOf<Long, MutableMap<String?, PendingBudgetWait>>()
 
@@ -149,7 +162,14 @@ class KeyframeRequester @JvmOverloads constructor(
         val pliOrFirPacket = packetInfo.getPliOrFirPacket() ?: return packetInfo
 
         val now = clock.instant()
-        val sourceSsrc: Long = pliOrFirPacket.targetMediaSsrc
+        /* A request relayed from another bridge may name a secondary SSRC of an encoding, such as its RTX SSRC (a
+         * local receiver's has been translated already). The sender is asked for the encoding by its primary SSRC,
+         * which is what the limits and the detector are keyed by. */
+        val sourceSsrc: Long = keyframeModeDetector?.primarySsrc(pliOrFirPacket.targetMediaSsrc)
+            ?: pliOrFirPacket.targetMediaSsrc
+        if (sourceSsrc != pliOrFirPacket.targetMediaSsrc) {
+            pliOrFirPacket.targetMediaSsrc = sourceSsrc
+        }
         val canSend: Boolean
         val forward: Boolean
         when (pliOrFirPacket) {
@@ -179,7 +199,7 @@ class KeyframeRequester @JvmOverloads constructor(
             else -> throw IllegalStateException("Packet is neither PLI nor FIR")
         }
 
-        if (!forward && canSend) {
+        if (canSend && !forward) {
             doRequestKeyframe(sourceSsrc)
         }
 
@@ -193,30 +213,29 @@ class KeyframeRequester @JvmOverloads constructor(
      */
     private fun canSendKeyframeRequest(
         requesterID: String?,
-        mediaSsrc: Long,
+        requestedSsrc: Long,
         now: Instant,
-        apiTriggered: Boolean = false
+        apiTriggered: Boolean = false,
+        observable: Boolean = true
     ): Boolean {
         if (!streamInformationStore.supportsPli && !streamInformationStore.supportsFir) {
             return false
         }
+        /* The source-wide limits are keyed by the encoding's primary SSRC, whichever of its SSRCs the request names,
+         * and the receiver's own by the source's. */
+        val mediaSsrc = keyframeModeDetector?.primarySsrc(requestedSsrc) ?: requestedSsrc
+        val sourceSsrc = keyframeModeDetector?.sourceSsrc(requestedSsrc) ?: mediaSsrc
         val floor = maxOf(waitInterval, sourceWideMinInterval)
-        synchronized(keyframeLimiterSyncRoot) {
-            /* A null requesterID is a dominant speaker switch, or a request relayed from another bridge (relayed
-             * RTCP carries no endpoint id). There is no receiver to attribute it to, so skip only the per-receiver
-             * limit; the source-wide limit still applies, since it is what protects the sender's encoder and this
-             * is the only bridge that sees every requester for the source. */
-            val perReceiverLimiter = requesterID?.let { requester ->
-                perReceiverKeyframeLimiter.computeIfAbsent(requester) { mutableMapOf() }
-                    .computeIfAbsent(mediaSsrc) {
-                        RateLimit(
-                            defaultMinInterval = minInterval,
-                            maxRequests = maxRequests,
-                            interval = maxRequestInterval
-                        )
-                    }
-            }
-            if (perReceiverLimiter != null && !perReceiverLimiter.wouldAccept(now, waitInterval)) {
+        val nowMs = now.toEpochMilli()
+        /* A null requesterID is a dominant speaker switch, or a request relayed from another bridge (relayed RTCP
+         * carries no endpoint id). There is no receiver to attribute it to, so skip only the per-receiver limit. The
+         * source-wide limit still applies: it is what protects the sender's encoder, and this is the only bridge
+         * that sees every requester for the source. */
+        val limitKeys = synchronized(keyframeLimiterSyncRoot) {
+            val receiverLimits =
+                requesterID?.let { perReceiverKeyframeLimiter.computeIfAbsent(it) { mutableMapOf() } }
+            /* A limit the receiver has no record on accepts; a limit is created only when a request is recorded. */
+            if (receiverLimits?.get(sourceSsrc)?.wouldAccept(now, waitInterval) == false) {
                 numRequestsDroppedPerReceiverLimit++
                 logger.cdebug {
                     "Ignoring keyframe request for $mediaSsrc from $requesterID, per-receiver rate limited"
@@ -224,35 +243,43 @@ class KeyframeRequester @JvmOverloads constructor(
                 return false
             }
 
-            val perSourceLimiter = perSourceKeyframeLimiter.computeIfAbsent(mediaSsrc) {
-                RateLimit(
-                    defaultMinInterval = sourceWideMinInterval,
-                    maxRequests = sourceWideMaxRequests,
-                    interval = sourceWideMaxRequestInterval
-                )
-            }
+            /* The source-wide limits are kept per encoding. A request is checked and recorded against the limit of
+             * every encoding it costs the sender a keyframe on. When the sender generates keyframes on every
+             * encoding together, that is every encoding of the source. When it generates a keyframe on one encoding
+             * at a time, it is only the encoding requested; see [KeyframeModeDetector.limiterKeys]. This is computed
+             * only once the per-receiver limit accepts, which is what drops most calls here. The detector answers
+             * from volatile state, without a lock. */
+            val keys = keyframeModeDetector?.limiterKeys(mediaSsrc) ?: listOf(mediaSsrc)
             /* The source-wide interval is the floor, lengthened by the keyframe budget as computed when the previous
              * request for this source was sent. The floor is applied here rather than when the budget is computed, so
              * that a change to it between requests takes effect at once. */
-            val interval = lastSourceWideLimits[mediaSsrc]?.budgetInterval?.let { maxOf(it, floor) } ?: floor
-            if (!perSourceLimiter.wouldAccept(now, interval)) {
+            val interval = lastSourceWideLimits[mediaSsrc]
+                /* A limit computed for the other mode is for a different cost: the whole source's or one encoding's. */
+                ?.takeIf { it.shared == (keys.size > 1) }
+                ?.budgetInterval?.let { maxOf(it, floor) } ?: floor
+            val blockingKey = keys.firstOrNull {
+                !perSourceKeyframeLimiter.computeIfAbsent(it) { newPerSourceLimit() }.wouldAccept(now, interval)
+            }
+            if (blockingKey != null) {
                 numRequestsDroppedSourceWideLimit++
-                if (interval > floor && perSourceLimiter.wouldAccept(now, floor)) {
+                if (interval > floor && perSourceKeyframeLimiter.getValue(blockingKey).wouldAccept(now, floor)) {
                     numRequestsDroppedByBudget++
                     if (apiTriggered) numRequestsDroppedByBudgetApi++
-                    budgetWaitStarts.computeIfAbsent(mediaSsrc) { mutableMapOf() }
+                    budgetWaitStarts.computeIfAbsent(blockingKey) { mutableMapOf() }
                         .putIfAbsent(requesterID, PendingBudgetWait(now, apiTriggered))
                 }
                 logger.cdebug { "Ignoring keyframe request for $mediaSsrc from $requesterID, per-source rate limited" }
                 return false
             }
 
-            /* Both limits accept, so record the request with both only now. A receiver waiting for a keyframe
-             * re-requests on every packet, so if requests dropped by the source-wide limit counted against its
-             * per-receiver limit it would exhaust that limit while the source-wide one is closed, and then be unable
-             * to request again for max-request-interval after the source-wide limit reopens. */
-            perReceiverLimiter?.record(now)
-            perSourceLimiter.record(now)
+            /* Record the request with both limits only now. A receiver waiting for a keyframe re-requests on every
+             * packet. If requests dropped by the source-wide limit counted against its per-receiver limit, it would
+             * exhaust that limit while the source-wide limit is closed. It would then be unable to request again for
+             * max-request-interval after the source-wide limit reopens. */
+            receiverLimits?.computeIfAbsent(sourceSsrc) { newPerReceiverLimit() }?.record(now)
+            keys.forEach { key ->
+                perSourceKeyframeLimiter.computeIfAbsent(key) { newPerSourceLimit() }.record(now)
+            }
 
             if (interval > floor) {
                 numRequestsSentBudgetLengthened++
@@ -264,9 +291,10 @@ class KeyframeRequester @JvmOverloads constructor(
                 numRequestsSentAtFloor++
                 if (apiTriggered) numRequestsSentAtFloorApi++
             }
-            /* This one request satisfies every receiver waiting on this source, not just the one which triggered it,
-             * so every requester recorded as waiting is resolved here, each with its own wait time. */
-            budgetWaitStarts.remove(mediaSsrc)?.values?.forEach { wait ->
+            /* This one request satisfies every receiver waiting on a limit it was recorded against, not just the
+             * requester which triggered it, so every requester recorded as waiting on those limits is resolved here,
+             * each with its own wait time. */
+            keys.flatMap { budgetWaitStarts.remove(it)?.values ?: emptyList() }.forEach { wait ->
                 val waitMs = Duration.between(wait.since, now).toMillis()
                 numBudgetWaits++
                 totalBudgetWaitMs += waitMs
@@ -277,18 +305,37 @@ class KeyframeRequester @JvmOverloads constructor(
                     maxBudgetWaitMsApi = maxOf(maxBudgetWaitMsApi, waitMs)
                 }
             }
+            keys
         }
+
+        /* Both limits accept, so the request will be sent. The detector must learn of every request which reaches
+         * the sender, forwarded or generated, to attribute the keyframes which follow correctly. Outside the lock,
+         * which it does not need, so that its own work does not hold up the receivers' checks. */
+        keyframeModeDetector?.onKeyframeRequested(mediaSsrc, nowMs, observable)
 
         /* Compute the limit to apply to the next request for this source now, once per request sent, so that the
          * cost lookup is off the per-packet request path. Outside the lock, since it calls into the receive
          * pipeline's measurements. */
         if (KeyframeBudgetConfig.enabled) {
-            lastSourceWideLimits[mediaSsrc] = sourceWideLimit(mediaSsrc)
+            val limit = sourceWideLimit(mediaSsrc, shared = limitKeys.size > 1)
+            limitKeys.forEach { lastSourceWideLimits[it] = limit }
         }
 
         logger.cdebug { "Keyframe requester requesting keyframe for $mediaSsrc, requested by $requesterID" }
         return true
     }
+
+    private fun newPerReceiverLimit() = RateLimit(
+        defaultMinInterval = minInterval,
+        maxRequests = maxRequests,
+        interval = maxRequestInterval
+    )
+
+    private fun newPerSourceLimit() = RateLimit(
+        defaultMinInterval = sourceWideMinInterval,
+        maxRequests = sourceWideMaxRequests,
+        interval = sourceWideMaxRequestInterval
+    )
 
     /**
      * The interval the keyframe budget calls for between keyframe requests for [mediaSsrc], from any receiver: with a
@@ -296,12 +343,17 @@ class KeyframeRequester @JvmOverloads constructor(
      * [KeyframeBudgetConfig.maxBitrateFraction] of the source's current bitrate, capped at
      * [KeyframeBudgetConfig.maxInterval]. The configured floor is applied when the limit is checked, so the interval
      * actually enforced is never shorter than the floor, and never longer than max-interval unless the floor itself
-     * is.
+     * is. [shared] is whether the limit is for the whole source; see [SourceWideLimit.shared].
      */
-    private fun sourceWideLimit(mediaSsrc: Long): SourceWideLimit {
+    private fun sourceWideLimit(mediaSsrc: Long, shared: Boolean): SourceWideLimit {
         val cost = keyframeCostSupplier?.invoke(mediaSsrc)
         val impliedInterval = cost?.intervalAt(KeyframeBudgetConfig.maxBitrateFraction)
-        return SourceWideLimit(impliedInterval?.coerceAtMost(KeyframeBudgetConfig.maxInterval), cost, impliedInterval)
+        return SourceWideLimit(
+            impliedInterval?.coerceAtMost(KeyframeBudgetConfig.maxInterval),
+            cost,
+            impliedInterval,
+            shared
+        )
     }
 
     /**
@@ -312,19 +364,62 @@ class KeyframeRequester @JvmOverloads constructor(
         keyframeCostSupplier = supplier
     }
 
+    /**
+     * Sets the [KeyframeModeDetector], which learns how the sender of each of the endpoint's sources answers
+     * keyframe requests.
+     */
+    fun setKeyframeModeDetector(detector: KeyframeModeDetector) {
+        keyframeModeDetector = detector
+    }
+
+    /**
+     * Requests a keyframe for [mediaSsrc], an SSRC of one of the endpoint's video sources. With no SSRC, the request
+     * is meant for every receiver of the endpoint's first video source; see [requestKeyframeForSource].
+     */
     fun requestKeyframe(requesterID: String?, mediaSsrc: Long? = null) {
-        val ssrc = mediaSsrc ?: streamInformationStore.primaryMediaSsrcs.firstOrNull() ?: run {
+        if (mediaSsrc == null) {
+            requestKeyframeForSource(requesterID, null)
+            return
+        }
+        requestKeyframes(requesterID, listOf(mediaSsrc), clock.instant())
+    }
+
+    /**
+     * Requests a keyframe meant for every receiver of the source with [sourceSsrc], or of the endpoint's first video
+     * source if null, as ahead of a dominant speaker change. It goes to whichever of the source's encodings the
+     * sender needs to be asked for individually; see [KeyframeModeDetector.requestSsrcsForSource].
+     */
+    fun requestKeyframeForSource(requesterID: String?, sourceSsrc: Long?) {
+        val now = clock.instant()
+        val primary = sourceSsrc ?: streamInformationStore.primaryMediaSsrcs.firstOrNull() ?: run {
             numApiRequestsDropped++
             logger.cdebug { "No video SSRC found to request keyframe" }
             return
         }
-        numApiRequests++
-        if (!canSendKeyframeRequest(requesterID, ssrc, clock.instant(), apiTriggered = true)) {
-            numApiRequestsDropped++
-            return
-        }
+        val ssrcs = keyframeModeDetector?.requestSsrcsForSource(primary, now.toEpochMilli()) ?: listOf(primary)
+        /* A set of requests, one per encoding, is meant for every receiver of the source, so it is limited
+         * source-wide only. A receiver's own limit, kept per source, would admit only the first request of the set. */
+        requestKeyframes(if (ssrcs.size > 1) null else requesterID, ssrcs, now)
+    }
 
-        doRequestKeyframe(ssrc)
+    /**
+     * Sends one request per SSRC of [ssrcs] which passes the limits, counting the call as one API request. A set of
+     * requests for every encoding of a source gives the mode detector no evidence, so it is told not to observe the
+     * set.
+     */
+    private fun requestKeyframes(requesterID: String?, ssrcs: List<Long>, now: Instant) {
+        numApiRequests++
+        var sent = false
+        val observable = ssrcs.size == 1
+        ssrcs.forEach { ssrc ->
+            if (canSendKeyframeRequest(requesterID, ssrc, now, apiTriggered = true, observable = observable)) {
+                doRequestKeyframe(ssrc)
+                sent = true
+            }
+        }
+        if (!sent) {
+            numApiRequestsDropped++
+        }
     }
 
     private fun doRequestKeyframe(mediaSsrc: Long) {
@@ -488,10 +583,18 @@ data class KeyframeRequesterStats(
 /**
  * What the keyframe budget calls for on the next request for one source: the interval it calls for, if a cost was
  * available, after the cap but before the floor; the keyframe cost it was derived from; and the interval that cost
- * implied before the cap.
+ * implied before the cap. [shared] is whether the limit is for every encoding of the source, computed from the cost
+ * of a whole set of keyframes, rather than one encoding's own. A limit computed under one mode is not applied under
+ * the other after the mode changes.
  */
-private class SourceWideLimit(val budgetInterval: Duration?, val cost: KeyframeCost?, val impliedInterval: Duration?) {
+private class SourceWideLimit(
+    val budgetInterval: Duration?,
+    val cost: KeyframeCost?,
+    val impliedInterval: Duration?,
+    val shared: Boolean
+) {
     fun toJson(): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
+        put("shared", shared)
         budgetInterval?.let { put("budget_interval_ms", it.toMillis()) }
         impliedInterval?.let { put("implied_interval_ms", it.toMillis()) }
         cost?.let {
