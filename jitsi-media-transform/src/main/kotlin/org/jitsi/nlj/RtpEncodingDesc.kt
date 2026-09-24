@@ -113,6 +113,27 @@ constructor(
         }
 
     /**
+     * Sets the height of every layer of this encoding to [height], as learned from the bitstream, and returns whether
+     * any layer's height changed. The layers stay the same objects, so the source's layer lookup tables, which hold
+     * them, see the new height. Meant for an encoding with a single spatial layer, whose layers all share its height,
+     * which is also recorded as the encoding's nominal height. Called on the receive pipeline's thread, like the other
+     * code which updates layers' attributes in place.
+     */
+    internal fun updateHeight(height: Int): Boolean {
+        var changed = false
+        for (layer in layers) {
+            if (layer.height != height) {
+                layer.height = height
+                changed = true
+            }
+        }
+        if (height != RtpLayerDesc.NO_HEIGHT) {
+            nominalHeight = height
+        }
+        return changed
+    }
+
+    /**
      * @return the "id" of a layer within this source, across all encodings. This is a server-side id and should
      * not be confused with any encoding id defined in the client (such as the
      * rid). This server-side id is used in the layer lookup table that is
