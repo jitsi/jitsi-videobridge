@@ -80,6 +80,20 @@ class AudioLevelHeaderExtensionTest : ShouldSpec() {
                 AudioLevelHeaderExtension.getVad(parsedExt) shouldBe true
                 reparsed.payloadLength shouldBe 20
             }
+            should("add, clamp and encode it in one step with addToPacket") {
+                for ((given, expected) in listOf(23 to 23, 200 to 127, -5 to 0)) {
+                    val packet = packetWithoutExtensions()
+                    AudioLevelHeaderExtension.addToPacket(packet, 1, given, true)
+
+                    // Already encoded into the bytes: a packet re-parsed from them (as a clone would be) carries it.
+                    val parsedExt = RtpPacket(packet.buffer, packet.offset, packet.length).getHeaderExtension(1)
+                    parsedExt shouldNotBe null
+                    AudioLevelHeaderExtension.getAudioLevel(parsedExt!!) shouldBe expected
+                    AudioLevelHeaderExtension.getVad(parsedExt) shouldBe true
+                    packet.clone().getHeaderExtension(1)?.let { AudioLevelHeaderExtension.getAudioLevel(it) } shouldBe
+                        expected
+                }
+            }
             should("reject an out-of-range level") {
                 val packet = packetWithoutExtensions()
                 val ext = packet.addHeaderExtension(1, AudioLevelHeaderExtension.DATA_SIZE_BYTES)
