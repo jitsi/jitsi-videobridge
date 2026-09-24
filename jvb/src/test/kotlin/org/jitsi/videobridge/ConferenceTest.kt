@@ -21,6 +21,9 @@ import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.DebugStateMode
+import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.mins
+import org.jitsi.utils.time.FakeClock
 import org.jxmpp.jid.impl.JidCreate
 
 /**
@@ -36,11 +39,40 @@ class ConferenceTest : ConfigTest() {
             with(Conference(videobridge, "id", name, null, false)) {
                 endpointCount shouldBe 0
                 // TODO cover the case when they're true
-                createLocalEndpoint("abcdabcd", true, false, false, false, false, false)
+                createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
                 endpointCount shouldBe 1
                 DebugStateMode.entries.forEach { mode ->
                     getDebugState(mode, null).shouldBeValidJsonConf()
                 }
+            }
+        }
+        context("Synthetic endpoints") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                val clock = FakeClock()
+                val bot = Endpoint(
+                    "bot",
+                    this,
+                    LoggerImpl("test"),
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    synthetic = true,
+                    clock = clock
+                )
+                bot.synthetic shouldBe true
+                // Within the initial timeout the backstop must not fire even with no other endpoints.
+                bot.shouldExpire() shouldBe false
+
+                clock.elapse(3.mins)
+                // Alone in the conference and past the timeout: the backstop allows expiry.
+                bot.shouldExpire() shouldBe true
+
+                // With a non-synthetic local endpoint present, a synthetic endpoint never expires on its own.
+                createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+                bot.shouldExpire() shouldBe false
             }
         }
         context("Creating relays should work") {
