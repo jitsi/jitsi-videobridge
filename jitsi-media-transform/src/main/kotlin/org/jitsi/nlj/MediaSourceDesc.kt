@@ -39,6 +39,7 @@ class MediaSourceDesc
     /**
      * The [RtpEncodingDesc]s that this [MediaSourceDesc]
      * possesses, ordered by their subjective quality from low to high.
+     * Each is at the index of its encoding ID, [RtpEncodingDesc.eid].
      */
     val rtpEncodings: Array<RtpEncodingDesc>,
     /**
@@ -100,6 +101,9 @@ class MediaSourceDesc
     }
 
     init {
+        rtpEncodings.forEachIndexed { index, encoding ->
+            require(encoding.eid == index) { "Encoding with EID ${encoding.eid} at index $index" }
+        }
         updateLayerCache()
     }
 
