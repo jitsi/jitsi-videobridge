@@ -25,6 +25,51 @@ class EncodingLivenessTrackerTest : ShouldSpec() {
     private val timeoutMs = 1000L
 
     init {
+        context("Signaled by the sender") {
+            // Each test makes its own tracker: tests in a context share the context's objects, in order.
+            fun tracker() = EncodingLivenessTracker(timeoutMs)
+            should("be live once signaled as sent, as if a packet had arrived") {
+                val tracker = tracker()
+                tracker.onSignaled(true, 1000)
+                tracker.isLive(1000 + timeoutMs) shouldBe true
+                tracker.isLive(1000 + timeoutMs + 1) shouldBe false
+            }
+            should("not be live once signaled as not sent, whatever arrived before") {
+                val tracker = tracker()
+                repeat(30) { tracker.onPacketReceived(1000 + it * 33L, it, it * 3000L) }
+                tracker.isLive(2000) shouldBe true
+                tracker.onSignaled(false, 2000)
+                tracker.isLive(2000) shouldBe false
+                tracker.signaledOff shouldBe true
+            }
+            should("be live again on a signal that it is sent, or on a packet") {
+                val tracker = tracker()
+                tracker.onSignaled(false, 1000)
+                tracker.onSignaled(true, 2000)
+                tracker.isLive(2000) shouldBe true
+                tracker.onSignaled(false, 3000)
+                tracker.onPacketReceived(4000, 1, 90_000L)
+                tracker.isLive(4000) shouldBe true
+                tracker.signaledOff shouldBe false
+            }
+            should("be outlasted by any live encoding while signaled as not sent") {
+                val tracker = tracker()
+                val other = EncodingLivenessTracker(timeoutMs)
+                tracker.onPacketReceived(1000, 0, 0L)
+                // The other's run began after this tracker's last packet, and within its allowance: not outlasted.
+                other.onPacketReceived(1500, 0, 0L)
+                other.hasOutlasted(tracker, 1500) shouldBe false
+                tracker.onSignaled(false, 1500)
+                other.hasOutlasted(tracker, 1500) shouldBe true
+            }
+            should("carry the signal over to a copy") {
+                val tracker = tracker()
+                tracker.onSignaled(false, 1000)
+                tracker.copy().isLive(1000) shouldBe false
+                tracker.onSignaled(true, 2000)
+                tracker.copy().isLive(2000) shouldBe true
+            }
+        }
         context("A tracker which has seen no packet") {
             val tracker = EncodingLivenessTracker(timeoutMs)
             should("not consider its encoding live") {
@@ -78,6 +123,13 @@ class EncodingLivenessTrackerTest : ShouldSpec() {
             should("not learn from a gap across a pause, since the sender may have turned it off") {
                 fast.onPacketReceived(20000 + 29 * 33L + 30000, 30, 30 * 3000L)
                 fast.frameIntervalMs shouldBe 33.0
+            }
+            should("tell a packet of an older frame from one of the current frame, for nodes reading its extensions") {
+                // The current frame is 30, from the test above.
+                fast.isOfOlderFrame(30, 30 * 3000L) shouldBe false
+                fast.isOfOlderFrame(29, 30 * 3000L) shouldBe false
+                fast.isOfOlderFrame(29, 29 * 3000L) shouldBe true
+                fast.isOfOlderFrame(31, 31 * 3000L) shouldBe false
             }
             should("not count a reordered or retransmitted packet of an older frame for anything") {
                 val lastPacket = fast.lastPacketReceivedMs

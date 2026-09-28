@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.nlj.EncodingLivenessConfig
+import org.jitsi.nlj.EncodingLivenessTracker
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -30,18 +32,27 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
+import java.time.Clock
 import kotlin.math.min
 
 /**
- * A node which reads the Video Layers Allocation (VLA) RTP header extension and updates the media sources.
+ * A node which reads the Video Layers Allocation (VLA) RTP header extension and updates the media sources. It sets
+ * the target bitrates, resolutions and frame rates of the layers the allocation lists, and which encodings the
+ * sender is sending, see [EncodingLivenessTracker.onSignaled]. An allocation lists the active layers of every RTP
+ * stream of the source. A stream with no active layers, or beyond the number of streams the allocation covers, is
+ * not being sent.
  */
 class VlaReaderNode(
     streamInformationStore: ReadOnlyStreamInformationStore,
-    parentLogger: Logger = LoggerImpl(VlaReaderNode::class.simpleName)
+    parentLogger: Logger = LoggerImpl(VlaReaderNode::class.simpleName),
+    private val clock: Clock = Clock.systemUTC()
 ) : ObserverNode("Video Layers Allocation reader") {
     private val logger = createChildLogger(parentLogger)
     private var vlaExtId: Int? = null
     private var mediaSourceDescs: Array<MediaSourceDesc> = arrayOf()
+
+    /** Whether to tell the encodings' liveness trackers what the allocation says, see [EncodingLivenessConfig]. */
+    private val trustSignaling = EncodingLivenessConfig.trustSignaling
 
     init {
         streamInformationStore.onRtpExtensionMapping(VLA) {
@@ -72,10 +83,34 @@ class VlaReaderNode(
 
                 val sourceDesc = mediaSourceDescs.findRtpSource(rtpPacket)
 
-                logger.debug("Found VLA=$vla for sourceDesc=$sourceDesc")
+                logger.debug { "Found VLA=$vla for sourceDesc=$sourceDesc" }
+
+                /* A sender puts the allocation on the packets most likely to be retransmitted. An allocation on a
+                 * packet of an older frame than its encoding's current frame is stale, regardless of which encodings
+                 * it names. It could list an encoding the sender has since turned off. The encoding liveness node,
+                 * ahead of this node, has recorded the packet on its encoding, so the encoding knows. Like that node,
+                 * this node reads only packets of an encoding's primary SSRC. */
+                val encoding = sourceDesc?.rtpEncodings?.find { it.primarySSRC == rtpPacket.ssrc } ?: return
+                if (encoding.liveness.isOfOlderFrame(rtpPacket.sequenceNumber, rtpPacket.timestamp)) {
+                    logger.cdebug { "Ignoring a stale VLA on a reordered or retransmitted packet: $rtpPacket" }
+                    return
+                }
+
+                /* An allocation with no streams at all says nothing about which are sent: the packet carrying it
+                 * shows that at least its own is. The format defines an empty allocation as no layer active, but a
+                 * sender which puts it on a packet is sending that packet's stream, so the allocation is not
+                 * believed. */
+                if (trustSignaling && sourceDesc != null && vla.isNotEmpty()) {
+                    val nowMs = clock.millis()
+                    sourceDesc.rtpEncodings.forEachIndexed { streamIdx, rtpEncoding ->
+                        val active = vla.getOrNull(streamIdx)?.spatialLayers?.isNotEmpty() == true
+                        rtpEncoding.liveness.onSignaled(active, nowMs)
+                    }
+                }
 
                 vla.forEachIndexed { streamIdx, stream ->
-                    val rtpEncoding = sourceDesc?.rtpEncodings?.get(streamIdx)
+                    /* The allocation may cover more streams than the source is known to have. */
+                    val rtpEncoding = sourceDesc?.rtpEncodings?.getOrNull(streamIdx)
                     stream.spatialLayers.forEach { spatialLayer ->
                         val maxTl = spatialLayer.targetBitratesKbps.size - 1
 

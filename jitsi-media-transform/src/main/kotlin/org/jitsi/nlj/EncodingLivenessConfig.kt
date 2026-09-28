@@ -34,4 +34,12 @@ object EncodingLivenessConfig {
     val desktopTimeout: Duration by config {
         "jmt.rtp.encoding-liveness.desktop-timeout".from(JitsiConfig.newConfig)
     }
+
+    /**
+     * Whether to take a sender's Video Layers Allocation header extension as saying which encodings it is sending,
+     * see [org.jitsi.nlj.EncodingLivenessTracker.onSignaled].
+     */
+    val trustSignaling: Boolean by config {
+        "jmt.rtp.encoding-liveness.trust-signaling".from(JitsiConfig.newConfig)
+    }
 }

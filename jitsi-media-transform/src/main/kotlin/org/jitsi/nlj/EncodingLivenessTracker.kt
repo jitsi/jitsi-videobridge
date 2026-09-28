@@ -32,6 +32,11 @@ import org.jitsi.rtp.util.RtpUtils
  * encoding sending slowly is allowed longer, based on the estimate of its frame interval which a
  * [FrameIntervalEstimator] makes from its packets' timestamps.
  *
+ * A sender which negotiates the Video Layers Allocation RTP header extension says outright which encodings it is
+ * sending, with every keyframe and after every change; see [onSignaled]. The VLA header extension is taken as
+ * authoritative. An encoding the VLA says it is not sending is not live, whatever was received before, until a new VLA
+ * says it is, or media proves otherwise. Media on the encoding is the surer sign, so a packet clears the signal.
+ *
  * The receive pipeline records every media packet of the encoding with [onPacketReceived], on its own thread. The
  * bandwidth allocation and projection code of every receiver of the source reads the state from other threads, so
  * that state is volatile.
@@ -74,6 +79,18 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
     @Volatile
     var flowingSinceMs: Long = NEVER_RECEIVED
         private set
+
+    /**
+     * Whether the sender's most recent signal said it is not sending the encoding; see [onSignaled]. Cleared by a
+     * signal that it is, or by a media packet of the encoding.
+     */
+    @Volatile
+    var signaledOff: Boolean = false
+        private set
+
+    /** When the sender most recently signaled that it is sending the encoding, or [NEVER_RECEIVED]. */
+    @Volatile
+    private var lastSignaledActiveMs: Long = NEVER_RECEIVED
 
     /** The estimate of the encoding's frame interval, from its packets' timestamps. */
     private var frames = FrameIntervalEstimator()
@@ -162,6 +179,36 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
             }
         }
         lastPacketReceivedMs = nowMs
+        if (signaledOff) {
+            signaledOff = false
+        }
+    }
+
+    /**
+     * Whether a packet with RTP sequence number [sequenceNumber] and timestamp [rtpTimestamp] is part of an older frame
+     * than the current frame. Such a packet is reordered or retransmitted; its arrival indicates nothing about the
+     * encoding currently, and neither does anything it carries. This is used by nodes after the node which records the
+     * encoding's packets, to indicate whether a header extension is stale. A late packet of the current frame is not
+     * part of an older frame, and what it carries is current. The packet that has just been recorded is part of the
+     * current frame by definition.
+     */
+    fun isOfOlderFrame(sequenceNumber: Int, rtpTimestamp: Long): Boolean =
+        frames.classify(sequenceNumber, rtpTimestamp) == PacketKind.STRAGGLER
+
+    /**
+     * Records that at [nowMs] the sender signaled whether it is sending the encoding ([active]). The Video Layers
+     * Allocation header extension signals this for every encoding of a source. A signal that the encoding is being
+     * encoded counts like a packet for [isLive]; a signal that it is not being encoded makes the encoding not live
+     * immediately. The encoding stays not live until the next signal that it is live, or until one of its media packets
+     * arrives.
+     */
+    fun onSignaled(active: Boolean, nowMs: Long) {
+        if (active) {
+            lastSignaledActiveMs = nowMs
+            signaledOff = false
+        } else {
+            signaledOff = true
+        }
     }
 
     /**
@@ -182,13 +229,18 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
     }
 
     /**
-     * Whether the encoding is being sent: a media packet of it was received within [timeoutMs] of [nowMs], or within
-     * [LIVENESS_FRAME_INTERVALS] of its own smoothed frame interval, whichever is longer, but never more than
-     * [MAX_ALLOWANCE_TIMEOUTS] timeouts. This reflects a change within a few frame intervals, whereas the layers'
-     * bitrate measurements take several seconds.
+     * Whether the encoding is being sent, judged by whether one of its media packets was received recently. Recently
+     * means within [timeoutMs] of [nowMs], or within [LIVENESS_FRAME_INTERVALS] of its own smoothed frame interval,
+     * whichever is longer, but never more than [MAX_ALLOWANCE_TIMEOUTS] timeouts. This reflects a change within a
+     * few frame intervals, whereas the layers' bitrate measurements take several seconds. A signal from the sender
+     * that it is sending the encoding counts like a packet. A signal that it is not sending it overrides
+     * everything; see [onSignaled].
      */
     fun isLive(nowMs: Long): Boolean {
-        val last = lastPacketReceivedMs
+        if (signaledOff) {
+            return false
+        }
+        val last = maxOf(lastPacketReceivedMs, lastSignaledActiveMs)
         if (last == NEVER_RECEIVED) {
             return false
         }
@@ -196,19 +248,26 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
     }
 
     /**
-     * Whether this encoding has kept being sent while the encoding [other] tracks stopped: this encoding is live,
-     * and has been flowing without a pause since before [other]'s last packet, or for longer than [other] may go
-     * without a packet (see [isLive]).
+     * Whether this encoding has kept being sent while the encoding [other] tracks stopped. That is, this encoding
+     * is live, and either its current run of frames began before [other]'s last packet, or the run began longer ago
+     * than [other] may go without a packet (see [isLive]).
      *
-     * This distinguishes two cases which look alike at first. When a whole source stalls and resumes, every
-     * encoding's first frames find the others not live; but this encoding only just resumed, or skipped frames
-     * itself while the source stalled, and the other may be about to resume. When the sender turned the other
-     * encoding off, this one kept flowing the whole time. The test holds for every frame after a resume, no
-     * matter how staggered, not only the first.
+     * Two situations make this encoding live while [other] is not, and only one of them means the sender turned the
+     * other encoding off. In that situation this encoding kept flowing without a break while the other went quiet, so
+     * its current run began before the other's last packet. In the other situation the whole source stalled and is
+     * resuming. Every encoding went quiet, and this encoding's first frames after the stall arrive before the other
+     * encoding's do, so the other looks stopped too. But this encoding's run began only now, after the other's last
+     * packet, so it has not outlasted the other, and the other is given its allowance to resume. If this encoding
+     * then flows for longer than that allowance and the other still has not resumed, the other is off after all;
+     * that is the second condition. A sender's signal that it is not sending [other]'s encoding settles the question
+     * outright; see [onSignaled].
      */
     fun hasOutlasted(other: EncodingLivenessTracker, nowMs: Long): Boolean {
         if (!isLive(nowMs)) {
             return false
+        }
+        if (other.signaledOff) {
+            return true
         }
         val since = flowingSinceMs
         if (since == NEVER_RECEIVED) {
@@ -224,6 +283,7 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
      */
     fun debugState(nowMs: Long): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         put("live", isLive(nowMs))
+        put("signaled_off", signaledOff)
         put("timeout_ms", timeoutMs)
         put("last_packet_received_ms", lastPacketReceivedMs)
         put("flowing_since_ms", flowingSinceMs)
@@ -237,6 +297,8 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
         it.lastPacketReceivedMs = lastPacketReceivedMs
         it.highestSequenceNumber = highestSequenceNumber
         it.flowingSinceMs = flowingSinceMs
+        it.signaledOff = signaledOff
+        it.lastSignaledActiveMs = lastSignaledActiveMs
         it.frames = frames.copy()
     }
 

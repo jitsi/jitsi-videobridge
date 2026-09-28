@@ -124,6 +124,23 @@ class KeyframeModeDetectorTest : ShouldSpec() {
             }
         }
 
+        context("a request answered by keyframes on every encoding, one of them live only because the sender said so") {
+            // Encodings 1 and 3 flowing; encoding 2 signaled as sent, but yet to send anything.
+            live(0, 1L, 3L)
+            source.rtpEncodings[1].liveness.onSignaled(true, 0)
+            detector.onKeyframeRequested(3L, 0)
+            detector.onKeyframeObserved(3L, 100)
+            detector.onKeyframeObserved(1L, 105)
+            // Encoding 2 starts with a keyframe.
+            source.rtpEncodings[1].liveness.onPacketReceived(300, 0, 300 * 90L)
+            detector.onKeyframeObserved(2L, 300)
+            should("be discarded, since an encoding starting up generates a keyframe in either mode") {
+                val closed = response + 1
+                stats(closed)["num_discarded"].asInt() shouldBe 1
+                stats(closed)["num_clustered"].asInt() shouldBe 0
+            }
+        }
+
         context("a request answered by keyframes on every live encoding together") {
             // The large keyframe is paced out well behind the smaller keyframes, as on a constrained uplink.
             observe(0, 3L, mapOf(1L to 100L, 2L to 105L, 3L to 700L))

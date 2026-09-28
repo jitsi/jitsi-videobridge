@@ -110,6 +110,7 @@ fun main() {
         KeyframeModeConfig.senderMode
         EncodingLivenessConfig.cameraTimeout
         EncodingLivenessConfig.desktopTimeout
+        EncodingLivenessConfig.trustSignaling
     } catch (e: Exception) {
         logger.error("Keyframe or encoding liveness configuration error: $e")
         exitProcess(78)
