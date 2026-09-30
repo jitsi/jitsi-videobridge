@@ -15,23 +15,39 @@
  */
 package org.jitsi.videobridge.export
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
+import org.eclipse.jetty.websocket.api.Session
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.logging2.LoggerImpl
 import java.net.URI
 
 /**
- * Drives [Exporter.handleIncomingMessage] directly (no socket) to verify how inbound mediajson `start`/`stop`
- * events map to the synthetic-source sending-change callback: a start/stop with a talk timestamp fires the callback
- * (start -> sending=true, stop -> sending=false); one without a timestamp (a plain stream start/stop) does not.
+ * Drives [Exporter] directly (no socket). Verifies how inbound mediajson `start`/`stop` events map to the
+ * synthetic-source sending-change callback (a start/stop with a talk timestamp fires the callback, start ->
+ * sending=true, stop -> sending=false; one without a timestamp, i.e. a plain stream start/stop, does not), and which
+ * audio [Exporter.wants] to export given the connect's exports/requests lists.
  */
 class ExporterTest : ShouldSpec() {
     private data class Change(val sourceName: String, val sending: Boolean, val timestamp: Long)
 
-    /** A fresh [Exporter] plus the list capturing its sending-change callback invocations. */
-    private fun fixture(): Pair<Exporter, MutableList<Change>> {
+    /**
+     * A fresh, not-yet-connected [Exporter] plus the list capturing its sending-change callback invocations. [sources]
+     * backs the audio-source lookup (SSRC -> source name); any other SSRC is unknown (resolves to null).
+     */
+    private fun fixture(
+        exports: List<String> = emptyList(),
+        requests: List<String> = emptyList(),
+        sources: Map<Long, String> = emptyMap()
+    ): Pair<Exporter, MutableList<Change>> {
         val changes = mutableListOf<Change>()
         val exporter = Exporter(
             URI("ws://localhost:1/"),
@@ -43,12 +59,20 @@ class ExporterTest : ShouldSpec() {
                 override fun handleSendingChange(sourceName: String, sending: Boolean, timestamp: Long) {
                     changes.add(Change(sourceName, sending, timestamp))
                 }
-                override fun getAudioSourceName(ssrc: Long): String? = null
+                override fun getAudioSourceName(ssrc: Long): String? = sources[ssrc]
                 override fun getDiarize(ssrc: Long): Boolean = false
-            }
+            },
+            exports = exports,
+            requests = requests
         )
         return exporter to changes
     }
+
+    /** Mark [exporter] connected through a mock session (no socket), returning the session to verify what it sent. */
+    private fun connect(exporter: Exporter): Session =
+        mockk<Session>(relaxed = true).also { exporter.recorderWebSocket.session = it }
+
+    private fun audioPacket(ssrc: Long) = PacketInfo(AudioRtpPacket(ByteArray(1500), 0, 100).apply { this.ssrc = ssrc })
 
     init {
         context("inbound start/stop dispatch to the sending-change callback") {
@@ -85,6 +109,64 @@ class ExporterTest : ShouldSpec() {
                     """{"event":"stop","sequenceNumber":4,"stop":{"tag":"55555555-a0.hi"}}"""
                 )
                 changes shouldBe emptyList()
+            }
+        }
+
+        context("wants(): which audio a connect exports") {
+            val s1 = 1111L
+            val s2 = 2222L
+            val sources = mapOf(s1 to "ep1-a0", s2 to "ep2-a0")
+
+            should("export all audio when there are no requests and exports is empty (transcriber/recorder)") {
+                val (exporter, _) = fixture(sources = sources)
+                connect(exporter)
+                exporter.wants(audioPacket(s1)) shouldBe true
+                exporter.wants(audioPacket(s2)) shouldBe true
+            }
+            should("export nothing when there are requests but exports is empty (voice agent)") {
+                val (exporter, _) = fixture(requests = listOf("agent-a0"), sources = sources)
+                connect(exporter)
+                exporter.wants(audioPacket(s1)) shouldBe false
+                exporter.wants(audioPacket(s2)) shouldBe false
+            }
+            should("export only the listed sources when there are requests and exports") {
+                val (exporter, _) =
+                    fixture(exports = listOf("ep1-a0"), requests = listOf("agent-a0"), sources = sources)
+                connect(exporter)
+                exporter.wants(audioPacket(s1)) shouldBe true
+                exporter.wants(audioPacket(s2)) shouldBe false
+            }
+            should("start exporting a source once a live update adds it to exports") {
+                val (exporter, _) = fixture(requests = listOf("agent-a0"), sources = sources)
+                val session = connect(exporter)
+                exporter.wants(audioPacket(s1)) shouldBe false
+
+                exporter.update(exports = listOf("ep1-a0"), requests = listOf("agent-a0"))
+
+                exporter.wants(audioPacket(s1)) shouldBe true
+                exporter.wants(audioPacket(s2)) shouldBe false
+                // The peer learns the new lists through the (unchanged) sources event.
+                val sent = slot<String>()
+                verify(exactly = 1) { session.sendText(capture(sent), any()) }
+                withClue(sent.captured) {
+                    val json = ObjectMapper().readTree(sent.captured)
+                    json.path("event").asText() shouldBe "sources"
+                    json.path("exports").map { it.asText() } shouldBe listOf("ep1-a0")
+                    json.path("requests").map { it.asText() } shouldBe listOf("agent-a0")
+                }
+            }
+            should("never export audio from an unknown SSRC") {
+                val unknown = 9999L
+                val (all, _) = fixture(sources = sources)
+                connect(all)
+                all.wants(audioPacket(unknown)) shouldBe false
+                val (listed, _) = fixture(exports = listOf("ep1-a0"), requests = listOf("agent-a0"), sources = sources)
+                connect(listed)
+                listed.wants(audioPacket(unknown)) shouldBe false
+            }
+            should("export nothing while not connected") {
+                val (exporter, _) = fixture(sources = sources)
+                exporter.wants(audioPacket(s1)) shouldBe false
             }
         }
     }
