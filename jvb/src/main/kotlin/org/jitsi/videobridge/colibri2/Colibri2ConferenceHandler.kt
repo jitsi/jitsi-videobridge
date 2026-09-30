@@ -30,6 +30,7 @@ import org.jitsi.videobridge.dcsctp.DcSctpTransport
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayConfig
+import org.jitsi.videobridge.relay.SyntheticSourceKind
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.transport.ice.IceRestartResult
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
@@ -295,13 +296,9 @@ class Colibri2ConferenceHandler(
             }
             endpoint.mediaSources = newMediaSources.toTypedArray()
 
-            val audioSources: ArrayList<AudioSourceDesc> = ArrayList()
-            sources.mediaSources.filter { it.type == MediaType.AUDIO }.forEach {
-                it.sources.forEach { s ->
-                    audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id, it.isSynthetic))
-                }
+            endpoint.audioSources = sources.mediaSources.filter { it.type == MediaType.AUDIO }.flatMap {
+                it.toAudioSourceDescs(c2endpoint.id, ownerSynthetic = endpoint.synthetic)
             }
-            endpoint.audioSources = audioSources
         }
 
         c2endpoint.forceMute?.let {
@@ -494,12 +491,14 @@ class Colibri2ConferenceHandler(
             if (endpoint.expire) {
                 relay.removeRemoteEndpoint(endpoint.id)
             } else {
-                val sources = endpoint.parseSourceDescs()
                 if (endpoint.create) {
-                    relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second)?.let {
-                        newEndpoints.add(it)
-                    }
+                    val synthetic = endpoint.hasCapability(CAP_SYNTHETIC_ENDPOINT)
+                    val sources = endpoint.parseSourceDescs(synthetic)
+                    relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second, synthetic)
+                        ?.let { newEndpoints.add(it) }
                 } else {
+                    // The capability is only signaled on create, so an update takes it from the existing endpoint.
+                    val sources = endpoint.parseSourceDescs(relay.getEndpoint(endpoint.id)?.synthetic)
                     relay.updateRemoteEndpoint(endpoint.id, sources.first, sources.second)
                 }
 
@@ -517,7 +516,10 @@ class Colibri2ConferenceHandler(
         return respBuilder.build()
     }
 
-    private fun Colibri2Endpoint.parseSourceDescs(): Pair<List<AudioSourceDesc>, List<MediaSourceDesc>> {
+    /** Parses the sources of this relayed endpoint; [ownerSynthetic] is whether it is synthetic (null if unknown). */
+    private fun Colibri2Endpoint.parseSourceDescs(
+        ownerSynthetic: Boolean?
+    ): Pair<List<AudioSourceDesc>, List<MediaSourceDesc>> {
         val audioSources: MutableList<AudioSourceDesc> = ArrayList()
         val videoSources: MutableList<MediaSourceDesc> = ArrayList()
         sources?.let {
@@ -528,7 +530,7 @@ class Colibri2ConferenceHandler(
                             "Ignoring audio source ${m.id} in endpoint $id of a relay (no SSRCs): ${toXML()}"
                         )
                     } else {
-                        m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id, m.isSynthetic)) }
+                        audioSources.addAll(m.toAudioSourceDescs(id, ownerSynthetic))
                     }
                 } else if (m.type == MediaType.VIDEO) {
                     val desc = MediaSourceFactory.createMediaSource(m.sources, m.ssrcGroups, id, m.id, m.isSynthetic)
@@ -541,6 +543,15 @@ class Colibri2ConferenceHandler(
             }
         }
         return Pair(audioSources, videoSources)
+    }
+
+    /**
+     * Describes the SSRCs of this audio [MediaSource] as owned by [owner]. A synthetic source's kind follows from
+     * whether its owner is a synthetic endpoint ([ownerSynthetic]; null when not known, leaving the kind unset).
+     */
+    private fun MediaSource.toAudioSourceDescs(owner: String, ownerSynthetic: Boolean?): List<AudioSourceDesc> {
+        val kind = if (isSynthetic) SyntheticSourceKind.forOwner(ownerSynthetic) else null
+        return sources.map { AudioSourceDesc(it.ssrc, owner, id, isSynthetic, kind) }
     }
 
     /**

@@ -1730,7 +1730,8 @@ public class Conference
          * Handles a synthetic source's sending-state change, derived from the {@code start}/{@code stop} mediajson
          * events a translator sends to bracket a "talk" of translated audio. Resolves the named synthetic source
          * (dropping the change if it isn't a known synthetic source, like {@link #handleMediaEvent}) and broadcasts
-         * a {@link SyntheticSourceSendingChangeEvent} to the conference's clients (and relays).
+         * a {@link SyntheticSourceSendingChangeEvent}, carrying the source's kind, to the conference's clients (and
+         * relays).
          *
          * @param sourceName the synthetic source whose sending state changed
          * @param sending    true if the source started sending, false if it stopped
@@ -1761,7 +1762,9 @@ public class Conference
                 // the client (lib-jitsi-meet) validates 0..0xFFFFFFFF, so send the low 32 bits. This also matches the
                 // wrapped timestamp the client sees on this source's injected media.
                 long rtpTimestamp = timestamp & 0xFFFFFFFFL;
-                broadcastMessage(new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp), true);
+                broadcastMessage(
+                        new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp, source.getKind()),
+                        true);
             }
             catch (Exception e)
             {
