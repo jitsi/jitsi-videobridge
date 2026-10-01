@@ -56,7 +56,9 @@ class RelayedEndpoint(
     val relay: Relay,
     id: String,
     parentLogger: Logger,
-    diagnosticContext: DiagnosticContext
+    diagnosticContext: DiagnosticContext,
+    /** Whether the remote endpoint is synthetic (e.g. a voice agent), as signaled with its relay create. */
+    override val synthetic: Boolean = false
 ) : AbstractEndpoint(conference, id, parentLogger), Relay.IncomingRelayPacketHandler {
     override var audioSources: List<AudioSourceDesc> = listOf()
         set(value) {

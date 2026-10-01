@@ -30,6 +30,7 @@ import org.jitsi.videobridge.dcsctp.DcSctpTransport
 import org.jitsi.videobridge.relay.AudioSourceDesc
 import org.jitsi.videobridge.relay.Relay
 import org.jitsi.videobridge.relay.RelayConfig
+import org.jitsi.videobridge.relay.SyntheticSourceKind
 import org.jitsi.videobridge.sctp.SctpConfig
 import org.jitsi.videobridge.transport.ice.IceRestartResult
 import org.jitsi.videobridge.util.PayloadTypeUtil.Companion.create
@@ -52,6 +53,12 @@ import org.jitsi.xmpp.util.createError
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
 import org.jivesoftware.smackx.muc.MUCRole
+
+/**
+ * The colibri2 endpoint capability marking a synthetic endpoint: a bridge-side entity that owns synthetic (injected)
+ * sources, e.g. a voice agent, and has no media transport. TODO: move to [Capability] in jitsi-xmpp-extensions.
+ */
+const val CAP_SYNTHETIC_ENDPOINT = "synthetic-endpoint"
 
 class Colibri2ConferenceHandler(
     private val conference: Conference,
@@ -171,10 +178,14 @@ class Colibri2ConferenceHandler(
             if (conference.getLocalEndpoint(c2endpoint.id) != null) {
                 throw IqProcessingException(Condition.conflict, "Endpoint with ID ${c2endpoint.id} already exists")
             }
-            val transport = c2endpoint.transport ?: throw IqProcessingException(
-                Condition.bad_request,
-                "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
-            )
+            val synthetic = c2endpoint.hasCapability(CAP_SYNTHETIC_ENDPOINT)
+            val transport = c2endpoint.transport
+            if (transport == null && !synthetic) {
+                throw IqProcessingException(
+                    Condition.bad_request,
+                    "Attempt to create endpoint ${c2endpoint.id} with no <transport>"
+                )
+            }
             if (!c2endpoint.hasCapability(Capability.CAP_SOURCE_NAME_SUPPORT)) {
                 throw IqProcessingException(Condition.bad_request, "Source name support is mandatory.")
             }
@@ -184,17 +195,18 @@ class Colibri2ConferenceHandler(
             val midDemux = ssrcRewriting && c2endpoint.hasCapability(Capability.CAP_RTP_MID_DEMUX_SUPPORT)
             conference.createLocalEndpoint(
                 c2endpoint.id,
-                transport.iceControlling,
+                transport?.iceControlling ?: false,
                 ssrcRewriting,
                 midDemux,
                 c2endpoint.mucRole == MUCRole.visitor,
                 privateAddresses,
-                c2endpoint.diarize == true
+                c2endpoint.diarize == true,
+                synthetic
             ).apply {
                 c2endpoint.statsId?.let {
                     statsId = it
                 }
-                transport.sctp?.let { sctp ->
+                transport?.sctp?.let { sctp ->
                     if (!SctpConfig.config.enabled) {
                         throw IqProcessingException(
                             Condition.feature_not_implemented,
@@ -284,13 +296,9 @@ class Colibri2ConferenceHandler(
             }
             endpoint.mediaSources = newMediaSources.toTypedArray()
 
-            val audioSources: ArrayList<AudioSourceDesc> = ArrayList()
-            sources.mediaSources.filter { it.type == MediaType.AUDIO }.forEach {
-                it.sources.forEach { s ->
-                    audioSources.add(AudioSourceDesc(s.ssrc, c2endpoint.id, it.id, it.isSynthetic))
-                }
+            endpoint.audioSources = sources.mediaSources.filter { it.type == MediaType.AUDIO }.flatMap {
+                it.toAudioSourceDescs(c2endpoint.id, ownerSynthetic = endpoint.synthetic)
             }
-            endpoint.audioSources = audioSources
         }
 
         c2endpoint.forceMute?.let {
@@ -325,7 +333,9 @@ class Colibri2ConferenceHandler(
         // So a transport is signaled back for a restart that started (the new Agent's rotated credentials) and
         // for one that kept the existing Agent (its unchanged credentials, so the endpoint keeps the connection
         // it has, with no re-invite). Only IceRestartResult.UNAVAILABLE signals nothing.
-        if (c2endpoint.create || iceRestartResult == IceRestartResult.STARTED ||
+        // A synthetic endpoint (e.g. a voice agent) has no media transport, so don't describe one back for it;
+        // real creates always carry a transport, and ICE restarts only happen on real endpoints.
+        if ((c2endpoint.create && c2endpoint.transport != null) || iceRestartResult == IceRestartResult.STARTED ||
             iceRestartResult == IceRestartResult.KEEP_EXISTING
         ) {
             val transBuilder = Transport.getBuilder()
@@ -481,12 +491,14 @@ class Colibri2ConferenceHandler(
             if (endpoint.expire) {
                 relay.removeRemoteEndpoint(endpoint.id)
             } else {
-                val sources = endpoint.parseSourceDescs()
                 if (endpoint.create) {
-                    relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second)?.let {
-                        newEndpoints.add(it)
-                    }
+                    val synthetic = endpoint.hasCapability(CAP_SYNTHETIC_ENDPOINT)
+                    val sources = endpoint.parseSourceDescs(synthetic)
+                    relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second, synthetic)
+                        ?.let { newEndpoints.add(it) }
                 } else {
+                    // The capability is only signaled on create, so an update takes it from the existing endpoint.
+                    val sources = endpoint.parseSourceDescs(relay.getEndpoint(endpoint.id)?.synthetic)
                     relay.updateRemoteEndpoint(endpoint.id, sources.first, sources.second)
                 }
 
@@ -504,7 +516,10 @@ class Colibri2ConferenceHandler(
         return respBuilder.build()
     }
 
-    private fun Colibri2Endpoint.parseSourceDescs(): Pair<List<AudioSourceDesc>, List<MediaSourceDesc>> {
+    /** Parses the sources of this relayed endpoint; [ownerSynthetic] is whether it is synthetic (null if unknown). */
+    private fun Colibri2Endpoint.parseSourceDescs(
+        ownerSynthetic: Boolean?
+    ): Pair<List<AudioSourceDesc>, List<MediaSourceDesc>> {
         val audioSources: MutableList<AudioSourceDesc> = ArrayList()
         val videoSources: MutableList<MediaSourceDesc> = ArrayList()
         sources?.let {
@@ -515,7 +530,7 @@ class Colibri2ConferenceHandler(
                             "Ignoring audio source ${m.id} in endpoint $id of a relay (no SSRCs): ${toXML()}"
                         )
                     } else {
-                        m.sources.forEach { audioSources.add(AudioSourceDesc(it.ssrc, id, m.id, m.isSynthetic)) }
+                        audioSources.addAll(m.toAudioSourceDescs(id, ownerSynthetic))
                     }
                 } else if (m.type == MediaType.VIDEO) {
                     val desc = MediaSourceFactory.createMediaSource(m.sources, m.ssrcGroups, id, m.id, m.isSynthetic)
@@ -528,6 +543,15 @@ class Colibri2ConferenceHandler(
             }
         }
         return Pair(audioSources, videoSources)
+    }
+
+    /**
+     * Describes the SSRCs of this audio [MediaSource] as owned by [owner]. A synthetic source's kind follows from
+     * whether its owner is a synthetic endpoint ([ownerSynthetic]; null when not known, leaving the kind unset).
+     */
+    private fun MediaSource.toAudioSourceDescs(owner: String, ownerSynthetic: Boolean?): List<AudioSourceDesc> {
+        val kind = if (isSynthetic) SyntheticSourceKind.forOwner(ownerSynthetic) else null
+        return sources.map { AudioSourceDesc(it.ssrc, owner, id, isSynthetic, kind) }
     }
 
     /**
