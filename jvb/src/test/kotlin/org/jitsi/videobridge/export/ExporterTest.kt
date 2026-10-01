@@ -23,10 +23,12 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.eclipse.jetty.websocket.api.Session
+import org.jitsi.config.withNewConfig
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.util.TaskPools
 import java.net.URI
@@ -35,8 +37,9 @@ import java.util.concurrent.TimeUnit
 /**
  * Drives [Exporter] directly (no socket). Verifies how inbound mediajson `start`/`stop` events map to the
  * synthetic-source sending-change callback (a start/stop with a talk timestamp fires the callback, start ->
- * sending=true, stop -> sending=false; one without a timestamp, i.e. a plain stream start/stop, does not), and which
- * audio [Exporter.wants] to export given the connect's exports/requests lists.
+ * sending=true, stop -> sending=false; one without a timestamp, i.e. a plain stream start/stop, does not), which
+ * audio [Exporter.wants] to export given the connect's exports/requests lists, and which websocket close codes lead
+ * to a reconnect.
  */
 class ExporterTest : ShouldSpec() {
     private data class Change(val sourceName: String, val sending: Boolean, val timestamp: Long)
@@ -76,7 +79,14 @@ class ExporterTest : ShouldSpec() {
 
     private fun audioPacket(ssrc: Long) = PacketInfo(AudioRtpPacket(ByteArray(1500), 0, 100).apply { this.ssrc = ssrc })
 
+    /** Replace the shared scheduler with a fake, so reconnects are observable as pending jobs and never dial out. */
+    private fun fakeScheduler() = FakeScheduledExecutorService().also { TaskPools.SCHEDULED_POOL = it }
+
+    private fun Exporter.close(code: Int, reason: String) = recorderWebSocket.onWebSocketClose(code, reason)
+
     init {
+        afterSpec { TaskPools.resetScheduledPool() }
+
         context("inbound start/stop dispatch to the sending-change callback") {
             should("fire sending=true for a start carrying a talk timestamp") {
                 val (exporter, changes) = fixture()
@@ -211,6 +221,75 @@ class ExporterTest : ShouldSpec() {
             should("export nothing while not connected") {
                 val (exporter, _) = fixture(sources = sources)
                 exporter.wants(audioPacket(s1)) shouldBe false
+            }
+        }
+
+        context("reconnecting after a websocket close") {
+            should("schedule a reconnect after an abnormal close (1006)") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(requests = listOf("agent-a0"))
+
+                exporter.close(1006, "abnormal closure")
+
+                scheduler.numPendingJobs() shouldBe 1
+                val debugState = exporter.debugState()
+                debugState.path("reconnect_attempts").asInt() shouldBe 1
+                debugState.has("terminal_close") shouldBe false
+            }
+            should("count 1011 as an internal error and still reconnect") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture()
+
+                exporter.close(1011, "internal error")
+
+                scheduler.numPendingJobs() shouldBe 1
+                exporter.debugState().path("websocket_internal_errors").asLong() shouldBe 1
+            }
+            listOf(
+                Exporter.CLOSE_AGENT_ENDED to "agent ended",
+                Exporter.CLOSE_ENDPOINT_UNREACHABLE to "endpoint unreachable: 404"
+            ).forEach { (code, reason) ->
+                should("not reconnect after a terminal close ($code) and record it in debugState") {
+                    val scheduler = fakeScheduler()
+                    val (exporter, _) = fixture(requests = listOf("agent-a0"))
+
+                    exporter.close(code, reason)
+
+                    scheduler.numPendingJobs() shouldBe 0
+                    exporter.isConnected() shouldBe false
+                    val debugState = exporter.debugState()
+                    debugState.path("reconnect_attempts").asInt() shouldBe 0
+                    debugState.path("terminal_close").path("code").asInt() shouldBe code
+                    debugState.path("terminal_close").path("reason").asText() shouldBe reason
+                }
+            }
+            should("stay terminal: a later update or websocket error doesn't reconnect either") {
+                val scheduler = fakeScheduler()
+                val (exporter, _) = fixture(requests = listOf("agent-a0"))
+                exporter.close(Exporter.CLOSE_AGENT_ENDED, "agent ended")
+
+                exporter.update(exports = listOf("ep1-a0"), requests = listOf("agent-a0"))
+                exporter.recorderWebSocket.onWebSocketError(RuntimeException("late error"))
+
+                scheduler.numPendingJobs() shouldBe 0
+                exporter.debugState().path("reconnect_attempts").asInt() shouldBe 0
+            }
+            should("cap reconnects at agent-max-reconnect-attempts only for connects that inject audio") {
+                withNewConfig("videobridge.exporter.agent-max-reconnect-attempts = 2") {
+                    fakeScheduler()
+                    val (agent, _) = fixture(requests = listOf("agent-a0"))
+                    val (transcriber, _) = fixture()
+
+                    repeat(3) {
+                        agent.close(1006, "abnormal closure")
+                        transcriber.close(1006, "abnormal closure")
+                    }
+
+                    agent.debugState().path("reconnect_exhausted").asBoolean() shouldBe true
+                    val transcriberState = transcriber.debugState()
+                    transcriberState.path("reconnect_exhausted").asBoolean() shouldBe false
+                    transcriberState.path("reconnect_attempts").asInt() shouldBe 3
+                }
             }
         }
     }
