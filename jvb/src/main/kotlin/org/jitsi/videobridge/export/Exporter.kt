@@ -75,6 +75,13 @@ internal class Exporter(
     private val reconnectAttempts = AtomicInteger(0)
     private var reconnectFuture: ScheduledFuture<*>? = null
 
+    /** Set by a terminal close from the peer; the exporter then stays closed until its connect is expired. */
+    @Volatile
+    private var terminalClose: TerminalClose? = null
+
+    @Volatile
+    private var reconnectExhausted = false
+
     private var connectionOpenedAtMs: Long = 0
 
     // Ping/pong state
@@ -121,15 +128,20 @@ internal class Exporter(
             }
 
             session = null
-            logger.info("Websocket closed with status $statusCode, reason: $reason")
             stopPing()
             val internalError = statusCode == 1011
             if (internalError) {
                 webSocketInternalErrors.inc()
                 instanceWebSocketInternalErrors.incrementAndGet()
             }
-            if (!isShuttingDown.get()) {
-                scheduleReconnect()
+            if (statusCode == CLOSE_AGENT_ENDED || statusCode == CLOSE_ENDPOINT_UNREACHABLE) {
+                terminalClose = TerminalClose(statusCode, reason)
+                logger.info("Websocket closed with terminal status $statusCode, reason: $reason. Not reconnecting.")
+            } else {
+                logger.info("Websocket closed with status $statusCode, reason: $reason")
+                if (!isShuttingDown.get()) {
+                    scheduleReconnect()
+                }
             }
         }
 
@@ -383,16 +395,19 @@ internal class Exporter(
     }
 
     private fun scheduleReconnect() {
-        if (isShuttingDown.get()) {
+        if (isShuttingDown.get() || terminalClose != null) {
             return
         }
 
         val attempt = reconnectAttempts.incrementAndGet()
-        maxReconnectAttempts?.let {
-            if (attempt > it) {
-                logger.warn("Max reconnection attempts ($it) reached, giving up")
-                return
-            }
+        val maxAttempts = listOfNotNull(
+            maxReconnectAttempts,
+            agentMaxReconnectAttempts.takeIf { requests.isNotEmpty() }
+        ).minOrNull()
+        if (maxAttempts != null && attempt > maxAttempts) {
+            reconnectExhausted = true
+            logger.warn("Max reconnection attempts ($maxAttempts) reached, giving up")
+            return
         }
 
         val delayMs = getDelayMs(attempt)
@@ -454,6 +469,8 @@ internal class Exporter(
         put("is_connected", isConnected())
         put("is_shutting_down", isShuttingDown.get())
         put("reconnect_attempts", reconnectAttempts.get())
+        put("reconnect_exhausted", reconnectExhausted)
+        terminalClose?.let { putObject("terminal_close").put("code", it.code).put("reason", it.reason) }
         put("packets_sent", instancePacketsSent.get())
         put("websocket_failures", instanceWebSocketFailures.get())
         put("websocket_internal_errors", instanceWebSocketInternalErrors.get())
@@ -473,7 +490,15 @@ internal class Exporter(
         }
     }
 
+    private class TerminalClose(val code: Int, val reason: String?)
+
     companion object {
+        /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): the agent sent `end`; do not redial. */
+        const val CLOSE_AGENT_ENDED = 4001
+
+        /** Terminal close code (opus-transcriber-proxy AGENT_PROTOCOL.md): endpoint dial failed; do not redial. */
+        const val CLOSE_ENDPOINT_UNREACHABLE = 4002
+
         private val webSocketClient = WebSocketClient().apply {
             idleTimeout = WebsocketServiceConfig.config.idleTimeout
             start()
@@ -531,6 +556,10 @@ internal class Exporter(
 
         private val maxReconnectAttempts: Int? by optionalconfig {
             "videobridge.exporter.max-reconnect-attempts".from(JitsiConfig.newConfig)
+        }
+
+        private val agentMaxReconnectAttempts: Int by config {
+            "videobridge.exporter.agent-max-reconnect-attempts".from(JitsiConfig.newConfig)
         }
 
         private val baseDelay: Duration by config {
