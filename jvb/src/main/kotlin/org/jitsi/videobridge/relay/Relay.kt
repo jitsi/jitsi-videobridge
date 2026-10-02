@@ -788,6 +788,7 @@ class Relay @JvmOverloads constructor(
             }
         }
         ep?.expire()
+        updateKeyframeModeSources()
     }
 
     private fun getOrCreateRelaySender(endpointId: String): RelayEndpointSender {
@@ -810,6 +811,7 @@ class Relay @JvmOverloads constructor(
             s.setExtmapAllowMixed(extmapAllowMixed)
             s.setFeature(Features.TRANSCEIVER_PCAP_DUMP, transceiver.isFeatureEnabled(Features.TRANSCEIVER_PCAP_DUMP))
             s.setKeyframeCostSupplier(::getKeyframeCost)
+            s.setKeyframeModeDetector(transceiver.keyframeModeDetector)
 
             senders[endpointId] = s
 
@@ -858,6 +860,22 @@ class Relay @JvmOverloads constructor(
     ) {
         ep.audioSources = audioSources.toList()
         ep.mediaSources = videoSources.toTypedArray()
+        updateKeyframeModeSources()
+    }
+
+    /**
+     * Gives the keyframe mode detector every relayed endpoint's video sources. The relay's own transceiver receives
+     * no media, so unlike an endpoint's it does not learn its sources from its receive pipeline. Instead the relayed
+     * endpoints' receivers report to it, and the relay's senders ask it how to limit their requests. This is the
+     * detector's only feeder: the relay's transceiver is never given media sources of its own, which would replace
+     * these.
+     */
+    private fun updateKeyframeModeSources() {
+        /* Published under the lock, so that two concurrent updates can not publish the older set last. */
+        synchronized(endpointsLock) {
+            val sources = relayedEndpoints.values.flatMap { it.mediaSources.asList() }
+            transceiver.keyframeModeDetector.setMediaSources(sources.toTypedArray())
+        }
     }
 
     fun getEndpoint(id: String): RelayedEndpoint? = synchronized(endpointsLock) { relayedEndpoints[id] }
@@ -906,10 +924,8 @@ class Relay @JvmOverloads constructor(
         when (packet) {
             is CompoundRtcpPacket -> packet.packets.forEach { ssrcs.addAll(getRtcpSsrcs(it)) }
 
-            is RtcpFbFirPacket -> ssrcs.add(packet.mediaSenderSsrc)
-
             // TODO: support multiple FIRs in a packet
-            is RtcpFbPacket -> ssrcs.add(packet.mediaSourceSsrc)
+            is RtcpFbPacket -> ssrcs.add(packet.targetMediaSsrc)
 
             is RtcpSrPacket -> packet.reportBlocks.forEach { ssrcs.add(it.ssrc) }
 

@@ -854,8 +854,6 @@ class Endpoint @JvmOverloads constructor(
 
     override fun receivesSsrc(ssrc: Long): Boolean = transceiver.receivesSsrc(ssrc)
 
-    fun doesSsrcRewriting(): Boolean = doSsrcRewriting
-
     /**
      * Returns the mid the bridge stamps on packets forwarded with the given (rewritten) send SSRC, or null if mid
      * demux is not enabled for this endpoint or the SSRC is not a rewritten slot SSRC. Invoked per outgoing packet by
@@ -868,7 +866,43 @@ class Endpoint @JvmOverloads constructor(
         return audioSsrcs.getMidBySsrc(ssrc) ?: videoSsrcs.getMidBySsrc(ssrc)
     }
 
-    fun unmapRtcpFbSsrc(packet: RtcpFbPacket) = videoSsrcs.unmapRtcpFbSsrc(packet)
+    /**
+     * Translates a PLI or FIR received from this endpoint into a request for the sender of the source it names.
+     * Undoes this endpoint's SSRC rewriting if it uses it, so that the request names the sender's SSRC. Then
+     * redirects the request to the encoding of the source this endpoint is being sent, see
+     * [retargetKeyframeRequest]. Returns false if the request should be dropped: it names no source this endpoint is
+     * sent, or a source suspended for it.
+     */
+    fun translateKeyframeRequest(packet: RtcpFbPacket): Boolean {
+        if (doSsrcRewriting && videoSsrcs.unmapRtcpFbSsrc(packet) == null) {
+            VideobridgeMetrics.keyframeRequestsDroppedUnknownSsrc.inc()
+            logger.debug { "Dropping keyframe request for unknown send ssrc ${packet.targetMediaSsrc}" }
+            return false
+        }
+        return retargetKeyframeRequest(packet)
+    }
+
+    /**
+     * Redirects a PLI or FIR received from this endpoint to the SSRC of the encoding this endpoint is being sent, see
+     * [BitrateController.retargetKeyframeRequest]. The request names an SSRC of a source, after any SSRC rewriting
+     * has been undone. Returns false if the request should be dropped instead, because the source is currently
+     * suspended for this endpoint.
+     */
+    private fun retargetKeyframeRequest(packet: RtcpFbPacket): Boolean {
+        val sourceSsrc = packet.targetMediaSsrc
+        val requestSsrc = bitrateController.retargetKeyframeRequest(sourceSsrc)
+        if (requestSsrc == null) {
+            VideobridgeMetrics.keyframeRequestsDroppedSuspended.inc()
+            logger.debug { "Dropping keyframe request for suspended source ssrc $sourceSsrc" }
+            return false
+        }
+        if (requestSsrc != sourceSsrc) {
+            VideobridgeMetrics.keyframeRequestsRetargeted.inc()
+            logger.debug { "Redirecting keyframe request for source ssrc $sourceSsrc to encoding ssrc $requestSsrc" }
+            packet.targetMediaSsrc = requestSsrc
+        }
+        return true
+    }
 
     override val ssrcs
         get() = HashSet(transceiver.receiveSsrcs)

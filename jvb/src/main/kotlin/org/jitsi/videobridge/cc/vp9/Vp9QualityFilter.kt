@@ -28,7 +28,9 @@ import org.jitsi.nlj.RtpLayerDesc.Companion.indexString
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.createChildLogger
-import java.time.Duration
+import org.jitsi.videobridge.cc.EncodingLiveness
+import org.jitsi.videobridge.cc.EncodingSwitchPolicy
+import org.jitsi.videobridge.cc.KeyframeRequestPacer
 import java.time.Instant
 
 /**
@@ -43,18 +45,36 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      */
     private val logger: Logger = createChildLogger(parentLogger)
 
-    /**
-     * Holds the arrival time of the most recent keyframe group.
-     * Reading/writing of this field is synchronized on this instance.
-     */
-    private var mostRecentKeyframeGroupArrivalTime: Instant? = null
+    /** Paces keyframe requests around the arrival of keyframe groups. Used under this instance's lock. */
+    private val pacer = KeyframeRequestPacer()
 
     /**
      * A boolean flag that indicates whether a keyframe is needed, due to an
      * encoding or (in some cases) a spatial layer switch.
      */
-    var needsKeyframe = false
-        private set
+    private var keyframeNeeded = false
+
+    /**
+     * Whether a keyframe is needed, due to an encoding or (in some cases) a spatial layer switch. Read, like
+     * [shouldRequestKeyframe], on the thread which has just called [acceptFrame], so neither takes the lock it does.
+     */
+    val needsKeyframe: Boolean
+        get() = keyframeNeeded
+
+    /**
+     * Whether a keyframe should be requested now: a keyframe is needed, and no keyframe has arrived within
+     * [KeyframeRequestPacer.MIN_KEY_FRAME_WAIT]. Within that time, the keyframe being waited for may still be on its
+     * way from a sender which generates keyframes on every encoding at once.
+     */
+    val shouldRequestKeyframe: Boolean
+        get() = pacer.shouldRequest(keyframeNeeded)
+
+    /**
+     * Whether a keyframe may be requested now, for a need which is not this filter's own: no group is still
+     * arriving.
+     */
+    val mayRequestKeyframe: Boolean
+        get() = pacer.mayRequest()
 
     /**
      * The encoding ID that this instance tries to achieve. Upon
@@ -102,10 +122,11 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         frame: Vp9Frame,
         incomingEncoding: Int,
         externalTargetIndex: Int,
-        receivedTime: Instant?
+        receivedTime: Instant?,
+        liveness: EncodingLiveness
     ): AcceptResult {
         val prevIndex = currentIndex
-        val accept = doAcceptFrame(frame, incomingEncoding, externalTargetIndex, receivedTime)
+        val accept = doAcceptFrame(frame, incomingEncoding, externalTargetIndex, receivedTime, liveness)
         val mark = if (frame.isInterPicturePredicted) {
             frame.spatialLayer.coerceAtLeast(0) == getSidFromIndex(currentIndex)
         } else {
@@ -123,19 +144,23 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
         frame: Vp9Frame,
         incomingEncoding: Int,
         externalTargetIndex: Int,
-        receivedTime: Instant?
+        receivedTime: Instant?,
+        liveness: EncodingLiveness
     ): Boolean {
         val externalTargetEncoding = getEidFromIndex(externalTargetIndex)
         val currentEncoding = getEidFromIndex(currentIndex)
 
+        pacer.onFrame(receivedTime)
+
         if (externalTargetEncoding != internalTargetEncoding) {
             // The externalEncodingIdTarget has changed since accept last
-            // ran; perhaps we should request a keyframe.
+            // ran; perhaps we should request a keyframe. Not if the encoding we're forwarding is the best encoding
+            // at or below the new target that is actually being sent. A request would only refresh it, and when the
+            // sender turns the target encoding on, it sends a keyframe on its own.
             internalTargetEncoding = externalTargetEncoding
-            if (externalTargetEncoding != SUSPENDED_ENCODING_ID &&
-                externalTargetEncoding != currentEncoding
-            ) {
-                needsKeyframe = true
+            if (externalTargetEncoding != SUSPENDED_ENCODING_ID) {
+                keyframeNeeded =
+                    EncodingSwitchPolicy.needsKeyframeAfter(currentEncoding, externalTargetEncoding, liveness)
             }
         }
         if (externalTargetEncoding == SUSPENDED_ENCODING_ID) {
@@ -150,7 +175,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             logger.debug {
                 "Quality filter got keyframe for stream ${frame.ssrc}"
             }
-            val accept = acceptKeyframe(frame, incomingEncoding, receivedTime)
+            val accept = acceptKeyframe(frame, incomingEncoding, receivedTime, liveness)
             if (accept) {
                 // Keyframes reset layer forwarding, whether or not they're an encoding switch
                 for (i in layers.indices) {
@@ -159,16 +184,25 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             }
             accept
         } else if (currentEncoding != SUSPENDED_ENCODING_ID) {
-            if (isOutOfSwitchingPhase(receivedTime) && isPossibleToSwitch(incomingEncoding)) {
-                // XXX(george) i've noticed some "rogue" base layer keyframes
-                // that trigger this. what happens is the client sends a base
-                // layer key frame, the bridge switches to that layer because
-                // for all it knows it may be the only keyframe sent by the
-                // client engine. then the bridge notices that packets from the
-                // higher quality streams are flowing and execution ends-up
-                // here. it is a mystery why the engine is "leaking" base layer
-                // key frames
-                needsKeyframe = true
+            if (pacer.isOutOfSwitchingPhase(receivedTime) &&
+                EncodingSwitchPolicy.switchPossible(currentEncoding, incomingEncoding, internalTargetEncoding, liveness)
+            ) {
+                // Frames are being sent on an encoding in the target's direction, or the encoding we're forwarding
+                // has stopped. No keyframe has arrived for a while, so (re-)request a keyframe. This is how a switch
+                // completes when the keyframe which would have completed it never arrived. That happens when the
+                // sender generates keyframes on one encoding at a time and the keyframe which arrived was for another
+                // encoding.
+                keyframeNeeded = true
+            } else if (keyframeNeeded &&
+                currentEncoding != internalTargetEncoding &&
+                !EncodingSwitchPolicy.needsKeyframeAfter(currentEncoding, internalTargetEncoding, liveness)
+            ) {
+                // The keyframe we were waiting for, to switch encodings, would no longer change anything. The sender
+                // turned the target encoding off, so the encoding we're forwarding has become the best encoding at or
+                // below the target that is being sent. Stop asking, or the request would only refresh what the
+                // receiver already has. A keyframe needed for a spatial layer switch within the current encoding is
+                // still needed.
+                keyframeNeeded = false
             }
             if (incomingEncoding != currentEncoding) {
                 // for non-keyframes, we can't route anything but the current encoding
@@ -220,7 +254,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
                                 "requesting keyframe"
                         }
                     }
-                    needsKeyframe = true
+                    keyframeNeeded = true
                 }
                 internalTargetSpatialId = externalTargetSpatialId
             }
@@ -283,51 +317,6 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     }
 
     /**
-     * Returns a boolean that indicates whether we are in layer switching phase
-     * or not.
-     *
-     * @param receivedTime the time the latest frame was received
-     * @return false if we're in layer switching phase, true otherwise.
-     */
-    @Synchronized
-    private fun isOutOfSwitchingPhase(receivedTime: Instant?): Boolean {
-        if (receivedTime == null) {
-            return false
-        }
-        if (mostRecentKeyframeGroupArrivalTime == null) {
-            return true
-        }
-        val delta = Duration.between(mostRecentKeyframeGroupArrivalTime, receivedTime)
-        return delta > MIN_KEY_FRAME_WAIT
-    }
-
-    /**
-     * @return true if it looks like we can re-scale (see implementation of
-     * method for specific details).
-     */
-    @Synchronized
-    private fun isPossibleToSwitch(incomingEncoding: Int): Boolean {
-        val currentEncoding = getEidFromIndex(currentIndex)
-
-        if (incomingEncoding == SUSPENDED_ENCODING_ID) {
-            // We failed to resolve the spatial/quality layer of the packet.
-            return false
-        }
-        return when {
-            incomingEncoding > currentEncoding && currentEncoding < internalTargetEncoding ->
-                // It looks like upscaling is possible
-                true
-
-            incomingEncoding < currentEncoding && currentEncoding > internalTargetEncoding ->
-                // It looks like downscaling is possible.
-                true
-
-            else ->
-                false
-        }
-    }
-
-    /**
      * Determines whether to accept or drop a VP9 keyframe. This method updates
      * the encoding id.
      *
@@ -339,7 +328,12 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
      * @return true to accept the VP9 keyframe, otherwise false.
      */
     @Synchronized
-    private fun acceptKeyframe(frame: Vp9Frame, incomingEncoding: Int, receivedTime: Instant?): Boolean {
+    private fun acceptKeyframe(
+        frame: Vp9Frame,
+        incomingEncoding: Int,
+        receivedTime: Instant?,
+        liveness: EncodingLiveness
+    ): Boolean {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
         // stream.
@@ -358,69 +352,33 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             "Received a keyframe of encoding: $incomingEncoding"
         }
         val incomingIndex = RtpLayerDesc.getIndex(incomingEncoding, frame.spatialLayer, frame.temporalLayer)
+        val currentEncoding = getEidFromIndex(currentIndex)
 
-        // The keyframe request has been fulfilled at this point, regardless of
-        // whether we'll be able to achieve the internalEncodingIdTarget.
-        needsKeyframe = false
-        return if (isOutOfSwitchingPhase(receivedTime)) {
-            // During the switching phase we always project the first
-            // keyframe because it may very well be the only one that we
-            // receive (i.e. the endpoint is sending low quality only). Then
-            // we try to approach the target.
-            mostRecentKeyframeGroupArrivalTime = receivedTime
-            logger.debug {
-                "First keyframe in this kf group " +
-                    "currentEncodingId: $incomingEncoding. " +
-                    "Target is $internalTargetEncoding"
-            }
-            if (incomingEncoding <= internalTargetEncoding) {
-                val currentEncoding = getEidFromIndex(currentIndex)
-                // If the target is 180p and the first keyframe of a group of
-                // keyframes is a 720p keyframe we don't project it. If we
-                // receive a 720p keyframe, we know that there MUST be a 180p
-                // keyframe shortly after.
-                if (currentEncoding != incomingEncoding) {
-                    currentIndex = incomingIndex
-                }
-                true
-            } else {
-                false
-            }
-        } else {
-            // We're within the 300ms window since the reception of the
-            // first key frame of a key frame group, let's check whether an
-            // upscale/downscale is possible.
-            val currentEncoding = getEidFromIndex(currentIndex)
-            when {
-                currentEncoding <= incomingEncoding &&
-                    incomingEncoding <= internalTargetEncoding -> {
-                    // upscale or current quality case
-                    if (currentEncoding != incomingEncoding) {
-                        currentIndex = incomingIndex
-                    }
-                    logger.debug {
-                        "Upscaling to encoding $incomingEncoding. " +
-                            "The target is $internalTargetEncoding"
-                    }
-                    true
-                }
+        // Whether or not we take it, hold off requesting another keyframe for a bit. A sender which generates
+        // keyframes on every encoding at once may still be sending the rest of the group.
+        pacer.onKeyframe(receivedTime)
 
-                incomingEncoding <= internalTargetEncoding &&
-                    internalTargetEncoding < currentEncoding -> {
-                    // downscale case
-                    currentIndex = incomingIndex
-                    logger.debug {
-                        "Downscaling to encoding $incomingEncoding. " +
-                            "The target is $internalTargetEncoding"
-                    }
-                    true
+        val accept = EncodingSwitchPolicy.acceptKeyframe(
+            currentEncoding,
+            incomingEncoding,
+            internalTargetEncoding,
+            liveness
+        )
+        if (accept) {
+            if (currentEncoding != incomingEncoding) {
+                logger.debug {
+                    "Switching to encoding $incomingEncoding from $currentEncoding. " +
+                        "The target is $internalTargetEncoding"
                 }
-
-                else -> {
-                    false
-                }
+                currentIndex = incomingIndex
             }
+            // We keep needing a keyframe until we have reached the target, or the highest encoding below it which is
+            // actually being sent. A keyframe on some other encoding, whether a keyframe we took as a step toward the
+            // target or a keyframe we dropped, doesn't fulfill the request.
+            keyframeNeeded =
+                EncodingSwitchPolicy.needsKeyframeAfter(incomingEncoding, internalTargetEncoding, liveness)
         }
+        return accept
     }
 
     /**
@@ -437,7 +395,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             .addField("qf.needsKeyframe", needsKeyframe)
             .addField(
                 "qf.mostRecentKeyframeGroupArrivalTimeMs",
-                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
+                pacer.mostRecentKeyframeGroupArrivalTimeMs
             )
         for (i in layers.indices) {
             pt.addField("qf.layer.$i", layers[i])
@@ -457,7 +415,7 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
             val debugState = JsonNodeFactory.instance.objectNode()
             debugState.put(
                 "mostRecentKeyframeGroupArrivalTimeMs",
-                mostRecentKeyframeGroupArrivalTime?.toEpochMilli() ?: -1
+                pacer.mostRecentKeyframeGroupArrivalTimeMs
             )
             debugState.put("needsKeyframe", needsKeyframe)
             debugState.put("internalTargetEncoding", internalTargetEncoding)
@@ -474,12 +432,6 @@ internal class Vp9QualityFilter(parentLogger: Logger) {
     )
 
     companion object {
-        /**
-         * The default maximum frequency at which the media engine
-         * generates key frame.
-         */
-        private val MIN_KEY_FRAME_WAIT = Duration.ofMillis(300)
-
         /**
          * The maximum possible number of VP9 spatial layers.
          */

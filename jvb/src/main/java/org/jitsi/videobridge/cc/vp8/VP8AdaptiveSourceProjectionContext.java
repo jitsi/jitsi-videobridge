@@ -255,11 +255,12 @@ public class VP8AdaptiveSourceProjectionContext
      *
      * @param packetInfo  the RTP packet to determine whether to project or not.
      * @param targetIndex the target quality index we want to achieve
+     * @param liveness which encodings of the source the sender is currently sending.
      * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public synchronized boolean accept(
-        @NotNull PacketInfo packetInfo, int targetIndex)
+        @NotNull PacketInfo packetInfo, int targetIndex, @NotNull EncodingLiveness liveness)
     {
         if (!(packetInfo.getPacket() instanceof Vp8Packet))
         {
@@ -298,7 +299,7 @@ public class VP8AdaptiveSourceProjectionContext
 
             Instant receivedTime = packetInfo.getReceivedTime();
             boolean accepted = vp8QualityFilter
-                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime);
+                .acceptFrame(frame, incomingEncoding, targetIndex, receivedTime, liveness);
 
             if (accepted)
             {
@@ -603,13 +604,24 @@ public class VP8AdaptiveSourceProjectionContext
     }
 
     @Override
+    public boolean shouldRequestKeyframe()
+    {
+        return vp8QualityFilter.shouldRequestKeyframe()
+            || (needsKeyframeToStart() && vp8QualityFilter.mayRequestKeyframe());
+    }
+
+    @Override
     public boolean needsKeyframe()
     {
-        if (vp8QualityFilter.needsKeyframe())
-        {
-            return true;
-        }
+        return vp8QualityFilter.needsKeyframe() || needsKeyframeToStart();
+    }
 
+    /**
+     * Whether a keyframe is needed for a reason of this context's own, not the quality filter's: nothing has been
+     * sent yet.
+     */
+    private boolean needsKeyframeToStart()
+    {
         if (lastVP8FrameProjection.getVP8Frame() == null)
         {
             /* Never sent anything */

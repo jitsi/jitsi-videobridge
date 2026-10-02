@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.lang.*;
 import java.util.*;
+import java.util.function.*;
 
 /**
  * Filters the packets coming from a specific {@link MediaSourceDesc}
@@ -61,10 +62,50 @@ public class AdaptiveSourceProjection
 
     /**
      * The main SSRC of the source (if simulcast is used, this is the SSRC
-     * of the low-quality layer). We use it as the SSRC of the source projection
-     * and also request keyframes from this SSRC.
+     * of the low-quality layer). We use it as the SSRC of the source projection.
      */
     private final long targetSsrc;
+
+    /**
+     * The source that this instance projects, as most recently given by the allocation. Used to decide which of its
+     * encodings to request keyframes from, so it must be the object the receive pipeline is updating. A source which
+     * is removed and signaled again is a new object, which {@link #setSource} brings in.
+     */
+    private volatile MediaSourceDesc source;
+
+    /**
+     * Which encodings of the source are being sent, judged as of the source's most recent packet, see
+     * {@link #getKeyframeRequestEncoding(int)}. For the packet being processed, that is the packet itself, which the
+     * receive pipeline recorded before it got here. The source and the time are taken once per packet, see
+     * {@link SourceLiveness#snapshot}, since the context may ask several times per packet. It is only used on the
+     * thread which processes the source's packets.
+     */
+    private final SourceLiveness liveness = new SourceLiveness();
+
+    class SourceLiveness implements EncodingLiveness
+    {
+        private MediaSourceDesc sourceCopy;
+        private long nowMs;
+
+        /** Takes the source as it is now, and the time as of which its encodings' liveness is judged. */
+        void snapshot(MediaSourceDesc source)
+        {
+            sourceCopy = source;
+            nowMs = source.getLastPacketReceivedMs();
+        }
+
+        @Override
+        public boolean isLive(int eid)
+        {
+            return sourceCopy.isEncodingLive(eid, nowMs);
+        }
+
+        @Override
+        public boolean hasOutlasted(int eid, int otherEid)
+        {
+            return sourceCopy.hasEncodingOutlasted(eid, otherEid, nowMs);
+        }
+    }
 
     private final DiagnosticContext diagnosticContext;
 
@@ -86,9 +127,10 @@ public class AdaptiveSourceProjection
     private AdaptiveSourceProjectionContext context;
 
     /**
-     * The target quality index for this source projection.
+     * The target quality index for this source projection. Written by the allocator and read on the packet path,
+     * and now also on the RTCP path when a receiver's own keyframe request is redirected, so it is volatile.
      */
-    private int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
+    private volatile int targetIndex = RtpLayerDesc.SUSPENDED_INDEX;
 
     /**
      * The map for persistent states.
@@ -105,11 +147,12 @@ public class AdaptiveSourceProjection
     public AdaptiveSourceProjection(
         @NotNull DiagnosticContext diagnosticContext,
         @NotNull MediaSourceDesc source,
-        Runnable keyframeRequester,
+        LongConsumer keyframeRequester,
         Logger parentLogger
     )
     {
         targetSsrc = source.getPrimarySSRC();
+        this.source = source;
         this.diagnosticContext = diagnosticContext;
         this.logger = parentLogger.createChildLogger(AdaptiveSourceProjection.class.getName(),
             Map.of("targetSsrc", Long.toString(targetSsrc),
@@ -128,9 +171,47 @@ public class AdaptiveSourceProjection
     }
 
     /**
-     * The callback we'll invoke when we want to request a keyframe for a stream.
+     * Sets the source that this instance projects, see {@link #source}.
      */
-    private final Runnable keyframeRequester;
+    public void setSource(@NotNull MediaSourceDesc source)
+    {
+        this.source = source;
+    }
+
+    /**
+     * The encoding liveness this projection gives its context. Exposed for tests.
+     */
+    SourceLiveness getLiveness()
+    {
+        liveness.snapshot(source);
+        return liveness;
+    }
+
+    /**
+     * Gets the target index value for this source projection.
+     */
+    public int getTargetIndex()
+    {
+        return targetIndex;
+    }
+
+    /**
+     * The callback we'll invoke when we want to request a keyframe for a stream, with the SSRC of the encoding to
+     * request it from, see {@link #getKeyframeRequestSsrc()}.
+     */
+    private final LongConsumer keyframeRequester;
+
+    /**
+     * The number of keyframe requests this projection made for which the encoding requested from was below the
+     * target's encoding, because the target's encoding was not being sent. Only written from {@link #accept}.
+     */
+    private volatile int numKeyframeRequestsBelowTarget = 0;
+
+    /**
+     * The number of keyframe requests this projection made while no encoding at or below the target was being sent,
+     * which fall back to the source's primary SSRC. Only written from {@link #accept}.
+     */
+    private volatile int numKeyframeRequestsNoLiveEncoding = 0;
 
     /**
      * When the context most recently started needing a keyframe while not suspended, or -1 if it does not
@@ -178,7 +259,9 @@ public class AdaptiveSourceProjection
         }
 
         int targetIndexCopy = targetIndex;
-        boolean accept = contextCopy.accept(packetInfo, targetIndexCopy);
+        MediaSourceDesc sourceCopy = source;
+        liveness.snapshot(sourceCopy);
+        boolean accept = contextCopy.accept(packetInfo, targetIndexCopy, liveness);
 
         // We check if the context needs a keyframe regardless of whether or not
         // the packet was accepted.
@@ -191,14 +274,85 @@ public class AdaptiveSourceProjection
         // stale layer being sent for a keyframe to fix, and contextCopy.needsKeyframe() is not a reliable signal
         // while suspended (the generic context forces it true for the whole suspension, to be ready to request one
         // the moment it is unsuspended).
-        boolean needsKeyframeNow = contextCopy.needsKeyframe() && targetIndexCopy > RtpLayerDesc.SUSPENDED_INDEX;
-        updateNeedsKeyframeWaitStats(needsKeyframeNow);
-        if (needsKeyframeNow)
+        boolean notSuspended = targetIndexCopy > RtpLayerDesc.SUSPENDED_INDEX;
+        // The wait lasts as long as the context needs a keyframe, whichever way it paces its requests for a keyframe.
+        updateNeedsKeyframeWaitStats(contextCopy.needsKeyframe() && notSuspended);
+        // The context paces its requests around keyframe groups: a sender which generates keyframes on every
+        // encoding at once may still be sending the keyframe being waited for. With one encoding, whatever keyframes
+        // a request yields arrive together, so there is nothing to hold off for: the need is requested at once, as
+        // it was before requests were paced.
+        boolean paced = sourceCopy.getRtpEncodings().length > 1;
+        if (notSuspended && (paced ? contextCopy.shouldRequestKeyframe() : contextCopy.needsKeyframe()))
         {
-            keyframeRequester.run();
+            RtpEncodingDesc encoding = getKeyframeRequestEncoding(targetIndexCopy);
+            if (encoding == null)
+            {
+                numKeyframeRequestsNoLiveEncoding++;
+            }
+            else if (encoding.getEid() != RtpLayerDesc.getEidFromIndex(targetIndexCopy))
+            {
+                numKeyframeRequestsBelowTarget++;
+            }
+            keyframeRequester.accept(keyframeRequestSsrc(encoding));
         }
 
         return accept;
+    }
+
+    /**
+     * The encoding to request a keyframe from so that this projection can reach the target with index
+     * {@code targetIndex}, or null to request from the source's primary SSRC. This is the effective target encoding:
+     * the highest encoding at or below the target's which the sender is currently sending.
+     * <p>
+     * A sender which generates keyframes on every encoding at once answers such a request the same as a request on
+     * any other SSRC. A sender which generates a keyframe only on the requested encoding, as libwebrtc does with the
+     * WebRTC-Video-PerSsrcKeyframes field trial, needs the request on the right encoding. Otherwise it would produce
+     * a keyframe only on the lowest encoding, which could never complete a switch upwards. An encoding the sender
+     * has turned off ignores requests entirely, which is why the target is resolved against what is actually live.
+     * If nothing at or below the target is live, the source's primary SSRC is requested, as it was before liveness
+     * was tracked.
+     * <p>
+     * Liveness is judged as of the source's most recent packet, not the wall clock. The state compares against when
+     * the source's packets were received. A delay between their receipt and this call, in the receive pipeline or in
+     * a receiver, would otherwise make every encoding look dead. And while nothing at all is heard from the sender,
+     * the last known state is kept.
+     */
+    private @Nullable RtpEncodingDesc getKeyframeRequestEncoding(int targetIndex)
+    {
+        MediaSourceDesc sourceCopy = source;
+        return sourceCopy.getEffectiveTargetEncoding(targetIndex, sourceCopy.getLastPacketReceivedMs());
+    }
+
+    /**
+     * The SSRC to request a keyframe from so that this projection can reach its target, see
+     * {@link #getKeyframeRequestEncoding(int)}. Has no side effects, so it can be called from any thread, as
+     * it is for a receiver's own keyframe requests.
+     */
+    public long getKeyframeRequestSsrc()
+    {
+        return keyframeRequestSsrc(getKeyframeRequestEncoding(targetIndex));
+    }
+
+    /**
+     * The SSRC to request a keyframe from so that this projection can reach its target, as
+     * {@link #getKeyframeRequestSsrc()}, or null if the source is suspended for the receiver. The target is read once.
+     * Otherwise an allocation which changes it in the meantime could turn a request for a suspended source into a
+     * request for the primary SSRC.
+     */
+    public @Nullable Long getKeyframeRequestSsrcUnlessSuspended()
+    {
+        int targetIndexCopy = targetIndex;
+        if (targetIndexCopy == RtpLayerDesc.SUSPENDED_INDEX)
+        {
+            return null;
+        }
+        return keyframeRequestSsrc(getKeyframeRequestEncoding(targetIndexCopy));
+    }
+
+    /** The SSRC to request a keyframe from for {@code encoding}, or the primary SSRC if there is none live. */
+    private long keyframeRequestSsrc(@Nullable RtpEncodingDesc encoding)
+    {
+        return encoding == null ? targetSsrc : encoding.getPrimarySSRC();
     }
 
     /**
@@ -461,6 +615,8 @@ public class AdaptiveSourceProjection
         debugState.put("totalNeedsKeyframeWaitMs", totalNeedsKeyframeWaitMs);
         debugState.put("maxNeedsKeyframeWaitMs", maxNeedsKeyframeWaitMs);
         debugState.put("numNeedsKeyframeWaitsCompleted", numNeedsKeyframeWaitsCompleted);
+        debugState.put("numKeyframeRequestsBelowTarget", numKeyframeRequestsBelowTarget);
+        debugState.put("numKeyframeRequestsNoLiveEncoding", numKeyframeRequestsNoLiveEncoding);
 
         return debugState;
     }
