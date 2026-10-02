@@ -131,7 +131,8 @@ class VlaReaderNodeTest : ShouldSpec() {
             }
         }
         context("An allocation carried by a packet of another encoding") {
-            packet(3L, 1000, 1000 / 100, 0x21, 0x00, 0x64, 0x32, 0x0A)
+            // RID 2: the packet's stream is the third.
+            packet(3L, 1000, 1000 / 100, -0x5F, 0x00, 0x64, 0x32, 0x0A)
             should("apply to the whole source") {
                 live(1000) shouldBe listOf(true, true, true)
             }
@@ -144,8 +145,9 @@ class VlaReaderNodeTest : ShouldSpec() {
                 live(2100) shouldBe listOf(true, true, false)
             }
             should("be ignored whichever stream carries it, judged by that stream's own frames") {
-                packet(2L, 2050, 30, 0x11, 0x00, 0x64, 0x32)
-                packet(2L, 2100, 25, 0x21, 0x00, 0x64, 0x32, 0x0A)
+                // RID 1: the packets' stream is the second.
+                packet(2L, 2050, 30, 0x51, 0x00, 0x64, 0x32)
+                packet(2L, 2100, 25, 0x61, 0x00, 0x64, 0x32, 0x0A)
                 live(2100) shouldBe listOf(true, true, false)
             }
             should("not be ignored on a late packet of the current frame") {
@@ -181,6 +183,20 @@ class VlaReaderNodeTest : ShouldSpec() {
                 should("leave liveness to the media") {
                     live(1000) shouldBe listOf(false, false, false)
                 }
+            }
+        }
+        context("An allocation listing no layer for the stream carrying it") {
+            // RID 0, three streams with their own bitmasks: stream 0 has no layer, streams 1 and 2 have layer 0.
+            packet(1L, 1000, 1000 / 100, 0x20, 0x01, 0x10, 0x00, 0x64, 0x0A)
+            should("not mark the packet's own encoding as not sent") {
+                live(1000) shouldBe listOf(true, true, true)
+            }
+        }
+        context("An allocation whose RID does not name the packet's encoding") {
+            // RID 1 on a packet of the first encoding.
+            packet(1L, 1000, 1000 / 100, 0x61, 0x00, 0x64, 0x32, 0x0A)
+            should("be ignored") {
+                live(1000) shouldBe listOf(true, false, false)
             }
         }
         context("An empty allocation") {

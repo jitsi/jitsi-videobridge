@@ -81,6 +81,14 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
         private set
 
     /**
+     * When the frame which ended the encoding's most recent pause started, or [NEVER_RECEIVED]. A pause is a gap
+     * between frames longer than [timeoutMs], regardless of the encoding's frame interval; see [hasOutlasted].
+     * Written by the receive pipeline's thread and read by others.
+     */
+    @Volatile
+    private var lastPauseEndMs: Long = NEVER_RECEIVED
+
+    /**
      * Whether the sender's most recent signal said it is not sending the encoding; see [onSignaled]. Cleared by a
      * signal that it is, or by a media packet of the encoding.
      */
@@ -142,7 +150,8 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
      *   from which the stream resumes after its sequence numbers restarted. It also starts the frame in
      *   the estimator, which learns no interval longer than [LEARNABLE_GAP_TIMEOUTS] times [timeoutMs]; see
      *   [FrameIntervalEstimator.startFrame].
-     * - Every packet but a straggler counts toward liveness.
+     * - Every packet newer than all received so far counts toward liveness. A straggler, or a late packet of the
+     *   current frame, does not.
      */
     fun onPacketReceived(nowMs: Long, sequenceNumber: Int, rtpTimestamp: Long) {
         if (rtpTimestamp == NO_TIMESTAMP) {
@@ -168,6 +177,9 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
             if (kind != PacketKind.SAME_FRAME) {
                 if (startsRun(nowMs)) {
                     flowingSinceMs = nowMs
+                }
+                if (frames.msSinceFrameStart(nowMs) > timeoutMs) {
+                    lastPauseEndMs = nowMs
                 }
                 frames.startFrame(
                     nowMs,
@@ -274,7 +286,11 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
             /* Live without any packet, which only the sender's signal can cause: it has not sent anything yet. */
             return false
         }
-        return since <= other.lastPacketReceivedMs || nowMs - since > other.allowedGapMs()
+        /* A slow encoding's run survives a pause shorter than twice its frame interval, such as a whole-source stall
+         * which the other encoding's run did not survive. So the comparison is made from the end of the most recent
+         * gap longer than the timeout, which a stall longer than the other's allowance always is. */
+        val sinceOrPause = maxOf(since, lastPauseEndMs)
+        return sinceOrPause <= other.lastPacketReceivedMs || nowMs - sinceOrPause > other.allowedGapMs()
     }
 
     /**
@@ -297,6 +313,7 @@ class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTim
         it.lastPacketReceivedMs = lastPacketReceivedMs
         it.highestSequenceNumber = highestSequenceNumber
         it.flowingSinceMs = flowingSinceMs
+        it.lastPauseEndMs = lastPauseEndMs
         it.signaledOff = signaledOff
         it.lastSignaledActiveMs = lastSignaledActiveMs
         it.frames = frames.copy()

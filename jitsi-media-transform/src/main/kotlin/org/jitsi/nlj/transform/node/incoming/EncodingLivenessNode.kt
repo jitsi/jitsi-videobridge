@@ -77,7 +77,11 @@ class EncodingLivenessNode(
 
         if (detector != null) {
             val isKeyframe = (packet as? ParsedVideoPacket)?.isKeyframe ?: false
-            if (isKeyframe && lastKeyframeTimestamps[packet.ssrc] != packet.timestamp) {
+            if (isKeyframe &&
+                lastKeyframeTimestamps[packet.ssrc] != packet.timestamp &&
+                /* A late packet of an older keyframe, arriving after a newer frame started, is not a new keyframe. */
+                !encoding.liveness.isOfOlderFrame(packet.sequenceNumber, packet.timestamp)
+            ) {
                 /* The first packet of this keyframe; only it writes the map, on the ingress path. */
                 lastKeyframeTimestamps[packet.ssrc] = packet.timestamp
                 detector.onKeyframeObserved(packet.ssrc, now)

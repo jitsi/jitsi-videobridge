@@ -223,6 +223,11 @@ class KeyframeModeDetector(parentLogger: Logger) {
             if (!observable || !requested.encoding.liveness.isLive(nowMs)) {
                 return
             }
+            /* A source with one encoding has no other encoding to observe, so every observation of it would be
+             * inconclusive. Its mode makes no difference either: the limits and requests are the same in both. */
+            if (source.rtpEncodings.size < 2) {
+                return
+            }
             val pending = state.pending
             if (pending != null) {
                 /* A further request while the first is being answered joins the observation, and its answer is

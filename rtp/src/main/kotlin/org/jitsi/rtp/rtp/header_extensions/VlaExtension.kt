@@ -28,8 +28,7 @@ import org.jitsi.rtp.util.BitReader
 class VlaExtension {
     companion object {
         fun parse(ext: RtpPacket.HeaderExtension): ParsedVla {
-            val empty = ext.dataLengthBytes == 1 && ext.buffer[ext.dataOffset] == 0.toByte()
-            if (empty) {
+            if (isEmpty(ext)) {
                 return emptyList()
             }
 
@@ -102,6 +101,17 @@ class VlaExtension {
 
             return streams
         }
+
+        /** Whether [ext] is the one-byte form of the extension which says that no layer is active. */
+        private fun isEmpty(ext: RtpPacket.HeaderExtension) =
+            ext.dataLengthBytes == 1 && ext.buffer[ext.dataOffset] == 0.toByte()
+
+        /**
+         * The RID field of the allocation in [ext]: the index, among the allocation's streams, of the stream of the
+         * packet carrying it. Null for the empty form, which has no RID field.
+         */
+        fun rid(ext: RtpPacket.HeaderExtension): Int? =
+            if (isEmpty(ext)) null else (ext.buffer[ext.dataOffset].toInt() shr 6) and 0x3
     }
 
     data class ResolutionAndFrameRate(

@@ -30,7 +30,7 @@ class KeyframeRequestPacerTest : ShouldSpec() {
 
     init {
         context("Before any frame") {
-            should("allow a request, so that a needed one is not held off") {
+            should("allow a request, so that a needed request is not held off") {
                 pacer.mayRequest() shouldBe true
                 pacer.shouldRequest(true) shouldBe true
                 pacer.shouldRequest(false) shouldBe false

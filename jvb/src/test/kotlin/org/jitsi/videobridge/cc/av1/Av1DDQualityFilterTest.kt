@@ -552,6 +552,10 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                         result.mark shouldBe true
                         filter.needsKeyframe shouldBe (!sawKeyframe)
                     }
+                    /* Any keyframe of the picture answers the request, taken or not, as before. */
+                    if (f.isKeyframe) {
+                        filter.needsKeyframe shouldBe false
+                    }
                 }
 
                 /* Switch to spatial layer 1.  Need a keyframe. */
@@ -852,13 +856,16 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                 val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
                 start(generator, filter, enc1)
 
-                /* The sender shrinks encoding 1 to a single layer: its keyframe has no decode target 2, which we
-                 * are forwarding. It must still be taken, at what it has, or its successors would be undecodable.
-                 * The allocator, which sees the new layers before the filter does, moves the target to the one
-                 * decode target the encoding has left. */
+                /* A switch down to encoding 0 is pending, during which only the frames the lower decode targets
+                 * depend on are forwarded. The sender shrinks encoding 1 to a single layer: its keyframe has no
+                 * decode target 2, which we are forwarding. It must still be taken, at what it has, or its successors
+                 * would be undecodable; the keyframe of encoding 0 is still awaited. */
+                testGenerator(generator, filter, enc0, numFrames = 30) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId != 2)
+                }
                 generator.shrinkToSingleLayer(1)
                 var sawKeyframe = false
-                testGenerator(generator, filter, Av1DDRtpLayerDesc.getIndex(1, 0), numFrames = 300) { f, result ->
+                testGenerator(generator, filter, enc0, numFrames = 300) { f, result ->
                     if (f.isKeyframe) {
                         sawKeyframe = true
                         f.ssrc shouldBe 1L
@@ -866,7 +873,33 @@ internal class Av1DDQualityFilterTest : ShouldSpec() {
                     result.accept shouldBe (f.ssrc == 1L)
                 }
                 sawKeyframe shouldBe true
-                filter.needsKeyframe shouldBe false
+                filter.needsKeyframe shouldBe true
+            }
+
+            should("switch down within the encoding being forwarded when its decode target is deactivated") {
+                val av1FrameMaps = HashMap<Long, Av1DDFrameMap>()
+                val filter = Av1DDQualityFilter(av1FrameMaps, logger)
+                val generator = PerEncodingKeyframeGenerator(av1FrameMaps)
+                start(generator, filter, enc1)
+
+                /* A switch down to encoding 0 is pending, so the allocation does not move what is forwarded of
+                 * encoding 1, and only the frames the lower decode targets depend on are forwarded. The sender
+                 * deactivates decode target 2 of encoding 1. The decode targets are temporal layers, so the switch
+                 * down to decode target 1 needs no keyframe: those frames keep flowing, and the keyframe of encoding 0
+                 * is still awaited. */
+                testGenerator(generator, filter, enc0, numFrames = 30) { f, result ->
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId != 2)
+                }
+                generator.setActiveDecodeTargets(1, 0b011)
+                var switched = false
+                testGenerator(generator, filter, enc0, numFrames = 60) { f, result ->
+                    if (result.accept) switched = true
+                    // Forwarded at decode target 1 once a frame it depends on arrives; of decode target 1, only the
+                    // base temporal layer is forwarded while the switch down is pending.
+                    result.accept shouldBe (f.ssrc == 1L && f.frameInfo!!.temporalId == 0)
+                }
+                switched shouldBe true
+                filter.needsKeyframe shouldBe true
             }
 
             should("forward a refresh keyframe at an active decode target while a switch down is pending") {

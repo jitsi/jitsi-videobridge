@@ -41,9 +41,15 @@ class EncodingLivenessNodeTest : ShouldSpec() {
     /** Packets are sent in order; the liveness trackers tell frames apart by sequence number. */
     private var nextSequenceNumber = 0
 
-    private fun send(ssrc: Long, timestamp: Long, isKeyframe: Boolean = false) {
+    private fun send(ssrc: Long, timestamp: Long, isKeyframe: Boolean = false): Int {
+        val sequenceNumber = nextSequenceNumber++
+        sendWithSequenceNumber(ssrc, timestamp, sequenceNumber, isKeyframe)
+        return sequenceNumber
+    }
+
+    private fun sendWithSequenceNumber(ssrc: Long, timestamp: Long, sequenceNumber: Int, isKeyframe: Boolean) {
         val packet = FakeLivenessPacket(ssrc, timestamp, isKeyframe)
-        packet.sequenceNumber = nextSequenceNumber++
+        packet.sequenceNumber = sequenceNumber
         node.processPacket(PacketInfo(packet))
     }
 
@@ -81,6 +87,29 @@ class EncodingLivenessNodeTest : ShouldSpec() {
                     clock.elapse(2.secs)
                     source.isEncodingLive(0, clock.millis()) shouldBe false
                 }
+            }
+        }
+
+        context("a late packet of an older keyframe") {
+            val detector = KeyframeModeDetector(StdoutLogger()).also { it.setMediaSources(arrayOf(source)) }
+            node.setKeyframeModeDetector(detector)
+            send(lowSsrc, 1000)
+            val olderKeyframeSeq = send(highSsrc, 1000, isKeyframe = true)
+            clock.elapse(33.ms)
+            send(highSsrc, 4000, isKeyframe = true)
+            clock.elapse(33.ms)
+            detector.onKeyframeRequested(highSsrc, clock.millis())
+            clock.elapse(20.ms)
+            // A retransmitted packet of the older keyframe arrives after the request, then the other encoding sends.
+            sendWithSequenceNumber(highSsrc, 1000, olderKeyframeSeq, isKeyframe = true)
+            clock.elapse(100.ms)
+            send(lowSsrc, 7000)
+            clock.elapse(2.secs)
+            should("not be reported to the detector as a keyframe") {
+                send(lowSsrc, 9000)
+                val stats = detector.debugState()["source_$lowSsrc"]
+                stats["num_unanswered"].asInt() shouldBe 1
+                stats["num_per_encoding"].asInt() shouldBe 0
             }
         }
 

@@ -243,6 +243,30 @@ class EncodingLivenessTrackerTest : ShouldSpec() {
                 }
                 other.hasOutlasted(fast, t) shouldBe true
             }
+            should("not take a slow encoding's unbroken run for outlasting a whole-source stall") {
+                // A desktop source: a slow encoding at about 2.7 s between frames, whose runs survive gaps up to
+                // twice that, and a fast one at 30 fps.
+                val slow = EncodingLivenessTracker(3000)
+                val fastDesktop = EncodingLivenessTracker(3000)
+                var t = 900000L
+                for (frame in 0..9) {
+                    for (i in 0 until 83) {
+                        t += 33
+                        fastDesktop.onPacketReceived(t, frame * 83 + i, (frame * 83 + i) * 3000L)
+                    }
+                    slow.onPacketReceived(t, frame, frame * 90_000L)
+                }
+                // The whole source stalls for 3.5 s, then the slow encoding resumes first. Its run was not broken,
+                // but it has not outlasted the fast encoding, which is given as long to resume as it may go without
+                // a packet.
+                t += 3500
+                slow.onPacketReceived(t, 10, 10 * 90_000L)
+                fastDesktop.isLive(t) shouldBe false
+                slow.hasOutlasted(fastDesktop, t) shouldBe false
+                t += 3100
+                slow.isLive(t) shouldBe true
+                slow.hasOutlasted(fastDesktop, t) shouldBe true
+            }
             should("count frames by sequence number, so that reordered frames are frames in the order sent") {
                 var t = 700000L
                 for (frame in 500..529) {

@@ -101,9 +101,20 @@ class VlaReaderNode(
                  * sender which puts it on a packet is sending that packet's stream, so the allocation is not
                  * believed. */
                 if (trustSignaling && sourceDesc != null && vla.isNotEmpty()) {
+                    /* The allocation lists the sender's streams in its own order, which the bridge takes to be the
+                     * order of the source's encodings. The RID field says which stream the packet carrying the
+                     * allocation belongs to, so an allocation whose RID does not name this packet's encoding is in
+                     * another order, and says nothing reliable about which encoding is which. */
+                    val rid = VlaExtension.rid(ext)
+                    if (rid != encoding.eid) {
+                        logger.cdebug { "Ignoring a VLA with RID $rid on a packet of encoding ${encoding.eid}" }
+                        return
+                    }
                     val nowMs = clock.millis()
                     sourceDesc.rtpEncodings.forEachIndexed { streamIdx, rtpEncoding ->
-                        val active = vla.getOrNull(streamIdx)?.spatialLayers?.isNotEmpty() == true
+                        /* The packet shows that its own encoding is being sent, whatever the allocation says of it. */
+                        val active = rtpEncoding === encoding ||
+                            vla.getOrNull(streamIdx)?.spatialLayers?.isNotEmpty() == true
                         rtpEncoding.liveness.onSignaled(active, nowMs)
                     }
                 }

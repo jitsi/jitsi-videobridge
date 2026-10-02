@@ -385,6 +385,22 @@ class KeyframeModeDetectorTest : ShouldSpec() {
             }
         }
 
+        context("a request for a source with one encoding") {
+            val other = MediaSourceDesc(
+                arrayOf(RtpEncodingDesc(11L, arrayOf<RtpLayerDesc>(VpxRtpLayerDesc(0, 0, -1, 180, 30.0)))),
+                "owner",
+                "other"
+            )
+            detector.setMediaSources(arrayOf(source, other))
+            other.rtpEncodings[0].liveness.onPacketReceived(0)
+            detector.onKeyframeRequested(11L, 0)
+            should("open no observation, since no other encoding could be evidence") {
+                detector.debugState()["open_observations"].asInt() shouldBe 0
+                detector.limiterKeys(11L) shouldContainExactly listOf(11L)
+                detector.requestSsrcsForSource(11L, 0) shouldContainExactly listOf(11L)
+            }
+        }
+
         context("a companion keyframe followed by a request for its encoding within the observation") {
             observe(0, 3L, mapOf(1L to 100L, 2L to 105L, 3L to 110L))
             // A set of requests for every encoding, which observes nothing, but is remembered as requests.
@@ -422,7 +438,7 @@ class KeyframeModeDetectorTest : ShouldSpec() {
             }
         }
 
-        context("requests for every live encoding at once, as sent ahead of a dominant speaker change") {
+        context("three requests covering every live encoding, joining one observation") {
             live(0, 1L, 2L, 3L)
             listOf(1L, 2L, 3L).forEach { detector.onKeyframeRequested(it, 0) }
             listOf(1L, 2L, 3L).forEach { detector.onKeyframeObserved(it, 100) }
@@ -443,7 +459,7 @@ class KeyframeModeDetectorTest : ShouldSpec() {
                 s["num_inconclusive"].asInt() shouldBe 1
                 s["num_per_encoding"].asInt() shouldBe 0
             }
-            context("except one which kept sending") {
+            context("except an encoding which kept sending") {
                 // Close the observation above first, so that only the observation below is evaluated.
                 stats(response + 1)["num_inconclusive"].asInt() shouldBe 1
                 live(5000, 1L, 2L, 3L)

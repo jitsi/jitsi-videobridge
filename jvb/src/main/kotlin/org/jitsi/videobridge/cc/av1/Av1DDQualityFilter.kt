@@ -221,27 +221,51 @@ internal class Av1DDQualityFilter(
                 return@doAcceptFrame false
             }
             var currentDt = getDtFromIndex(currentIndex)
-            val externalTargetDt = if (currentEncoding == externalTargetEncoding) {
+            var externalTargetDt = if (currentEncoding == externalTargetEncoding) {
                 getDtFromIndex(externalTargetIndex)
             } else {
                 currentDt
             }
 
-            if (
-                frame.activeDecodeTargets != null &&
-                !frame.activeDecodeTargets.containsDecodeTarget(externalTargetDt)
-            ) {
-                /* This shouldn't happen. The dependency descriptor is taken as accurate: a sender announces every
-                 * change to its active decode targets, the parser then rebuilds the layers from the active ones and
-                 * sets layeringChanged, and the allocation is updated on that packet before this filter sees it. So
-                 * the target is never a decode target the frame says is inactive, and no fallback is attempted. The
-                 * exception is a reordered packet still carrying the bitmask from before a change, whose frame is
-                 * stale anyway. */
-                logger.warn {
-                    "External target DT $externalTargetDt not present in current decode targets 0x" +
-                        Integer.toHexString(frame.activeDecodeTargets) + " for frame $frame."
+            val activeDts = frame.activeDecodeTargets
+            if (activeDts != null && !activeDts.containsDecodeTarget(externalTargetDt)) {
+                if (currentEncoding != externalTargetEncoding) {
+                    /* A switch to another encoding is pending, and meanwhile the sender has deactivated the decode
+                     * target being forwarded. The allocation, which follows the layering change, moves only the
+                     * target, so nothing else moves what is forwarded of this encoding. Switch down within it to the
+                     * highest active decode target below the one forwarded, if the structure allows that without a
+                     * keyframe, as it does between temporal layers and between spatial layers which predict from
+                     * each other. The receiver already has every frame of the lower decode target. Otherwise nothing
+                     * of this encoding can be forwarded until the pending switch completes. */
+                    val fallbackDt = frameInfo.dtisPresent
+                        .filter { it < currentDt && activeDts.containsDecodeTarget(it) }
+                        .maxOrNull()
+                    val canSwitch = fallbackDt != null &&
+                        frame.structure?.canSwitchWithoutKeyframe(currentDt, fallbackDt) == true
+                    /* The switch is made on a frame which is forwarded at the new decode target, by the rule at the
+                     * end; a frame which is not is dropped, and the next frame which is makes the switch. */
+                    val switchingDown = currentEncoding > externalTargetEncoding
+                    if (!canSwitch || !forwardedAt(frameInfo.dti.getOrNull(fallbackDt), switchingDown)) {
+                        logger.debug { "Forwarded DT $currentDt is not active, nothing to forward: $frame" }
+                        return false
+                    }
+                    logger.debug { "Forwarded DT $currentDt is not active, switching to $fallbackDt: $frame" }
+                    currentDt = fallbackDt
+                    currentIndex = getIndex(currentEncoding, fallbackDt)
+                    externalTargetDt = fallbackDt
+                } else {
+                    /* This shouldn't happen. The dependency descriptor is taken as accurate: a sender announces every
+                     * change to its active decode targets, the parser then rebuilds the layers from the active ones
+                     * and sets layeringChanged, and the allocation is updated on that packet before this filter sees
+                     * it. So the target is never a decode target the frame says is inactive, and no fallback is
+                     * attempted. The exception is a reordered packet still carrying the bitmask from before a change,
+                     * whose frame is stale anyway. */
+                    logger.warn {
+                        "External target DT $externalTargetDt not present in current decode targets 0x" +
+                            Integer.toHexString(activeDts) + " for frame $frame."
+                    }
+                    return false
                 }
-                return false
             }
 
             if (currentDt != externalTargetDt) {
@@ -267,12 +291,7 @@ internal class Av1DDQualityFilter(
             }
 
             /* The structure may have shrunk below the decode target being forwarded, in which case nothing is. */
-            val currentFrameDti = frameInfo.dti.getOrNull(currentDt) ?: DTI.NOT_PRESENT
-            if (currentEncoding > externalTargetEncoding) {
-                (currentFrameDti == DTI.SWITCH || currentFrameDti == DTI.REQUIRED)
-            } else {
-                (currentFrameDti != DTI.NOT_PRESENT)
-            }
+            forwardedAt(frameInfo.dti.getOrNull(currentDt), currentEncoding > externalTargetEncoding)
         } else {
             // In this branch we're not processing a keyframe and the
             // currentEncoding is in suspended state, which means we need
@@ -282,6 +301,17 @@ internal class Av1DDQualityFilter(
             // internal target encoding was first moved off SUSPENDED_ENCODING.
             false
         }
+    }
+
+    /**
+     * Whether a frame whose indication for the decode target being forwarded is [dti], or null if the structure lacks
+     * that decode target, is forwarded. While [switchingDown] to a lower encoding, only the frames the lower decode
+     * targets depend on are, so that the receiver is not sent more than it is about to be allocated.
+     */
+    private fun forwardedAt(dti: DTI?, switchingDown: Boolean): Boolean = if (switchingDown) {
+        dti == DTI.SWITCH || dti == DTI.REQUIRED
+    } else {
+        dti != null && dti != DTI.NOT_PRESENT
     }
 
     /**
@@ -361,6 +391,12 @@ internal class Av1DDQualityFilter(
         val wouldSwitch =
             EncodingSwitchPolicy.acceptKeyframe(currentEncoding, incomingEncoding, internalTargetEncoding, liveness)
         val accept = acceptIfSwitched && wouldSwitch
+        if (!acceptIfSwitched && incomingEncoding == externalTargetEncoding) {
+            /* A keyframe of the target encoding which is not part of the target decode target. The keyframe which
+             * is follows in the same picture, so as far as this filter can tell the request has been answered, as
+             * before. The target encoding's frames re-arm the need if that keyframe does not come. */
+            keyframeNeeded = false
+        }
         if (accept && indexIfSwitched != null) {
             if (currentEncoding != incomingEncoding) {
                 logger.debug {
@@ -373,10 +409,7 @@ internal class Av1DDQualityFilter(
             // actually being sent. A keyframe on some other encoding, whether a keyframe we took as a step toward the
             // target or a keyframe we dropped, doesn't fulfill the request.
             keyframeNeeded =
-                EncodingSwitchPolicy.needsKeyframeAfter(incomingEncoding, internalTargetEncoding, liveness) ||
-                /* Taken at another decode target than the target's: a keyframe for that decode target is still
-                 * needed. */
-                (incomingEncoding == internalTargetEncoding && indexIfSwitched != externalTargetIndex)
+                EncodingSwitchPolicy.needsKeyframeAfter(incomingEncoding, internalTargetEncoding, liveness)
         }
         return accept
     }

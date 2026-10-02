@@ -78,11 +78,13 @@ class EncodingSwitchPolicyTest : ShouldSpec() {
                     acceptKeyframe(2, 1, 2, live(0, 1)) shouldBe true
                     acceptKeyframe(2, 1, 0, live(0, 1)) shouldBe false
                 }
-                should("not take one below the effective target when the current one has stopped, a second switch") {
+                should(
+                    "not take a keyframe below the effective target when the current encoding stopped, a second switch"
+                ) {
                     acceptKeyframe(2, 0, 2, live(0, 1)) shouldBe false
                     acceptKeyframe(2, 0, 2, live(0)) shouldBe true
                 }
-                should("not take it when the whole source has just resumed, since the current one is about to") {
+                should("not take it when the whole source has just resumed, since the current encoding is about to") {
                     val resumed = object : EncodingLiveness {
                         override fun isLive(eid: Int) = eid == 0
                         override fun hasOutlasted(eid: Int, otherEid: Int) = false
@@ -147,7 +149,7 @@ class EncodingSwitchPolicyTest : ShouldSpec() {
                 switchPossible(1, 2, 1, live(0, 2)) shouldBe false
                 switchPossible(0, 2, 0, live(2)) shouldBe false
             }
-            should("not on the frames after the whole source resumes, until the current one has had time to") {
+            should("not on the frames after the whole source resumes, until the current encoding has had time to") {
                 switchPossible(1, 0, 1, resumed(0)) shouldBe false
                 switchPossible(2, 0, 2, resumed(0, 1)) shouldBe false
             }

@@ -386,7 +386,7 @@ class KeyframeRequester @JvmOverloads constructor(
 
     /**
      * Requests a keyframe meant for every receiver of the source with [sourceSsrc], or of the endpoint's first video
-     * source if null, as ahead of a dominant speaker change. It goes to whichever of the source's encodings the
+     * source if null, as is done ahead of a dominant speaker change. It goes to whichever of the source's encodings the
      * sender needs to be asked for individually; see [KeyframeModeDetector.requestSsrcsForSource].
      */
     fun requestKeyframeForSource(requesterID: String?, sourceSsrc: Long?) {
@@ -405,7 +405,8 @@ class KeyframeRequester @JvmOverloads constructor(
     /**
      * Sends one request per SSRC of [ssrcs] which passes the limits, counting the call as one API request. A set of
      * requests for every encoding of a source gives the mode detector no evidence, so it is told not to observe the
-     * set.
+     * set. The SSRCs are primary SSRCs of encodings: the bridge never requests a keyframe on an RTX SSRC, and the
+     * request is sent naming the SSRC as given, while the limits and the detector work by the encoding's primary.
      */
     private fun requestKeyframes(requesterID: String?, ssrcs: List<Long>, now: Instant) {
         numApiRequests++
