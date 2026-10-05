@@ -20,7 +20,9 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.videobridge.util.TaskPools
 import java.net.URI
+import java.util.concurrent.TimeUnit
 
 /**
  * Drives [Exporter.handleIncomingMessage] directly (no socket) to verify how inbound mediajson `start`/`stop`
@@ -85,6 +87,49 @@ class ExporterTest : ShouldSpec() {
                     """{"event":"stop","sequenceNumber":4,"stop":{"tag":"55555555-a0.hi"}}"""
                 )
                 changes shouldBe emptyList()
+            }
+        }
+
+        context("ping/pong handling") {
+            should("cancel pending ping timeout when matching pong is received") {
+                val (exporter, _) = fixture()
+                val future = TaskPools.SCHEDULED_POOL.schedule({ }, 10, TimeUnit.SECONDS)
+                exporter.lastPingSentId.set(10)
+                exporter.pingTimeoutFuture = future
+
+                exporter.handleIncomingMessage("""{"event":"pong","id":10}""")
+
+                future.isCancelled shouldBe true
+                exporter.pingTimeoutFuture shouldBe null
+                (exporter.lastPongReceivedMs.get() > 0) shouldBe true
+            }
+
+            should("ignore outdated pong with lower id") {
+                val (exporter, _) = fixture()
+                val future = TaskPools.SCHEDULED_POOL.schedule({ }, 10, TimeUnit.SECONDS)
+                exporter.lastPingSentId.set(10)
+                exporter.pingTimeoutFuture = future
+
+                exporter.handleIncomingMessage("""{"event":"pong","id":9}""")
+
+                future.isCancelled shouldBe false
+                exporter.pingTimeoutFuture shouldBe future
+                exporter.lastPongReceivedMs.get() shouldBe 0L
+                future.cancel(false)
+            }
+
+            should("ignore pong with higher id") {
+                val (exporter, _) = fixture()
+                val future = TaskPools.SCHEDULED_POOL.schedule({ }, 10, TimeUnit.SECONDS)
+                exporter.lastPingSentId.set(10)
+                exporter.pingTimeoutFuture = future
+
+                exporter.handleIncomingMessage("""{"event":"pong","id":11}""")
+
+                future.isCancelled shouldBe false
+                exporter.pingTimeoutFuture shouldBe future
+                exporter.lastPongReceivedMs.get() shouldBe 0L
+                future.cancel(false)
             }
         }
     }
