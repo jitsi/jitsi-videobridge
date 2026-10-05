@@ -1087,7 +1087,7 @@ public class Conference
         });
         audioSubscriptionManager.removeEndpoint(endpoint.getId());
         audioSubscriptionManager.removeSources(new HashSet<>(endpoint.getAudioSources()));
-        endpointsChanged(removedEndpoint.getVisitor());
+        endpointsChanged(!removedEndpoint.getVisitor());
     }
 
     /**
