@@ -43,6 +43,19 @@ class ConferenceTest : ConfigTest() {
                 }
             }
         }
+        context("An expired non-visitor should be removed from speech activity") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                val leaving = createLocalEndpoint("aaaaaaaa", true, false, false, false, false, false)
+                createLocalEndpoint("bbbbbbbb", true, false, false, false, false, false)
+                // A visitor joining does not refresh speech activity, so it cannot mask the bug.
+                createLocalEndpoint("cccccccc", true, false, false, true, false, false)
+                speechActivity.orderedEndpoints.map { it.id }.toSet() shouldBe setOf("aaaaaaaa", "bbbbbbbb")
+
+                leaving.expire()
+
+                speechActivity.orderedEndpoints.map { it.id } shouldBe listOf("bbbbbbbb")
+            }
+        }
         context("Creating relays should work") {
             with(Conference(videobridge, "id", name, null, false)) {
                 hasRelays() shouldBe false
