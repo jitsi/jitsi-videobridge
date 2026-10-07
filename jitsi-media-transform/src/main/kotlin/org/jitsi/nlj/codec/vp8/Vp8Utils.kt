@@ -55,17 +55,21 @@ class Vp8Utils {
             }
         }
 
-        fun getHeightFromKeyFrame(vp8Packet: RtpPacket): Int {
+        fun getHeightFromKeyFrame(vp8Packet: RtpPacket): Int =
+            DePacketizer.VP8KeyframeHeader.getHeight(vp8Packet.buffer, keyframeHeaderOffset(vp8Packet))
+
+        /** The width of the keyframe which [vp8Packet] starts; only meaningful if it starts one. */
+        fun getWidthFromKeyFrame(vp8Packet: RtpPacket): Int =
+            DePacketizer.VP8KeyframeHeader.getWidth(vp8Packet.buffer, keyframeHeaderOffset(vp8Packet))
+
+        private fun keyframeHeaderOffset(vp8Packet: RtpPacket): Int {
             val payloadDescriptorLen =
                 DePacketizer.VP8PayloadDescriptor.getSize(
                     vp8Packet.buffer,
                     vp8Packet.payloadOffset,
                     vp8Packet.payloadLength
                 )
-            return DePacketizer.VP8KeyframeHeader.getHeight(
-                vp8Packet.buffer,
-                vp8Packet.payloadOffset + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN
-            )
+            return vp8Packet.payloadOffset + payloadDescriptorLen + VP8_PAYLOAD_HEADER_LEN
         }
 
         fun getSpatialLayerIndexFromKeyFrame(vp8Packet: RtpPacket): Int {

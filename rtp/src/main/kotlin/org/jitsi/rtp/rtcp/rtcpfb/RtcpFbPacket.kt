@@ -57,6 +57,17 @@ abstract class RtcpFbPacket(
         get() = getMediaSourceSsrc(buffer, offset)
         set(value) = setMediaSourceSsrc(buffer, offset, value)
 
+    /**
+     * The SSRC of the media stream this feedback is about. For most feedback packets this is the media source SSRC
+     * of the header. A FIR leaves that field 0 and names its target in its FCI (RFC 5104), so it overrides this. A
+     * REMB leaves it 0 too and lists its targets in its FCI; nothing reads this property for a REMB.
+     */
+    open var targetMediaSsrc: Long
+        get() = mediaSourceSsrc
+        set(value) {
+            mediaSourceSsrc = value
+        }
+
     companion object {
         val PACKET_TYPES = listOf(TransportLayerRtcpFbPacket.PT, PayloadSpecificRtcpFbPacket.PT)
         const val MEDIA_SOURCE_SSRC_OFFSET = RtcpHeader.SIZE_BYTES

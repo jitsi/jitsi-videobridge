@@ -37,6 +37,7 @@ import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.cc.RtpState
+import org.jitsi.videobridge.cc.accept
 import org.jitsi_modified.impl.neomedia.codec.video.vp9.DePacketizer
 import org.junit.Assert
 import org.junit.Test

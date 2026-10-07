@@ -193,6 +193,27 @@ object VideobridgeMetrics {
     )
 
     @JvmField
+    val keyframeRequestsRetargeted = metricsContainer.registerCounter(
+        "keyframe_requests_retargeted",
+        "Number of PLI/FIR requests from receivers which were redirected to the primary SSRC of the encoding the " +
+            "receiver is being sent, from the source's primary SSRC or from an RTX SSRC."
+    )
+
+    @JvmField
+    val keyframeRequestsDroppedSuspended = metricsContainer.registerCounter(
+        "keyframe_requests_dropped_suspended",
+        "Number of PLI/FIR requests from receivers which were dropped because the source is suspended for the " +
+            "receiver."
+    )
+
+    @JvmField
+    val keyframeRequestsDroppedUnknownSsrc = metricsContainer.registerCounter(
+        "keyframe_requests_dropped_unknown_ssrc",
+        "Number of PLI/FIR requests from receivers with SSRC rewriting which were dropped because they named an " +
+            "SSRC the receiver was not sent."
+    )
+
+    @JvmField
     val keyframesReceived = metricsContainer.registerCounter(
         "keyframes_received",
         "Number of keyframes that were received (updated on endpoint expiration)."

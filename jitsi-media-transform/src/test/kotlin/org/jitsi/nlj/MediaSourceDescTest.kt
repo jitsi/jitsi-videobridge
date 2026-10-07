@@ -78,6 +78,68 @@ class MediaSourceDescTest : ShouldSpec() {
             }
         }
 
+        context("Encoding liveness") {
+            val liveSource = createSource(ssrcs, 1, 3, "Fake owner", "Fake name", VideoType.CAMERA)
+            val topIndex = RtpLayerDesc.getIndex(2, 0, 2)
+            val midIndex = RtpLayerDesc.getIndex(1, 0, 2)
+            should("consider no encoding live before any packet is received") {
+                liveSource.rtpEncodings.forEach {
+                    it.liveness.lastPacketReceivedMs shouldBe EncodingLivenessTracker.NEVER_RECEIVED
+                }
+                liveSource.lastPacketReceivedMs shouldBe EncodingLivenessTracker.NEVER_RECEIVED
+                (0..2).forEach { liveSource.isEncodingLive(it, 1000) shouldBe false }
+                liveSource.getEffectiveTargetEncoding(topIndex, 1000) shouldBe null
+            }
+            context("once packets have been received on some encodings") {
+                liveSource.rtpEncodings[0].liveness.onPacketReceived(1000)
+                liveSource.rtpEncodings[2].liveness.onPacketReceived(1000)
+                should("consider those encodings live") {
+                    liveSource.isEncodingLive(0, 1500) shouldBe true
+                    liveSource.isEncodingLive(1, 1500) shouldBe false
+                    liveSource.isEncodingLive(2, 1500) shouldBe true
+                }
+                should("resolve the effective target to the highest live encoding at or below the target") {
+                    liveSource.getEffectiveTargetEncoding(topIndex, 1500)?.eid shouldBe 2
+                    liveSource.getEffectiveTargetEncoding(midIndex, 1500)?.eid shouldBe 0
+                    liveSource.getEffectiveTargetEncoding(RtpLayerDesc.getIndex(0, 0, 0), 1500)?.eid shouldBe 0
+                }
+                should("resolve a suspended target to no encoding") {
+                    liveSource.getEffectiveTargetEncoding(RtpLayerDesc.SUSPENDED_INDEX, 1500) shouldBe null
+                }
+                should("stop considering an encoding live once the camera timeout has passed") {
+                    liveSource.isEncodingLive(2, 1000 + 1000) shouldBe true
+                    liveSource.isEncodingLive(2, 1000 + 1001) shouldBe false
+                    liveSource.getEffectiveTargetEncoding(topIndex, 1000 + 1001) shouldBe null
+                }
+                should("use the longer timeout for a desktop source") {
+                    liveSource.rtpEncodings.forEach { it.liveness.timeoutMs shouldBe 1000 }
+                    liveSource.videoType = VideoType.DESKTOP
+                    liveSource.rtpEncodings.forEach { it.liveness.timeoutMs shouldBe 3000 }
+                    liveSource.isEncodingLive(2, 1000 + 2999) shouldBe true
+                    liveSource.isEncodingLive(2, 1000 + 3001) shouldBe false
+                    liveSource.videoType = VideoType.CAMERA
+                }
+                should("carry the last packet time over to a copy") {
+                    val copy = liveSource.copy()
+                    copy.rtpEncodings[2].liveness.lastPacketReceivedMs shouldBe 1000
+                    copy.rtpEncodings[1].liveness.lastPacketReceivedMs shouldBe EncodingLivenessTracker.NEVER_RECEIVED
+                }
+            }
+            context("for an encoding which kept flowing while another stopped") {
+                // Without frame tracking: the first packets of encoding 1, then of encoding 0, which keeps flowing.
+                liveSource.rtpEncodings[1].liveness.onPacketReceived(5000)
+                liveSource.rtpEncodings[0].liveness.onPacketReceived(5000)
+                liveSource.rtpEncodings[0].liveness.onPacketReceived(7000)
+                should("tell which outlasted which, through the source") {
+                    liveSource.hasEncodingOutlasted(0, 1, 7000) shouldBe true
+                    liveSource.hasEncodingOutlasted(1, 0, 7000) shouldBe false
+                }
+                should("tell when the most recent packet of any encoding arrived") {
+                    liveSource.lastPacketReceivedMs shouldBe 7000
+                }
+            }
+        }
+
         context("Layer bitrates should be correct") {
             val t = 0L // Doesn't actually matter for fake rate statistics
 

@@ -21,6 +21,7 @@ import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.from
 import org.jitsi.nlj.rtcp.CompoundRtcpParser
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
 import org.jitsi.nlj.rtcp.RembHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
@@ -46,6 +47,7 @@ import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.BitrateCalculator
 import org.jitsi.nlj.transform.node.incoming.DiscardableDiscarder
 import org.jitsi.nlj.transform.node.incoming.DuplicateTermination
+import org.jitsi.nlj.transform.node.incoming.EncodingLivenessNode
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RemoteBandwidthEstimator
@@ -142,6 +144,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         })
     }
     private val toggleablePcapWriter = ToggleablePcapWriter(logger, "$id-rx")
+    private val encodingLivenessNode = EncodingLivenessNode(parentLogger)
     private val videoBitrateCalculator = VideoBitrateCalculator(parentLogger)
     private val audioBitrateCalculator = BitrateCalculator("Audio bitrate calculator")
 
@@ -151,6 +154,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun isReceivingVideo() = videoBitrateCalculator.active
 
     override fun getKeyframeCost(ssrc: Long) = videoBitrateCalculator.getKeyframeCost(ssrc)
+
+    override fun setKeyframeModeDetector(detector: KeyframeModeDetector) {
+        encodingLivenessNode.setKeyframeModeDetector(detector)
+        videoBitrateCalculator.setKeyframeModeDetector(detector)
+    }
 
     override fun addLossListener(lossListener: LossListener) {
         tccGenerator.addLossListener(lossListener)
@@ -252,6 +260,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(paddingOnlyDiscarder)
                                     node(videoParser)
                                     node(VideoQualityLayerLookup(logger))
+                                    node(encodingLivenessNode)
                                     node(videoBitrateCalculator)
                                     node(VlaReaderNode(streamInformationStore, logger))
                                     node(packetHandlerWrapper)

@@ -585,6 +585,14 @@ public class DePacketizer
         // 16 bits      :     (2 bits Vertical Scale << 14) | Height (14 bits)
 
         /**
+         * @return the width of this instance.
+         */
+        public static int getWidth(byte[] buf, int off)
+        {
+            return (((buf[off + 4] & 0xff) << 8) | buf[off + 3] & 0xff) & 0x3fff;
+        }
+
+        /**
          * @return the height of this instance.
          */
         public static int getHeight(byte[] buf, int off)

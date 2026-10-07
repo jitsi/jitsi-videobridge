@@ -19,6 +19,7 @@ package org.jitsi.videobridge.cc.allocation
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.longs.shouldBeWithinPercentageOf
 import io.kotest.matchers.shouldBe
@@ -32,6 +33,7 @@ import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.RtpLayerDesc
 import org.jitsi.nlj.VideoType
 import org.jitsi.nlj.format.RtxPayloadType
+import org.jitsi.nlj.rtp.SsrcAssociationType.RTX
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
@@ -121,6 +123,52 @@ class BitrateControllerTest : ShouldSpec() {
                 val sources = createSources("s6", "s5", "s4", "s3", "s2", "s1")
                 val ordered = prioritize(sources, listOf("s2", "s1", "s5"))
                 ordered.map { it.sourceName } shouldBe listOf("s2", "s1", "s5", "s6", "s4", "s3")
+            }
+        }
+
+        context("Retargeting receivers' keyframe requests") {
+            val aSource = a.mediaSources[0]
+            // RTX SSRCs, which a receiver's request may name too.
+            aSource.rtpEncodings.forEachIndexed { i, encoding -> encoding.addSecondarySsrc(101L + i, RTX) }
+            bc.setEndpointOrdering(a, b, c, d)
+            bc.setStageView("A-v0")
+            bc.bwe = 10.mbps
+            bc.forwardedSourcesHistory.last().event shouldContain "A-v0"
+            // A is on stage at 10 Mbps, so its target is the 720p encoding, SSRC 3.
+            context("for a source whose target encoding is being sent") {
+                aSource.rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                should("name the target encoding") {
+                    bc.bc.retargetKeyframeRequest(1L) shouldBe 3L
+                }
+                should("name the target encoding for a request naming an RTX SSRC") {
+                    bc.bc.retargetKeyframeRequest(101L) shouldBe 3L
+                }
+            }
+            context("for a source whose target encoding is not being sent") {
+                aSource.rtpEncodings[0].liveness.onPacketReceived(clock.millis())
+                aSource.rtpEncodings[1].liveness.onPacketReceived(clock.millis())
+                should("name the highest encoding below it which is") {
+                    bc.bc.retargetKeyframeRequest(1L) shouldBe 2L
+                }
+            }
+            context("for a source none of whose encodings are being sent") {
+                should("leave the request on the primary SSRC") {
+                    bc.bc.retargetKeyframeRequest(1L) shouldBe 1L
+                }
+            }
+            context("for a source which is not forwarded to the receiver") {
+                bc.setStageView("A-v0", lastN = 1)
+                bc.bwe = 10.mbps
+                bc.forwardedSourcesHistory.last().event shouldBe setOf("A-v0")
+                b.mediaSources[0].rtpEncodings.forEach { it.liveness.onPacketReceived(clock.millis()) }
+                should("drop the request") {
+                    bc.bc.retargetKeyframeRequest(4L) shouldBe null
+                }
+            }
+            context("for an unknown source") {
+                should("leave the request unchanged") {
+                    bc.bc.retargetKeyframeRequest(9999L) shouldBe 9999L
+                }
             }
         }
 

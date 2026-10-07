@@ -41,9 +41,10 @@ public interface AdaptiveSourceProjectionContext
      *
      * @param packetInfo  the RTP packet to determine whether to accept or not.
      * @param targetIndex the target quality index
+     * @param liveness which encodings of the source the sender is currently sending.
      * @return true if the packet should be accepted, false otherwise.
      */
-    boolean accept(PacketInfo packetInfo, int targetIndex);
+    boolean accept(PacketInfo packetInfo, int targetIndex, EncodingLiveness liveness);
 
     /**
      * @return true if this stream context needs a keyframe in order to either
@@ -51,6 +52,16 @@ public interface AdaptiveSourceProjectionContext
      * on the implementation).
      */
     boolean needsKeyframe();
+
+    /**
+     * @return true if a keyframe should be requested now: a keyframe is needed (see {@link #needsKeyframe()}), and
+     * there is no reason to hold off. An implementation which distinguishes the two may hold off while a keyframe
+     * may still be on its way.
+     */
+    default boolean shouldRequestKeyframe()
+    {
+        return needsKeyframe();
+    }
 
     /**
      * Rewrites the timestamp, sequence number, ssrc and other codec dependent

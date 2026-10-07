@@ -119,6 +119,9 @@ class RelayedEndpoint(
         }
         handleEvent(SetLocalSsrcEvent(MediaType.AUDIO, conference.localAudioSsrc))
         handleEvent(SetLocalSsrcEvent(MediaType.VIDEO, conference.localVideoSsrc))
+        /* Keyframe requests for this endpoint's sources go out through the relay's senders. So the relay's detector
+         * is the detector which needs to see the keyframes which answer them. */
+        setKeyframeModeDetector(relay.transceiver.keyframeModeDetector)
     }
 
     override fun receivesSsrc(ssrc: Long): Boolean = streamInformationStore.receiveSsrcs.contains(ssrc)
@@ -135,7 +138,7 @@ class RelayedEndpoint(
     override fun requestKeyframe(requesterID: String, mediaSsrc: Long) =
         relay.transceiver.requestKeyFrame(requesterID, mediaSsrc)
 
-    override fun requestKeyframe() = relay.transceiver.requestKeyFrame(null, mediaSource?.primarySSRC)
+    override fun requestKeyframe() = relay.transceiver.requestKeyFrameForSource(null, mediaSource?.primarySSRC)
 
     /** The measured cost of a keyframe for this endpoint's video source with primary SSRC [ssrc], if observed. */
     fun getKeyframeCost(ssrc: Long): KeyframeCost? = rtpReceiver.getKeyframeCost(ssrc)
