@@ -955,10 +955,11 @@ class Endpoint @JvmOverloads constructor(
     override fun shouldExpire(): Boolean {
         if (synthetic) {
             // A synthetic endpoint has no transport, so the ICE/activity checks below don't apply. It is expired
-            // explicitly via colibri; as a backstop against lost signaling, allow expiry once no non-synthetic
-            // local endpoints remain, so a synthetic endpoint alone doesn't keep the conference alive.
+            // explicitly via colibri; as a backstop against lost signaling, allow expiry once no human endpoint
+            // remains in the conference, local or relayed: a synthetic endpoint alone doesn't keep the conference
+            // alive, but one hosted on a bridge whose humans are all behind relays stays for the call.
             return Duration.between(creationTime, clock.instant()) > epTimeout &&
-                conference.localEndpoints.none { it !== this && !it.synthetic }
+                conference.endpoints.none { it !== this && !it.synthetic }
         }
         if (iceTransport.hasFailed()) {
             logger.warn("Allowing to expire because ICE failed.")

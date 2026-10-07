@@ -75,6 +75,43 @@ class ConferenceTest : ConfigTest() {
                 bot.shouldExpire() shouldBe false
             }
         }
+        context("Synthetic endpoints on a relay-only bridge") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                val clock = FakeClock()
+                val bot = Endpoint(
+                    "bot",
+                    this,
+                    LoggerImpl("test"),
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    synthetic = true,
+                    clock = clock
+                )
+                val relay = createRelay("relay-id", "mesh-id", true, true)
+                clock.elapse(3.mins)
+
+                should("expire when the only other endpoints are another bridge's synthetic ones") {
+                    val remoteBot = relay.addRemoteEndpoint(
+                        "remote-bot",
+                        null,
+                        emptyList(),
+                        emptyList(),
+                        synthetic = true
+                    )!!
+                    addEndpoints(setOf(remoteBot))
+                    bot.shouldExpire() shouldBe true
+                }
+                should("stay alive while a human is reachable through a relay, with no local humans") {
+                    val remoteHuman = relay.addRemoteEndpoint("remote-human", null, emptyList(), emptyList())!!
+                    addEndpoints(setOf(remoteHuman))
+                    bot.shouldExpire() shouldBe false
+                }
+            }
+        }
         context("Creating relays should work") {
             with(Conference(videobridge, "id", name, null, false)) {
                 hasRelays() shouldBe false
