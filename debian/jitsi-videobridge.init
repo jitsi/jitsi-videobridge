@@ -1,0 +1,53 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          jitsi-videobridge
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Jitsi Videobridge
+# Description:       WebRTC media server for Jitsi
+### END INIT INFO
+
+set -e
+
+DAEMON=/usr/share/jitsi-videobridge/jvb.sh
+NAME=jitsi-videobridge
+DESC="Jitsi Videobridge"
+PIDFILE=/var/run/$NAME.pid
+CONFIG=/etc/jitsi/videobridge/config
+
+[ -x "$DAEMON" ] || exit 0
+[ -f "$CONFIG" ] && . "$CONFIG"
+
+case "$1" in
+    start)
+        echo "Starting $DESC"
+        start-stop-daemon --start --quiet --pidfile $PIDFILE \
+            --chuid jvb:jitsi \
+            --exec $DAEMON -- $JAVA_SYS_PROPS || true
+        ;;
+    stop)
+        echo "Stopping $DESC"
+        start-stop-daemon --stop --quiet --pidfile $PIDFILE || true
+        ;;
+    restart)
+        $0 stop
+        sleep 2
+        $0 start
+        ;;
+    status)
+        if [ -f $PIDFILE ] && kill -0 $(cat $PIDFILE) 2>/dev/null; then
+            echo "$DESC is running"
+        else
+            echo "$DESC is not running"
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+
+exit 0

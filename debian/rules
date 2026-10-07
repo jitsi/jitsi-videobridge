@@ -27,7 +27,7 @@ override_dh_install:
 	dh_install
 
 override_dh_installinit:
-	dh_installinit --noscripts
+	dh_installinit
 
 override_dh_auto_install:
 	dh_auto_install
