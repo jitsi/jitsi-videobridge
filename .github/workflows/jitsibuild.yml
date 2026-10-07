@@ -1,0 +1,25 @@
+name: Jitsi CI build with deps
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize ]
+    branches: [ master ]
+    
+jobs:
+  checkout_and_build:
+    name: Jitsi build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache Maven dependencies
+        uses: actions/cache@v1
+        with:
+          path: ~/.m2
+          key: m2  
+      - uses: bbaldino/jitsi-ga-test@HEAD
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+            name: logs
+            path: logs
