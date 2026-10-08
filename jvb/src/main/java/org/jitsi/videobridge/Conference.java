@@ -1464,11 +1464,16 @@ public class Conference
             }
         }
 
-        // Synthetic sources (e.g. bridge-generated translated audio) don't participate in speech activity /
-        // loudest-speaker selection, and must not be dropped by loudest-only filtering -- they're still forwarded
-        // to relays and to endpoints that explicitly subscribe to them.
+        // Synthetic sources must not be dropped by loudest-only filtering: they're forwarded to relays and to the
+        // endpoints that explicitly subscribe to them. A voice agent's audio does count for speech activity, so a
+        // talking bot can be the dominant speaker like anyone else (this is the path for an agent hosted on another
+        // bridge, arriving over a relay); translated audio never does.
         if (source != null && source.getSynthetic())
         {
+            if (source.getKind() == SyntheticSourceKind.AGENT)
+            {
+                speechActivity.levelChanged(endpoint, level);
+            }
             return false;
         }
 
@@ -1693,8 +1698,6 @@ public class Conference
                 // Optional RFC 6464 audio level, so clients can show a level indicator for the synthetic source.
                 // The producer computes it from the PCM it encoded (the bridge never decodes the Opus). Absent in
                 // media from producers that predate the field, in which case the packet has no extension, as before.
-                // The level never feeds speech activity: this packet enters via handleIncomingPacket, not an
-                // endpoint's receive pipeline, and levelChanged exempts synthetic sources arriving over a relay.
                 Integer audioLevel = media.getAudioLevel();
                 if (audioLevel != null)
                 {
@@ -1708,6 +1711,16 @@ public class Conference
                     {
                         logger.warn("Injected media carries an audio level but no ssrc-audio-level extension is "
                             + "negotiated; not adding it.");
+                    }
+
+                    // This packet enters via handleIncomingPacket, not an endpoint's receive pipeline, so feed speech
+                    // activity here for a voice agent, with the same loudness the receive pipeline derives (127 is
+                    // silence on the wire), so a talking bot can be the dominant speaker. Translated audio never is.
+                    AbstractEndpoint owner = source.getKind() == SyntheticSourceKind.AGENT && source.getOwner() != null
+                        ? getEndpoint(source.getOwner()) : null;
+                    if (owner != null)
+                    {
+                        speechActivity.levelChanged(owner, Math.max(0, 127 - audioLevel));
                     }
                 }
 

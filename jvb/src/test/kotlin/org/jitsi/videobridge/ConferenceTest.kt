@@ -17,14 +17,20 @@ package org.jitsi.videobridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.kotest.assertions.nondeterministic.continually
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.DebugStateMode
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.mins
 import org.jitsi.utils.time.FakeClock
+import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.relay.SyntheticSourceKind
 import org.jxmpp.jid.impl.JidCreate
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * This is a high-level test for [Conference] and related functionality.
@@ -109,6 +115,39 @@ class ConferenceTest : ConfigTest() {
                     val remoteHuman = relay.addRemoteEndpoint("remote-human", null, emptyList(), emptyList())!!
                     addEndpoints(setOf(remoteHuman))
                     bot.shouldExpire() shouldBe false
+                }
+            }
+        }
+        context("Speech activity and synthetic sources") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                val human = createLocalEndpoint("human", true, false, false, false, false, false, false)
+                val bot = createLocalEndpoint("bot", true, false, false, false, false, false, true)
+                human.audioSources = listOf(
+                    AudioSourceDesc(1L, "human", "human-a0"),
+                    AudioSourceDesc(
+                        2L,
+                        "human",
+                        "human-a0.fr",
+                        synthetic = true,
+                        kind = SyntheticSourceKind.TRANSLATION
+                    )
+                )
+                bot.audioSources = listOf(
+                    AudioSourceDesc(3L, "bot", "bot-a0", synthetic = true, kind = SyntheticSourceKind.AGENT)
+                )
+                should("count a voice agent's audio as speech, so a talking bot becomes the dominant speaker") {
+                    eventually(5.seconds) {
+                        // Never dropped by loudest-only filtering, whatever the ranking.
+                        levelChanged(bot, 3L, 100) shouldBe false
+                        speechActivity.dominantEndpoint shouldBe bot
+                    }
+                }
+                should("keep translated audio out of speech activity") {
+                    // The first speaker heard becomes dominant at once (see above), so this would flip to human.
+                    continually(2.seconds) {
+                        levelChanged(human, 2L, 100) shouldBe false
+                        speechActivity.dominantEndpoint shouldNotBe human
+                    }
                 }
             }
         }
