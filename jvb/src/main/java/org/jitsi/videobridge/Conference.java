@@ -208,6 +208,12 @@ public class Conference
      */
     @NotNull private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
 
+    /**
+     * Serializes adding requests to {@link #colibriQueue} with closing it in {@link #expire()}, so that a request
+     * can not be added to an already closed queue (where it would be silently dropped).
+     */
+    private final Object colibriQueueLock = new Object();
+
     @NotNull private final EncodingsManager encodingsManager = new EncodingsManager();
 
     /**
@@ -347,6 +353,17 @@ public class Conference
                             .startSpan();
                     try (Scope s = span.makeCurrent())
                     {
+                        if (isExpired())
+                        {
+                            // The conference expired (e.g. from VideobridgeExpireThread) after this request was
+                            // taken off the queue, so close() did not see it. Do not process it against an
+                            // expired conference.
+                            logger.warn("Conference expired before colibri request "
+                                    + request.getRequest().getStanzaId() + " could be handled, responding with "
+                                    + "conference_not_found.");
+                            ColibriQueue.failConferenceNotFound(request);
+                            return true;
+                        }
                         logger.info( () -> {
                             String reqStr = request.getRequest().toXML().toString();
                             if (VideobridgeConfig.getRedactColibriHttpHeaders())
@@ -429,7 +446,20 @@ public class Conference
 
     public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
     {
-        colibriQueue.add(request);
+        synchronized (colibriQueueLock)
+        {
+            if (!isExpired())
+            {
+                colibriQueue.add(request);
+                return;
+            }
+        }
+
+        // The conference expired between Videobridge.getOrCreateConference() and here. The queue is closed and
+        // would drop the request silently, so answer it ourselves.
+        logger.warn("Conference expired before colibri request " + request.getRequest().getStanzaId()
+                + " could be queued, responding with conference_not_found.");
+        ColibriQueue.failConferenceNotFound(request);
     }
 
     /**
@@ -724,7 +754,11 @@ public class Conference
 
         logger.info("Expiring.");
 
-        colibriQueue.close();
+        synchronized (colibriQueueLock)
+        {
+            // Any request still in the queue is answered with conference_not_found (see ColibriQueue.releasePacket).
+            colibriQueue.close();
+        }
 
         epConnectionStatusMonitor.stop();
 
