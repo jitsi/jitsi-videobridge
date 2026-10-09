@@ -138,6 +138,7 @@ class Endpoint @JvmOverloads constructor(
     /**
      * Whether this is a synthetic endpoint: a bridge-side entity that owns synthetic (injected) sources, e.g. a
      * voice agent, and has no media transport of its own.
+     * TODO: skip the ICE agent, DTLS transport, transceiver and bandwidth probing, which a synthetic endpoint never uses.
      */
     override val synthetic: Boolean = false,
     private val clock: Clock = Clock.systemUTC()
