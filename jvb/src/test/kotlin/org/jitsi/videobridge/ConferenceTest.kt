@@ -17,11 +17,20 @@ package org.jitsi.videobridge
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.kotest.assertions.nondeterministic.continually
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.mockk
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.DebugStateMode
+import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.mins
+import org.jitsi.utils.time.FakeClock
+import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.relay.SyntheticSourceKind
 import org.jxmpp.jid.impl.JidCreate
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * This is a high-level test for [Conference] and related functionality.
@@ -36,10 +45,109 @@ class ConferenceTest : ConfigTest() {
             with(Conference(videobridge, "id", name, null, false)) {
                 endpointCount shouldBe 0
                 // TODO cover the case when they're true
-                createLocalEndpoint("abcdabcd", true, false, false, false, false, false)
+                createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
                 endpointCount shouldBe 1
                 DebugStateMode.entries.forEach { mode ->
                     getDebugState(mode, null).shouldBeValidJsonConf()
+                }
+            }
+        }
+        context("Synthetic endpoints") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                val clock = FakeClock()
+                val bot = Endpoint(
+                    "bot",
+                    this,
+                    LoggerImpl("test"),
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    synthetic = true,
+                    clock = clock
+                )
+                bot.synthetic shouldBe true
+                // Within the initial timeout the backstop must not fire even with no other endpoints.
+                bot.shouldExpire() shouldBe false
+
+                clock.elapse(3.mins)
+                // Alone in the conference and past the timeout: the backstop allows expiry.
+                bot.shouldExpire() shouldBe true
+
+                // With a non-synthetic local endpoint present, a synthetic endpoint never expires on its own.
+                createLocalEndpoint("abcdabcd", true, false, false, false, false, false, false)
+                bot.shouldExpire() shouldBe false
+            }
+        }
+        context("Synthetic endpoints on a relay-only bridge") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                val clock = FakeClock()
+                val bot = Endpoint(
+                    "bot",
+                    this,
+                    LoggerImpl("test"),
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    synthetic = true,
+                    clock = clock
+                )
+                val relay = createRelay("relay-id", "mesh-id", true, true)
+                clock.elapse(3.mins)
+
+                should("expire when the only other endpoints are another bridge's synthetic ones") {
+                    val remoteBot = relay.addRemoteEndpoint(
+                        "remote-bot",
+                        null,
+                        emptyList(),
+                        emptyList(),
+                        synthetic = true
+                    )!!
+                    addEndpoints(setOf(remoteBot))
+                    bot.shouldExpire() shouldBe true
+                }
+                should("stay alive while a human is reachable through a relay, with no local humans") {
+                    val remoteHuman = relay.addRemoteEndpoint("remote-human", null, emptyList(), emptyList())!!
+                    addEndpoints(setOf(remoteHuman))
+                    bot.shouldExpire() shouldBe false
+                }
+            }
+        }
+        context("Speech activity and synthetic sources") {
+            with(Conference(videobridge, "id", name, null, false)) {
+                val human = createLocalEndpoint("human", true, false, false, false, false, false, false)
+                val bot = createLocalEndpoint("bot", true, false, false, false, false, false, true)
+                human.audioSources = listOf(
+                    AudioSourceDesc(1L, "human", "human-a0"),
+                    AudioSourceDesc(
+                        2L,
+                        "human",
+                        "human-a0.fr",
+                        synthetic = true,
+                        kind = SyntheticSourceKind.TRANSLATION
+                    )
+                )
+                bot.audioSources = listOf(
+                    AudioSourceDesc(3L, "bot", "bot-a0", synthetic = true, kind = SyntheticSourceKind.AGENT)
+                )
+                should("count a voice agent's audio as speech, so a talking bot becomes the dominant speaker") {
+                    eventually(5.seconds) {
+                        // Never dropped by loudest-only filtering, whatever the ranking.
+                        levelChanged(bot, 3L, 100) shouldBe false
+                        speechActivity.dominantEndpoint shouldBe bot
+                    }
+                }
+                should("keep translated audio out of speech activity") {
+                    // The first speaker heard becomes dominant at once (see above), so this would flip to human.
+                    continually(2.seconds) {
+                        levelChanged(human, 2L, 100) shouldBe false
+                        speechActivity.dominantEndpoint shouldNotBe human
+                    }
                 }
             }
         }

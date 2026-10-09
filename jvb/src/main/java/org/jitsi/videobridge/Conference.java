@@ -829,7 +829,8 @@ public class Conference
             boolean doMidDemux,
             boolean visitor,
             boolean privateAddresses,
-            boolean diarize)
+            boolean diarize,
+            boolean synthetic)
     {
         final AbstractEndpoint existingEndpoint = getEndpoint(id);
         if (existingEndpoint != null)
@@ -838,7 +839,8 @@ public class Conference
         }
 
         final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
+                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize,
+                synthetic);
         videobridge.localEndpointCreated(visitor);
 
         endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
@@ -1462,11 +1464,16 @@ public class Conference
             }
         }
 
-        // Synthetic sources (e.g. bridge-generated translated audio) don't participate in speech activity /
-        // loudest-speaker selection, and must not be dropped by loudest-only filtering -- they're still forwarded
-        // to relays and to endpoints that explicitly subscribe to them.
+        // Synthetic sources must not be dropped by loudest-only filtering: they're forwarded to relays and to the
+        // endpoints that explicitly subscribe to them. A voice agent's audio does count for speech activity, so a
+        // talking bot can be the dominant speaker like anyone else (this is the path for an agent hosted on another
+        // bridge, arriving over a relay); translated audio never does.
         if (source != null && source.getSynthetic())
         {
+            if (source.getKind() == SyntheticSourceKind.AGENT)
+            {
+                speechActivity.levelChanged(endpoint, level);
+            }
             return false;
         }
 
@@ -1691,8 +1698,6 @@ public class Conference
                 // Optional RFC 6464 audio level, so clients can show a level indicator for the synthetic source.
                 // The producer computes it from the PCM it encoded (the bridge never decodes the Opus). Absent in
                 // media from producers that predate the field, in which case the packet has no extension, as before.
-                // The level never feeds speech activity: this packet enters via handleIncomingPacket, not an
-                // endpoint's receive pipeline, and levelChanged exempts synthetic sources arriving over a relay.
                 Integer audioLevel = media.getAudioLevel();
                 if (audioLevel != null)
                 {
@@ -1706,6 +1711,16 @@ public class Conference
                     {
                         logger.warn("Injected media carries an audio level but no ssrc-audio-level extension is "
                             + "negotiated; not adding it.");
+                    }
+
+                    // This packet enters via handleIncomingPacket, not an endpoint's receive pipeline, so feed speech
+                    // activity here for a voice agent, with the same loudness the receive pipeline derives (127 is
+                    // silence on the wire), so a talking bot can be the dominant speaker. Translated audio never is.
+                    AbstractEndpoint owner = source.getKind() == SyntheticSourceKind.AGENT && source.getOwner() != null
+                        ? getEndpoint(source.getOwner()) : null;
+                    if (owner != null)
+                    {
+                        speechActivity.levelChanged(owner, Math.max(0, 127 - audioLevel));
                     }
                 }
 
@@ -1728,7 +1743,8 @@ public class Conference
          * Handles a synthetic source's sending-state change, derived from the {@code start}/{@code stop} mediajson
          * events a translator sends to bracket a "talk" of translated audio. Resolves the named synthetic source
          * (dropping the change if it isn't a known synthetic source, like {@link #handleMediaEvent}) and broadcasts
-         * a {@link SyntheticSourceSendingChangeEvent} to the conference's clients (and relays).
+         * a {@link SyntheticSourceSendingChangeEvent}, carrying the source's kind, to the conference's clients (and
+         * relays).
          *
          * @param sourceName the synthetic source whose sending state changed
          * @param sending    true if the source started sending, false if it stopped
@@ -1759,7 +1775,9 @@ public class Conference
                 // the client (lib-jitsi-meet) validates 0..0xFFFFFFFF, so send the low 32 bits. This also matches the
                 // wrapped timestamp the client sees on this source's injected media.
                 long rtpTimestamp = timestamp & 0xFFFFFFFFL;
-                broadcastMessage(new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp), true);
+                broadcastMessage(
+                        new SyntheticSourceSendingChangeEvent(sourceName, sending, rtpTimestamp, source.getKind()),
+                        true);
             }
             catch (Exception e)
             {

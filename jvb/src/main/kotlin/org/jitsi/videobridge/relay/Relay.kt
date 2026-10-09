@@ -714,7 +714,8 @@ class Relay @JvmOverloads constructor(
         id: String,
         statsId: String?,
         audioSources: Collection<AudioSourceDesc>,
-        videoSources: Collection<MediaSourceDesc>
+        videoSources: Collection<MediaSourceDesc>,
+        synthetic: Boolean = false
     ): RelayedEndpoint? {
         val ep: RelayedEndpoint
         synchronized(endpointsLock) {
@@ -731,7 +732,8 @@ class Relay @JvmOverloads constructor(
                 conference.newDiagnosticContext().apply {
                     put("relay_id", this@Relay.id)
                     put("endpoint_id", id)
-                }
+                },
+                synthetic
             )
             ep.statsId = statsId
             ep.audioSources = audioSources.toList()

@@ -27,6 +27,7 @@ import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.message.AudioSourcesMap
 import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.relay.SyntheticSourceKind
 import java.util.Random
 
 class SsrcCacheTest : ShouldSpec() {
@@ -98,17 +99,36 @@ class SsrcCacheTest : ShouldSpec() {
             mapping.mid shouldBe null
             cache.getMidBySsrc(mapping.ssrc) shouldBe null
         }
+
+        should("carry the kind of a synthetic source in its mapping, and none for a regular source") {
+            val kindEp = Ep(mapOf(3001L to SyntheticSourceKind.AGENT, 3002L to SyntheticSourceKind.TRANSLATION))
+            val cache = AudioSsrcCache(3, kindEp, midDemux = false, logger)
+
+            listOf(3001L, 3002L, 3003L).forEach { cache.rewriteRtp(PacketGenerator(it, random).nextPacket()) }
+
+            val mappings = kindEp.sentMessages.filterIsInstance<AudioSourcesMap>().flatMap { it.mappedSources }
+            mappings.map { it.source to it.kind } shouldBe listOf(
+                "anon-3001-a0" to SyntheticSourceKind.AGENT,
+                "anon-3002-a0" to SyntheticSourceKind.TRANSLATION,
+                "anon-3003-a0" to null
+            )
+        }
     }
 }
 
-private class Ep : SsrcRewriter {
+private class Ep(
+    /** The kinds of the synthetic sources, by SSRC; any other SSRC is a regular source. */
+    private val syntheticKinds: Map<Long, SyntheticSourceKind> = emptyMap()
+) : SsrcRewriter {
 
     private var nextSendSsrc = 1L
 
     override fun findVideoSourceProps(ssrc: Long): MediaSourceDesc? = null
 
-    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? =
-        AudioSourceDesc(ssrc, "anon-$ssrc", "anon-$ssrc-a0")
+    override fun findAudioSourceProps(ssrc: Long): AudioSourceDesc? {
+        val kind = syntheticKinds[ssrc]
+        return AudioSourceDesc(ssrc, "anon-$ssrc", "anon-$ssrc-a0", synthetic = kind != null, kind = kind)
+    }
 
     val sentMessages = mutableListOf<BridgeChannelMessage>()
 

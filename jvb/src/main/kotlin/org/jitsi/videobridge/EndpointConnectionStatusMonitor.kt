@@ -66,8 +66,11 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
         logger.info("Stopped")
     }
 
+    /** Visitors and synthetic endpoints (voice agents, which never connect) have no connection status to report. */
+    private fun monitoredEndpoints() = conference.localEndpoints.filter { !it.visitor && !it.synthetic }
+
     private fun run() {
-        conference.localEndpoints.filter { !it.visitor }.forEach(::monitorEndpointActivity)
+        monitoredEndpoints().forEach(::monitorEndpointActivity)
     }
 
     private fun monitorEndpointActivity(endpoint: Endpoint) {
@@ -143,7 +146,7 @@ class EndpointConnectionStatusMonitor @JvmOverloads constructor(
      */
     fun endpointConnected(endpointId: String) {
         synchronized(inactiveEndpointIds) {
-            val localEndpointIds = conference.localEndpoints.filter { !it.visitor }.map { it.id }
+            val localEndpointIds = monitoredEndpoints().map { it.id }
             inactiveEndpointIds.forEach { inactiveEpId ->
                 // inactiveEndpointIds may contain endpoints that have already expired and/or moved to another bridge.
                 if (localEndpointIds.contains(inactiveEpId)) {
