@@ -31,6 +31,7 @@ import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.videobridge.util.TaskPools
+import org.jitsi.xmpp.extensions.colibri2.Connect
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
@@ -51,7 +52,8 @@ class ExporterTest : ShouldSpec() {
     private fun fixture(
         exports: List<String> = emptyList(),
         requests: List<String> = emptyList(),
-        sources: Map<Long, String> = emptyMap()
+        sources: Map<Long, String> = emptyMap(),
+        type: Connect.Types = Connect.Types.RECORDER
     ): Pair<Exporter, MutableList<Change>> {
         val changes = mutableListOf<Change>()
         val exporter = Exporter(
@@ -67,6 +69,7 @@ class ExporterTest : ShouldSpec() {
                 override fun getAudioSourceName(ssrc: Long): String? = sources[ssrc]
                 override fun getDiarize(ssrc: Long): Boolean = false
             },
+            type = type,
             exports = exports,
             requests = requests
         )
@@ -274,10 +277,10 @@ class ExporterTest : ShouldSpec() {
                 scheduler.numPendingJobs() shouldBe 0
                 exporter.debugState().path("reconnect_attempts").asInt() shouldBe 0
             }
-            should("cap reconnects at agent-max-reconnect-attempts only for connects that inject audio") {
+            should("cap reconnects at agent-max-reconnect-attempts only for agent connects") {
                 withNewConfig("videobridge.exporter.agent-max-reconnect-attempts = 2") {
                     fakeScheduler()
-                    val (agent, _) = fixture(requests = listOf("agent-a0"))
+                    val (agent, _) = fixture(requests = listOf("agent-a0"), type = Connect.Types.AGENT)
                     val (transcriber, _) = fixture()
 
                     repeat(3) {

@@ -406,7 +406,7 @@ internal class Exporter(
         val attempt = reconnectAttempts.incrementAndGet()
         val maxAttempts = listOfNotNull(
             maxReconnectAttempts,
-            agentMaxReconnectAttempts.takeIf { requests.isNotEmpty() }
+            agentMaxReconnectAttempts.takeIf { type == Connect.Types.AGENT }
         ).minOrNull()
         if (maxAttempts != null && attempt > maxAttempts) {
             reconnectExhausted = true

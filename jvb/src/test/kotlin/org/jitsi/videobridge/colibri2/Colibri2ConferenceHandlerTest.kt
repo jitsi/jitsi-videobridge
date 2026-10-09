@@ -161,7 +161,7 @@ class Colibri2ConferenceHandlerTest : ConfigTest() {
                 setCreate(true)
                 addCapability(Capability.CAP_SOURCE_NAME_SUPPORT)
                 if (synthetic) {
-                    addCapability(CAP_SYNTHETIC_ENDPOINT)
+                    addCapability(Capability.CAP_SYNTHETIC_ENDPOINT)
                 } else {
                     setTransport(Transport.getBuilder().apply { setIceControlling(true) }.build())
                 }

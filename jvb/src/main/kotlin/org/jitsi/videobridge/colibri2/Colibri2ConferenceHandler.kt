@@ -54,12 +54,6 @@ import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError.Condition
 import org.jivesoftware.smackx.muc.MUCRole
 
-/**
- * The colibri2 endpoint capability marking a synthetic endpoint: a bridge-side entity that owns synthetic (injected)
- * sources, e.g. a voice agent, and has no media transport. TODO: move to [Capability] in jitsi-xmpp-extensions.
- */
-const val CAP_SYNTHETIC_ENDPOINT = "synthetic-endpoint"
-
 class Colibri2ConferenceHandler(
     private val conference: Conference,
     parentLogger: Logger
@@ -178,7 +172,7 @@ class Colibri2ConferenceHandler(
             if (conference.getLocalEndpoint(c2endpoint.id) != null) {
                 throw IqProcessingException(Condition.conflict, "Endpoint with ID ${c2endpoint.id} already exists")
             }
-            val synthetic = c2endpoint.hasCapability(CAP_SYNTHETIC_ENDPOINT)
+            val synthetic = c2endpoint.hasCapability(Capability.CAP_SYNTHETIC_ENDPOINT)
             val transport = c2endpoint.transport
             if (transport == null && !synthetic) {
                 throw IqProcessingException(
@@ -492,7 +486,7 @@ class Colibri2ConferenceHandler(
                 relay.removeRemoteEndpoint(endpoint.id)
             } else {
                 if (endpoint.create) {
-                    val synthetic = endpoint.hasCapability(CAP_SYNTHETIC_ENDPOINT)
+                    val synthetic = endpoint.hasCapability(Capability.CAP_SYNTHETIC_ENDPOINT)
                     val sources = endpoint.parseSourceDescs(synthetic)
                     relay.addRemoteEndpoint(endpoint.id, endpoint.statsId, sources.first, sources.second, synthetic)
                         ?.let { newEndpoints.add(it) }
