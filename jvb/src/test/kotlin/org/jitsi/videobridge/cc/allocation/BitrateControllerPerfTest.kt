@@ -66,7 +66,13 @@ class BitrateControllerPerfTest : StringSpec() {
 
     private val endpointIds = mutableListOf("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
     private val endpoints: MutableList<TestEndpoint> = createEndpoints(*endpointIds.toTypedArray())
-    private val bc = BitrateController(
+
+    // Lazy, so that it is not created (and its bandwidth allocator does not start rescheduling itself on
+    // TaskPools.SCHEDULED_POOL) when the tests are disabled.
+    private val bcLazy = lazy { createBitrateController() }
+    private val bc by bcLazy
+
+    private fun createBitrateController() = BitrateController(
         object : BitrateController.EventHandler {
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
             override fun effectiveVideoConstraintsChanged(
@@ -90,6 +96,13 @@ class BitrateControllerPerfTest : StringSpec() {
     }
 
     init {
+        // The bandwidth allocator reschedules itself on TaskPools.SCHEDULED_POOL until it is expired.
+        afterSpec {
+            if (bcLazy.isInitialized()) {
+                bc.expire()
+            }
+        }
+
         "Tile view".config(enabled = false) {
             repeat(5) {
                 run("Warmup", listOf("A", "B", "C", "D", "E"), 180)

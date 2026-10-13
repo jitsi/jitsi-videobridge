@@ -55,6 +55,7 @@ import java.net.Inet6Address
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -103,7 +104,13 @@ class IceTransport @JvmOverloads constructor(
      * Creates the ice4j [Agent]s of this transport, with their candidate harvesters configured. Only replaced
      * in tests, which have no use for real Agents (they bind ports and start threads).
      */
-    agentFactory: ((Logger) -> Agent)? = null
+    agentFactory: ((Logger) -> Agent)? = null,
+    /**
+     * Runs the ICE restart timeout and transition window tasks. Only replaced in tests, which need to control
+     * when they run without swapping the bridge-wide [TaskPools.SCHEDULED_POOL] (other code keeps scheduling on
+     * it, and those tasks would end up in the test's scheduler).
+     */
+    private val scheduler: ScheduledExecutorService = TaskPools.SCHEDULED_POOL
 ) {
     private val logger = createChildLogger(parentLogger)
 
@@ -513,7 +520,7 @@ class IceTransport @JvmOverloads constructor(
         )
         iceRestartsStarted.inc()
 
-        val timeoutTask = TaskPools.SCHEDULED_POOL.schedule(
+        val timeoutTask = scheduler.schedule(
             { abandonPendingRestart(newBundle, "it did not connect within $timeout") },
             timeout.toMillis(),
             TimeUnit.MILLISECONDS
@@ -658,7 +665,7 @@ class IceTransport @JvmOverloads constructor(
             return
         }
 
-        val freeTask = TaskPools.SCHEDULED_POOL.schedule(
+        val freeTask = scheduler.schedule(
             {
                 logger.info(
                     "ICE restart (generation=${newBundle.generation}) transition window elapsed, freeing " +
