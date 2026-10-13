@@ -22,6 +22,7 @@ import io.kotest.matchers.shouldBe
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
@@ -66,13 +67,7 @@ class BitrateControllerPerfTest : StringSpec() {
 
     private val endpointIds = mutableListOf("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
     private val endpoints: MutableList<TestEndpoint> = createEndpoints(*endpointIds.toTypedArray())
-
-    // Lazy, so that it is not created (and its bandwidth allocator does not start rescheduling itself on
-    // TaskPools.SCHEDULED_POOL) when the tests are disabled.
-    private val bcLazy = lazy { createBitrateController() }
-    private val bc by bcLazy
-
-    private fun createBitrateController() = BitrateController(
+    private val bc = BitrateController(
         object : BitrateController.EventHandler {
             override fun forwardedSourcesChanged(forwardedSources: Set<String>) { }
             override fun effectiveVideoConstraintsChanged(
@@ -86,6 +81,9 @@ class BitrateControllerPerfTest : StringSpec() {
         DiagnosticContext(),
         createLogger(),
         clock,
+        // A fake which is never run, so that the periodic re-allocation does not keep rescheduling itself on
+        // TaskPools.SCHEDULED_POOL after the spec (the tests drive the allocation themselves).
+        FakeScheduledExecutorService(),
     ).apply {
         // The BC only starts working 10 seconds after it first received media, so fake that.
         transformRtp(PacketInfo(VideoRtpPacket(ByteArray(100), 0, 100)))
@@ -96,13 +94,6 @@ class BitrateControllerPerfTest : StringSpec() {
     }
 
     init {
-        // The bandwidth allocator reschedules itself on TaskPools.SCHEDULED_POOL until it is expired.
-        afterSpec {
-            if (bcLazy.isInitialized()) {
-                bc.expire()
-            }
-        }
-
         "Tile view".config(enabled = false) {
             repeat(5) {
                 run("Warmup", listOf("A", "B", "C", "D", "E"), 180)

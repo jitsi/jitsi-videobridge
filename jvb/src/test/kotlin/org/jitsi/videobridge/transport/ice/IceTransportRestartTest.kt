@@ -55,7 +55,7 @@ class IceTransportRestartTest : ShouldSpec({
         advertisePrivateAddresses = false,
         parentLogger = LoggerImpl("test"),
         agentFactory = agents.factory,
-        scheduler = scheduler
+        customScheduler = scheduler
     )
 
     context("Before ICE is established") {

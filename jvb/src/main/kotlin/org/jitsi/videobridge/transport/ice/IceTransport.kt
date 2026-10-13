@@ -106,13 +106,17 @@ class IceTransport @JvmOverloads constructor(
      */
     agentFactory: ((Logger) -> Agent)? = null,
     /**
-     * Runs the ICE restart timeout and transition window tasks. Only replaced in tests, which need to control
-     * when they run without swapping the bridge-wide [TaskPools.SCHEDULED_POOL] (other code keeps scheduling on
-     * it, and those tasks would end up in the test's scheduler).
+     * Runs the ICE restart timeout and transition window tasks. Only set in tests, which need to control when they
+     * run without swapping the bridge-wide [TaskPools.SCHEDULED_POOL] (other code keeps scheduling on it, and those
+     * tasks would end up in the test's scheduler). When null, [TaskPools.SCHEDULED_POOL] is used, read when each
+     * task is scheduled.
      */
-    private val scheduler: ScheduledExecutorService = TaskPools.SCHEDULED_POOL
+    private val customScheduler: ScheduledExecutorService? = null
 ) {
     private val logger = createChildLogger(parentLogger)
+
+    private val scheduler: ScheduledExecutorService
+        get() = customScheduler ?: TaskPools.SCHEDULED_POOL
 
     private val agentFactory: (Logger) -> Agent = agentFactory ?: { agentLogger ->
         Agent(IceConfig.config.ufragPrefix, agentLogger).apply {
