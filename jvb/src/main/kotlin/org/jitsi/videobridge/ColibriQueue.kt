@@ -73,22 +73,24 @@ abstract class ColibriQueue(
      * would be the wrong answer.
      */
     override fun releasePacket(pkt: XmppConnection.ColibriRequest) {
-        if (!closed) {
+        val respond: Runnable = if (closed) {
+            Runnable { failConferenceNotFound(pkt, logger) }
+        } else {
             // Dropped from the head of a full queue. The capacity is unbounded so this should not happen, but every
             // accepted request must be answered.
             logger.error("Colibri request ${pkt.request.stanzaId} dropped from a full queue.")
-            pkt.callback(createError(pkt.request, StanzaError.Condition.internal_server_error, "Colibri queue full"))
-            return
+            Runnable {
+                pkt.callback(
+                    createError(pkt.request, StanzaError.Condition.internal_server_error, "Colibri queue full")
+                )
+            }
         }
-        // We are being called from close(), which Conference runs while holding its queue lock, so send the response
-        // from another thread.
+        // We are called from close() or add(), which run under locks (Conference's queue lock, and PacketQueue's),
+        // so send the response from another thread.
         try {
-            TaskPools.IO_POOL.execute { failConferenceNotFound(pkt, logger) }
+            TaskPools.IO_POOL.execute(respond)
         } catch (e: RejectedExecutionException) {
-            logger.warn(
-                "Failed to schedule conference_not_found response to colibri request ${pkt.request.stanzaId}",
-                e
-            )
+            logger.warn("Failed to schedule error response to colibri request ${pkt.request.stanzaId}", e)
         }
     }
 

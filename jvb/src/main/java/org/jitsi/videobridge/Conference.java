@@ -897,10 +897,20 @@ public class Conference
             throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
         }
 
-        // Construct outside the lock (this is slow), then add under it. If the conference expired in the meantime
-        // addEndpoints() rejects it, and we release the resources of the endpoint we just created.
+        // Construct outside the lock (this is slow), then add under it.
         final Endpoint endpoint = new Endpoint(
                 id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
+        return addLocalEndpoint(endpoint, visitor);
+    }
+
+    /**
+     * Adds a newly constructed local endpoint to this conference. If the conference expired while the endpoint was
+     * being constructed, the endpoint is expired (releasing its resources) and {@link ConferenceExpiredException}
+     * is thrown. Package-private for tests.
+     */
+    @NotNull
+    Endpoint addLocalEndpoint(@NotNull Endpoint endpoint, boolean visitor)
+    {
         endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
         try
         {

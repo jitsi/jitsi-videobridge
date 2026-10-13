@@ -20,12 +20,15 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.jitsi.ConfigTest
 import org.jitsi.nlj.stats.DelayStats
+import org.jitsi.utils.logging2.createLogger
 import org.jitsi.videobridge.xmpp.XmppConnection
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Endpoint
 import org.jitsi.xmpp.extensions.colibri2.Colibri2Error
 import org.jitsi.xmpp.extensions.colibri2.ConferenceModifyIQ
+import org.jitsi.xmpp.extensions.colibri2.Sources
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.StanzaError
 import org.jxmpp.jid.impl.JidCreate
@@ -132,6 +135,57 @@ class ConferenceColibriQueueTest : ConfigTest() {
                 thirdRequest.response.get(5, TimeUnit.SECONDS).type shouldBe IQ.Type.result
 
                 // The third request left the conference empty with nothing pending, so it expired it.
+                expiredByVideobridge.await(5, TimeUnit.SECONDS) shouldBe true
+                conference.isExpired shouldBe true
+            } finally {
+                conference.expire()
+            }
+        }
+
+        context("An endpoint constructed while the conference expired is rejected and expired") {
+            val conference = newConference()
+            // Simulates the conference expiring between constructing the endpoint and adding it.
+            val endpoint = Endpoint("a", conference, createLogger(), true, false, false, false, false, false)
+            conference.expire()
+
+            shouldThrow<Conference.ConferenceExpiredException> {
+                conference.addLocalEndpoint(endpoint, false)
+            }
+            endpoint.isExpired shouldBe true
+            conference.endpointCount shouldBe 0
+            verify(exactly = 0) { videobridge.localEndpointCreated(any()) }
+        }
+
+        context("An error response which leaves the conference empty expires it") {
+            val conference = newConference()
+            try {
+                conference.createLocalEndpoint("a", true, false, false, false, false, false)
+
+                // Queue the next two requests behind a blocking one, so that the removal of the last endpoint
+                // defers the expiration to the request after it, which fails.
+                val blockingRequest = BlockingRequest(emptyModify("9"))
+                conference.enqueueColibriRequest(blockingRequest.request)
+                blockingRequest.callbackReached.await(5, TimeUnit.SECONDS) shouldBe true
+
+                val expireLastEndpoint = CompletableFuture<IQ>()
+                conference.enqueueColibriRequest(
+                    colibriRequest(expireEndpointModify("10", "a")) { expireLastEndpoint.complete(it) }
+                )
+                // Updating the sources of an unknown endpoint is an error.
+                val unknownEndpoint = Colibri2Endpoint.getBuilder().apply {
+                    setId("unknown")
+                    setSources(Sources.getBuilder().build())
+                }.build()
+                val failingRequest = CompletableFuture<IQ>()
+                conference.enqueueColibriRequest(
+                    colibriRequest(
+                        ConferenceModifyIQ.builder("11").setMeetingId(meetingId).addEndpoint(unknownEndpoint).build()
+                    ) { failingRequest.complete(it) }
+                )
+                blockingRequest.release.countDown()
+
+                expireLastEndpoint.get(5, TimeUnit.SECONDS).type shouldBe IQ.Type.result
+                failingRequest.get(5, TimeUnit.SECONDS).type shouldBe IQ.Type.error
                 expiredByVideobridge.await(5, TimeUnit.SECONDS) shouldBe true
                 conference.isExpired shouldBe true
             } finally {
