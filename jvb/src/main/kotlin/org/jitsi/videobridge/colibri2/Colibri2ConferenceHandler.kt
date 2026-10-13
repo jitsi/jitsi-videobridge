@@ -63,13 +63,32 @@ class Colibri2ConferenceHandler(
      * @return A pair with an IQ to be sent as a response, and a boolean indicating if the conference needs to be
      * expired.
      */
-    fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
+    fun handleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> {
+        val (response, requestedExpire) = doHandleConferenceModifyIQ(conferenceModifyIQ)
+        var expire = requestedExpire
+
+        // Whether the request succeeded or not, if it left the conference with no endpoints or relays, expire it.
+        if (!conferenceModifyIQ.create && conference.endpointCount == 0 && conference.relayCount == 0) {
+            if (conference.hasPendingColibriRequests()) {
+                // A queued request may be about to add an endpoint (e.g. the re-allocation of an endpoint which
+                // was just expired). Let it be processed; if it does not, it will trigger the expiration itself.
+                logger.info("All endpoints and relays removed, but colibri requests are pending, not expiring yet.")
+            } else {
+                logger.info("All endpoints and relays removed, expiring.")
+                expire = true
+            }
+        }
+
+        return Pair(response, expire)
+    }
+
+    private fun doHandleConferenceModifyIQ(conferenceModifyIQ: ConferenceModifyIQ): Pair<IQ, Boolean> = try {
         validateRequest(conferenceModifyIQ)
 
         val ignoreUnknownEndpoints = shouldIgnoreUnknownEndpoints(conferenceModifyIQ)
         val responseBuilder =
             ConferenceModifiedIQ.builder(ConferenceModifiedIQ.Builder.createResponse(conferenceModifyIQ))
-        var expire = conferenceModifyIQ.expire.also {
+        val expire = conferenceModifyIQ.expire.also {
             if (it) logger.info("Received request to expire conference.")
         }
 
@@ -98,17 +117,6 @@ class Colibri2ConferenceHandler(
         // TODO: perhaps colibri clients should be required to process responses in order?
         if (conferenceModifyIQ.create || conferenceModifyIQ.endpoints.any { it.create }) {
             responseBuilder.setSources(buildFeedbackSources())
-        }
-
-        if (!conferenceModifyIQ.create && conference.endpointCount == 0 && conference.relayCount == 0) {
-            if (conference.hasPendingColibriRequests()) {
-                // A queued request may be about to add an endpoint (e.g. the re-allocation of an endpoint which
-                // was just expired). Let it be processed; if it does not, it will trigger the expiration itself.
-                logger.info("All endpoints and relays removed, but colibri requests are pending, not expiring yet.")
-            } else {
-                logger.info("All endpoints and relays removed, expiring.")
-                expire = true
-            }
         }
 
         Pair(responseBuilder.build(), expire)
@@ -507,7 +515,13 @@ class Colibri2ConferenceHandler(
                 }
             }
         }
-        conference.addEndpoints(newEndpoints)
+        try {
+            conference.addEndpoints(newEndpoints)
+        } catch (e: Conference.ConferenceExpiredException) {
+            // Do not leave the relay with endpoints the conference never had.
+            newEndpoints.forEach { relay.removeRemoteEndpoint(it.id) }
+            throw e
+        }
 
         /* TODO: handle the rest of the relay's fields: feedback sources. */
         return respBuilder.build()

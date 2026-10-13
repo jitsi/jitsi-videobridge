@@ -369,6 +369,23 @@ public class Conference
     }
 
     /**
+     * @return the XML of the request, with the HTTP header values and/or remote addresses redacted as configured.
+     */
+    private static String redactedRequestXml(XmppConnection.ColibriRequest request)
+    {
+        String reqStr = request.getRequest().toXML().toString();
+        if (VideobridgeConfig.getRedactColibriHttpHeaders())
+        {
+            reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
+        }
+        if (VideobridgeConfig.getRedactRemoteAddresses())
+        {
+            reqStr = RedactColibri.Companion.redactIp(reqStr);
+        }
+        return reqStr;
+    }
+
+    /**
      * Handles a colibri request taken from {@link #colibriQueue}. Package-private for tests.
      * @return {@code true} (the request was processed, or answered with an error).
      */
@@ -391,18 +408,7 @@ public class Conference
                 ColibriQueue.failConferenceNotFound(request, logger);
                 return true;
             }
-            logger.info( () -> {
-                String reqStr = request.getRequest().toXML().toString();
-                if (VideobridgeConfig.getRedactColibriHttpHeaders())
-                {
-                    reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
-                }
-                if (VideobridgeConfig.getRedactRemoteAddresses())
-                {
-                    reqStr = RedactColibri.Companion.redactIp(reqStr);
-                }
-                return "RECV colibri2 request: " + reqStr;
-            });
+            logger.info(() -> "RECV colibri2 request: " + redactedRequestXml(request));
             long start = System.currentTimeMillis();
             Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
             IQ response = p.getFirst();
@@ -414,17 +420,8 @@ public class Conference
             request.getTotalDelayStats().addDelay(totalDelay);
             if (processingDelay > 100)
             {
-                String reqStr = request.getRequest().toXML().toString();
-                if (VideobridgeConfig.getRedactColibriHttpHeaders())
-                {
-                    reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
-                }
-                if (VideobridgeConfig.getRedactRemoteAddresses())
-                {
-                    reqStr = RedactColibri.Companion.redactIp(reqStr);
-                }
                 logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                        + totalDelay + " ms): " + reqStr);
+                        + totalDelay + " ms): " + redactedRequestXml(request));
             }
             logger.info("SENT colibri2 response: " + response.toXML());
             request.getCallback().invoke(response);
@@ -782,9 +779,10 @@ public class Conference
             updateLastNEndpointsFuture = null;
         }
 
-        // Endpoints and relays are created under these locks after checking isExpired(). Taking them here (now that
-        // expired is set) guarantees that any creation which passed its check has finished adding to the map, and
-        // any later one will be rejected, so nothing can be added after we expire what is in the maps.
+        // Endpoints and relays are added to these maps under their locks, after checking isExpired() under the same
+        // lock (addEndpoints(), createRelay()). Taking the locks here, now that expired is set, guarantees that any
+        // addition which passed its check has completed, and any later one is rejected, so nothing can be added to
+        // the maps after we expire what is in them. Any new writer to these maps must follow the same pattern.
         synchronized (endpointsById)
         {
         }
@@ -889,53 +887,61 @@ public class Conference
             boolean privateAddresses,
             boolean diarize)
     {
-        // Hold the lock while creating the endpoint so that it can not be created in a conference which is
-        // concurrently expiring (see expire()).
-        synchronized (endpointsById)
+        if (isExpired())
         {
-            if (isExpired())
-            {
-                throw new ConferenceExpiredException(getID());
-            }
-            final AbstractEndpoint existingEndpoint = getEndpoint(id);
-            if (existingEndpoint != null)
-            {
-                throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
-            }
-
-            final Endpoint endpoint = new Endpoint(
-                    id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
-            videobridge.localEndpointCreated(visitor);
-
-            endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
-
-            addEndpoints(Collections.singleton(endpoint));
-
-            return endpoint;
+            throw new ConferenceExpiredException(getID());
         }
+        final AbstractEndpoint existingEndpoint = getEndpoint(id);
+        if (existingEndpoint != null)
+        {
+            throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
+        }
+
+        // Construct outside the lock (this is slow), then add under it. If the conference expired in the meantime
+        // addEndpoints() rejects it, and we release the resources of the endpoint we just created.
+        final Endpoint endpoint = new Endpoint(
+                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
+        endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
+        try
+        {
+            addEndpoints(Collections.singleton(endpoint));
+        }
+        catch (ConferenceExpiredException e)
+        {
+            endpoint.expire();
+            throw e;
+        }
+        videobridge.localEndpointCreated(visitor);
+
+        return endpoint;
     }
 
     @NotNull
     public Relay createRelay(String id, @Nullable String meshId, boolean iceControlling, boolean useUniquePort)
     {
+        if (isExpired())
+        {
+            throw new ConferenceExpiredException(getID());
+        }
+        final Relay existingRelay = getRelay(id);
+        if (existingRelay != null)
+        {
+            throw new IllegalArgumentException("Relay with ID = " + id + "already created");
+        }
+
+        // Construct outside the lock (this is slow), then add under it. See expire().
+        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
         synchronized (relaysById)
         {
             if (isExpired())
             {
+                relay.expire();
                 throw new ConferenceExpiredException(getID());
             }
-            final Relay existingRelay = getRelay(id);
-            if (existingRelay != null)
-            {
-                throw new IllegalArgumentException("Relay with ID = " + id + "already created");
-            }
-
-            final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
-
             relaysById.put(id, relay);
-
-            return relay;
         }
+
+        return relay;
     }
 
     /**
@@ -1143,7 +1149,11 @@ public class Conference
         removedEndpoint = endpointsById.remove(id);
         if (removedEndpoint == null)
         {
-            logger.warn("No endpoint found, id=" + id);
+            // Expected for an endpoint which was created while the conference was expiring and never added.
+            if (!isExpired())
+            {
+                logger.warn("No endpoint found, id=" + id);
+            }
             return;
         }
 
@@ -1182,6 +1192,7 @@ public class Conference
      */
     public void addEndpoints(Set<AbstractEndpoint> endpoints)
     {
+        // The check and the puts must be under the lock, so that nothing is added after expire() (see there).
         synchronized (endpointsById)
         {
             if (isExpired())

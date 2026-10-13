@@ -24,6 +24,8 @@ import org.jitsi.videobridge.metrics.QueueMetrics
 import org.jitsi.videobridge.metrics.VideobridgeMetricsContainer
 import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.xmpp.XmppConnection
+import org.jitsi.xmpp.util.createError
+import org.jivesoftware.smack.packet.StanzaError
 import java.time.Clock
 import java.util.concurrent.RejectedExecutionException
 import kotlin.Int.Companion.MAX_VALUE
@@ -72,6 +74,10 @@ abstract class ColibriQueue(
      */
     override fun releasePacket(pkt: XmppConnection.ColibriRequest) {
         if (!closed) {
+            // Dropped from the head of a full queue. The capacity is unbounded so this should not happen, but every
+            // accepted request must be answered.
+            logger.error("Colibri request ${pkt.request.stanzaId} dropped from a full queue.")
+            pkt.callback(createError(pkt.request, StanzaError.Condition.internal_server_error, "Colibri queue full"))
             return
         }
         // We are being called from close(), which Conference runs while holding its queue lock, so send the response
