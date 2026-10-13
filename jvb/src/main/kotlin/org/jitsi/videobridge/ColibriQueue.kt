@@ -15,7 +15,8 @@
  */
 package org.jitsi.videobridge
 
-import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
 import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.videobridge.colibri2.createConferenceNotFoundError
@@ -27,23 +28,30 @@ import java.time.Clock
 import java.util.concurrent.RejectedExecutionException
 import kotlin.Int.Companion.MAX_VALUE
 
-abstract class ColibriQueue(packetHandler: PacketHandler<XmppConnection.ColibriRequest>) :
-    PacketQueue<XmppConnection.ColibriRequest>(
-        MAX_VALUE,
-        true,
-        QUEUE_NAME,
-        packetHandler,
-        TaskPools.IO_POOL,
-        // TODO: using the Videobridge clock breaks tests somehow
-        Clock.systemUTC(),
-        // Allow running tasks to complete (so we can close the queue from within the task).
-        false,
-    ) {
+abstract class ColibriQueue(
+    parentLogger: Logger,
+    packetHandler: PacketHandler<XmppConnection.ColibriRequest>
+) : PacketQueue<XmppConnection.ColibriRequest>(
+    MAX_VALUE,
+    true,
+    QUEUE_NAME,
+    packetHandler,
+    TaskPools.IO_POOL,
+    // TODO: using the Videobridge clock breaks tests somehow
+    Clock.systemUTC(),
+    // Allow running tasks to complete (so we can close the queue from within the task).
+    false,
+) {
+    private val logger = createChildLogger(parentLogger)
+
     init {
         setErrorHandler(queueErrorCounter)
     }
 
-    /** Whether [close] has been called. [PacketQueue]'s own flag is private. */
+    /**
+     * Whether [close] has been called. [PacketQueue]'s own flag is private; this can be replaced with
+     * `isClosed()` once jitsi-utils#167 is in.
+     */
     @Volatile
     private var closed = false
 
@@ -63,8 +71,18 @@ abstract class ColibriQueue(packetHandler: PacketHandler<XmppConnection.ColibriR
      * would be the wrong answer.
      */
     override fun releasePacket(pkt: XmppConnection.ColibriRequest) {
-        if (closed) {
-            failConferenceNotFound(pkt)
+        if (!closed) {
+            return
+        }
+        // We are being called from close(), which Conference runs while holding its queue lock, so send the response
+        // from another thread.
+        try {
+            TaskPools.IO_POOL.execute { failConferenceNotFound(pkt, logger) }
+        } catch (e: RejectedExecutionException) {
+            logger.warn(
+                "Failed to schedule conference_not_found response to colibri request ${pkt.request.stanzaId}",
+                e
+            )
         }
     }
 
@@ -73,29 +91,23 @@ abstract class ColibriQueue(packetHandler: PacketHandler<XmppConnection.ColibriR
 
         /**
          * Respond to [request] with a conference_not_found error because its conference expired before the request
-         * could be handled. The callback is invoked on the IO pool so that sending the response does not block the
-         * caller (which may be holding a lock while closing the queue).
+         * could be handled. The response is sent on the calling thread.
          */
         @JvmStatic
-        fun failConferenceNotFound(request: XmppConnection.ColibriRequest) {
+        fun failConferenceNotFound(request: XmppConnection.ColibriRequest, logger: Logger) {
+            val iq = request.request
+            logger.warn(
+                "Conference expired before colibri request ${iq.stanzaId} could be handled, responding with " +
+                    "conference_not_found."
+            )
             expiredConferenceRequestsMetric.inc()
             request.totalDelayStats.addDelay(System.currentTimeMillis() - request.receiveTime)
-            val iq = request.request
-            val response = createConferenceNotFoundError(iq, iq.meetingId)
             try {
-                TaskPools.IO_POOL.execute {
-                    try {
-                        request.callback(response)
-                    } catch (t: Throwable) {
-                        logger.warn("Failed to send conference_not_found response to colibri request ${iq.stanzaId}", t)
-                    }
-                }
-            } catch (e: RejectedExecutionException) {
-                logger.warn("Failed to schedule conference_not_found response to colibri request ${iq.stanzaId}", e)
+                request.callback(createConferenceNotFoundError(iq, iq.meetingId))
+            } catch (t: Throwable) {
+                logger.warn("Failed to send conference_not_found response to colibri request ${iq.stanzaId}", t)
             }
         }
-
-        private val logger = createLogger()
 
         val expiredConferenceRequestsMetric = VideobridgeMetricsContainer.instance.registerCounter(
             "colibri_queue_expired_conference_requests",

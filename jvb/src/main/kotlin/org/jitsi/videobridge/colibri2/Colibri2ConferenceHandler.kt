@@ -101,11 +101,20 @@ class Colibri2ConferenceHandler(
         }
 
         if (!conferenceModifyIQ.create && conference.endpointCount == 0 && conference.relayCount == 0) {
-            logger.info("All endpoints and relays removed, expiring.")
-            expire = true
+            if (conference.hasPendingColibriRequests()) {
+                // A queued request may be about to add an endpoint (e.g. the re-allocation of an endpoint which
+                // was just expired). Let it be processed; if it does not, it will trigger the expiration itself.
+                logger.info("All endpoints and relays removed, but colibri requests are pending, not expiring yet.")
+            } else {
+                logger.info("All endpoints and relays removed, expiring.")
+                expire = true
+            }
         }
 
         Pair(responseBuilder.build(), expire)
+    } catch (e: Conference.ConferenceExpiredException) {
+        logger.warn("Conference expired while processing conference-modify IQ: $e")
+        Pair(createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.meetingId), false)
     } catch (e: UnknownEndpointException) {
         logger.warn("Unknown Endpoint during processing conference-modify IQ: $e")
         val error = createEndpointNotFoundError(conferenceModifyIQ, e.endpointId)

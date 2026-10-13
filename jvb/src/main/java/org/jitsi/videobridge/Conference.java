@@ -58,6 +58,7 @@ import java.util.regex.*;
 import java.util.stream.*;
 
 import static org.jitsi.xmpp.util.ErrorUtilKt.createError;
+import static org.jitsi.videobridge.colibri2.Colibri2UtilKt.createConferenceNotFoundError;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -342,84 +343,7 @@ public class Conference
         this.id = Objects.requireNonNull(id, "id");
         this.conferenceName = conferenceName;
         this.colibri2Handler = new Colibri2ConferenceHandler(this, logger);
-        colibriQueue = new ColibriQueue(
-                request ->
-                {
-                    Span span = tracer.spanBuilder("colibri.request")
-                            .setAttribute("conference.id", request.getRequest().getMeetingId())
-                            .setAttribute("create", request.getRequest().getCreate())
-                            .setAttribute("expire", request.getRequest().getExpire())
-                            .setParent(remoteContextFromIq(request.getRequest()))
-                            .startSpan();
-                    try (Scope s = span.makeCurrent())
-                    {
-                        if (isExpired())
-                        {
-                            // The conference expired (e.g. from VideobridgeExpireThread) after this request was
-                            // taken off the queue, so close() did not see it. Do not process it against an
-                            // expired conference.
-                            logger.warn("Conference expired before colibri request "
-                                    + request.getRequest().getStanzaId() + " could be handled, responding with "
-                                    + "conference_not_found.");
-                            ColibriQueue.failConferenceNotFound(request);
-                            return true;
-                        }
-                        logger.info( () -> {
-                            String reqStr = request.getRequest().toXML().toString();
-                            if (VideobridgeConfig.getRedactColibriHttpHeaders())
-                            {
-                                reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
-                            }
-                            if (VideobridgeConfig.getRedactRemoteAddresses())
-                            {
-                                reqStr = RedactColibri.Companion.redactIp(reqStr);
-                            }
-                            return "RECV colibri2 request: " + reqStr;
-                        });
-                        long start = System.currentTimeMillis();
-                        Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
-                        IQ response = p.getFirst();
-                        boolean expire = p.getSecond();
-                        long end = System.currentTimeMillis();
-                        long processingDelay = end - start;
-                        long totalDelay = end - request.getReceiveTime();
-                        request.getProcessingDelayStats().addDelay(processingDelay);
-                        request.getTotalDelayStats().addDelay(totalDelay);
-                        if (processingDelay > 100)
-                        {
-                            String reqStr = request.getRequest().toXML().toString();
-                            if (VideobridgeConfig.getRedactColibriHttpHeaders())
-                            {
-                                reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
-                            }
-                            if (VideobridgeConfig.getRedactRemoteAddresses())
-                            {
-                                reqStr = RedactColibri.Companion.redactIp(reqStr);
-                            }
-                            logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
-                                    + totalDelay + " ms): " + reqStr);
-                        }
-                        logger.info("SENT colibri2 response: " + response.toXML());
-                        request.getCallback().invoke(response);
-                        if (expire) videobridge.expireConference(this);
-                    }
-                    catch (Throwable e)
-                    {
-                        logger.warn("Failed to handle colibri request: ", e);
-                        span.setStatus(StatusCode.ERROR, e.getMessage());
-                        request.getCallback().invoke(
-                                createError(
-                                        request.getRequest(),
-                                        StanzaError.Condition.internal_server_error,
-                                        e.getMessage()));
-                    }
-                    finally
-                    {
-                        span.end();
-                    }
-                    return true;
-                }
-        )
+        colibriQueue = new ColibriQueue(logger, this::handleColibriRequest)
         {
         };
 
@@ -444,6 +368,94 @@ public class Conference
         epConnectionStatusMonitor.start();
     }
 
+    /**
+     * Handles a colibri request taken from {@link #colibriQueue}. Package-private for tests.
+     * @return {@code true} (the request was processed, or answered with an error).
+     */
+    boolean handleColibriRequest(XmppConnection.ColibriRequest request)
+    {
+        Span span = tracer.spanBuilder("colibri.request")
+                .setAttribute("conference.id", request.getRequest().getMeetingId())
+                .setAttribute("create", request.getRequest().getCreate())
+                .setAttribute("expire", request.getRequest().getExpire())
+                .setParent(remoteContextFromIq(request.getRequest()))
+                .startSpan();
+        try (Scope s = span.makeCurrent())
+        {
+            if (isExpired())
+            {
+                // The conference expired (e.g. from VideobridgeExpireThread) after this request was taken off the
+                // queue, so close() did not see it. Do not process it against an expired conference. Creating
+                // endpoints or relays in an expired conference is also rejected, so this check only needs to be a
+                // fast path.
+                ColibriQueue.failConferenceNotFound(request, logger);
+                return true;
+            }
+            logger.info( () -> {
+                String reqStr = request.getRequest().toXML().toString();
+                if (VideobridgeConfig.getRedactColibriHttpHeaders())
+                {
+                    reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
+                }
+                if (VideobridgeConfig.getRedactRemoteAddresses())
+                {
+                    reqStr = RedactColibri.Companion.redactIp(reqStr);
+                }
+                return "RECV colibri2 request: " + reqStr;
+            });
+            long start = System.currentTimeMillis();
+            Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(request.getRequest());
+            IQ response = p.getFirst();
+            boolean expire = p.getSecond();
+            long end = System.currentTimeMillis();
+            long processingDelay = end - start;
+            long totalDelay = end - request.getReceiveTime();
+            request.getProcessingDelayStats().addDelay(processingDelay);
+            request.getTotalDelayStats().addDelay(totalDelay);
+            if (processingDelay > 100)
+            {
+                String reqStr = request.getRequest().toXML().toString();
+                if (VideobridgeConfig.getRedactColibriHttpHeaders())
+                {
+                    reqStr = RedactColibri.Companion.redactHttpHeaderValues(reqStr);
+                }
+                if (VideobridgeConfig.getRedactRemoteAddresses())
+                {
+                    reqStr = RedactColibri.Companion.redactIp(reqStr);
+                }
+                logger.warn("Took " + processingDelay + " ms to process an IQ (total delay "
+                        + totalDelay + " ms): " + reqStr);
+            }
+            logger.info("SENT colibri2 response: " + response.toXML());
+            request.getCallback().invoke(response);
+            if (expire) videobridge.expireConference(this);
+        }
+        catch (Throwable e)
+        {
+            logger.warn("Failed to handle colibri request: ", e);
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+            request.getCallback().invoke(
+                    createError(
+                            request.getRequest(),
+                            StanzaError.Condition.internal_server_error,
+                            e.getMessage()));
+        }
+        finally
+        {
+            span.end();
+        }
+        return true;
+    }
+
+    /**
+     * @return whether there are colibri requests for this conference queued and not yet handled (not counting one
+     * currently being handled).
+     */
+    public boolean hasPendingColibriRequests()
+    {
+        return colibriQueue.size() > 0;
+    }
+
     public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
     {
         synchronized (colibriQueueLock)
@@ -457,9 +469,7 @@ public class Conference
 
         // The conference expired between Videobridge.getOrCreateConference() and here. The queue is closed and
         // would drop the request silently, so answer it ourselves.
-        logger.warn("Conference expired before colibri request " + request.getRequest().getStanzaId()
-                + " could be queued, responding with conference_not_found.");
-        ColibriQueue.failConferenceNotFound(request);
+        ColibriQueue.failConferenceNotFound(request, logger);
     }
 
     /**
@@ -584,6 +594,10 @@ public class Conference
      */
     IQ handleConferenceModifyIQ(ConferenceModifyIQ conferenceModifyIQ)
     {
+        if (isExpired())
+        {
+            return createConferenceNotFoundError(conferenceModifyIQ, conferenceModifyIQ.getMeetingId());
+        }
         Pair<IQ, Boolean> p = colibri2Handler.handleConferenceModifyIQ(conferenceModifyIQ);
         if (p.getSecond())
         {
@@ -768,6 +782,16 @@ public class Conference
             updateLastNEndpointsFuture = null;
         }
 
+        // Endpoints and relays are created under these locks after checking isExpired(). Taking them here (now that
+        // expired is set) guarantees that any creation which passed its check has finished adding to the map, and
+        // any later one will be rejected, so nothing can be added after we expire what is in the maps.
+        synchronized (endpointsById)
+        {
+        }
+        synchronized (relaysById)
+        {
+        }
+
         logger.debug(() -> "Expiring endpoints.");
         getEndpoints().forEach(AbstractEndpoint::expire);
         getRelays().forEach(Relay::expire);
@@ -865,37 +889,53 @@ public class Conference
             boolean privateAddresses,
             boolean diarize)
     {
-        final AbstractEndpoint existingEndpoint = getEndpoint(id);
-        if (existingEndpoint != null)
+        // Hold the lock while creating the endpoint so that it can not be created in a conference which is
+        // concurrently expiring (see expire()).
+        synchronized (endpointsById)
         {
-            throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
+            if (isExpired())
+            {
+                throw new ConferenceExpiredException(getID());
+            }
+            final AbstractEndpoint existingEndpoint = getEndpoint(id);
+            if (existingEndpoint != null)
+            {
+                throw new IllegalArgumentException("Local endpoint with ID = " + id + "already created");
+            }
+
+            final Endpoint endpoint = new Endpoint(
+                    id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
+            videobridge.localEndpointCreated(visitor);
+
+            endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
+
+            addEndpoints(Collections.singleton(endpoint));
+
+            return endpoint;
         }
-
-        final Endpoint endpoint = new Endpoint(
-                id, this, logger, iceControlling, doSsrcRewriting, doMidDemux, visitor, privateAddresses, diarize);
-        videobridge.localEndpointCreated(visitor);
-
-        endpoint.addEventHandler(() -> endpointSourcesChanged(endpoint));
-
-        addEndpoints(Collections.singleton(endpoint));
-
-        return endpoint;
     }
 
     @NotNull
     public Relay createRelay(String id, @Nullable String meshId, boolean iceControlling, boolean useUniquePort)
     {
-        final Relay existingRelay = getRelay(id);
-        if (existingRelay != null)
+        synchronized (relaysById)
         {
-            throw new IllegalArgumentException("Relay with ID = " + id + "already created");
+            if (isExpired())
+            {
+                throw new ConferenceExpiredException(getID());
+            }
+            final Relay existingRelay = getRelay(id);
+            if (existingRelay != null)
+            {
+                throw new IllegalArgumentException("Relay with ID = " + id + "already created");
+            }
+
+            final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
+
+            relaysById.put(id, relay);
+
+            return relay;
         }
-
-        final Relay relay = new Relay(id, this, logger, meshId, iceControlling, useUniquePort);
-
-        relaysById.put(id, relay);
-
-        return relay;
     }
 
     /**
@@ -1142,22 +1182,29 @@ public class Conference
      */
     public void addEndpoints(Set<AbstractEndpoint> endpoints)
     {
-        endpoints.forEach(endpoint -> {
-            if (endpoint.getConference() != this)
+        synchronized (endpointsById)
+        {
+            if (isExpired())
             {
-                throw new IllegalArgumentException("Endpoint belong to other " +
-                        "conference = " + endpoint.getConference());
+                throw new ConferenceExpiredException(getID());
             }
-            AbstractEndpoint replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
-            if (replacedEndpoint != null)
-            {
-                logger.info("Endpoint with id " + endpoint.getId() + ": " +
-                        replacedEndpoint + " has been replaced by new " +
-                        "endpoint with same id: " + endpoint);
-            }
-        });
+            endpoints.forEach(endpoint -> {
+                if (endpoint.getConference() != this)
+                {
+                    throw new IllegalArgumentException("Endpoint belong to other " +
+                            "conference = " + endpoint.getConference());
+                }
+                AbstractEndpoint replacedEndpoint = endpointsById.put(endpoint.getId(), endpoint);
+                if (replacedEndpoint != null)
+                {
+                    logger.info("Endpoint with id " + endpoint.getId() + ": " +
+                            replacedEndpoint + " has been replaced by new " +
+                            "endpoint with same id: " + endpoint);
+                }
+            });
 
-        updateEndpointsCache();
+            updateEndpointsCache();
+        }
 
         boolean hasNonVisitor = endpoints.stream().anyMatch(endpoint -> !endpoint.getVisitor());
 
@@ -1947,6 +1994,17 @@ public class Conference
         public void lastNEndpointsChanged()
         {
             Conference.this.lastNEndpointsChanged();
+        }
+    }
+
+    /**
+     * Thrown when an endpoint or relay can not be created because the conference has expired.
+     */
+    public static class ConferenceExpiredException extends IllegalStateException
+    {
+        public ConferenceExpiredException(String conferenceId)
+        {
+            super("Conference " + conferenceId + " has expired");
         }
     }
 }
