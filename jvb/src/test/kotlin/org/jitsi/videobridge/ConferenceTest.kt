@@ -32,24 +32,34 @@ class ConferenceTest : ConfigTest() {
     init {
         val name = JidCreate.entityBareFrom("roomName@somedomain.com")
 
+        // The conferences are expired at the end, so that their endpoints' and relays' periodic tasks (e.g. bandwidth
+        // allocation, which reschedules itself on TaskPools.SCHEDULED_POOL) do not keep running into other specs.
         context("Adding local endpoints should work") {
             with(Conference(videobridge, "id", name, null, false)) {
-                endpointCount shouldBe 0
-                // TODO cover the case when they're true
-                createLocalEndpoint("abcdabcd", true, false, false, false, false, false)
-                endpointCount shouldBe 1
-                DebugStateMode.entries.forEach { mode ->
-                    getDebugState(mode, null).shouldBeValidJsonConf()
+                try {
+                    endpointCount shouldBe 0
+                    // TODO cover the case when they're true
+                    createLocalEndpoint("abcdabcd", true, false, false, false, false, false)
+                    endpointCount shouldBe 1
+                    DebugStateMode.entries.forEach { mode ->
+                        getDebugState(mode, null).shouldBeValidJsonConf()
+                    }
+                } finally {
+                    expire()
                 }
             }
         }
         context("Creating relays should work") {
             with(Conference(videobridge, "id", name, null, false)) {
-                hasRelays() shouldBe false
-                createRelay("relay-id", "mesh-id", true, true)
-                hasRelays() shouldBe true
-                DebugStateMode.entries.forEach { mode ->
-                    getDebugState(mode, null).shouldBeValidJsonConf()
+                try {
+                    hasRelays() shouldBe false
+                    createRelay("relay-id", "mesh-id", true, true)
+                    hasRelays() shouldBe true
+                    DebugStateMode.entries.forEach { mode ->
+                        getDebugState(mode, null).shouldBeValidJsonConf()
+                    }
+                } finally {
+                    expire()
                 }
             }
         }
