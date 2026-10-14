@@ -72,6 +72,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import org.jitsi.utils.queue.CountingErrorHandler
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.utils.sumOf
 import org.jitsi.videobridge.Conference
 import org.jitsi.videobridge.CryptexConfig
@@ -333,9 +334,12 @@ class Relay @JvmOverloads constructor(
      * The queue which enforces sequential processing of incoming data channel messages
      * to maintain processing order.
      */
-    private val incomingDataChannelMessagesQueue = PacketInfoQueue(
+    // A plain PacketQueue rather than a PacketInfoQueue: the buffers are the SCTP library's message payloads, not
+    // pool buffers, so they must not be returned to the pool when the queue drops or rejects them.
+    private val incomingDataChannelMessagesQueue = PacketQueue<PacketInfo>(
+        TransportConfig.queueSize,
+        null,
         "${javaClass.simpleName}-incoming-data-channel-queue",
-        TaskPools.IO_POOL,
         { packetInfo ->
             packetInfo.packetAs<DataChannelPacket>().let { packet ->
                 dataChannelStack.onIncomingDataChannelPacket(
@@ -346,7 +350,7 @@ class Relay @JvmOverloads constructor(
             }
             true
         },
-        TransportConfig.queueSize
+        TaskPools.IO_POOL
     )
 
     fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {

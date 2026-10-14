@@ -209,12 +209,6 @@ public class Conference
      */
     @NotNull private final PacketQueue<XmppConnection.ColibriRequest> colibriQueue;
 
-    /**
-     * Serializes adding requests to {@link #colibriQueue} with closing it in {@link #expire()}, so that a request
-     * can not be added to an already closed queue (where it would be silently dropped).
-     */
-    private final Object colibriQueueLock = new Object();
-
     @NotNull private final EncodingsManager encodingsManager = new EncodingsManager();
 
     /**
@@ -455,18 +449,13 @@ public class Conference
 
     public void enqueueColibriRequest(XmppConnection.ColibriRequest request)
     {
-        synchronized (colibriQueueLock)
+        if (!colibriQueue.tryAdd(request))
         {
-            if (!isExpired())
-            {
-                colibriQueue.add(request);
-                return;
-            }
+            // The conference expired (closing the queue) between Videobridge.getOrCreateConference() and here. A
+            // request accepted by the queue is always either handled or answered by ColibriQueue.releasePacket(),
+            // so this is the only case we need to answer ourselves.
+            ColibriQueue.failConferenceNotFound(request, logger);
         }
-
-        // The conference expired between Videobridge.getOrCreateConference() and here. The queue is closed and
-        // would drop the request silently, so answer it ourselves.
-        ColibriQueue.failConferenceNotFound(request, logger);
     }
 
     /**
@@ -765,11 +754,8 @@ public class Conference
 
         logger.info("Expiring.");
 
-        synchronized (colibriQueueLock)
-        {
-            // Any request still in the queue is answered with conference_not_found (see ColibriQueue.releasePacket).
-            colibriQueue.close();
-        }
+        // Any request still in the queue is answered with conference_not_found (see ColibriQueue.releasePacket).
+        colibriQueue.close();
 
         epConnectionStatusMonitor.stop();
 
