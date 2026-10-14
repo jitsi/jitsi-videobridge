@@ -51,18 +51,6 @@ abstract class ColibriQueue(
     }
 
     /**
-     * Whether [close] has been called. [PacketQueue]'s own flag is private; this can be replaced with
-     * `isClosed()` once jitsi-utils#167 is in.
-     */
-    @Volatile
-    private var closed = false
-
-    override fun close() {
-        closed = true
-        super.close()
-    }
-
-    /**
      * Called by [PacketQueue] for a request it discards. When the queue is being closed the conference is expiring,
      * so instead of silently discarding the request we answer it with conference_not_found. Jicofo treats that error
      * as a stale session for this one conference and re-invites its participants, whereas an unanswered request
@@ -73,7 +61,7 @@ abstract class ColibriQueue(
      * would be the wrong answer.
      */
     override fun releasePacket(pkt: XmppConnection.ColibriRequest) {
-        val respond: Runnable = if (closed) {
+        val respond: Runnable = if (isClosed) {
             Runnable { failConferenceNotFound(pkt, logger) }
         } else {
             // Dropped from the head of a full queue. The capacity is unbounded so this should not happen, but every
@@ -85,8 +73,8 @@ abstract class ColibriQueue(
                 )
             }
         }
-        // We are called from close() or add(), which run under locks (Conference's queue lock, and PacketQueue's),
-        // so send the response from another thread.
+        // We may be called from close(), which Videobridge.expireConference() runs while holding its bridge-wide
+        // conference lock, so send the response from another thread.
         try {
             TaskPools.IO_POOL.execute(respond)
         } catch (e: RejectedExecutionException) {

@@ -28,7 +28,7 @@
         <kotest.version>5.9.1</kotest.version>
         <junit.version>5.14.4</junit.version>
         <junit.platform.version>1.14.4</junit.platform.version>
-        <jitsi.utils.version>1.0-153-gd5c0102</jitsi.utils.version>
+        <jitsi.utils.version>1.0-156-gac44824</jitsi.utils.version>
         <jicoco.version>1.1-183-gfc70624</jicoco.version>
         <mockk.version>1.14.11</mockk.version>
         <ktlint.version>1.8.0</ktlint.version>

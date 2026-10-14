@@ -85,6 +85,13 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         override fun releasePacket(buffer: Buffer) {
             BufferPool.returnBuffer(buffer.buffer)
         }
+
+        /** Takes ownership of the buffer even when the queue is closed (it is returned to the pool). */
+        override fun tryAdd(buffer: Buffer): Boolean = super.tryAdd(buffer).also { accepted ->
+            if (!accepted) {
+                releasePacket(buffer)
+            }
+        }
     }
 
     /**
