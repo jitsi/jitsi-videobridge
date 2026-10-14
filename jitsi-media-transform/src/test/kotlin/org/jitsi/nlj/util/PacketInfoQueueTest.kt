@@ -23,10 +23,11 @@ import java.util.concurrent.Executors
 
 class PacketInfoQueueTest : ShouldSpec() {
     private val returnedBuffers = mutableListOf<ByteArray>()
-    private val originalReturnBuffer = BufferPool.returnBuffer
+    private lateinit var originalReturnBuffer: (ByteArray) -> Unit
     private val executor = Executors.newSingleThreadExecutor()
 
     override suspend fun beforeSpec(spec: io.kotest.core.spec.Spec) {
+        originalReturnBuffer = BufferPool.returnBuffer
         BufferPool.returnBuffer = { synchronized(returnedBuffers) { returnedBuffers.add(it) } }
     }
 
@@ -45,7 +46,7 @@ class PacketInfoQueueTest : ShouldSpec() {
             val packet = packet()
             should("reject the packet and return its buffer to the pool") {
                 queue.tryAdd(packet) shouldBe false
-                returnedBuffers shouldBe listOf(packet.packet.buffer)
+                synchronized(returnedBuffers) { returnedBuffers.toList() } shouldBe listOf(packet.packet.buffer)
             }
         }
     }

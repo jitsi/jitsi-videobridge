@@ -78,6 +78,9 @@ class DtlsTransport(parentLogger: Logger, id: String) {
             } catch (e: Exception) {
                 logger.warn("Failed to handle DTLS data", e)
                 false
+            } finally {
+                // The DTLS stack copies the data, and the buffer came from the pool (see IceTransport).
+                BufferPool.returnBuffer(buffer.buffer)
             }
         },
         TaskPools.IO_POOL,

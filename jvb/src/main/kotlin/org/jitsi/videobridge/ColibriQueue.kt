@@ -78,7 +78,9 @@ abstract class ColibriQueue(
         try {
             TaskPools.IO_POOL.execute(respond)
         } catch (e: RejectedExecutionException) {
-            logger.warn("Failed to schedule error response to colibri request ${pkt.request.stanzaId}", e)
+            // The pool is shutting down. Better to answer from this thread than to leave the request unanswered.
+            logger.warn("Failed to schedule error response to colibri request ${pkt.request.stanzaId}, sending inline")
+            respond.run()
         }
     }
 

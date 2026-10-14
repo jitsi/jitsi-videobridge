@@ -63,6 +63,7 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.mins
 import org.jitsi.utils.queue.CountingErrorHandler
+import org.jitsi.utils.queue.PacketQueue
 import org.jitsi.utils.sumOf
 import org.jitsi.videobridge.cc.BandwidthProbing
 import org.jitsi.videobridge.cc.allocation.BandwidthAllocation
@@ -230,9 +231,12 @@ class Endpoint @JvmOverloads constructor(
      * The queue which enforces sequential processing of incoming data channel messages
      * to maintain processing order.
      */
-    private val incomingDataChannelMessagesQueue = PacketInfoQueue(
+    // A plain PacketQueue rather than a PacketInfoQueue: the buffers are the SCTP library's message payloads, not
+    // pool buffers, so they must not be returned to the pool when the queue drops or rejects them.
+    private val incomingDataChannelMessagesQueue = PacketQueue<PacketInfo>(
+        TransportConfig.queueSize,
+        null,
         "${javaClass.simpleName}-incoming-data-channel-queue",
-        TaskPools.IO_POOL,
         { packetInfo ->
             packetInfo.packetAs<DataChannelPacket>().let { packet ->
                 dataChannelStack.onIncomingDataChannelPacket(
@@ -243,7 +247,7 @@ class Endpoint @JvmOverloads constructor(
             }
             true
         },
-        TransportConfig.queueSize
+        TaskPools.IO_POOL
     )
 
     private val bitrateController = BitrateController(
