@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtcp.KeyframeCost
+import org.jitsi.nlj.rtcp.KeyframeModeDetector
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtp.RtpExtension
 import org.jitsi.nlj.rtp.RtpExtensionType
@@ -97,6 +98,14 @@ class Transceiver(
 
     private var mediaSources = MediaSources()
 
+    /**
+     * Learns how the senders of the received video sources answer keyframe requests, from the requests the sender
+     * side makes and the keyframes the receive side then sees. Public for an owner which receives some sources
+     * through other receivers and requests keyframes for them through other senders, as a relay does. Such an owner
+     * gives the detector those sources and connects those receivers and senders to it.
+     */
+    val keyframeModeDetector = KeyframeModeDetector(logger)
+
     var srtpTransformers: SrtpTransformers? = null
 
     /** Whether the srtpTransformers were created inside this object, or passed in externally.
@@ -163,6 +172,8 @@ class Transceiver(
         endpointConnectionStats.addListener(rtpReceiver)
 
         setKeyframeCostSupplier(rtpReceiver::getKeyframeCost)
+        rtpReceiver.setKeyframeModeDetector(keyframeModeDetector)
+        rtpSender.setKeyframeModeDetector(keyframeModeDetector)
     }
 
     /**
@@ -242,6 +253,7 @@ class Transceiver(
         logger.cdebug { "$id setting media sources: ${mediaSources.joinToString()}" }
         val ret = this.mediaSources.setMediaSources(mediaSources)
         val mergedMediaSources = this.mediaSources.getMediaSources()
+        keyframeModeDetector.setMediaSources(mergedMediaSources)
         val signaledMediaSources = mediaSources.copy()
         rtpReceiver.handleEvent(SetMediaSourcesEvent(mergedMediaSources, signaledMediaSources))
         return ret
@@ -254,6 +266,13 @@ class Transceiver(
     @JvmOverloads
     fun requestKeyFrame(requesterID: String? = null, mediaSsrc: Long? = null) =
         rtpSender.requestKeyframe(requesterID, mediaSsrc)
+
+    /**
+     * Requests a keyframe meant for every receiver of the source with [sourceSsrc], see
+     * [RtpSender.requestKeyframeForSource].
+     */
+    fun requestKeyFrameForSource(requesterID: String? = null, sourceSsrc: Long? = null) =
+        rtpSender.requestKeyframeForSource(requesterID, sourceSsrc)
 
     fun addPayloadType(payloadType: PayloadType) {
         logger.cdebug { "Payload type added: $payloadType" }
@@ -346,6 +365,7 @@ class Transceiver(
     fun debugState(mode: DebugStateMode): ObjectNode = JsonNodeFactory.instance.objectNode().apply {
         set<ObjectNode>("stream_information_store", streamInformationStore.debugState(mode))
         set<ObjectNode>("media_sources", mediaSources.debugState())
+        set<ObjectNode>("sender_keyframe_modes", keyframeModeDetector.debugState())
         set<ObjectNode>("endpoint_connection_stats", endpointConnectionStats.getSnapshot().toJson())
         set<ObjectNode>("receiver", rtpReceiver.debugState(mode))
         set<ObjectNode>("sender", rtpSender.debugState(mode))

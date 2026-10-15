@@ -153,6 +153,10 @@ constructor(
      */
     fun encodingId(layer: RtpLayerDesc): Long = calcEncodingId(primarySSRC, layer.layerId)
 
+    /** Tracks whether this encoding is currently being sent, from its media packets; see [EncodingLivenessTracker]. */
+    var liveness = EncodingLivenessTracker()
+        private set
+
     /**
      * Get the secondary ssrc for this encoding that corresponds to the given
      * type
@@ -178,6 +182,7 @@ constructor(
         layers: Array<RtpLayerDesc> = Array(this.layers.size) { i -> this.layers[i].copy() }
     ) = RtpEncodingDesc(primarySSRC, layers, eid).also {
         this.secondarySsrcs.forEach { (ssrc, type) -> it.addSecondarySsrc(ssrc, type) }
+        it.liveness = this.liveness.copy()
     }
 
     /**
@@ -206,6 +211,7 @@ constructor(
         put("fec_ssrc", getSecondarySsrc(SsrcAssociationType.FEC))
         put("eid", eid)
         put("nominal_height", nominalHeight)
+        set<ObjectNode>("liveness", liveness.debugState(System.currentTimeMillis()))
         for (layer in layers) {
             set<ObjectNode>(layer.indexString(), layer.debugState())
         }

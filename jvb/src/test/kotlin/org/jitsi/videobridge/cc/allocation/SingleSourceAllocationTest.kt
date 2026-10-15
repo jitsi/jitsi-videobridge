@@ -100,8 +100,13 @@ class SingleSourceAllocationTest : ShouldSpec() {
                     allocation.layers.map { it.layer } shouldBe listOf(ld7point5, ld15, ld30, sd30)
                 }
                 context("With constraints unmet by any layer") {
-                    // Single high-res stream with 3 temporal layers.
+                    // Single high-res stream with 3 temporal layers, so it has a single encoding, with EID 0.
                     val endpointId = "A"
+                    val hd7point5 =
+                        MockRtpLayerDesc(tid = 0, eid = 0, height = 720, frameRate = 7.5, bitrate = bitrateHd * 0.33)
+                    val hd15 =
+                        MockRtpLayerDesc(tid = 1, eid = 0, height = 720, frameRate = 15.0, bitrate = bitrateHd * 0.66)
+                    val hd30 = MockRtpLayerDesc(tid = 2, eid = 0, height = 720, frameRate = 30.0, bitrate = bitrateHd)
                     val mediaSource = MediaSourceDesc(
                         // No simulcast.
                         arrayOf(RtpEncodingDesc(1L, arrayOf(hd7point5, hd15, hd30))),
@@ -290,9 +295,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
             }
             context("The low layers are inactive (simulcast signaled but not used)") {
                 // Override layers with bitrate=0. Simulate simulcast being signaled but effectively disabled.
-                val ld7point5 = MockRtpLayerDesc(tid = 0, eid = 2, height = 720, frameRate = 7.5, bitrate = 0.bps)
-                val ld15 = MockRtpLayerDesc(tid = 1, eid = 2, height = 720, frameRate = 15.0, bitrate = 0.bps)
-                val ld30 = MockRtpLayerDesc(tid = 2, eid = 2, height = 720, frameRate = 30.0, bitrate = 0.bps)
+                val ld7point5 = MockRtpLayerDesc(tid = 0, eid = 0, height = 180, frameRate = 7.5, bitrate = 0.bps)
+                val ld15 = MockRtpLayerDesc(tid = 1, eid = 0, height = 180, frameRate = 15.0, bitrate = 0.bps)
+                val ld30 = MockRtpLayerDesc(tid = 2, eid = 0, height = 180, frameRate = 30.0, bitrate = 0.bps)
                 val sd7point5 = MockRtpLayerDesc(tid = 0, eid = 1, height = 360, frameRate = 7.5, bitrate = 0.bps)
                 val sd15 = MockRtpLayerDesc(tid = 1, eid = 1, height = 360, frameRate = 15.0, bitrate = 0.bps)
                 val sd30 = MockRtpLayerDesc(tid = 2, eid = 1, height = 360, frameRate = 30.0, bitrate = 0.bps)
@@ -348,12 +353,9 @@ class SingleSourceAllocationTest : ShouldSpec() {
                 val l2 = MockRtpLayerDesc(tid = 0, eid = 0, sid = 1, height = 720, frameRate = -1.0, bitrate = 370.kbps)
                 val l3 = MockRtpLayerDesc(tid = 0, eid = 0, sid = 2, height = 720, frameRate = -1.0, bitrate = 750.kbps)
 
+                // Spatial layers of one SVC stream, so all three are in one encoding.
                 val mediaSource = MediaSourceDesc(
-                    arrayOf(
-                        RtpEncodingDesc(1L, arrayOf(l1)),
-                        RtpEncodingDesc(1L, arrayOf(l2)),
-                        RtpEncodingDesc(1L, arrayOf(l3))
-                    ),
+                    arrayOf(RtpEncodingDesc(1L, arrayOf(l1, l2, l3))),
                     sourceName = SOURCE_NAME,
                     owner = OWNER,
                     videoType = VideoType.DESKTOP

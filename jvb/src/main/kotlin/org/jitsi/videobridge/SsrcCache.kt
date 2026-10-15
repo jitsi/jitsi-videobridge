@@ -505,16 +505,16 @@ abstract class SsrcCache(
      * then do not modify the packet and return null.
      */
     fun unmapRtcpFbSsrc(packet: RtcpFbPacket): String? {
-        val mediaSsrc = packet.mediaSourceSsrc
+        val mediaSsrc = packet.targetMediaSsrc
 
         synchronized(sendSources) {
             val ss = sendSources.values.find { sendSource ->
                 if (mediaSsrc == sendSource.send1.ssrc) {
-                    packet.mediaSourceSsrc = sendSource.props.ssrc1
+                    packet.targetMediaSsrc = sendSource.props.ssrc1
                     return@find true
                 }
                 if (mediaSsrc == sendSource.send2.ssrc) {
-                    packet.mediaSourceSsrc = sendSource.props.ssrc2
+                    packet.targetMediaSsrc = sendSource.props.ssrc2
                     return@find true
                 }
                 return@find false
@@ -523,7 +523,7 @@ abstract class SsrcCache(
             if (ss != null) {
                 logger.debug {
                     "Received RTCP FB packet. " +
-                        "Translated send SSRC $mediaSsrc to receive SSRC ${packet.mediaSourceSsrc}. " +
+                        "Translated send SSRC $mediaSsrc to receive SSRC ${packet.targetMediaSsrc}. " +
                         "Owner = ${ss.props.owner}."
                 }
                 return ss.props.owner
