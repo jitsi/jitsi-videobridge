@@ -195,8 +195,9 @@ class VlaReaderNodeTest : ShouldSpec() {
         context("An allocation whose RID does not name the packet's encoding") {
             // RID 1 on a packet of the first encoding.
             packet(1L, 1000, 1000 / 100, 0x61, 0x00, 0x64, 0x32, 0x0A)
-            should("be ignored") {
+            should("be ignored, for liveness and for the layers alike") {
                 live(1000) shouldBe listOf(true, false, false)
+                source.rtpLayers.all { it.targetBitrate == null } shouldBe true
             }
         }
         context("An empty allocation") {

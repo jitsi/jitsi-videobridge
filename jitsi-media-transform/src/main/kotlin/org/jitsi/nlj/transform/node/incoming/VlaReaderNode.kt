@@ -96,20 +96,22 @@ class VlaReaderNode(
                     return
                 }
 
+                /* The allocation lists the sender's streams in its own order, which the bridge takes to be the order
+                 * of the source's encodings. The RID field says which stream the packet carrying the allocation
+                 * belongs to, so an allocation whose RID does not name this packet's encoding is in another order,
+                 * and says nothing reliable about which encoding is which: neither which encodings are sent nor
+                 * which layers have which sizes and bitrates. An empty allocation has no RID field. */
+                val rid = VlaExtension.rid(ext)
+                if (vla.isNotEmpty() && rid != encoding.eid) {
+                    logger.cdebug { "Ignoring a VLA with RID $rid on a packet of encoding ${encoding.eid}" }
+                    return
+                }
+
                 /* An allocation with no streams at all says nothing about which are sent: the packet carrying it
                  * shows that at least its own is. The format defines an empty allocation as no layer active, but a
                  * sender which puts it on a packet is sending that packet's stream, so the allocation is not
                  * believed. */
                 if (trustSignaling && sourceDesc != null && vla.isNotEmpty()) {
-                    /* The allocation lists the sender's streams in its own order, which the bridge takes to be the
-                     * order of the source's encodings. The RID field says which stream the packet carrying the
-                     * allocation belongs to, so an allocation whose RID does not name this packet's encoding is in
-                     * another order, and says nothing reliable about which encoding is which. */
-                    val rid = VlaExtension.rid(ext)
-                    if (rid != encoding.eid) {
-                        logger.cdebug { "Ignoring a VLA with RID $rid on a packet of encoding ${encoding.eid}" }
-                        return
-                    }
                     val nowMs = clock.millis()
                     sourceDesc.rtpEncodings.forEachIndexed { streamIdx, rtpEncoding ->
                         /* The packet shows that its own encoding is being sent, whatever the allocation says of it. */
