@@ -78,12 +78,22 @@ class DtlsTransport(parentLogger: Logger, id: String) {
             } catch (e: Exception) {
                 logger.warn("Failed to handle DTLS data", e)
                 false
+            } finally {
+                // The DTLS stack copies the data, and the buffer came from the pool (see IceTransport).
+                BufferPool.returnBuffer(buffer.buffer)
             }
         },
         TaskPools.IO_POOL,
     ) {
         override fun releasePacket(buffer: Buffer) {
             BufferPool.returnBuffer(buffer.buffer)
+        }
+
+        /** Takes ownership of the buffer even when the queue is closed (it is returned to the pool). */
+        override fun tryAdd(buffer: Buffer): Boolean = super.tryAdd(buffer).also { accepted ->
+            if (!accepted) {
+                releasePacket(buffer)
+            }
         }
     }
 

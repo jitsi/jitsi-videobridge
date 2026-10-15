@@ -21,7 +21,9 @@ import org.jitsi.utils.queue.PacketQueue
 import java.util.concurrent.ExecutorService
 
 /**
- * A [PacketQueue] of [PacketInfo]s, returning buffers when released.
+ * A [PacketQueue] of [PacketInfo]s, returning buffers when released. Unlike the base class, this queue takes
+ * ownership of every packet passed to [tryAdd]/[add], even when the queue is closed: a rejected packet's buffer is
+ * returned to the pool, so callers must not use it afterwards.
  */
 class PacketInfoQueue(
     id: String,
@@ -31,5 +33,15 @@ class PacketInfoQueue(
 ) : PacketQueue<PacketInfo>(capacity, null, id, handler, executor) {
     override fun releasePacket(pkt: PacketInfo) {
         BufferPool.returnBuffer(pkt.packet.buffer)
+    }
+
+    /**
+     * @return whether the packet was accepted. If it was not (the queue is closed), its buffer has been returned to
+     * the pool.
+     */
+    override fun tryAdd(pkt: PacketInfo): Boolean = super.tryAdd(pkt).also { accepted ->
+        if (!accepted) {
+            releasePacket(pkt)
+        }
     }
 }

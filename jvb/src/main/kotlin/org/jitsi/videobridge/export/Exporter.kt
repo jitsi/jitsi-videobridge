@@ -79,10 +79,13 @@ internal class Exporter(
 
     // Ping/pong state
     private var pingScheduledFuture: ScheduledFuture<*>? = null
-    private var pingTimeoutFuture: ScheduledFuture<*>? = null
+
+    @Volatile
+    internal var pingTimeoutFuture: ScheduledFuture<*>? = null
+
     private val nextPingId = AtomicInteger(0)
-    private val lastPingSentId = AtomicInteger(0)
-    private val lastPongReceivedMs = AtomicLong(0)
+    internal val lastPingSentId = AtomicInteger(0)
+    internal val lastPongReceivedMs = AtomicLong(0)
 
     // Instance-level counters for debugState
     private val instancePacketsSent = AtomicLong(0)
@@ -314,15 +317,16 @@ internal class Exporter(
         val pingEvent = PingEvent(pingId)
 
         try {
-            recorderWebSocket.session?.sendText(pingEvent.toJson(), Callback.NOOP)
             lastPingSentId.set(pingId)
-            logger.debug { "Sent ping with id=$pingId" }
-
-            // Schedule timeout check
             pingTimeoutFuture = TaskPools.SCHEDULED_POOL.schedule({
                 handlePingTimeout()
             }, pingTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
+
+            recorderWebSocket.session?.sendText(pingEvent.toJson(), Callback.NOOP)
+            logger.debug { "Sent ping with id=$pingId" }
         } catch (e: Exception) {
+            pingTimeoutFuture?.cancel(false)
+            pingTimeoutFuture = null
             logger.warn("Failed to send ping message", e)
         }
     }

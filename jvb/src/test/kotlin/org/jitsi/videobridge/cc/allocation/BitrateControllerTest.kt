@@ -26,6 +26,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.jitsi.config.setNewConfig
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.PacketInfo
@@ -39,6 +40,7 @@ import org.jitsi.nlj.util.Bandwidth
 import org.jitsi.nlj.util.bps
 import org.jitsi.nlj.util.kbps
 import org.jitsi.nlj.util.mbps
+import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging.DiagnosticContext
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.ms
@@ -49,6 +51,7 @@ import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.TaskPools
 import java.time.Instant
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 
@@ -93,8 +96,7 @@ class BitrateControllerTest : ShouldSpec() {
                     every { cancel(capture(captureCancel)) } returns true
                 }
             }
-            TaskPools.SCHEDULED_POOL = executor
-            val bc = BitrateControllerWrapper(createEndpoints(), clock = clock)
+            val bc = BitrateControllerWrapper(createEndpoints(), clock = clock, scheduler = executor)
             val delayMs = TimeUnit.MILLISECONDS.convert(captureDelay.captured, captureDelayTimeunit.captured)
 
             delayMs.shouldBeWithinPercentageOf(
@@ -105,8 +107,26 @@ class BitrateControllerTest : ShouldSpec() {
             captureCancel.isCaptured shouldBe false
             bc.bc.expire()
             captureCancel.isCaptured shouldBe true
+        }
+        context("Expire while an update is being rescheduled") {
+            val runnables = mutableListOf<Runnable>()
+            val futures = mutableListOf<ScheduledFuture<*>>()
+            var onSchedule: () -> Unit = {}
+            val executor: ScheduledExecutorService = mockk {
+                every { schedule(any<Runnable>(), any(), any()) } answers {
+                    runnables.add(firstArg())
+                    onSchedule()
+                    mockk<ScheduledFuture<*>>(relaxed = true).also { futures.add(it) }
+                }
+            }
+            val bc = BitrateControllerWrapper(createEndpoints(), clock = clock, scheduler = executor)
 
-            TaskPools.resetScheduledPool()
+            // Expire after the periodic update has checked that it is not expired, but before it has stored the
+            // task it is scheduling (so expire() can only cancel the previous one).
+            onSchedule = { bc.bc.expire() }
+            runnables.last().run()
+
+            verify { futures.last().cancel(false) }
         }
         context("Prioritization") {
             context("Without selection") {
@@ -1539,7 +1559,16 @@ class BitrateControllerTest : ShouldSpec() {
     }
 }
 
-class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val clock: FakeClock = FakeClock()) {
+class BitrateControllerWrapper(
+    initialEndpoints: List<MediaSourceContainer>,
+    val clock: FakeClock = FakeClock(),
+    /**
+     * Runs the periodic re-allocation. By default a fake which is never run: the tests drive the allocation
+     * themselves, and this way the allocators they create (and do not always expire) do not keep rescheduling
+     * themselves on [TaskPools.SCHEDULED_POOL] for the rest of the test run.
+     */
+    scheduler: ScheduledExecutorService = FakeScheduledExecutorService()
+) {
     var endpoints: List<MediaSourceContainer> = initialEndpoints
     val logger = createLogger()
 
@@ -1590,7 +1619,8 @@ class BitrateControllerWrapper(initialEndpoints: List<MediaSourceContainer>, val
         Supplier { endpoints },
         DiagnosticContext(),
         logger,
-        clock
+        clock,
+        scheduler
     ).apply { bandwidthChanged(bwe.bps) } // TODO: handle the -1 bps case better
 
     fun setEndpointOrdering(vararg endpoints: TestEndpoint) {

@@ -30,7 +30,6 @@ import org.jitsi.config.withNewConfig
 import org.jitsi.utils.concurrent.FakeScheduledExecutorService
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.xmpp.extensions.jingle.IceUdpTransportPacketExtension
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
@@ -43,10 +42,10 @@ import java.beans.PropertyChangeListener
 class IceTransportRestartTest : ShouldSpec({
     isolationMode = IsolationMode.InstancePerLeaf
 
-    // The restart timeout and the transition window are scheduled on TaskPools.SCHEDULED_POOL.
+    // The restart timeout and the transition window are scheduled on this. It is passed to the transport rather
+    // than installed as TaskPools.SCHEDULED_POOL, so tasks scheduled by other code (e.g. a bandwidth allocator left
+    // running by another spec) do not end up in it.
     val scheduler = FakeScheduledExecutorService()
-    TaskPools.SCHEDULED_POOL = scheduler
-    afterSpec { TaskPools.resetScheduledPool() }
 
     val agents = FakeAgents()
     fun createTransport() = IceTransport(
@@ -55,7 +54,8 @@ class IceTransportRestartTest : ShouldSpec({
         useUniquePort = false,
         advertisePrivateAddresses = false,
         parentLogger = LoggerImpl("test"),
-        agentFactory = agents.factory
+        agentFactory = agents.factory,
+        customScheduler = scheduler
     )
 
     context("Before ICE is established") {

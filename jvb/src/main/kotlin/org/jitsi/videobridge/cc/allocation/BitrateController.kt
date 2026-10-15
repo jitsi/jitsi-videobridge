@@ -36,6 +36,7 @@ import org.jitsi.videobridge.message.ReceiverVideoConstraintsMessage
 import org.jitsi.videobridge.util.BooleanStateTimeTracker
 import java.time.Clock
 import java.time.Duration
+import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
 
 /**
@@ -52,7 +53,9 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
     endpointsSupplier: Supplier<List<T>>,
     private val diagnosticContext: DiagnosticContext,
     parentLogger: Logger,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    /** Runs the periodic re-allocation, see [BandwidthAllocator]. Only set in tests. */
+    scheduler: ScheduledExecutorService? = null
 ) {
     val eventEmitter = SyncEventEmitter<EventHandler>()
 
@@ -93,7 +96,8 @@ class BitrateController<T : MediaSourceContainer> @JvmOverloads constructor(
             Supplier { trustBwe },
             parentLogger,
             diagnosticContext,
-            clock
+            clock,
+            scheduler
         )
     fun hasSuspendedSources() = bandwidthAllocator.allocation.hasSuspendedSources
 
