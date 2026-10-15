@@ -37,6 +37,7 @@ import java.util.concurrent.Future
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 class DcSctpTransport(
     val name: String,
@@ -46,49 +47,82 @@ class DcSctpTransport(
     private val lock = Any()
     private var socket: DcSctpSocketInterface? = null
 
+    /** Exceptions a callback raised that dcsctp4j surfaced from a socket method; see [withSocket]. */
+    private val surfacedExceptions = AtomicLong()
+
     fun start(callbacks: DcSctpSocketCallbacks, options: DcSctpOptions = DEFAULT_SOCKET_OPTIONS) {
         synchronized(lock) {
             socket = factory.create(name, callbacks, null, options)
         }
     }
 
+    /**
+     * Runs [block] on the socket, under the lock, if there is one; otherwise returns [ifNoSocket].
+     *
+     * dcsctp4j surfaces an exception thrown by one of our callbacks from the socket method that was
+     * running at the time (dcsctp itself is compiled without exception support, so it cannot be
+     * thrown through it). These methods are the only way into the socket, so this is the one place
+     * to catch and log such an exception, whichever thread it surfaces on. [ifNoSocket] is returned
+     * in that case too. This runs on the ingress path for every packet, so after the first few the
+     * stack trace is dropped and only every hundredth occurrence is logged.
+     */
+    private inline fun <T> withSocket(what: String, ifNoSocket: T, block: (DcSctpSocketInterface) -> T): T {
+        synchronized(lock) {
+            val s = socket ?: return ifNoSocket
+            return try {
+                block(s)
+            } catch (e: Throwable) {
+                val n = surfacedExceptions.incrementAndGet()
+                if (n <= 3) {
+                    logger.warn("Exception $what", e)
+                } else if (n % 100 == 0L) {
+                    logger.warn("Exception $what ($n so far): $e")
+                }
+                ifNoSocket
+            }
+        }
+    }
+
     fun handleIncomingSctp(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
-        synchronized(lock) {
-            socket?.receivePacket(packet.getBuffer(), packet.getOffset(), packet.getLength())
+        withSocket("processing incoming SCTP packet", Unit) {
+            it.receivePacket(packet.getBuffer(), packet.getOffset(), packet.getLength())
         }
     }
 
     fun stop() {
         synchronized(lock) {
-            socket?.close()
+            // Null the field first: if close() throws, nothing may keep calling into the closed socket.
+            val s = socket ?: return
             socket = null
+            try {
+                s.close()
+            } catch (e: Throwable) {
+                logger.warn("Exception closing SCTP socket", e)
+            }
         }
     }
 
     fun connect() {
-        synchronized(lock) {
-            socket?.connect()
-        }
+        withSocket("connecting SCTP socket", Unit) { it.connect() }
     }
 
-    fun send(message: DcSctpMessage, options: SendOptions): SendStatus {
-        synchronized(lock) {
-            return socket?.send(message, options) ?: SendStatus.kErrorShuttingDown
-        }
-    }
+    /**
+     * Returns [SendStatus.kErrorShuttingDown] when there is no socket, and also when a callback
+     * exception surfaced from the send: there is no status for that, the warning logged above
+     * shows the real cause, and the socket should be treated as unusable from then on anyway.
+     */
+    fun send(message: DcSctpMessage, options: SendOptions): SendStatus =
+        withSocket("sending SCTP message", SendStatus.kErrorShuttingDown) { it.send(message, options) }
 
     fun handleTimeout(timeoutId: Long) {
-        synchronized(lock) {
-            socket?.handleTimeout(timeoutId)
-        }
+        withSocket("handling SCTP timeout", Unit) { it.handleTimeout(timeoutId) }
     }
 
     fun getDebugState(): ObjectNode {
-        val metrics = synchronized(lock) {
-            socket?.metrics
-        }
+        val metrics = withSocket("reading SCTP metrics", null) { it.metrics }
         return JsonNodeFactory.instance.objectNode().apply {
+            put("surfaced_callback_exceptions", surfacedExceptions.get())
             if (metrics != null) {
                 put("tx_packets_count", metrics.txPacketsCount)
                 put("tx_messages_count", metrics.txMessagesCount)
@@ -178,7 +212,15 @@ abstract class DcSctpBaseCallbacks(
         private val transport: DcSctpTransport?
             get() = weakTransport.get()
         private var timeoutId: Long = 0
+
+        // Assigned on the SCHEDULED_POOL thread and read by stop() from another. Volatile makes the
+        // assignments visible to stop(); a stop() racing the scheduled lambda before `future` is set
+        // can still miss the IO task, which then calls handleTimeout for a stopped timer, which
+        // dcsctp ignores.
+        @Volatile
         private var scheduledFuture: ScheduledFuture<*>? = null
+
+        @Volatile
         private var future: Future<*>? = null
         override fun start(duration: Long, timeoutId: Long) {
             try {
