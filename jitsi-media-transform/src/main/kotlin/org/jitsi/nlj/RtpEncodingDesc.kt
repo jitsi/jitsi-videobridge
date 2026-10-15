@@ -77,6 +77,17 @@ constructor(
 
     private var nominalHeight = initialLayers.getNominalHeight()
 
+    /**
+     * The source this encoding belongs to, set by the source when it is constructed. The source keeps lookup tables
+     * of its encodings' layers, which the [layers] setter tells it to rebuild.
+     */
+    internal var source: MediaSourceDesc? = null
+
+    /**
+     * The encoding's layers. Assigning them replaces the layer objects, so the source's lookup tables are rebuilt
+     * from the setter; see [MediaSourceDesc.setEncodingLayers], which also takes the source's lock. A change to a
+     * layer's attributes in place needs no rebuild, since the tables hold the layer objects themselves.
+     */
     internal var layers = initialLayers
         set(newLayers) {
             validateLayerEids(newLayers)
@@ -110,6 +121,7 @@ constructor(
                 }
             }
             field = newLayers
+            source?.onEncodingLayersChanged()
         }
 
     /** The layer of this encoding with layer ID [layerId], see [RtpLayerDesc.layerId], or null if there is none. */

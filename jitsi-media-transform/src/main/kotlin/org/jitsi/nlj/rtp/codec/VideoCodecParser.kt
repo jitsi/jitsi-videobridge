@@ -28,9 +28,19 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
  * and verify stream consistency.
  */
 abstract class VideoCodecParser(
-    var source: MediaSourceDesc
+    source: MediaSourceDesc
 ) {
+    /** The source whose packets are parsed; replaced when the sources are signaled again. */
+    var source: MediaSourceDesc = source
+        set(value) {
+            field = value
+            onSourceChanged()
+        }
+
     abstract fun parse(packetInfo: PacketInfo)
+
+    /** Called after [source] is replaced, for a parser which keeps state by the source's SSRCs to prune it. */
+    protected open fun onSourceChanged() {}
 
     protected fun findRtpEncodingDesc(packet: VideoRtpPacket): RtpEncodingDesc? {
         source.findRtpEncodingDesc(packet.ssrc)?.let {

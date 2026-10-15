@@ -103,6 +103,7 @@ class MediaSourceDesc
     init {
         rtpEncodings.forEachIndexed { index, encoding ->
             require(encoding.eid == index) { "Encoding with EID ${encoding.eid} at index $index" }
+            encoding.source = this
         }
         updateLayerCache()
     }
@@ -127,6 +128,13 @@ class MediaSourceDesc
         val timeoutMs = type.livenessTimeoutMs()
         rtpEncodings.forEach { it.liveness.timeoutMs = timeoutMs }
     }
+
+    /**
+     * Rebuilds the layer lookup tables after an encoding's layers were assigned; called by
+     * [RtpEncodingDesc.layers]'s setter, so that no assignment can leave the tables holding the old layer objects.
+     */
+    @Synchronized
+    internal fun onEncodingLayersChanged() = updateLayerCache()
 
     /**
      * Gets the last "stable" bitrate (in bps) of the encoding of the specified
@@ -266,8 +274,8 @@ class MediaSourceDesc
     @Synchronized
     fun setEncodingLayers(layers: Array<RtpLayerDesc>, ssrc: Long) {
         val enc = findRtpEncodingDesc(ssrc) ?: return
+        /* The setter rebuilds the layer lookup tables. */
         enc.layers = layers
-        updateLayerCache()
     }
 
     /**

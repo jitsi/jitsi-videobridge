@@ -48,8 +48,10 @@ abstract class RtpLayerDesc(
      * In order to handle portrait-mode video correctly, this should actually be the smaller of
      * the bitstream's height or width.
      *
-     * Where possible we sniff the actual height from the RTP packets.
+     * Where possible we sniff the actual height from the RTP packets. Written on the receive pipeline's thread, by
+     * the codec parsers and the VLA reader, and read by the bandwidth allocators on their own threads.
      */
+    @Volatile
     var height: Int,
     /**
      * The max frame rate (in fps) of the bitstream that this instance
