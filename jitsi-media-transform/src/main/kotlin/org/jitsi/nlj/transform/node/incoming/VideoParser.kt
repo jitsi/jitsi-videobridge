@@ -240,7 +240,10 @@ class VideoParser(
         }
         logger.cdebug { "Resetting source ${source.sourceName} to signaled source: $signaledSource" }
         for (signaledEncoding in signaledSource.rtpEncodings) {
-            source.setEncodingLayers(signaledEncoding.layers, signaledEncoding.primarySSRC)
+            /* Copies, since the parsers and the VLA reader update layers in place, and the signaled layers must stay
+             * as signaled for the next reset. */
+            val layers = Array(signaledEncoding.layers.size) { i -> signaledEncoding.layers[i].copy() }
+            source.setEncodingLayers(layers, signaledEncoding.primarySSRC)
         }
     }
 
