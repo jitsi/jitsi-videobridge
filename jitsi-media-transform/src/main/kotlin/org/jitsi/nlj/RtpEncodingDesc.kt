@@ -124,9 +124,6 @@ constructor(
             source?.onEncodingLayersChanged()
         }
 
-    /** The layer of this encoding with layer ID [layerId], see [RtpLayerDesc.layerId], or null if there is none. */
-    internal fun findLayer(layerId: Int): RtpLayerDesc? = layers.firstOrNull { it.layerId == layerId }
-
     /**
      * Sets the height of every layer of this encoding to [height], as learned from the bitstream, and returns whether
      * any layer's height changed. The layers stay the same objects, so the source's layer lookup tables, which hold
