@@ -622,12 +622,7 @@ public class VP8AdaptiveSourceProjectionContext
      */
     private boolean needsKeyframeToStart()
     {
-        if (lastVP8FrameProjection.getVP8Frame() == null)
-        {
-            /* Never sent anything */
-            return true;
-        }
-        return false;
+        return lastVP8FrameProjection.getVP8Frame() == null;
     }
 
     /**

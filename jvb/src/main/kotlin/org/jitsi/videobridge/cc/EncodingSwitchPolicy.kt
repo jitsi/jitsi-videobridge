@@ -101,6 +101,28 @@ object EncodingSwitchPolicy {
         current != effectiveTarget(target, liveness)
 
     /**
+     * Whether a filter forwarding [current] needs a keyframe after its target changed to [target], given that it
+     * needed one ([needed]) or not before. A suspended target leaves the need as it was: the filter stops forwarding,
+     * and judges the need again when it is given a target. Otherwise a keyframe is needed unless the current encoding
+     * is already the effective target. A request would then only refresh it, and when the sender turns the target
+     * encoding on, it sends a keyframe on its own.
+     */
+    @JvmStatic
+    fun needsKeyframeOnTargetChange(current: Int, target: Int, liveness: EncodingLiveness, needed: Boolean): Boolean =
+        if (target == SUSPENDED_ENCODING_ID) needed else needsKeyframeAfter(current, target, liveness)
+
+    /**
+     * Whether a keyframe needed to switch from [current] to [target] would no longer change anything: the sender
+     * turned the target encoding off, so the current encoding has become the effective target. The filter then stops
+     * asking, or the request would only refresh what the receiver already has. A need which is not for a switch
+     * between encodings, such as for a spatial layer or decode target switch within the current encoding, is not
+     * moot by this test, since then [current] is [target].
+     */
+    @JvmStatic
+    fun switchNeedIsMoot(current: Int, target: Int, liveness: EncodingLiveness): Boolean =
+        current != target && !needsKeyframeAfter(current, target, liveness)
+
+    /**
      * Whether a non-keyframe on encoding [incoming], arriving while [current] is forwarded and [target] is wanted,
      * shows that a switch is possible. If so, a keyframe should be requested for it. It does in two cases:
      * - The frame is from an encoding which would be a step toward the target. That is, it is above the current

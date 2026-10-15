@@ -144,16 +144,10 @@ class VP8QualityFilter
 
         if (externalEncodingIdTarget != internalEncodingIdTarget)
         {
-            // The externalEncodingIdTarget has changed since accept last
-            // run; perhaps we should request a keyframe. Not if the encoding we're forwarding is the best encoding
-            // at or below the new target that is actually being sent. A request would only refresh it, and when the
-            // sender turns the target encoding on, it sends a keyframe on its own.
+            // The target has changed since accept last ran; see the policy for whether a keyframe is needed.
             internalEncodingIdTarget = externalEncodingIdTarget;
-            if (externalEncodingIdTarget > SUSPENDED_ENCODING_ID)
-            {
-                needsKeyframe = EncodingSwitchPolicy.needsKeyframeAfter(
-                    currentEncodingId, externalEncodingIdTarget, liveness);
-            }
+            needsKeyframe = EncodingSwitchPolicy.needsKeyframeOnTargetChange(
+                currentEncodingId, externalEncodingIdTarget, liveness, needsKeyframe);
         }
 
         if (externalEncodingIdTarget < 0
@@ -194,13 +188,9 @@ class VP8QualityFilter
                 needsKeyframe = true;
             }
             else if (needsKeyframe
-                && currentEncodingId != internalEncodingIdTarget
-                && !EncodingSwitchPolicy.needsKeyframeAfter(currentEncodingId, internalEncodingIdTarget, liveness))
+                && EncodingSwitchPolicy.switchNeedIsMoot(currentEncodingId, internalEncodingIdTarget, liveness))
             {
-                // The keyframe we were waiting for, to switch encodings, would no longer change anything. The sender
-                // turned the target encoding off, so the encoding we're forwarding has become the best encoding at or
-                // below the target that is being sent. Stop asking, or the request would only refresh what the
-                // receiver already has.
+                // The keyframe we were waiting for, to switch encodings, would no longer change anything.
                 needsKeyframe = false;
             }
 

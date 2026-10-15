@@ -54,17 +54,11 @@ internal class Av1DDQualityFilter(
     private val pacer = KeyframeRequestPacer()
 
     /**
-     * A boolean flag that indicates whether a keyframe is needed, due to an
-     * encoding or (in some cases) a decode target switch.
-     */
-    private var keyframeNeeded = false
-
-    /**
      * Whether a keyframe is needed, due to an encoding or (in some cases) a decode target switch. Read, like
      * [shouldRequestKeyframe], on the thread which has just called [acceptFrame], so neither takes the lock it does.
      */
-    val needsKeyframe: Boolean
-        get() = keyframeNeeded
+    var needsKeyframe = false
+        private set
 
     /**
      * Whether a keyframe should be requested now: a keyframe is needed, and no keyframe has arrived within
@@ -72,7 +66,7 @@ internal class Av1DDQualityFilter(
      * way from a sender which generates keyframes on every encoding at once.
      */
     val shouldRequestKeyframe: Boolean
-        get() = pacer.shouldRequest(keyframeNeeded)
+        get() = pacer.shouldRequest(needsKeyframe)
 
     /**
      * Whether a keyframe may be requested now, for a need which is not this filter's own: no group is still
@@ -157,15 +151,14 @@ internal class Av1DDQualityFilter(
         pacer.onFrame(receivedTime)
 
         if (externalTargetEncoding != internalTargetEncoding) {
-            // The externalEncodingIdTarget has changed since accept last
-            // ran; perhaps we should request a keyframe. Not if the encoding we're forwarding is the best encoding
-            // at or below the new target that is actually being sent. A request would only refresh it, and when the
-            // sender turns the target encoding on, it sends a keyframe on its own.
+            // The target has changed since accept last ran; see the policy for whether a keyframe is needed.
             internalTargetEncoding = externalTargetEncoding
-            if (externalTargetEncoding != SUSPENDED_ENCODING_ID) {
-                keyframeNeeded =
-                    EncodingSwitchPolicy.needsKeyframeAfter(currentEncoding, externalTargetEncoding, liveness)
-            }
+            needsKeyframe = EncodingSwitchPolicy.needsKeyframeOnTargetChange(
+                currentEncoding,
+                externalTargetEncoding,
+                liveness,
+                needsKeyframe
+            )
         }
         if (externalTargetEncoding == SUSPENDED_ENCODING_ID) {
             // We stop forwarding immediately. We will need a keyframe in order
@@ -187,17 +180,12 @@ internal class Av1DDQualityFilter(
                 // completes when the keyframe which would have completed it never arrived. That happens when the
                 // sender generates keyframes on one encoding at a time and the keyframe which arrived was for another
                 // encoding.
-                keyframeNeeded = true
-            } else if (keyframeNeeded &&
-                currentEncoding != internalTargetEncoding &&
-                !EncodingSwitchPolicy.needsKeyframeAfter(currentEncoding, internalTargetEncoding, liveness)
+                needsKeyframe = true
+            } else if (needsKeyframe &&
+                EncodingSwitchPolicy.switchNeedIsMoot(currentEncoding, internalTargetEncoding, liveness)
             ) {
-                // The keyframe we were waiting for, to switch encodings, would no longer change anything. The sender
-                // turned the target encoding off, so the encoding we're forwarding has become the best encoding at or
-                // below the target that is being sent. Stop asking, or the request would only refresh what the
-                // receiver already has. A keyframe needed for a decode target switch within the current encoding is
-                // still needed.
-                keyframeNeeded = false
+                // The keyframe we were waiting for, to switch encodings, would no longer change anything.
+                needsKeyframe = false
             }
             if (incomingEncoding != currentEncoding) {
                 // for non-keyframes, we can't route anything but the current encoding
@@ -217,7 +205,7 @@ internal class Av1DDQualityFilter(
              * current DT.
              */
             val frameInfo = frame.frameInfo ?: run {
-                keyframeNeeded = true
+                needsKeyframe = true
                 return@doAcceptFrame false
             }
             var currentDt = getDtFromIndex(currentIndex)
@@ -286,7 +274,7 @@ internal class Av1DDQualityFilter(
                     currentIndex = externalTargetIndex
                 } else if (frame.structure?.canSwitchWithoutKeyframe(currentDt, externalTargetDt) != true) {
                     logger.debug { "Want to switch to DT $externalTargetDt from $currentDt, requesting keyframe" }
-                    keyframeNeeded = true
+                    needsKeyframe = true
                 }
             }
 
@@ -395,7 +383,7 @@ internal class Av1DDQualityFilter(
             /* A keyframe of the target encoding which is not part of the target decode target. The keyframe which
              * is follows in the same picture, so as far as this filter can tell the request has been answered, as
              * before. The target encoding's frames re-arm the need if that keyframe does not come. */
-            keyframeNeeded = false
+            needsKeyframe = false
         }
         if (accept && indexIfSwitched != null) {
             if (currentEncoding != incomingEncoding) {
@@ -408,7 +396,7 @@ internal class Av1DDQualityFilter(
             // We keep needing a keyframe until we have reached the target, or the highest encoding below it which is
             // actually being sent. A keyframe on some other encoding, whether a keyframe we took as a step toward the
             // target or a keyframe we dropped, doesn't fulfill the request.
-            keyframeNeeded =
+            needsKeyframe =
                 EncodingSwitchPolicy.needsKeyframeAfter(incomingEncoding, internalTargetEncoding, liveness)
         }
         return accept

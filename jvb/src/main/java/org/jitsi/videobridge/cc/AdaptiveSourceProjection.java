@@ -179,20 +179,15 @@ public class AdaptiveSourceProjection
     }
 
     /**
-     * The encoding liveness this projection gives its context. Exposed for tests.
+     * A snapshot of the encoding liveness this projection gives its context, as of the source's most recent packet.
+     * For tests. A fresh object, so that a call from another thread does not disturb the snapshot an accept in
+     * progress is using.
      */
     SourceLiveness getLiveness()
     {
-        liveness.snapshot(source);
-        return liveness;
-    }
-
-    /**
-     * Gets the target index value for this source projection.
-     */
-    public int getTargetIndex()
-    {
-        return targetIndex;
+        SourceLiveness snapshot = new SourceLiveness();
+        snapshot.snapshot(source);
+        return snapshot;
     }
 
     /**
@@ -325,10 +320,10 @@ public class AdaptiveSourceProjection
 
     /**
      * The SSRC to request a keyframe from so that this projection can reach its target, see
-     * {@link #getKeyframeRequestEncoding(int)}. Has no side effects, so it can be called from any thread, as
-     * it is for a receiver's own keyframe requests.
+     * {@link #getKeyframeRequestEncoding(int)}. Has no side effects, so it can be called from any thread. For tests;
+     * a receiver's own keyframe requests use {@link #getKeyframeRequestSsrcUnlessSuspended()}.
      */
-    public long getKeyframeRequestSsrc()
+    long getKeyframeRequestSsrc()
     {
         return keyframeRequestSsrc(getKeyframeRequestEncoding(targetIndex));
     }
