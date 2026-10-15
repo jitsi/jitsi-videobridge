@@ -330,7 +330,7 @@ fun Array<MediaSourceDesc>.findRtpSource(ssrc: Long): MediaSourceDesc? = this.fi
  * the desktop timeout for any screen share, the camera timeout otherwise.
  */
 private fun VideoType.livenessTimeoutMs(): Long =
-    (if (isScreenshare()) EncodingLivenessConfig.desktopTimeout else EncodingLivenessConfig.cameraTimeout).toMillis()
+    if (isScreenshare()) EncodingLivenessConfig.desktopTimeoutMs else EncodingLivenessConfig.cameraTimeoutMs
 
 /** An encoding of a source, as looked up by one of its SSRCs. */
 class SourceEncoding(val source: MediaSourceDesc, val encoding: RtpEncodingDesc)

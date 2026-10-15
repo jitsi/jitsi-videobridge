@@ -123,6 +123,12 @@ object KeyframeModeConfig {
  * per-encoding sender makes the bridge ask it for several sets of keyframes where one set would suffice. Mistaking
  * a per-encoding sender for a clustered sender only makes the bridge wait longer between requests.
  *
+ * Over a relay, the detector sees only the requests this bridge sends. Requests the origin bridge forwards for its
+ * own receivers, or for other relays, are invisible here, so their answers are not recognized as late answers and
+ * can count as evidence. A per-encoding sender whose encodings two bridges request at about the same time can look
+ * clustered for that observation. The cost of such a mistake is a shared limit and longer waits, not lost video,
+ * and [KeyframeModeConfig.senderMode] can fix the mode where it matters.
+ *
  * Times are in milliseconds of the caller's clock. The receive pipeline's clock and the requester's must agree,
  * which they do since both are wall clocks. The observation logic runs at most once per keyframe or request.
  */

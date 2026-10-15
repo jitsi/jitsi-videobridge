@@ -36,6 +36,14 @@ object EncodingLivenessConfig {
     }
 
     /**
+     * The timeouts in milliseconds, read once. A tracker is created for every encoding, including the transient
+     * encodings built from a VP9 or AV1 scalability structure and the copies of a source, on the receive pipeline's
+     * thread, and reading the configuration each time would cost a lookup and a parse there.
+     */
+    val cameraTimeoutMs: Long by lazy { cameraTimeout.toMillis() }
+    val desktopTimeoutMs: Long by lazy { desktopTimeout.toMillis() }
+
+    /**
      * Whether to take a sender's Video Layers Allocation header extension as saying which encodings it is sending,
      * see [org.jitsi.nlj.EncodingLivenessTracker.onSignaled].
      */

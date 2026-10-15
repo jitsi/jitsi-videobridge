@@ -41,7 +41,7 @@ import org.jitsi.rtp.util.RtpUtils
  * bandwidth allocation and projection code of every receiver of the source reads the state from other threads, so
  * that state is volatile.
  */
-class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTimeout.toMillis()) {
+class EncodingLivenessTracker(timeoutMs: Long = EncodingLivenessConfig.cameraTimeoutMs) {
     /**
      * How long the encoding may go without a media packet and still be live, in milliseconds; see [isLive]. Its own
      * frame interval may allow longer. This depends on the video type of the encoding's source: a screen sharing
