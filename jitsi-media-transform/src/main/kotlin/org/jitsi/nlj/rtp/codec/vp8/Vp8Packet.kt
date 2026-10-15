@@ -40,6 +40,7 @@ class Vp8Packet private constructor(
     isStartOfFrame: Boolean?,
     encodingId: Int,
     height: Int?,
+    width: Int?,
     pictureId: Int?,
     TL0PICIDX: Int?
 ) : ParsedVideoPacket(buffer, offset, length, encodingId) {
@@ -54,6 +55,7 @@ class Vp8Packet private constructor(
         isStartOfFrame = null,
         encodingId = RtpLayerDesc.SUSPENDED_ENCODING_ID,
         height = null,
+        width = null,
         pictureId = null,
         TL0PICIDX = null
     )
@@ -130,8 +132,15 @@ class Vp8Packet private constructor(
      * this index will correspond to an overall simulcast layer index across multiple simulcast stream.  e.g.
      * 180p stream packets will have 0, 360p -> 1, 720p -> 2
      */
-    val height: Int = height ?: if (this.isKeyframe) {
+    val height: Int = height ?: if (this.isKeyframe && Vp8Utils.hasKeyframeHeader(this)) {
         Vp8Utils.getHeightFromKeyFrame(this)
+    } else {
+        -1
+    }
+
+    /** The width of the keyframe this packet starts, or -1 if it does not start a keyframe with a whole header. */
+    val width: Int = width ?: if (this.isKeyframe && Vp8Utils.hasKeyframeHeader(this)) {
+        Vp8Utils.getWidthFromKeyFrame(this)
     } else {
         -1
     }
@@ -159,6 +168,7 @@ class Vp8Packet private constructor(
         isStartOfFrame = isStartOfFrame,
         encodingId = encodingId,
         height = height,
+        width = width,
         pictureId = pictureId,
         TL0PICIDX = TL0PICIDX
     ).also { postClone(it) }

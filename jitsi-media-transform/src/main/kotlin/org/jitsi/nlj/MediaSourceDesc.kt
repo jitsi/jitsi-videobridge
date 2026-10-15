@@ -100,8 +100,16 @@ class MediaSourceDesc
     }
 
     init {
+        rtpEncodings.forEach { it.source = this }
         updateLayerCache()
     }
+
+    /**
+     * Rebuilds the layer lookup tables after an encoding's layers were assigned; called by
+     * [RtpEncodingDesc.layers]'s setter, so that no assignment can leave the tables holding the old layer objects.
+     */
+    @Synchronized
+    internal fun onEncodingLayersChanged() = updateLayerCache()
 
     /**
      * Gets the last "stable" bitrate (in bps) of the encoding of the specified
@@ -159,8 +167,8 @@ class MediaSourceDesc
     @Synchronized
     fun setEncodingLayers(layers: Array<RtpLayerDesc>, ssrc: Long) {
         val enc = findRtpEncodingDesc(ssrc) ?: return
+        /* The setter rebuilds the layer lookup tables. */
         enc.layers = layers
-        updateLayerCache()
     }
 
     /**
