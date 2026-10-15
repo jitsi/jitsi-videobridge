@@ -51,6 +51,19 @@ class MediaSourceDescTest : ShouldSpec() {
             source.matches(0xdeadbeef) shouldBe true
         }
 
+        context("Assigning an encoding's layers directly") {
+            // A source of its own, since the contexts above share theirs and its layers' statistics.
+            val own = createSource(ssrcs, 1, 3, "Fake owner", "Fake name", VideoType.CAMERA)
+            val newLayers = own.rtpEncodings[1].layers.map { it.copy() }.toTypedArray()
+            own.rtpEncodings[1].layers = newLayers
+            should("update the source's layer lookups to the new layer objects") {
+                for (layer in newLayers) {
+                    own.getRtpLayerByQualityIdx(layer.index) shouldBe layer
+                    own.rtpLayers.any { it === layer } shouldBe true
+                }
+            }
+        }
+
         context("Encoding and layer properties should be correct") {
             for (i in source.rtpEncodings.indices) {
                 val e = source.rtpEncodings[i]
