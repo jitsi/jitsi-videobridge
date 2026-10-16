@@ -88,9 +88,8 @@ class Av1DDFrameMap(
             if (packet.descriptor == null) {
                 /* The parser could not parse the dependency descriptor of this packet, e.g. because it is a late
                  * retransmission and the template dependency structure in effect for it has left the parser's
-                 * history. The frame knows the structure, so parse the descriptor again with it. The structure is
-                 * copied, because the structure of a packet's descriptor is modified when the packet is rewritten. */
-                frame.structure?.let { packet.updateParse(it.clone(), logger) }
+                 * history. The frame knows the structure, so parse the descriptor again with it. */
+                frame.structure?.let { packet.updateParse(it, logger) }
             }
             try {
                 frame.validateConsistency(packet)

@@ -91,8 +91,8 @@ class Av1DDPacket : ParsedVideoPacket {
      * packet was created. This is for a packet whose structure was not known to the parser, e.g. a late retransmission
      * for which the structure has left the parser's history, when the frame of the packet knows the structure.
      *
-     * The descriptor keeps a reference to [templateDependencyStructure], and the structure of a descriptor is
-     * modified when the packet is rewritten. Pass a copy if the structure is shared.
+     * The descriptor gets a copy of [templateDependencyStructure], because the structure of a descriptor is
+     * modified when the packet is rewritten.
      *
      * @return true if the packet has a descriptor after the call.
      */
@@ -102,7 +102,7 @@ class Av1DDPacket : ParsedVideoPacket {
         }
         val ddExt = getHeaderExtension(av1DDHeaderExtensionId) ?: return false
         val newDescriptor = try {
-            Av1DependencyDescriptorReader(ddExt).parse(templateDependencyStructure)
+            Av1DependencyDescriptorReader(ddExt).parse(templateDependencyStructure.clone())
         } catch (e: Av1DependencyException) {
             logger.warn(
                 "Could not parse updated AV1 Dependency Descriptor for ssrc $ssrc seq $sequenceNumber: ${e.message}"

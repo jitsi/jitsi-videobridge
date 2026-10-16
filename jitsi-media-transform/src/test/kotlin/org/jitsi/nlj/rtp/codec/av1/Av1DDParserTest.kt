@@ -20,6 +20,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import org.jitsi.nlj.MediaSourceDesc
 import org.jitsi.nlj.RtpEncodingDesc
 import org.jitsi.nlj.resources.logging.StdoutLogger
@@ -106,11 +107,19 @@ class Av1DDParserTest : ShouldSpec() {
                 late.descriptor shouldBe null
                 late.frameInfo shouldBe null
 
-                late.updateParse(structure.clone(), logger) shouldBe true
+                late.updateParse(structure, logger) shouldBe true
                 late.descriptor shouldNotBe null
                 late.statelessDescriptor shouldBeSameInstanceAs late.descriptor
                 late.frameInfo shouldBe onTime.frameInfo
                 late.descriptor!!.activeDecodeTargetsBitmask shouldBe onTime.descriptor!!.activeDecodeTargetsBitmask
+
+                /* The descriptor has its own copy of the structure: the structure of a descriptor is modified when
+                 * the packet is rewritten, and the structure passed in is shared (e.g. by a frame). */
+                val lateStructure = late.descriptor!!.structure
+                lateStructure shouldNotBeSameInstanceAs structure
+                lateStructure.templateIdOffset shouldBe structure.templateIdOffset
+                lateStructure.templateIdOffset = (structure.templateIdOffset + 1) % 64
+                structure.templateIdOffset shouldBe keyframe.descriptor!!.structure.templateIdOffset
             }
             should("be parsed when it is not later than the history size") {
                 parser.createFrom(keyframe(1000), AV1_DD_HEADER_EXTENSION_ID)
