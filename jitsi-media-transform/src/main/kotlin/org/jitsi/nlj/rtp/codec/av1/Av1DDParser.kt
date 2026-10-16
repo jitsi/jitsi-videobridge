@@ -146,7 +146,10 @@ class Av1DDParser(
 class TemplateHistory(minHistory: Int) {
     private val indexTracker = RtpSequenceIndexTracker()
     private val history = TreeCache<Av1DdInfo>(minHistory)
-    private var latestDecodeTargets = -1
+
+    /** The last active decode targets bitmask seen, or null if none was seen. With 32 decode targets the bitmask
+     * with all targets active is -1, so -1 cannot be the sentinel. */
+    private var latestDecodeTargets: Int? = null
     private var latestDecodeTargetIndex = -1L
 
     fun get(seqNo: Int): Map.Entry<Long, Av1DdInfo>? {

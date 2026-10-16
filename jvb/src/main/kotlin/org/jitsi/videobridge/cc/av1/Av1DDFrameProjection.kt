@@ -162,7 +162,7 @@ class Av1DDFrameProjection internal constructor(
             val structure = descriptor.structure
             if (dti != null && (
                     descriptor.newTemplateDependencyStructure == null ||
-                        dti != (1 shl structure.decodeTargetCount) - 1
+                        dti != structure.allDecodeTargetsMask
                     )
             ) {
                 descriptor.activeDecodeTargetsBitmask = dti

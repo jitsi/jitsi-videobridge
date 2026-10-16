@@ -134,7 +134,7 @@ class Av1DependencyDescriptorHeaderExtension(
             return false
         }
         val newStructure = newTemplateDependencyStructure ?: return true
-        return bitmask != (1 shl newStructure.decodeTargetCount) - 1
+        return bitmask != newStructure.allDecodeTargetsMask
     }
 
     private val unpaddedLengthBits: Int
@@ -341,6 +341,11 @@ class Av1TemplateDependencyStructure private constructor(
 
     val decodeTargetCount
         get() = decodeTargetLayers.size
+
+    /** The active decode targets bitmask with all the decode targets active. The count can be 32, for which
+     * `(1 shl count) - 1` is 0, because shift amounts are taken modulo 32. */
+    val allDecodeTargetsMask: Int
+        get() = if (decodeTargetCount >= Int.SIZE_BITS) -1 else (1 shl decodeTargetCount) - 1
 
     val chainCount: Int =
         templateInfo.first().chains.size
@@ -680,7 +685,7 @@ class Av1TemplateDependencyStructure private constructor(
      * contained in that DT.
      */
     fun getDtBitmaskForDt(dt: Int): Int {
-        var mask = (1 shl decodeTargetCount) - 1
+        var mask = allDecodeTargetsMask
         templateInfo.forEach { frameInfo ->
             frameInfo.dti.forEachIndexed { i, dti ->
                 if (frameInfo.dti[dt] == DTI.NOT_PRESENT && dti != DTI.NOT_PRESENT) {
@@ -875,7 +880,7 @@ class Av1DependencyDescriptorReader(
         val activeDecodeTargetsBitmask = if (activeDecodeTargetsPresent) {
             bits(structure.decodeTargetCount)
         } else if (templateDependencyStructurePresent) {
-            (1 shl structure.decodeTargetCount) - 1
+            structure.allDecodeTargetsMask
         } else {
             null
         }

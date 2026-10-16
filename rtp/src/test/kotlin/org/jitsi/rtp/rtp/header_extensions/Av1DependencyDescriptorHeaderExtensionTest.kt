@@ -29,11 +29,16 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
     override fun isolationMode(): IsolationMode = IsolationMode.InstancePerLeaf
 
     /**
-     * Build a descriptor which carries a template dependency structure with one decode target and template ID offset
-     * 0. [structureBody] writes the structure from its template layers on. The buffer has room for a structure with
-     * the maximum number of templates, and the bits after the structure are zero.
+     * Build a descriptor which carries a template dependency structure with [decodeTargetCount] decode targets (one
+     * by default) and template ID offset 0, followed by [activeDecodeTargetsBitmask] if that is not null.
+     * [structureBody] writes the structure from its template layers on. The buffer has room for a structure with the
+     * maximum number of templates, and the bits after the descriptor are zero.
      */
-    private fun descriptorWithStructure(structureBody: BitWriter.() -> Unit): ByteArray {
+    private fun descriptorWithStructure(
+        decodeTargetCount: Int = 1,
+        activeDecodeTargetsBitmask: Int? = null,
+        structureBody: BitWriter.() -> Unit
+    ): ByteArray {
         val buf = ByteArray(64)
         val writer = BitWriter(buf, 0, buf.size)
         with(writer) {
@@ -42,13 +47,16 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
             writeBits(6, 0) // frameDependencyTemplateId
             writeBits(16, 1) // frameNumber
             writeBit(true) // templateDependencyStructurePresent
-            writeBit(false) // activeDecodeTargetsPresent
+            writeBit(activeDecodeTargetsBitmask != null) // activeDecodeTargetsPresent
             writeBit(false) // customDtisFlag
             writeBit(false) // customFdiffsFlag
             writeBit(false) // customChainsFlag
             writeBits(6, 0) // templateIdOffset
-            writeBits(5, 0) // dtCntMinusOne
+            writeBits(5, decodeTargetCount - 1) // dtCntMinusOne
             structureBody()
+            if (activeDecodeTargetsBitmask != null) {
+                writeBits(decodeTargetCount, activeDecodeTargetsBitmask)
+            }
         }
         return buf
     }
@@ -518,6 +526,49 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                         Av1DependencyDescriptorReader(desc, 0, desc.size).parse(null)
                     }
                     e.message shouldContain "temporal ID above ${Av1TemplateDependencyStructure.MAX_TEMPORAL_ID}"
+                }
+                context("with 32 decode targets") {
+                    val decodeTargetCount = 32
+                    /* One template, in layer 0/0, which is SWITCH for every decode target. */
+                    val structureBody: BitWriter.() -> Unit = {
+                        writeBits(2, 3)
+                        repeat(decodeTargetCount) { writeBits(2, DTI.SWITCH.dti) }
+                        writeBit(false) // No fdiffs
+                        writeNs(decodeTargetCount + 1, 0) // No chains
+                        writeBit(false) // No render resolutions
+                    }
+                    val structureBits = 6 + 5 + 2 + 2 * decodeTargetCount + 1 + nsBits(decodeTargetCount + 1, 0) + 1
+
+                    should("parse and re-encode with all decode targets active by default") {
+                        val length = (24 + 5 + structureBits + 7) / 8
+                        val desc = descriptorWithStructure(decodeTargetCount, null, structureBody)
+                        val dd = Av1DependencyDescriptorReader(desc, 0, length).parse(null)
+                        val structure = dd.newTemplateDependencyStructure!!
+                        structure.decodeTargetCount shouldBe decodeTargetCount
+                        structure.allDecodeTargetsMask shouldBe -1
+                        dd.activeDecodeTargetsBitmask shouldBe -1
+                        dd.frameInfo.dtisPresent.size shouldBe decodeTargetCount
+                        structure.getDtBitmaskForDt(31) shouldBe -1
+
+                        dd.encodedLength shouldBe length
+                        val buf = ByteArray(dd.encodedLength)
+                        dd.write(buf, 0, buf.size)
+                        buf shouldBe desc.copyOf(length)
+                    }
+                    should("parse and re-encode an explicit 32-bit active decode targets bitmask") {
+                        val bitmask = 0xAAAAAAAA.toInt()
+                        val length = (24 + 5 + structureBits + decodeTargetCount + 7) / 8
+                        val desc = descriptorWithStructure(decodeTargetCount, bitmask, structureBody)
+                        val dd = Av1DependencyDescriptorReader(desc, 0, length).parse(null)
+                        dd.activeDecodeTargetsBitmask shouldBe bitmask
+                        (dd.activeDecodeTargetsBitmask!! ushr 31) and 1 shouldBe 1
+                        (dd.activeDecodeTargetsBitmask!! ushr 30) and 1 shouldBe 0
+
+                        dd.encodedLength shouldBe length
+                        val buf = ByteArray(dd.encodedLength)
+                        dd.write(buf, 0, buf.size)
+                        buf shouldBe desc.copyOf(length)
+                    }
                 }
             }
             context("a descriptor without extended fields") {
