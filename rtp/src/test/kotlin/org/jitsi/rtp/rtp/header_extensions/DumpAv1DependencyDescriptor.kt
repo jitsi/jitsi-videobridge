@@ -23,8 +23,7 @@ fun main(args: Array<String>) {
     while (readLine().also { line = it } != null) {
         try {
             val descBinary = parseHexBinary(line)
-            val reader = Av1DependencyDescriptorReader(descBinary, 0, descBinary.size)
-            val desc = reader.parse(structure)
+            val desc = Av1DependencyDescriptorHeaderExtension.parse(descBinary, 0, descBinary.size, structure)
             desc.newTemplateDependencyStructure?.let { structure = it }
             println(desc.toString())
             val frameInfo = desc.frameInfo

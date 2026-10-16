@@ -106,8 +106,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
     init {
         context("AV1 Dependency Descriptors") {
             context("a descriptor with a single-layer dependency structure") {
-                val ld1r = Av1DependencyDescriptorReader(descL1T1, 0, descL1T1.size)
-                val ld1 = ld1r.parse(null)
+                val ld1 = Av1DependencyDescriptorHeaderExtension.parse(descL1T1, 0, descL1T1.size, null)
                 should("be parsed properly") {
                     ld1.startOfFrame shouldBe true
                     ld1.endOfFrame shouldBe false
@@ -120,7 +119,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     structure.maxSpatialId shouldBe 0
                 }
                 should("be parseable statelessly") {
-                    val ld1s = ld1r.parseStateless()
+                    val ld1s = Av1DependencyDescriptorStatelessSubset.parse(descL1T1, 0, descL1T1.size)
                     ld1s.startOfFrame shouldBe true
                     ld1s.endOfFrame shouldBe false
                     ld1s.frameNumber shouldBe 0x0001
@@ -144,8 +143,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor with a scalable dependency structure") {
-                val ldsr = Av1DependencyDescriptorReader(descL3T3, 0, descL3T3.size)
-                val lds = ldsr.parse(null)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(descL3T3, 0, descL3T3.size, null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
                     lds.endOfFrame shouldBe true
@@ -215,8 +213,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor with a K-SVC dependency structure") {
-                val ldsr = Av1DependencyDescriptorReader(descL3T3Key, 0, descL3T3Key.size)
-                val lds = ldsr.parse(null)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(descL3T3Key, 0, descL3T3Key.size, null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
                     lds.endOfFrame shouldBe false
@@ -286,8 +283,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor with a K-SVC dependency structure with key shift") {
-                val ldsr = Av1DependencyDescriptorReader(descL2T2KeyShift, 0, descL2T2KeyShift.size)
-                val lds = ldsr.parse(null)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(descL2T2KeyShift, 0, descL2T2KeyShift.size, null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
                     lds.endOfFrame shouldBe false
@@ -352,10 +348,13 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor following the dependency structure, specifying decode targets") {
-                val ldsr = Av1DependencyDescriptorReader(descL3T3, 0, descL3T3.size)
-                val lds = ldsr.parse(null)
-                val mdsr = Av1DependencyDescriptorReader(midDescScalable, 0, midDescScalable.size)
-                val mds = mdsr.parse(lds.newTemplateDependencyStructure)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(descL3T3, 0, descL3T3.size, null)
+                val mds = Av1DependencyDescriptorHeaderExtension.parse(
+                    midDescScalable,
+                    0,
+                    midDescScalable.size,
+                    lds.newTemplateDependencyStructure
+                )
 
                 should("be parsed properly") {
                     mds.startOfFrame shouldBe true
@@ -380,10 +379,13 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("another such descriptor") {
-                val ldsr = Av1DependencyDescriptorReader(longForMid2, 0, longForMid2.size)
-                val lds = ldsr.parse(null)
-                val mdsr = Av1DependencyDescriptorReader(midDescScalable2, 0, midDescScalable2.size)
-                val mds = mdsr.parse(lds.newTemplateDependencyStructure)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(longForMid2, 0, longForMid2.size, null)
+                val mds = Av1DependencyDescriptorHeaderExtension.parse(
+                    midDescScalable2,
+                    0,
+                    midDescScalable2.size,
+                    lds.newTemplateDependencyStructure
+                )
 
                 should("be parsed properly") {
                     mds.startOfFrame shouldBe true
@@ -408,9 +410,8 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor without a dependency structure") {
-                val mdsr = Av1DependencyDescriptorReader(midDescScalable, 0, midDescScalable.size)
                 should("be parseable as the stateless subset") {
-                    val mds = mdsr.parseStateless()
+                    val mds = Av1DependencyDescriptorStatelessSubset.parse(midDescScalable, 0, midDescScalable.size)
 
                     mds.startOfFrame shouldBe true
                     mds.endOfFrame shouldBe true
@@ -420,7 +421,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
                 should("fail to parse if the dependency structure is not present") {
                     shouldThrow<Av1DependencyException> {
-                        mdsr.parse(null)
+                        Av1DependencyDescriptorHeaderExtension.parse(midDescScalable, 0, midDescScalable.size, null)
                     }
                 }
             }
@@ -428,32 +429,34 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 /* The sender changed to a new structure with two chains, and the packet which carried it was lost.
                  * The receiver still has the older structure, which has three chains. The descriptors (from a
                  * production capture) have custom fdiffs and two custom chains, and do not fit the older structure. */
-                val staleStructure = Av1DependencyDescriptorReader(longForMid2, 0, longForMid2.size)
-                    .parse(null).newTemplateDependencyStructure!!
+                val staleStructure = Av1DependencyDescriptorHeaderExtension.parse(
+                    longForMid2,
+                    0,
+                    longForMid2.size,
+                    null
+                ).newTemplateDependencyStructure!!
                 staleStructure.chainCount shouldBe 3
 
                 should("fail to parse when the template ID is not in the structure") {
                     val desc = parseHexBinary("e49f3f1a602000")
-                    val reader = Av1DependencyDescriptorReader(desc, 0, desc.size)
                     val e = shouldThrow<Av1DependencyException> {
-                        reader.parse(staleStructure)
+                        Av1DependencyDescriptorHeaderExtension.parse(desc, 0, desc.size, staleStructure)
                     }
                     e.message shouldContain "Invalid template ID 36"
 
-                    val stateless = reader.parseStateless()
+                    val stateless = Av1DependencyDescriptorStatelessSubset.parse(desc, 0, desc.size)
                     stateless.frameDependencyTemplateId shouldBe 36
                     stateless.frameNumber shouldBe 0x9f3f
                 }
                 should("fail to parse when the custom fields do not fit in the descriptor") {
                     /* The same descriptor, with template ID 1, which the stale structure does have. */
                     val desc = parseHexBinary("c19f3f1a602000")
-                    val reader = Av1DependencyDescriptorReader(desc, 0, desc.size)
                     val e = shouldThrow<Av1DependencyException> {
-                        reader.parse(staleStructure)
+                        Av1DependencyDescriptorHeaderExtension.parse(desc, 0, desc.size, staleStructure)
                     }
                     e.message shouldContain "too short"
 
-                    val stateless = reader.parseStateless()
+                    val stateless = Av1DependencyDescriptorStatelessSubset.parse(desc, 0, desc.size)
                     stateless.frameDependencyTemplateId shouldBe 1
                     stateless.frameNumber shouldBe 0x9f3f
                 }
@@ -461,8 +464,12 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     /* A stale structure with two chains: the two custom chains fit, so only the template ID check
                      * detects that the structure is stale. Without it the descriptor is silently parsed with the
                      * wrong structure. */
-                    val twoChainStructure = Av1DependencyDescriptorReader(descL2T2KeyShift, 0, descL2T2KeyShift.size)
-                        .parse(null).newTemplateDependencyStructure!!
+                    val twoChainStructure = Av1DependencyDescriptorHeaderExtension.parse(
+                        descL2T2KeyShift,
+                        0,
+                        descL2T2KeyShift.size,
+                        null
+                    ).newTemplateDependencyStructure!!
                     twoChainStructure.chainCount shouldBe 2
                     val templateId = 63
                     ((templateId + 64 - twoChainStructure.templateIdOffset) % 64 >= twoChainStructure.templateCount)
@@ -470,12 +477,12 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
 
                     /* The same descriptor, with template ID 63. */
                     val desc = parseHexBinary("ff9f3f1a602000")
-                    val reader = Av1DependencyDescriptorReader(desc, 0, desc.size)
                     val e = shouldThrow<Av1DependencyException> {
-                        reader.parse(twoChainStructure)
+                        Av1DependencyDescriptorHeaderExtension.parse(desc, 0, desc.size, twoChainStructure)
                     }
                     e.message shouldContain "Invalid template ID 63"
-                    reader.parseStateless().frameDependencyTemplateId shouldBe 63
+                    Av1DependencyDescriptorStatelessSubset.parse(desc, 0, desc.size).frameDependencyTemplateId shouldBe
+                        63
                 }
             }
             context("a template dependency structure at the limits of the specification") {
@@ -490,11 +497,19 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                         writeNs(2, 0) // No chains
                         writeBit(false) // No render resolutions
                     }
-                    val reader = Av1DependencyDescriptorReader(desc, 0, desc.size)
-                    val structure = reader.parse(null).newTemplateDependencyStructure!!
+                    val structure = Av1DependencyDescriptorHeaderExtension.parse(
+                        desc,
+                        0,
+                        desc.size,
+                        null
+                    ).newTemplateDependencyStructure!!
                     structure.templateCount shouldBe Av1TemplateDependencyStructure.MAX_TEMPLATE_COUNT
                     structure.getTemplateIndex(63) shouldBe 63
-                    reader.parseStateless().newTemplateDependencyStructure!!.templateCount shouldBe
+                    Av1DependencyDescriptorStatelessSubset.parse(
+                        desc,
+                        0,
+                        desc.size
+                    ).newTemplateDependencyStructure!!.templateCount shouldBe
                         Av1TemplateDependencyStructure.MAX_TEMPLATE_COUNT
                 }
                 should("fail to parse with more than the maximum number of templates") {
@@ -503,7 +518,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                         writeBits(2, 3)
                     }
                     val e = shouldThrow<Av1DependencyException> {
-                        Av1DependencyDescriptorReader(desc, 0, desc.size).parse(null)
+                        Av1DependencyDescriptorHeaderExtension.parse(desc, 0, desc.size, null)
                     }
                     e.message shouldContain "more than ${Av1TemplateDependencyStructure.MAX_TEMPLATE_COUNT} templates"
                 }
@@ -513,7 +528,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                         writeBits(2, 3)
                     }
                     val e = shouldThrow<Av1DependencyException> {
-                        Av1DependencyDescriptorReader(desc, 0, desc.size).parseStateless()
+                        Av1DependencyDescriptorStatelessSubset.parse(desc, 0, desc.size)
                     }
                     e.message shouldContain "spatial ID above ${Av1TemplateDependencyStructure.MAX_SPATIAL_ID}"
                 }
@@ -523,7 +538,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                         writeBits(2, 3)
                     }
                     val e = shouldThrow<Av1DependencyException> {
-                        Av1DependencyDescriptorReader(desc, 0, desc.size).parse(null)
+                        Av1DependencyDescriptorHeaderExtension.parse(desc, 0, desc.size, null)
                     }
                     e.message shouldContain "temporal ID above ${Av1TemplateDependencyStructure.MAX_TEMPORAL_ID}"
                 }
@@ -542,7 +557,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     should("parse and re-encode with all decode targets active by default") {
                         val length = (24 + 5 + structureBits + 7) / 8
                         val desc = descriptorWithStructure(decodeTargetCount, null, structureBody)
-                        val dd = Av1DependencyDescriptorReader(desc, 0, length).parse(null)
+                        val dd = Av1DependencyDescriptorHeaderExtension.parse(desc, 0, length, null)
                         val structure = dd.newTemplateDependencyStructure!!
                         structure.decodeTargetCount shouldBe decodeTargetCount
                         structure.allDecodeTargetsMask shouldBe -1
@@ -559,7 +574,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                         val bitmask = 0xAAAAAAAA.toInt()
                         val length = (24 + 5 + structureBits + decodeTargetCount + 7) / 8
                         val desc = descriptorWithStructure(decodeTargetCount, bitmask, structureBody)
-                        val dd = Av1DependencyDescriptorReader(desc, 0, length).parse(null)
+                        val dd = Av1DependencyDescriptorHeaderExtension.parse(desc, 0, length, null)
                         dd.activeDecodeTargetsBitmask shouldBe bitmask
                         (dd.activeDecodeTargetsBitmask!! ushr 31) and 1 shouldBe 1
                         (dd.activeDecodeTargetsBitmask!! ushr 30) and 1 shouldBe 0
@@ -572,10 +587,13 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor without extended fields") {
-                val ld1r = Av1DependencyDescriptorReader(descL1T1, 0, descL1T1.size)
-                val ld1 = ld1r.parse(null)
-                val sd1r = Av1DependencyDescriptorReader(shortDesc, 0, shortDesc.size)
-                val sd1 = sd1r.parse(ld1.newTemplateDependencyStructure)
+                val ld1 = Av1DependencyDescriptorHeaderExtension.parse(descL1T1, 0, descL1T1.size, null)
+                val sd1 = Av1DependencyDescriptorHeaderExtension.parse(
+                    shortDesc,
+                    0,
+                    shortDesc.size,
+                    ld1.newTemplateDependencyStructure
+                )
 
                 should("be parsed properly") {
                     sd1.startOfFrame shouldBe false
@@ -599,21 +617,24 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     buf shouldBe shortDesc
                 }
                 should("fail to parse when the template ID is not in the structure") {
-                    val otherStructure = Av1DependencyDescriptorReader(descL2T2KeyShift, 0, descL2T2KeyShift.size)
-                        .parse(null).newTemplateDependencyStructure!!
+                    val otherStructure = Av1DependencyDescriptorHeaderExtension.parse(
+                        descL2T2KeyShift,
+                        0,
+                        descL2T2KeyShift.size,
+                        null
+                    ).newTemplateDependencyStructure!!
                     val templateId = sd1.frameDependencyTemplateId
                     ((templateId + 64 - otherStructure.templateIdOffset) % 64 >= otherStructure.templateCount)
                         .shouldBe(true)
 
                     val e = shouldThrow<Av1DependencyException> {
-                        Av1DependencyDescriptorReader(shortDesc, 0, shortDesc.size).parse(otherStructure)
+                        Av1DependencyDescriptorHeaderExtension.parse(shortDesc, 0, shortDesc.size, otherStructure)
                     }
                     e.message shouldContain "Invalid template ID $templateId"
                 }
             }
             context("A descriptor with a Temporal-only scalability structure ") {
-                val ldsr = Av1DependencyDescriptorReader(descL1T3, 0, descL1T3.size)
-                val lds = ldsr.parse(null)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(descL1T3, 0, descL1T3.size, null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
                     lds.endOfFrame shouldBe false
@@ -668,8 +689,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("a descriptor with a simulcast dependency structure") {
-                val ldsr = Av1DependencyDescriptorReader(descS3T3, 0, descS3T3.size)
-                val lds = ldsr.parse(null)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(descS3T3, 0, descS3T3.size, null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
                     lds.endOfFrame shouldBe true
@@ -739,8 +759,7 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                 }
             }
             context("A descriptor with no chains") {
-                val ldsr = Av1DependencyDescriptorReader(descNoChains, 0, descNoChains.size)
-                val lds = ldsr.parse(null)
+                val lds = Av1DependencyDescriptorHeaderExtension.parse(descNoChains, 0, descNoChains.size, null)
                 should("be parsed properly") {
                     lds.startOfFrame shouldBe true
                     lds.endOfFrame shouldBe false

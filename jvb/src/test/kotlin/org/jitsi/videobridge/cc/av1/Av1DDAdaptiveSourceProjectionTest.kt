@@ -25,7 +25,7 @@ import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacketBuilder
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorHeaderExtension
-import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorReader
+import org.jitsi.rtp.rtp.header_extensions.Av1DependencyDescriptorStatelessSubset
 import org.jitsi.rtp.rtp.header_extensions.Av1TemplateDependencyStructure
 import org.jitsi.rtp.rtp.header_extensions.FrameInfo
 import org.jitsi.rtp.util.RtpUtils
@@ -1407,7 +1407,7 @@ class Av1DDAdaptiveSourceProjectionTest {
 
         /* The rewritten descriptor is encoded in the packet. */
         val ddExt = latePacket.getHeaderExtension(Av1PacketGenerator.AV1_DD_HEADER_EXTENSION_ID)!!
-        val reread = Av1DependencyDescriptorReader(ddExt).parseStateless()
+        val reread = Av1DependencyDescriptorStatelessSubset.parse(ddExt)
         Assert.assertEquals(5556, reread.frameNumber)
         Assert.assertEquals(expectedTemplateId, reread.frameDependencyTemplateId)
     }
@@ -1559,7 +1559,7 @@ private open class Av1PacketGenerator(
 
     init {
         val dd = parseHexBinary(templateDdHex)
-        structure = Av1DependencyDescriptorReader(dd, 0, dd.size).parse(null).structure
+        structure = Av1DependencyDescriptorHeaderExtension.parse(dd, 0, dd.size, null).structure
     }
 
     fun reset() {
