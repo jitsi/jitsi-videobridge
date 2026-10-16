@@ -173,7 +173,6 @@ class Av1DDFrameProjection internal constructor(
                 descriptor.activeDecodeTargetsBitmask = dti
             }
 
-            pkt.descriptor = descriptor
             pkt.reencodeDdExt()
         }
     }

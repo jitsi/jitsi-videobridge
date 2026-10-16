@@ -1354,6 +1354,176 @@ class Av1DDAdaptiveSourceProjectionTest {
         Assert.assertEquals(0, packet.frameInfo?.temporalId)
         Assert.assertEquals(7, packet.descriptor?.structure?.templateIdOffset)
     }
+
+    /**
+     * A late retransmission of a packet of an accepted frame, whose dependency descriptor the parser could not parse,
+     * because the template dependency structure in effect for it had left the parser's history. The projection must
+     * parse the descriptor again with the structure of the frame, and rewrite the packet like the other packets of
+     * the frame.
+     */
+    @Test
+    fun lateRetransmissionWithoutDescriptorTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "lateRetransmissionWithoutDescriptorTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState,
+            Av1PersistentState(5555, 7),
+            logger
+        )
+        val targetIndex = getIndex(eid = 0, dt = 3 * 2 + 2)
+
+        val firstPacketInfo = generator.nextPacket()
+        val firstPacket = firstPacketInfo.packetAs<Av1DDPacket>()
+        Assert.assertTrue(context.accept(firstPacketInfo, targetIndex))
+        context.rewriteRtp(firstPacketInfo)
+        Assert.assertEquals(10001, firstPacket.sequenceNumber)
+        Assert.assertEquals(5556, firstPacket.frameNumber)
+
+        /* The second packet of the keyframe is lost. When its retransmission arrives, the parser can no longer parse
+         * its descriptor, because the structure has left the parser's history. */
+        val secondPacket = generator.nextPacket().packetAs<Av1DDPacket>()
+        val latePacket = Av1DDPacket(secondPacket.clone(), Av1PacketGenerator.AV1_DD_HEADER_EXTENSION_ID, null, logger)
+        Assert.assertNull(latePacket.descriptor)
+        Assert.assertNull(latePacket.frameInfo)
+        val latePacketInfo = PacketInfo(latePacket)
+
+        for (i in 0 until 600) {
+            val packetInfo = generator.nextPacket()
+            Assert.assertTrue(context.accept(packetInfo, targetIndex))
+            context.rewriteRtp(packetInfo)
+        }
+
+        Assert.assertTrue(context.accept(latePacketInfo, targetIndex))
+        Assert.assertNotNull(latePacket.descriptor)
+        Assert.assertEquals(firstPacket.frameInfo, latePacket.frameInfo)
+        context.rewriteRtp(latePacketInfo)
+        Assert.assertEquals(10002, latePacket.sequenceNumber)
+        Assert.assertEquals(5556, latePacket.frameNumber)
+        val expectedTemplateId = firstPacket.statelessDescriptor.frameDependencyTemplateId
+        Assert.assertEquals(expectedTemplateId, latePacket.statelessDescriptor.frameDependencyTemplateId)
+
+        /* The rewritten descriptor is encoded in the packet. */
+        val ddExt = latePacket.getHeaderExtension(Av1PacketGenerator.AV1_DD_HEADER_EXTENSION_ID)!!
+        val reread = Av1DependencyDescriptorReader(ddExt).parseStateless()
+        Assert.assertEquals(5556, reread.frameNumber)
+        Assert.assertEquals(expectedTemplateId, reread.frameDependencyTemplateId)
+    }
+
+    /**
+     * A packet of an accepted frame whose dependency descriptor cannot be parsed, not even with the structure of the
+     * frame. The packet cannot be rewritten, so it must not be accepted.
+     */
+    @Test
+    fun unparseablePacketOfAcceptedFrameTest() {
+        val generator = ScalableAv1PacketGenerator(3)
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "unparseablePacketOfAcceptedFrameTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val context = Av1DDAdaptiveSourceProjectionContext(diagnosticContext, initialState, null, logger)
+        val targetIndex = getIndex(eid = 0, dt = 3 * 2 + 2)
+
+        val firstPacketInfo = generator.nextPacket()
+        val structure = firstPacketInfo.packetAs<Av1DDPacket>().descriptor!!.structure
+        /* The first template ID which is not in the structure. */
+        val badTemplateId = (structure.templateIdOffset + structure.templateCount) % 64
+        Assert.assertTrue(context.accept(firstPacketInfo, targetIndex))
+        context.rewriteRtp(firstPacketInfo)
+
+        /* The second packet of the keyframe, with its template ID changed, and parsed without a structure. */
+        val badRtpPacket = generator.nextPacket().packetAs<Av1DDPacket>().clone()
+        val ddExt = badRtpPacket.getHeaderExtension(Av1PacketGenerator.AV1_DD_HEADER_EXTENSION_ID)!!
+        ddExt.buffer[ddExt.dataOffset] = ((ddExt.buffer[ddExt.dataOffset].toInt() and 0xc0) or badTemplateId).toByte()
+        val badPacket = Av1DDPacket(badRtpPacket, Av1PacketGenerator.AV1_DD_HEADER_EXTENSION_ID, null, logger)
+        Assert.assertNull(badPacket.descriptor)
+        Assert.assertEquals(badTemplateId, badPacket.statelessDescriptor.frameDependencyTemplateId)
+
+        Assert.assertFalse(context.accept(PacketInfo(badPacket), targetIndex))
+        Assert.assertNull(badPacket.descriptor)
+
+        /* The rest of the stream is not affected. */
+        for (i in 0 until 30) {
+            val packetInfo = generator.nextPacket()
+            Assert.assertTrue(context.accept(packetInfo, targetIndex))
+            context.rewriteRtp(packetInfo)
+        }
+    }
+
+    /**
+     * An encoding switch after the frames of the first encoding were rewritten with a non-zero template ID delta.
+     * The projection of the new encoding takes the next template ID from the structure of the last projected frame.
+     * The frame must keep the original structure: the packet which was accepted is the same object which is rewritten
+     * (the last receiver gets the original packet), and the rewrite changes the template ID offset of the structure
+     * of the packet. Otherwise the delta is applied twice.
+     */
+    @Test
+    fun encodingSwitchAfterRewriteWithTemplateIdDeltaTest() {
+        val generator1 = TemporallyScaledPacketGenerator(3, encodingId = 0)
+        val generator2 = TemporallyScaledPacketGenerator(3, encodingId = 1)
+        generator2.ssrc = 0xdeadbeefL
+        val diagnosticContext = DiagnosticContext()
+        diagnosticContext["test"] = "encodingSwitchAfterRewriteWithTemplateIdDeltaTest"
+        val initialState = RtpState(1, 10000, 1000000)
+        val persistentTemplateId = 7
+        val context = Av1DDAdaptiveSourceProjectionContext(
+            diagnosticContext,
+            initialState,
+            Av1PersistentState(5555, persistentTemplateId),
+            logger
+        )
+        var targetIndex = getIndex(eid = 0, dt = 2)
+        var templateCount = 0
+
+        /* Encoding 0 is forwarded. Its template IDs are rewritten to start at persistentTemplateId. */
+        for (i in 0..29) {
+            val packetInfo1 = generator1.nextPacket()
+            val packet1 = packetInfo1.packetAs<Av1DDPacket>()
+            if (i == 0) {
+                val structure = packet1.descriptor!!.structure
+                templateCount = structure.templateCount
+                /* The test needs a rewrite which changes the template ID offset. */
+                Assert.assertNotEquals(persistentTemplateId, structure.templateIdOffset)
+            }
+            Assert.assertTrue(context.accept(packetInfo1, targetIndex))
+            context.rewriteRtp(packetInfo1)
+            Assert.assertEquals(persistentTemplateId, packet1.descriptor!!.structure.templateIdOffset)
+            Assert.assertFalse(context.accept(generator2.nextPacket(), targetIndex))
+        }
+
+        /* Switch to encoding 1, with keyframes on both encodings. The structure of encoding 1 must follow the
+         * structure of encoding 0 as it was sent. */
+        targetIndex = getIndex(eid = 1, dt = 2)
+        generator1.requestKeyframe()
+        generator2.requestKeyframe()
+        val expectedTemplateOffset = (persistentTemplateId + templateCount) % 64
+
+        for (i in 0..29) {
+            val packetInfo1 = generator1.nextPacket()
+            /* The first packet of the keyframe of encoding 0 is accepted, before the keyframe of encoding 1. */
+            Assert.assertEquals(i == 0, context.accept(packetInfo1, targetIndex))
+            if (i == 0) {
+                context.rewriteRtp(packetInfo1)
+            }
+
+            val packetInfo2 = generator2.nextPacket()
+            val packet2 = packetInfo2.packetAs<Av1DDPacket>()
+            val originalTemplateIndex =
+                packet2.descriptor!!.frameDependencyTemplateId - packet2.descriptor!!.structure.templateIdOffset
+            val expectedTemplateId = (originalTemplateIndex + 64 + expectedTemplateOffset) % 64
+            Assert.assertTrue(context.accept(packetInfo2, targetIndex))
+            context.rewriteRtp(packetInfo2)
+            Assert.assertEquals(expectedTemplateId, packet2.descriptor!!.frameDependencyTemplateId)
+            Assert.assertEquals(expectedTemplateOffset, packet2.descriptor!!.structure.templateIdOffset)
+            if (i == 0) {
+                Assert.assertEquals(
+                    expectedTemplateOffset,
+                    packet2.descriptor!!.newTemplateDependencyStructure!!.templateIdOffset
+                )
+            }
+        }
+    }
 }
 
 private open class Av1PacketGenerator(
@@ -1429,6 +1599,9 @@ private open class Av1PacketGenerator(
         rtpPacket.timestamp = ts
         rtpPacket.isMarked = endOfPicture
 
+        /* Each packet gets its own copy of the structure, as from Av1DDParser. Rewriting a packet modifies the
+         * structure of its descriptor. */
+        val structure = this.structure.clone()
         val dd = Av1DependencyDescriptorHeaderExtension(
             startOfFrame = startOfFrame,
             endOfFrame = endOfFrame,
