@@ -358,9 +358,9 @@ class TransportFeedbackAdapter(
         if (packetFeedback.sent.sendTime.isInfinite()) {
             // TODO(srte): Fix the tests that makes this happen and make this a
             //  DCHECK.
-            logger.error(
+            logger.debug {
                 "Received feedback before packet with seqNum $transportSeqNum was indicated as sent"
-            )
+            }
             return null
         }
 
