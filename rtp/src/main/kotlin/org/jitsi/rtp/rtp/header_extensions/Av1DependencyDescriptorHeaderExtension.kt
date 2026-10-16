@@ -235,7 +235,7 @@ class Av1DependencyDescriptorHeaderExtension(
     fun write(ext: RtpPacket.HeaderExtension) = write(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
 
     fun write(buffer: ByteArray, offset: Int, length: Int) {
-        check(length <= encodedLength) {
+        check(length >= encodedLength) {
             "Cannot write AV1 DD to buffer: buffer length $length must be at least $encodedLength"
         }
         val writer = BitWriter(buffer, offset, length)
