@@ -352,7 +352,12 @@ class Endpoint @JvmOverloads constructor(
                 }
             }
 
-            is AudioRtpPacket -> if (doSsrcRewriting) audioSsrcs.rewriteRtp(packet)
+            is AudioRtpPacket -> {
+                // A packet that was not rewritten has an SSRC that the receiver does not know, so it is not useful.
+                if (doSsrcRewriting && !audioSsrcs.rewriteRtp(packet)) {
+                    return null
+                }
+            }
 
             is RtcpSrPacket -> {
                 // Allow the BC to update the timestamp (in place).
