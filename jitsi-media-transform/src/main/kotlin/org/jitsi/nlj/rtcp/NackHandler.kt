@@ -29,21 +29,28 @@ import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
+import java.time.Clock
 import java.time.Instant
 
 /**
  * When a nack packet is received, the [NackHandler] will try to retrieve the
  * nacked packets from the cache and then send them to the RTX output pipeline.
+ *
+ * It does not retransmit a packet that was first sent more than max(1 s, 3 RTT) ago (see [MIN_MAX_PACKET_AGE_MS]
+ * and [MAX_PACKET_AGE_RTTS]). A receiver that comes back after a network outage can NACK all the packets that it
+ * lost. Packets that old are no longer useful to the receiver, and a burst of them fills the send queue.
  */
 class NackHandler(
     private val packetCache: PacketCache,
     private val onNackedPacketsReady: PacketHandler,
-    parentLogger: Logger
+    parentLogger: Logger,
+    private val clock: Clock = Clock.systemUTC()
 ) : NodeStatsProducer, RtcpListener, EndpointConnectionStats.EndpointConnectionStatsListener {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0
     private var numPacketsNotResentDueToDelay = 0
+    private var numPacketsNotResentDueToAge = 0
     private var numCacheMisses = 0
     private val logger = createChildLogger(parentLogger)
     private var currRtt: Double = -1.0
@@ -56,7 +63,12 @@ class NackHandler(
 
     private fun onNackPacket(nackPacket: RtcpFbNackPacket) {
         logger.cdebug { "Nack received for ${nackPacket.mediaSourceSsrc} ${nackPacket.missingSeqNums}" }
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
+        val maxAgeMs = if (currRtt == -1.0) {
+            MIN_MAX_PACKET_AGE_MS
+        } else {
+            Math.max(MIN_MAX_PACKET_AGE_MS, MAX_PACKET_AGE_RTTS * currRtt)
+        }
 
         numNacksReceived++
         val nackedPackets = mutableListOf<RtpPacket>()
@@ -64,11 +76,17 @@ class NackHandler(
         numNackedPackets += nackPacket.missingSeqNums.size
         nackPacket.missingSeqNums.forEach { missingSeqNum ->
             packetCache.get(ssrc, missingSeqNum)?.let { container ->
+                // The time of the first transmission. The cache updates [timeAdded] when we retransmit the packet.
+                val age = now - container.timeInserted
+                // The time since the last transmission (the first one, or the last retransmission).
                 val delay = now - container.timeAdded
                 val shouldResendPacket =
                     (currRtt == -1.0) ||
                         (delay >= Math.min(currRtt * .9, currRtt - 5))
-                if (shouldResendPacket) {
+                if (age > maxAgeMs) {
+                    BufferPool.returnBuffer(container.item!!.buffer)
+                    numPacketsNotResentDueToAge++
+                } else if (shouldResendPacket) {
                     // The cache returns a null container on failure, never a container with a null packet. Maybe we
                     // can refactor to make it explicit.
                     nackedPackets.add(container.item!!)
@@ -99,6 +117,15 @@ class NackHandler(
         addNumber("num_nacked_packets", numNackedPackets)
         addNumber("num_retransmitted_packets", numRetransmittedPackets)
         addNumber("num_packets_not_retransmitted", numPacketsNotResentDueToDelay)
+        addNumber("num_packets_not_retransmitted_too_old", numPacketsNotResentDueToAge)
         addNumber("num_cache_misses", numCacheMisses)
+    }
+
+    companion object {
+        /** The minimum value of the max age of a packet that we retransmit. */
+        const val MIN_MAX_PACKET_AGE_MS = 1000.0
+
+        /** The max age of a packet that we retransmit, as a number of RTTs (if larger than [MIN_MAX_PACKET_AGE_MS]). */
+        const val MAX_PACKET_AGE_RTTS = 3
     }
 }

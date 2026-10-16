@@ -20,6 +20,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.rtp.rtp.RtpPacket
+import java.time.Clock
 import java.util.Collections
 
 /**
@@ -33,7 +34,8 @@ class PacketCache(
     /**
      * The max number of packets to cache per SSRC.
      */
-    val size: Int = 500
+    val size: Int = 500,
+    private val clock: Clock = Clock.systemUTC()
 ) : NodeStatsProducer {
     private val packetCaches = Collections.synchronizedMap(
         LinkedHashMap<Long, RtpPacketCache>(
@@ -51,7 +53,7 @@ class PacketCache(
     private var stopped = false
 
     private fun getCache(ssrc: Long): RtpPacketCache = packetCaches.computeIfAbsent(ssrc) {
-        RtpPacketCache(size)
+        RtpPacketCache(size, clock = clock)
     }.also { it.setLastAccess() }
         .also { expireCaches(it.lastAccessMillis) }
 
@@ -90,6 +92,7 @@ class PacketCache(
     /**
      * Updates the timestamp of a packet in the cache (if it is in the cache). This is used when we re-transmit a
      * packet in order to update the timestamp without re-adding the packet to the cache (which is expensive).
+     * This changes [ArrayCache.Container.timeAdded], but not [ArrayCache.Container.timeInserted].
      */
     fun updateTimestamp(ssrc: Long, seqNum: Int, timeAdded: Long) = getCache(ssrc).updateTimestamp(seqNum, timeAdded)
 
@@ -118,11 +121,13 @@ class PacketCache(
  */
 class RtpPacketCache(
     size: Int,
-    synchronize: Boolean = true
+    synchronize: Boolean = true,
+    clock: Clock = Clock.systemUTC()
 ) : ArrayCache<RtpPacket>(
     size = size,
     cloneItem = RtpPacket::clone,
-    synchronize = synchronize
+    synchronize = synchronize,
+    clock = clock
 ) {
     var lastAccessMillis: Long = 0
         private set
