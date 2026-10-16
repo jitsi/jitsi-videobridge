@@ -184,7 +184,10 @@ class Av1DDFrame internal constructor(
         frameNumber = packet.statelessDescriptor.frameNumber,
         index = index,
         templateId = packet.statelessDescriptor.frameDependencyTemplateId,
-        structure = packet.descriptor?.structure,
+        /* Copied: the frame maps of all receivers see the same packet, so without a copy they would all reference
+         * one structure object, and a projection changes templateIdOffset of the structure of a packet's
+         * descriptor in place when it rewrites the packet. */
+        structure = packet.descriptor?.structure?.clone(),
         activeDecodeTargets = packet.activeDecodeTargets,
         isKeyframe = packet.isKeyframe,
         rawDependencyDescriptor = if (packet.frameInfo == null) {
@@ -221,7 +224,8 @@ class Av1DDFrame internal constructor(
         }
 
         if (structure == null && packet.descriptor?.structure != null) {
-            structure = packet.descriptor?.structure
+            /* Copied, see the constructor. */
+            structure = packet.descriptor?.structure?.clone()
         }
 
         if (frameInfo == null && packet.frameInfo != null) {

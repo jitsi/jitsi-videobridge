@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import org.jitsi.rtp.rtp.RtpPacket
 import org.jitsi.rtp.util.BitReader
+import org.jitsi.rtp.util.BitReaderOverrunException
 import org.jitsi.rtp.util.BitWriter
 
 /**
@@ -70,15 +71,7 @@ class Av1DependencyDescriptorHeaderExtension(
     newTemplateDependencyStructure
 ) {
     val frameInfo: FrameInfo by lazy {
-        val templateIndex = (frameDependencyTemplateId + 64 - structure.templateIdOffset) % 64
-        if (templateIndex >= structure.templateCount) {
-            val maxTemplate = (structure.templateIdOffset + structure.templateCount - 1) % 64
-            throw Av1DependencyException(
-                "Invalid template ID $frameDependencyTemplateId. " +
-                    "Should be in range ${structure.templateIdOffset} .. $maxTemplate. " +
-                    "Missed a keyframe?"
-            )
-        }
+        val templateIndex = structure.getTemplateIndex(frameDependencyTemplateId)
         val templateVal = structure.templateInfo[templateIndex]
 
         FrameInfo(
@@ -318,6 +311,24 @@ class Av1TemplateDependencyStructure(
 
     val chainCount: Int =
         templateInfo.first().chains.size
+
+    /**
+     * Get the index in [templateInfo] of the template with the given frame dependency template ID.
+     * @throws Av1DependencyException if the ID is not a template of this structure. This happens when the sender
+     * has changed to a new structure, and the packet which carried it was lost or delayed.
+     */
+    fun getTemplateIndex(frameDependencyTemplateId: Int): Int {
+        val templateIndex = (frameDependencyTemplateId + 64 - templateIdOffset) % 64
+        if (templateIndex >= templateCount) {
+            val maxTemplate = (templateIdOffset + templateCount - 1) % 64
+            throw Av1DependencyException(
+                "Invalid template ID $frameDependencyTemplateId. " +
+                    "Should be in range $templateIdOffset .. $maxTemplate. " +
+                    "Missed a keyframe?"
+            )
+        }
+        return templateIndex
+    }
 
     init {
         check(templateInfo.all { it.chains.size == chainCount }) {
@@ -567,18 +578,20 @@ class Av1DependencyDescriptorReader(
      */
     fun parseStateless(): Av1DependencyDescriptorStatelessSubset {
         reset()
-        readMandatoryDescriptorFields()
+        readFields {
+            readMandatoryDescriptorFields()
 
-        if (length > 3) {
-            val templateDependencyStructurePresent = reader.bitAsBoolean()
+            if (length > 3) {
+                val templateDependencyStructurePresent = reader.bitAsBoolean()
 
-            /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
-             * none of these fields are parseable statelessly.
-             */
-            reader.skipBits(4)
+                /* activeDecodeTargetsPresent, customDtisFlag, customFdiffsFlag, and customChainsFlag;
+                 * none of these fields are parseable statelessly.
+                 */
+                reader.skipBits(4)
 
-            if (templateDependencyStructurePresent) {
-                localTemplateDependencyStructure = readTemplateDependencyStructure()
+                if (templateDependencyStructurePresent) {
+                    localTemplateDependencyStructure = readTemplateDependencyStructure()
+                }
             }
         }
         return Av1DependencyDescriptorStatelessSubset(
@@ -591,17 +604,24 @@ class Av1DependencyDescriptorReader(
     }
 
     /** Parse the dependency descriptor in the context of [dep], the currently-applicable template dependency
-     * structure.*/
+     * structure.
+     * @throws Av1DependencyException if the descriptor cannot be parsed with [dep].
+     */
     fun parse(dep: Av1TemplateDependencyStructure?): Av1DependencyDescriptorHeaderExtension {
         reset()
-        readMandatoryDescriptorFields()
-        if (length > 3) {
-            readExtendedDescriptorFields(dep)
-        } else {
-            if (dep == null) {
-                throw Av1DependencyException("No external dependency structure specified for non-first packet")
+        readFields {
+            readMandatoryDescriptorFields()
+            if (length > 3) {
+                readExtendedDescriptorFields(dep)
+            } else {
+                if (dep == null) {
+                    throw Av1DependencyException("No external dependency structure specified for non-first packet")
+                }
+                /* See readExtendedDescriptorFields: a template ID which is not in the structure means the structure
+                 * is stale. */
+                dep.getTemplateIndex(frameDependencyTemplateId)
+                templateDependencyStructure = dep
             }
-            templateDependencyStructure = dep
         }
         return Av1DependencyDescriptorHeaderExtension(
             startOfFrame,
@@ -618,6 +638,22 @@ class Av1DependencyDescriptorReader(
     }
 
     private fun reset() = reader.reset()
+
+    /**
+     * Run [block], and convert a read past the end of the descriptor into an [Av1DependencyException]. This happens
+     * when the descriptor is truncated, or when it does not match the template dependency structure it is parsed
+     * with (the sender changed to a new structure, and the packet which carried it was lost). Other exceptions are
+     * not converted: they indicate a bug, not unparseable input.
+     */
+    private inline fun readFields(block: () -> Unit) {
+        try {
+            block()
+        } catch (e: BitReaderOverrunException) {
+            throw Av1DependencyException(
+                "Dependency descriptor of $length bytes is too short for its fields: ${e.message}"
+            )
+        }
+    }
 
     private fun readMandatoryDescriptorFields() {
         startOfFrame = reader.bitAsBoolean()
@@ -647,6 +683,11 @@ class Av1DependencyDescriptorReader(
         } else if (templateDependencyStructurePresent) {
             activeDecodeTargetsBitmask = (1 shl templateDependencyStructure!!.decodeTargetCount) - 1
         }
+
+        /* The spec (frame_dependency_definition()) checks the template index before it reads the custom DTIs,
+         * fdiffs and chains, because their sizes come from the structure. If the template ID is not in the
+         * structure, the structure is stale, and the custom fields must not be read with it. */
+        templateDependencyStructure!!.getTemplateIndex(frameDependencyTemplateId)
 
         if (customDtisFlag) {
             customDtis = readFrameDtis()

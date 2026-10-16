@@ -42,12 +42,16 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
 
     fun remainingBits(): Int = byteBound * 8 - offset
 
-    /** Read a single bit from the buffer, as a boolean, incrementing the offset. */
+    /** Read a single bit from the buffer, as a boolean, incrementing the offset.
+     * @throws BitReaderOverrunException if the read is past the end of the buffer.
+     */
     fun bitAsBoolean(): Boolean {
         val byteIdx = offset / 8
         val bitIdx = offset % 8
-        check(byteIdx < byteBound) {
-            "offset $offset ($byteIdx/$bitIdx) invalid in buffer of length $byteLength after offset $byteOffset"
+        if (byteIdx >= byteBound) {
+            throw BitReaderOverrunException(
+                "offset $offset ($byteIdx/$bitIdx) invalid in buffer of length $byteLength after offset $byteOffset"
+            )
         }
         val byte = buf[byteIdx]
         val mask = (1 shl (7 - bitIdx)).toByte()
@@ -133,3 +137,6 @@ class BitReader(val buf: ByteArray, private val byteOffset: Int = 0, private val
         offset = byteOffset * 8
     }
 }
+
+/** Thrown when a [BitReader] is asked to read past the end of its buffer. */
+class BitReaderOverrunException(msg: String) : IllegalStateException(msg)

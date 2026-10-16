@@ -136,7 +136,14 @@ class Av1DDAdaptiveSourceProjectionContext(
         }
 
         val accept = frame.isAccepted &&
-            if (frame.projection?.accept(packet) == true) {
+            if (packet.descriptor == null) {
+                /* The frame number and template ID of the packet cannot be rewritten without a descriptor, so the
+                 * packet cannot be forwarded. An accepted frame knows its structure, and the frame map parses the
+                 * descriptor again with it, so this happens only if the descriptor does not match the structure
+                 * (logged at WARN by the parse). */
+                logger.debug { "Not accepting $packet: it has no dependency descriptor" }
+                false
+            } else if (frame.projection?.accept(packet) == true) {
                 true
             } else {
                 if (frame.projection != null && frame.projection?.closedSeq != -1) {

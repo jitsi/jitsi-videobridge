@@ -21,6 +21,7 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import jakarta.xml.bind.DatatypeConverter.parseHexBinary
 
 class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
@@ -389,6 +390,60 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     }
                 }
             }
+            context("a descriptor which does not match the dependency structure it is parsed with") {
+                /* The sender changed to a new structure with two chains, and the packet which carried it was lost.
+                 * The receiver still has the older structure, which has three chains. The descriptors (from a
+                 * production capture) have custom fdiffs and two custom chains, and do not fit the older structure. */
+                val staleStructure = Av1DependencyDescriptorReader(longForMid2, 0, longForMid2.size)
+                    .parse(null).newTemplateDependencyStructure!!
+                staleStructure.chainCount shouldBe 3
+
+                should("fail to parse when the template ID is not in the structure") {
+                    val desc = parseHexBinary("e49f3f1a602000")
+                    val reader = Av1DependencyDescriptorReader(desc, 0, desc.size)
+                    val e = shouldThrow<Av1DependencyException> {
+                        reader.parse(staleStructure)
+                    }
+                    e.message shouldContain "Invalid template ID 36"
+
+                    val stateless = reader.parseStateless()
+                    stateless.frameDependencyTemplateId shouldBe 36
+                    stateless.frameNumber shouldBe 0x9f3f
+                }
+                should("fail to parse when the custom fields do not fit in the descriptor") {
+                    /* The same descriptor, with template ID 1, which the stale structure does have. */
+                    val desc = parseHexBinary("c19f3f1a602000")
+                    val reader = Av1DependencyDescriptorReader(desc, 0, desc.size)
+                    val e = shouldThrow<Av1DependencyException> {
+                        reader.parse(staleStructure)
+                    }
+                    e.message shouldContain "too short"
+
+                    val stateless = reader.parseStateless()
+                    stateless.frameDependencyTemplateId shouldBe 1
+                    stateless.frameNumber shouldBe 0x9f3f
+                }
+                should("fail to parse when the template ID is not in the structure, even if the custom fields fit") {
+                    /* A stale structure with two chains: the two custom chains fit, so only the template ID check
+                     * detects that the structure is stale. Without it the descriptor is silently parsed with the
+                     * wrong structure. */
+                    val twoChainStructure = Av1DependencyDescriptorReader(descL2T2KeyShift, 0, descL2T2KeyShift.size)
+                        .parse(null).newTemplateDependencyStructure!!
+                    twoChainStructure.chainCount shouldBe 2
+                    val templateId = 63
+                    ((templateId + 64 - twoChainStructure.templateIdOffset) % 64 >= twoChainStructure.templateCount)
+                        .shouldBe(true)
+
+                    /* The same descriptor, with template ID 63. */
+                    val desc = parseHexBinary("ff9f3f1a602000")
+                    val reader = Av1DependencyDescriptorReader(desc, 0, desc.size)
+                    val e = shouldThrow<Av1DependencyException> {
+                        reader.parse(twoChainStructure)
+                    }
+                    e.message shouldContain "Invalid template ID 63"
+                    reader.parseStateless().frameDependencyTemplateId shouldBe 63
+                }
+            }
             context("a descriptor without extended fields") {
                 val ld1r = Av1DependencyDescriptorReader(descL1T1, 0, descL1T1.size)
                 val ld1 = ld1r.parse(null)
@@ -415,6 +470,18 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     val buf = ByteArray(sd1.encodedLength)
                     sd1.write(buf, 0, buf.size)
                     buf shouldBe shortDesc
+                }
+                should("fail to parse when the template ID is not in the structure") {
+                    val otherStructure = Av1DependencyDescriptorReader(descL2T2KeyShift, 0, descL2T2KeyShift.size)
+                        .parse(null).newTemplateDependencyStructure!!
+                    val templateId = sd1.frameDependencyTemplateId
+                    ((templateId + 64 - otherStructure.templateIdOffset) % 64 >= otherStructure.templateCount)
+                        .shouldBe(true)
+
+                    val e = shouldThrow<Av1DependencyException> {
+                        Av1DependencyDescriptorReader(shortDesc, 0, shortDesc.size).parse(otherStructure)
+                    }
+                    e.message shouldContain "Invalid template ID $templateId"
                 }
             }
             context("A descriptor with a Temporal-only scalability structure ") {

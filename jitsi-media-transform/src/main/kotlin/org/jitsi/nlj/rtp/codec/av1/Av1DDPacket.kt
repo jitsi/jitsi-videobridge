@@ -33,9 +33,16 @@ import kotlin.math.min
  * other video codecs can also carry the AV1 DD.
  */
 class Av1DDPacket : ParsedVideoPacket {
+    /** The parsed dependency descriptor, or null if it could not be parsed (e.g. the template dependency structure
+     * in effect for the packet is not known). See [updateParse]. */
     var descriptor: Av1DependencyDescriptorHeaderExtension?
-    val statelessDescriptor: Av1DependencyDescriptorStatelessSubset
-    val frameInfo: FrameInfo?
+        private set
+
+    /** The stateless subset of the dependency descriptor. This is [descriptor] itself when that is non-null. */
+    var statelessDescriptor: Av1DependencyDescriptorStatelessSubset
+        private set
+    var frameInfo: FrameInfo?
+        private set
     val av1DDHeaderExtensionId: Int
 
     private constructor(
@@ -76,15 +83,46 @@ class Av1DDPacket : ParsedVideoPacket {
             null
         }
         statelessDescriptor = descriptor ?: parser.parseStateless()
-        frameInfo = try {
-            descriptor?.frameInfo
+        frameInfo = descriptor?.let { getFrameInfo(it, logger) }
+    }
+
+    /**
+     * Parse the dependency descriptor again, with [templateDependencyStructure], if it could not be parsed when the
+     * packet was created. This is for a packet whose structure was not known to the parser, e.g. a late retransmission
+     * for which the structure has left the parser's history, when the frame of the packet knows the structure.
+     *
+     * The descriptor gets a copy of [templateDependencyStructure], because the structure of a descriptor is
+     * modified when the packet is rewritten.
+     *
+     * @return true if the packet has a descriptor after the call.
+     */
+    fun updateParse(templateDependencyStructure: Av1TemplateDependencyStructure, logger: Logger): Boolean {
+        if (descriptor != null) {
+            return true
+        }
+        val ddExt = getHeaderExtension(av1DDHeaderExtensionId) ?: return false
+        val newDescriptor = try {
+            Av1DependencyDescriptorReader(ddExt).parse(templateDependencyStructure.clone())
         } catch (e: Av1DependencyException) {
             logger.warn(
-                "Could not extract frame info from AV1 Dependency Descriptor for " +
-                    "ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: ${e.message}"
+                "Could not parse updated AV1 Dependency Descriptor for ssrc $ssrc seq $sequenceNumber: ${e.message}"
             )
-            null
+            return false
         }
+        descriptor = newDescriptor
+        statelessDescriptor = newDescriptor
+        frameInfo = getFrameInfo(newDescriptor, logger)
+        return true
+    }
+
+    private fun getFrameInfo(descriptor: Av1DependencyDescriptorHeaderExtension, logger: Logger): FrameInfo? = try {
+        descriptor.frameInfo
+    } catch (e: Av1DependencyException) {
+        logger.warn(
+            "Could not extract frame info from AV1 Dependency Descriptor for ssrc $ssrc seq $sequenceNumber: " +
+                e.message
+        )
+        null
     }
 
     /* "template_dependency_structure_present_flag MUST be set to 1 for the first packet of a coded video sequence,

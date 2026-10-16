@@ -454,6 +454,14 @@ abstract class SsrcCache(
      * @return whether to send this packet.
      */
     fun rewriteRtp(packet: RtpPacket, start: Boolean = true): Boolean {
+        if (packet is Av1DDPacket && packet.descriptor == null) {
+            /* The frame number and template ID of the packet cannot be rewritten, and the receiver cannot use the
+             * packet with the original values. The source projection does not accept such a packet, so this is not
+             * expected. */
+            logger.debug { "Not sending an AV1 DD packet without a descriptor: $packet" }
+            return false
+        }
+
         val remappings = mutableListOf<SendSource>()
         var send = false
 
