@@ -29,6 +29,7 @@ import org.jitsi.nlj.rtp.ParsedVideoPacket
 import org.jitsi.nlj.rtp.RtpExtensionType
 import org.jitsi.nlj.rtp.codec.VideoCodecParser
 import org.jitsi.nlj.rtp.codec.av1.Av1DDParser
+import org.jitsi.nlj.rtp.codec.av1.MalformedAv1DependencyDescriptorException
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Parser
 import org.jitsi.nlj.rtp.codec.vp9.Vp9Packet
@@ -127,6 +128,14 @@ class VideoParser(
             }.also {
                 videoCodecParser?.parse(packetInfo)
             }
+        } catch (e: MalformedAv1DependencyDescriptorException) {
+            /* A malformed dependency descriptor from the remote side, not a failure of the bridge: logged without a
+             * stack trace. The parse logs an unparseable but well-formed descriptor itself, and does not throw. */
+            logger.warn(
+                "Dropping a video packet with a malformed AV1 Dependency Descriptor: ${e.message}. Packet data is: " +
+                    packet.buffer.toHex(packet.offset, Math.min(packet.length, 80))
+            )
+            return null
         } catch (e: Exception) {
             logger.error(
                 "Exception parsing video packet.  Packet data is: " +

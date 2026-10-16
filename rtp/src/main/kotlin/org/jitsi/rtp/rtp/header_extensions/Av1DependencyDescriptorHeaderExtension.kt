@@ -1052,6 +1052,7 @@ enum class DTI(val dti: Int) {
 
 fun List<DTI>.toShortString(): String = joinToString(separator = "") { it.toShortString() }
 
-class Av1DependencyException(msg: String) : RuntimeException(msg)
+/** A dependency descriptor, or a template dependency structure, which cannot be parsed. */
+open class Av1DependencyException(msg: String, cause: Throwable? = null) : RuntimeException(msg, cause)
 
 fun <T> List<T>.toIndexedMap(): Map<Int, T> = mapIndexed { i, t -> i to t }.toMap()
