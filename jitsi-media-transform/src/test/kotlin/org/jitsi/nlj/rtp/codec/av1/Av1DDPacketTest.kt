@@ -234,7 +234,53 @@ class Av1DDPacketTest : ShouldSpec() {
                 }
             }
         }
+        context("An AV1 DD that does not match the known template dependency structure") {
+            /* The sender changed to a new structure with two chains, and the packet that carried the new structure
+             * was lost. The bridge still has the older structure with three chains. The DD of the next packets has
+             * custom fdiffs and two custom chains, and does not fit the older structure. The packet must be
+             * constructed without a descriptor (and without frame info), not fail with an exception. */
+            val staleStructure = scalableKeyframe.data.let {
+                Av1DDPacket(RtpPacket(it, 0, it.size), AV1_DD_HEADER_EXTENSION_ID, null, logger)
+            }.descriptor!!.structure
+
+            should("not throw when the template ID is not in the structure") {
+                staleStructure.chainCount shouldBe 3
+                ((36 + 64 - staleStructure.templateIdOffset) % 64 >= staleStructure.templateCount) shouldBe true
+
+                val data = DatatypeConverter.parseHexBinary(packetWithTwoCustomChains("e4"))
+                val p = Av1DDPacket(RtpPacket(data, 0, data.size), AV1_DD_HEADER_EXTENSION_ID, staleStructure, logger)
+                p.descriptor shouldBe null
+                p.frameInfo shouldBe null
+                p.isKeyframe shouldBe false
+                p.statelessDescriptor.frameDependencyTemplateId shouldBe 36
+                p.statelessDescriptor.frameNumber shouldBe 0x9f3f
+            }
+            should("not throw when the custom chains do not fit in the DD") {
+                ((1 + 64 - staleStructure.templateIdOffset) % 64 < staleStructure.templateCount) shouldBe true
+
+                val data = DatatypeConverter.parseHexBinary(packetWithTwoCustomChains("c1"))
+                val p = Av1DDPacket(RtpPacket(data, 0, data.size), AV1_DD_HEADER_EXTENSION_ID, staleStructure, logger)
+                p.descriptor shouldBe null
+                p.frameInfo shouldBe null
+                p.isKeyframe shouldBe false
+                p.statelessDescriptor.frameDependencyTemplateId shouldBe 1
+                p.statelessDescriptor.frameNumber shouldBe 0x9f3f
+            }
+        }
     }
+
+    /**
+     * A packet from a production log (AV1, ext ID 11). Its 7-byte DD is: SOF=1, EOF=1, template ID (from
+     * [firstDdByte]), frame number 0x9f3f, custom fdiffs ([4]) and two custom chains ([4, 0]), then 3 bits of zero
+     * padding.
+     */
+    private fun packetWithTwoCustomChains(firstDdByte: String) = "90a9efa4977b9143c35fa97f" + // RTP header
+        "bede0004" + // Header extension header
+        "322b0fba" + // Other header extensions
+        "510ea4" +
+        "b6" + firstDdByte + "9f3f1a602000" + // AV1 DD
+        "00" + // Padding
+        "1034003100200000e6a5c43403c001de" // AV1 Media payload, truncated.
 
     companion object {
         const val AV1_DD_HEADER_EXTENSION_ID = 11

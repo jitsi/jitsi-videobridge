@@ -104,7 +104,7 @@ class BitReaderTest : ShouldSpec() {
             clone.remainingBits() shouldBe 0
 
             bitReader.bits(8) shouldBe 0b1010_1010
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 clone.bits(8)
             }
         }
@@ -112,19 +112,19 @@ class BitReaderTest : ShouldSpec() {
         context("Throwing exception when reading past the bounds") {
             bitReader.skipBits(bits)
             bitReader.remainingBits() shouldBe 0
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.bitAsBoolean()
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.bit()
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.bits(4)
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 bitReader.leb128()
             }
-            shouldThrow<IllegalStateException> {
+            shouldThrow<BitReaderOverrunException> {
                 BitReader(byteArrayOf(0b1111_0000.toByte())).leb128()
             }
         }
