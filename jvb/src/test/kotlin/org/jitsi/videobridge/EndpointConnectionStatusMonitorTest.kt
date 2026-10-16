@@ -41,16 +41,25 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
     val localEp1: Endpoint = mockk {
         every { id } returns "1"
         every { visitor } returns false
+        every { synthetic } returns false
     }
     val localEp2: Endpoint = mockk {
         every { id } returns "2"
         every { visitor } returns false
+        every { synthetic } returns false
     }
     val localEp3: Endpoint = mockk {
         every { id } returns "3"
         every { visitor } returns true
+        every { synthetic } returns false
     }
-    val eps = listOf(localEp1, localEp2, localEp3)
+    // A voice agent: never connects, so it must never be reported as inactive.
+    val agentEp: Endpoint = mockk {
+        every { id } returns "agent"
+        every { visitor } returns false
+        every { synthetic } returns true
+    }
+    val eps = listOf(localEp1, localEp2, localEp3, agentEp)
 
     val broadcastMessage = slot<EndpointConnectionStatusMessage>()
     val broadcastSendToRelays = slot<Boolean>()
@@ -125,6 +134,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                     }
                     broadcastCalls.forAll { (msg, sendToOcto) ->
                         msg.endpoint shouldNotBe "3"
+                        msg.endpoint shouldNotBe "agent"
                     }
                 }
                 context("and then become active") {
@@ -221,6 +231,7 @@ class EndpointConnectionStatusMonitorTest : ShouldSpec({
                         }
                         sendMessageCalls.forAll { (msg, _, _) ->
                             msg.endpoint shouldNotBe "3"
+                            msg.endpoint shouldNotBe "agent"
                         }
                     }
                 }

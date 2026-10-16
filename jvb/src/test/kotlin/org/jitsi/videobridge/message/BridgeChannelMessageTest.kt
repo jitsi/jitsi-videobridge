@@ -35,6 +35,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jitsi.nlj.VideoType
 import org.jitsi.videobridge.cc.allocation.VideoConstraints
 import org.jitsi.videobridge.message.BridgeChannelMessage.Companion.parse
+import org.jitsi.videobridge.relay.SyntheticSourceKind
 
 @Suppress("BlockingMethodInNonBlockingContext")
 class BridgeChannelMessageTest : ShouldSpec() {
@@ -204,6 +205,8 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 // A natural JSON number in the uint32 RTP range (the client checks Number.isInteger and <= 0xFFFFFFFF).
                 parsed.get("timestamp").isNumber shouldBe true
                 parsed.get("timestamp").asLong() shouldBe 384000
+                // The kind is optional: absent (rather than null) when the bridge doesn't know it.
+                parsed.has("kind") shouldBe false
             }
             context("round-trip") {
                 val parsed = parse(message.toJson())
@@ -211,6 +214,25 @@ class BridgeChannelMessageTest : ShouldSpec() {
                 parsed.sourceName shouldBe "55555555-a0.hi"
                 parsed.sending shouldBe true
                 parsed.timestamp shouldBe 384000
+                parsed.kind shouldBe null
+            }
+            context("with the kind of the source") {
+                val agentMessage =
+                    SyntheticSourceSendingChangeEvent("agent1234-a0", true, 384000, SyntheticSourceKind.AGENT)
+                jacksonObjectMapper().readTree(agentMessage.toJson()).get("kind").asText() shouldBe "agent"
+
+                val parsed = parse(agentMessage.toJson())
+                parsed.shouldBeInstanceOf<SyntheticSourceSendingChangeEvent>()
+                parsed.kind shouldBe SyntheticSourceKind.AGENT
+
+                val jsonString = """
+                    {"colibriClass":"SyntheticSourceSendingChangeEvent",
+                     "sourceName":"55555555-a0.hi","sending":false,"timestamp":0,"kind":"translation"}
+                """.trimIndent()
+                parse(jsonString).apply {
+                    shouldBeInstanceOf<SyntheticSourceSendingChangeEvent>()
+                    kind shouldBe SyntheticSourceKind.TRANSLATION
+                }
             }
         }
 
@@ -460,6 +482,36 @@ class BridgeChannelMessageTest : ShouldSpec() {
                         AudioSourceMapping(source1, owner1, ssrc1),
                         AudioSourceMapping(source2, owner2, ssrc2)
                     )
+            }
+
+            context("with the kinds of synthetic sources") {
+                val message = AudioSourcesMap(
+                    listOf(
+                        AudioSourceMapping(source1, owner1, ssrc1),
+                        AudioSourceMapping("agent1234-a0", "agent1234", 111L, kind = SyntheticSourceKind.AGENT),
+                        AudioSourceMapping("$source1.hi", owner1, 222L, kind = SyntheticSourceKind.TRANSLATION)
+                    )
+                )
+
+                val mapped = jacksonObjectMapper().readTree(message.toJson()).get("mappedSources")
+                // A regular source has no "kind" field at all (rather than a null one).
+                mapped.get(0).has("kind") shouldBe false
+                mapped.get(1).get("kind").asText() shouldBe "agent"
+                mapped.get(2).get("kind").asText() shouldBe "translation"
+
+                parse(message.toJson()).apply {
+                    shouldBeInstanceOf<AudioSourcesMap>()
+                    mappedSources shouldContainExactly message.mappedSources.toList()
+                }
+
+                val kindJson = """
+                    {"colibriClass":"AudioSourcesMap",
+                     "mappedSources":[{"source":"agent1234-a0","owner":"agent1234","ssrc":111,"kind":"agent"}]}
+                """.trimIndent()
+                parse(kindJson).apply {
+                    shouldBeInstanceOf<AudioSourcesMap>()
+                    mappedSources.single().kind shouldBe SyntheticSourceKind.AGENT
+                }
             }
         }
 

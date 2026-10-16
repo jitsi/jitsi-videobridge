@@ -42,6 +42,7 @@ import org.jitsi.videobridge.message.BridgeChannelMessage
 import org.jitsi.videobridge.message.VideoSourceMapping
 import org.jitsi.videobridge.message.VideoSourcesMap
 import org.jitsi.videobridge.relay.AudioSourceDesc
+import org.jitsi.videobridge.relay.SyntheticSourceKind
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -53,14 +54,17 @@ class SourceDesc private constructor(
     val owner: String,
     val videoType: VideoType,
     val ssrc1: Long,
-    val ssrc2: Long
+    val ssrc2: Long,
+    /** The kind of a synthetic audio source; null for video and regular audio sources, or when not known. */
+    val kind: SyntheticSourceKind? = null
 ) {
     constructor(s: AudioSourceDesc) : this(
         s.sourceName ?: "anon",
         s.owner ?: "unknown",
         VideoType.DISABLED,
         s.ssrc,
-        -1
+        -1,
+        s.kind
     )
     constructor(s: MediaSourceDesc) : this(s.sourceName, s.owner, s.videoType, s.primarySSRC, getRtx(s))
     companion object {
@@ -590,7 +594,7 @@ class AudioSsrcCache(size: Int, ep: SsrcRewriter, midDemux: Boolean, parentLogge
     override fun notifyMappings(sources: List<SendSource>) {
         sources.map {
             val props = it.props
-            AudioSourceMapping(props.name, props.owner, it.send1.ssrc, it.mid)
+            AudioSourceMapping(props.name, props.owner, it.send1.ssrc, it.mid, props.kind)
         }.also {
             ep.sendMessage(AudioSourcesMap(it))
         }
