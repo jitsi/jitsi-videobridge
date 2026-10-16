@@ -240,6 +240,16 @@ class Av1DDPacketTest : ShouldSpec() {
                 }
             }
         }
+        context("Template ID arithmetic") {
+            should("wrap around in both directions") {
+                getTemplateIdDelta(1, 10) shouldBe 55
+                getTemplateIdDelta(1, 58) shouldBe 7
+                getTemplateIdDelta(5, 80) shouldBe 53
+                applyTemplateIdDelta(10, 55) shouldBe 1
+                applyTemplateIdDelta(5, -11) shouldBe 58
+                applyTemplateIdDelta(70, 0) shouldBe 6
+            }
+        }
         context("An AV1 DD which carries a malformed template dependency structure") {
             /* A structure with one more template than the 6-bit template ID can address. It cannot be parsed with
              * or without a structure in effect, so the packet cannot be used, and the constructor fails. */

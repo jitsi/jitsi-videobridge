@@ -80,6 +80,12 @@ class Av1DependencyDescriptorHeaderExtension(
 
     newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
 
+    /**
+     * The active decode targets bitmask, or null if the descriptor does not specify one. A descriptor which carries a
+     * template dependency structure should have a bitmask, since the specification defines its default (all decode
+     * targets active) for that case, and the parser sets it. In that case a null bitmask is encoded as that default.
+     * Without a carried structure, a null bitmask is encoded as absent, which means unchanged for the receiver.
+     */
     var activeDecodeTargetsBitmask: Int?,
 
     val customDtis: List<DTI>?,
@@ -104,6 +110,12 @@ class Av1DependencyDescriptorHeaderExtension(
     init {
         require(newTemplateDependencyStructure == null || newTemplateDependencyStructure === structure) {
             "A descriptor which carries a template dependency structure must use that structure"
+        }
+        require(customDtis == null || customDtis.size == structure.decodeTargetCount) {
+            "Custom DTIs must have one entry for each of the ${structure.decodeTargetCount} decode targets"
+        }
+        require(customChains == null || customChains.size == structure.chainCount) {
+            "Custom chains must have one entry for each of the ${structure.chainCount} chains"
         }
     }
 
@@ -611,6 +623,9 @@ class Av1TemplateDependencyStructure private constructor(
         if (templateIdOffset == this.templateIdOffset) {
             this
         } else {
+            require(templateIdOffset in 0 until MAX_TEMPLATE_COUNT) {
+                "Template ID offset $templateIdOffset is not a 6-bit template ID"
+            }
             Av1TemplateDependencyStructure(
                 templateIdOffset,
                 // The lists are read-only, so they can be shared.
