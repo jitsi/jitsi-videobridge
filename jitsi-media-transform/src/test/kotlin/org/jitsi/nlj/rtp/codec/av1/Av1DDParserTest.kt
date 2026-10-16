@@ -84,6 +84,19 @@ class Av1DDParserTest : ShouldSpec() {
     }
 
     init {
+        context("The template history") {
+            val history = TemplateHistory(500)
+            should("report the first active decode targets bitmask as a change, also when it is all 32 targets") {
+                /* With 32 decode targets the bitmask with all targets active is -1, which must not be mistaken for
+                 * "no bitmask seen yet". */
+                history.updateDecodeTargets(1, -1) shouldBe true
+                history.updateDecodeTargets(2, -1) shouldBe false
+                history.updateDecodeTargets(3, 0x7fffffff) shouldBe true
+                /* An older packet does not change the latest bitmask. */
+                history.updateDecodeTargets(2, -1) shouldBe false
+                history.updateDecodeTargets(4, 0x7fffffff) shouldBe false
+            }
+        }
         context("A retransmitted packet that arrives late") {
             /* Production case: the sender sends many keyframes, and each one has a new structure. The bridge sends
              * NACKs, and the retransmissions arrive more than TEMPLATE_HISTORY_SIZE packets after the newest
