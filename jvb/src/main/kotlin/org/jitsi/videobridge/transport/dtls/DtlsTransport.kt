@@ -18,6 +18,7 @@ package org.jitsi.videobridge.transport.dtls
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import org.bouncycastle.tls.TlsTimeoutException
 import org.ice4j.util.Buffer
 import org.jitsi.nlj.dtls.DtlsClient
 import org.jitsi.nlj.dtls.DtlsServer
@@ -146,6 +147,10 @@ class DtlsTransport(parentLogger: Logger, id: String) {
         }
         try {
             dtlsStack.start()
+        } catch (t: TlsTimeoutException) {
+            // The remote side did not complete the handshake in time (e.g. it went away). This is not a failure of the
+            // bridge.
+            logger.warn("DTLS handshake timed out.")
         } catch (t: Throwable) {
             // TODO: we're not doing anything here, should we? or change the log?
             logger.error("Error during DTLS negotiation, closing this transport manager", t)

@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.eclipse.jetty.websocket.api.Callback
 import org.eclipse.jetty.websocket.api.Session
+import org.eclipse.jetty.websocket.api.exceptions.WebSocketTimeoutException
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest
 import org.eclipse.jetty.websocket.client.WebSocketClient
 import org.jitsi.config.JitsiConfig
@@ -46,7 +47,9 @@ import org.jitsi.videobridge.util.TaskPools
 import org.jitsi.videobridge.version.JvbVersionService
 import org.jitsi.videobridge.websocket.config.WebsocketServiceConfig
 import org.jitsi.xmpp.extensions.colibri2.Connect
+import java.io.EOFException
 import java.net.URI
+import java.nio.channels.ClosedChannelException
 import java.time.Duration
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -151,7 +154,12 @@ internal class Exporter(
         }
 
         override fun onWebSocketError(cause: Throwable?) {
-            logger.error("Websocket error", cause)
+            if (cause.isRemoteClosedOrTimedOut()) {
+                // Expected (the peer went away or stopped responding); the connection is re-established below.
+                logger.warn("Websocket error: $cause")
+            } else {
+                logger.error("Websocket error", cause)
+            }
             webSocketFailures.inc()
             instanceWebSocketFailures.incrementAndGet()
             if (!isShuttingDown.get()) {
@@ -479,6 +487,17 @@ internal class Exporter(
             idleTimeout = WebsocketServiceConfig.config.idleTimeout
             start()
         }
+
+        /**
+         * Whether this error means that the remote side closed the connection (EOF without a close frame) or the
+         * connection timed out because the remote side was idle. Other errors (e.g. a failed upgrade) are unexpected.
+         */
+        private fun Throwable?.isRemoteClosedOrTimedOut(): Boolean =
+            generateSequence(this) { it.cause }.take(MAX_CAUSE_DEPTH).any {
+                it is ClosedChannelException || it is EOFException || it is WebSocketTimeoutException
+            }
+
+        private const val MAX_CAUSE_DEPTH = 5
 
         private val webSocketFailures = VideobridgeMetricsContainer.instance.registerCounter(
             "exporter_websocket_failures",
