@@ -33,14 +33,22 @@ open class Av1DependencyDescriptorStatelessSubset(
     var frameDependencyTemplateId: Int,
     var frameNumber: Int,
 
-    val newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
+    newTemplateDependencyStructure: Av1TemplateDependencyStructure?,
 ) {
+    /**
+     * The template dependency structure carried by this descriptor, or null if it does not carry one. A structure
+     * is immutable and shared (see [Av1TemplateDependencyStructure]); when the descriptor is rewritten, this is
+     * replaced, not modified.
+     */
+    var newTemplateDependencyStructure: Av1TemplateDependencyStructure? = newTemplateDependencyStructure
+        protected set
+
     open fun clone(): Av1DependencyDescriptorStatelessSubset = Av1DependencyDescriptorStatelessSubset(
         startOfFrame = startOfFrame,
         endOfFrame = endOfFrame,
         frameDependencyTemplateId = frameDependencyTemplateId,
         frameNumber = frameNumber,
-        newTemplateDependencyStructure = newTemplateDependencyStructure?.clone()
+        newTemplateDependencyStructure = newTemplateDependencyStructure
     )
 }
 
@@ -62,7 +70,7 @@ class Av1DependencyDescriptorHeaderExtension(
     val customFdiffs: List<Int>?,
     val customChains: List<Int>?,
 
-    val structure: Av1TemplateDependencyStructure
+    structure: Av1TemplateDependencyStructure
 ) : Av1DependencyDescriptorStatelessSubset(
     startOfFrame,
     endOfFrame,
@@ -70,6 +78,33 @@ class Av1DependencyDescriptorHeaderExtension(
     frameNumber,
     newTemplateDependencyStructure
 ) {
+    /**
+     * The template dependency structure in effect for this descriptor: the one it carries, if it carries one, and
+     * otherwise the one from an earlier descriptor of the stream. See [rewriteTemplateIdOffset].
+     */
+    var structure: Av1TemplateDependencyStructure = structure
+        private set
+
+    init {
+        require(newTemplateDependencyStructure == null || newTemplateDependencyStructure === structure) {
+            "A descriptor which carries a template dependency structure must use that structure"
+        }
+    }
+
+    /**
+     * Change the template ID offset of [structure], for a descriptor which is being rewritten. The structure is
+     * replaced with a copy that has the new offset (or kept, if the offset is unchanged), because structures are
+     * immutable and shared. If this descriptor carries the structure, [newTemplateDependencyStructure] is replaced
+     * too, so that the rewritten descriptor is encoded with the new offset.
+     */
+    fun rewriteTemplateIdOffset(templateIdOffset: Int) {
+        val newStructure = structure.withTemplateIdOffset(templateIdOffset)
+        if (newTemplateDependencyStructure != null) {
+            newTemplateDependencyStructure = newStructure
+        }
+        structure = newStructure
+    }
+
     val frameInfo: FrameInfo by lazy {
         val templateIndex = structure.getTemplateIndex(frameDependencyTemplateId)
         val templateVal = structure.templateInfo[templateIndex]
@@ -86,6 +121,22 @@ class Av1DependencyDescriptorHeaderExtension(
     val encodedLength: Int
         get() = (unpaddedLengthBits + 7) / 8
 
+    /**
+     * Whether the active decode targets bitmask is encoded in the descriptor. It is omitted when there is no bitmask,
+     * and when the descriptor carries a template dependency structure and all the decode targets are active, which
+     * is the default.
+     */
+    private val activeDecodeTargetsPresent: Boolean
+        get() = isActiveDecodeTargetsPresent(activeDecodeTargetsBitmask)
+
+    private fun isActiveDecodeTargetsPresent(bitmask: Int?): Boolean {
+        if (bitmask == null) {
+            return false
+        }
+        val newStructure = newTemplateDependencyStructure ?: return true
+        return bitmask != (1 shl newStructure.decodeTargetCount) - 1
+    }
+
     private val unpaddedLengthBits: Int
         get() {
             var length = 24
@@ -97,15 +148,8 @@ class Av1DependencyDescriptorHeaderExtension(
             ) {
                 length += 5
             }
-            if (newTemplateDependencyStructure != null) {
-                length += newTemplateDependencyStructure.unpaddedLengthBits
-            }
-            if (activeDecodeTargetsBitmask != null &&
-                (
-                    newTemplateDependencyStructure == null ||
-                        activeDecodeTargetsBitmask != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
-                    )
-            ) {
+            newTemplateDependencyStructure?.let { length += it.unpaddedLengthBits }
+            if (activeDecodeTargetsPresent) {
                 length += structure.decodeTargetCount
             }
             if (customDtis != null) {
@@ -124,23 +168,19 @@ class Av1DependencyDescriptorHeaderExtension(
             return length
         }
 
-    override fun clone(): Av1DependencyDescriptorHeaderExtension {
-        val structureCopy = structure.clone()
-        val newStructure = if (newTemplateDependencyStructure == null) null else structureCopy
-        return Av1DependencyDescriptorHeaderExtension(
-            startOfFrame,
-            endOfFrame,
-            frameDependencyTemplateId,
-            frameNumber,
-            newStructure,
-            activeDecodeTargetsBitmask,
-            // These values are not mutable so it's safe to copy them by reference
-            customDtis,
-            customFdiffs,
-            customChains,
-            structureCopy
-        )
-    }
+    override fun clone(): Av1DependencyDescriptorHeaderExtension = Av1DependencyDescriptorHeaderExtension(
+        startOfFrame,
+        endOfFrame,
+        frameDependencyTemplateId,
+        frameNumber,
+        // The structure is immutable (see Av1TemplateDependencyStructure), so it is shared, as are the lists.
+        newTemplateDependencyStructure,
+        activeDecodeTargetsBitmask,
+        customDtis,
+        customFdiffs,
+        customChains,
+        structure
+    )
 
     fun write(ext: RtpPacket.HeaderExtension) = write(ext.buffer, ext.dataOffset, ext.dataLengthBytes)
 
@@ -175,12 +215,10 @@ class Av1DependencyDescriptorHeaderExtension(
     }
 
     private fun writeOptionalDescriptorFields(writer: BitWriter) {
+        val newTemplateDependencyStructure = this.newTemplateDependencyStructure
         val templateDependencyStructurePresent = newTemplateDependencyStructure != null
-        val activeDecodeTargetsPresent = activeDecodeTargetsBitmask != null &&
-            (
-                newTemplateDependencyStructure == null ||
-                    activeDecodeTargetsBitmask != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
-                )
+        val activeDecodeTargetsBitmask = this.activeDecodeTargetsBitmask
+        val activeDecodeTargetsPresent = isActiveDecodeTargetsPresent(activeDecodeTargetsBitmask)
 
         val customDtisFlag = customDtis != null
         val customFdiffsFlag = customFdiffs != null
@@ -192,12 +230,10 @@ class Av1DependencyDescriptorHeaderExtension(
         writer.writeBit(customFdiffsFlag)
         writer.writeBit(customChainsFlag)
 
-        if (templateDependencyStructurePresent) {
-            newTemplateDependencyStructure.write(writer)
-        }
+        newTemplateDependencyStructure?.write(writer)
 
-        if (activeDecodeTargetsPresent) {
-            writeActiveDecodeTargets(writer)
+        if (activeDecodeTargetsBitmask != null && activeDecodeTargetsPresent) {
+            writer.writeBits(structure.decodeTargetCount, activeDecodeTargetsBitmask)
         }
 
         if (customDtisFlag) {
@@ -211,10 +247,6 @@ class Av1DependencyDescriptorHeaderExtension(
         if (customChainsFlag) {
             writeFrameChains(writer)
         }
-    }
-
-    private fun writeActiveDecodeTargets(writer: BitWriter) {
-        writer.writeBits(structure.decodeTargetCount, activeDecodeTargetsBitmask!!)
     }
 
     private fun writeFrameDtis(writer: BitWriter) {
@@ -270,12 +302,9 @@ class Av1DependencyDescriptorHeaderExtension(
                     mapper.valueToTree<com.fasterxml.jackson.databind.node.ArrayNode>(it)
                 )
             }
-            activeDecodeTargetsBitmask?.let {
-                if (newTemplateDependencyStructure == null ||
-                    it != ((1 shl newTemplateDependencyStructure.decodeTargetCount) - 1)
-                ) {
-                    put("activeDecodeTargets", Integer.toBinaryString(it))
-                }
+            val activeDecodeTargetsBitmask = this@Av1DependencyDescriptorHeaderExtension.activeDecodeTargetsBitmask
+            if (activeDecodeTargetsBitmask != null && isActiveDecodeTargetsPresent(activeDecodeTargetsBitmask)) {
+                put("activeDecodeTargets", Integer.toBinaryString(activeDecodeTargetsBitmask))
             }
         }.toString()
     }
@@ -292,10 +321,14 @@ fun Int.bitsForFdiff() = when {
  * The template information about a stream described by AV1 dependency descriptors.  This is carried in the
  * first packet of a codec video sequence (i.e. the first packet of a keyframe), and is necessary to interpret
  * dependency descriptors carried in subsequent packets of the sequence.
+ *
+ * A structure is immutable, so one instance can be shared by the descriptors of all the packets of the sequence,
+ * the frames which track them, and the parser history, on any thread. A descriptor which is rewritten gets a copy
+ * with a new template ID offset from [withTemplateIdOffset]; see
+ * [Av1DependencyDescriptorHeaderExtension.rewriteTemplateIdOffset].
  */
-@SuppressFBWarnings("CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE")
 class Av1TemplateDependencyStructure(
-    var templateIdOffset: Int,
+    val templateIdOffset: Int,
     val templateInfo: List<FrameInfo>,
     val decodeTargetProtectedBy: List<Int>,
     val decodeTargetLayers: List<DecodeTargetLayer>,
@@ -370,16 +403,23 @@ class Av1TemplateDependencyStructure(
             return length
         }
 
-    fun clone(): Av1TemplateDependencyStructure = Av1TemplateDependencyStructure(
-        templateIdOffset,
-        // These objects are not mutable so it's safe to copy them by reference
-        templateInfo,
-        decodeTargetProtectedBy,
-        decodeTargetLayers,
-        maxRenderResolutions,
-        maxSpatialId,
-        maxTemporalId
-    )
+    /** A copy of this structure with the template ID offset [templateIdOffset], or this structure if it already has
+     * that offset. */
+    fun withTemplateIdOffset(templateIdOffset: Int): Av1TemplateDependencyStructure =
+        if (templateIdOffset == this.templateIdOffset) {
+            this
+        } else {
+            Av1TemplateDependencyStructure(
+                templateIdOffset,
+                // The lists are not modified after construction, so they can be shared.
+                templateInfo,
+                decodeTargetProtectedBy,
+                decodeTargetLayers,
+                maxRenderResolutions,
+                maxSpatialId,
+                maxTemporalId
+            )
+        }
 
     fun write(writer: BitWriter) {
         writer.writeBits(6, templateIdOffset)

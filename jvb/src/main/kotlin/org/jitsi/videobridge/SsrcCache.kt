@@ -785,8 +785,7 @@ private class Av1DDCodecDeltas(val frameNumDelta: Int, val templateIdDelta: Int)
         descriptor.frameNumber = RtpUtils.applySequenceNumberDelta(descriptor.frameNumber, frameNumDelta)
         descriptor.frameDependencyTemplateId =
             applyTemplateIdDelta(descriptor.frameDependencyTemplateId, templateIdDelta)
-        descriptor.structure.templateIdOffset =
-            applyTemplateIdDelta(descriptor.structure.templateIdOffset, templateIdDelta)
+        descriptor.rewriteTemplateIdOffset(applyTemplateIdDelta(descriptor.structure.templateIdOffset, templateIdDelta))
 
         packet.reencodeDdExt()
     }
