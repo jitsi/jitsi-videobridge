@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.rtcp
 
+import org.jitsi.config.JitsiConfig
+import org.jitsi.metaconfig.config
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.PacketOrigin
@@ -30,21 +32,25 @@ import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.cdebug
 import org.jitsi.utils.logging2.createChildLogger
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 
 /**
  * When a nack packet is received, the [NackHandler] will try to retrieve the
  * nacked packets from the cache and then send them to the RTX output pipeline.
  *
- * It does not retransmit a packet that was first sent more than max(1 s, 3 RTT) ago (see [MIN_MAX_PACKET_AGE_MS]
- * and [MAX_PACKET_AGE_RTTS]). A receiver that comes back after a network outage can NACK all the packets that it
- * lost. Packets that old are no longer useful to the receiver, and a burst of them fills the send queue.
+ * It does not retransmit a packet that was first sent more than max([maxPacketAge], [maxPacketAgeRtts] * RTT) ago
+ * (by default max(3 s, 9 RTT), see `jmt.nack` in reference.conf). A receiver that comes back after a network outage
+ * can NACK all the packets that it lost. Packets that old are no longer useful to the receiver, and a burst of them
+ * fills the send queue.
  */
 class NackHandler(
     private val packetCache: PacketCache,
     private val onNackedPacketsReady: PacketHandler,
     parentLogger: Logger,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    private val maxPacketAge: Duration = maxPacketAgeConfig,
+    private val maxPacketAgeRtts: Double = maxPacketAgeRttsConfig
 ) : NodeStatsProducer, RtcpListener, EndpointConnectionStats.EndpointConnectionStatsListener {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
@@ -65,9 +71,9 @@ class NackHandler(
         logger.cdebug { "Nack received for ${nackPacket.mediaSourceSsrc} ${nackPacket.missingSeqNums}" }
         val now = clock.millis()
         val maxAgeMs = if (currRtt == -1.0) {
-            MIN_MAX_PACKET_AGE_MS
+            maxPacketAge.toMillis().toDouble()
         } else {
-            Math.max(MIN_MAX_PACKET_AGE_MS, MAX_PACKET_AGE_RTTS * currRtt)
+            Math.max(maxPacketAge.toMillis().toDouble(), maxPacketAgeRtts * currRtt)
         }
 
         numNacksReceived++
@@ -123,9 +129,13 @@ class NackHandler(
 
     companion object {
         /** The minimum value of the max age of a packet that we retransmit. */
-        const val MIN_MAX_PACKET_AGE_MS = 1000.0
+        private val maxPacketAgeConfig: Duration by config {
+            "jmt.nack.max-packet-age".from(JitsiConfig.newConfig)
+        }
 
-        /** The max age of a packet that we retransmit, as a number of RTTs (if larger than [MIN_MAX_PACKET_AGE_MS]). */
-        const val MAX_PACKET_AGE_RTTS = 3
+        /** The max age of a packet that we retransmit, as a number of RTTs (if larger than [maxPacketAgeConfig]). */
+        private val maxPacketAgeRttsConfig: Double by config {
+            "jmt.nack.max-packet-age-rtts".from(JitsiConfig.newConfig)
+        }
     }
 }
