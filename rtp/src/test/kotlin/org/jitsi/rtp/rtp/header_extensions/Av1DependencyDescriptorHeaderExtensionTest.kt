@@ -22,6 +22,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import jakarta.xml.bind.DatatypeConverter.parseHexBinary
 import org.jitsi.rtp.util.BitWriter
 
@@ -483,6 +484,49 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     e.message shouldContain "Invalid template ID 63"
                     Av1DependencyDescriptorStatelessSubset.parse(desc, 0, desc.size).frameDependencyTemplateId shouldBe
                         63
+                }
+            }
+            context("rewriting the template ID offset") {
+                val structure = Av1DependencyDescriptorHeaderExtension.parse(descL1T1, 0, descL1T1.size, null).structure
+                val newOffset = (structure.templateIdOffset + 7) % 64
+
+                should("replace the structure of a descriptor which carries it, and the carried structure") {
+                    val dd = Av1DependencyDescriptorHeaderExtension.parse(descL1T1, 0, descL1T1.size, null)
+                    val original = dd.structure
+                    dd.newTemplateDependencyStructure shouldBeSameInstanceAs original
+
+                    dd.rewriteTemplateIdOffset(newOffset)
+                    dd.structure.templateIdOffset shouldBe newOffset
+                    dd.newTemplateDependencyStructure shouldBeSameInstanceAs dd.structure
+                    original.templateIdOffset shouldBe structure.templateIdOffset
+
+                    /* The rewritten descriptor is encoded with the new offset. */
+                    val buf = ByteArray(dd.encodedLength)
+                    dd.write(buf, 0, buf.size)
+                    val reread = Av1DependencyDescriptorStatelessSubset.parse(buf, 0, buf.size)
+                    reread.newTemplateDependencyStructure!!.templateIdOffset shouldBe newOffset
+                }
+                should("replace only the structure of a descriptor which does not carry it") {
+                    val dd = Av1DependencyDescriptorHeaderExtension.parse(shortDesc, 0, shortDesc.size, structure)
+                    dd.structure shouldBeSameInstanceAs structure
+
+                    dd.rewriteTemplateIdOffset(newOffset)
+                    dd.structure.templateIdOffset shouldBe newOffset
+                    dd.newTemplateDependencyStructure shouldBe null
+                }
+                should("not change a structure shared with another descriptor") {
+                    val other = Av1DependencyDescriptorHeaderExtension.parse(shortDesc, 0, shortDesc.size, structure)
+                    val dd = Av1DependencyDescriptorHeaderExtension.parse(shortDesc, 0, shortDesc.size, structure)
+
+                    dd.rewriteTemplateIdOffset(newOffset)
+                    structure.templateIdOffset shouldBe (newOffset + 64 - 7) % 64
+                    other.structure shouldBeSameInstanceAs structure
+                }
+                should("keep the structure when the offset is unchanged") {
+                    val dd = Av1DependencyDescriptorHeaderExtension.parse(shortDesc, 0, shortDesc.size, structure)
+                    dd.rewriteTemplateIdOffset(structure.templateIdOffset)
+                    dd.structure shouldBeSameInstanceAs structure
+                    structure.withTemplateIdOffset(structure.templateIdOffset) shouldBeSameInstanceAs structure
                 }
             }
             context("a template dependency structure at the limits of the specification") {
