@@ -528,6 +528,54 @@ class Av1DependencyDescriptorHeaderExtensionTest : ShouldSpec() {
                     dd.structure shouldBeSameInstanceAs structure
                     structure.withTemplateIdOffset(structure.templateIdOffset) shouldBeSameInstanceAs structure
                 }
+                should("reject an offset which is not a template ID") {
+                    shouldThrow<IllegalArgumentException> { structure.withTemplateIdOffset(64) }
+                    shouldThrow<IllegalArgumentException> { structure.withTemplateIdOffset(-1) }
+                    val dd = Av1DependencyDescriptorHeaderExtension.parse(shortDesc, 0, shortDesc.size, structure)
+                    shouldThrow<IllegalArgumentException> { dd.rewriteTemplateIdOffset(64) }
+                    dd.structure shouldBeSameInstanceAs structure
+                }
+            }
+            context("constructing a descriptor by hand") {
+                val structure = Av1DependencyDescriptorHeaderExtension.parse(descL3T3, 0, descL3T3.size, null).structure
+                fun descriptor(
+                    newStructure: Av1TemplateDependencyStructure? = null,
+                    customDtis: List<DTI>? = null,
+                    customChains: List<Int>? = null
+                ) = Av1DependencyDescriptorHeaderExtension(
+                    startOfFrame = true,
+                    endOfFrame = true,
+                    frameDependencyTemplateId = structure.templateIdOffset,
+                    frameNumber = 1,
+                    newTemplateDependencyStructure = newStructure,
+                    activeDecodeTargetsBitmask = null,
+                    customDtis = customDtis,
+                    customFdiffs = null,
+                    customChains = customChains,
+                    structure = structure
+                )
+
+                should("accept custom fields which match the structure") {
+                    descriptor(
+                        customDtis = List(structure.decodeTargetCount) { DTI.SWITCH },
+                        customChains = List(structure.chainCount) { 0 }
+                    ).frameInfo.dti.size shouldBe structure.decodeTargetCount
+                }
+                should("reject a carried structure which is not the structure in effect") {
+                    shouldThrow<IllegalArgumentException> {
+                        descriptor(newStructure = structure.withTemplateIdOffset((structure.templateIdOffset + 1) % 64))
+                    }
+                }
+                should("reject custom DTIs which do not match the decode target count") {
+                    shouldThrow<IllegalArgumentException> {
+                        descriptor(customDtis = List(structure.decodeTargetCount + 1) { DTI.SWITCH })
+                    }
+                }
+                should("reject custom chains which do not match the chain count") {
+                    shouldThrow<IllegalArgumentException> {
+                        descriptor(customChains = List(structure.chainCount + 1) { 0 })
+                    }
+                }
             }
             context("a template dependency structure at the limits of the specification") {
                 should("parse with the maximum number of templates") {

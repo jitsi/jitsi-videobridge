@@ -304,7 +304,7 @@ fun Int.containsDecodeTarget(dt: Int) = ((1 shl dt) and this) != 0
  * getTl0PicIdxDelta(1, 10) -> 55 (10 + 55 = 1)
  * getTl0PicIdxDelta(1, 58) -> 7 (58 + 7 = 1)
  */
-fun getTemplateIdDelta(a: Int, b: Int): Int = (a - b + 64) % 64
+fun getTemplateIdDelta(a: Int, b: Int): Int = Math.floorMod(a - b, 64)
 
 /**
  * Apply a delta to a given templateID and return the result (taking
@@ -313,4 +313,4 @@ fun getTemplateIdDelta(a: Int, b: Int): Int = (a - b + 64) % 64
  * @param delta the delta to be applied
  * @return the templateID resulting from doing "start + delta"
  */
-fun applyTemplateIdDelta(start: Int, delta: Int): Int = (start + delta) % 64
+fun applyTemplateIdDelta(start: Int, delta: Int): Int = Math.floorMod(start + delta, 64)
