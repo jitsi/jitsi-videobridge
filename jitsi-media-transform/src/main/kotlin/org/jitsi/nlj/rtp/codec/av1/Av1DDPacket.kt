@@ -71,17 +71,49 @@ class Av1DDPacket : ParsedVideoPacket {
         requireNotNull(ddExt) {
             "Packet did not have Dependency Descriptor"
         }
-        descriptor = try {
+        val parsed = parseDescriptor(ddExt, templateDependencyStructure, packet, logger)
+        descriptor = parsed.descriptor
+        statelessDescriptor = parsed.statelessDescriptor
+        frameInfo = parsed.descriptor?.let { getFrameInfo(it, logger) }
+    }
+
+    /** The result of parsing a dependency descriptor: the full descriptor if it could be parsed, and in any case the
+     * stateless subset, which is the full descriptor itself when that was parsed. */
+    private class ParsedDescriptor(
+        val descriptor: Av1DependencyDescriptorHeaderExtension?,
+        val statelessDescriptor: Av1DependencyDescriptorStatelessSubset
+    )
+
+    /**
+     * Parse the dependency descriptor in [ddExt] with [templateDependencyStructure]. If that fails, the descriptor
+     * may still be usable without a structure, e.g. when the structure in effect for it is not known or is stale,
+     * so the stateless subset is parsed, and the failure is logged at WARN.
+     *
+     * @throws MalformedAv1DependencyDescriptorException if the descriptor cannot be parsed statelessly either. Then
+     * it is malformed, and the packet cannot be used at all. Nothing is logged here, so that the caller logs the
+     * failure once.
+     */
+    private fun parseDescriptor(
+        ddExt: RtpPacket.HeaderExtension,
+        templateDependencyStructure: Av1TemplateDependencyStructure?,
+        packet: RtpPacket,
+        logger: Logger
+    ): ParsedDescriptor {
+        val descriptor = try {
             Av1DependencyDescriptorHeaderExtension.parse(ddExt, templateDependencyStructure)
         } catch (e: Av1DependencyException) {
+            val statelessDescriptor = try {
+                Av1DependencyDescriptorStatelessSubset.parse(ddExt)
+            } catch (statelessException: Av1DependencyException) {
+                throw MalformedAv1DependencyDescriptorException(packet, statelessException, e)
+            }
             logger.warn(
                 "Could not parse AV1 Dependency Descriptor for ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: " +
                     e.message
             )
-            null
+            return ParsedDescriptor(null, statelessDescriptor)
         }
-        statelessDescriptor = descriptor ?: Av1DependencyDescriptorStatelessSubset.parse(ddExt)
-        frameInfo = descriptor?.let { getFrameInfo(it, logger) }
+        return ParsedDescriptor(descriptor, descriptor)
     }
 
     /**
@@ -189,6 +221,26 @@ class Av1DDPacket : ParsedVideoPacket {
         descriptor.write(ext)
     }
 }
+
+/**
+ * A dependency descriptor which cannot be parsed even statelessly, so the packet cannot be used. The message has the
+ * reason of the stateless parse, and of the full parse with the structure in effect if that differs. The cause is
+ * the failure of the full parse.
+ */
+class MalformedAv1DependencyDescriptorException(
+    packet: RtpPacket,
+    statelessFailure: Av1DependencyException,
+    fullParseFailure: Av1DependencyException
+) : Av1DependencyException(
+    buildString {
+        append("Malformed AV1 Dependency Descriptor for ssrc ${packet.ssrc} seq ${packet.sequenceNumber}: ")
+        append(statelessFailure.message)
+        if (fullParseFailure.message != statelessFailure.message) {
+            append(" (with the structure in effect: ${fullParseFailure.message})")
+        }
+    },
+    fullParseFailure
+)
 
 fun Av1DependencyDescriptorHeaderExtension.getScalabilityStructure(
     ssrc: Long,
